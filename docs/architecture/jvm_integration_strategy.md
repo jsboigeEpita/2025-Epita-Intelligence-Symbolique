@@ -8,6 +8,9 @@ L'initialisation et l'arrêt de la JVM sont des opérations critiques qui, si el
 
 Pour contrer ces instabilités, une stratégie de **défense en profondeur** a été développée au fil du temps. Elle repose sur quatre couches de protection distinctes mais complémentaires. Ce document sert de guide de référence pour tout développeur interagissant avec la JVM, afin de comprendre non seulement **comment** le système fonctionne, mais surtout **pourquoi** il a été conçu de cette manière.
 
+&gt; **📖 Prérequis Recommandé**
+&gt; Si vous découvrez l'intégration Python-Java, commencez par lire le document d'introduction : [**Architecture d'Intégration Python-Java (JPype/Tweety)**](integration_python_java_intro.md). Il présente les composants clés, l'architecture globale et le flux d'interaction typique avant d'aborder les stratégies avancées de stabilisation décrites ici.
+
 &gt; **Note sur l'Évolution de l'Architecture**
 &gt; Ce document se concentre sur les principes fondamentaux de stabilisation de la JVM. Pour une vue d'ensemble des évolutions plus récentes, incluant le refactoring du serveur MCP et la fiabilisation du pipeline de CI qui s'appuient sur ces bases, veuillez consulter le [Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI](../refactoring/refactoring_mcp_et_stabilisation_ci.md).
 ## 2. Les Quatre Couches de la Stratégie de Défense

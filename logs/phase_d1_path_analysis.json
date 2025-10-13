@@ -1,0 +1,2929 @@
+{
+  "metadata": {
+    "analysis_timestamp": "2025-10-09T00:31:56.602688",
+    "project_root": "D:\\2025-Epita-Intelligence-Symbolique",
+    "docs_directory": "D:\\2025-Epita-Intelligence-Symbolique\\docs",
+    "files_analyzed": 540
+  },
+  "global_stats": {
+    "relative_paths_count": 2340,
+    "absolute_paths_count": 2985,
+    "python_imports_count": 732,
+    "file_references_count": 9781,
+    "markdown_links_count": 3903
+  },
+  "files_with_patterns": {
+    "relative_paths": [
+      {
+        "file": "docs\\analyse_structure_depot.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\AUDIT_ARCHITECTURAL_RAPPORT.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\cartographie_scripts_fonctionnels.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\CONTRIBUTING.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\DOC_CONCEPTION_SHERLOCK_WATSON.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\GUIDE_MAINTENANCE_ORACLE_ENHANCED.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\index.md",
+        "count": 105
+      },
+      {
+        "file": "docs\\java_testing_action_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\PLAN_MISE_A_JOUR_TESTS_FONCTIONNELS.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\plan_reorganisation_documentation.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\PROJECT_STRUCTURE_POST_CLEANUP.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\PROPOSITION_REORG_TESTS.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\README.md",
+        "count": 33
+      },
+      {
+        "file": "docs\\README_PROJETS_ETUDIANTS.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\readme_update_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\rhetorical_analysis_architecture.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\RUNNERS_ET_VALIDATION_WEB.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\RÉSUMÉ_ANALYSE_MIGRATION_DOUBLONS.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\standards_documentation.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\STRUCTURE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\troubleshooting.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\UNIFIED_AUTHENTIC_SYSTEM.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\VALIDATION_REPORT_PARALLEL_WORKFLOW.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\WEB_APPLICATION_GUIDE.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\analysis\\README.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\architecture\\analyse_architecture_orchestration.md",
+        "count": 29
+      },
+      {
+        "file": "docs\\architecture\\analyse_impact_architecture_sur_projets_etudiants.md",
+        "count": 119
+      },
+      {
+        "file": "docs\\architecture\\architecture_globale.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\architecture\\architecture_hierarchique.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\architecture\\communication_agents.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\architecture\\conception_multi_canal.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\architecture\\current_state_analysis.md",
+        "count": 34
+      },
+      {
+        "file": "docs\\architecture\\etat_avancement.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\architecture\\jvm_integration_strategy.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\reorganization_proposal.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\composants\\agents_specialistes.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\composants\\agent_management.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\composants\\analyse_impact_composants_sur_projets_etudiants.md",
+        "count": 110
+      },
+      {
+        "file": "docs\\composants\\api_web.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\composants\\argument_parser.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\composants\\evaluation_subsystem.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\composants\\knowledge_base_interface.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\composants\\README.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\composants\\reasoning_engine.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\composants\\structure_projet.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\composants\\synthese_collaboration.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\composants\\tweety_bridge.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\diagrams\\README.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\entry_points\\02_web_app.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\entry_points\\03_demo_epita.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\entry_points\\ep2_web_applications.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\full_audit\\audit_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\full_audit\\audit_results.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_modale.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_premier_ordre.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_propositionnelle.md",
+        "count": 14
+      },
+      {
+        "file": "docs\\guides\\guide_developpeur.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\guide_utilisation.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\guides\\integration_api_web.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\guides\\README.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\guides\\utilisation_agents_logiques.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\images\\README.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\integration\\README.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\integration\\validation_integration.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\internal\\refactoring_plan.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\investigations\\20250921_e2e_architecture_reelle.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\CLAUDE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\maintenance\\documentation_analyzer.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\maintenance\\rapport_mission_ADR_sophismes.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\mapping\\logical_reasoning_demos_map.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\migration\\MIGRATION_WEBAPP.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\outils\\README.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\projets\\ACCOMPAGNEMENT_ETUDIANTS.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\projets\\ACCUEIL_ETUDIANTS_SYNTHESE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\developpement_systeme.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\projets\\exemples_tweety.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\experience_utilisateur.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\fondements_theoriques.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\projets\\message_annonce_etudiants.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\projets\\README.md",
+        "count": 128
+      },
+      {
+        "file": "docs\\projets\\SUIVI_PROJETS_ETUDIANTS.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets_projets_detailles.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\refactoring\\01_root_cleanup_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\07_implementation_roadmap.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\analysis_tools_consolidation_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reference\\README.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\reports\\2025-09-28_grounding_etat_projet.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\reports\\mission_report_ep2_web_applications.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\reports\\mission_report_shared_services_validation.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reports\\task_log_20250812_raw.md",
+        "count": 167
+      },
+      {
+        "file": "docs\\sherlock_watson\\ARCHITECTURE_MULTI_AGENTS_TECHNIQUE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\sherlock_watson\\ARCHITECTURE_TECHNIQUE_DETAILLEE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\sherlock_watson\\DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEPLOIEMENT.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\sherlock_watson\\guide_unifie_sherlock_watson.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_UTILISATEUR_COMPLET.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_UTILISATEUR_SHERLOCK_WATSON_COMPLET.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\sherlock_watson\\README.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\technical\\e2e_test_orchestration.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\validation\\shared_services_refactoring_validation.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification\\00_main_verification_report.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\verification\\01_launch_webapp_background_plan.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\verification\\01_launch_webapp_background_test_results.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification\\03_simulate_balanced_participation_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification\\04_generate_and_analyze_arguments_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification\\04_generate_and_analyze_arguments_test_results.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification_s2\\02_rhetorical_analysis_test_results.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\verification_s2\\03_web_apps_apis_final_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification_s2\\04_epita_demo_final_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\verification_s2\\04_epita_demo_mapping.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\verification_s2\\04_epita_demo_test_results.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\verification_s2\\05_testing_infrastructure_final_report.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\architecture\\strategies\\README.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\targeted_analysis_raw.md",
+        "count": 293
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_01_raw.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02.md",
+        "count": 35
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02_raw.md",
+        "count": 35
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_03_raw.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_05_raw.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_06_raw.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_07_raw.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_08_raw.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_10_raw.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_11_raw.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_12_raw.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_13_raw.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_14_raw.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_15_raw.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_16_raw.md",
+        "count": 36
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_17_raw.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_18_raw.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_18_summary.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_19_raw.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_20_raw.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot1_analysis_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot5_completion_report.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\guides\\cli\\maintenance_manager.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\cli\\setup_manager.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\01_cartographie_initiale\\rapport_cartographie.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_B\\rapport_phase_B.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\planning\\refactoring_orchestration\\plan_execution_refactoring_orchestration.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\planning\\refactoring_orchestration\\refonte_plugin_sophismes.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.2_Agent_Detection_Sophismes_Biais_Cognitifs.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.6_Integration_LLMs_locaux_legers.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.4.1_Index_Semantique_Arguments.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\projets\\sujets\\3.1.1_Interface_Web_Analyse_Argumentative.md",
+        "count": 86
+      },
+      {
+        "file": "docs\\projets\\sujets\\README.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\FAQ_DEVELOPPEMENT.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\GUIDE_INTEGRATION_PROJETS.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\PRESENTATION_KICKOFF.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\README.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\DEMARRAGE_RAPIDE.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\GUIDE_UTILISATION_API.md",
+        "count": 34
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\TROUBLESHOOTING.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\exemples-react\\README.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\03_informal_fallacy_consolidation_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\04_operational_plan.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250726_agent_loader_plan_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_governance_plan_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_impact_analysis_regularization.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_operational_plan_audit_report.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_operational_plan_restructuring_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250731_mission_report_phase3.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\agents\\extract_agent_api.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reference\\agents\\informal_agent_api.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reference\\agents\\pl_agent_api.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\reference\\agents\\pm_agent_api.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reference\\agents\\README.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\reference\\orchestration\\analysis_runner.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reference\\orchestration\\hierarchical_architecture_api.md",
+        "count": 19
+      },
+      {
+        "file": "docs\\reference\\orchestration\\operational_level_api.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reference\\orchestration\\README.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\reference\\orchestration\\strategic_level_api.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reference\\orchestration\\tactical_level_api.md",
+        "count": 2
+      }
+    ],
+    "absolute_paths": [
+      {
+        "file": "docs\\api_reference.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "count": 51
+      },
+      {
+        "file": "docs\\GUIDE_DEMARRAGE_RAPIDE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\GUIDE_MAINTENANCE_ORACLE_ENHANCED.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\integration_outils_rhetorique.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\PLAN_MISE_A_JOUR_TESTS_FONCTIONNELS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\WEB_APPLICATION_GUIDE.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\api\\logic_endpoints.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\architecture\\plugin_loader_test_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\composants\\api_web.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\design\\solver_configuration_v2.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\designs\\AUTO_SELECTION_DESIGN.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\diagrams\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\entry_points\\02_web_app.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\full_audit\\audit_results.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\DOCUMENTATION_TECHNIQUE_JTMS.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\guide_utilisation.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\guides\\integration_api_web.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\investigations\\2025-08-28_analyse_proxy_frontend.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\investigations\\2025-08-30_rapport_debougage_suite_e2e.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\investigations\\20250917_backend_instrumentation_results.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\investigations\\20250921_e2e_architecture_reelle.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\maintenance\\DESIGN_PARALLEL_WORKFLOW.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\maintenance\\documentation_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\migration\\MIGRATION_WEBAPP.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\outils\\integration_outils.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\plans\\PLAN_INTEGRATION_AGENT_DUNG.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\presentations\\architecture_agents_logiques.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\projets\\exemples_tweety_par_projet.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\nlp_implementation_plan_toulmin-v3.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\2025-09-28_grounding_etat_projet.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\mission_report_service_bus.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\task_log_20250812_raw.md",
+        "count": 28
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEPLOIEMENT.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\troubleshooting\\jvm_version_conflict_resolution.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\validations\\2025-09-27_validation_finale_suite_e2e.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification_s2\\03_web_apps_apis_test_results.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\targeted_analysis_raw.md",
+        "count": 1008
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_01_raw.md",
+        "count": 40
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02.md",
+        "count": 14
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02_raw.md",
+        "count": 14
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_03_raw.md",
+        "count": 97
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_04_raw.md",
+        "count": 37
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_05_raw.md",
+        "count": 68
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_06_raw.md",
+        "count": 67
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_07_raw.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_08_raw.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_09_raw.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_10_raw.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_11_raw.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_12_raw.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_13_raw.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_14_raw.md",
+        "count": 57
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_15_raw.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_16_raw.md",
+        "count": 162
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_17_raw.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_18_raw.md",
+        "count": 42
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_19_raw.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_20_raw.md",
+        "count": 155
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\analyse_cibles.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.2.7_Argumentation_Dialogique.md",
+        "count": 82
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.4.1_Systemes_Maintenance_Verite_TMS.md",
+        "count": 271
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.1.6_Gouvernance_Multi_Agents.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.6_Integration_LLMs_locaux_legers.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.4.1_Index_Semantique_Arguments.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md",
+        "count": 40
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.5.6_Protection_Systemes_IA_Attaques_Adversariales.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\3.1.1_Interface_Web_Analyse_Argumentative.md",
+        "count": 275
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\FAQ_DEVELOPPEMENT.md",
+        "count": 38
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\GUIDE_INTEGRATION_PROJETS.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\DEMARRAGE_RAPIDE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\GUIDE_UTILISATION_API.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\TROUBLESHOOTING.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\exemples-react\\README.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\04_operational_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports_pass_2\\webapp\\hardening_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\docs.py",
+        "count": 4
+      }
+    ],
+    "python_imports": [
+      {
+        "file": "docs\\agents_specialistes.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\ARCHITECTURE_MIGRATION_SIMPLE.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\conventions_importation.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\CORRECTIFS_SEMANTIC_KERNEL_AGENTS_RAPPORT.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\faq.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\GUIDE_DEPLOIEMENT_PRODUCTION.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\GUIDE_MAINTENANCE_ORACLE_ENHANCED.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\INTEGRATION_TESTING_DESIGN.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\logic_agents.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\mcp_integration_guide_for_students.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\MIGRATION_VALIDATION_SCRIPT1.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\modal_logic_agent_guide.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\ONE_LINER_AUTO_ENV.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\RUNNERS_ET_VALIDATION_WEB.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\SPECIFICATION_TECHNIQUE_MIGRATION.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\standards_documentation.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\UNIFIED_AUTHENTIC_SYSTEM.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\unified_orchestrations_architecture.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\unified_orchestration_architecture.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\UNIFIED_SYSTEM_GUIDE.md",
+        "count": 20
+      },
+      {
+        "file": "docs\\architecture\\architecture_restauration_orchestration.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\architecture\\plan_migration_abstractlogicagent_vers_baselogicagent.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\audit\\fol_git_archeology_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\composants\\agents_specialistes.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\design\\solver_configuration_v2.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\conventions_importation.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\guides\\DOCUMENTATION_TECHNIQUE_JTMS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\guides\\ENVIRONMENT_SETUP.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_modale.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_premier_ordre.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_propositionnelle.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\guide_developpeur.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\guides\\GUIDE_UTILISATION_REELLE_JTMS_EPITA.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\integration_api_web.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\guides\\utilisation_agents_logiques.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\integration\\FACT_CHECKING_INTEGRATION_GUIDE.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\maintenance\\DESIGN_PARALLEL_WORKFLOW.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\refactoring_impact_analysis.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\refactoring_plan.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\outils\\api_outils.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\argument_coherence_evaluator.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\coherence_evaluator.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\complex_fallacy_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\contextual_fallacy_detector.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\developpement_outils.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\outils\\enhanced_complex_fallacy_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\outils_analyse_rhetorique.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\visualizer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\exemples_tweety.md",
+        "count": 62
+      },
+      {
+        "file": "docs\\projets\\exemples_tweety_par_projet.md",
+        "count": 46
+      },
+      {
+        "file": "docs\\refactoring\\05_core_integration_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\refactoring\\analysis_tools_consolidation_plan.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\code_duplication_audit.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\refactoring\\refactoring_plan_toulmin_model.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\analysis_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\DIAGNOSTIC_SYSTÈME_AGENTIQUE_COMPLET_20250610.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\EVALUATION_JTMS_CONTRIBUTION_ETUDIANTE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\task_log_20250812_raw.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\sherlock_watson\\ARCHITECTURE_ORACLE_ENHANCED.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\sherlock_watson\\documentation_phase_d_trace_ideale.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEPLOIEMENT.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEVELOPPEUR_ORACLE.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\sherlock_watson\\guide_unifie_sherlock_watson.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_UTILISATEUR_COMPLET.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\architecture\\strategies\\audit_anti_mock.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\architecture\\strategies\\README.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\analyse_cibles.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\outils\\reference\\argument_coherence_evaluator.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\coherence_evaluator.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\complex_fallacy_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\contextual_fallacy_detector.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\contextual_fallacy_detector_advanced.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\enhanced_complex_fallacy_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\semantic_argument_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\outils\\reference\\visualizer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\planning\\refactoring_orchestration\\plan_implementation_refonte.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.2.7_Argumentation_Dialogique.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.4.1_Systemes_Maintenance_Verite_TMS.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.1.6_Gouvernance_Multi_Agents.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.2_Agent_Detection_Sophismes_Biais_Cognitifs.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.3_Agent_Generation_Contre_Arguments.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.6_Integration_LLMs_locaux_legers.md",
+        "count": 38
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.4.1_Index_Semantique_Arguments.md",
+        "count": 50
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md",
+        "count": 39
+      },
+      {
+        "file": "docs\\projets\\sujets\\3.1.1_Interface_Web_Analyse_Argumentative.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\projets\\sujets\\Custom_Speech_to_Text_Analyse_Arguments_Fallacieux.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\FAQ_DEVELOPPEMENT.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\DEMARRAGE_RAPIDE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\GUIDE_UTILISATION_API.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\TROUBLESHOOTING.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\exemples-react\\README.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\03_informal_fallacy_consolidation_plan.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\reference\\agents\\extract_agent_api.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\agents\\informal_agent_api.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\agents\\pl_agent_api.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\reference\\agents\\pm_agent_api.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\orchestration\\analysis_runner.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\orchestration\\hierarchical_architecture_api.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\reference\\orchestration\\README.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\docs.py",
+        "count": 11
+      }
+    ],
+    "file_references": [
+      {
+        "file": "docs\\ANALYSE_MIGRATION_DUPLICATES.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\analyse_structure_depot.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\AUDIT_ARCHITECTURAL_RAPPORT.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\CONTRIBUTING.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\CORRECTED_RECOMMENDATIONS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\documentation_plan_agents.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\e2e_tests_status.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\einstein_tweety_puzzle.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\FACT_CHECKING_SYSTEM_ARCHITECTURE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\faq.md",
+        "count": 27
+      },
+      {
+        "file": "docs\\FINALISATION_CONSOLIDATION_20250610.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\GUIDE_DEMARRAGE_RAPIDE.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\GUIDE_DEPLOIEMENT_PRODUCTION.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\GUIDE_MAINTENANCE_ORACLE_ENHANCED.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\index.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\INTEGRATION_TESTING_DESIGN.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\java_integration_handbook.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\java_testing_action_plan.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\LLM_SERVICE_API_COMPATIBILITY_FIX.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\logique_definitions_par_defaut.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\mcp_chronology.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\mcp_implementation_guide.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\mcp_restoration_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\ONE_LINER_AUTO_ENV.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\plan_architecture_python_java.md",
+        "count": 14
+      },
+      {
+        "file": "docs\\PLAN_DETAILLE_PHASE2_AUTHENTIC_LLM.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\PLAN_MISE_A_JOUR_TESTS_FONCTIONNELS.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\PLAN_REFACTORING_JPYPE_MOCK.md",
+        "count": 15
+      },
+      {
+        "file": "docs\\plan_reorganisation_documentation.md",
+        "count": 77
+      },
+      {
+        "file": "docs\\PROJECT_STRUCTURE_POST_CLEANUP.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\PROPOSITION_REORG_TESTS.md",
+        "count": 25
+      },
+      {
+        "file": "docs\\PYTEST_ASYNCIO_CONFIGURATION_CHANGES.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\PYTHON_FUNCTIONAL_MAP.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\README_DEMOS_PLAYWRIGHT.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\README_ETAT_ACTUEL.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\README_PROJETS_ETUDIANTS.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\readme_update_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\resume_global_projet.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\RUNNERS_ET_VALIDATION_WEB.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\solution_problemes_environnement.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\standards_documentation.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\STRUCTURE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\structure_projet.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\SYSTEME_CONSOLIDE_FINAL_STATUS.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\testing_entrypoints_audit.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\troubleshooting.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\UNIFIED_AUTHENTIC_SYSTEM.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\unified_orchestrations_architecture.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\unified_orchestration_architecture.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\UNIFIED_SYSTEM_GUIDE.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\unified_web_orchestrator.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\WEB_APPLICATION_GUIDE.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\analysis\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\analyse_impact_architecture_sur_projets_etudiants.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\architecture_globale.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\architecture_hierarchique.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\architecture\\architecture_map.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\architecture_restauration_orchestration.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\architecture\\conception_multi_canal.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\architecture\\current_state_analysis.md",
+        "count": 35
+      },
+      {
+        "file": "docs\\architecture\\jvm_integration_strategy.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\architecture\\plugin_loader_test_plan.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\architecture\\README.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\architecture\\reorganization_proposal.md",
+        "count": 60
+      },
+      {
+        "file": "docs\\audit\\cartographie_documentation_2025-06-03.md",
+        "count": 202
+      },
+      {
+        "file": "docs\\audit\\fol_git_archeology_report.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\composants\\agents_specialistes.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\composants\\agent_management.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\composants\\api_web.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\composants\\structure_projet.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\composants\\synthese_collaboration.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\composants\\tweety_bridge.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\designs\\AUTO_SELECTION_DESIGN.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\entry_points\\02_web_app.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\entry_points\\03_demo_epita.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\entry_points\\05_unit_tests.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\full_audit\\audit_fixes_part1.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\full_audit\\audit_plan.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\full_audit\\audit_results.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\full_audit\\audit_revalidation_results_part1.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\full_audit\\audit_scope.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\guides\\analyse_impact_guides_sur_projets_etudiants.md",
+        "count": 93
+      },
+      {
+        "file": "docs\\guides\\CHANGELOG.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\guides\\ENVIRONMENT_SETUP.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\exemples_logique_propositionnelle.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\GETTING_STARTED.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\guides\\GUIDE_DEMARRAGE_RAPIDE_PROJET_EPITA.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\guides\\guide_developpeur.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\GUIDE_EXECUTION_NETTOYAGE_ARCHITECTURAL.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\GUIDE_INSTALLATION_ETUDIANTS.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\guides\\guide_utilisation.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\guides\\RUN_VALIDATION.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\guides\\testing_strategy_rhetorical_system.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\guides\\utilisation_agents_logiques.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\integration\\FACT_CHECKING_INTEGRATION_GUIDE.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\integration\\integration_complete.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\integration\\liste_verification_deploiement.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\integration\\plan_integration.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\internal\\DESIGN_DOC.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\internal\\PLAN.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\internal\\plan_amelioration_agent.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\internal\\refactoring_plan.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\investigations\\2025-08-28_analyse_proxy_frontend.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\investigations\\2025-08-30_rapport_debougage_suite_e2e.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\investigations\\2025-08-31_analyse_regressions_e2e_post_reparation.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\investigations\\2025-08-31_reparation_suite_e2e_playwright.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\investigations\\20250917_backend_instrumentation_results.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\investigations\\20250921_e2e_architecture_reelle.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\maintenance\\CHANGELOG_README_2025-10-03.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\maintenance\\CLAUDE.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\maintenance\\PLAN.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\rapport_de_mission.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\maintenance\\rapport_mission_ADR_sophismes.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\maintenance\\README_DEPOT_CLEANUP.md",
+        "count": 25
+      },
+      {
+        "file": "docs\\maintenance\\README_enrichment_report_2025-10-03.md",
+        "count": 13
+      },
+      {
+        "file": "docs\\mapping\\unit_tests_structure_map.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\mapping\\web_apps_map.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\migration\\CHANGELOG_ORACLE_ENHANCED_V2_1_0.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\migration\\MIGRATION_WEBAPP.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\mission_reports\\20250821_rapport_mission_demo_epita.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\mission_reports\\mission_report_epita_demo_validation.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\outils\\developpement_outils.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\outils\\outils_analyse_rhetorique.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\planning_and_reports\\plan_clarification_dossiers_dupliques.md",
+        "count": 15
+      },
+      {
+        "file": "docs\\plans\\PLAN_ACTION_NETTOYAGE_77_FICHIERS.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\plans\\PLAN_CONSOLIDATION_DOCS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\plans\\PLAN_INTEGRATION_AGENT_DUNG.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\plans\\PLAN_RANGEMENT_STRUCTURE.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\projets\\ACCOMPAGNEMENT_ETUDIANTS.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\projets\\ACCUEIL_ETUDIANTS_SYNTHESE.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\README.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\projets\\SUIVI_PROJETS_ETUDIANTS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\rapports\\correction_incompatibilites_api_cluedo_oracle_state.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\rapports\\groupe1_corrections_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\rapports\\mise_a_jour_couverture_20250607_140537.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\rapports\\mise_a_jour_documentation_20250607_140948.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\01_root_cleanup_plan.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\refactoring\\02_scripts_cleanup_plan.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\refactoring\\03_argumentation_analysis_cleanup_plan.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\refactoring\\04_scripts_maintenance_consolidation_plan.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\refactoring\\06_final_architecture_plan.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\refactoring\\07_implementation_roadmap.md",
+        "count": 75
+      },
+      {
+        "file": "docs\\refactoring\\nlp_implementation_plan_toulmin-v3.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\refactoring\\nlp_implementation_plan_toulmin.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\refactoring_plan_toulmin_model.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reference\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\2025-08-27_backend_startup_fix.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\reports\\2025-09-28_grounding_etat_projet.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reports\\analysis_logic_demos_cluedo_einstein.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reports\\analysis_report.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\reports\\analysis_run_demo_epita.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reports\\CARTOGRAPHIE_5_POINTS_ENTREE_PRINCIPAUX.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\reports\\CARTOGRAPHIE_EXHAUSTIVE_PHASE2B.md",
+        "count": 31
+      },
+      {
+        "file": "docs\\reports\\DIAGNOSTIC_SYSTÈME_AGENTIQUE_COMPLET_20250610.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\reports\\E2E_Test_Stabilization_Report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\mission_report_20250727_1602.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reports\\mission_report_20250727_final_grounding.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\reports\\mission_report_ep2_web_applications.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\mission_report_ep3_epita_demo.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\mission_report_orchestration_service_robustness.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\mission_report_plugin_dependencies.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\mission_report_service_bus.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\mission_report_shared_services_validation.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\playwright_test_summary.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\reports\\plugin_loader_mission_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports\\revised_plan.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\reports\\task_log_20250812_raw.md",
+        "count": 887
+      },
+      {
+        "file": "docs\\reports\\test_orchestrate_complex_analysis_simple_case_20250616_132820.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports\\validation_point1_tests_unitaires.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\reports_pass_2\\final_hardening_report.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\reports_pass_3\\epita_demo_cleanup_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\reports_pass_3\\web_stack_cartography.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\scripts_legacy\\README.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\sherlock_watson\\AUDIT_INTEGRITE_CLUEDO.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEMARRAGE_RAPIDE.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEPLOIEMENT.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_DEVELOPPEUR_ORACLE.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\sherlock_watson\\guide_unifie_sherlock_watson.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\sherlock_watson\\GUIDE_UTILISATEUR_COMPLET.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\sherlock_watson\\MISSION_SHERLOCK_WATSON_COMPLETE.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\sherlock_watson\\README.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\sherlock_watson\\README_recovered2.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\technical\\e2e_test_orchestration.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\technical\\test_failure_analysis.md",
+        "count": 14
+      },
+      {
+        "file": "docs\\troubleshooting\\jvm_version_conflict_resolution.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\validation\\20250804_test_failure_analysis.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\validation\\shared_services_refactoring_validation.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\validation\\validation_plan.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\validations\\2025-09-27_rapport_final_orchestrateur_e2e.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\validations\\2025-09-27_validation_finale_suite_e2e.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\validations\\2025-09-27_validation_structure_contenu.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification\\01_launch_webapp_background_test_results.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification\\05_main_app_plan.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\verification\\05_main_app_test_results.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\verification\\master_verification_plan_non_interactive.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification_s2\\01_sherlock_watson_final_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification_s2\\02_rhetorical_analysis_mapping.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\verification_s2\\03_web_apps_apis_final_report.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\verification_s2\\04_epita_demo_test_results.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\verification_s2\\05_testing_infrastructure_mapping.md",
+        "count": 7
+      },
+      {
+        "file": "docs\\verification_s2\\05_testing_infrastructure_test_results.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\strategies\\README.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\architecture\\strategies\\semantic_kernel_integration.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\architecture\\strategies\\strategies_architecture.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\targeted_analysis_raw.md",
+        "count": 3310
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\targeted_analysis_summary.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_01_raw.md",
+        "count": 189
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_01_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02.md",
+        "count": 115
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02_raw.md",
+        "count": 115
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_02_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_03_raw.md",
+        "count": 151
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_04_raw.md",
+        "count": 137
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_05_raw.md",
+        "count": 296
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_06_raw.md",
+        "count": 200
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_07_raw.md",
+        "count": 188
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_07_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_08_raw.md",
+        "count": 188
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_08_summary.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_09_raw.md",
+        "count": 111
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_09_summary.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_10_raw.md",
+        "count": 82
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_11_raw.md",
+        "count": 70
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_12_raw.md",
+        "count": 60
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_12_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_13_raw.md",
+        "count": 220
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_14_raw.md",
+        "count": 119
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_15_raw.md",
+        "count": 93
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_16_raw.md",
+        "count": 172
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_16_summary.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_17_raw.md",
+        "count": 97
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_17_summary.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_18_raw.md",
+        "count": 92
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_19_raw.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\archived_commit_analysis\\commit_analysis_reports\\20250622_400_commits\\analysis_lot_20_raw.md",
+        "count": 141
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\final_cleanup_summary_report.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot1_analysis_plan.md",
+        "count": 39
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot1_completion_report.md",
+        "count": 17
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot2_analysis_plan.md",
+        "count": 23
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot2_completion_report.md",
+        "count": 37
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot3_analysis_plan.md",
+        "count": 52
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot3_completion_report.md",
+        "count": 34
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot4_analysis_plan.md",
+        "count": 58
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot4_completion_report.md",
+        "count": 40
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot5_analysis_plan.md",
+        "count": 26
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot5_completion_report.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot6_analysis_plan.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot6_completion_report.md",
+        "count": 22
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot7_analysis_plan.md",
+        "count": 82
+      },
+      {
+        "file": "docs\\archives\\cleaning_historique\\lot7_completion_report.md",
+        "count": 63
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\00_PLAN_MASTER.md",
+        "count": 19
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\03_commits_log.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\01_cartographie_initiale\\rapport_cartographie.md",
+        "count": 28
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_A\\RAPPORT_PARTIEL_ORCHESTRATEUR.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_A\\rapport_phase_A.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_A\\SYNTHESE_PARTIELLE_A2.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_B\\rapport_phase_B.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\analyse_cibles.md",
+        "count": 36
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\decisions_techniques.md",
+        "count": 11
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\grounding_initial.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\maintenance\\cleanup_campaign_2025-10-03\\02_phases\\phase_C\\rapport_phase_C.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\outils\\reference\\semantic_argument_analyzer.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\planning\\refactoring_orchestration\\plan_execution_refactoring_orchestration.md",
+        "count": 29
+      },
+      {
+        "file": "docs\\planning\\refactoring_orchestration\\refonte_plugin_sophismes.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.2.7_Argumentation_Dialogique.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\1.4.1_Systemes_Maintenance_Verite_TMS.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.3.6_Integration_LLMs_locaux_legers.md",
+        "count": 10
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.4.1_Index_Semantique_Arguments.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\2.5.3_Developpement_Serveur_MCP_Analyse_Argumentative.md",
+        "count": 16
+      },
+      {
+        "file": "docs\\projets\\sujets\\3.1.1_Interface_Web_Analyse_Argumentative.md",
+        "count": 18
+      },
+      {
+        "file": "docs\\projets\\sujets\\Custom_Speech_to_Text_Analyse_Arguments_Fallacieux.md",
+        "count": 5
+      },
+      {
+        "file": "docs\\projets\\sujets\\README.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\projets\\sujets\\sujet_1.1.5_formules_booleennes_quantifiees.md",
+        "count": 4
+      },
+      {
+        "file": "docs\\projets\\sujets\\sujet_2.3.5_agent_evaluation_qualite.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\FAQ_DEVELOPPEMENT.md",
+        "count": 55
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\GUIDE_INTEGRATION_PROJETS.md",
+        "count": 21
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\PRESENTATION_KICKOFF.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\README.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\DEMARRAGE_RAPIDE.md",
+        "count": 19
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\GUIDE_UTILISATION_API.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\projets\\sujets\\aide\\interface-web\\TROUBLESHOOTING.md",
+        "count": 9
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\02_system_legacy_and_evolution_analysis.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\03_informal_fallacy_consolidation_plan.md",
+        "count": 24
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\04_operational_plan.md",
+        "count": 73
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\2025-07-26_21-15_mission_handoff_report.md",
+        "count": 15
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250726_agent_loader_plan_report.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250726_plugin_loader_plan_report.md",
+        "count": 12
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_divergence_analysis_report.md",
+        "count": 8
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_impact_analysis_regularization.md",
+        "count": 30
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_incident_report_sddd_violation.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250727_operational_plan_restructuring_report.md",
+        "count": 6
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250729_execution_tracking_report.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\refactoring\\informal_fallacy_system\\reports\\20250731_mission_report_phase3.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports_pass_2\\rhetorical_analysis\\hardening_report.md",
+        "count": 1
+      },
+      {
+        "file": "docs\\reports_pass_2\\webapp\\hardening_report.md",
+        "count": 3
+      },
+      {
+        "file": "docs\\resources\\notebooks\\README.md",
+        "count": 2
+      },
+      {
+        "file": "docs\\maintenance\\tests_jvm.txt",
+        "count": 13
+      },
+      {
+        "file": "docs\\docs.py",
+        "count": 1
+      }
+    ]
+  },
+  "pattern_examples": {
+    "relative_paths": [
+      {
+        "file": "docs\\analyse_structure_depot.md",
+        "line": 45,
+        "content": "- `tests/` : Tests unitaires et d'intégration (organisés en [`tests/unit/`](tests/unit/) (par exempl"
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "line": 619,
+        "content": "Pour plus d'informations sur l'utilisation de l'API, consultez les exemples complets dans le dossier"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "line": 428,
+        "content": "- **[Tests Hiérarchiques](../tests/unit/orchestration/hierarchical/)** - Tests validation architectu"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "line": 429,
+        "content": "- **[Adaptateurs Opérationnels](../tests/unit/orchestration/hierarchical/operational/adapters/)** - "
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "line": 68,
+        "content": "*   **Dépendance JPype (`JPype1`)** : La bibliothèque `JPype1` est la dépendance Python principale p"
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "line": 73,
+        "content": "*   Le script [`setup_project_env.ps1`](../setup_project_env.ps1:1) gère le téléchargement (via la v"
+      },
+      {
+        "file": "docs\\AUDIT_ARCHITECTURAL_RAPPORT.md",
+        "line": 197,
+        "content": "./scripts/env/activate_project_env.ps1 -CommandToRun \"python examples/scripts_demonstration/demonstr"
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "line": 384,
+        "content": "- [Configuration Unifiée](../config/unified_config.py)"
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "line": 385,
+        "content": "- [Tests d'Authenticité](../tests/unit/authentication/)"
+      },
+      {
+        "file": "docs\\cartographie_scripts_fonctionnels.md",
+        "line": 3,
+        "content": "> **Note de mise à jour (Juillet 2025) :** Ce document contient une analyse détaillée des scripts Po"
+      }
+    ],
+    "absolute_paths": [
+      {
+        "file": "docs\\api_reference.md",
+        "line": 15,
+        "content": "- [`POST /api/analyze`](#post-apianalyze)"
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "line": 17,
+        "content": "- [`POST /api/fallacies`](#post-apifallacies)"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "line": 138,
+        "content": "APPELS API /ANALYZE:"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "line": 139,
+        "content": "[SM] POST /api/analyze -> 200"
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "line": 152,
+        "content": "📁 JAR: /path/to/tweety.jar"
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "line": 183,
+        "content": "\"jar_path\": \"/path/to/tweety.jar\""
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "line": 125,
+        "content": "// Analyse contextuelle sophistiquée"
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "line": 283,
+        "content": "// Configuration du graphique"
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "line": 417,
+        "content": "// Requête"
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "line": 428,
+        "content": "\"timeout\": 30000,  // millisecondes"
+      }
+    ],
+    "python_imports": [
+      {
+        "file": "docs\\agents_specialistes.md",
+        "line": 378,
+        "content": "from argumentiation_analysis.agents.tools.analysis import ("
+      },
+      {
+        "file": "docs\\agents_specialistes.md",
+        "line": 421,
+        "content": "from argumentiation_analysis.agents.tools.analysis import ("
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "line": 496,
+        "content": "import requests"
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "line": 546,
+        "content": "import React, { useState } from 'react';"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_MIGRATION_SIMPLE.md",
+        "line": 11,
+        "content": "from argumentation_analysis.pipelines.unified_text_analysis import UnifiedTextAnalysisPipeline"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_MIGRATION_SIMPLE.md",
+        "line": 12,
+        "content": "from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator"
+      },
+      {
+        "file": "docs\\authenticity_validation_guide.md",
+        "line": 37,
+        "content": "from config.unified_config import UnifiedConfig, MockLevel, TaxonomySize, LogicType"
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "line": 42,
+        "content": "import React, { useState, useEffect } from 'react';"
+      },
+      {
+        "file": "docs\\COMPOSANTS_REACT_SOPHISTIQUES.md",
+        "line": 109,
+        "content": "import React, { useContext, useCallback } from 'react';"
+      },
+      {
+        "file": "docs\\conception_systeme_communication_multi_canal.md",
+        "line": 1749,
+        "content": "from multichannel_comms import Agent, Message"
+      }
+    ],
+    "file_references": [
+      {
+        "file": "docs\\ANALYSE_MIGRATION_DUPLICATES.md",
+        "line": 18,
+        "pattern": "data/",
+        "content": "- **Structure** : `directories/`, `metadata/`, `scripts/`"
+      },
+      {
+        "file": "docs\\analyse_structure_depot.md",
+        "line": 17,
+        "pattern": "docs/",
+        "content": "#### 1.1.2. Documentation (`docs/`) (incluant des guides importants comme le [`docs/guides/guide_dev"
+      },
+      {
+        "file": "docs\\analyse_structure_depot.md",
+        "line": 33,
+        "pattern": "results/",
+        "content": "#### 1.1.4. Résultats (`results/`)"
+      },
+      {
+        "file": "docs\\api_reference.md",
+        "line": 619,
+        "pattern": "docs/",
+        "content": "Pour plus d'informations sur l'utilisation de l'API, consultez les exemples complets dans le dossier"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "line": 378,
+        "pattern": "tests/",
+        "content": "python -m pytest tests/unit/orchestration/hierarchical/strategic/ -v"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md",
+        "line": 381,
+        "pattern": "tests/",
+        "content": "python -m pytest tests/unit/orchestration/hierarchical/tactical/ -v"
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "line": 39,
+        "pattern": "libs/",
+        "content": "H --> J[Construction Classpath (libs/*.jar)];"
+      },
+      {
+        "file": "docs\\architecture_python_java_integration.md",
+        "line": 46,
+        "pattern": "libs/",
+        "content": "L --> M[Bibliothèques Tweety (libs/*.jar)];"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "line": 17,
+        "pattern": "config/",
+        "content": "C[\"config/webapp_config.yml\"]"
+      },
+      {
+        "file": "docs\\ARCHITECTURE_TESTS_E2E.md",
+        "line": 28,
+        "pattern": "tests/",
+        "content": "T_PY[\"tests/e2e/python/\"]"
+      }
+    ]
+  }
+}

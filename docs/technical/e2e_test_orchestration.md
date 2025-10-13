@@ -2,7 +2,7 @@
 
 **Date:** 2025-09-04
 **Auteur:** Roo
-**Contexte:** Ce document a été rédigé dans le cadre de la refonte visant à stabiliser l'exécution des tests E2E lancés via `run_tests.ps1`, conformément aux recommandations du document [`docs/testing_entrypoints_audit.md`](docs/testing_entrypoints_audit.md).
+**Contexte:** Ce document a été rédigé dans le cadre de la refonte visant à stabiliser l'exécution des tests E2E lancés via `run_tests.ps1`, conformément aux recommandations du document [`docs/testing_entrypoints_audit.md`](docs/reports/testing_entrypoints_audit.md).
 
 ## 1. Contexte : Résoudre l'Instabilité des Tests E2E
 

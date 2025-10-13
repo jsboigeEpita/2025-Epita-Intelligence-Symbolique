@@ -10108,8 +10108,8 @@ index 84f58856..79816358 100644
 +### b. Fichiers de Documentation Clés
 +Le dossier `docs/` est une source d'information cruciale.
 +-   [`docs/RUNNERS_ET_VALIDATION_WEB.md`](docs/RUNNERS_ET_VALIDATION_WEB.md)
-+-   [`docs/WEB_APPLICATION_GUIDE.md`](docs/WEB_APPLICATION_GUIDE.md)
-+-   [`docs/unified_web_orchestrator.md`](docs/unified_web_orchestrator.md)
++-   [`docs/WEB_APPLICATION_GUIDE.md`](docs/guides/WEB_APPLICATION_GUIDE.md)
++-   [`docs/unified_web_orchestrator.md`](docs/architecture/unified_web_orchestrator.md)
 +-   [`docs/composants/api_web.md`](docs/composants/api_web.md)
 +-   [`docs/migration/MIGRATION_WEBAPP.md`](docs/migration/MIGRATION_WEBAPP.md)
 +### Exemples de Réponses API

@@ -17837,7 +17837,7 @@ index 00000000..da8e54ce
 +
 +## 3. Cr├®ation du Fichier de Plan
 +
-+Ce plan sera sauvegard├® dans le fichier [`docs/documentation_plan_agents.md`](docs/documentation_plan_agents.md) pour servir de guide ├á l'agent en charge de la r├®daction de la documentation.
++Ce plan sera sauvegard├® dans le fichier [`docs/documentation_plan_agents.md`](docs/maintenance/documentation_plan_agents.md) pour servir de guide ├á l'agent en charge de la r├®daction de la documentation.
 \ No newline at end of file
 
 ==================== COMMIT: 46133d7aa7d758c1f75f24c24bf8f18a1cb567d7 ====================

@@ -30,7 +30,7 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Plan d'Intégration](./integration/plan_integration.md) - Plan pour l'intégration des composants
 - [Validation d'Intégration](./integration/validation_integration.md) - Procédures de validation
 - [Liste de Vérification pour le Déploiement](./integration/liste_verification_deploiement.md) - Checklist de déploiement
-- [Intégration des Outils Rhétoriques](./integration_outils_rhetorique.md) - Intégration des outils d'analyse
+- [Intégration des Outils Rhétoriques](./integration/integration_outils_rhetorique.md) - Intégration des outils d'analyse
 
 ### Documentation des outils
 - [Outils d'Analyse Rhétorique](./outils/outils_analyse_rhetorique.md) - Vue d'ensemble des outils
@@ -41,7 +41,7 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Visualizer](./outils/visualizer.md) - Outil de visualisation
 
 ### Documentation des API
-- [Référence API](./reference/reference_api.md) - Documentation de référence pour les API
+- [Référence API](./reference/api_communication_multicanal.md) - Documentation de référence pour les API
 - [API des Agents Extract](./reference/agents/extract_agent_api.md) - API des agents d'extraction
 - [API des Agents Informal](./reference/agents/informal_agent_api.md) - API des agents informels
 - [API des Agents PL](./reference/agents/pl_agent_api.md) - API des agents de logique propositionnelle
@@ -73,16 +73,16 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Guide Développeur](./guides/guide_developpeur.md) - Guide complet pour les développeurs
 - [Conventions d'Importation](./conventions_importation.md) - Standards de code
 - [Architecture Globale](./architecture/architecture_globale.md) - Comprendre l'architecture
-- [API de Référence](./reference/reference_api.md) - Documentation des API
+- [API de Référence](./reference/api_communication_multicanal.md) - Documentation des API
 
 ### Pour les contributeurs
 - [Guide de Contribution](../README.md#guide-de-contribution) - Comment contribuer
-- [Standards de Documentation](./standards_documentation.md) - Standards pour la documentation
+- [Standards de Documentation](./guides/standards_documentation.md) - Standards pour la documentation
 - [Workflow de Contribution](../docs/CONTRIBUTING.md) - Processus de contribution
 
 ### Pour les administrateurs
 - [Liste de Vérification pour le Déploiement](./integration/liste_verification_deploiement.md) - Checklist de déploiement
-- [Solution aux Problèmes d'Environnement](./solution_problemes_environnement.md) - Résolution de problèmes
+- [Solution aux Problèmes d'Environnement](./guides/solution_problemes_environnement.md) - Résolution de problèmes
 - [Validation de l'Intégration](./integration/validation_integration.md) - Procédures de validation
 
 ## Index alphabétique des documents
@@ -106,7 +106,7 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 | [Extraits Chiffrés](./extraits_chiffres.md) | Système d'extraits chiffrés | Fonctionnalités |
 | [Guide Développeur](./guides/guide_developpeur.md) | Guide pour les développeurs | Guides |
 | [Guide Utilisation](./guides/guide_utilisation.md) | Guide pour les utilisateurs | Guides |
-| [Intégration des Outils](./integration_outils_rhetorique.md) | Intégration des outils | Intégration |
+| [Intégration des Outils](./integration/integration_outils_rhetorique.md) | Intégration des outils | Intégration |
 | [Liste de Vérification](./integration/liste_verification_deploiement.md) | Checklist de déploiement | Intégration |
 | [Logique des Définitions](./logique_definitions_par_defaut.md) | Définitions par défaut | Fonctionnalités |
 | [Outils d'Analyse Rhétorique](./outils/outils_analyse_rhetorique.md) | Vue d'ensemble des outils | Outils |
@@ -117,10 +117,10 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 | [Rapport de Réorganisation](./rapport_reorganisation_complete.md) | Rapport de réorganisation | Rapports |
 | [Rapport de Validation](./rapport_validation_tests_performance.md) | Validation des tests | Rapports |
 | [README Principal](../README.md) | Point d'entrée du projet | Général |
-| [Référence API](./reference/reference_api.md) | Documentation des API | API |
+| [Référence API](./reference/api_communication_multicanal.md) | Documentation des API | API |
 | [Résumé Global](./resume_global_projet.md) | Vue d'ensemble du projet | Général |
-| [Solution aux Problèmes](./solution_problemes_environnement.md) | Résolution de problèmes | Administration |
-| [Standards de Documentation](./standards_documentation.md) | Standards documentaires | Documentation |
+| [Solution aux Problèmes](./guides/solution_problemes_environnement.md) | Résolution de problèmes | Administration |
+| [Standards de Documentation](./guides/standards_documentation.md) | Standards documentaires | Documentation |
 | [Structure du Projet](./structure_projet.md) | Organisation des fichiers | Structure |
 | [Synthèse Collaboration](./composants/synthese_collaboration.md) | Collaboration des agents | Composants |
 | [Validation d'Intégration](./integration/validation_integration.md) | Procédures de validation | Intégration |

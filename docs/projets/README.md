@@ -3,6 +3,56 @@
 
 Ce dossier contient l'ensemble des sujets de projets proposés aux étudiants dans le cadre du cours d'intelligence symbolique, ainsi que les ressources associées pour leur réalisation. Ces projets permettent d'appliquer concrètement les méthodes et outils d'intelligence symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée.
 
+---
+
+## 🎓 Guide Rapide pour Étudiants
+
+> **Si vous êtes étudiant(e) et découvrez ce projet, commencez ici !**
+
+### 0. Support et Accompagnement
+
+Pour des conseils, la liste des problèmes connus et des ressources centralisées pour vous aider durant votre projet, consultez :
+
+- **Guide d'Accompagnement des Étudiants** : [`ACCOMPAGNEMENT_ETUDIANTS.md`](ACCOMPAGNEMENT_ETUDIANTS.md)
+- **Synthèse d'Accueil pour les Étudiants** : [`ACCUEIL_ETUDIANTS_SYNTHESE.md`](ACCUEIL_ETUDIANTS_SYNTHESE.md) - Pour un démarrage rapide et une vue d'ensemble !
+
+### 1. Comprendre le Projet Global
+
+Avant de plonger dans les sujets spécifiques, nous vous recommandons de lire attentivement le **message d'annonce** qui détaille les objectifs pédagogiques, les modalités de travail, les livrables attendus et les critères d'évaluation :
+
+- **Message d'annonce aux étudiants** : [`message_annonce_etudiants.md`](message_annonce_etudiants.md)
+
+### 2. Explorer les Sujets de Projets
+
+Les sujets de projets sont organisés en trois grandes catégories :
+
+- **[Fondements théoriques et techniques](fondements_theoriques.md)** : Explorez les aspects formels, logiques et théoriques de l'argumentation.
+- **[Développement système et infrastructure](developpement_systeme.md)** : Travaillez sur l'architecture, l'orchestration et les composants techniques du système.
+- **[Expérience utilisateur et applications](experience_utilisateur.md)** : Concentrez-vous sur les interfaces, les visualisations et les cas d'usage concrets.
+
+Pour une **synthèse thématique** qui regroupe les projets par grands domaines et met en évidence les synergies possibles :
+- **[Synthèse Thématique des Projets](SYNTHESE_THEMATIQUE_PROJETS.md)**
+
+Pour une vue d'ensemble de tous les sujets avec leur structure standardisée :
+- **[Sujets de Projets Détaillés](sujets_projets_detailles.md)**
+
+### 3. Ressources Techniques : Exemples de Code et Tests
+
+De nombreuses ressources sont à votre disposition pour vous aider à démarrer :
+
+- **Exemples de scripts** : [`../examples/logic_agents/`](../examples/logic_agents/), [`../examples/scripts_demonstration/`](../examples/scripts_demonstration/)
+- **Notebooks Jupyter didactiques** : [`../examples/notebooks/`](../examples/notebooks/)
+- **Données d'exemple** : [`../examples/test_data/`](../examples/test_data/)
+- **Tests unitaires** : [`../tests/unit/`](../tests/unit/)
+- **Tests d'intégration** : [`../tests/integration/`](../tests/integration/)
+- **Exemples spécifiques TweetyProject** : [`exemples_tweety_par_projet.md`](exemples_tweety_par_projet.md)
+
+### 4. Démarrage Rapide
+
+Consultez la section "Démarrage rapide" du [message d'annonce](message_annonce_etudiants.md#démarrage-rapide) pour les étapes initiales (fork, clone, installation, etc.).
+
+---
+
 ## Table des Matières
 
 - [Vue d'ensemble](#vue-densemble)
