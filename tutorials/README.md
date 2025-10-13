@@ -1,102 +1,105 @@
-# Tutoriels du Projet Intelligence Symbolique
+# 📚 Tutoriels
 
-Ce répertoire contient une série de tutoriels pour vous aider à prendre en main le système d'analyse argumentative et à comprendre ses fonctionnalités. Ces guides pratiques sont conçus pour accompagner les développeurs et utilisateurs à tous les niveaux d'expertise.
+## 📋 Vue d'Ensemble
 
-## Tutoriels Disponibles
+Les tutoriels offrent des guides pas-à-pas pour apprendre à utiliser et étendre le système d'argumentation de l'Intelligence Symbolique EPITA. Ils sont organisés du niveau débutant au niveau avancé, avec une progression pédagogique claire.
 
-### [01 - Prise en Main](./01_prise_en_main.md)
-**Introduction au système d'analyse argumentative et configuration de l'environnement de développement.**
+Chaque tutoriel inclut des exemples pratiques, des exercices et des points de validation pour garantir une compréhension progressive.
 
-Ce tutoriel couvre :
-- Installation des dépendances requises
-- Configuration de l'environnement de développement
-- Structure générale du projet
-- Premier lancement du système
-- Vérification de l'installation
+## 📂 Structure
 
-**Prérequis :** Python 3.10+, pip, git
+```
+tutorials/
+├── 01_getting_started/      # Introduction et premiers pas avec le système
+└── 02_extending_the_system/ # Extension et personnalisation avancées
+```
 
-**Temps estimé :** 30 minutes
+## 🎯 Parcours d'Apprentissage
 
-### [02 - Analyse de Discours Simple](./02_analyse_discours_simple.md)
-**Guide pour effectuer une analyse de discours simple avec le système.**
+### 📘 Niveau 1 : Getting Started
 
-Ce tutoriel couvre :
-- Chargement d'un texte source
-- Configuration des paramètres d'analyse
-- Exécution d'une analyse basique
-- Interprétation des résultats
-- Exportation des résultats
+**Prérequis** : Python 3.8+, connaissances de base en programmation  
+**Durée estimée** : 2-3 heures  
+**Objectif** : Maîtriser les fondamentaux du système d'argumentation
 
-**Prérequis :** Tutoriel 01 complété
+| Tutoriel | Titre | Contenu Clé |
+|----------|-------|-------------|
+| **[01](./01_getting_started/01_introduction.md)** | Introduction | Présentation du système, architecture générale, concepts de base |
+| **[02](./01_getting_started/02_installation.md)** | Installation | Configuration de l'environnement, installation des dépendances, vérification |
+| **[03](./01_getting_started/03_first_steps.md)** | Premiers Pas | Première analyse, utilisation de l'API, interprétation des résultats |
 
-**Temps estimé :** 45 minutes
+**📖 [Documentation détaillée](./01_getting_started/README.md)**
 
-### [03 - Analyse de Discours Complexe](./03_analyse_discours_complexe.md)
-**Techniques avancées pour l'analyse de discours complexes, incluant la détection de sophismes et l'évaluation de la cohérence argumentative.**
+#### Points de Validation Niveau 1
 
-Ce tutoriel couvre :
-- Analyse de textes argumentatifs complexes
-- Détection et classification des sophismes
-- Évaluation de la cohérence argumentative
-- Analyse des structures rhétoriques
-- Génération de rapports détaillés
+À l'issue de ce niveau, vous devriez être capable de :
+- ✅ Installer et configurer l'environnement de développement
+- ✅ Comprendre l'architecture générale du système
+- ✅ Exécuter une analyse argumentative simple
+- ✅ Interpréter les résultats de base
+- ✅ Naviguer dans la documentation
 
-**Prérequis :** Tutoriels 01 et 02 complétés
+### 📗 Niveau 2 : Extending the System
 
-**Temps estimé :** 1 heure
+**Prérequis** : Niveau 1 complété, Python intermédiaire, connaissance OOP  
+**Durée estimée** : 3-4 heures  
+**Objectif** : Personnaliser et étendre le système selon vos besoins
 
-### [04 - Ajout d'un Nouvel Agent](./04_ajout_nouvel_agent.md)
-**Instructions pour étendre le système avec un nouvel agent spécialiste.**
+| Tutoriel | Titre | Contenu Clé |
+|----------|-------|-------------|
+| **[01](./02_extending_the_system/01_creating_plugins.md)** | Création de Plugins | Architecture des plugins, développement, intégration, bonnes pratiques |
+| **[02](./02_extending_the_system/02_custom_analyzers.md)** | Analyseurs Personnalisés | Création d'analyseurs spécialisés, extension de la taxonomie des sophismes |
 
-Ce tutoriel couvre :
-- Architecture des agents dans le système
-- Création d'un nouvel agent spécialiste
-- Implémentation des méthodes requises
-- Intégration avec le système existant
-- Tests et validation du nouvel agent
+**📖 [Documentation détaillée](./02_extending_the_system/README.md)**
 
-**Prérequis :** Tutoriels 01, 02 et 03 complétés, connaissance de base en programmation orientée objet
+#### Points de Validation Niveau 2
 
-**Temps estimé :** 2 heures
+À l'issue de ce niveau, vous devriez être capable de :
+- ✅ Développer un plugin fonctionnel pour le système
+- ✅ Créer un analyseur personnalisé pour détecter de nouveaux types de sophismes
+- ✅ Intégrer vos extensions avec l'architecture existante
+- ✅ Tester et valider vos développements
+- ✅ Contribuer au projet de manière structurée
 
-### [05 - Extension des Outils d'Analyse](./05_extension_outils_analyse.md)
-**Guide pour développer et intégrer de nouveaux outils d'analyse rhétorique.**
+## 🚀 Démarrage Rapide
 
-Ce tutoriel couvre :
-- Architecture des outils d'analyse
-- Création d'un nouvel outil d'analyse
-- Intégration avec les agents existants
-- Optimisation des performances
-- Tests et validation des résultats
+### Installation Initiale
 
-**Prérequis :** Tutoriels 01 à 04 complétés, connaissance intermédiaire en Python
+```bash
+# Cloner le projet
+git clone https://github.com/votre-org/intelligence-symbolique.git
+cd intelligence-symbolique
 
-**Temps estimé :** 2-3 heures
+# Créer un environnement virtuel
+python -m venv venv
+source venv/bin/activate  # Sur Windows: venv\Scripts\activate
 
-## Progression Recommandée
+# Installer les dépendances
+pip install -r requirements.txt
 
-Pour une prise en main optimale du système, nous vous recommandons de suivre les tutoriels dans l'ordre numérique :
+# Vérifier l'installation
+python -c "from argumentation_analysis.core.environment import ensure_env; ensure_env()"
+```
 
-1. Commencez par la [Prise en Main](./01_prise_en_main.md) pour configurer votre environnement
-2. Passez ensuite à l'[Analyse de Discours Simple](./02_analyse_discours_simple.md) pour comprendre les bases
-3. Approfondissez avec l'[Analyse de Discours Complexe](./03_analyse_discours_complexe.md)
-4. Si vous souhaitez contribuer au système, explorez l'[Ajout d'un Nouvel Agent](./04_ajout_nouvel_agent.md)
-5. Pour des fonctionnalités avancées, consultez l'[Extension des Outils d'Analyse](./05_extension_outils_analyse.md)
+### Premier Tutoriel
 
-## Exemples Pratiques
+Commencez par l'[Introduction](./01_getting_started/01_introduction.md) pour découvrir les concepts fondamentaux.
 
-Chaque tutoriel inclut des exemples pratiques que vous pouvez exécuter pour mieux comprendre les concepts présentés. Voici un exemple simple d'analyse de texte :
+### Exemple Rapide
 
 ```python
+# Exemple d'analyse argumentative simple
 from argumentation_analysis.services.extract_service import ExtractService
-from argumentation_analysis.models.extract_result import ExtractResult
 
-# Initialiser le service d'extraction
+# Initialiser le service
 extract_service = ExtractService()
 
-# Analyser un texte simple
-texte = "Ce texte contient un argument basé sur une autorité. Selon le Dr. Smith, expert reconnu, cette approche est la meilleure."
+# Analyser un texte
+texte = """
+Ce texte contient un argument d'autorité. 
+Selon le Dr. Smith, expert reconnu, cette approche est la meilleure.
+"""
+
 resultat = extract_service.analyze_text(texte)
 
 # Afficher les résultats
@@ -104,28 +107,115 @@ print(f"Sophismes détectés : {resultat.fallacies}")
 print(f"Structure argumentative : {resultat.structure}")
 ```
 
-## Contribution aux Tutoriels
+## 📊 Progression des Compétences
 
-Nous encourageons les contributions pour améliorer ces tutoriels ou en ajouter de nouveaux. Pour contribuer :
+```
+Niveau 1: Getting Started
+├─ Installation et Configuration     [Débutant]
+├─ Analyse Simple                    [Débutant]
+└─ Interprétation des Résultats      [Débutant]
 
-1. **Identifiez un besoin** : Un sujet manquant, une explication à clarifier, ou un exemple à ajouter
-2. **Créez une branche** : `git checkout -b amelioration-tutoriel`
-3. **Rédigez votre contribution** : Suivez le format et le style des tutoriels existants
-4. **Testez vos exemples** : Assurez-vous que tous les exemples fonctionnent correctement
-5. **Soumettez une pull request** : Avec une description claire de votre contribution
+Niveau 2: Extending the System
+├─ Architecture des Plugins          [Intermédiaire]
+├─ Développement d'Extensions        [Intermédiaire]
+└─ Tests et Validation               [Avancé]
+```
 
-## Ressources Complémentaires
+## 🔗 Ressources Connexes
 
-- [Documentation du Projet](../docs/README.md)
-- [Exemples d'Utilisation](../examples/README.md)
-- [Guide du Développeur](../docs/guides/guide_developpeur.md)
-- [API de Référence](../docs/reference/reference_api.md)
-- [Outils d'Analyse Rhétorique](../docs/outils/README.md)
+- **[Démonstrations](../demos/README.md)** : Exemples fonctionnels complets du système
+- **[Exemples](../examples/README.md)** : Code réutilisable et patterns d'implémentation
+- **[Documentation](../docs/)** : Documentation technique complète et référence API
+- **[Plugins](../plugins/)** : Collection de plugins existants
 
-## Support et Questions
+## 💡 Créer un Nouveau Tutoriel
 
-Si vous rencontrez des difficultés en suivant ces tutoriels ou si vous avez des questions :
+### Guidelines de Contribution
 
-1. Consultez la [documentation](../docs/README.md) pour des informations supplémentaires
-2. Vérifiez les [problèmes connus](https://github.com/votre-organisation/votre-projet/issues) sur le dépôt GitHub
-3. Posez vos questions dans la section [discussions](https://github.com/votre-organisation/votre-projet/discussions) du dépôt
+Si vous souhaitez contribuer en ajoutant un nouveau tutoriel :
+
+1. **Identifier le niveau cible** : Débutant, Intermédiaire ou Avancé
+2. **Choisir le répertoire approprié** : `01_getting_started/` ou `02_extending_the_system/`
+3. **Suivre la structure standard** :
+   ```markdown
+   # Titre du Tutoriel
+   
+   ## Objectifs d'Apprentissage
+   ## Prérequis
+   ## Durée Estimée
+   ## Concepts Clés
+   ## Instructions Pas-à-Pas
+   ## Exercices Pratiques
+   ## Points de Validation
+   ## Ressources Complémentaires
+   ```
+
+4. **Inclure des exemples fonctionnels** : Tous les exemples doivent être testés
+5. **Ajouter des points de validation** : Permettre au lecteur d'auto-évaluer sa compréhension
+6. **Mettre à jour ce README** : Ajouter une entrée dans la table appropriée
+7. **Créer/mettre à jour le sous-README** : Documentation du répertoire concerné
+
+### Format des Exemples de Code
+
+```python
+#!/usr/bin/env python3
+"""
+Exemple : [Titre court]
+Description : [Description concise de l'objectif]
+Niveau : [Débutant/Intermédiaire/Avancé]
+"""
+
+# Bootstrap recommandé
+from pathlib import Path
+import sys
+
+current_file = Path(__file__).resolve()
+project_root = next((p for p in current_file.parents if (p / "pyproject.toml").exists()), None)
+if project_root and str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from argumentation_analysis.core.environment import ensure_env
+ensure_env()
+
+# Code de l'exemple
+# ...
+```
+
+## 📈 Statistiques
+
+- **Total tutoriels** : 5
+- **Niveaux** : 2 (Getting Started, Extending System)
+- **Durée totale** : ~6 heures
+- **Langages couverts** : Python
+- **Dernière mise à jour** : Phase D2.3
+
+## 🎓 Support et Questions
+
+Si vous rencontrez des difficultés en suivant ces tutoriels :
+
+1. **Consultez la [documentation technique](../docs/README.md)** pour des informations supplémentaires
+2. **Explorez les [exemples pratiques](../examples/README.md)** pour voir des implémentations concrètes
+3. **Testez les [démonstrations](../demos/README.md)** pour valider votre environnement
+4. **Vérifiez les problèmes connus** dans les issues GitHub du projet
+
+## 🏆 Certification
+
+Après avoir complété tous les tutoriels et validé tous les points de validation, vous aurez :
+- ✅ Une compréhension complète du système d'argumentation
+- ✅ Les compétences pour développer vos propres extensions
+- ✅ La capacité de contribuer efficacement au projet
+- ✅ Les bases pour approfondir l'analyse argumentative formelle
+
+---
+
+**Dernière mise à jour** : Phase D2.3 - Documentation Structure  
+**Mainteneur** : Intelligence Symbolique EPITA  
+**Licence** : Voir LICENSE à la racine du projet
+</thinking>
+
+Maintenant je lis le `examples/README.md` existant pour voir comment l'enrichir.
+
+<read_file>
+<path>examples/README.md</path>
+<line_range>1-100</line_range>
+</read_file>

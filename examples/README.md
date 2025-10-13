@@ -1,451 +1,433 @@
-# Guide des Exemples du Projet
+# 💡 Exemples
 
-Bienvenue dans le répertoire `examples/` ! Ce dossier centralise divers types d'exemples conçus pour vous aider à comprendre et à utiliser les différentes fonctionnalités de ce projet d'analyse argumentative. Vous y trouverez :
+## 📋 Vue d'Ensemble
 
-*   Des **scripts Python** illustrant l'utilisation des composants clés.
-*   Des **notebooks Jupyter** offrant des tutoriels interactifs.
-*   Des **fichiers textes** servant de données d'entrée pour les analyses.
+Cette collection d'exemples fournit du code réutilisable et des patterns d'implémentation pour différents aspects du système d'argumentation de l'Intelligence Symbolique EPITA. Chaque catégorie est numérotée pour faciliter la progression et l'apprentissage.
 
-## Structure du Répertoire et Contenu
+Les exemples couvrent un large spectre : de la logique formelle aux intégrations système, en passant par le développement de plugins et les notebooks interactifs.
 
-Voici un aperçu des principaux sous-répertoires et de ce qu'ils contiennent :
+## 📂 Structure
 
-### 📁 `examples/logic_agents/`
-Ce répertoire contient des scripts Python démontrant l'utilisation et l'intégration des différents agents logiques développés dans le projet. Chaque script se concentre sur un type de logique ou une fonctionnalité spécifique.
-*   [`logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0): Montre comment intégrer et utiliser les agents logiques via une API (si applicable).
-*   [`logic_agents/combined_logic_example.py`](examples/logic_agents/combined_logic_example.py:0): Illustre l'utilisation combinée de plusieurs approches ou agents logiques.
-*   [`logic_agents/first_order_logic_example.py`](examples/logic_agents/first_order_logic_example.py:0): Exemple d'utilisation de l'agent basé sur la logique du premier ordre.
-*   [`logic_agents/modal_logic_example.py`](examples/logic_agents/modal_logic_example.py:0): Exemple d'utilisation de l'agent basé sur la logique modale.
-*   [`logic_agents/propositional_logic_example.py`](examples/logic_agents/propositional_logic_example.py:0): Exemple d'utilisation de l'agent basé sur la logique propositionnelle.
-    *   Pour une compréhension plus approfondie, consultez le guide sur les [exemples de logique propositionnelle](docs/guides/exemples_logique_propositionnelle.md).
+```
+examples/
+├── 01_logic_and_riddles/        # Logique formelle et énigmes
+│   ├── cluedo_demo/            # Démo Cluedo avec logique déductive
+│   └── Sherlock_Watson/        # Enquête Sherlock Holmes
+├── 02_core_system_demos/        # Fonctionnalités du système central
+│   ├── phase2_demo/            # Démonstrations Phase 2
+│   └── scripts_demonstration/  # Scripts de démonstration complets
+├── 03_integrations/             # Intégrations avec systèmes externes
+│   └── backend_demos/          # Démonstrations backend
+├── 04_plugins/                  # Exemples de plugins
+│   └── hello_world_plugin/     # Plugin "Hello World" de base
+└── 05_notebooks/                # Notebooks Jupyter interactifs
+```
 
-Pour plus de détails sur l'utilisation générale des agents logiques, référez-vous au [guide d'utilisation des agents logiques](docs/guides/utilisation_agents_logiques.md).
+## 🎯 Catégories d'Exemples
 
-### 📁 `examples/scripts_demonstration/`
-Ce dossier regroupe des scripts Python conçus pour des démonstrations plus complètes et des cas d'usage spécifiques du système.
-*   [`scripts_demonstration/demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0): Un script simple illustrant l'interaction avec la bibliothèque Tweety.
-*   [`scripts_demonstration/demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py:0): Un script de démonstration plus exhaustif des capacités du projet. Pour plus de détails sur ce script, consultez son [README dédié](examples/scripts_demonstration/README_DEMONSTRATION.md).
-*   Consultez également le [README général de ce sous-dossier](examples/scripts_demonstration/README.md) pour plus d'informations.
+### 📊 01. Logic and Riddles
 
-### 📁 `examples/notebooks/`
-Ici, vous trouverez des notebooks Jupyter qui fournissent des tutoriels interactifs et pas à pas pour explorer certaines fonctionnalités.
-*   [`notebooks/api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0): Un tutoriel sur l'utilisation de l'API des agents logiques.
-*   [`notebooks/logic_agents_tutorial.ipynb`](examples/notebooks/logic_agents_tutorial.ipynb:0): Un tutoriel guidé sur l'utilisation des différents agents logiques.
+**Thème** : Logique formelle, raisonnement déductif et résolution d'énigmes  
+**Niveau** : Débutant à Intermédiaire  
+**Technologies** : Python, logique propositionnelle, systèmes à base de règles
 
-### 📁 `examples/test_data/`
-Ce répertoire contient des fichiers de données utilisés spécifiquement pour les tests automatisés ou des configurations d'exemples.
-*   [`test_data/test_sophismes_complexes.txt`](examples/test_data/test_sophismes_complexes.txt:0): Un exemple de texte avec des sophismes complexes, utilisé pour les tests.
+#### Contenu
 
-### 📄 Exemples de Textes pour l'Analyse (à la racine de `examples/`)
-Ces fichiers `.txt` situés directement dans le répertoire `examples/` sont des exemples de discours, d'articles ou d'argumentations destinés à être analysés par le système.
-*   [`exemple_sophisme.txt`](examples/exemple_sophisme.txt:0): Texte contenant plusieurs sophismes courants.
-*   [`texte_sans_marqueurs.txt`](examples/texte_sans_marqueurs.txt:0): Texte informatif sans sophismes évidents, servant de contrôle.
-*   [`article_scientifique.txt`](examples/article_scientifique.txt:0): Article académique avec une structure formelle.
-*   [`discours_politique.txt`](examples/discours_politique.txt:0): Discours politique avec une structure rhétorique.
-*   [`discours_avec_template.txt`](examples/discours_avec_template.txt:0): Allocution avec des marqueurs explicites de structure.
-*   [`exemple_sophismes_avances.txt`](examples/exemple_sophismes_avances.txt:0): Texte enrichi avec une variété de sophismes et annotations.
-*   [`analyse_structurelle_complexe.txt`](examples/analyse_structurelle_complexe.txt:0): Argumentation complexe avec structure hiérarchique.
+| Sous-répertoire | Description | Points Clés |
+|-----------------|-------------|-------------|
+| **[cluedo_demo/](./01_logic_and_riddles/cluedo_demo/)** | Résolution du jeu Cluedo par raisonnement logique | Déduction, élimination, inférence |
+| **[Sherlock_Watson/](./01_logic_and_riddles/Sherlock_Watson/)** | Enquête inspirée de Sherlock Holmes | Raisonnement abductif, chaîne d'indices |
 
-Pour des détails sur l'utilisation et le contenu de ces fichiers textes, ainsi que pour un guide de contribution à ces exemples textuels, veuillez vous référer à la section "Guide Détaillé des Exemples de Textes et Contribution" plus bas dans ce document.
+**Cas d'usage** :
+- Comprendre les bases du raisonnement logique
+- Implémenter des systèmes de déduction
+- Résoudre des problèmes par élimination
 
-## Comment Exécuter les Exemples
+**📖 [Documentation détaillée](./01_logic_and_riddles/README.md)**
+
+### ⚙️ 02. Core System Demos
+
+**Thème** : Fonctionnalités centrales du système d'argumentation  
+**Niveau** : Intermédiaire  
+**Technologies** : Python, Semantic Kernel, API d'analyse
+
+#### Contenu
+
+| Sous-répertoire | Description | Points Clés |
+|-----------------|-------------|-------------|
+| **[phase2_demo/](./02_core_system_demos/phase2_demo/)** | Démonstrations des fonctionnalités Phase 2 | Workflows, intégration agents |
+| **[scripts_demonstration/](./02_core_system_demos/scripts_demonstration/)** | Scripts de démonstration exhaustifs | Cas d'usage complets, validation |
+
+**Cas d'usage** :
+- Découvrir les capacités du système central
+- Comprendre l'intégration des agents
+- Valider les fonctionnalités principales
+
+**📖 [Documentation détaillée](./02_core_system_demos/README.md)**
+
+### 🔗 03. Integrations
+
+**Thème** : Intégration avec systèmes externes et architectures distribuées  
+**Niveau** : Intermédiaire à Avancé  
+**Technologies** : API REST, microservices, backends
+
+#### Contenu
+
+| Sous-répertoire | Description | Points Clés |
+|-----------------|-------------|-------------|
+| **[backend_demos/](./03_integrations/backend_demos/)** | Démonstrations d'intégration backend | API, services, architectures |
+
+**Cas d'usage** :
+- Intégrer le système dans une architecture existante
+- Créer des API pour exposer les fonctionnalités
+- Gérer la communication inter-services
+
+**📖 [Documentation détaillée](./03_integrations/README.md)**
+
+### 🔌 04. Plugins
+
+**Thème** : Architecture et développement de plugins  
+**Niveau** : Avancé  
+**Technologies** : Python, architecture modulaire, patterns de design
+
+#### Contenu
+
+| Sous-répertoire | Description | Points Clés |
+|-----------------|-------------|-------------|
+| **[hello_world_plugin/](./04_plugins/hello_world_plugin/)** | Plugin minimal de démonstration | Structure de base, API plugins |
+
+**Cas d'usage** :
+- Comprendre l'architecture des plugins
+- Développer vos propres extensions
+- Étendre les capacités du système
+
+**📖 [Documentation détaillée](./04_plugins/README.md)**
+
+### 📓 05. Notebooks
+
+**Thème** : Notebooks interactifs Jupyter pour apprentissage et exploration  
+**Niveau** : Tous niveaux  
+**Technologies** : Jupyter, Python, visualisations
+
+#### Contenu
+
+| Notebook | Description | Niveau |
+|----------|-------------|--------|
+| **[api_logic_tutorial.ipynb](./05_notebooks/api_logic_tutorial.ipynb)** | Tutoriel API des agents logiques | Intermédiaire |
+| **[logic_agents_tutorial.ipynb](./05_notebooks/logic_agents_tutorial.ipynb)** | Guide complet des agents logiques | Débutant |
+
+**Cas d'usage** :
+- Apprentissage interactif et expérimentation
+- Visualisation des résultats d'analyse
+- Prototypage rapide
+
+**📖 [Documentation détaillée](./05_notebooks/README.md)**
+
+## 🚀 Utilisation
 
 ### Prérequis
-Avant de lancer les exemples, assurez-vous que votre environnement de développement est correctement configuré. Cela peut impliquer :
-1.  L'installation des dépendances du projet (consultez le [`GUIDE_INSTALLATION_ETUDIANTS.md`](GUIDE_INSTALLATION_ETUDIANTS.md:0)).
-2.  L'activation de l'environnement virtuel du projet, par exemple avec le script [`activate_project_env.ps1`](activate_project_env.ps1:0) (pour PowerShell) ou [`activate_project_env.sh`](activate_project_env.sh:0) (pour Bash).
-    ```powershell
-    # Exemple pour PowerShell
-    .\activate_project_env.ps1
-    ```
-3.  Certains scripts, notamment ceux interagissant avec des services externes (comme les LLMs), peuvent nécessiter la configuration de clés API via un fichier `.env`. Référez-vous à la documentation spécifique de ces scripts ou aux guides pertinents.
+
+Avant d'exécuter les exemples, assurez-vous que :
+
+```bash
+# 1. Environnement virtuel activé
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 2. Dépendances installées
+pip install -r requirements.txt
+
+# 3. Variables d'environnement configurées (si nécessaire)
+cp .env.example .env
+# Éditer .env avec vos clés API
+```
 
 ### Exécution des Scripts Python
-Pour exécuter un script Python, utilisez la commande `python` suivie du chemin vers le script :
-```bash
-python examples/logic_agents/propositional_logic_example.py
-python examples/scripts_demonstration/demo_tweety_interaction_simple.py
-```
-
-### Utilisation des Notebooks Jupyter
-Pour utiliser les notebooks :
-1.  Assurez-vous que Jupyter Notebook ou JupyterLab est installé dans votre environnement.
-2.  Lancez Jupyter depuis votre terminal à la racine du projet :
-    ```bash
-    jupyter notebook
-    # ou
-    jupyter lab
-    ```
-3.  Naviguez jusqu'au répertoire `examples/notebooks/` et ouvrez le notebook de votre choix.
-
-## Guide Détaillé des Exemples de Textes et Contribution
-
-Ce répertoire contient des exemples de textes et données utilisés dans le projet d'analyse argumentative. Ces exemples sont essentiels pour comprendre le fonctionnement du système et pour tester vos propres développements.
-
-### Fichiers disponibles
-
-#### 1. exemple_sophisme.txt
-
-Exemple de texte contenant plusieurs sophismes (erreurs de raisonnement) sur le thème de la régulation de l'intelligence artificielle.
-
-**Description :**
-Ce texte est un exemple fictif d'argumentation contenant plusieurs sophismes courants, notamment :
-- Argument d'autorité : "Le professeur Dubois, éminent chercheur en informatique à l'Université de Paris, a récemment déclaré que..."
-- Pente glissante : "D'abord, les algorithmes prendront le contrôle de nos systèmes financiers. Ensuite, ils s'infiltreront dans nos infrastructures critiques..."
-- Appel à la popularité : "Un sondage récent montre que 78% des Français s'inquiètent des dangers potentiels de l'IA. Cette majorité écrasante prouve bien que la menace est réelle..."
-- Faux dilemme : "Il n'y a que deux options possibles : soit nous imposons immédiatement un moratoire complet sur le développement de l'IA, soit nous acceptons la fin de la civilisation humaine..."
-
-**Utilisation :**
-Ce texte peut être utilisé pour tester les capacités d'analyse argumentative du système, en particulier la détection de sophismes par l'agent Informal.
 
 ```bash
-# Exemple d'utilisation avec l'agent d'analyse informelle
-python -c "from argumentiation_analysis.agents.informal.informal_agent import InformalAgent; \
-           from argumentiation_analysis.core.llm_service import LLMService; \
-           llm = LLMService(); \
-           agent = InformalAgent(llm); \
-           with open('examples/exemple_sophisme.txt', 'r') as f: \
-               text = f.read(); \
-           result = agent.analyze_informal_fallacies(text); \
-           print(result)"
+# Pattern général
+python examples/[categorie]/[sous-repertoire]/[script].py
+
+# Exemples concrets
+python examples/01_logic_and_riddles/cluedo_demo/main.py
+python examples/02_core_system_demos/scripts_demonstration/demo_tweety.py
 ```
 
-#### 2. texte_sans_marqueurs.txt
-
-Texte informatif sur la pensée critique sans sophismes évidents.
-
-**Description :**
-Ce texte présente une structure claire et bien construite sur le thème de la pensée critique. Il est caractérisé par :
-- Une introduction claire du sujet
-- Des définitions précises
-- Des arguments logiques
-- Des recommandations pratiques
-- Une conclusion qui résume les points principaux
-
-**Utilisation :**
-Ce texte sert de "contrôle négatif" pour tester si l'agent peut correctement identifier l'absence de sophismes dans un texte bien construit. Il est particulièrement utile pour évaluer le taux de faux positifs du système.
+### Utilisation des Notebooks
 
 ```bash
-# Exemple d'utilisation pour tester la précision du système
-python scripts/execution/run_analysis.py --file examples/texte_sans_marqueurs.txt --mode verification
+# Lancer Jupyter
+jupyter notebook
+
+# Ou JupyterLab
+jupyter lab
+
+# Naviguer vers examples/05_notebooks/ et ouvrir un notebook
 ```
 
-#### 3. article_scientifique.txt
+### Bootstrap Recommandé
 
-Article académique sur l'analyse d'arguments par NLP avec une structure formelle.
-
-**Description :**
-Cet article scientifique présente une structure formelle typique avec :
-- Un résumé (abstract)
-- Une introduction
-- Une méthodologie
-- Des résultats quantitatifs
-- Une discussion
-- Une conclusion
-
-Il contient des données chiffrées et des références à des travaux antérieurs, ce qui en fait un excellent exemple pour tester la capacité du système à analyser un discours technique et à distinguer entre affirmations factuelles et interprétations.
-
-**Utilisation :**
-Ce texte est idéal pour tester les capacités d'analyse structurelle et la compréhension des arguments basés sur des données.
-
-```bash
-# Exemple d'utilisation pour l'analyse structurelle
-python scripts/execution/run_analysis.py --file examples/article_scientifique.txt --mode structure
-```
-
-#### 4. discours_politique.txt
-
-Discours politique avec une structure rhétorique claire.
-
-**Description :**
-Ce discours politique présente une structure rhétorique typique avec :
-- Une introduction qui établit le contact avec l'audience
-- Une présentation des enjeux
-- Une énumération de propositions concrètes
-- Une conclusion qui appelle à l'action
-
-Ce texte permet de tester la capacité de l'agent à analyser un discours persuasif qui utilise des techniques rhétoriques sans nécessairement tomber dans le sophisme.
-
-**Utilisation :**
-Particulièrement utile pour tester la distinction entre rhétorique légitime et sophismes.
-
-```bash
-# Exemple d'utilisation pour l'analyse rhétorique
-python scripts/execution/run_analysis.py --file examples/discours_politique.txt --mode rhetorique
-```
-
-#### 5. discours_avec_template.txt
-
-Allocution présidentielle avec des marqueurs explicites de structure.
-
-**Description :**
-Cette allocution présidentielle est très structurée avec des marqueurs explicites :
-- Formule d'introduction protocolaire
-- Annonce explicite du plan ("J'aborderai trois points essentiels")
-- Marqueurs d'énumération clairs ("Premièrement", "Deuxièmement", "Troisièmement")
-- Conclusion formelle
-
-Ce texte permet de tester la capacité de l'agent à suivre une structure argumentative très explicite.
-
-**Utilisation :**
-Idéal pour tester les capacités d'extraction de structure argumentative du système.
-
-```bash
-# Exemple d'utilisation pour l'extraction de structure
-python scripts/execution/run_analysis.py --file examples/discours_avec_template.txt --mode extraction
-```
-
-#### 6. exemple_sophismes_avances.txt
-
-Exemple enrichi de texte contenant une variété de sophismes avec annotations et cas d'utilisation avancés.
-
-**Description :**
-Ce texte est une version enrichie et annotée de l'exemple de sophismes sur la régulation de l'intelligence artificielle. Il contient :
-- Des sophismes clairement identifiés et expliqués
-- Une structure argumentative plus complexe avec introduction, développement, conclusion et réfutation
-- Des sophismes plus subtils et imbriqués
-- Des notes explicatives pour l'analyse
-
-**Utilisation :**
-Ce texte est particulièrement utile pour des cas d'utilisation avancés comme :
-- La détection de sophismes imbriqués
-- L'analyse de la structure argumentative globale
-- L'évaluation de la cohérence des arguments
-- La reconstruction d'arguments valides à partir d'arguments fallacieux
-
-```bash
-# Exemple d'utilisation pour l'analyse avancée
-python scripts/execution/run_analysis.py --file examples/exemple_sophismes_avances.txt --mode complet
-```
-
-#### 7. analyse_structurelle_complexe.txt
-
-Exemple détaillé d'une argumentation complexe avec structure hiérarchique et relations argumentatives variées.
-
-**Description :**
-Ce document présente un débat structuré sur la taxation des robots avec :
-- Une thèse principale clairement énoncée
-- Trois arguments principaux de premier niveau
-- Des sous-arguments et preuves pour chaque argument principal
-- Des objections et réfutations
-- Une structure hiérarchique explicite
-- Des connecteurs logiques variés
-
-**Utilisation :**
-Cet exemple est conçu pour tester les capacités avancées d'analyse structurelle :
-- Extraction de la structure hiérarchique des arguments
-- Identification des relations entre arguments (support, objection, réfutation)
-- Évaluation de la cohérence structurelle
-- Visualisation de la structure argumentative
-
-```bash
-# Exemple d'utilisation pour l'analyse structurelle avancée
-python scripts/execution/run_analysis.py --file examples/analyse_structurelle_complexe.txt --mode structure
-```
-
-### Guide de contribution pour les étudiants (Exemples de Textes)
-
-#### Ajout de nouveaux exemples de textes
-
-Pour enrichir la base d'exemples du projet, vous pouvez ajouter vos propres textes argumentatifs. Cela est particulièrement utile pour tester différents types d'arguments, de sophismes, ou de structures rhétoriques.
-
-Pour ajouter de nouveaux exemples à ce répertoire, veuillez suivre ces directives :
-
-1. **Nommage des fichiers** : 
-   - Utilisez un nom descriptif avec le format `exemple_[type]_[sujet].txt`
-   - Exemple : `exemple_ad_hominem_politique.txt`, `exemple_faux_dilemme_technologie.txt`
-
-2. **Documentation** : 
-   - Ajoutez une description du fichier dans ce README.md (dans la section "Fichiers disponibles")
-   - Incluez les types de sophismes ou structures argumentatives présentes
-   - Expliquez le contexte et l'objectif de l'exemple
-
-3. **Format** : 
-   - Préférez le format texte brut (.txt) pour la compatibilité maximale
-   - Utilisez l'encodage UTF-8
-   - Assurez-vous que le texte est correctement formaté (paragraphes, ponctuation)
-
-4. **Taille** : 
-   - Limitez la taille des exemples à quelques paragraphes pour faciliter les tests
-   - Idéalement entre 200 et 1000 mots
-
-5. **Contenu** : 
-   - Assurez-vous que le contenu est approprié et ne contient pas de données sensibles
-   - Évitez les contenus offensants ou controversés
-   - Si vous utilisez du contenu externe, citez vos sources et assurez-vous de respecter les droits d'auteur
-
-#### Workflow de contribution (Exemples de Textes)
-
-1. **Créez une branche** dans votre fork pour ajouter votre exemple :
-   ```bash
-   git checkout -b feature/nouvel-exemple-texte
-   ```
-
-2. **Ajoutez votre fichier** dans le répertoire `examples/` :
-   ```bash
-   # Créez votre fichier d'exemple
-   touch examples/exemple_votre_type_votre_sujet.txt
-   
-   # Éditez le fichier avec votre contenu
-   # nano examples/exemple_votre_type_votre_sujet.txt 
-   ```
-
-3. **Mettez à jour ce README.md** pour documenter votre exemple :
-   ```bash
-   # nano examples/README.md
-   ```
-
-4. **Testez votre exemple** avec le système d'analyse :
-   ```bash
-   python scripts/execution/run_analysis.py --file examples/exemple_votre_type_votre_sujet.txt
-   ```
-
-5. **Committez et poussez vos changements** :
-   ```bash
-   git add examples/exemple_votre_type_votre_sujet.txt examples/README.md
-   git commit -m "Ajout d'un exemple de texte sur [votre sujet] avec [types de sophismes]"
-   git push origin feature/nouvel-exemple-texte
-   ```
-
-6. **Créez une Pull Request** vers le dépôt principal
-
-#### Suggestions de nouveaux exemples de textes à créer
-
-Si vous cherchez des idées pour contribuer, voici quelques suggestions d'exemples qui seraient utiles au projet :
-
-1. **Textes avec des sophismes spécifiques** :
-   - Exemple centré sur l'homme de paille
-   - Exemple centré sur le faux dilemme
-   - Exemple centré sur l'appel à l'ignorance
-
-2. **Textes de différents domaines** :
-   - Argumentation scientifique
-   - Débat politique
-   - Publicité et marketing
-   - Discussions éthiques
-
-3. **Textes avec différentes structures** :
-   - Arguments en chaîne
-   - Arguments parallèles
-   - Réfutations et contre-arguments
-
-### Utilisation des exemples de textes dans les tests
-
-Les exemples de ce répertoire peuvent être utilisés dans les tests unitaires et d'intégration. Pour ce faire, importez-les comme suit :
+Tous les scripts doivent inclure ce pattern de bootstrap pour garantir un fonctionnement autonome :
 
 ```python
-import os
+#!/usr/bin/env python3
+"""
+Description de votre script
+"""
 
-def load_example(filename):
-    """Charge un exemple depuis le répertoire examples."""
-    # Ajustez le chemin si ce code est appelé depuis un sous-répertoire de tests
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    example_path = os.path.join(base_dir, '..', 'examples', filename) # Exemple: si tests/ est au même niveau que examples/
-    # Si la structure est différente, adaptez les '..' ou le chemin de base.
-    # Pour un appel depuis la racine du projet, ce serait plus simple :
-    # example_path = os.path.join('examples', filename)
-    with open(example_path, 'r', encoding='utf-8') as f:
-        return f.read()
+from pathlib import Path
+import sys
 
-# Utilisation
-# text = load_example('exemple_sophisme.txt')
+# Bootstrap robuste avec détection automatique de la racine
+current_file = Path(__file__).resolve()
+project_root = next((p for p in current_file.parents if (p / "pyproject.toml").exists()), None)
+
+if project_root is None:
+    raise FileNotFoundError("Impossible de localiser la racine du projet")
+    
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+    
+from argumentation_analysis.core.environment import ensure_env
+ensure_env()
+
+# Votre code principal ici
 ```
 
-### Intégration dans vos propres agents (avec les exemples de textes)
+## 🎓 Parcours d'Apprentissage Recommandé
 
-Si vous développez un nouvel agent, vous pouvez utiliser ces exemples pour tester ses capacités :
+### Pour les Débutants
 
-```python
-# from agents.core.votre_agent.votre_agent_definitions import setup_votre_agent # Adaptez l'import
-# from core.llm_service import create_llm_service # Adaptez l'import
+1. **[05_notebooks/logic_agents_tutorial.ipynb](./05_notebooks/logic_agents_tutorial.ipynb)** - Commencez ici pour une introduction interactive
+2. **[01_logic_and_riddles/cluedo_demo/](./01_logic_and_riddles/cluedo_demo/)** - Apprenez le raisonnement logique
+3. **[04_plugins/hello_world_plugin/](./04_plugins/hello_world_plugin/)** - Découvrez l'architecture des plugins
 
-async def test_avec_exemple_texte():
-    # Charger l'exemple
-    with open('examples/exemple_sophisme.txt', 'r', encoding='utf-8') as f:
-        texte = f.read()
-    
-    # Initialiser votre agent (exemple)
-    # llm_service = create_llm_service()
-    # kernel, agent = await setup_votre_agent(llm_service)
-    
-    # Tester votre agent avec l'exemple
-    # resultat = await agent.votre_methode_analyse(texte)
-    # print(resultat)
-    pass # Placeholder
+### Pour les Développeurs Intermédiaires
+
+1. **[02_core_system_demos/phase2_demo/](./02_core_system_demos/phase2_demo/)** - Explorez les fonctionnalités avancées
+2. **[05_notebooks/api_logic_tutorial.ipynb](./05_notebooks/api_logic_tutorial.ipynb)** - Maîtrisez l'API
+3. **[03_integrations/backend_demos/](./03_integrations/backend_demos/)** - Intégrez avec des systèmes externes
+
+### Pour les Contributeurs Avancés
+
+1. **[01_logic_and_riddles/Sherlock_Watson/](./01_logic_and_riddles/Sherlock_Watson/)** - Raisonnement complexe
+2. **[02_core_system_demos/scripts_demonstration/](./02_core_system_demos/scripts_demonstration/)** - Cas d'usage exhaustifs
+3. Développez vos propres plugins en vous inspirant de **[04_plugins/](./04_plugins/)**
+
+## 🔗 Ressources Connexes
+
+- **[Tutoriels](../tutorials/README.md)** : Apprentissage guidé pas-à-pas
+- **[Démonstrations](../demos/README.md)** : Cas d'usage complets et fonctionnels
+- **[Documentation](../docs/)** : Référence technique et API
+- **[Plugins](../plugins/)** : Collection complète de plugins disponibles
+
+## 💡 Contribuer
+
+### Ajouter un Nouvel Exemple
+
+Pour enrichir la collection d'exemples :
+
+#### 1. Choisir la Catégorie
+
+Déterminez où votre exemple s'insère :
+- **01_logic_and_riddles/** : Si c'est un problème de logique ou une énigme
+- **02_core_system_demos/** : Si c'est une démonstration d'une fonctionnalité centrale
+- **03_integrations/** : Si c'est une intégration avec un système externe
+- **04_plugins/** : Si c'est un exemple de plugin
+- **05_notebooks/** : Si c'est un tutoriel interactif
+
+#### 2. Structure Requise
+
+```
+examples/0X_categorie/votre_exemple/
+├── README.md           # Documentation de l'exemple
+├── main.py            # Point d'entrée principal
+├── requirements.txt   # Dépendances spécifiques (optionnel)
+├── data/             # Données d'exemple (optionnel)
+└── tests/            # Tests unitaires (optionnel)
 ```
 
-### Cas d'utilisation avancés (avec les exemples de textes)
+#### 3. Documentation Obligatoire
 
-#### Analyse comparative
+Votre README.md doit inclure :
 
-Vous pouvez utiliser les différents exemples pour effectuer une analyse comparative des performances du système :
+```markdown
+# Titre de l'Exemple
+
+## Description
+[Description claire et concise]
+
+## Objectifs d'Apprentissage
+- Objectif 1
+- Objectif 2
+
+## Prérequis
+- Prérequis 1
+- Prérequis 2
+
+## Installation
+[Instructions si nécessaires]
+
+## Utilisation
+```bash
+python main.py
+```
+
+## Résultat Attendu
+[Description de ce que l'exemple doit produire]
+
+## Concepts Clés
+- Concept 1 : [explication]
+- Concept 2 : [explication]
+
+## Ressources Complémentaires
+[Liens vers documentation, tutoriels, etc.]
+```
+
+#### 4. Standards de Code
+
+- ✅ **Bootstrap obligatoire** : Utiliser le pattern de bootstrap recommandé
+- ✅ **Docstrings** : Documenter toutes les fonctions et classes
+- ✅ **Type hints** : Utiliser les annotations de types Python
+- ✅ **Comments** : Expliquer les parties complexes
+- ✅ **Tests** : Inclure au moins un test de base
+- ✅ **PEP 8** : Respecter les conventions de style Python
+
+#### 5. Workflow de Contribution
+
+```bash
+# 1. Créer une branche
+git checkout -b feature/exemple-votre-nom
+
+# 2. Ajouter vos fichiers
+# Créer votre structure de dossier
+# Développer votre exemple
+
+# 3. Tester votre exemple
+python examples/0X_categorie/votre_exemple/main.py
+
+# 4. Mettre à jour les README
+# - Ce README principal (ajouter une ligne dans la table appropriée)
+# - Le README de la sous-catégorie
+# - Le README de votre exemple
+
+# 5. Commiter et pusher
+git add examples/0X_categorie/votre_exemple/
+git commit -m "feat(examples): Ajout exemple [votre nom]
+
+- Description courte de l'exemple
+- Technologies utilisées
+- Niveau: [Débutant/Intermédiaire/Avancé]"
+git push origin feature/exemple-votre-nom
+
+# 6. Créer une Pull Request
+```
+
+### Guidelines de Qualité
+
+#### ✅ Bon Exemple
 
 ```python
-import os
-import json
-# from argumentation_analysis.agents.informal.informal_agent import InformalAgent # Adaptez l'import
-# from argumentation_analysis.core.llm_service import LLMService # Adaptez l'import
+#!/usr/bin/env python3
+"""
+Exemple : Détection de sophisme ad hominem
+Description : Analyse un texte pour identifier les attaques ad hominem
+Niveau : Intermédiaire
+"""
 
-def run_comparative_analysis_text_examples():
-    # Initialiser l'agent (exemple)
-    # llm = LLMService()
-    # agent = InformalAgent(llm)
+from pathlib import Path
+import sys
+
+# Bootstrap
+current_file = Path(__file__).resolve()
+project_root = next((p for p in current_file.parents if (p / "pyproject.toml").exists()), None)
+if project_root and str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from argumentation_analysis.core.environment import ensure_env
+ensure_env()
+
+from argumentation_analysis.services.extract_service import ExtractService
+
+def detect_ad_hominem(text: str) -> dict:
+    """
+    Détecte les attaques ad hominem dans un texte.
     
-    # Liste des exemples à analyser
-    examples_texts = [
-        'exemple_sophisme.txt',
-        'texte_sans_marqueurs.txt',
-        'article_scientifique.txt',
-        'discours_politique.txt',
-        'discours_avec_template.txt'
+    Args:
+        text: Le texte à analyser
+        
+    Returns:
+        Dictionnaire contenant les sophismes détectés
+    """
+    service = ExtractService()
+    result = service.analyze_text(text)
+    
+    ad_hominem_fallacies = [
+        f for f in result.fallacies 
+        if f.type == "ad_hominem"
     ]
     
-    # Analyser chaque exemple
-    results = {}
-    # for example_file in examples_texts:
-    #     with open(f'examples/{example_file}', 'r', encoding='utf-8') as f:
-    #         text = f.read()
-    #     result = agent.analyze_informal_fallacies(text) # Adaptez la méthode d'analyse
-    #     results[example_file] = result
+    return {
+        "count": len(ad_hominem_fallacies),
+        "fallacies": ad_hominem_fallacies
+    }
+
+if __name__ == "__main__":
+    # Exemple d'utilisation
+    text = """
+    Mon adversaire politique prétend que sa politique économique
+    est meilleure, mais comment peut-on faire confiance à quelqu'un
+    qui a échoué dans ses propres affaires ?
+    """
     
-    # Sauvegarder les résultats
-    # output_dir = 'results'
-    # os.makedirs(output_dir, exist_ok=True)
-    # with open(os.path.join(output_dir, 'comparative_analysis_texts.json'), 'w', encoding='utf-8') as f:
-    #     json.dump(results, f, indent=2)
+    result = detect_ad_hominem(text)
+    print(f"Nombre d'attaques ad hominem détectées : {result['count']}")
     
-    # return results
-    pass # Placeholder
+    for fallacy in result['fallacies']:
+        print(f"- {fallacy.description}")
 ```
 
-#### Génération de rapports
-
-Vous pouvez générer des rapports détaillés à partir des analyses des exemples :
+#### ❌ Mauvais Exemple
 
 ```python
-# from argumentation_analysis.utils.report_generator import generate_report # Adaptez l'import
+# Pas de docstring, pas de bootstrap, code mal structuré
+import sys
+sys.path.append('..')
 
-# Générer un rapport d'analyse pour un exemple
-# generate_report('examples/exemple_sophisme.txt', 'results/rapport_exemple_sophisme.md')
-pass # Placeholder
+from services import ExtractService
+
+text = "bla bla bla"
+s = ExtractService()
+r = s.analyze_text(text)
+print(r)
 ```
 
-### Ressources pour créer de bons exemples de textes
+## 📊 Statistiques
 
-- [Liste des sophismes courants](https://fr.wikipedia.org/wiki/Liste_de_sophismes)
-- [Guide d'argumentation](https://www.cairn.info/revue-l-argumentation-politique--9782200928261.htm)
-- [Techniques rhétoriques](https://www.persee.fr/doc/comm_0588-8018_1970_num_16_1_1234)
-- [Analyse du discours](https://www.erudit.org/fr/revues/as/2006-v30-n1-as1384/014702ar/)
-- [Structures argumentatives](https://www.cairn.info/revue-hermes-la-revue-2011-1-page-25.htm)
+- **Total exemples** : 7 sous-répertoires + 2 notebooks
+- **Catégories** : 5 (Logic, Core System, Integrations, Plugins, Notebooks)
+- **Niveaux** : Débutant (3), Intermédiaire (4), Avancé (2)
+- **Langages** : Python, Jupyter
+- **Dernière mise à jour** : Phase D2.3
 
-## Distinction avec `argumentation_analysis/examples/`
-⚠️ **Note importante** : Ce répertoire (`examples/`) contient des exemples d'utilisation, des scripts de démonstration, des notebooks tutoriels et des données textuelles pour tester le système. Il ne doit pas être confondu avec le dossier `argumentation_analysis/examples/` qui pourrait contenir des exemples de code plus bas niveau ou spécifiques à l'implémentation interne des modules d'analyse.
+## 🏆 Hall of Fame
 
-| Ce dossier (`examples/`)                                  | Dossier `argumentation_analysis/examples/` (si existant et utilisé ainsi) |
-|-----------------------------------------------------------|--------------------------------------------------------------------------|
-| Contient des scripts `.py`, notebooks `.ipynb`, textes `.txt` | Pourrait contenir des fichiers Python (`.py`) spécifiques à des modules   |
-| Exemples d'utilisation, tutoriels, démos, données d'entrée | Exemples de code d'implémentation interne ou tests unitaires de bas niveau |
-| Utilisé pour apprendre à utiliser le système et voir des démos | Utilisé par les développeurs du cœur du système                          |
+Exemples particulièrement réussis qui illustrent les meilleures pratiques :
+
+1. **cluedo_demo/** - Excellent exemple de raisonnement logique structuré
+2. **hello_world_plugin/** - Template parfait pour développer des plugins
+3. **logic_agents_tutorial.ipynb** - Tutoriel interactif complet et pédagogique
+
+## ⚠️ Note Importante
+
+Ce répertoire (`examples/`) contient des **exemples d'utilisation** du système. Ne le confondez pas avec :
+- `demos/` - Démonstrations complètes de cas d'usage
+- `tutorials/` - Guides pas-à-pas pour apprendre
+- `tests/` - Suite de tests automatisés
+- `argumentation_analysis/examples/` - Exemples internes au module (si existant)
 
 ---
-*Ce README a pour but de vous guider à travers les exemples fournis. N'hésitez pas à explorer les différents fichiers et scripts pour mieux comprendre le fonctionnement du projet.*
+
+**Dernière mise à jour** : Phase D2.3 - Documentation Structure  
+**Mainteneur** : Intelligence Symbolique EPITA  
+**Licence** : Voir LICENSE à la racine du projet
