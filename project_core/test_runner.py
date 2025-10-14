@@ -245,7 +245,7 @@ class TestRunner:
             _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        safe_runner_path = ROOT_DIR / "safe_pytest_runner.py"
+        safe_runner_path = ROOT_DIR / "scripts" / "testing" / "safe_pytest_runner.py"
         command = ["python", str(safe_runner_path), "-v"] + test_paths
         
         # Passer les URLs aux tests seulement si les services sont démarrés
