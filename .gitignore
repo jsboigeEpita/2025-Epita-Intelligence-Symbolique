@@ -312,3 +312,4 @@ dummy_opentelemetry/
 
 # Ignore auto-generated root-level reports
 # reports/ - REMOVED Phase C: reports/ now tracked (historical cleanup reports)
+phase_c_fluidite_results_*.json

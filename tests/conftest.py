@@ -39,7 +39,7 @@ try:
     import transformers
     import openai
     import semantic_kernel
-except ImportError as e:
+except (ImportError, OSError, RuntimeError) as e:
     # Utilise print car le logger n'est pas encore configuré à ce stade.
     print(f"[AVERTISSEMENT CONTEST] L'importation préventive d'une bibliothèque a échoué: {e}", file=sys.stderr)
 # Ajouter le répertoire racine et les sous-répertoires pertinents au PYTHONPATH
