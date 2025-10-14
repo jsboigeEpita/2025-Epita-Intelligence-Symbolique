@@ -17,11 +17,13 @@ jobs:
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15  # Protection contre timeouts
         with:
-          auto-update-conda: true
-          python-version: 3.10
+          python-version: "3.10"  # FIX: guillemets pour éviter 3.1
           environment-file: environment.yml
           activate-environment: epita-symbolic-ai
+          use-mamba: true  # Résolution 5-10x plus rapide
+          auto-update-conda: false  # Évite instabilités cache
 
       - name: Format with black
         shell: pwsh
@@ -48,11 +50,13 @@ jobs:
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15  # Protection contre timeouts
         with:
-          auto-update-conda: true
-          python-version: 3.10
+          python-version: "3.10"  # FIX: guillemets pour éviter 3.1
           environment-file: environment.yml
           activate-environment: epita-symbolic-ai
+          use-mamba: true  # Résolution 5-10x plus rapide
+          auto-update-conda: false  # Évite instabilités cache
 
       - name: Check API keys availability
         id: check_secrets
