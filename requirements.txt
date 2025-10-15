@@ -25,6 +25,7 @@ pytest
 pytest-asyncio
 pytest-mock
 pytest-playwright
+pyfakefs>=5.0.0
 playwright
 coverage
 
