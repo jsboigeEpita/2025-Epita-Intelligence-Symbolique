@@ -9,51 +9,52 @@ import re
 from pathlib import Path
 from datetime import datetime
 
+
 class DocumentationUpdater:
     """Mise à jour de la documentation Oracle Enhanced"""
-    
+
     def __init__(self):
         self.root_dir = Path(".")
         self.docs_dir = self.root_dir / "docs"
         self.sherlock_docs_dir = self.docs_dir / "sherlock_watson"
         self.update_log = []
-        
+
     def run_documentation_update(self):
         """Exécute la mise à jour complète de la documentation"""
         print("📚 Début mise à jour documentation Oracle Enhanced...")
-        
+
         # Phase 4.1: Mise à jour README principal
         self._update_main_readme()
-        
+
         # Phase 4.2: Mise à jour documentation Sherlock-Watson
         self._update_sherlock_watson_docs()
-        
+
         # Phase 4.3: Création guide développeur complet
         self._create_developer_guide()
-        
+
         # Phase 4.4: Mise à jour index documentation
         self._update_documentation_index()
-        
+
         # Phase 4.5: Création guide déploiement
         self._create_deployment_guide()
-        
+
         # Génération du rapport
         self._generate_documentation_report()
-        
+
         print("✅ Mise à jour documentation terminée.")
-        
+
     def _update_main_readme(self):
         """Met à jour le README principal"""
         print("📝 Mise à jour README principal...")
-        
+
         # Lire le README existant
         readme_path = self.root_dir / "README.md"
         if readme_path.exists():
-            with open(readme_path, 'r', encoding='utf-8') as f:
+            with open(readme_path, "r", encoding="utf-8") as f:
                 content = f.read()
         else:
             content = "# 2025-Epita-Intelligence-Symbolique\n\n"
-            
+
         # Section Oracle Enhanced à ajouter/mettre à jour
         oracle_section = """
 ## 🎭 Système Sherlock-Watson-Moriarty Oracle Enhanced
@@ -155,38 +156,44 @@ print(response.data)  # Révélation automatique ou validation
 """
 
         # Insérer ou remplacer la section Oracle
-        oracle_pattern = r'## 🎭 Système Sherlock-Watson-Moriarty Oracle Enhanced.*?(?=## |\Z)'
+        oracle_pattern = (
+            r"## 🎭 Système Sherlock-Watson-Moriarty Oracle Enhanced.*?(?=## |\Z)"
+        )
         if re.search(oracle_pattern, content, re.DOTALL):
-            content = re.sub(oracle_pattern, oracle_section.strip(), content, flags=re.DOTALL)
+            content = re.sub(
+                oracle_pattern, oracle_section.strip(), content, flags=re.DOTALL
+            )
         else:
             content += oracle_section
-            
+
         # Écrire le README mis à jour
-        with open(readme_path, 'w', encoding='utf-8') as f:
+        with open(readme_path, "w", encoding="utf-8") as f:
             f.write(content)
-            
-        self.update_log.append("✅ README principal mis à jour avec Oracle Enhanced v2.1.0")
-        
+
+        self.update_log.append(
+            "✅ README principal mis à jour avec Oracle Enhanced v2.1.0"
+        )
+
     def _update_sherlock_watson_docs(self):
         """Met à jour la documentation Sherlock-Watson"""
         print("🕵️ Mise à jour documentation Sherlock-Watson...")
-        
+
         # Mise à jour du guide utilisateur
         self._update_user_guide()
-        
+
         # Mise à jour de la documentation technique
         self._update_technical_docs()
-        
+
     def _update_user_guide(self):
         """Met à jour le guide utilisateur"""
         user_guide_path = self.sherlock_docs_dir / "GUIDE_UTILISATEUR_COMPLET.md"
-        
+
         if user_guide_path.exists():
-            with open(user_guide_path, 'r', encoding='utf-8') as f:
+            with open(user_guide_path, "r", encoding="utf-8") as f:
                 content = f.read()
         else:
             content = "# Guide Utilisateur Sherlock-Watson-Moriarty Oracle Enhanced\n\n"
-            
+
         # Section nouveaux modules à ajouter
         new_modules_section = """
 ## 🆕 Nouveaux Modules Oracle Enhanced v2.1.0
@@ -274,22 +281,24 @@ python scripts/maintenance/validate_oracle_coverage.py
         # Insérer la section nouveaux modules
         if "## 🆕 Nouveaux Modules Oracle Enhanced" not in content:
             content += new_modules_section
-            
-        with open(user_guide_path, 'w', encoding='utf-8') as f:
+
+        with open(user_guide_path, "w", encoding="utf-8") as f:
             f.write(content)
-            
+
         self.update_log.append("✅ Guide utilisateur mis à jour avec nouveaux modules")
-        
+
     def _update_technical_docs(self):
         """Met à jour la documentation technique"""
-        tech_doc_path = self.sherlock_docs_dir / "DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md"
-        
+        tech_doc_path = (
+            self.sherlock_docs_dir / "DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md"
+        )
+
         if tech_doc_path.exists():
-            with open(tech_doc_path, 'r', encoding='utf-8') as f:
+            with open(tech_doc_path, "r", encoding="utf-8") as f:
                 content = f.read()
         else:
             content = "# Documentation Complète Sherlock-Watson-Moriarty\n\n"
-            
+
         # Section refactorisation à ajouter
         refactor_section = """
 ## 🔧 Refactorisation Oracle Enhanced v2.1.0
@@ -344,16 +353,16 @@ from argumentation_analysis.agents.core.oracle import (
 
         if "## 🔧 Refactorisation Oracle Enhanced" not in content:
             content += refactor_section
-            
-        with open(tech_doc_path, 'w', encoding='utf-8') as f:
+
+        with open(tech_doc_path, "w", encoding="utf-8") as f:
             f.write(content)
-            
+
         self.update_log.append("✅ Documentation technique mise à jour")
-        
+
     def _create_developer_guide(self):
         """Crée le guide développeur complet"""
         print("👨‍💻 Création guide développeur...")
-        
+
         developer_guide_content = '''# Guide Développeur Oracle Enhanced v2.1.0
 
 ## 🚀 Environnement de Développement
@@ -660,18 +669,18 @@ jobs:
 ---
 *Guide Développeur Oracle Enhanced v2.1.0 - Mise à jour automatique*
 '''
-        
+
         developer_guide_path = self.sherlock_docs_dir / "GUIDE_DEVELOPPEUR_ORACLE.md"
-        with open(developer_guide_path, 'w', encoding='utf-8') as f:
+        with open(developer_guide_path, "w", encoding="utf-8") as f:
             f.write(developer_guide_content)
-            
+
         self.update_log.append("✅ Guide développeur Oracle Enhanced créé")
-        
+
     def _update_documentation_index(self):
         """Met à jour l'index de documentation"""
         print("📑 Mise à jour index documentation...")
-        
-        index_content = '''# Index Documentation Sherlock-Watson-Moriarty Oracle Enhanced
+
+        index_content = """# Index Documentation Sherlock-Watson-Moriarty Oracle Enhanced
 
 ## 📚 Documentation Utilisateur
 
@@ -769,18 +778,18 @@ jobs:
 
 ---
 *Index mis à jour automatiquement - Oracle Enhanced v2.1.0*
-'''
-        
+"""
+
         index_path = self.sherlock_docs_dir / "README.md"
-        with open(index_path, 'w', encoding='utf-8') as f:
+        with open(index_path, "w", encoding="utf-8") as f:
             f.write(index_content)
-            
+
         self.update_log.append("✅ Index documentation mis à jour")
-        
+
     def _create_deployment_guide(self):
         """Crée le guide de déploiement"""
         print("🚀 Création guide déploiement...")
-        
+
         deployment_guide_content = '''# Guide Déploiement Oracle Enhanced v2.1.0
 
 ## 🎯 Vue d'ensemble Déploiement
@@ -1289,16 +1298,16 @@ echo "🎉 Déploiement Oracle Enhanced validé avec succès!"
 ---
 *Guide Déploiement Oracle Enhanced v2.1.0 - Production Ready*
 '''
-        
+
         deployment_guide_path = self.sherlock_docs_dir / "GUIDE_DEPLOIEMENT.md"
-        with open(deployment_guide_path, 'w', encoding='utf-8') as f:
+        with open(deployment_guide_path, "w", encoding="utf-8") as f:
             f.write(deployment_guide_content)
-            
+
         self.update_log.append("✅ Guide déploiement Oracle Enhanced créé")
-        
+
     def _generate_documentation_report(self):
         """Génère le rapport de mise à jour documentation"""
-        
+
         report_content = f"""# Rapport de Mise à Jour Documentation Oracle Enhanced
 
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -1441,12 +1450,18 @@ Phase 5: Commits Git progressifs et validation finale
 ---
 *Documentation Oracle Enhanced v2.1.0: Complète, structurée, prête production*
 """
-        
-        report_path = self.root_dir / "docs" / "rapports" / f"mise_a_jour_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-        with open(report_path, 'w', encoding='utf-8') as f:
+
+        report_path = (
+            self.root_dir
+            / "docs"
+            / "rapports"
+            / f"mise_a_jour_documentation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_content)
-            
+
         print(f"📄 Rapport de documentation généré: {report_path}")
+
 
 if __name__ == "__main__":
     updater = DocumentationUpdater()

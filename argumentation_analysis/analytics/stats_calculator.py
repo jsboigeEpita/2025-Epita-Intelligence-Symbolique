@@ -10,7 +10,10 @@ de résultats groupés, typiquement par corpus.
 """
 from typing import Dict, List, Any, Tuple
 
-def calculate_average_scores(grouped_results: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Dict[str, float]]:
+
+def calculate_average_scores(
+    grouped_results: Dict[str, List[Dict[str, Any]]]
+) -> Dict[str, Dict[str, float]]:
     """
     Calcule les scores moyens pour chaque corpus à partir des résultats groupés.
 
@@ -67,21 +70,25 @@ def calculate_average_scores(grouped_results: Dict[str, List[Dict[str, Any]]]) -
             # Si un corpus n'a pas de résultats, on lui assigne un dictionnaire vide de moyennes
             average_scores_by_corpus[corpus_name] = {}
             continue
-        
-        score_sums: Dict[str, float] = {} # Pour stocker la somme des scores pour chaque métrique
-        score_counts: Dict[str, int] = {} # Pour compter le nombre d'occurrences de chaque métrique
+
+        score_sums: Dict[
+            str, float
+        ] = {}  # Pour stocker la somme des scores pour chaque métrique
+        score_counts: Dict[
+            str, int
+        ] = {}  # Pour compter le nombre d'occurrences de chaque métrique
 
         # Itération sur chaque élément de résultat (par exemple, analyse d'un document) dans le corpus
         for result_item in results_list:
             if not isinstance(result_item, dict):
                 continue  # Ignorer les éléments qui ne sont pas des dictionnaires
-            
+
             for key, value in result_item.items():
                 # On ne calcule la moyenne que pour les valeurs numériques (int ou float)
                 if isinstance(value, (int, float)):
                     score_sums[key] = score_sums.get(key, 0.0) + float(value)
                     score_counts[key] = score_counts.get(key, 0) + 1
-        
+
         corpus_averages: Dict[str, float] = {}
         # Calcul de la moyenne pour chaque métrique collectée
         for score_name, total_sum in score_sums.items():

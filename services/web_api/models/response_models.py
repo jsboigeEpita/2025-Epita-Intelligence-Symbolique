@@ -2,11 +2,13 @@
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
 
+
 class BeliefSetDetail(BaseModel):
     id: str
     logic_type: str
     content: str
     source_text: Optional[str] = None
+
 
 class LogicBeliefSetResponse(BaseModel):
     success: bool
@@ -14,11 +16,13 @@ class LogicBeliefSetResponse(BaseModel):
     message: Optional[str] = None
     processing_time: Optional[float] = None
 
+
 class QueryResultDetail(BaseModel):
     query: str
     result: Any
     formatted_result: Optional[str] = None
     explanation: Optional[str] = None
+
 
 class LogicQueryResponse(BaseModel):
     success: bool
@@ -27,6 +31,7 @@ class LogicQueryResponse(BaseModel):
     result: Optional[QueryResultDetail] = None
     message: Optional[str] = None
     processing_time: Optional[float] = None
+
 
 class LogicGenerateQueriesResponse(BaseModel):
     success: bool

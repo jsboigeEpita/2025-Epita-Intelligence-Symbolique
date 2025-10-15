@@ -14,7 +14,11 @@ Composants principaux:
 """
 
 from .message import Message, MessageType, MessagePriority, AgentLevel
-from .channel_interface import Channel, ChannelType, LocalChannel # Ajout de LocalChannel
+from .channel_interface import (
+    Channel,
+    ChannelType,
+    LocalChannel,
+)  # Ajout de LocalChannel
 from .middleware import MessageMiddleware
 from .request_response import RequestResponseProtocol
 from .pub_sub import PublishSubscribeProtocol
@@ -24,14 +28,25 @@ from .data_channel import DataChannel
 from .strategic_adapter import StrategicAdapter
 from .tactical_adapter import TacticalAdapter
 from .operational_adapter import OperationalAdapter
+
 # Importer le patch pour ajouter la méthode get_adapter à MessageMiddleware
 from .middleware_patch import *
 
 __all__ = [
-    'Message', 'MessageType', 'MessagePriority', 'AgentLevel',
-    'Channel', 'ChannelType', 'LocalChannel', # Ajout de LocalChannel
-    'MessageMiddleware',
-    'RequestResponseProtocol', 'PublishSubscribeProtocol',
-    'HierarchicalChannel', 'CollaborationChannel', 'DataChannel',
-    'StrategicAdapter', 'TacticalAdapter', 'OperationalAdapter'
+    "Message",
+    "MessageType",
+    "MessagePriority",
+    "AgentLevel",
+    "Channel",
+    "ChannelType",
+    "LocalChannel",  # Ajout de LocalChannel
+    "MessageMiddleware",
+    "RequestResponseProtocol",
+    "PublishSubscribeProtocol",
+    "HierarchicalChannel",
+    "CollaborationChannel",
+    "DataChannel",
+    "StrategicAdapter",
+    "TacticalAdapter",
+    "OperationalAdapter",
 ]

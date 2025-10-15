@@ -18,31 +18,42 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
 from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
 
+
 class TestTweetyBridge(unittest.TestCase):
     """Tests pour la classe TweetyBridge."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.use_real_jpype = os.environ.get('USE_REAL_JPYPE') == 'true'
+        self.use_real_jpype = os.environ.get("USE_REAL_JPYPE") == "true"
 
         if self.use_real_jpype:
             self.bridge = TweetyBridge.get_instance()
             try:
                 self.bridge.initialize_jvm()
             except Exception as e:
-                self.fail(f"L'initialisation de la JVM en condition réelle a échoué: {e}")
+                self.fail(
+                    f"L'initialisation de la JVM en condition réelle a échoué: {e}"
+                )
         else:
             # Patcher entièrement TweetyInitializer pour éviter tout contact avec jpype
             # On retire spec=True car le patching de cette classe est problématique.
-            self.initializer_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer')
+            self.initializer_patcher = patch(
+                "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer"
+            )
             self.mock_initializer_class = self.initializer_patcher.start()
             self.mock_initializer_instance = self.mock_initializer_class.return_value
             # Simuler une JVM prête
             self.mock_initializer_instance.is_jvm_ready.return_value = True
 
             # Patcher les classes Handler pour injecter des mocks
-            self.pl_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.PLHandler', autospec=True)
-            self.fol_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.FOLHandler', autospec=True)
+            self.pl_handler_patcher = patch(
+                "argumentation_analysis.agents.core.logic.tweety_bridge.PLHandler",
+                autospec=True,
+            )
+            self.fol_handler_patcher = patch(
+                "argumentation_analysis.agents.core.logic.tweety_bridge.FOLHandler",
+                autospec=True,
+            )
             self.mock_pl_handler_class = self.pl_handler_patcher.start()
             self.mock_fol_handler_class = self.fol_handler_patcher.start()
 
@@ -67,7 +78,10 @@ class TestTweetyBridge(unittest.TestCase):
         instance2 = TweetyBridge.get_instance()
         self.assertIs(instance1, instance2)
 
-    @unittest.skipIf(os.environ.get('USE_REAL_JPYPE') == 'true', "Test pour environnement mocké uniquement")
+    @unittest.skipIf(
+        os.environ.get("USE_REAL_JPYPE") == "true",
+        "Test pour environnement mocké uniquement",
+    )
     def test_lazy_loading_of_handlers(self):
         """Vérifie que les handlers sont créés uniquement au premier accès."""
         # Au début, les handlers ne doivent pas être initialisés
@@ -106,16 +120,20 @@ class TestTweetyBridge(unittest.TestCase):
         query_str = "p(a)."
         if not self.use_real_jpype:
             belief_set_mock = MagicMock()
-            
+
             # Appel via le handler mocké
             self.bridge.fol_handler.fol_query(belief_set_mock, query_str)
-            
+
             # Vérifier que la méthode du handler est appelée correctement
-            self.mock_fol_handler_instance.fol_query.assert_called_once_with(belief_set_mock, query_str)
+            self.mock_fol_handler_instance.fol_query.assert_called_once_with(
+                belief_set_mock, query_str
+            )
         else:
             try:
                 # Pour le test réel, nous devons d'abord créer un belief set via le handler
-                belief_set_obj = self.bridge.fol_handler.create_belief_set_from_string("forall X: p(X).")
+                belief_set_obj = self.bridge.fol_handler.create_belief_set_from_string(
+                    "forall X: p(X)."
+                )
                 self.assertIsNotNone(belief_set_obj)
                 self.bridge.fol_handler.fol_query(belief_set_obj, query_str)
             except Exception as e:
@@ -126,7 +144,9 @@ class TestTweetyBridge(unittest.TestCase):
         formula = "a => b"
         if not self.use_real_jpype:
             self.bridge.validate_pl_formula(formula)
-            self.mock_pl_handler_instance.parse_pl_formula.assert_called_once_with(formula)
+            self.mock_pl_handler_instance.parse_pl_formula.assert_called_once_with(
+                formula
+            )
         else:
             self.assertTrue(self.bridge.validate_pl_formula(formula))
             self.assertFalse(self.bridge.validate_pl_formula("a ==> b"))
@@ -135,13 +155,23 @@ class TestTweetyBridge(unittest.TestCase):
         """Vérifie que validate_fol_formula délègue correctement."""
         formula = "forall X : p(X)"
         if not self.use_real_jpype:
-            self.bridge.fol_handler.validate_formula_with_signature(MagicMock(), formula)
+            self.bridge.fol_handler.validate_formula_with_signature(
+                MagicMock(), formula
+            )
             self.mock_fol_handler_instance.validate_formula_with_signature.assert_called_once()
         else:
             # Pour un test réel, il faudrait une signature
             sig_mock = MagicMock()
-            self.assertTrue(self.bridge.fol_handler.validate_formula_with_signature(sig_mock, formula)[0])
-            self.assertFalse(self.bridge.fol_handler.validate_formula_with_signature(sig_mock, "forall X p(X)")[0])
+            self.assertTrue(
+                self.bridge.fol_handler.validate_formula_with_signature(
+                    sig_mock, formula
+                )[0]
+            )
+            self.assertFalse(
+                self.bridge.fol_handler.validate_formula_with_signature(
+                    sig_mock, "forall X p(X)"
+                )[0]
+            )
 
 
 if __name__ == "__main__":

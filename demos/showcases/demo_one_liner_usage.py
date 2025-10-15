@@ -20,48 +20,52 @@ import sys
 import os
 from datetime import datetime
 
+
 def main():
     """Démonstration d'usage du one-liner"""
-    
+
     print("=" * 60)
     print("DEMO : One-liner auto-activateur d'environnement")
     print("=" * 60)
-    
+
     # Vérification que l'environnement est configuré
     print(f"\n[INFO] Python utilisé : {sys.executable}")
     print(f"[INFO] Version Python : {sys.version}")
     print(f"[INFO] Répertoire de travail : {os.getcwd()}")
-    
+
     # Variables d'environnement du projet
-    project_root = os.environ.get('PROJECT_ROOT', 'Non défini')
-    python_path = os.environ.get('PYTHONPATH', 'Non défini')
-    conda_env = os.environ.get('CONDA_DEFAULT_ENV', 'Non défini')
-    
+    project_root = os.environ.get("PROJECT_ROOT", "Non défini")
+    python_path = os.environ.get("PYTHONPATH", "Non défini")
+    conda_env = os.environ.get("CONDA_DEFAULT_ENV", "Non défini")
+
     print(f"\n[ENV] PROJECT_ROOT : {project_root}")
     print(f"[ENV] PYTHONPATH : {python_path}")
     print(f"[ENV] CONDA_DEFAULT_ENV : {conda_env}")
-    
+
     # Test d'import de modules du projet
     try:
-        from project_core.core_from_scripts.environment_manager import EnvironmentManager
+        from project_core.core_from_scripts.environment_manager import (
+            EnvironmentManager,
+        )
+
         print(f"\n[OK] Import EnvironmentManager réussi")
-        
+
         manager = EnvironmentManager()
         print(f"[OK] Instanciation EnvironmentManager réussie")
-        
+
         if manager.check_conda_available():
             print(f"[OK] Conda disponible")
         else:
             print(f"[WARN] Conda non disponible")
-            
+
     except ImportError as e:
         print(f"\n[ERROR] Erreur d'import : {e}")
-    
+
     # Simulation d'une tâche que ferait un agent AI
     print(f"\n[TASK] Simulation tâche agent AI...")
     print(f"[TASK] Timestamp : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"[TASK] Tâche exécutée avec succès dans l'environnement projet !")
-    
+
     print(f"\n[SUCCESS] Démonstration terminée avec succès")
     print("=" * 60)
 

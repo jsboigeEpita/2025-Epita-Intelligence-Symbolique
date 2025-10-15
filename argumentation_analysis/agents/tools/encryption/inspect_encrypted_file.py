@@ -23,6 +23,7 @@ if str(parent_dir) not in sys.path:
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 
+
 def decrypt_data(encrypted_data, key):
     """Déchiffre des données binaires avec une clé Fernet."""
     if not key:
@@ -35,42 +36,47 @@ def decrypt_data(encrypted_data, key):
         print(f"Erreur déchiffrement: {e}")
         return None
 
+
 def inspect_encrypted_file():
     """Inspecte le contenu du fichier encrypté."""
     # Vérifier si la clé de chiffrement est disponible
     if not ENCRYPTION_KEY:
-        print(f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'.")
+        print(
+            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
+        )
         return False
-    
+
     # Vérifier si le fichier encrypté existe
     if not CONFIG_FILE_ENC.exists():
         print(f"❌ Erreur: Le fichier encrypté '{CONFIG_FILE_ENC}' n'existe pas.")
         return False
-    
+
     try:
         # Lire le contenu du fichier encrypté
-        with open(CONFIG_FILE_ENC, 'rb') as f:
+        with open(CONFIG_FILE_ENC, "rb") as f:
             encrypted_data = f.read()
-        
+
         print(f"[OK] Fichier encrypté '{CONFIG_FILE_ENC}' chargé avec succès.")
         print(f"   - Taille: {len(encrypted_data)} octets.")
-        
+
         # Déchiffrer les données
         decrypted_compressed_data = decrypt_data(encrypted_data, ENCRYPTION_KEY)
         if not decrypted_compressed_data:
             print(f"❌ Erreur: Échec du déchiffrement des données.")
             return False
-        
+
         # Décompresser les données
         decompressed_data = gzip.decompress(decrypted_compressed_data)
-        print(f"[OK] Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets.")
-        
+        print(
+            f"[OK] Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets."
+        )
+
         # Charger le JSON
-        data = json.loads(decompressed_data.decode('utf-8'))
-        
+        data = json.loads(decompressed_data.decode("utf-8"))
+
         # Afficher le type et la structure des données
         print(f"[OK] Type de données: {type(data)}")
-        
+
         if isinstance(data, dict):
             print(f"[OK] Structure du dictionnaire:")
             for key, value in data.items():
@@ -87,7 +93,7 @@ def inspect_encrypted_file():
                 print(f"   - Premier élément: {type(data[0])}")
                 if isinstance(data[0], dict):
                     print(f"     - Clés: {', '.join(data[0].keys())}")
-                    
+
                     # Afficher plus de détails sur les extraits
                     print("\n[OK] Détails des sources:")
                     for i, source in enumerate(data):
@@ -95,7 +101,7 @@ def inspect_encrypted_file():
                         extracts = source.get("extracts", [])
                         print(f"   - Source {i+1}: {source_name}")
                         print(f"     - Nombre d'extraits: {len(extracts)}")
-                        
+
                         # Afficher les détails du premier extrait s'il existe
                         if extracts:
                             first_extract = extracts[0]
@@ -105,32 +111,36 @@ def inspect_encrypted_file():
                                     print(f"       - {key}: {value[:50]}...")
                                 else:
                                     print(f"       - {key}: {value}")
-        
+
         return True
-    
+
     except Exception as e:
         print(f"❌ Erreur inattendue: {e}")
         return False
 
+
 def main():
     """Fonction principale."""
     print("\n=== Inspection du fichier encrypté ===\n")
-    
+
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
+        print(
+            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+        )
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
-    
+
     # Inspecter le fichier encrypté
     success = inspect_encrypted_file()
-    
+
     if success:
         print("\n[OK] Inspection du fichier encrypté réussie !")
     else:
         print("\n❌ Échec de l'inspection du fichier encrypté.")
-    
+
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

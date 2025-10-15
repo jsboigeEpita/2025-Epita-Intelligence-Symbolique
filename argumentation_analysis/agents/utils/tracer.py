@@ -12,8 +12,11 @@ from semantic_kernel.contents import (
     FunctionCallContent,
     FunctionResultContent,
 )
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+
 
 class TracedAgent:
     """
@@ -25,15 +28,19 @@ class TracedAgent:
     def __init__(self, agent_to_wrap: ChatCompletionAgent, trace_log_path: str):
         """
         Initialise le wrapper.
-        
+
         :param agent_to_wrap: L'instance de l'agent à tracer.
         :param trace_log_path: Le chemin vers le fichier de log.
         """
         self.agent = agent_to_wrap
-        self.name = agent_to_wrap.name if hasattr(agent_to_wrap, 'name') else 'UnnamedAgent'
+        self.name = (
+            agent_to_wrap.name if hasattr(agent_to_wrap, "name") else "UnnamedAgent"
+        )
         self._trace_log_path = trace_log_path
         self._logger = self._setup_logger()
-        self._logger.info(f"TracedAgent for '{self.name}' enabled. Log file: {self._trace_log_path}")
+        self._logger.info(
+            f"TracedAgent for '{self.name}' enabled. Log file: {self._trace_log_path}"
+        )
 
     def _setup_logger(self):
         """Configure et retourne un logger pour la trace (mode de débogage robuste)."""
@@ -42,11 +49,11 @@ class TracedAgent:
         # potentiels liés à la manipulation manuelle des handlers dans un contexte de multiprocesseing.
         logging.basicConfig(
             filename=self._trace_log_path,
-            filemode='w',  # 'w' pour écraser le fichier à chaque fois
+            filemode="w",  # 'w' pour écraser le fichier à chaque fois
             level=logging.INFO,
-            format='%(asctime)s - %(message)s',
-            encoding='utf-8',
-            force=True  # force=True est crucial ici
+            format="%(asctime)s - %(message)s",
+            encoding="utf-8",
+            force=True,  # force=True est crucial ici
         )
         # Retourne le logger root qui vient d'être configuré.
         return logging.getLogger()
@@ -58,19 +65,25 @@ class TracedAgent:
 
         formatted_list = []
         for i, msg in enumerate(history.messages):
-            role = msg.role.name.upper() if hasattr(msg.role, 'name') else str(msg.role).upper()
+            role = (
+                msg.role.name.upper()
+                if hasattr(msg.role, "name")
+                else str(msg.role).upper()
+            )
             line = f"--- Message {i}: Role: {role} ---"
-            
-            content_parts = []
-            if hasattr(msg, 'content') and msg.content:
-                content_parts.append(f"  Content: \"{str(msg.content)}\"")
 
-            all_items = (getattr(msg, 'items', []) or []) + (getattr(msg, 'tool_calls', []) or [])
+            content_parts = []
+            if hasattr(msg, "content") and msg.content:
+                content_parts.append(f'  Content: "{str(msg.content)}"')
+
+            all_items = (getattr(msg, "items", []) or []) + (
+                getattr(msg, "tool_calls", []) or []
+            )
             if all_items:
                 for j, item in enumerate(all_items):
                     item_type_name = type(item).__name__
                     item_str = f"  Item/ToolCall {j} (type {item_type_name}): "
-                    
+
                     if isinstance(item, FunctionCallContent):
                         item_str += f"FunctionCall: {item.function.name}, ID: {item.id}, Args: {item.function.arguments}"
                     elif isinstance(item, FunctionResultContent):
@@ -78,16 +91,18 @@ class TracedAgent:
                     else:
                         item_str += str(item)
                     content_parts.append(item_str)
-            
+
             if not content_parts:
-                 content_parts.append("  (No visible content or tool calls)")
+                content_parts.append("  (No visible content or tool calls)")
 
             line += "\n" + "\n".join(content_parts)
             formatted_list.append(line)
 
         return "\n".join(formatted_list)
 
-    async def invoke(self, history: "ChatHistory", **kwargs) -> AsyncIterator[ChatMessageContent]:
+    async def invoke(
+        self, history: "ChatHistory", **kwargs
+    ) -> AsyncIterator[ChatMessageContent]:
         """
         Invoque l'agent encapsulé et journalise l'historique complet avant et après.
         """
@@ -96,9 +111,13 @@ class TracedAgent:
             # Tente de sérialiser l'historique complet, qui est un objet ChatHistory
             # La méthode `model_dump_json` de Pydantic est idéale pour cela.
             history_json = history.model_dump_json(indent=2)
-            self._logger.info(f"--- START INVOKE on {self.name} ---\nHISTORY:\n{history_json}\n")
+            self._logger.info(
+                f"--- START INVOKE on {self.name} ---\nHISTORY:\n{history_json}\n"
+            )
         except Exception as e:
-            self._logger.error(f"Erreur lors de la sérialisation de l'historique initial: {e}")
+            self._logger.error(
+                f"Erreur lors de la sérialisation de l'historique initial: {e}"
+            )
 
         # Invocation de l'agent en mode stream
         response_stream = self.agent.invoke_stream(history, **kwargs)
@@ -106,10 +125,14 @@ class TracedAgent:
         # Consommation et retransmission du stream
         async for response_part in response_stream:
             yield response_part
-        
+
         # Log de l'historique final après l'invocation
         try:
             final_history_json = history.model_dump_json(indent=2)
-            self._logger.info(f"--- FINAL HISTORY for {self.name} ---\nHISTORY:\n{final_history_json}\n")
+            self._logger.info(
+                f"--- FINAL HISTORY for {self.name} ---\nHISTORY:\n{final_history_json}\n"
+            )
         except Exception as e:
-            self._logger.error(f"Erreur lors de la sérialisation de l'historique final: {e}")
+            self._logger.error(
+                f"Erreur lors de la sérialisation de l'historique final: {e}"
+            )

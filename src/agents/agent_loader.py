@@ -2,6 +2,7 @@ import os
 import json
 from typing import List, Dict, Any, Optional
 
+
 class AgentLoader:
     """
     Handles the discovery and loading of agents based on their manifests.
@@ -31,7 +32,7 @@ class AgentLoader:
             if "agent_manifest.json" in files:
                 manifest_path = os.path.join(root, "agent_manifest.json")
                 discovered_manifests.append(manifest_path)
-        
+
         return discovered_manifests
 
     def load_agent(self, agent_manifest_path: str) -> Optional[Dict[str, Any]]:
@@ -51,13 +52,15 @@ class AgentLoader:
             return None
 
         try:
-            with open(agent_manifest_path, 'r', encoding='utf-8') as f:
+            with open(agent_manifest_path, "r", encoding="utf-8") as f:
                 manifest_data = json.load(f)
-            
+
             # Basic validation can be expanded here (e.g., with JSON Schema)
             required_keys = ["manifest_version", "agent_name", "version", "entry_point"]
             if not all(key in manifest_data for key in required_keys):
-                print(f"Warning: Manifest {agent_manifest_path} is missing required keys.")
+                print(
+                    f"Warning: Manifest {agent_manifest_path} is missing required keys."
+                )
                 return None
 
             return manifest_data
@@ -65,5 +68,7 @@ class AgentLoader:
             print(f"Error: Could not decode JSON from {agent_manifest_path}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred while loading agent {agent_manifest_path}: {e}")
+            print(
+                f"An unexpected error occurred while loading agent {agent_manifest_path}: {e}"
+            )
             return None

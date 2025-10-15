@@ -22,8 +22,13 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # Import de l'orchestrateur principal
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
-from semantic_kernel import Kernel # Nécessaire pour l'initialisation de l'orchestrateur
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+    CluedoExtendedOrchestrator,
+)
+from semantic_kernel import (
+    Kernel,
+)  # Nécessaire pour l'initialisation de l'orchestrateur
+
 
 # Configuration du logging simple pour la démo
 def setup_demo_logging():
@@ -32,17 +37,17 @@ def setup_demo_logging():
     if not logging.getLogger().handlers:
         logging.basicConfig(
             level=logging.INFO,
-            format='[%(levelname)s] %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout)
-            ]
+            format="[%(levelname)s] %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)],
         )
     # Appliquer le niveau à tous les handlers existants
     for handler in logging.getLogger().handlers:
         handler.setLevel(logging.INFO)
     return logging.getLogger("DemoCluedo")
 
+
 logger = setup_demo_logging()
+
 
 async def run_demo():
     """
@@ -68,23 +73,29 @@ async def run_demo():
         #     logger.warning("L'orchestrateur pourrait ne pas fonctionner comme attendu sans service LLM configuré.")
 
     except Exception as e:
-        logger.error(f"❌ Erreur lors de l'initialisation du Kernel Semantic Kernel: {e}")
-        logger.error("Veuillez vérifier votre configuration et vos variables d'environnement.")
+        logger.error(
+            f"❌ Erreur lors de l'initialisation du Kernel Semantic Kernel: {e}"
+        )
+        logger.error(
+            "Veuillez vérifier votre configuration et vos variables d'environnement."
+        )
         return
 
     try:
         # Instanciation de l'orchestrateur
         # Le constructeur de CluedoExtendedOrchestrator pourrait nécessiter le kernel
         # ou d'autres configurations. Adaptez selon sa définition.
-        orchestrator = CluedoExtendedOrchestrator(kernel=kernel) # ou CluedoExtendedOrchestrator() si kernel n'est pas requis au init
+        orchestrator = CluedoExtendedOrchestrator(
+            kernel=kernel
+        )  # ou CluedoExtendedOrchestrator() si kernel n'est pas requis au init
 
         logger.info("🕵️‍♂️ Lancement de l'enquête Cluedo...")
-        
+
         # L'appel à la méthode principale de l'orchestrateur.
         # Remplacez 'start_investigation' par la méthode réelle.
         # Elle pourrait prendre des paramètres (ex: description du cas).
         # result = await orchestrator.start_investigation("Un meurtre a été commis au manoir Tudor.")
-        
+
         # Lancement du workflow en deux étapes
         await orchestrator.setup_workflow()
         game_summary = await orchestrator.execute_workflow(
@@ -93,50 +104,77 @@ async def run_demo():
 
         logger.info("\n🏁 Enquête Terminée !")
         logger.info("Résumé de la partie :")
-        
+
         # Affichage structuré du résultat
         if game_summary:
-            solution_analysis = game_summary.get('solution_analysis', {})
-            workflow_info = game_summary.get('workflow_info', {})
-            oracle_stats = game_summary.get('oracle_statistics', {})
-            
-            logger.info(f"  Succès: {solution_analysis.get('success', 'N/A')}")
-            if solution_analysis.get('success'):
-                logger.info(f"  Solution: {solution_analysis.get('proposed_solution', 'N/A')}")
-            else:
-                logger.info(f"  Solution proposée: {solution_analysis.get('proposed_solution', 'N/A')}")
-                logger.info(f"  Solution correcte: {solution_analysis.get('correct_solution', 'N/A')}")
+            solution_analysis = game_summary.get("solution_analysis", {})
+            workflow_info = game_summary.get("workflow_info", {})
+            oracle_stats = game_summary.get("oracle_statistics", {})
 
-            total_turns = oracle_stats.get('agent_interactions', {}).get('total_turns', 'N/A')
+            logger.info(f"  Succès: {solution_analysis.get('success', 'N/A')}")
+            if solution_analysis.get("success"):
+                logger.info(
+                    f"  Solution: {solution_analysis.get('proposed_solution', 'N/A')}"
+                )
+            else:
+                logger.info(
+                    f"  Solution proposée: {solution_analysis.get('proposed_solution', 'N/A')}"
+                )
+                logger.info(
+                    f"  Solution correcte: {solution_analysis.get('correct_solution', 'N/A')}"
+                )
+
+            total_turns = oracle_stats.get("agent_interactions", {}).get(
+                "total_turns", "N/A"
+            )
             logger.info(f"  Nombre de tours: {total_turns}")
-            logger.info(f"  Temps d'exécution: {workflow_info.get('execution_time_seconds', 'N/A')}s")
+            logger.info(
+                f"  Temps d'exécution: {workflow_info.get('execution_time_seconds', 'N/A')}s"
+            )
         else:
-            logger.warning("Aucun résumé de partie n'a été retourné par l'orchestrateur.")
+            logger.warning(
+                "Aucun résumé de partie n'a été retourné par l'orchestrateur."
+            )
 
     except Exception as e:
-        logger.error(f"❌ Une erreur est survenue durant l'exécution de la démo: {e}", exc_info=True)
+        logger.error(
+            f"❌ Une erreur est survenue durant l'exécution de la démo: {e}",
+            exc_info=True,
+        )
+
 
 async def main():
     await run_demo()
+
 
 if __name__ == "__main__":
     # Activation de l'environnement
     try:
         from argumentation_analysis.core.environment import ensure_env
+
         logger.info("Activation de l'environnement...")
-        if not ensure_env(silent=False): # Mettre silent=True pour moins de verbosité
-            logger.error("ERREUR: Impossible d'activer l'environnement. Le script pourrait échouer.")
+        if not ensure_env(silent=False):  # Mettre silent=True pour moins de verbosité
+            logger.error(
+                "ERREUR: Impossible d'activer l'environnement. Le script pourrait échouer."
+            )
             # Décommenter pour sortir si l'environnement est critique
             # sys.exit(1)
     except ImportError:
-        logger.error("ERREUR: Impossible d'importer 'ensure_env' depuis 'argumentation_analysis.core.environment'.")
-        logger.error("Veuillez vérifier que le PYTHONPATH est correctement configuré ou que le script est lancé depuis la racine du projet.")
+        logger.error(
+            "ERREUR: Impossible d'importer 'ensure_env' depuis 'argumentation_analysis.core.environment'."
+        )
+        logger.error(
+            "Veuillez vérifier que le PYTHONPATH est correctement configuré ou que le script est lancé depuis la racine du projet."
+        )
         sys.exit(1)
-    
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("\n⏹️ Exécution de la démo interrompue par l'utilisateur.")
     except Exception as general_error:
-        logger.critical(f"❌ Une erreur non gérée et critique est survenue: {general_error}", exc_info=True)
+        logger.critical(
+            f"❌ Une erreur non gérée et critique est survenue: {general_error}",
+            exc_info=True,
+        )
         sys.exit(1)

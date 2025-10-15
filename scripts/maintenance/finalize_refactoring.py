@@ -10,127 +10,163 @@ import time
 from pathlib import Path
 from datetime import datetime
 
+
 class RefactoringFinalizer:
     """Finalisation de la refactorisation Oracle Enhanced"""
-    
+
     def __init__(self):
         self.root_dir = Path(".")
         self.validation_log = []
-        
+
     def run_final_validation(self):
         """Exécute la validation finale complète"""
         print("🎯 Début validation finale Oracle Enhanced...")
-        
+
         # Phase 5.1: Validation système Oracle
         self._validate_oracle_system()
-        
+
         # Phase 5.2: Tests d'intégration complets
         self._run_integration_tests()
-        
+
         # Phase 5.3: Validation démo fonctionnelle
         self._validate_functional_demo()
-        
+
         # Phase 5.4: Validation Git et push
         self._validate_and_push_git()
-        
+
         # Phase 5.5: Génération rapport final
         self._generate_final_report()
-        
+
         print("✅ Validation finale terminée avec succès.")
-        
+
     def _validate_oracle_system(self):
         """Valide le système Oracle Enhanced"""
         print("🔍 Validation système Oracle Enhanced...")
-        
+
         try:
             # Test import principal Oracle
-            result = subprocess.run([
-                sys.executable, "-c",
-                "from argumentation_analysis.agents.core.oracle import get_oracle_version; print(f'Oracle Enhanced v{get_oracle_version()}')"
-            ], capture_output=True, text=True, timeout=30)
-            
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "from argumentation_analysis.agents.core.oracle import get_oracle_version; print(f'Oracle Enhanced v{get_oracle_version()}')",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
             if result.returncode == 0:
                 self.validation_log.append("✅ Import Oracle Enhanced réussi")
                 print(f"📦 {result.stdout.strip()}")
             else:
                 self.validation_log.append(f"❌ Erreur import Oracle: {result.stderr}")
-                
+
         except Exception as e:
             self.validation_log.append(f"❌ Exception validation Oracle: {e}")
-            
+
         # Test nouveaux modules
         modules_to_test = [
             "argumentation_analysis.agents.core.oracle.error_handling",
-            "argumentation_analysis.agents.core.oracle.interfaces"
+            "argumentation_analysis.agents.core.oracle.interfaces",
         ]
-        
+
         for module in modules_to_test:
             try:
-                result = subprocess.run([
-                    sys.executable, "-c", f"import {module}; print('OK')"
-                ], capture_output=True, text=True, timeout=10)
-                
+                result = subprocess.run(
+                    [sys.executable, "-c", f"import {module}; print('OK')"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+
                 if result.returncode == 0:
-                    self.validation_log.append(f"✅ Module {module.split('.')[-1]} importé")
+                    self.validation_log.append(
+                        f"✅ Module {module.split('.')[-1]} importé"
+                    )
                 else:
-                    self.validation_log.append(f"❌ Erreur import {module}: {result.stderr}")
-                    
+                    self.validation_log.append(
+                        f"❌ Erreur import {module}: {result.stderr}"
+                    )
+
             except Exception as e:
                 self.validation_log.append(f"❌ Exception {module}: {e}")
-                
+
     def _run_integration_tests(self):
         """Exécute les tests d'intégration complets"""
         print("🧪 Exécution tests d'intégration...")
-        
+
         # Tests Oracle avec couverture
         try:
-            result = subprocess.run([
-                sys.executable, "scripts/maintenance/validate_oracle_coverage.py"
-            ], capture_output=True, text=True, timeout=120)
-            
+            result = subprocess.run(
+                [sys.executable, "scripts/maintenance/validate_oracle_coverage.py"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
             if result.returncode == 0:
-                self.validation_log.append("✅ Validation couverture Oracle 100% réussie")
+                self.validation_log.append(
+                    "✅ Validation couverture Oracle 100% réussie"
+                )
                 print("📊 Couverture Oracle: 100% validée")
             else:
-                self.validation_log.append(f"❌ Échec validation couverture: {result.stderr}")
-                
+                self.validation_log.append(
+                    f"❌ Échec validation couverture: {result.stderr}"
+                )
+
         except Exception as e:
             self.validation_log.append(f"❌ Exception tests couverture: {e}")
-            
+
         # Tests nouveaux modules spécifiquement
         test_commands = [
-            [sys.executable, "-m", "pytest", 
-             "tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py", 
-             "-v", "--tb=short"],
-            [sys.executable, "-m", "pytest",
-             "tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py",
-             "-v", "--tb=short"],
-            [sys.executable, "-m", "pytest",
-             "tests/unit/argumentation_analysis/agents/core/oracle/test_new_modules_integration.py",
-             "-v", "--tb=short"]
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py",
+                "-v",
+                "--tb=short",
+            ],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py",
+                "-v",
+                "--tb=short",
+            ],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "tests/unit/argumentation_analysis/agents/core/oracle/test_new_modules_integration.py",
+                "-v",
+                "--tb=short",
+            ],
         ]
-        
+
         for cmd in test_commands:
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                test_name = cmd[3].split('/')[-1]
-                
+                test_name = cmd[3].split("/")[-1]
+
                 if result.returncode == 0:
                     self.validation_log.append(f"✅ Tests {test_name} réussis")
                 else:
                     self.validation_log.append(f"❌ Échec {test_name}: {result.stderr}")
-                    
+
             except Exception as e:
                 self.validation_log.append(f"❌ Exception test {test_name}: {e}")
-                
+
     def _validate_functional_demo(self):
         """Valide les démonstrations fonctionnelles"""
         print("🎭 Validation démonstrations fonctionnelles...")
-        
+
         # Test rapide Oracle Enhanced (version test)
         try:
             # Créer un script de test rapide
-            test_script = '''
+            test_script = """
 import asyncio
 from argumentation_analysis.agents.core.oracle import (
     CluedoDataset, CluedoDatasetManager, MoriartyInterrogatorAgent
@@ -164,74 +200,80 @@ async def test_oracle_quick():
 if __name__ == "__main__":
     result = asyncio.run(test_oracle_quick())
     exit(0 if result else 1)
-'''
-            
+"""
+
             test_file = self.root_dir / "temp_oracle_test.py"
-            with open(test_file, 'w', encoding='utf-8') as f:
+            with open(test_file, "w", encoding="utf-8") as f:
                 f.write(test_script)
-                
-            result = subprocess.run([
-                sys.executable, str(test_file)
-            ], capture_output=True, text=True, timeout=30)
-            
+
+            result = subprocess.run(
+                [sys.executable, str(test_file)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
             # Nettoyer le fichier temporaire
             test_file.unlink(missing_ok=True)
-            
+
             if result.returncode == 0:
                 self.validation_log.append("✅ Test fonctionnel Oracle réussi")
                 print("🎯 Test fonctionnel: OK")
             else:
                 self.validation_log.append(f"❌ Échec test fonctionnel: {result.stderr}")
-                
+
         except Exception as e:
             self.validation_log.append(f"❌ Exception test fonctionnel: {e}")
-            
+
     def _validate_and_push_git(self):
         """Valide l'état Git et effectue le push"""
         print("📤 Validation Git et synchronisation...")
-        
+
         try:
             # Vérifier état Git
-            result = subprocess.run([
-                "git", "status", "--porcelain"
-            ], capture_output=True, text=True)
-            
+            result = subprocess.run(
+                ["git", "status", "--porcelain"], capture_output=True, text=True
+            )
+
             if result.stdout.strip():
                 self.validation_log.append("⚠️ Fichiers non commités détectés")
                 print("⚠️ Fichiers non commités présents")
             else:
                 self.validation_log.append("✅ Git repository propre")
-                
+
             # Vérifier commits récents
-            result = subprocess.run([
-                "git", "log", "--oneline", "-5"
-            ], capture_output=True, text=True)
-            
+            result = subprocess.run(
+                ["git", "log", "--oneline", "-5"], capture_output=True, text=True
+            )
+
             if "Phase" in result.stdout:
                 self.validation_log.append("✅ Commits de refactorisation présents")
-                
+
             # Push vers remote (si configuré)
             try:
-                result = subprocess.run([
-                    "git", "push", "origin", "main"
-                ], capture_output=True, text=True, timeout=60)
-                
+                result = subprocess.run(
+                    ["git", "push", "origin", "main"],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+
                 if result.returncode == 0:
                     self.validation_log.append("✅ Push Git réussi")
                     print("📤 Push Git: OK")
                 else:
                     self.validation_log.append(f"⚠️ Push Git échoué: {result.stderr}")
                     print("⚠️ Push Git: Échec (normal si pas de remote)")
-                    
+
             except Exception as e:
                 self.validation_log.append(f"⚠️ Exception push Git: {e}")
-                
+
         except Exception as e:
             self.validation_log.append(f"❌ Exception validation Git: {e}")
-            
+
     def _generate_final_report(self):
         """Génère le rapport final de refactorisation"""
-        
+
         report_content = f"""# Rapport Final Refactorisation Oracle Enhanced v2.1.0
 
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -417,24 +459,32 @@ Le système **Sherlock-Watson-Moriarty Oracle Enhanced** est désormais **prêt 
 ---
 *Rapport généré automatiquement - Refactorisation Oracle Enhanced v2.1.0 terminée avec succès*
 """
-        
-        report_path = self.root_dir / "docs" / "rapports" / f"rapport_final_refactorisation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-        with open(report_path, 'w', encoding='utf-8') as f:
+
+        report_path = (
+            self.root_dir
+            / "docs"
+            / "rapports"
+            / f"rapport_final_refactorisation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_content)
-            
+
         print(f"📄 Rapport final généré: {report_path}")
-        
+
         # Affichage résumé console
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎉 REFACTORISATION ORACLE ENHANCED v2.1.0 TERMINÉE")
-        print("="*60)
-        print(f"✅ Validation finale: {len([x for x in self.validation_log if '✅' in x])}/{len(self.validation_log)} OK")
+        print("=" * 60)
+        print(
+            f"✅ Validation finale: {len([x for x in self.validation_log if '✅' in x])}/{len(self.validation_log)} OK"
+        )
         print("📦 Architecture: 7 modules Oracle Enhanced")
         print("🧪 Tests: 148+ tests (100% couverture)")
         print("📚 Documentation: 12 guides complets")
         print("🛠️ Scripts: 4 outils maintenance")
         print("📈 Performance: +44% démarrage, -21% mémoire")
-        print("="*60)
+        print("=" * 60)
+
 
 if __name__ == "__main__":
     finalizer = RefactoringFinalizer()

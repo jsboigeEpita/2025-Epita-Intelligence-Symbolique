@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 from collections import defaultdict
 
+
 def analyze_taxonomy_stats(file_path: str):
     """
     Analyse un fichier de taxonomie CSV pour générer des statistiques de remplissage
@@ -21,7 +22,7 @@ def analyze_taxonomy_stats(file_path: str):
     taxonomy_data = []
     fieldnames = []
     try:
-        with open(file_path, mode='r', encoding='utf-8') as infile:
+        with open(file_path, mode="r", encoding="utf-8") as infile:
             reader = csv.DictReader(infile)
             print("... Lecture du fichier CSV ...")
             sys.stdout.flush()
@@ -35,7 +36,9 @@ def analyze_taxonomy_stats(file_path: str):
         return
 
     if not taxonomy_data or not fieldnames:
-        print("ERREUR: Aucune donnée ou aucun en-tête trouvé dans le fichier de taxonomie.")
+        print(
+            "ERREUR: Aucune donnée ou aucun en-tête trouvé dans le fichier de taxonomie."
+        )
         sys.stdout.flush()
         return
 
@@ -46,12 +49,12 @@ def analyze_taxonomy_stats(file_path: str):
         for field in fieldnames:
             if row.get(field) and row.get(field).strip():
                 non_empty_counts[field] += 1
-    
+
     # Regrouper par langue supposée
     stats_by_lang = defaultdict(list)
     other_fields = []
-    
-    lang_suffixes = ['_fr', '_en', '_es', '_ru', '_de', '_it', '_pt', '_zh']
+
+    lang_suffixes = ["_fr", "_en", "_es", "_ru", "_de", "_it", "_pt", "_zh"]
 
     for field in fieldnames:
         found_lang = False
@@ -65,9 +68,11 @@ def analyze_taxonomy_stats(file_path: str):
             other_fields.append(field)
 
     print(f"\n--- 📊 RAPPORT STATISTIQUE (sur {total_rows} noeuds) ---")
-    
+
     print("\n--- Champs non spécifiques à une langue ---")
-    sorted_other_fields = sorted(other_fields, key=lambda f: non_empty_counts.get(f, 0), reverse=True)
+    sorted_other_fields = sorted(
+        other_fields, key=lambda f: non_empty_counts.get(f, 0), reverse=True
+    )
     for field in sorted_other_fields:
         count = non_empty_counts.get(field, 0)
         percentage = (count / total_rows) * 100
@@ -76,7 +81,9 @@ def analyze_taxonomy_stats(file_path: str):
     sorted_langs = sorted(stats_by_lang.keys())
     for lang in sorted_langs:
         print(f"\n--- Langue: {lang} ---")
-        sorted_lang_fields = sorted(stats_by_lang[lang], key=lambda f: non_empty_counts.get(f, 0), reverse=True)
+        sorted_lang_fields = sorted(
+            stats_by_lang[lang], key=lambda f: non_empty_counts.get(f, 0), reverse=True
+        )
         for field in sorted_lang_fields:
             count = non_empty_counts.get(field, 0)
             percentage = (count / total_rows) * 100
@@ -86,15 +93,17 @@ def analyze_taxonomy_stats(file_path: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Analyseur statistique de fichier de taxonomie CSV.")
+    parser = argparse.ArgumentParser(
+        description="Analyseur statistique de fichier de taxonomie CSV."
+    )
     parser.add_argument(
-        '--taxonomy-file',
+        "--taxonomy-file",
         type=str,
-        default='argumentation_analysis/data/argumentum_fallacies_taxonomy.csv',
-        help='Chemin vers le fichier de taxonomie CSV à analyser.'
+        default="argumentation_analysis/data/argumentum_fallacies_taxonomy.csv",
+        help="Chemin vers le fichier de taxonomie CSV à analyser.",
     )
     args = parser.parse_args()
-    
+
     print("--- Démarrage de l'analyse ---")
     sys.stdout.flush()
     analyze_taxonomy_stats(args.taxonomy_file)

@@ -6,13 +6,16 @@ import os
 from argumentation_analysis.orchestration.workflow import ParallelWorkflowManager
 from argumentation_analysis.utils.taxonomy_loader import TaxonomyLoader
 
+
 class AgentType(Enum):
     """Enumeration of available agent archetypes."""
+
     METHODICAL_AUDITOR = "MethodicalAuditor"
     PARALLEL_EXPLORER = "ParallelExplorer"
     RESEARCH_ASSISTANT = "ResearchAssistant"
     INFORMAL_FALLACY = "InformalFallacy"
     SHERLOCK_JTMS = "SherlockJTMS"
+
 
 class FallacyAgentBase(abc.ABC):
     """Abstract base class for fallacy detection agents."""
@@ -31,6 +34,7 @@ class FallacyAgentBase(abc.ABC):
         """
         pass
 
+
 class MethodicalAuditorAgent(FallacyAgentBase):
     """
     Agent that performs a two-step analysis.
@@ -38,17 +42,24 @@ class MethodicalAuditorAgent(FallacyAgentBase):
     2. A parallel exploration runs only on the suggested categories.
     This aims for a balance of speed and accuracy.
     """
+
     def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         script_dir = os.path.dirname(__file__)
         # The new standard plugins directory is at the root of the project.
-        self.plugins_directory = os.path.abspath(os.path.join(script_dir, "..", "..", "plugins"))
-        self.taxonomy_directory = os.path.join(script_dir, "..", "taxonomy", "fallacies")
+        self.plugins_directory = os.path.abspath(
+            os.path.join(script_dir, "..", "..", "plugins")
+        )
+        self.taxonomy_directory = os.path.join(
+            script_dir, "..", "taxonomy", "fallacies"
+        )
 
         # Load the guiding function from the new standard directory
-        guiding_plugin_ = kernel.add_plugin(parent_directory=self.plugins_directory, plugin_name="GuidingPlugin")
+        guiding_plugin_ = kernel.add_plugin(
+            parent_directory=self.plugins_directory, plugin_name="GuidingPlugin"
+        )
         self.guiding_func = guiding_plugin_["suggest_categories"]
-        
+
         # Initialize the workflow manager. It now loads its own plugins.
         self.manager = ParallelWorkflowManager(kernel)
 
@@ -57,23 +68,27 @@ class MethodicalAuditorAgent(FallacyAgentBase):
         Orchestrates the guided analysis workflow.
         """
         print("--- Running Methodical Auditor Agent ---")
-        
+
         # 1. Run the guiding plugin to find relevant categories
         print("Step 1: Identifying relevant fallacy categories...")
         guiding_result = await self._kernel.invoke(
-            self.guiding_func,
-            sk.KernelArguments(input=text)
+            self.guiding_func, sk.KernelArguments(input=text)
         )
-        
+
         try:
             relevant_categories_data = json.loads(str(guiding_result))
-            relevant_categories = relevant_categories_data.get("relevant_categories", [])
+            relevant_categories = relevant_categories_data.get(
+                "relevant_categories", []
+            )
         except (json.JSONDecodeError, AttributeError):
             relevant_categories = []
 
         if not relevant_categories:
             print("No relevant categories suggested. Aborting focused exploration.")
-            return {"summary": "Analysis aborted: No relevant fallacy categories were identified by the guiding model.", "findings": []}
+            return {
+                "summary": "Analysis aborted: No relevant fallacy categories were identified by the guiding model.",
+                "findings": [],
+            }
 
         print(f"Guiding plugin suggested: {relevant_categories}")
 
@@ -81,37 +96,47 @@ class MethodicalAuditorAgent(FallacyAgentBase):
         print("Step 2: Filtering taxonomy for focused exploration...")
         loader = TaxonomyLoader()
         all_branches = loader.load_taxonomy()
-        
+
         # The category is the first part of the path, e.g., "Fallacies of Relevance/Ad Hominem.txt"
         # We need to normalize the path format for reliable matching.
         targeted_branches = {
-            path: definition for path, definition in all_branches.items()
+            path: definition
+            for path, definition in all_branches.items()
             if os.path.normpath(path).split(os.sep)[0] in relevant_categories
         }
 
         if not targeted_branches:
             print("No matching taxonomy branches found for the suggested categories.")
-            return {"summary": "Analysis complete: The categories suggested by the guiding model did not match any available taxonomies.", "findings": []}
+            return {
+                "summary": "Analysis complete: The categories suggested by the guiding model did not match any available taxonomies.",
+                "findings": [],
+            }
 
         print(f"Executing workflow on {len(targeted_branches)} targeted branches.")
 
         # 3. Execute the workflow on the filtered set of branches
-        analysis_result = await self.manager.execute_parallel_workflow(text, targeted_branches)
-        
+        analysis_result = await self.manager.execute_parallel_workflow(
+            text, targeted_branches
+        )
+
         return analysis_result
+
 
 class ParallelExplorerAgent(FallacyAgentBase):
     """
     Agent that explores all taxonomy branches in parallel.
     Uses the ParallelWorkflowManager for a comprehensive but potentially less focused analysis.
     """
+
     def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         # Determine paths relative to this file's location
         script_dir = os.path.dirname(__file__)
         self.plugins_directory = os.path.join(script_dir, "..", "plugins")
-        self.taxonomy_directory = os.path.join(script_dir, "..", "taxonomy", "fallacies")
-        
+        self.taxonomy_directory = os.path.join(
+            script_dir, "..", "taxonomy", "fallacies"
+        )
+
         # Initialize the workflow manager
         self.manager = ParallelWorkflowManager(kernel, self.plugins_directory)
 
@@ -122,18 +147,23 @@ class ParallelExplorerAgent(FallacyAgentBase):
         print("--- Running Parallel Explorer Agent ---")
         loader = TaxonomyLoader()
         taxonomy_branches_list = loader.load_taxonomy()
-        taxonomy_branches = {item['nom_vulgarisé']: item['text_fr'] for item in taxonomy_branches_list}
-        
+        taxonomy_branches = {
+            item["nom_vulgarisé"]: item["text_fr"] for item in taxonomy_branches_list
+        }
+
         print(f"Loaded {len(taxonomy_branches)} branches for parallel exploration.")
-        
+
         # For cost and performance management during testing, let's cap the exploration
         # to a subset of branches. We will use all of them in the final integration tests.
         # selected_branches = dict(list(taxonomy_branches.items())[:10])
         # print(f"Executing workflow on {len(selected_branches)} selected branches.")
 
-        analysis_result = await self.manager.execute_parallel_workflow(text, taxonomy_branches)
-        
+        analysis_result = await self.manager.execute_parallel_workflow(
+            text, taxonomy_branches
+        )
+
         return analysis_result
+
 
 class ResearchAssistantAgent(FallacyAgentBase):
     """
@@ -141,6 +171,7 @@ class ResearchAssistantAgent(FallacyAgentBase):
     for interactive, step-by-step analysis.
     This agent is not yet implemented.
     """
+
     def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         print("--- Research Assistant Agent Initialized (Placeholder) ---")
@@ -156,7 +187,7 @@ class ResearchAssistantAgent(FallacyAgentBase):
                 {
                     "fallacy_name": "Not Implemented",
                     "explanation": "The ResearchAssistantAgent is designed for a future interactive, planner-based analysis workflow. This feature is currently under development.",
-                    "is_fallacious": "N/A"
+                    "is_fallacious": "N/A",
                 }
-            ]
+            ],
         }

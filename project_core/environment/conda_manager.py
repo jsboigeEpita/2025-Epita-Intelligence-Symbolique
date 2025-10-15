@@ -27,42 +27,59 @@ from typing import List, Optional, Union, Dict, Any
 # Cela pourrait nécessiter un ajustement en fonction de la structure finale.
 try:
     from ..core_from_scripts.common_utils import Logger, ColoredOutput, safe_exit
-    from ..core_from_scripts.environment_manager import ReinstallComponent # Pour les types, si nécessaire
+    from ..core_from_scripts.environment_manager import (
+        ReinstallComponent,
+    )  # Pour les types, si nécessaire
 except ImportError:
     # Fallback pour exécution directe ou si la structure change
     # Ce fallback est simplifié et pourrait ne pas fonctionner sans ajustements
     # print("Avertissement: Impossible d'importer common_utils ou ReinstallComponent directement.")
     # Définitions basiques pour que le code ne plante pas à l'import
     class Logger:
-        def __init__(self, verbose=False): self.verbose = verbose
-        def debug(self, msg): print(f"DEBUG: {msg}")
-        def info(self, msg): print(f"INFO: {msg}")
-        def warning(self, msg): print(f"WARNING: {msg}")
-        def error(self, msg, exc_info=False): print(f"ERROR: {msg}")
-        def success(self, msg): print(f"SUCCESS: {msg}")
-        def critical(self, msg): print(f"CRITICAL: {msg}")
+        def __init__(self, verbose=False):
+            self.verbose = verbose
+
+        def debug(self, msg):
+            print(f"DEBUG: {msg}")
+
+        def info(self, msg):
+            print(f"INFO: {msg}")
+
+        def warning(self, msg):
+            print(f"WARNING: {msg}")
+
+        def error(self, msg, exc_info=False):
+            print(f"ERROR: {msg}")
+
+        def success(self, msg):
+            print(f"SUCCESS: {msg}")
+
+        def critical(self, msg):
+            print(f"CRITICAL: {msg}")
 
     class ColoredOutput:
         @staticmethod
-        def print_section(msg): print(f"\n--- {msg} ---")
+        def print_section(msg):
+            print(f"\n--- {msg} ---")
 
     def safe_exit(code, logger_instance=None):
         if logger_instance:
             logger_instance.info(f"Sortie avec code {code}")
         sys.exit(code)
-    
-    import sys # Nécessaire pour le fallback de safe_exit
+
+    import sys  # Nécessaire pour le fallback de safe_exit
 
 
 class CondaManager:
     """
     Gère les interactions avec Conda.
     """
+
     def __init__(self, logger: Logger = None, project_root: Path = None):
         self.logger = logger or Logger()
-        self.project_root = project_root or Path(os.getcwd()) # Fallback simple
+        self.project_root = project_root or Path(os.getcwd())  # Fallback simple
         self.conda_executable_path: Optional[str] = None
-        self.default_conda_env = "projet-is" # Peut être configuré
+        self.default_conda_env = "projet-is"  # Peut être configuré
 
     def _find_conda_executable(self) -> Optional[str]:
         """
@@ -87,26 +104,32 @@ class CondaManager:
             self.conda_executable_path = conda_path
             return self.conda_executable_path
 
-        self.logger.warning(f"'{conda_exe_name}' non trouvé via shutil.which. Le PATH est peut-être incomplet.")
+        self.logger.warning(
+            f"'{conda_exe_name}' non trouvé via shutil.which. Le PATH est peut-être incomplet."
+        )
         self.logger.debug(f"PATH actuel: {os.environ.get('PATH')}")
 
         # Plan B : Tenter de lire CONDA_PATH depuis .env
         self.logger.info("Tentative de localisation de Conda via le fichier .env...")
         conda_path_from_env = self._get_var_from_dotenv("CONDA_PATH")
         if conda_path_from_env:
-            self.logger.info(f"Variable CONDA_PATH trouvée dans .env: {conda_path_from_env}")
-            original_path = os.environ.get('PATH', '')
+            self.logger.info(
+                f"Variable CONDA_PATH trouvée dans .env: {conda_path_from_env}"
+            )
+            original_path = os.environ.get("PATH", "")
             # Utiliser un séparateur approprié pour le système
             separator = os.pathsep
             new_path = f"{conda_path_from_env}{separator}{original_path}"
-            os.environ['PATH'] = new_path
-            
+            os.environ["PATH"] = new_path
+
             self.logger.debug(f"Nouveau PATH (temporaire): {new_path}")
-            
+
             # Nouvelle tentative avec le PATH mis à jour
             conda_path = shutil.which(conda_exe_name)
             if conda_path:
-                self.logger.info(f"Exécutable Conda trouvé via .env et shutil.which: {conda_path}")
+                self.logger.info(
+                    f"Exécutable Conda trouvé via .env et shutil.which: {conda_path}"
+                )
                 self.conda_executable_path = conda_path
                 return self.conda_executable_path
 
@@ -119,64 +142,86 @@ class CondaManager:
         if not dotenv_path.is_file():
             self.logger.warning(f"Fichier .env introuvable à : {dotenv_path}")
             return None
-        
+
         try:
-            with open(dotenv_path, 'r', encoding='utf-8') as f:
+            with open(dotenv_path, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
                     if line.startswith(f"{var_name}="):
-                        value = line.split('=', 1)[1].strip()
-                        return value.strip('\'"')
+                        value = line.split("=", 1)[1].strip()
+                        return value.strip("'\"")
             return None
         except IOError as e:
-            self.logger.error(f"Erreur de lecture du fichier .env pour la variable '{var_name}': {e}")
+            self.logger.error(
+                f"Erreur de lecture du fichier .env pour la variable '{var_name}': {e}"
+            )
             return None
 
     def _get_conda_env_path(self, env_name: str) -> Optional[str]:
         """Récupère le chemin complet d'un environnement conda par son nom."""
         conda_exe = self._find_conda_executable()
-        if not conda_exe: return None
+        if not conda_exe:
+            return None
 
         try:
-            cmd = [conda_exe, 'env', 'list', '--json']
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding='utf-8')
+            cmd = [conda_exe, "env", "list", "--json"]
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30, encoding="utf-8"
+            )
             if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 json_start_index = -1
                 for i, line in enumerate(lines):
-                    if line.strip().startswith('{'):
+                    if line.strip().startswith("{"):
                         json_start_index = i
                         break
-                
+
                 if json_start_index == -1:
-                    self.logger.warning("Impossible de trouver le début du JSON dans la sortie de 'conda env list'.")
+                    self.logger.warning(
+                        "Impossible de trouver le début du JSON dans la sortie de 'conda env list'."
+                    )
                     return None
 
-                json_content = '\n'.join(lines[json_start_index:])
+                json_content = "\n".join(lines[json_start_index:])
                 data = json.loads(json_content)
 
-                for env_path_str in data.get('envs', []):
+                for env_path_str in data.get("envs", []):
                     if Path(env_path_str).name == env_name:
-                        self.logger.debug(f"Chemin trouvé pour '{env_name}': {env_path_str}")
+                        self.logger.debug(
+                            f"Chemin trouvé pour '{env_name}': {env_path_str}"
+                        )
                         return env_path_str
             else:
-                 self.logger.warning(f"La commande 'conda env list --json' a échoué. Stderr: {result.stderr}")
+                self.logger.warning(
+                    f"La commande 'conda env list --json' a échoué. Stderr: {result.stderr}"
+                )
 
             return None
-        except (subprocess.SubprocessError, json.JSONDecodeError, subprocess.TimeoutExpired) as e:
-            self.logger.error(f"Erreur lors de la recherche du chemin de l'environnement '{env_name}': {e}")
+        except (
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+            subprocess.TimeoutExpired,
+        ) as e:
+            self.logger.error(
+                f"Erreur lors de la recherche du chemin de l'environnement '{env_name}': {e}"
+            )
             return None
 
-    def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
-                         cwd: Optional[Union[str, Path]] = None, capture_output: bool = False) -> subprocess.CompletedProcess:
+    def run_in_conda_env(
+        self,
+        command: Union[str, List[str]],
+        env_name: str = None,
+        cwd: Optional[Union[str, Path]] = None,
+        capture_output: bool = False,
+    ) -> subprocess.CompletedProcess:
         """
         Exécute une commande dans un environnement conda de manière robuste en utilisant `conda run`.
         """
         if env_name is None:
             env_name = self.default_conda_env
-        
+
         effective_cwd = str(cwd) if cwd else str(self.project_root)
 
         conda_exe = self._find_conda_executable()
@@ -186,29 +231,59 @@ class CondaManager:
 
         env_path = self._get_conda_env_path(env_name)
         if not env_path:
-            self.logger.error(f"Impossible de trouver le chemin pour l'environnement conda '{env_name}'.")
-            raise RuntimeError(f"Environnement conda '{env_name}' non disponible ou chemin inaccessible.")
+            self.logger.error(
+                f"Impossible de trouver le chemin pour l'environnement conda '{env_name}'."
+            )
+            raise RuntimeError(
+                f"Environnement conda '{env_name}' non disponible ou chemin inaccessible."
+            )
 
-        is_complex_string_command = isinstance(command, str) and (';' in command or '&&' in command or '|' in command)
+        is_complex_string_command = isinstance(command, str) and (
+            ";" in command or "&&" in command or "|" in command
+        )
 
         if is_complex_string_command:
             if platform.system() == "Windows":
-                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'cmd.exe', '/c', command]
+                final_command = [
+                    conda_exe,
+                    "run",
+                    "--prefix",
+                    env_path,
+                    "--no-capture-output",
+                    "cmd.exe",
+                    "/c",
+                    command,
+                ]
             else:
-                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'bash', '-c', command]
+                final_command = [
+                    conda_exe,
+                    "run",
+                    "--prefix",
+                    env_path,
+                    "--no-capture-output",
+                    "bash",
+                    "-c",
+                    command,
+                ]
         else:
-            import shlex # Import localisé car spécifique à ce bloc
+            import shlex  # Import localisé car spécifique à ce bloc
+
             if isinstance(command, str):
-                base_command = shlex.split(command, posix=(os.name != 'nt'))
+                base_command = shlex.split(command, posix=(os.name != "nt"))
             else:
                 base_command = command
-            
+
             final_command = [
-                conda_exe, 'run', '--prefix', env_path,
-                '--no-capture-output' # Important pour la robustesse
+                conda_exe,
+                "run",
+                "--prefix",
+                env_path,
+                "--no-capture-output",  # Important pour la robustesse
             ] + base_command
-        
-        self.logger.info(f"Commande d'exécution via 'conda run': {' '.join(final_command)}")
+
+        self.logger.info(
+            f"Commande d'exécution via 'conda run': {' '.join(final_command)}"
+        )
 
         try:
             # Si capture_output est True, on capture stdout/stderr. Sinon, ils vont au terminal parent.
@@ -216,28 +291,34 @@ class CondaManager:
             process_kwargs: Dict[str, Any] = {
                 "cwd": effective_cwd,
                 "text": True,
-                "encoding": 'utf-8',
-                "errors": 'replace',
-                "check": False, # On gère le code de retour nous-mêmes
-                "timeout": 3600
+                "encoding": "utf-8",
+                "errors": "replace",
+                "check": False,  # On gère le code de retour nous-mêmes
+                "timeout": 3600,
             }
             if capture_output:
                 process_kwargs["capture_output"] = True
-            
+
             result = subprocess.run(final_command, **process_kwargs)
 
             if result.returncode == 0:
-                self.logger.debug(f"'conda run' exécuté avec succès (code {result.returncode}).")
+                self.logger.debug(
+                    f"'conda run' exécuté avec succès (code {result.returncode})."
+                )
             else:
-                self.logger.warning(f"'conda run' terminé avec le code: {result.returncode}.")
+                self.logger.warning(
+                    f"'conda run' terminé avec le code: {result.returncode}."
+                )
                 if capture_output:
                     self.logger.debug(f"Stdout: {result.stdout}")
                     self.logger.debug(f"Stderr: {result.stderr}")
-            
+
             return result
 
         except subprocess.TimeoutExpired as e:
-            self.logger.error(f"La commande a dépassé le timeout de 3600 secondes : {e}")
+            self.logger.error(
+                f"La commande a dépassé le timeout de 3600 secondes : {e}"
+            )
             raise
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.error(f"Erreur majeure lors de l'exécution de 'conda run': {e}")
@@ -247,89 +328,136 @@ class CondaManager:
         """Vérifie si un environnement conda existe en cherchant son chemin."""
         env_path = self._get_conda_env_path(env_name)
         if env_path:
-            self.logger.debug(f"Environnement conda '{env_name}' trouvé à l'emplacement : {env_path}")
+            self.logger.debug(
+                f"Environnement conda '{env_name}' trouvé à l'emplacement : {env_path}"
+            )
             return True
         else:
-            self.logger.warning(f"Environnement conda '{env_name}' non trouvé parmi les environnements existants.")
+            self.logger.warning(
+                f"Environnement conda '{env_name}' non trouvé parmi les environnements existants."
+            )
             return False
 
-    def reinstall_pip_dependencies(self, env_name: str, requirements_file_path: Union[str, Path]):
+    def reinstall_pip_dependencies(
+        self, env_name: str, requirements_file_path: Union[str, Path]
+    ):
         """Force la réinstallation des dépendances pip depuis un fichier requirements."""
-        ColoredOutput.print_section(f"Réinstallation forcée des paquets PIP pour l'env '{env_name}'")
-        
+        ColoredOutput.print_section(
+            f"Réinstallation forcée des paquets PIP pour l'env '{env_name}'"
+        )
+
         # Note: La validation de l'environnement Java est omise ici,
         # car elle est très spécifique au EnvironmentManager original.
         # Si nécessaire, elle pourrait être ajoutée comme une étape optionnelle.
 
         if not self.check_conda_env_exists(env_name):
-            self.logger.critical(f"L'environnement '{env_name}' n'existe pas. Impossible de réinstaller les dépendances.")
+            self.logger.critical(
+                f"L'environnement '{env_name}' n'existe pas. Impossible de réinstaller les dépendances."
+            )
             safe_exit(1, self.logger)
-            
+
         req_path = Path(requirements_file_path)
         if not req_path.exists():
-            self.logger.critical(f"Le fichier de dépendances n'a pas été trouvé: {req_path}")
+            self.logger.critical(
+                f"Le fichier de dépendances n'a pas été trouvé: {req_path}"
+            )
             safe_exit(1, self.logger)
 
         self.logger.info(f"Lancement de la réinstallation depuis {req_path}...")
         pip_install_command = [
-            'pip', 'install',
-            '--no-cache-dir',
-            '--force-reinstall',
-            '-r', str(req_path)
+            "pip",
+            "install",
+            "--no-cache-dir",
+            "--force-reinstall",
+            "-r",
+            str(req_path),
         ]
-        
+
         result = self.run_in_conda_env(pip_install_command, env_name=env_name)
-        
+
         if result.returncode != 0:
-            self.logger.error(f"Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus.")
+            self.logger.error(
+                f"Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus."
+            )
             safe_exit(1, self.logger)
-        
+
         self.logger.success("Réinstallation des dépendances PIP terminée.")
 
-    def reinstall_conda_environment(self, env_name: str, python_version: str = "3.10", requirements_file_path: Optional[Union[str, Path]] = None):
+    def reinstall_conda_environment(
+        self,
+        env_name: str,
+        python_version: str = "3.10",
+        requirements_file_path: Optional[Union[str, Path]] = None,
+    ):
         """Supprime et recrée intégralement l'environnement conda."""
-        ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}'")
+        ColoredOutput.print_section(
+            f"Réinstallation complète de l'environnement Conda '{env_name}'"
+        )
 
         conda_exe = self._find_conda_executable()
         if not conda_exe:
-            self.logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
+            self.logger.critical(
+                "Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer."
+            )
             safe_exit(1, self.logger)
         self.logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
 
         if self.check_conda_env_exists(env_name):
             self.logger.info(f"Suppression de l'environnement existant '{env_name}'...")
             # Utiliser subprocess.run directement car run_in_conda_env n'est pas adapté pour 'conda env remove'
-            remove_cmd = [conda_exe, 'env', 'remove', '-n', env_name, '--y']
+            remove_cmd = [conda_exe, "env", "remove", "-n", env_name, "--y"]
             self.logger.debug(f"Exécution: {' '.join(remove_cmd)}")
-            remove_result = subprocess.run(remove_cmd, check=False, capture_output=True, text=True)
+            remove_result = subprocess.run(
+                remove_cmd, check=False, capture_output=True, text=True
+            )
             if remove_result.returncode != 0:
-                self.logger.error(f"Échec de la suppression de l'environnement '{env_name}'. Stderr: {remove_result.stderr}")
+                self.logger.error(
+                    f"Échec de la suppression de l'environnement '{env_name}'. Stderr: {remove_result.stderr}"
+                )
                 safe_exit(1, self.logger)
             self.logger.success(f"Environnement '{env_name}' supprimé.")
         else:
-            self.logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
+            self.logger.info(
+                f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer."
+            )
 
-        self.logger.info(f"Création du nouvel environnement '{env_name}' avec Python {python_version}...")
-        create_cmd = [conda_exe, 'create', '-n', env_name, f'python={python_version}', '--y']
+        self.logger.info(
+            f"Création du nouvel environnement '{env_name}' avec Python {python_version}..."
+        )
+        create_cmd = [
+            conda_exe,
+            "create",
+            "-n",
+            env_name,
+            f"python={python_version}",
+            "--y",
+        ]
         self.logger.debug(f"Exécution: {' '.join(create_cmd)}")
-        create_result = subprocess.run(create_cmd, check=False, capture_output=True, text=True)
+        create_result = subprocess.run(
+            create_cmd, check=False, capture_output=True, text=True
+        )
         if create_result.returncode != 0:
-            self.logger.error(f"Échec de la création de l'environnement '{env_name}'. Stderr: {create_result.stderr}")
+            self.logger.error(
+                f"Échec de la création de l'environnement '{env_name}'. Stderr: {create_result.stderr}"
+            )
             safe_exit(1, self.logger)
         self.logger.success(f"Environnement '{env_name}' recréé.")
-        
+
         if requirements_file_path:
             self.reinstall_pip_dependencies(env_name, requirements_file_path)
         else:
-            self.logger.info("Aucun fichier requirements fourni, les dépendances PIP ne sont pas réinstallées automatiquement.")
+            self.logger.info(
+                "Aucun fichier requirements fourni, les dépendances PIP ne sont pas réinstallées automatiquement."
+            )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Exemple d'utilisation
     logger = Logger(verbose=True)
     # Assurez-vous que project_root est correctement défini si nécessaire pour les chemins relatifs.
     # Par exemple, pour trouver un requirements.txt à la racine du projet.
-    project_root_path = Path(__file__).resolve().parent.parent.parent 
-    
+    project_root_path = Path(__file__).resolve().parent.parent.parent
+
     manager = CondaManager(logger=logger, project_root=project_root_path)
 
     # Test _find_conda_executable
@@ -340,23 +468,33 @@ if __name__ == '__main__':
         logger.error("Conda executable not found.")
 
     # Test check_conda_env_exists
-    env_to_check = "base" # ou manager.default_conda_env
+    env_to_check = "base"  # ou manager.default_conda_env
     if manager.check_conda_env_exists(env_to_check):
         logger.success(f"Conda environment '{env_to_check}' exists.")
-        
+
         # Test run_in_conda_env (exemple simple)
         try:
-            logger.info(f"Tentative d'exécution de 'python --version' dans l'env '{env_to_check}'")
-            result = manager.run_in_conda_env("python --version", env_name=env_to_check, capture_output=True)
+            logger.info(
+                f"Tentative d'exécution de 'python --version' dans l'env '{env_to_check}'"
+            )
+            result = manager.run_in_conda_env(
+                "python --version", env_name=env_to_check, capture_output=True
+            )
             if result.returncode == 0:
-                logger.success(f"Commande exécutée avec succès. Python version: {result.stdout.strip()}")
+                logger.success(
+                    f"Commande exécutée avec succès. Python version: {result.stdout.strip()}"
+                )
             else:
-                logger.error(f"Échec de l'exécution de la commande. Stderr: {result.stderr}")
+                logger.error(
+                    f"Échec de l'exécution de la commande. Stderr: {result.stderr}"
+                )
         except Exception as e:
             logger.error(f"Erreur lors du test de run_in_conda_env: {e}")
-            
+
     else:
-        logger.warning(f"Conda environment '{env_to_check}' does not exist. Certains tests seront sautés.")
+        logger.warning(
+            f"Conda environment '{env_to_check}' does not exist. Certains tests seront sautés."
+        )
 
     # Pour tester la réinstallation (ATTENTION: cela modifiera votre environnement)
     # test_reinstall = False

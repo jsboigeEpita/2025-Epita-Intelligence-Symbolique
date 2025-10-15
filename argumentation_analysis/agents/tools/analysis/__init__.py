@@ -12,9 +12,9 @@ from .complex_fallacy_analyzer import ComplexFallacyAnalyzer
 from .rhetorical_result_visualizer import RhetoricalResultVisualizer
 
 __all__ = [
-    'ContextualFallacyAnalyzer',
-    'FallacySeverityEvaluator',
-    'ComplexFallacyAnalyzer',
-    'RhetoricalResultAnalyzer',
-    'RhetoricalResultVisualizer'
+    "ContextualFallacyAnalyzer",
+    "FallacySeverityEvaluator",
+    "ComplexFallacyAnalyzer",
+    "RhetoricalResultAnalyzer",
+    "RhetoricalResultVisualizer",
 ]

@@ -11,45 +11,50 @@ from pathlib import Path
 from typing import Dict, List, Any
 from datetime import datetime
 
+
 class OracleSystemRefactorer:
     """Refactorisation du système Oracle Enhanced"""
-    
+
     def __init__(self):
         self.root_dir = Path(".")
-        self.oracle_dir = self.root_dir / "argumentation_analysis" / "agents" / "core" / "oracle"
-        self.orchestration_dir = self.root_dir / "argumentation_analysis" / "orchestration"
+        self.oracle_dir = (
+            self.root_dir / "argumentation_analysis" / "agents" / "core" / "oracle"
+        )
+        self.orchestration_dir = (
+            self.root_dir / "argumentation_analysis" / "orchestration"
+        )
         self.core_dir = self.root_dir / "argumentation_analysis" / "core"
-        
+
         self.refactor_log = []
-        
+
     def run_refactoring(self):
         """Exécute la refactorisation complète"""
         print("🔄 Début de la refactorisation Oracle Enhanced...")
-        
+
         # Phase 2.1: Consolidation des imports
         self._consolidate_imports()
-        
+
         # Phase 2.2: Refactorisation des méthodes longues
         self._refactor_long_methods()
-        
+
         # Phase 2.3: Amélioration de la gestion d'erreurs
         self._improve_error_handling()
-        
+
         # Phase 2.4: Standardisation des interfaces
         self._standardize_interfaces()
-        
+
         # Phase 2.5: Amélioration de la documentation
         self._improve_documentation()
-        
+
         # Génération du rapport
         self._generate_refactor_report()
-        
+
         print("✅ Refactorisation terminée.")
-        
+
     def _consolidate_imports(self):
         """Consolide et organise les imports"""
         print("📦 Consolidation des imports...")
-        
+
         # Amélioration du fichier __init__.py Oracle
         oracle_init_content = '''"""
 Sherlock-Watson-Moriarty Oracle Enhanced System
@@ -123,13 +128,13 @@ def get_oracle_info() -> Dict[str, Any]:
         "config": DEFAULT_ORACLE_CONFIG
     }
 '''
-        
+
         oracle_init_path = self.oracle_dir / "__init__.py"
-        with open(oracle_init_path, 'w', encoding='utf-8') as f:
+        with open(oracle_init_path, "w", encoding="utf-8") as f:
             f.write(oracle_init_content)
-        
+
         self.refactor_log.append("✅ Consolidation imports Oracle __init__.py")
-        
+
         # Amélioration du fichier principal d'orchestration
         orchestration_init_content = '''"""
 Orchestration Sherlock-Watson-Moriarty Oracle Enhanced
@@ -152,28 +157,28 @@ __all__ = [
     "run_cluedo_oracle_game"
 ]
 '''
-        
+
         orchestration_init_path = self.orchestration_dir / "__init__.py"
-        with open(orchestration_init_path, 'w', encoding='utf-8') as f:
+        with open(orchestration_init_path, "w", encoding="utf-8") as f:
             f.write(orchestration_init_content)
-            
+
         self.refactor_log.append("✅ Consolidation imports Orchestration __init__.py")
-        
+
     def _refactor_long_methods(self):
         """Refactorise les méthodes trop longues"""
         print("🔧 Refactorisation des méthodes longues...")
-        
-        # Amélioration de la méthode _force_moriarty_oracle_revelation 
+
+        # Amélioration de la méthode _force_moriarty_oracle_revelation
         self._refactor_oracle_revelation_method()
-        
+
         # Amélioration de la méthode execute_workflow
         self._refactor_execute_workflow_method()
-        
+
         self.refactor_log.append("✅ Refactorisation méthodes longues")
-        
+
     def _refactor_oracle_revelation_method(self):
         """Refactorise la méthode de révélation Oracle"""
-        
+
         helper_method = '''
     async def _validate_suggestion_format(self, suggestion: Dict[str, str]) -> bool:
         """Valide le format d'une suggestion Cluedo"""
@@ -205,21 +210,25 @@ __all__ = [
             self.logger.error(f"Erreur révélation Moriarty: {e}")
             return {"error": f"Erreur révélation: {str(e)}"}
 '''
-        
+
         # Nota: Dans une vraie refactorisation, on modifierait le fichier
         # Ici on simule l'amélioration
-        self.refactor_log.append("📝 Méthode _force_moriarty_oracle_revelation refactorisée")
-        
+        self.refactor_log.append(
+            "📝 Méthode _force_moriarty_oracle_revelation refactorisée"
+        )
+
     def _refactor_execute_workflow_method(self):
         """Refactorise la méthode execute_workflow"""
-        
+
         # Nota: Simulation de la refactorisation
-        self.refactor_log.append("📝 Méthode execute_workflow refactorisée en sous-méthodes")
-        
+        self.refactor_log.append(
+            "📝 Méthode execute_workflow refactorisée en sous-méthodes"
+        )
+
     def _improve_error_handling(self):
         """Améliore la gestion d'erreurs"""
         print("⚡ Amélioration de la gestion d'erreurs...")
-        
+
         # Créer un module de gestion d'erreurs Oracle
         error_handler_content = '''"""
 Gestion d'erreurs avancée pour le système Oracle Enhanced
@@ -327,17 +336,17 @@ def oracle_error_handler(context: str = ""):
             
     return decorator
 '''
-        
+
         error_handler_path = self.oracle_dir / "error_handling.py"
-        with open(error_handler_path, 'w', encoding='utf-8') as f:
+        with open(error_handler_path, "w", encoding="utf-8") as f:
             f.write(error_handler_content)
-            
+
         self.refactor_log.append("✅ Module de gestion d'erreurs Oracle créé")
-        
+
     def _standardize_interfaces(self):
         """Standardise les interfaces"""
         print("🎯 Standardisation des interfaces...")
-        
+
         # Interface Oracle standard
         interface_content = '''"""
 Interfaces standardisées pour le système Oracle Enhanced
@@ -406,19 +415,19 @@ class OracleResponseStatus(Enum):
     INVALID_QUERY = "invalid_query"
     DATASET_ERROR = "dataset_error"
 '''
-        
+
         interface_path = self.oracle_dir / "interfaces.py"
-        with open(interface_path, 'w', encoding='utf-8') as f:
+        with open(interface_path, "w", encoding="utf-8") as f:
             f.write(interface_content)
-            
+
         self.refactor_log.append("✅ Interfaces Oracle standardisées")
-        
+
     def _improve_documentation(self):
         """Améliore la documentation"""
         print("📚 Amélioration de la documentation...")
-        
+
         # Documentation technique complète
-        tech_doc_content = '''# Documentation Technique Oracle Enhanced
+        tech_doc_content = """# Documentation Technique Oracle Enhanced
 
 ## Architecture du Système
 
@@ -530,17 +539,22 @@ print(response.data)  # Résultat de la validation
 - **Cible**: 100% de couverture
 - **Statut actuel**: 105/105 tests Oracle passent
 - **Métriques**: Tous les composants Oracle couverts
-'''
-        
-        tech_doc_path = self.root_dir / "docs" / "sherlock_watson" / "ARCHITECTURE_ORACLE_ENHANCED.md"
-        with open(tech_doc_path, 'w', encoding='utf-8') as f:
+"""
+
+        tech_doc_path = (
+            self.root_dir
+            / "docs"
+            / "sherlock_watson"
+            / "ARCHITECTURE_ORACLE_ENHANCED.md"
+        )
+        with open(tech_doc_path, "w", encoding="utf-8") as f:
             f.write(tech_doc_content)
-            
+
         self.refactor_log.append("✅ Documentation technique Oracle Enhanced")
-        
+
     def _generate_refactor_report(self):
         """Génère le rapport de refactorisation"""
-        
+
         report_content = f"""# Rapport de Refactorisation Oracle Enhanced
 
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -611,14 +625,20 @@ Phase 5: Commits Git progressifs et validation
 ---
 *Rapport généré automatiquement par le système de refactorisation Oracle Enhanced*
 """
-        
-        report_path = self.root_dir / "docs" / "rapports" / f"refactorisation_oracle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+
+        report_path = (
+            self.root_dir
+            / "docs"
+            / "rapports"
+            / f"refactorisation_oracle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
         os.makedirs(report_path.parent, exist_ok=True)
-        
-        with open(report_path, 'w', encoding='utf-8') as f:
+
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_content)
-            
+
         print(f"📄 Rapport de refactorisation généré: {report_path}")
+
 
 if __name__ == "__main__":
     refactorer = OracleSystemRefactorer()

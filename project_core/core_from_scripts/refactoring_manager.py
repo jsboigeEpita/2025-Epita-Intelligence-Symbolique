@@ -5,34 +5,43 @@ from pathlib import Path
 from typing import List, Dict, Any, Union
 
 from argumentation_analysis.core.utils import code_manipulation_utils
+
 # from argumentation_analysis.core.utils.filesystem_utils import get_all_files_in_directory # Obsolete
 import difflib
+
 
 class RefactoringManager:
     """
     Applies large-scale code transformations based on a declarative plan.
     """
 
-    def _apply_single_transformation(self, original_code: str, transformation: Dict[str, Any]) -> str:
+    def _apply_single_transformation(
+        self, original_code: str, transformation: Dict[str, Any]
+    ) -> str:
         """Applies a single transformation rule to a string of code."""
         action = transformation.get("action")
-        
+
         if action == "update_import":
             return code_manipulation_utils.refactor_update_import(
                 original_code,
                 transformation.get("old_path"),
-                transformation.get("new_path")
+                transformation.get("new_path"),
             )
         elif action == "rename_function":
             return code_manipulation_utils.refactor_rename_function(
                 original_code,
                 transformation.get("old_name"),
-                transformation.get("new_name")
+                transformation.get("new_name"),
             )
-        
+
         return original_code
 
-    def apply_refactoring_plan(self, plan_path: Union[str, Path], dry_run: bool = False, project_root: Path = None) -> Dict[str, str]:
+    def apply_refactoring_plan(
+        self,
+        plan_path: Union[str, Path],
+        dry_run: bool = False,
+        project_root: Path = None,
+    ) -> Dict[str, str]:
         """
         Applies a series of refactoring actions defined in a JSON plan.
 
@@ -51,11 +60,19 @@ class RefactoringManager:
         if project_root is None:
             project_root = Path.cwd()
 
-        with open(plan_path, 'r', encoding='utf-8') as f:
+        with open(plan_path, "r", encoding="utf-8") as f:
             plan = json.load(f)
 
         all_diffs = {}
-        excluded_dirs = {'node_modules', '.venv', '.git', '__pycache__', 'build', 'dist', 'env'}
+        excluded_dirs = {
+            "node_modules",
+            ".venv",
+            ".git",
+            "__pycache__",
+            "build",
+            "dist",
+            "env",
+        }
 
         all_files = list(project_root.rglob("*.py"))
         target_files = []
@@ -70,22 +87,26 @@ class RefactoringManager:
 
                 for transformation in plan.get("transformations", []):
                     # Apply transformation sequentially on the modified code
-                    modified_code = self._apply_single_transformation(modified_code, transformation)
+                    modified_code = self._apply_single_transformation(
+                        modified_code, transformation
+                    )
 
                 if original_code != modified_code:
-                    diff = "".join(difflib.unified_diff(
-                        original_code.splitlines(True),
-                        modified_code.splitlines(True),
-                        fromfile=str(file_path),
-                        tofile=str(file_path)
-                    ))
+                    diff = "".join(
+                        difflib.unified_diff(
+                            original_code.splitlines(True),
+                            modified_code.splitlines(True),
+                            fromfile=str(file_path),
+                            tofile=str(file_path),
+                        )
+                    )
                     all_diffs[str(file_path)] = diff
 
                     if not dry_run:
                         file_path.write_text(modified_code, encoding="utf-8")
-                        
+
             except OSError as e:
                 print(f"Skipping file due to OSError: {file_path} - {e}")
                 continue
-                    
+
         return all_diffs

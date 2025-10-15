@@ -19,10 +19,8 @@ from argumentation_analysis.core.bootstrap import initialize_project_environment
 logger = logging.getLogger(__name__)
 
 # Marque tous les tests de ce fichier pour utiliser une JVM et un LLM réel.
-pytestmark = [
-    pytest.mark.usefixtures("jvm_session"),
-    pytest.mark.real_llm
-]
+pytestmark = [pytest.mark.usefixtures("jvm_session"), pytest.mark.real_llm]
+
 
 @pytest.fixture(scope="module")
 def app():
@@ -42,7 +40,9 @@ def app():
     os.environ["FORCE_REAL_LLM_IN_TEST"] = "true"
     if "OPENAI_BASE_URL" in os.environ:
         del os.environ["OPENAI_BASE_URL"]
-        logger.warning("Variable d'environnement OPENAI_BASE_URL supprimée pour forcer l'usage de l'API directe.")
+        logger.warning(
+            "Variable d'environnement OPENAI_BASE_URL supprimée pour forcer l'usage de l'API directe."
+        )
 
     try:
         # Forcer le rechargement des modules de configuration pour qu'ils prennent
@@ -50,15 +50,17 @@ def app():
         # la configuration est chargée à l'import.
         from argumentation_analysis.config import settings
         from argumentation_analysis.core import llm_service
+
         importlib.reload(settings)
         importlib.reload(llm_service)
-        
+
         # Maintenant que la config est rechargée, on peut créer l'app
         # L'import est localisé ici pour s'assurer que la JVM est gérée par la fixture de session
         from argumentation_analysis.services.web_api.app import create_app
+
         test_app = create_app()
         test_app.config.update({"TESTING": True})
-        
+
         yield test_app
 
     finally:
@@ -76,18 +78,21 @@ def app():
         else:
             os.environ["OPENAI_BASE_URL"] = original_base_url
             logger.info("Variable d'environnement OPENAI_BASE_URL restaurée.")
-            
+
         # Recharger une dernière fois pour nettoyer pour les tests suivants
         from argumentation_analysis.config import settings
         from argumentation_analysis.core import llm_service
+
         importlib.reload(settings)
         importlib.reload(llm_service)
         logger.info("--- Fin des tests d'intégration, nettoyage de l'app ---")
-    
+
+
 @pytest.fixture()
 def client(app):
     """Un client de test pour l'application Flask."""
     return app.test_client()
+
 
 @pytest.mark.integration
 def test_analyze_empty_string_graceful_handling(client):
@@ -95,13 +100,16 @@ def test_analyze_empty_string_graceful_handling(client):
     Vérifie que l'API gère une chaîne d'entrée vide sans planter.
     """
     logger.info("--- Test API: Analyse d'une chaîne vide ---")
-    response = client.post('/api/analyze', json={'text': ''})
-    
-    assert response.status_code == 400, f"Le code de statut attendu était 400, mais était {response.status_code}"
+    response = client.post("/api/analyze", json={"text": ""})
+
+    assert (
+        response.status_code == 400
+    ), f"Le code de statut attendu était 400, mais était {response.status_code}"
     json_data = response.get_json()
     assert "error" in json_data
     assert json_data["error"] == "Données invalides"
     logger.info(f"Réponse pour chaîne vide OK: {json_data}")
+
 
 @pytest.mark.integration
 def test_analyze_non_argumentative_text(client):
@@ -115,15 +123,24 @@ def test_analyze_non_argumentative_text(client):
         "bordure de la Seine. Construite en deux ans par Gustave Eiffel et ses "
         "collaborateurs pour l’Exposition universelle de Paris de 1889."
     )
-    
-    response = client.post('/api/analyze', json={'text': input_text, 'analysis_type': 'default'})
-    
-    assert response.status_code == 200, f"L'analyse a échoué avec le statut: {response.status_code}"
+
+    response = client.post(
+        "/api/analyze", json={"text": input_text, "analysis_type": "default"}
+    )
+
+    assert (
+        response.status_code == 200
+    ), f"L'analyse a échoué avec le statut: {response.status_code}"
     json_data = response.get_json()
-    
+
     fallacies = json_data.get("analysis", {}).get("identified_fallacies", {})
-    assert len(fallacies) <= 1, f"Trop de sophismes ({len(fallacies)}) détectés dans un texte non argumentatif."
-    logger.info(f"Analyse du texte non-argumentatif terminée. {len(fallacies)} sophisme(s) détecté(s).")
+    assert (
+        len(fallacies) <= 1
+    ), f"Trop de sophismes ({len(fallacies)}) détectés dans un texte non argumentatif."
+    logger.info(
+        f"Analyse du texte non-argumentatif terminée. {len(fallacies)} sophisme(s) détecté(s)."
+    )
+
 
 @pytest.mark.integration
 def test_analyze_complex_argumentative_text(client):
@@ -139,21 +156,29 @@ def test_analyze_complex_argumentative_text(client):
         "d'arroser son jardin en pleine journée. Peut-on vraiment faire confiance à un tel hypocrite ? "
         "Il est évident pour toute personne sensée que nous devons agir maintenant."
     )
-    
-    response = client.post('/api/analyze', json={'text': input_text, 'analysis_type': 'default'})
-    
-    assert response.status_code == 200, f"L'analyse a échoué avec le statut: {response.status_code}"
+
+    response = client.post(
+        "/api/analyze", json={"text": input_text, "analysis_type": "default"}
+    )
+
+    assert (
+        response.status_code == 200
+    ), f"L'analyse a échoué avec le statut: {response.status_code}"
     json_data = response.get_json()
 
     # La structure de réponse a changé. La clé est 'fallacies' à la racine.
     fallacies_list = json_data.get("fallacies", [])
-    assert len(fallacies_list) > 0, "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
-    
+    assert (
+        len(fallacies_list) > 0
+    ), "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
+
     # La réponse est une liste de dictionnaires, pas un dictionnaire de dictionnaires.
-    fallacy_names = {f.get('name', '').lower() for f in fallacies_list}
+    fallacy_names = {f.get("name", "").lower() for f in fallacies_list}
     logger.info(f"Sophismes détectés: {fallacy_names}")
 
     assert any(
-        "ad hominem" in f_name or "appel à l'autorité" in f_name or "ad verecundiam" in f_name
+        "ad hominem" in f_name
+        or "appel à l'autorité" in f_name
+        or "ad verecundiam" in f_name
         for f_name in fallacy_names
     ), "Devrait détecter un sophisme de type Ad Hominem ou Appel à l'Autorité."

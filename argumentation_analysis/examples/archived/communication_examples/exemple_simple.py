@@ -8,7 +8,9 @@ avec un échange simple entre un agent stratégique et un agent tactique.
 import time
 import threading
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
-from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
+from argumentation_analysis.core.communication.hierarchical_channel import (
+    HierarchicalChannel,
+)
 from argumentation_analysis.core.communication.strategic_adapter import StrategicAdapter
 from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentation_analysis.core.communication.message import MessagePriority
@@ -36,21 +38,21 @@ def main():
         print("Agent tactique en attente d'une directive...")
         # Recevoir la directive
         directive = tactical_adapter.receive_directive(timeout=5.0)
-        
+
         if directive:
             print(f"Directive reçue: {directive.content}")
-            
+
             # Simuler un traitement
             print("Traitement de la directive...")
             time.sleep(1.0)
-            
+
             # Envoyer un rapport
             print("Envoi d'un rapport...")
             tactical_adapter.send_report(
                 report_type="status_update",
                 content={"status": "in_progress", "completion": 50},
                 recipient_id="strategic-agent-1",
-                priority=MessagePriority.NORMAL
+                priority=MessagePriority.NORMAL,
             )
 
     # Démarrer un thread pour l'agent tactique
@@ -64,7 +66,7 @@ def main():
         directive_type="analyze_text",
         parameters={"text_id": "text-123"},
         recipient_id="tactical-agent-1",
-        priority=MessagePriority.HIGH
+        priority=MessagePriority.HIGH,
     )
 
     # Attendre un peu
@@ -80,7 +82,7 @@ def main():
 
     # Attendre que le thread se termine
     tactical_thread.join()
-    
+
     print("Communication terminée.")
 
 

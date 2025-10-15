@@ -7,13 +7,16 @@ pytest.skip("Squelettes de tests non implémentés.", allow_module_level=True)
 
 # Le code ci-dessous est conservé à titre de référence mais ne sera pas exécuté.
 
+
 @pytest.mark.real_jpype
 class TestArgumentationFrameworks:
     """
     Tests d'intégration pour les frameworks d'argumentation Tweety (ex: Dung AFs).
     """
 
-    def test_dung_af_creation_and_basic_properties(self, logic_classes, integration_jvm):
+    def test_dung_af_creation_and_basic_properties(
+        self, logic_classes, integration_jvm
+    ):
         pass
 
     def test_dung_af_admissible_extensions(self, logic_classes, integration_jvm):

@@ -11,7 +11,7 @@ import warnings
 warnings.warn(
     "The 'report_generation' module is deprecated. Use the 'reporting' package instead.",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
 
 # To avoid breaking existing code immediately, you could provide a facade here.

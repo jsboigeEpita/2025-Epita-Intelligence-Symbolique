@@ -5,6 +5,7 @@ from typing import Dict, Any
 from ..definitions import Argument, CounterArgument, EvaluationResult, ValidationResult
 from ..utils.hybrid_decorator import hybrid_function
 
+
 class HypothesisValidationTool:
     """
     Outil pour valider une hypothèse de sophisme spécifique.
@@ -13,7 +14,7 @@ class HypothesisValidationTool:
     def __init__(self, some_dependency=None):
         """
         Initialise l'outil de validation d'hypothèses.
-        
+
         Args:
             some_dependency: Toute dépendance nécessaire (par ex. un client API, etc.).
         """
@@ -34,7 +35,7 @@ class HypothesisValidationTool:
             "- 'explanation': une explication détaillée (en 2-3 phrases) justifiant ton évaluation.\n"
             "- 'is_fallacious': un booléen (true/false) confirmant la présence du sophisme.\n\n"
             "Exemple de sortie : \n"
-            "{\"confidence\": 0.85, \"explanation\": \"L'auteur attaque le caractère de son adversaire plutôt que son argument, ce qui est caractéristique d'une attaque ad hominem.\", \"is_fallacious\": true}"
+            '{"confidence": 0.85, "explanation": "L\'auteur attaque le caractère de son adversaire plutôt que son argument, ce qui est caractéristique d\'une attaque ad hominem.", "is_fallacious": true}'
         )
     )
     async def validate_fallacy(
@@ -43,23 +44,25 @@ class HypothesisValidationTool:
         fallacy_hypothesis: Dict[str, Any],
         confidence: float,
         explanation: str,
-        is_fallacious: bool
+        is_fallacious: bool,
     ) -> Dict[str, Any]:
         """
         Fonction native qui reçoit l'analyse du LLM et la structure.
-        
+
         Args:
             argument_text: Le texte de l'argument à analyser.
             fallacy_hypothesis: La description et les détails du sophisme suspecté.
             confidence: Le score de confiance généré par le LLM.
             explanation: L'explication générée par le LLM.
             is_fallacious: Le booléen généré par le LLM.
-        
+
         Returns:
             Un dictionnaire structuré contenant le rapport de validation.
         """
-        print(f"Validation de l'hypothèse '{fallacy_hypothesis.get('name', 'inconnue')}' pour l'argument : '{argument_text[:50]}...'")
-        
+        print(
+            f"Validation de l'hypothèse '{fallacy_hypothesis.get('name', 'inconnue')}' pour l'argument : '{argument_text[:50]}...'"
+        )
+
         # Ici, la fonction native reçoit directement les données structurées
         # grâce au décorateur et au prompt.
         # Nous pouvons ajouter une logique métier supplémentaire si nécessaire.
@@ -71,9 +74,11 @@ class HypothesisValidationTool:
             "is_fallacious": is_fallacious,
             "confidence": confidence,
             "explanation": explanation,
-            "argument_analyzed": argument_text
+            "argument_analyzed": argument_text,
         }
 
-        print(f"Rapport de validation généré pour '{report['hypothesis_name']}': Confiance = {report['confidence']:.2f}")
+        print(
+            f"Rapport de validation généré pour '{report['hypothesis_name']}': Confiance = {report['confidence']:.2f}"
+        )
 
         return report

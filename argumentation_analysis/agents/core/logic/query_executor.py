@@ -12,22 +12,25 @@ from .tweety_bridge import TweetyBridge
 # Configuration du logger
 logger = logging.getLogger("Orchestration.QueryExecutor")
 
+
 class QueryExecutor:
     """
     Exécuteur de requêtes logiques.
-    
+
     Cette classe fournit une interface unifiée pour exécuter des requêtes
     sur différents types d'ensembles de croyances.
     """
-    
+
     def __init__(self):
         """
         Initialise l'exécuteur de requêtes.
         """
         self._logger = logger
         self._tweety_bridge = TweetyBridge()
-    
-    def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+
+    def execute_query(
+        self, belief_set: BeliefSet, query: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête logique sur un ensemble de croyances donné.
 
@@ -45,14 +48,16 @@ class QueryExecutor:
                  - Un message formaté (str) décrivant le résultat ou l'erreur.
         :rtype: Tuple[Optional[bool], str]
         """
-        self._logger.info(f"Exécution de la requête '{query}' sur un ensemble de croyances de type '{belief_set.logic_type}'")
-        
+        self._logger.info(
+            f"Exécution de la requête '{query}' sur un ensemble de croyances de type '{belief_set.logic_type}'"
+        )
+
         # Vérifier si la JVM est prête
         if not self._tweety_bridge.is_jvm_ready():
             error_msg = "JVM non prête ou composants Tweety non chargés"
             self._logger.error(error_msg)
             return None, f"FUNC_ERROR: {error_msg}"
-        
+
         # Exécuter la requête en fonction du type de logique
         if belief_set.logic_type == "propositional":
             return self._execute_propositional_query(belief_set, query)
@@ -64,8 +69,10 @@ class QueryExecutor:
             error_msg = f"Type de logique non supporté: {belief_set.logic_type}"
             self._logger.error(error_msg)
             return None, f"FUNC_ERROR: {error_msg}"
-    
-    def execute_queries(self, belief_set: BeliefSet, queries: List[str]) -> List[Tuple[str, Optional[bool], str]]:
+
+    def execute_queries(
+        self, belief_set: BeliefSet, queries: List[str]
+    ) -> List[Tuple[str, Optional[bool], str]]:
         """
         Exécute une liste de requêtes logiques sur un ensemble de croyances.
 
@@ -79,16 +86,20 @@ class QueryExecutor:
                  son résultat booléen (Optional[bool]), et le message formaté (str).
         :rtype: List[Tuple[str, Optional[bool], str]]
         """
-        self._logger.info(f"Exécution de {len(queries)} requêtes sur un ensemble de croyances de type '{belief_set.logic_type}'")
-        
+        self._logger.info(
+            f"Exécution de {len(queries)} requêtes sur un ensemble de croyances de type '{belief_set.logic_type}'"
+        )
+
         results = []
         for query in queries:
             result, message = self.execute_query(belief_set, query)
             results.append((query, result, message))
-        
+
         return results
-    
-    def _execute_propositional_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+
+    def _execute_propositional_query(
+        self, belief_set: BeliefSet, query: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête de logique propositionnelle via `TweetyBridge`.
 
@@ -103,9 +114,14 @@ class QueryExecutor:
         """
         try:
             # Valider la requête
-            is_valid, validation_msg = self._tweety_bridge.pl_handler.validate_pl_formula(query)
+            (
+                is_valid,
+                validation_msg,
+            ) = self._tweety_bridge.pl_handler.validate_pl_formula(query)
             if not is_valid:
-                self._logger.error(f"Requête propositionnelle invalide: {validation_msg}")
+                self._logger.error(
+                    f"Requête propositionnelle invalide: {validation_msg}"
+                )
                 return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
 
             # Exécuter la requête
@@ -117,17 +133,21 @@ class QueryExecutor:
                     return True, f"Tweety Result: Query '{query}' is ACCEPTED (True)."
                 else:
                     return False, f"Tweety Result: Query '{query}' is REJECTED (False)."
-            
+
             # Si ce n'est pas un booléen, c'est un message d'erreur.
             self._logger.error(f"Erreur du handler propositionnel: {result}")
             return None, result
-        
+
         except Exception as e:
-            error_msg = f"Erreur lors de l'exécution de la requête propositionnelle: {str(e)}"
+            error_msg = (
+                f"Erreur lors de l'exécution de la requête propositionnelle: {str(e)}"
+            )
             self._logger.error(error_msg, exc_info=True)
             return None, f"FUNC_ERROR: {error_msg}"
-    
-    def _execute_first_order_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+
+    def _execute_first_order_query(
+        self, belief_set: BeliefSet, query: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête de logique du premier ordre (FOL) via `TweetyBridge`.
 
@@ -154,19 +174,29 @@ class QueryExecutor:
             # Analyser le résultat
             if isinstance(result, bool):
                 if result:
-                    return True, f"Tweety Result: FOL Query '{query}' is ACCEPTED (True)."
+                    return (
+                        True,
+                        f"Tweety Result: FOL Query '{query}' is ACCEPTED (True).",
+                    )
                 else:
-                    return False, f"Tweety Result: FOL Query '{query}' is REJECTED (False)."
-            
+                    return (
+                        False,
+                        f"Tweety Result: FOL Query '{query}' is REJECTED (False).",
+                    )
+
             self._logger.error(f"Erreur du handler FOL: {result}")
             return None, result
-        
+
         except Exception as e:
-            error_msg = f"Erreur lors de l'exécution de la requête du premier ordre: {str(e)}"
+            error_msg = (
+                f"Erreur lors de l'exécution de la requête du premier ordre: {str(e)}"
+            )
             self._logger.error(error_msg, exc_info=True)
             return None, f"FUNC_ERROR: {error_msg}"
-    
-    def _execute_modal_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+
+    def _execute_modal_query(
+        self, belief_set: BeliefSet, query: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête de logique modale via `TweetyBridge`.
 
@@ -181,26 +211,33 @@ class QueryExecutor:
         """
         try:
             # Valider la requête
-            is_valid, validation_msg = self._tweety_bridge.modal_handler.validate_modal_formula(query)
+            (
+                is_valid,
+                validation_msg,
+            ) = self._tweety_bridge.modal_handler.validate_modal_formula(query)
             if not is_valid:
                 self._logger.error(f"Requête modale invalide: {validation_msg}")
                 return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
 
             # Exécuter la requête
-            result_str = self._tweety_bridge.modal_handler.execute_modal_query(belief_set.content, query)
+            result_str = self._tweety_bridge.modal_handler.execute_modal_query(
+                belief_set.content, query
+            )
 
             # Analyser le résultat
             if "FUNC_ERROR" in result_str:
-                self._logger.error(f"Erreur lors de l'exécution de la requête modale: {result_str}")
+                self._logger.error(
+                    f"Erreur lors de l'exécution de la requête modale: {result_str}"
+                )
                 return None, result_str
-            
+
             if "ACCEPTED" in result_str:
                 return True, result_str
             elif "REJECTED" in result_str:
                 return False, result_str
             else:
                 return None, result_str
-        
+
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête modale: {str(e)}"
             self._logger.error(error_msg, exc_info=True)

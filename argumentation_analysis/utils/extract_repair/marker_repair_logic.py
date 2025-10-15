@@ -10,8 +10,12 @@ ainsi que la fonction de génération de rapport.
 
 import logging
 from typing import List, Dict, Any, Optional
-from argumentation_analysis.models.extract_definition import ExtractDefinitions # Ajuster si ExtractDefinitions est utilisé directement
-from argumentation_analysis.services.extract_service import ExtractService # S'assurer que ExtractService est accessible
+from argumentation_analysis.models.extract_definition import (
+    ExtractDefinitions,
+)  # Ajuster si ExtractDefinitions est utilisé directement
+from argumentation_analysis.services.extract_service import (
+    ExtractService,
+)  # S'assurer que ExtractService est accessible
 
 # Configuration du logging pour ce module
 logger = logging.getLogger("MarkerRepairLogic")
@@ -71,59 +75,62 @@ En cas de rejet:
 
 # --- Classes et fonctions ---
 
+
 class ExtractRepairPlugin:
     """Plugin pour les fonctions natives de réparation des extraits."""
-    
+
     def __init__(self, extract_service: ExtractService):
         """
         Initialise le plugin de réparation.
-        
+
         Args:
             extract_service: Service d'extraction
         """
         self.extract_service = extract_service
         self.repair_results = []
-    
-    def find_similar_markers(self, text: str, marker: str, max_results: int = 5) -> List[Dict[str, Any]]:
+
+    def find_similar_markers(
+        self, text: str, marker: str, max_results: int = 5
+    ) -> List[Dict[str, Any]]:
         """
         Trouve des marqueurs similaires dans le texte source.
-        
+
         Args:
             text: Texte source
             marker: Marqueur à rechercher
             max_results: Nombre maximum de résultats
-            
+
         Returns:
             Liste de marqueurs similaires
         """
         if not text or not marker:
             return []
-        
+
         similar_markers = []
         # Assurez-vous que extract_service.find_similar_text est bien une méthode de ExtractService
-        results = self.extract_service.find_similar_text(text, marker, context_size=50, max_results=max_results)
-        
+        results = self.extract_service.find_similar_text(
+            text, marker, context_size=50, max_results=max_results
+        )
+
         for context, position, found_text in results:
-            similar_markers.append({
-                "marker": found_text,
-                "position": position,
-                "context": context
-            })
-        
+            similar_markers.append(
+                {"marker": found_text, "position": position, "context": context}
+            )
+
         return similar_markers
-    
+
     def update_extract_markers(
         self,
-        extract_definitions: ExtractDefinitions, # Type à vérifier/ajuster
+        extract_definitions: ExtractDefinitions,  # Type à vérifier/ajuster
         source_idx: int,
         extract_idx: int,
         new_start_marker: str,
         new_end_marker: str,
-        template_start: Optional[str] = None
+        template_start: Optional[str] = None,
     ) -> bool:
         """
         Met à jour les marqueurs d'un extrait.
-        
+
         Args:
             extract_definitions: Définitions d'extraits (objet ExtractDefinitions)
             source_idx: Index de la source
@@ -131,7 +138,7 @@ class ExtractRepairPlugin:
             new_start_marker: Nouveau marqueur de début
             new_end_marker: Nouveau marqueur de fin
             template_start: Template pour le marqueur de début
-            
+
         Returns:
             True si la mise à jour a réussi, False sinon
         """
@@ -139,82 +146,97 @@ class ExtractRepairPlugin:
         # et non une liste de dictionnaires comme dans la version utils/
         if 0 <= source_idx < len(extract_definitions.sources):
             source_info = extract_definitions.sources[source_idx]
-            extracts = source_info.extracts # Assumant que c'est une liste d'objets Extract
-            
+            extracts = (
+                source_info.extracts
+            )  # Assumant que c'est une liste d'objets Extract
+
             if 0 <= extract_idx < len(extracts):
                 old_start = extracts[extract_idx].start_marker
                 old_end = extracts[extract_idx].end_marker
                 old_template = extracts[extract_idx].template_start
-                
+
                 extracts[extract_idx].start_marker = new_start_marker
                 extracts[extract_idx].end_marker = new_end_marker
-                
+
                 if template_start:
                     extracts[extract_idx].template_start = template_start
-                elif extracts[extract_idx].template_start: # Si template_start est None/vide, on efface l'ancien
-                    extracts[extract_idx].template_start = "" # ou None, selon la définition du modèle
-                
+                elif extracts[
+                    extract_idx
+                ].template_start:  # Si template_start est None/vide, on efface l'ancien
+                    extracts[
+                        extract_idx
+                    ].template_start = ""  # ou None, selon la définition du modèle
+
                 # Enregistrer les modifications
-                self.repair_results.append({
-                    "source_name": source_info.source_name,
-                    "extract_name": extracts[extract_idx].extract_name,
-                    "old_start_marker": old_start,
-                    "new_start_marker": new_start_marker,
-                    "old_end_marker": old_end,
-                    "new_end_marker": new_end_marker,
-                    "old_template_start": old_template,
-                    "new_template_start": template_start if template_start else ""
-                })
-                
+                self.repair_results.append(
+                    {
+                        "source_name": source_info.source_name,
+                        "extract_name": extracts[extract_idx].extract_name,
+                        "old_start_marker": old_start,
+                        "new_start_marker": new_start_marker,
+                        "old_end_marker": old_end,
+                        "new_end_marker": new_end_marker,
+                        "old_template_start": old_template,
+                        "new_template_start": template_start if template_start else "",
+                    }
+                )
+
                 return True
-        
+
         return False
-    
+
     def get_repair_results(self) -> List[Dict[str, Any]]:
         """Récupère les résultats des réparations effectuées."""
         return self.repair_results
 
-def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_report.html"):
+
+def generate_report(
+    results: List[Dict[str, Any]], output_file: str = "repair_report.html"
+):
     """
     Génère un rapport HTML des modifications effectuées.
-    
+
     Args:
         results: Résultats des réparations (liste de dictionnaires comme défini dans le script original)
         output_file: Fichier de sortie pour le rapport HTML
     """
     logger.info(f"Génération du rapport dans '{output_file}'...")
-    
+
     status_counts = {
         "valid": 0,
         "repaired": 0,
         "rejected": 0,
         "unchanged": 0,
-        "error": 0
+        "error": 0,
     }
-    
-    repair_types = {
-        "first_letter_missing": 0,
-        "other": 0
-    }
-    
-    for result in results: # results est la liste des dictionnaires produits par repair_extract_markers
+
+    repair_types = {"first_letter_missing": 0, "other": 0}
+
+    for (
+        result
+    ) in (
+        results
+    ):  # results est la liste des dictionnaires produits par repair_extract_markers
         status = result.get("status", "error")
         if status in status_counts:
             status_counts[status] += 1
-            
+
         if status == "repaired":
             old_start = result.get("old_start_marker", "")
             new_start = result.get("new_start_marker", "")
             old_template = result.get("old_template_start", "")
-            
+
             # Logique de détection du type de réparation (simplifiée de l'original)
             # Cette logique peut nécessiter un ajustement si la structure de 'result' change
             if old_template and "{0}" in old_template:
-                 first_letter_template = old_template.replace("{0}", "")
-                 if new_start.startswith(first_letter_template) and old_start == new_start[len(first_letter_template):]:
-                     repair_types["first_letter_missing"] += 1
-                 else:
-                     repair_types["other"] +=1
+                first_letter_template = old_template.replace("{0}", "")
+                if (
+                    new_start.startswith(first_letter_template)
+                    and old_start == new_start[len(first_letter_template) :]
+                ):
+                    repair_types["first_letter_missing"] += 1
+                else:
+                    repair_types["other"] += 1
             else:
                 repair_types["other"] += 1
 
@@ -269,14 +291,14 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
                 <th>Détails</th>
             </tr>
     """
-    
+
     for result in results:
         source_name = result.get("source_name", "Source inconnue")
         extract_name = result.get("extract_name", "Extrait inconnu")
         status = result.get("status", "error")
         message = result.get("message", "Aucun message")
-        
-        details_html = "" # Renommé pour éviter conflit de nom
+
+        details_html = ""  # Renommé pour éviter conflit de nom
         if status == "repaired":
             details_html += f"""
             <div class="details">
@@ -287,7 +309,7 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
                 <p><strong>Explication:</strong> {result.get('explanation', '')}</p>
             </div>
             """
-        
+
         html_content += f"""
         <tr class="{status}">
             <td>{source_name}</td>
@@ -296,14 +318,14 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "repair_re
             <td>{message}{details_html}</td>
         </tr>
         """
-    
+
     html_content += """
         </table>
     </body>
     </html>
     """
-    
-    with open(output_file, 'w', encoding='utf-8') as f:
+
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(html_content)
-    
+
     logger.info(f"Rapport généré dans '{output_file}'.")

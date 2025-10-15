@@ -28,14 +28,16 @@ from argumentation_analysis.ui.utils import get_cache_filepath
 
 if __name__ == "__main__":
     print("\n=== Initialisation du cache des textes ===\n")
-    
+
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
+        print(
+            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+        )
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
-    
+
     # Initialiser le cache des textes
     initialize_text_cache()
-    
+
     print("\n=== Initialisation terminée ===\n")

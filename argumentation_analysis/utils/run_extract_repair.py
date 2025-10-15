@@ -13,6 +13,7 @@ import sys
 import asyncio
 from pathlib import Path
 
+
 async def main():
     """Fonction principale pour lancer la réparation des bornes défectueuses.
 
@@ -20,20 +21,27 @@ async def main():
     """
     # Importer le module depuis son nouvel emplacement
     try:
-        from argumentation_analysis.utils.extract_repair.repair_extract_markers import main as repair_main
+        from argumentation_analysis.utils.extract_repair.repair_extract_markers import (
+            main as repair_main,
+        )
+
         print("[OK] Module repair_extract_markers importé avec succès.")
-        
+
         # Lancer le script de réparation
         await repair_main()
         print("\n[OK] Script de réparation exécuté avec succès.")
     except ImportError as e:
         print(f"❌ Erreur lors de l'importation du module repair_extract_markers: {e}")
-        print("Vérifiez que le fichier repair_extract_markers.py est présent dans le répertoire utils/extract_repair/.")
+        print(
+            "Vérifiez que le fichier repair_extract_markers.py est présent dans le répertoire utils/extract_repair/."
+        )
         raise
     except Exception as e:
         print(f"❌ Erreur lors de l'exécution du script de réparation: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

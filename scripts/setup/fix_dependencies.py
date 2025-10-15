@@ -11,7 +11,7 @@ import argumentation_analysis.core.environment
 
 import sys
 import argparse
-import logging # Gardé pour le logger du script principal si nécessaire
+import logging  # Gardé pour le logger du script principal si nécessaire
 from pathlib import Path
 
 # Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
@@ -25,7 +25,8 @@ from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 # Configuration du logger pour ce script (avant l'appel au pipeline)
 # Le pipeline configurera son propre logging ou utilisera celui configuré globalement.
-logger = logging.getLogger(__name__) # Utilisation de __name__ pour le logger
+logger = logging.getLogger(__name__)  # Utilisation de __name__ pour le logger
+
 
 def main():
     """
@@ -38,34 +39,36 @@ def main():
     parser.add_argument(
         "requirements_file",
         type=str,
-        help="Chemin vers le fichier requirements.txt (ou équivalent)."
+        help="Chemin vers le fichier requirements.txt (ou équivalent).",
     )
     parser.add_argument(
         "--force-reinstall",
         action="store_true",
-        help="Force la réinstallation de tous les paquets."
+        help="Force la réinstallation de tous les paquets.",
     )
     parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Niveau de verbosité du logging."
+        help="Niveau de verbosité du logging.",
     )
     parser.add_argument(
-       "--pip-options",
-       type=str, # nargs non spécifié, la valeur par défaut est 1
-       default="",
-       help="Options supplémentaires à passer à la commande pip install, sous forme d'une seule chaîne (ex: \"--no-cache-dir --upgrade\")."
-   )
-    
+        "--pip-options",
+        type=str,  # nargs non spécifié, la valeur par défaut est 1
+        default="",
+        help='Options supplémentaires à passer à la commande pip install, sous forme d\'une seule chaîne (ex: "--no-cache-dir --upgrade").',
+    )
+
     args = parser.parse_args()
 
     # Configurer le logging pour ce script avant d'appeler le pipeline.
     # Le pipeline lui-même appellera setup_logging avec le log_level fourni.
     setup_logging(args.log_level)
     logger.info(f"Script {Path(__file__).name} démarré.")
-    logger.info(f"Appel du pipeline d'installation des dépendances avec les arguments: {args}")
+    logger.info(
+        f"Appel du pipeline d'installation des dépendances avec les arguments: {args}"
+    )
 
     # L'activation de l'environnement est maintenant gérée par l'importation de
     # argumentation_analysis.core.environment et les scripts wrappers.
@@ -83,7 +86,7 @@ def main():
         command=pip_command,
         description="Installation des dépendances via pip",
         capture_output=True,
-        shell_mode=False # Plus sûr d'utiliser une liste d'arguments
+        shell_mode=False,  # Plus sûr d'utiliser une liste d'arguments
     )
 
     if stderr:
@@ -93,8 +96,11 @@ def main():
         logger.info("Pipeline d'installation des dépendances terminé avec succès.")
         sys.exit(0)
     else:
-        logger.error("Le pipeline d'installation des dépendances a rencontré des erreurs.")
+        logger.error(
+            "Le pipeline d'installation des dépendances a rencontré des erreurs."
+        )
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

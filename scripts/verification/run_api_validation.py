@@ -26,7 +26,10 @@ if str(project_root) not in sys.path:
 
 from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
 
-REPORT_FILE = project_root / "docs" / "verification_s2" / "03_web_apps_apis_test_results.md"
+REPORT_FILE = (
+    project_root / "docs" / "verification_s2" / "03_web_apps_apis_test_results.md"
+)
+
 
 class ReportGenerator:
     """Génère le rapport de test en Markdown."""
@@ -46,19 +49,28 @@ class ReportGenerator:
         with self.report_file.open("a", encoding="utf-8") as f:
             f.write(f"## {title}\n\n")
 
-    def add_test_result(self, name: str, command: str, response_status: int, response_body: Any, payload: Optional[Dict] = None):
+    def add_test_result(
+        self,
+        name: str,
+        command: str,
+        response_status: int,
+        response_body: Any,
+        payload: Optional[Dict] = None,
+    ):
         """Ajoute le résultat d'un test individuel."""
         body_str_lower = str(response_body).lower()
         is_success_status = 200 <= response_status < 300
         has_error_in_body = "erreur" in body_str_lower or "error" in body_str_lower
 
-        result_status = "SUCCÈS" if is_success_status and not has_error_in_body else "ÉCHEC"
-        
+        result_status = (
+            "SUCCÈS" if is_success_status and not has_error_in_body else "ÉCHEC"
+        )
+
         content = f"### **Nom :** `{name}`\n"
         content += f"- **Commande de Test :** `{command}`\n"
         if payload:
             content += f"- **Payload :**\n  ```json\n{json.dumps(payload, indent=2, ensure_ascii=False)}\n  ```\n"
-        
+
         # Tronquer les réponses très longues
         body_str = json.dumps(response_body, indent=2, ensure_ascii=False)
         if len(body_str) > 1000:
@@ -72,8 +84,9 @@ class ReportGenerator:
 
         with self.report_file.open("a", encoding="utf-8") as f:
             f.write(content)
-        
+
         print(f"[{result_status}] Testé : {name}")
+
 
 class ApiTester:
     """Exécute des requêtes sur une API et rapporte les résultats."""
@@ -87,7 +100,9 @@ class ApiTester:
         command = f"requests.get('{url}')"
         try:
             response = requests.get(url, timeout=20)
-            self.reporter.add_test_result(name, command, response.status_code, response.json())
+            self.reporter.add_test_result(
+                name, command, response.status_code, response.json()
+            )
         except requests.RequestException as e:
             self.reporter.add_test_result(name, command, 503, {"error": str(e)})
 
@@ -97,16 +112,24 @@ class ApiTester:
         command = f"requests.post('{url}', json=...)"
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=20)
-            self.reporter.add_test_result(name, command, response.status_code, response.json(), payload)
+            self.reporter.add_test_result(
+                name, command, response.status_code, response.json(), payload
+            )
         except requests.RequestException as e:
-            self.reporter.add_test_result(name, command, 503, {"error": str(e)}, payload)
+            self.reporter.add_test_result(
+                name, command, 503, {"error": str(e)}, payload
+            )
 
 
-async def run_fastapi_tests(orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator):
+async def run_fastapi_tests(
+    orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator
+):
     """Démarre FastAPI et exécute la suite de tests."""
     reporter.add_section_header("1. API FastAPI (`api/main.py`)")
-    
-    if not await orchestrator.start_webapp(app_module='api.main:app', frontend_enabled=False):
+
+    if not await orchestrator.start_webapp(
+        app_module="api.main:app", frontend_enabled=False
+    ):
         print("Échec du démarrage du serveur FastAPI.")
         return
 
@@ -114,37 +137,47 @@ async def run_fastapi_tests(orchestrator: UnifiedWebOrchestrator, reporter: Repo
     tester = ApiTester(base_url, reporter)
 
     print(f"--- Tests FastAPI sur {base_url} ---")
-    
+
     # Endpoints du routeur principal
     tester.test_get("/api/health", "FastAPI - GET /api/health")
     tester.test_get("/api/status", "FastAPI - GET /api/status")
     tester.test_get("/api/examples", "FastAPI - GET /api/examples")
     tester.test_get("/api/endpoints", "FastAPI - GET /api/endpoints")
 
-    analyze_payload = {"text": "Socrates is a man, all men are mortal, therefore Socrates is mortal."}
+    analyze_payload = {
+        "text": "Socrates is a man, all men are mortal, therefore Socrates is mortal."
+    }
     tester.test_post("/api/analyze", "FastAPI - POST /api/analyze", analyze_payload)
 
     # Endpoints du routeur Dung
     # Payload corrigé selon api/models.py:FrameworkAnalysisRequest
-    dung_payload = {
-        "arguments": ["a", "b", "c"],
-        "attacks": [["a", "b"], ["b", "c"]]
-    }
-    tester.test_post("/api/v1/framework/analyze", "FastAPI - POST /api/v1/framework/analyze", dung_payload)
+    dung_payload = {"arguments": ["a", "b", "c"], "attacks": [["a", "b"], ["b", "c"]]}
+    tester.test_post(
+        "/api/v1/framework/analyze",
+        "FastAPI - POST /api/v1/framework/analyze",
+        dung_payload,
+    )
 
     await orchestrator.stop_webapp()
     print("--- Fin des tests FastAPI ---")
 
 
-async def run_flask_tests(orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator):
+async def run_flask_tests(
+    orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator
+):
     """Démarre Flask et exécute la suite de tests."""
-    reporter.add_section_header("2. Application Web Flask (`argumentation_analysis/services/web_api/app.py`)")
-    
+    reporter.add_section_header(
+        "2. Application Web Flask (`argumentation_analysis/services/web_api/app.py`)"
+    )
+
     # Le BackendManager de l'orchestrateur est conçu pour gérer différents types
     # de serveurs WSGI/ASGI. Il suffit de spécifier le module applicatif.
     # L'orchestrateur essaiera de trouver un port libre en commençant par celui
     # configuré (ou 8095 par défaut s'il n'est pas déjà pris).
-    if not await orchestrator.start_webapp(app_module='argumentation_analysis.services.web_api.app:app', frontend_enabled=False):
+    if not await orchestrator.start_webapp(
+        app_module="argumentation_analysis.services.web_api.app:app",
+        frontend_enabled=False,
+    ):
         print("Échec du démarrage du serveur Flask.")
         return
 
@@ -152,12 +185,14 @@ async def run_flask_tests(orchestrator: UnifiedWebOrchestrator, reporter: Report
     tester = ApiTester(base_url, reporter)
 
     print(f"--- Tests Flask sur {base_url} ---")
-    
+
     # Mise à jour: /api/status n'existe pas, on utilise le health check complet
     tester.test_get("/api/health", "Flask - GET /api/health (deep check)")
     tester.test_get("/api/endpoints", "Flask - GET /api/endpoints")
 
-    analyze_payload = {"text": "Cats are better than dogs because they are more independent."}
+    analyze_payload = {
+        "text": "Cats are better than dogs because they are more independent."
+    }
     tester.test_post("/api/analyze", "Flask - POST /api/analyze", analyze_payload)
 
     validate_payload = {"premises": ["p -> q", "p"], "conclusion": "q"}
@@ -169,8 +204,15 @@ async def run_flask_tests(orchestrator: UnifiedWebOrchestrator, reporter: Report
     framework_payload = {
         "arguments": [
             {"id": "a", "content": "Il faut réduire les impots.", "attacks": ["b"]},
-            {"id": "b", "content": "Réduire les impots va diminuer les recettes de l'Etat."},
-            {"id": "c", "content": "C'est faux, la baisse des impots stimule la consommation.", "attacks": ["b"]}
+            {
+                "id": "b",
+                "content": "Réduire les impots va diminuer les recettes de l'Etat.",
+            },
+            {
+                "id": "c",
+                "content": "C'est faux, la baisse des impots stimule la consommation.",
+                "attacks": ["b"],
+            },
         ]
     }
     tester.test_post("/api/framework", "Flask - POST /api/framework", framework_payload)

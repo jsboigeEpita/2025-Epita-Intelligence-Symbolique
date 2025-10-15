@@ -102,4 +102,6 @@ ERREUR: Impossible de conclure, l'analyse semble incomplète. Vérifiez l'état.
 prompt_write_conclusion_v6 = prompt_write_conclusion_v7
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.pm.prompts chargé (V12 - Règles de progression strictes).")
+logging.getLogger(__name__).debug(
+    "Module agents.core.pm.prompts chargé (V12 - Règles de progression strictes)."
+)

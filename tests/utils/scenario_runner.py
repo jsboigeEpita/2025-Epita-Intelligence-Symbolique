@@ -8,6 +8,7 @@ from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.kernel.kernel_builder import KernelBuilder
 from argumentation_analysis.orchestration.orchestrator import Orchestrator
 
+
 def run_scenario_from_file(scenario_path: str):
     """
     Exécute un scénario de test de durcissement à partir d'un fichier JSON.
@@ -26,11 +27,15 @@ def run_scenario_from_file(scenario_path: str):
 
     facts = scenario_data.get("facts")
     if not facts:
-        raise ValueError("Le fichier de scénario de durcissement doit contenir une clé 'facts'.")
-    
+        raise ValueError(
+            "Le fichier de scénario de durcissement doit contenir une clé 'facts'."
+        )
+
     expected_outcome = scenario_data.get("expected_outcome")
     if not expected_outcome:
-        raise ValueError("Le fichier de scénario de durcissement doit contenir une clé 'expected_outcome'.")
+        raise ValueError(
+            "Le fichier de scénario de durcissement doit contenir une clé 'expected_outcome'."
+        )
 
     # 2. Configuration et initialisation de l'application
     settings = AppSettings()
@@ -47,13 +52,13 @@ def run_scenario_from_file(scenario_path: str):
         # Une amélioration future pourrait être de gérer une liste de faits directement.
         input_text = ". ".join(facts)
         result = asyncio.run(orchestrator.run_analysis_async(input_text))
-        
+
         # Pour les tests de durcissement, nous vérifions si le résultat contient le résultat attendu
         # (par exemple, "contradiction").
         # C'est une simplification ; une assertion plus robuste serait nécessaire dans un vrai test.
         print(f"Analysis Result: {result}")
         print(f"Expected Outcome: {expected_outcome}")
-        
+
         # La logique de validation réelle se trouvera dans le corps du test qui appelle ce runner.
         # Ce runner se contente d'exécuter et de retourner le résultat.
         return result, expected_outcome

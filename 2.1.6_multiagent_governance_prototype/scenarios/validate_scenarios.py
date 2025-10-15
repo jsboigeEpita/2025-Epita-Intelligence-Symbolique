@@ -8,8 +8,9 @@ import os
 import json
 from metrics.metrics import validate_scenario
 
+
 def main():
-    scenario_files = [f for f in os.listdir('.') if f.endswith('.json')]
+    scenario_files = [f for f in os.listdir(".") if f.endswith(".json")]
     all_valid = True
     for fname in scenario_files:
         with open(fname) as f:
@@ -26,5 +27,6 @@ def main():
     else:
         print("All scenarios are valid.")
 
-if __name__ == '__main__':
-    main() 
+
+if __name__ == "__main__":
+    main()

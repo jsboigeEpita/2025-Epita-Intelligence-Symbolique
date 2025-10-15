@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, call
 from src.core.decorators import track_tokens
 from src.benchmarking.benchmark_service import BenchmarkService
 
-class TestTrackTokensDecorator(unittest.TestCase):
 
+class TestTrackTokensDecorator(unittest.TestCase):
     def test_track_tokens_with_string_args(self):
         """
         Vérifie que le décorateur suit correctement les tokens pour des arguments
@@ -27,11 +27,10 @@ class TestTrackTokensDecorator(unittest.TestCase):
         # Vérification des appels à record_metric
         # "Hello" -> 1 token, "World" -> 1 token
         # "Hello World" -> 2 tokens
-        expected_calls = [
-            call('input_tokens', 2),
-            call('output_tokens', 2)
-        ]
-        mock_benchmark_service.record_metric.assert_has_calls(expected_calls, any_order=False)
+        expected_calls = [call("input_tokens", 2), call("output_tokens", 2)]
+        mock_benchmark_service.record_metric.assert_has_calls(
+            expected_calls, any_order=False
+        )
 
     def test_track_tokens_with_dict_args(self):
         """
@@ -51,11 +50,10 @@ class TestTrackTokensDecorator(unittest.TestCase):
 
         # "some text" -> 2 tokens
         # "Processed some text" -> 3 tokens
-        expected_calls = [
-            call('input_tokens', 2),
-            call('output_tokens', 3)
-        ]
-        mock_benchmark_service.record_metric.assert_has_calls(expected_calls, any_order=False)
+        expected_calls = [call("input_tokens", 2), call("output_tokens", 3)]
+        mock_benchmark_service.record_metric.assert_has_calls(
+            expected_calls, any_order=False
+        )
 
     def test_track_tokens_with_no_strings(self):
         """
@@ -72,11 +70,11 @@ class TestTrackTokensDecorator(unittest.TestCase):
 
         self.assertEqual(result, 30)
 
-        expected_calls = [
-            call('input_tokens', 0),
-            call('output_tokens', 0)
-        ]
-        mock_benchmark_service.record_metric.assert_has_calls(expected_calls, any_order=False)
+        expected_calls = [call("input_tokens", 0), call("output_tokens", 0)]
+        mock_benchmark_service.record_metric.assert_has_calls(
+            expected_calls, any_order=False
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,10 @@ import json
 import semantic_kernel as sk
 from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, OpenAIPromptExecutionSettings
+from semantic_kernel.connectors.ai.open_ai import (
+    OpenAIChatCompletion,
+    OpenAIPromptExecutionSettings,
+)
 from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
@@ -33,6 +36,7 @@ Vous avez accès à des outils (`WatsonTools`) pour valider la syntaxe des formu
 
 from .tweety_bridge import TweetyBridge
 
+
 class WatsonTools:
     """
     Plugin natif pour l'agent Watson, fournissant des outils logiques basés sur Tweety.
@@ -41,7 +45,12 @@ class WatsonTools:
     formules logiques et d'exécution de requêtes sur des bases de connaissances
     propositionnelles.
     """
-    def __init__(self, tweety_bridge: Optional[TweetyBridge] = None, constants: Optional[List[str]] = None):
+
+    def __init__(
+        self,
+        tweety_bridge: Optional[TweetyBridge] = None,
+        constants: Optional[List[str]] = None,
+    ):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._constants = constants or []
         try:
@@ -49,11 +58,15 @@ class WatsonTools:
             # C'est cette ligne qui peut échouer si la JVM n'est pas prête.
             self._tweety_bridge = tweety_bridge or TweetyBridge()
         except RuntimeError as e:
-            self._logger.warning(f"Échec de l'initialisation de TweetyBridge: {e}. Watson fonctionnera sans outils logiques formels.")
+            self._logger.warning(
+                f"Échec de l'initialisation de TweetyBridge: {e}. Watson fonctionnera sans outils logiques formels."
+            )
             self._tweety_bridge = None
 
         if not self._tweety_bridge or not TweetyInitializer.is_jvm_ready():
-            self._logger.warning("TweetyBridge n'est pas prêt. Les outils logiques formels sont désactivés.")
+            self._logger.warning(
+                "TweetyBridge n'est pas prêt. Les outils logiques formels sont désactivés."
+            )
 
     def _normalize_formula(self, formula: str) -> str:
         """Normalise une formule pour la rendre compatible avec le parser PL de Tweety."""
@@ -61,8 +74,12 @@ class WatsonTools:
         normalized = formula.replace("&&", "&").replace("||", "|").replace("!", "not ")
 
         # Remplace `Predicat(Argument)` par `Predicat_Argument`
-        normalized = re.sub(r'(\w+)\(([\w\s]+)\)', lambda m: m.group(1) + "_" + m.group(2).replace(" ", ""), normalized)
-        
+        normalized = re.sub(
+            r"(\w+)\(([\w\s]+)\)",
+            lambda m: m.group(1) + "_" + m.group(2).replace(" ", ""),
+            normalized,
+        )
+
         # Supprime les espaces et les caractères non valides pour les propositions
         # Garde les lettres, chiffres, underscores, et les opérateurs logiques &, |, not, (, )
         # Note: les espaces dans "not " sont importants
@@ -73,41 +90,56 @@ class WatsonTools:
                 sanitized_parts.append("not")
             else:
                 # Supprime tout ce qui n'est pas un caractère de mot, ou un opérateur valide
-                sanitized_part = re.sub(r'[^\w&|()~]', '', part)
+                sanitized_part = re.sub(r"[^\w&|()~]", "", part)
                 sanitized_parts.append(sanitized_part)
-        
+
         normalized = " ".join(sanitized_parts)
         # Fusionne "not" avec le mot suivant
         normalized = normalized.replace("not ", "not")
 
         # Supprime les espaces autour des opérateurs pour être sûr
-        normalized = re.sub(r'\s*([&|()~])\s*', r'\1', normalized)
+        normalized = re.sub(r"\s*([&|()~])\s*", r"\1", normalized)
 
         self._logger.debug(f"Formule normalisée: de '{formula}' à '{normalized}'")
         return normalized
 
-    @kernel_function(name="validate_formula", description="Valide la syntaxe d'une formule logique propositionnelle.")
+    @kernel_function(
+        name="validate_formula",
+        description="Valide la syntaxe d'une formule logique propositionnelle.",
+    )
     def validate_formula(self, formula: str) -> bool:
         self._logger.debug(f"Validation de la formule PL: '{formula}'")
         normalized_formula = self._normalize_formula(formula)
         try:
             # Utilise les constantes stockées lors de l'initialisation
-            is_valid, message = self._tweety_bridge.validate_formula(formula_string=normalized_formula, constants=self._constants)
+            is_valid, message = self._tweety_bridge.validate_formula(
+                formula_string=normalized_formula, constants=self._constants
+            )
             if not is_valid:
-                self._logger.warning(f"Formule PL invalide: '{normalized_formula}'. Message: {message}")
+                self._logger.warning(
+                    f"Formule PL invalide: '{normalized_formula}'. Message: {message}"
+                )
             return is_valid
         except Exception as e:
-            self._logger.error(f"Erreur lors de la validation de la formule PL '{normalized_formula}': {e}", exc_info=True)
+            self._logger.error(
+                f"Erreur lors de la validation de la formule PL '{normalized_formula}': {e}",
+                exc_info=True,
+            )
             return False
 
-    @kernel_function(name="execute_query", description="Exécute une requête logique sur une base de connaissances.")
+    @kernel_function(
+        name="execute_query",
+        description="Exécute une requête logique sur une base de connaissances.",
+    )
     def execute_query(self, belief_set_content: str, query: str) -> str:
         self._logger.info(f"Exécution de la requête PL: '{query}' sur le BeliefSet.")
         normalized_query = self._normalize_formula(query)
         normalized_belief_set = self._normalize_formula(belief_set_content)
         try:
             # Utilise les constantes stockées lors de l'initialisation
-            is_valid, validation_message = self._tweety_bridge.validate_formula(formula_string=normalized_query, constants=self._constants)
+            is_valid, validation_message = self._tweety_bridge.validate_formula(
+                formula_string=normalized_query, constants=self._constants
+            )
             if not is_valid:
                 msg = f"Requête invalide: {normalized_query}. Raison: {validation_message}"
                 self._logger.error(msg)
@@ -116,9 +148,9 @@ class WatsonTools:
             is_entailed, raw_output_str = self._tweety_bridge.perform_pl_query(
                 belief_set_content=normalized_belief_set,
                 query_string=normalized_query,
-                constants=self._constants
+                constants=self._constants,
             )
-            
+
             if is_entailed is None:
                 # raw_output_str contient déjà le message d'erreur formaté
                 return raw_output_str
@@ -129,44 +161,67 @@ class WatsonTools:
             self._logger.error(error_msg, exc_info=True)
             return f"ERREUR: {error_msg}"
 
-    @kernel_function(name="formal_step_by_step_analysis", description="Effectue une analyse formelle step-by-step pour problèmes logiques complexes (Einstein, puzzles).")
-    def formal_step_by_step_analysis(self, problem_description: str, constraints: str = "") -> str:
+    @kernel_function(
+        name="formal_step_by_step_analysis",
+        description="Effectue une analyse formelle step-by-step pour problèmes logiques complexes (Einstein, puzzles).",
+    )
+    def formal_step_by_step_analysis(
+        self, problem_description: str, constraints: str = ""
+    ) -> str:
         """
         Outil d'analyse formelle step-by-step pour Watson - problèmes logiques complexes
-        
+
         Args:
             problem_description: Description textuelle du problème logique
             constraints: Contraintes formelles du problème
-        
+
         Returns:
             Analyse formelle structurée avec progression step-by-step
         """
-        self._logger.info(f"Analyse formelle step-by-step demandée pour: {problem_description[:100]}...")
-        
+        self._logger.info(
+            f"Analyse formelle step-by-step demandée pour: {problem_description[:100]}..."
+        )
+
         try:
-            
             # Phase 1: FORMALISATION
             formalization_results = []
             if problem_description:
                 # Extraction automatique de contraintes logiques du problème
-                problem_lines = problem_description.split('\n')
+                problem_lines = problem_description.split("\n")
                 for i, line in enumerate(problem_lines):
-                    if any(keyword in line.lower() for keyword in ['si', 'alors', 'et', 'ou', 'non', 'tous', 'aucun']):
-                        formalization_results.append({
-                            "constraint_id": f"C{i+1}",
-                            "natural_language": line.strip(),
-                            "logical_form": self._extract_logical_pattern(line),
-                            "confidence": 0.8
-                        })
-            
+                    if any(
+                        keyword in line.lower()
+                        for keyword in [
+                            "si",
+                            "alors",
+                            "et",
+                            "ou",
+                            "non",
+                            "tous",
+                            "aucun",
+                        ]
+                    ):
+                        formalization_results.append(
+                            {
+                                "constraint_id": f"C{i+1}",
+                                "natural_language": line.strip(),
+                                "logical_form": self._extract_logical_pattern(line),
+                                "confidence": 0.8,
+                            }
+                        )
+
             # Phase 2: ANALYSE CONTRAINTES
             constraint_analysis = {
                 "total_constraints": len(formalization_results),
                 "constraint_types": self._classify_constraints(formalization_results),
-                "potential_conflicts": self._detect_constraint_conflicts(formalization_results),
-                "deduction_order": self._determine_deduction_order(formalization_results)
+                "potential_conflicts": self._detect_constraint_conflicts(
+                    formalization_results
+                ),
+                "deduction_order": self._determine_deduction_order(
+                    formalization_results
+                ),
             }
-            
+
             # Phase 3: DÉDUCTION PROGRESSIVE
             deduction_steps = []
             for i, constraint in enumerate(formalization_results):
@@ -175,41 +230,48 @@ class WatsonTools:
                     "applying_constraint": constraint["constraint_id"],
                     "logical_operation": f"Applying {constraint['logical_form']}",
                     "intermediate_result": f"Derived fact from constraint {constraint['constraint_id']}",
-                    "remaining_unknowns": max(len(formalization_results) - i - 1, 0)
+                    "remaining_unknowns": max(len(formalization_results) - i - 1, 0),
                 }
                 deduction_steps.append(step)
-            
+
             # Phase 4: VALIDATION FORMELLE
             validation_result = {
                 "consistency_check": "PASSED",
                 "completeness_check": "VERIFIED",
                 "soundness_check": "CONFIRMED",
-                "formal_proof_valid": True
+                "formal_proof_valid": True,
             }
-            
+
             # Phase 5: SOLUTION STRUCTURÉE
             structured_solution = {
                 "method": "formal_step_by_step_analysis",
-                "phases_completed": ["Formalisation", "Analyse Contraintes", "Déduction Progressive", "Validation Formelle"],
+                "phases_completed": [
+                    "Formalisation",
+                    "Analyse Contraintes",
+                    "Déduction Progressive",
+                    "Validation Formelle",
+                ],
                 "formalization": formalization_results,
                 "constraint_analysis": constraint_analysis,
                 "deduction_steps": deduction_steps,
                 "validation": validation_result,
                 "final_solution": self._generate_final_solution(deduction_steps),
                 "confidence": 0.95,
-                "analysis_quality": "RIGOROUS_FORMAL"
+                "analysis_quality": "RIGOROUS_FORMAL",
             }
-            
-            self._logger.info(f"Analyse formelle terminée avec {len(deduction_steps)} étapes de déduction")
-            
+
+            self._logger.info(
+                f"Analyse formelle terminée avec {len(deduction_steps)} étapes de déduction"
+            )
+
             # Enrichissement de la réponse avec la personnalité de Watson
             json_output = json.dumps(structured_solution, ensure_ascii=False, indent=2)
             return f"Voyons... analysons logiquement ce que nous avons. En tant que partenaire, je dois être rigoureux. Voici mon analyse step-by-step : \n\n{json_output}"
-            
+
         except Exception as e:
             self._logger.error(f"Erreur lors de l'analyse formelle: {e}")
             return f"Erreur analyse formelle: {e}"
-    
+
     def _extract_logical_pattern(self, sentence: str) -> str:
         """Extrait un pattern logique simple d'une phrase naturelle"""
         sentence_lower = sentence.lower()
@@ -223,10 +285,15 @@ class WatsonTools:
             return "¬A"
         else:
             return "P(x)"
-    
+
     def _classify_constraints(self, constraints: list) -> dict:
         """Classifie les types de contraintes"""
-        types = {"implications": 0, "conjunctions": 0, "disjunctions": 0, "negations": 0}
+        types = {
+            "implications": 0,
+            "conjunctions": 0,
+            "disjunctions": 0,
+            "negations": 0,
+        }
         for constraint in constraints:
             logical_form = constraint.get("logical_form", "")
             if "=>" in logical_form:
@@ -238,27 +305,30 @@ class WatsonTools:
             elif "¬" in logical_form:
                 types["negations"] += 1
         return types
-    
+
     def _detect_constraint_conflicts(self, constraints: list) -> list:
         """Détecte les conflits potentiels entre contraintes"""
         # Simulation simple de détection de conflits
-        return [] if len(constraints) < 5 else ["Conflit potentiel détecté entre C1 et C3"]
-    
+        return (
+            [] if len(constraints) < 5 else ["Conflit potentiel détecté entre C1 et C3"]
+        )
+
     def _determine_deduction_order(self, constraints: list) -> list:
         """Détermine l'ordre optimal de déduction"""
         return [f"C{i+1}" for i in range(len(constraints))]
-    
+
     def _generate_final_solution(self, deduction_steps: list) -> dict:
         """Génère la solution finale basée sur les étapes de déduction"""
         return {
             "solution_type": "LOGICAL_DEDUCTION",
             "steps_applied": len(deduction_steps),
             "result": "Solution obtenue par analyse formelle rigoureuse",
-            "certainty": "HIGH"
+            "certainty": "HIGH",
         }
 
 
 from .propositional_logic_agent import PropositionalLogicAgent
+
 
 class WatsonLogicAssistant(PropositionalLogicAgent):
     """
@@ -269,7 +339,16 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
     pour s'interfacer avec le système logique `Tweety`.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Watson", tweety_bridge: Optional[TweetyBridge] = None, constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
+    def __init__(
+        self,
+        kernel: Kernel,
+        agent_name: str = "Watson",
+        tweety_bridge: Optional[TweetyBridge] = None,
+        constants: Optional[List[str]] = None,
+        system_prompt: Optional[str] = None,
+        service_id: str = "chat_completion",
+        **kwargs,
+    ):
         """
         Initialise une instance de WatsonLogicAssistant.
 
@@ -279,18 +358,31 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             constants: Une liste optionnelle de constantes logiques à utiliser.
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
-        actual_system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
-        super().__init__(kernel=kernel, agent_name=agent_name, instructions=actual_system_prompt, service_id=service_id)
-        
+        actual_system_prompt = (
+            system_prompt
+            if system_prompt is not None
+            else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
+        )
+        super().__init__(
+            kernel=kernel,
+            agent_name=agent_name,
+            instructions=actual_system_prompt,
+            service_id=service_id,
+        )
+
         self._tools = WatsonTools(tweety_bridge=tweety_bridge, constants=constants)
-        
-        self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
-        
-    async def invoke_single(self, messages: Optional[list[ChatMessageContent]] = None, **kwargs) -> list[ChatMessageContent]:
+
+        self.logger.info(
+            f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques."
+        )
+
+    async def invoke_single(
+        self, messages: Optional[list[ChatMessageContent]] = None, **kwargs
+    ) -> list[ChatMessageContent]:
         # Gérer l'argument 'input' pour la compatibilité avec l'orchestrateur
-        if 'input' in kwargs and messages is None:
-            messages = kwargs['input']
-        
+        if "input" in kwargs and messages is None:
+            messages = kwargs["input"]
+
         if messages is None:
             messages = []
 
@@ -305,22 +397,30 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         """
         history = ChatHistory()
         if isinstance(input, str):
-            self.logger.info(f"[{self.name}] Invoke called with a string input: {input[:100]}...")
+            self.logger.info(
+                f"[{self.name}] Invoke called with a string input: {input[:100]}..."
+            )
             history.add_user_message(input)
         elif isinstance(input, list):
-            self.logger.info(f"[{self.name}] Invoke called with a message history of {len(input)} messages.")
+            self.logger.info(
+                f"[{self.name}] Invoke called with a message history of {len(input)} messages."
+            )
             for message in input:
                 # Ajout de la vérification pour s'assurer que 'message' est bien un ChatMessageContent
                 if isinstance(message, ChatMessageContent):
                     history.add_message(message)
                 else:
-                    self.logger.warning(f"Élément non-conforme dans l'historique: {type(message)}. Ignoré.")
-        
+                    self.logger.warning(
+                        f"Élément non-conforme dans l'historique: {type(message)}. Ignoré."
+                    )
+
         # Appelle la logique principale qui gère un historique
         response_message = await self.invoke_custom(history)
         return [response_message]
 
-    async def invoke_stream(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> AsyncGenerator[List[ChatMessageContent], Any]:
+    async def invoke_stream(
+        self, input: Union[str, List[ChatMessageContent]], **kwargs
+    ) -> AsyncGenerator[List[ChatMessageContent], Any]:
         """Implémentation de la méthode de streaming abstraite."""
         # Pour cet agent, le streaming est simulé en appelant la méthode invoke standard
         # et en retournant le résultat complet en une seule fois.
@@ -337,7 +437,9 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         Returns:
             Le contenu de l'ensemble de croyances, ou None si non trouvé ou en cas d'erreur.
         """
-        self.logger.info(f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}")
+        self.logger.info(
+            f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}"
+        )
         try:
             # Préparation des arguments pour la fonction du plugin
             # Le nom du paramètre dans la fonction du plugin doit correspondre à "belief_set_id"
@@ -345,19 +447,21 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             # Si la fonction du plugin attend un dictionnaire d'arguments, il faut le construire.
             # Pour l'instant, on suppose que les arguments sont passés en tant que kwargs à invoke.
             # kernel_arguments = {"belief_set_id": belief_set_id} # Alternative si invoke prend des KernelArguments
-            
+
             result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="get_belief_set_content",
-                arguments=KernelArguments(belief_set_id=belief_set_id)
+                arguments=KernelArguments(belief_set_id=belief_set_id),
             )
-            
+
             # La valeur réelle est souvent dans result.value ou directement result
-            if hasattr(result, 'value'):
+            if hasattr(result, "value"):
                 return str(result.value) if result.value is not None else None
             return str(result) if result is not None else None
         except Exception as e:
-            self.logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
+            self.logger.error(
+                f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}"
+            )
             return None
 
     async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
@@ -365,14 +469,16 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         Méthode d'invocation personnalisée pour la boucle d'orchestration.
         Prend un historique et retourne la réponse de l'agent.
         """
-        self.logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
+        self.logger.info(
+            f"[{self.name}] Invocation personnalisée avec {len(history)} messages."
+        )
 
         # Ajout du prompt système au début de l'historique pour cette invocation
         full_history = ChatHistory()
         full_history.add_system_message(self.instructions)
         for msg in history:
             full_history.add_message(msg)
-        
+
         try:
             # Création de la configuration du prompt et des settings d'exécution
             prompt_config = PromptTemplateConfig(
@@ -381,7 +487,12 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
                 template_format="semantic-kernel",
             )
             prompt_config.add_execution_settings(
-                                OpenAIPromptExecutionSettings(service_id=self._llm_service_id, max_tokens=200, temperature=0.6, top_p=0.7)
+                OpenAIPromptExecutionSettings(
+                    service_id=self._llm_service_id,
+                    max_tokens=200,
+                    temperature=0.6,
+                    top_p=0.7,
+                )
             )
 
             # Création d'une fonction ad-hoc pour la conversation
@@ -393,17 +504,31 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
 
             # Invocation via le kernel pour la robustesse et la compatibilité
             arguments = KernelArguments(chat_history=full_history)
-            
+
             response = await self._kernel.invoke(chat_function, arguments=arguments)
-            
+
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")
                 # La réponse de invoke est un FunctionResult. Le contenu est la valeur, le rôle est implicite.
-                return ChatMessageContent(role="assistant", content=str(response), name=self.name)
+                return ChatMessageContent(
+                    role="assistant", content=str(response), name=self.name
+                )
             else:
-                self.logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
-                return ChatMessageContent(role="assistant", content="Je dois analyser la situation plus en détail.", name=self.name)
+                self.logger.warning(
+                    f"[{self.name}] N'a reçu aucune réponse du service AI."
+                )
+                return ChatMessageContent(
+                    role="assistant",
+                    content="Je dois analyser la situation plus en détail.",
+                    name=self.name,
+                )
 
         except Exception as e:
-            self.logger.error(f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True)
-            return ChatMessageContent(role="assistant", content=f"Une erreur logique m'empêche de procéder: {e}", name=self.name)
+            self.logger.error(
+                f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True
+            )
+            return ChatMessageContent(
+                role="assistant",
+                content=f"Une erreur logique m'empêche de procéder: {e}",
+                name=self.name,
+            )

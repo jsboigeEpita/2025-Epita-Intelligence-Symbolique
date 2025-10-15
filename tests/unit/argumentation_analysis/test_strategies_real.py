@@ -15,44 +15,49 @@ from pathlib import Path
 from typing import List
 
 # Configuration pour forcer l'utilisation du vrai JPype
-os.environ['USE_REAL_JPYPE'] = 'true'
+os.environ["USE_REAL_JPYPE"] = "true"
 
 try:
     # IMPORTS CORRIGÉS avec les bons chemins
     from argumentation_analysis.core.strategies import (
         SimpleTerminationStrategy,
         DelegatingSelectionStrategy,
-        BalancedParticipationStrategy
+        BalancedParticipationStrategy,
     )
     from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-    print("OK SUCCES : Toutes les strategies importees avec succes depuis argumentation_analysis.core.strategies")
+
+    print(
+        "OK SUCCES : Toutes les strategies importees avec succes depuis argumentation_analysis.core.strategies"
+    )
 except ImportError as e:
     print(f"[ERREUR] ERREUR D'IMPORT CRITIQUE: {e}")
-    print("[ATTENTION]  Vérifiez que les modules sont bien dans argumentation_analysis.core")
+    print(
+        "[ATTENTION]  Vérifiez que les modules sont bien dans argumentation_analysis.core"
+    )
 
 
 class RealAgent:
     """Agent simple RÉEL pour les tests d'intégration avec Semantic Kernel."""
-    
+
     def __init__(self, name, role="agent"):
         self.name = name
         self.role = role
         self.id = name
-        
+
     def __str__(self):
         return f"RealAgent({self.name}, {self.role})"
 
 
 class RealChatMessage:
     """Message de chat RÉEL compatible Semantic Kernel pour les tests."""
-    
+
     def __init__(self, content, role="assistant", author_name=None):
         self.content = content
         self.role = role
         self.author_name = author_name or "system"
         self.name = self.author_name  # Alias pour compatibilité
         self.timestamp = "2025-06-07T12:00:00"
-    
+
     def __str__(self):
         return f"RealMessage({self.author_name}: {self.content})"
 
@@ -65,6 +70,7 @@ def simple_termination_fixture():
     agent = RealAgent("test_agent", "analyste")
     history = []
     return {"state": state, "strategy": strategy, "agent": agent, "history": history}
+
 
 class TestRealSimpleTerminationStrategy:
     """Tests RÉELS pour SimpleTerminationStrategy (style pytest)."""
@@ -83,12 +89,12 @@ class TestRealSimpleTerminationStrategy:
         strategy = simple_termination_fixture["strategy"]
         agent = simple_termination_fixture["agent"]
         history = simple_termination_fixture["history"]
-        
+
         async def run_test():
             for i in range(4):
                 result = await strategy.should_terminate(agent, history)
                 assert not result, f"Ne devrait pas terminer au tour {i+1}"
-            
+
             # Le 5e appel devrait déclencher la terminaison
             result = await strategy.should_terminate(agent, history)
             assert result, "Devrait terminer après max_steps"
@@ -104,7 +110,7 @@ class TestRealSimpleTerminationStrategy:
         history = simple_termination_fixture["history"]
 
         state.final_conclusion = "Conclusion de test atteinte"
-        
+
         async def run_test():
             return await strategy.should_terminate(agent, history)
 
@@ -120,13 +126,14 @@ def delegating_selection_fixture():
     agents = [
         RealAgent("ProjectManagerAgent", "manager"),
         RealAgent("AnalystAgent", "analyst"),
-        RealAgent("CriticAgent", "critic")
+        RealAgent("CriticAgent", "critic"),
     ]
     strategy = DelegatingSelectionStrategy(
         agents, state, default_agent_name="ProjectManagerAgent"
     )
     history = []
     return {"state": state, "strategy": strategy, "agents": agents, "history": history}
+
 
 class TestRealDelegatingSelectionStrategy:
     """Tests RÉELS pour DelegatingSelectionStrategy (style pytest)."""
@@ -143,10 +150,10 @@ class TestRealDelegatingSelectionStrategy:
         """Teste la sélection par défaut sans désignation."""
         strategy = delegating_selection_fixture["strategy"]
         agents = delegating_selection_fixture["agents"]
-        
+
         async def run_test():
             return await strategy.next(agents, [])
-        
+
         selected = asyncio.run(run_test())
         assert selected.name == "ProjectManagerAgent"
         print("[OK] Test sélection agent par défaut réussi")
@@ -157,9 +164,9 @@ class TestRealDelegatingSelectionStrategy:
         state = delegating_selection_fixture["state"]
         agents = delegating_selection_fixture["agents"]
         history = delegating_selection_fixture["history"]
-        
+
         state.designate_next_agent("AnalystAgent")
-        
+
         async def run_test():
             return await strategy.next(agents, history)
 
@@ -175,17 +182,22 @@ def balanced_participation_fixture():
     agents = [
         RealAgent("ProjectManagerAgent", "manager"),
         RealAgent("AnalystAgent", "analyst"),
-        RealAgent("CriticAgent", "critic")
+        RealAgent("CriticAgent", "critic"),
     ]
     target_participation = {
-        "ProjectManagerAgent": 0.5, "AnalystAgent": 0.3, "CriticAgent": 0.2
+        "ProjectManagerAgent": 0.5,
+        "AnalystAgent": 0.3,
+        "CriticAgent": 0.2,
     }
     strategy = BalancedParticipationStrategy(
-        agents, state, default_agent_name="ProjectManagerAgent",
-        target_participation=target_participation
+        agents,
+        state,
+        default_agent_name="ProjectManagerAgent",
+        target_participation=target_participation,
     )
     history = []
     return {"state": state, "strategy": strategy, "agents": agents, "history": history}
+
 
 class TestRealBalancedParticipationStrategy:
     """Tests RÉELS pour BalancedParticipationStrategy (style pytest)."""
@@ -203,13 +215,15 @@ class TestRealBalancedParticipationStrategy:
         strategy = balanced_participation_fixture["strategy"]
         agents = balanced_participation_fixture["agents"]
         history = balanced_participation_fixture["history"]
-        
+
         async def run_test():
             selections = []
             for turn in range(10):
                 selected = await strategy.next(agents, history)
                 selections.append(selected.name)
-                message = RealChatMessage(f"Message tour {turn+1}", "assistant", selected.name)
+                message = RealChatMessage(
+                    f"Message tour {turn+1}", "assistant", selected.name
+                )
                 history.append(message)
             return selections
 
@@ -218,8 +232,10 @@ class TestRealBalancedParticipationStrategy:
         pm_count = selections.count("ProjectManagerAgent")
         analyst_count = selections.count("AnalystAgent")
         critic_count = selections.count("CriticAgent")
-        
-        print(f"   Participations après 10 tours: PM={pm_count}, Analyst={analyst_count}, Critic={critic_count}")
+
+        print(
+            f"   Participations après 10 tours: PM={pm_count}, Analyst={analyst_count}, Critic={critic_count}"
+        )
         assert pm_count >= analyst_count
         assert pm_count >= critic_count
         print("[OK] Test équilibrage participation réussi")
@@ -228,7 +244,7 @@ class TestRealBalancedParticipationStrategy:
         """Teste que la désignation explicite prime sur l'équilibrage."""
         s = balanced_participation_fixture
         s["state"].designate_next_agent("CriticAgent")
-        
+
         async def run_test():
             return await s["strategy"].next(s["agents"], s["history"])
 
@@ -244,7 +260,7 @@ def strategies_integration_fixture():
     agents = [
         RealAgent("ProjectManagerAgent", "manager"),
         RealAgent("AnalystAgent", "analyst"),
-        RealAgent("CriticAgent", "critic")
+        RealAgent("CriticAgent", "critic"),
     ]
     termination_strategy = SimpleTerminationStrategy(state, max_steps=8)
     balanced_strategy = BalancedParticipationStrategy(
@@ -253,39 +269,49 @@ def strategies_integration_fixture():
     history = []
     # Note: selection_strategy n'est pas utilisé dans le test, donc on ne le retourne pas.
     return {
-        "state": state, "agents": agents, "history": history,
+        "state": state,
+        "agents": agents,
+        "history": history,
         "termination_strategy": termination_strategy,
-        "balanced_strategy": balanced_strategy
+        "balanced_strategy": balanced_strategy,
     }
+
 
 class TestRealStrategiesIntegration:
     """Tests d'intégration complets utilisant les 3 stratégies (style pytest)."""
-    
-    def test_full_conversation_with_all_strategies_real(self, strategies_integration_fixture):
+
+    def test_full_conversation_with_all_strategies_real(
+        self, strategies_integration_fixture
+    ):
         """Simulation complète avec les 3 stratégies en interaction."""
         fx = strategies_integration_fixture
-        
+
         async def run_test():
             turn = 0
             conversation_ended = False
-            
+
             while not conversation_ended and turn < 10:
                 turn += 1
-                selected_agent = await fx["balanced_strategy"].next(fx["agents"], fx["history"])
+                selected_agent = await fx["balanced_strategy"].next(
+                    fx["agents"], fx["history"]
+                )
                 message = RealChatMessage(
-                    f"Réponse tour {turn} de {selected_agent.role}", "assistant", selected_agent.name
+                    f"Réponse tour {turn} de {selected_agent.role}",
+                    "assistant",
+                    selected_agent.name,
                 )
                 fx["history"].append(message)
                 conversation_ended = await fx["termination_strategy"].should_terminate(
                     selected_agent, fx["history"]
                 )
-                print(f"   Tour {turn}: Agent={selected_agent.name}, Terminé={conversation_ended}")
+                print(
+                    f"   Tour {turn}: Agent={selected_agent.name}, Terminé={conversation_ended}"
+                )
             return turn
-            
+
         turn = asyncio.run(run_test())
 
         assert len(fx["history"]) > 0, "Au moins un message généré"
         assert turn == 8, "La conversation doit se terminer exactement au 8ème tour"
-        
-        print("[OK] INTÉGRATION COMPLÈTE : Toutes les stratégies fonctionnent ensemble")
 
+        print("[OK] INTÉGRATION COMPLÈTE : Toutes les stratégies fonctionnent ensemble")

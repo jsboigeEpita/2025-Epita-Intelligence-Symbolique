@@ -24,6 +24,7 @@ from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.core.llm_service import create_llm_service
 
+
 def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Initialise et configure les services en se basant sur la configuration centrale et une config optionnelle.
@@ -32,15 +33,19 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
     services = {}
     if config is None:
         config = {}
-    
-    logging.info(f"--- Initialisation des services (mock LLM: {settings.use_mock_llm}, JVM: {settings.enable_jvm}) ---")
+
+    logging.info(
+        f"--- Initialisation des services (mock LLM: {settings.use_mock_llm}, JVM: {settings.enable_jvm}) ---"
+    )
 
     # 1. Initialisation de la JVM (contrôlée par la config)
     if settings.enable_jvm:
         # Priorité à la configuration passée, sinon fallback sur `settings`
         libs_dir_path_str = config.get("LIBS_DIR_PATH")
-        libs_dir_path = Path(libs_dir_path_str) if libs_dir_path_str else settings.libs_dir
-        
+        libs_dir_path = (
+            Path(libs_dir_path_str) if libs_dir_path_str else settings.libs_dir
+        )
+
         if libs_dir_path is None or not libs_dir_path.exists():
             logging.error(f"enable_jvm=True mais settings.libs_dir n'est pas configuré")
             services["jvm_ready"] = False
@@ -61,31 +66,37 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
         llm_service = create_llm_service(
             service_id="default_llm_service",
             model_id=settings.default_model_id,
-            force_mock=settings.use_mock_llm
+            force_mock=settings.use_mock_llm,
         )
         services["llm_service"] = llm_service
-        
+
         if llm_service:
             service_type = type(llm_service).__name__
-            service_id = getattr(llm_service, 'service_id', 'N/A')
-            logging.info(f"[OK] Service LLM créé (Type: {service_type}, ID: {service_id}).")
+            service_id = getattr(llm_service, "service_id", "N/A")
+            logging.info(
+                f"[OK] Service LLM créé (Type: {service_type}, ID: {service_id})."
+            )
         else:
             logging.warning("create_llm_service a retourné None.")
 
     except Exception as e:
-        logging.critical(f"Échec critique lors de la création du service LLM: {e}", exc_info=True)
+        logging.critical(
+            f"Échec critique lors de la création du service LLM: {e}", exc_info=True
+        )
         services["llm_service"] = None
-    
+
     return services
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Exemple d'utilisation (pourrait nécessiter une configuration de logging et .env)
     from argumentation_analysis.core.utils.logging_utils import setup_logging
+
     setup_logging()
 
     # Note: Pour tester, assurez-vous que votre fichier .env est configuré
     # avec les variables `ENABLE_JVM`, `USE_MOCK_LLM`, et `LIBS_DIR` si nécessaire.
-    
+
     logging.info("Test de initialize_analysis_services...")
     initialized_services = initialize_analysis_services()
     logging.info(f"Services initialisés: {initialized_services}")

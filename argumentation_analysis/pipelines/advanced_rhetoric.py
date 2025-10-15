@@ -10,17 +10,22 @@ from typing import List, Dict, Any
 from tqdm import tqdm
 
 from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
-from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
-from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
+from argumentation_analysis.orchestration.advanced_analyzer import (
+    analyze_extract_advanced,
+)
+from argumentation_analysis.core.interfaces.fallacy_detector import (
+    AbstractFallacyDetector,
+)
 
 
 logger = logging.getLogger(__name__)
+
 
 def run_advanced_rhetoric_pipeline(
     extract_definitions: List[Dict[str, Any]],
     base_results: List[Dict[str, Any]],
     output_file: Path,
-    fallacy_detector: AbstractFallacyDetector
+    fallacy_detector: AbstractFallacyDetector,
 ) -> None:
     """
     Analyse tous les extraits avec les outils avancés et sauvegarde les résultats.
@@ -49,27 +54,31 @@ def run_advanced_rhetoric_pipeline(
     :rtype: None
     """
     logger.info("Démarrage du pipeline d'analyse rhétorique avancée...")
-    
+
     # Initialiser le plugin qui contient tous les outils
     logger.info("Initialisation du AnalysisToolsPlugin...")
     try:
         analysis_plugin = AnalysisToolsPlugin(fallacy_detector=fallacy_detector)
         logger.info("[OK] AnalysisToolsPlugin initialisé avec succès.")
     except Exception as e:
-        logger.error(f"❌ Impossible d'initialiser AnalysisToolsPlugin: {e}", exc_info=True)
+        logger.error(
+            f"❌ Impossible d'initialiser AnalysisToolsPlugin: {e}", exc_info=True
+        )
         # Écrit un fichier de résultats d'erreur et quitte si le plugin ne peut pas être chargé.
         error_result = {
             "error": "Échec de l'initialisation du AnalysisToolsPlugin",
-            "details": str(e)
+            "details": str(e),
         }
         try:
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 json.dump([error_result], f, ensure_ascii=False, indent=2)
         except Exception as write_e:
-            logger.error(f"Erreur lors de la tentative d'écriture du fichier d'erreur de pipeline: {write_e}")
+            logger.error(
+                f"Erreur lors de la tentative d'écriture du fichier d'erreur de pipeline: {write_e}"
+            )
         return
-            
+
     base_results_dict: Dict[str, Dict[str, Any]] = {}
     for result in base_results:
         extract_name = result.get("extract_name")
@@ -77,23 +86,27 @@ def run_advanced_rhetoric_pipeline(
         if extract_name and source_name:
             key = f"{source_name}:{extract_name}"
             base_results_dict[key] = result
-    
-    total_extracts = sum(len(source.get("extracts", [])) for source in extract_definitions)
+
+    total_extracts = sum(
+        len(source.get("extracts", [])) for source in extract_definitions
+    )
     logger.info(f"Pipeline d'analyse avancée pour {total_extracts} extraits...")
-    
+
     all_pipeline_results: List[Dict[str, Any]] = []
-    
-    progress_bar = tqdm(total=total_extracts, desc="Pipeline d'analyse avancée", unit="extrait")
-    
+
+    progress_bar = tqdm(
+        total=total_extracts, desc="Pipeline d'analyse avancée", unit="extrait"
+    )
+
     for source in extract_definitions:
         source_name = source.get("source_name", "Source sans nom")
         extracts_in_source = source.get("extracts", [])
-        
+
         for extract_def in extracts_in_source:
             extract_name = extract_def.get("extract_name", "Extrait sans nom")
             key = f"{source_name}:{extract_name}"
             base_result_for_extract = base_results_dict.get(key)
-            
+
             try:
                 # Appel à la fonction d'orchestration pour un seul extrait avec le plugin
                 single_extract_results = analyze_extract_advanced(
@@ -101,21 +114,33 @@ def run_advanced_rhetoric_pipeline(
                 )
                 all_pipeline_results.append(single_extract_results)
             except Exception as e:
-                logger.error(f"Erreur dans le pipeline pour l'extrait '{extract_name}': {e}", exc_info=True)
-                all_pipeline_results.append({
-                    "extract_name": extract_name,
-                    "source_name": source_name,
-                    "error": f"Erreur de pipeline: {str(e)}"
-                })
-            
+                logger.error(
+                    f"Erreur dans le pipeline pour l'extrait '{extract_name}': {e}",
+                    exc_info=True,
+                )
+                all_pipeline_results.append(
+                    {
+                        "extract_name": extract_name,
+                        "source_name": source_name,
+                        "error": f"Erreur de pipeline: {str(e)}",
+                    }
+                )
+
             progress_bar.update(1)
-    
+
     progress_bar.close()
-    
+
     try:
-        output_file.parent.mkdir(parents=True, exist_ok=True) # S'assurer que le répertoire parent existe
-        with open(output_file, 'w', encoding='utf-8') as f:
+        output_file.parent.mkdir(
+            parents=True, exist_ok=True
+        )  # S'assurer que le répertoire parent existe
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(all_pipeline_results, f, ensure_ascii=False, indent=2)
-        logger.info(f"[OK] Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}")
+        logger.info(
+            f"[OK] Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}"
+        )
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la sauvegarde des résultats du pipeline: {e}", exc_info=True)
+        logger.error(
+            f"❌ Erreur lors de la sauvegarde des résultats du pipeline: {e}",
+            exc_info=True,
+        )

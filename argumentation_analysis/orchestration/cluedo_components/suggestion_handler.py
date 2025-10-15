@@ -2,14 +2,18 @@
 import logging
 from typing import Optional, Dict, Any
 
-from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
+from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
+    MoriartyInterrogatorAgent,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class SuggestionHandler:
     """
     Gère l'extraction et le traitement des suggestions Cluedo faites par les agents.
     """
+
     def __init__(self, moriarty_agent: MoriartyInterrogatorAgent):
         self.moriarty_agent = moriarty_agent
 
@@ -48,54 +52,78 @@ class SuggestionHandler:
     #
     #     return None
 
-    async def force_moriarty_oracle_revelation(self, suggestion: Dict[str, str], suggesting_agent: str) -> Optional[Dict[str, Any]]:
+    async def force_moriarty_oracle_revelation(
+        self, suggestion: Dict[str, str], suggesting_agent: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Force Moriarty à révéler ses cartes pour une suggestion donnée.
-        
+
         Args:
             suggestion: Dict avec suspect/arme/lieu
             suggesting_agent: Nom de l'agent qui fait la suggestion
-            
+
         Returns:
             Réponse Oracle de Moriarty ou None si erreur
         """
         try:
-            logger.info(f"🔮 Force Oracle révélation: {suggestion} par {suggesting_agent}")
-            
-            oracle_result = await self.moriarty_agent.validate_suggestion_cluedo(
-                suspect=suggestion.get('suspect', ''),
-                arme=suggestion.get('arme', ''),
-                lieu=suggestion.get('lieu', ''),
-                suggesting_agent=suggesting_agent
+            logger.info(
+                f"🔮 Force Oracle révélation: {suggestion} par {suggesting_agent}"
             )
-            
-            if oracle_result.authorized and oracle_result.data and oracle_result.data.can_refute:
+
+            oracle_result = await self.moriarty_agent.validate_suggestion_cluedo(
+                suspect=suggestion.get("suspect", ""),
+                arme=suggestion.get("arme", ""),
+                lieu=suggestion.get("lieu", ""),
+                suggesting_agent=suggesting_agent,
+            )
+
+            if (
+                oracle_result.authorized
+                and oracle_result.data
+                and oracle_result.data.can_refute
+            ):
                 revealed_cards = oracle_result.revealed_information or []
                 if revealed_cards:
                     content = f"*sourire énigmatique* Ah, {suggesting_agent}... Je possède {', '.join(revealed_cards)} ! Votre théorie s'effondre."
                     return {
-                        "content": content, "type": "oracle_revelation", "revealed_cards": revealed_cards,
-                        "can_refute": True, "suggestion": suggestion
+                        "content": content,
+                        "type": "oracle_revelation",
+                        "revealed_cards": revealed_cards,
+                        "can_refute": True,
+                        "suggestion": suggestion,
                     }
                 else:
                     # Cas de sécurité, même si Moriarty a été corrigé pour ne plus arriver ici.
-                    logger.warning(f"Oracle a indiqué pouvoir réfuter mais n'a retourné aucune carte pour la suggestion: {suggestion}")
+                    logger.warning(
+                        f"Oracle a indiqué pouvoir réfuter mais n'a retourné aucune carte pour la suggestion: {suggestion}"
+                    )
                     content = f"*silence calculé* Votre suggestion, {suggesting_agent}, est... notable. Mais je ne révélerai rien pour l'instant."
                     return {
-                        "content": content, "type": "oracle_no_refutation", "revealed_cards": [],
-                        "can_refute": False, "suggestion": suggestion, "warning": "Incohérence Oracle"
+                        "content": content,
+                        "type": "oracle_no_refutation",
+                        "revealed_cards": [],
+                        "can_refute": False,
+                        "suggestion": suggestion,
+                        "warning": "Incohérence Oracle",
                     }
             else:
                 content = f"*silence inquiétant* Intéressant, {suggesting_agent}... Je ne peux rien révéler sur cette suggestion."
                 return {
-                    "content": content, "type": "oracle_no_refutation", "revealed_cards": [],
-                    "can_refute": False, "suggestion": suggestion, "warning": "Suggestion potentiellement correcte"
+                    "content": content,
+                    "type": "oracle_no_refutation",
+                    "revealed_cards": [],
+                    "can_refute": False,
+                    "suggestion": suggestion,
+                    "warning": "Suggestion potentiellement correcte",
                 }
-                
+
         except Exception as e:
             logger.error(f"❌ Erreur Oracle révélation: {e}", exc_info=True)
             error_content = f"*confusion momentanée* Pardonnez-moi, {suggesting_agent}... Un mystère technique m'empêche de répondre."
             return {
-                "content": error_content, "type": "oracle_error", "revealed_cards": [],
-                "can_refute": False, "error": str(e)
+                "content": error_content,
+                "type": "oracle_error",
+                "revealed_cards": [],
+                "can_refute": False,
+                "error": str(e),
             }

@@ -1,7 +1,7 @@
-from typing import Tuple, Optional # Ajout pour le typage
-import logging # Ajout pour logging
+from typing import Tuple, Optional  # Ajout pour le typage
+import logging  # Ajout pour logging
 
-logger = logging.getLogger(__name__) # Ajout logger
+logger = logging.getLogger(__name__)  # Ajout logger
 """
 Ce module fournit des fonctions utilitaires pour la manipulation et la normalisation de chaînes de caractères.
 
@@ -12,7 +12,8 @@ Il contient des fonctions pour :
 import re
 import string
 import unicodedata
-from typing import List, Dict, Any # Ajout de Dict et Any
+from typing import List, Dict, Any  # Ajout de Dict et Any
+
 
 def normalize_text(text: str) -> str:
     """
@@ -44,9 +45,11 @@ def normalize_text(text: str) -> str:
     # en leur caractère de base suivi de leurs marques diacritiques combinantes.
     # Par exemple, "é" devient "e" + "´".
     # Ensuite, nous filtrons ces marques diacritiques (catégorie Unicode 'Mn').
-    text = ''.join(
-        c for c in unicodedata.normalize('NFD', text)
-        if unicodedata.category(c) != 'Mn'  # 'Mn' correspond à Mark, Nonspacing (diacritiques)
+    text = "".join(
+        c
+        for c in unicodedata.normalize("NFD", text)
+        if unicodedata.category(c)
+        != "Mn"  # 'Mn' correspond à Mark, Nonspacing (diacritiques)
     )
 
     # Gestion spécifique des apostrophes avant la suppression générale de la ponctuation.
@@ -58,9 +61,9 @@ def normalize_text(text: str) -> str:
     # - l'important -> l'important (conservé car interne)
 
     text = text.replace("'''", "'")  # l'''exemple''' -> l'exemple
-    text = text.replace("''", " ")   # ''fin'' ->  fin ,  l''autre -> l autre
-                                     # Note: " fin " avec espaces sera nettoyé par la normalisation des espaces plus tard.
-                                     # "l autre" est intentionnel pour la tokenisation.
+    text = text.replace("''", " ")  # ''fin'' ->  fin ,  l''autre -> l autre
+    # Note: " fin " avec espaces sera nettoyé par la normalisation des espaces plus tard.
+    # "l autre" est intentionnel pour la tokenisation.
 
     # Supprimer les apostrophes restantes en début/fin de mot ou celles isolées par des espaces.
     # Ex: 'debut' ->  debut , ' mot ' ->   mot
@@ -72,15 +75,18 @@ def normalize_text(text: str) -> str:
     # pour ne pas affecter les apostrophes internes conservées.
     # Chaque caractère de ponctuation est remplacé par un espace.
     punctuations_to_remove = string.punctuation.replace("'", "")
-    translator = str.maketrans(punctuations_to_remove, ' ' * len(punctuations_to_remove))
+    translator = str.maketrans(
+        punctuations_to_remove, " " * len(punctuations_to_remove)
+    )
     text = text.translate(translator)
 
     # Normalisation des espaces blancs : remplace les séquences d'espaces multiples
     # (y compris tabulations, nouvelles lignes converties en espaces par les étapes précédentes)
     # par un seul espace, puis supprime les espaces en début et fin de chaîne.
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
 
     return text
+
 
 def tokenize_text(text: str) -> List[str]:
     """
@@ -113,13 +119,17 @@ def tokenize_text(text: str) -> List[str]:
     # Pour s'assurer que la tokenisation sépare les mots aux apostrophes,
     # comme attendu par certains tests et le docstring.
     normalized_text = normalized_text.replace("'", " ")
-    if not normalized_text.strip(): # Gérer chaîne vide ou que des espaces après remplacement
+    if (
+        not normalized_text.strip()
+    ):  # Gérer chaîne vide ou que des espaces après remplacement
         return []
     tokens = normalized_text.split()
     return tokens
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import doctest
+
     results = doctest.testmod()
     if results.failed == 0:
         print(f"Tous les {results.attempted} tests doctest ont réussi !")
@@ -171,10 +181,10 @@ if __name__ == '__main__':
         tokenize_text(None)
     except TypeError as e:
         print(f"\nErreur attendue pour tokenize_text avec entrée non-string: {e}")
+
+
 def find_segment_with_markers(
-    full_text: str, 
-    start_marker: str, 
-    end_marker: str
+    full_text: str, start_marker: str, end_marker: str
 ) -> Tuple[Optional[int], Optional[int], Optional[str]]:
     """
     Tente de trouver un segment de texte basé sur des marqueurs de début et de fin.
@@ -188,7 +198,7 @@ def find_segment_with_markers(
         end_marker (str): La chaîne de caractères marquant la fin du segment.
 
     Returns:
-        Tuple[Optional[int], Optional[int], Optional[str]]: 
+        Tuple[Optional[int], Optional[int], Optional[str]]:
             Un tuple contenant:
             - L'index de début du marqueur de début dans full_text (ou None si non trouvé).
             - L'index de fin du marqueur de fin (c'est-à-dire l'index après le dernier caractère
@@ -201,7 +211,9 @@ def find_segment_with_markers(
     if not all(isinstance(arg, str) for arg in [full_text, start_marker, end_marker]):
         logger.warning("find_segment_with_markers a reçu des arguments non-chaînes.")
         return None, None, None
-    if not all([full_text, start_marker, end_marker]): # Vérifier aussi si les chaînes sont vides
+    if not all(
+        [full_text, start_marker, end_marker]
+    ):  # Vérifier aussi si les chaînes sont vides
         logger.debug("Un des arguments (full_text, start_marker, end_marker) est vide.")
         return None, None, None
 
@@ -214,26 +226,35 @@ def find_segment_with_markers(
         # Recherche end_marker APRES la fin de start_marker
         search_from_index = start_idx + len(start_marker)
         end_idx = full_text.find(end_marker, search_from_index)
-        
+
         if end_idx == -1:
-            logger.debug(f"Marqueur de fin '{end_marker[:50]}...' non trouvé après l'index {search_from_index}.")
+            logger.debug(
+                f"Marqueur de fin '{end_marker[:50]}...' non trouvé après l'index {search_from_index}."
+            )
             return None, None, None
-            
+
         # L'index de fin pour le slicing doit inclure le end_marker
         segment_end_idx = end_idx + len(end_marker)
-        
+
         # Le segment extrait inclut les marqueurs
-        extracted_segment = full_text[start_idx : segment_end_idx]
-        
-        logger.debug(f"Segment trouvé: début à {start_idx}, fin (du marqueur de fin) à {segment_end_idx}. Aperçu: '{extracted_segment[:100]}...'")
+        extracted_segment = full_text[start_idx:segment_end_idx]
+
+        logger.debug(
+            f"Segment trouvé: début à {start_idx}, fin (du marqueur de fin) à {segment_end_idx}. Aperçu: '{extracted_segment[:100]}...'"
+        )
         return start_idx, segment_end_idx, extracted_segment
-        
+
     except Exception as e:
-        logger.error(f"Erreur dans find_segment_with_markers: {e} avec start='{start_marker[:50]}...', end='{end_marker[:50]}...'", exc_info=True)
+        logger.error(
+            f"Erreur dans find_segment_with_markers: {e} avec start='{start_marker[:50]}...', end='{end_marker[:50]}...'",
+            exc_info=True,
+        )
         return None, None, None
+
+
 def populate_text_segment(
     source_full_text: str,
-    extract_definition: Dict[str, Any] # Nécessite Dict from typing
+    extract_definition: Dict[str, Any],  # Nécessite Dict from typing
 ) -> Optional[str]:
     """
     Peuple le 'full_text_segment' pour une définition d'extrait donnée
@@ -256,7 +277,7 @@ def populate_text_segment(
     if not source_full_text:
         logger.debug("Texte source complet manquant, impossible de peupler le segment.")
         return None
-        
+
     if not isinstance(extract_definition, dict):
         logger.warning("La définition de l'extrait n'est pas un dictionnaire.")
         return None
@@ -267,17 +288,27 @@ def populate_text_segment(
 
     if not start_marker or not end_marker:
         missing_info = []
-        if not start_marker: missing_info.append("marqueur de début")
-        if not end_marker: missing_info.append("marqueur de fin")
-        logger.warning(f"{', '.join(missing_info).capitalize()} manquants pour l'extrait '{extract_name}'. Segment non peuplé.")
+        if not start_marker:
+            missing_info.append("marqueur de début")
+        if not end_marker:
+            missing_info.append("marqueur de fin")
+        logger.warning(
+            f"{', '.join(missing_info).capitalize()} manquants pour l'extrait '{extract_name}'. Segment non peuplé."
+        )
         return None
 
-    _, _, segment = find_segment_with_markers(source_full_text, start_marker, end_marker)
+    _, _, segment = find_segment_with_markers(
+        source_full_text, start_marker, end_marker
+    )
 
     if segment:
-        logger.debug(f"Segment peuplé pour l'extrait '{extract_name}' (longueur: {len(segment)}).")
+        logger.debug(
+            f"Segment peuplé pour l'extrait '{extract_name}' (longueur: {len(segment)})."
+        )
         return segment
     else:
         # find_segment_with_markers logue déjà les détails si les marqueurs ne sont pas trouvés.
-        logger.warning(f"Impossible de trouver/peupler le segment pour l'extrait '{extract_name}' avec les marqueurs fournis.")
+        logger.warning(
+            f"Impossible de trouver/peupler le segment pour l'extrait '{extract_name}' avec les marqueurs fournis."
+        )
         return None

@@ -3,6 +3,7 @@ from packaging.version import parse
 
 MIN_SK_VERSION = "1.3.0"
 
+
 def validate_semantic_kernel_version():
     """
     Vérifie que la version de semantic-kernel installée est compatible.
@@ -29,6 +30,7 @@ def validate_semantic_kernel_version():
             "Le package 'semantic-kernel' n'est pas installé. "
             "Veuillez l'installer dans votre environnement."
         )
+
 
 # Exécution de la validation à l'import du module
 # validate_semantic_kernel_version()

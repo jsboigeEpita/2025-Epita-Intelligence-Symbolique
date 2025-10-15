@@ -1,5 +1,6 @@
 import abc
 
+
 class AbstractFallacyDetector(abc.ABC):
     @abc.abstractmethod
     def detect(self, text: str) -> dict:

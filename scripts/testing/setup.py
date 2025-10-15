@@ -4,8 +4,9 @@ import os
 # Version du package
 __version__ = "0.1.0"
 
+
 # Fonction pour parser requirements.txt
-def parse_requirements_txt(filename='requirements.txt'):
+def parse_requirements_txt(filename="requirements.txt"):
     """
     Assurez-vous que cette fonction ne lit que les noms des paquets,
     en ignorant les commentaires, les options et les marqueurs.
@@ -16,38 +17,38 @@ def parse_requirements_txt(filename='requirements.txt'):
     # nécessaire pour le projet mais qui pourrait entrer en conflit avec d'autres.
     # 'uvicorn[standard]' doit être simplifié en 'uvicorn'
     exclusions = [
-        'semantic-kernel',
-        'uvicorn[standard]'  # Le setup ne gère pas les extras comme ça, on met 'uvicorn' à la place
+        "semantic-kernel",
+        "uvicorn[standard]",  # Le setup ne gère pas les extras comme ça, on met 'uvicorn' à la place
     ]
 
     # Paquets à ajouter explicitement au lieu de ceux exclus (si nécessaire)
     # par exemple, uvicorn sans l'extra.
-    additions = {
-        'uvicorn[standard]': 'uvicorn'
-    }
+    additions = {"uvicorn[standard]": "uvicorn"}
 
     libs = {}
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         for line in f:
             line = line.strip()
             # Ignorer les commentaires, les lignes vides et les options
-            if not line or line.startswith('#') or line.startswith('-'):
+            if not line or line.startswith("#") or line.startswith("-"):
                 continue
 
             # Retirer les commentaires en ligne
-            if '#' in line:
-                line = line.split('#', 1)[0].strip()
+            if "#" in line:
+                line = line.split("#", 1)[0].strip()
 
             # Normaliser le nom du paquet et retirer les extras pour les exclusions
-            package_name_for_check = line.split('==')[0].split('>=')[0].split('<=')[0].strip()
-            
+            package_name_for_check = (
+                line.split("==")[0].split(">=")[0].split("<=")[0].strip()
+            )
+
             # Gérer les exclusions de manière plus robuste
             if any(ex in line for ex in exclusions) and not "torch" in line:
-                 # Vérifier si on doit ajouter une version modifiée du paquet
+                # Vérifier si on doit ajouter une version modifiée du paquet
                 for key, value in additions.items():
                     if key in line:
                         libs[value] = line.replace(key, value)
-                continue # On saute la ligne originale
+                continue  # On saute la ligne originale
 
             # Vérifier que le paquet n'est pas déjà dans la liste
             # pour éviter les doublons si une substitution a déjà été faite.
@@ -57,12 +58,15 @@ def parse_requirements_txt(filename='requirements.txt'):
 
     return list(libs.values())
 
+
 # Charger les dépendances depuis requirements.txt
 try:
-    dynamic_install_requires = parse_requirements_txt('requirements.txt')
+    dynamic_install_requires = parse_requirements_txt("requirements.txt")
 except FileNotFoundError:
-    print("AVERTISSEMENT: Le fichier 'requirements.txt' est introuvable. "
-          "Installation sans dépendances.")
+    print(
+        "AVERTISSEMENT: Le fichier 'requirements.txt' est introuvable. "
+        "Installation sans dépendances."
+    )
     dynamic_install_requires = []
 
 # Configuration du package
@@ -72,12 +76,22 @@ setup(
     author="Votre Nom ou Nom de l'Équipe",
     author_email="votre.email@example.com",
     description="Un projet d'analyse d'argumentation",
-    long_description=open('README.md', encoding='utf-8').read() if os.path.exists('README.md') else '',
+    long_description=open("README.md", encoding="utf-8").read()
+    if os.path.exists("README.md")
+    else "",
     long_description_content_type="text/markdown",
     url="https://github.com/votre_nom/votre_projet",
     packages=find_packages(
-        exclude=["*.tests", "*.tests.*", "tests.*", "tests",
-                 "docs", "examples", "scripts", "archived_scripts"]
+        exclude=[
+            "*.tests",
+            "*.tests.*",
+            "tests.*",
+            "tests",
+            "docs",
+            "examples",
+            "scripts",
+            "archived_scripts",
+        ]
     ),
     install_requires=dynamic_install_requires,
     classifiers=[
@@ -86,29 +100,29 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.8',
+    python_requires=">=3.8",
     include_package_data=True,
     package_data={
-        '': ['*.json', '*.yml', '*.css', '*.js', '*.html', '*.jinja', '*.txt'],
+        "": ["*.json", "*.yml", "*.css", "*.js", "*.html", "*.jinja", "*.txt"],
     },
     entry_points={
-        'console_scripts': [
-            'analyze_arguments=argumentation_analysis.main:main',
+        "console_scripts": [
+            "analyze_arguments=argumentation_analysis.main:main",
         ],
     },
     # Assurez-vous que les dépendances de test sont dans un fichier-extra
     # pour ne pas être installées en production.
     extras_require={
-        'dev': [
-            'pytest',
-            'pytest-cov',
-            'pytest-mock',
+        "dev": [
+            "pytest",
+            "pytest-cov",
+            "pytest-mock",
             # autres dépendances de développement
         ],
-        'docs': [
-            'sphinx',
-            'sphinx_rtd_theme',
-        ]
+        "docs": [
+            "sphinx",
+            "sphinx_rtd_theme",
+        ],
     },
     # Si votre projet inclut des données non-python, spécifiez-les ici
     # package_data={

@@ -39,7 +39,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-def get_embeddings_for_chunks(text_chunks: List[str], embedding_model_name: str) -> List[List[float]]:
+
+def get_embeddings_for_chunks(
+    text_chunks: List[str], embedding_model_name: str
+) -> List[List[float]]:
     """
     Génère les embeddings pour une liste de morceaux de texte en utilisant un modèle spécifié.
 
@@ -84,20 +87,23 @@ def get_embeddings_for_chunks(text_chunks: List[str], embedding_model_name: str)
                 "Veuillez l'installer pour utiliser les modèles d'embedding OpenAI."
             )
         try:
-            client = OpenAI() # Initialisation du client OpenAI
+            client = OpenAI()  # Initialisation du client OpenAI
             response = client.embeddings.create(
-                input=text_chunks,
-                model=embedding_model_name
+                input=text_chunks, model=embedding_model_name
             )
             # Extraction des embeddings de la réponse de l'API
             embeddings = [item.embedding for item in response.data]
             return embeddings
         except APIError as e:
-            logger.error(f"Erreur de l'API OpenAI lors de la génération des embeddings avec le modèle {embedding_model_name}: {e}")
+            logger.error(
+                f"Erreur de l'API OpenAI lors de la génération des embeddings avec le modèle {embedding_model_name}: {e}"
+            )
             # Relance l'exception APIError pour que l'appelant puisse la gérer spécifiquement.
             raise
         except Exception as e:
-            logger.error(f"Erreur inattendue lors de la génération des embeddings OpenAI avec le modèle {embedding_model_name}: {e}")
+            logger.error(
+                f"Erreur inattendue lors de la génération des embeddings OpenAI avec le modèle {embedding_model_name}: {e}"
+            )
             # Relance une exception générique pour les autres erreurs.
             raise
     else:
@@ -110,15 +116,23 @@ def get_embeddings_for_chunks(text_chunks: List[str], embedding_model_name: str)
                 "mais n'a pas pu être importée. Veuillez l'installer."
             )
         try:
-            logger.info(f"Chargement du modèle Sentence Transformer: {embedding_model_name}")
-            model = SentenceTransformer(embedding_model_name) # Chargement du modèle
-            logger.info(f"Génération des embeddings avec {embedding_model_name} pour {len(text_chunks)} morceaux.")
-            embeddings_np = model.encode(text_chunks) # Génération des embeddings (typiquement un ndarray NumPy)
-            
+            logger.info(
+                f"Chargement du modèle Sentence Transformer: {embedding_model_name}"
+            )
+            model = SentenceTransformer(embedding_model_name)  # Chargement du modèle
+            logger.info(
+                f"Génération des embeddings avec {embedding_model_name} pour {len(text_chunks)} morceaux."
+            )
+            embeddings_np = model.encode(
+                text_chunks
+            )  # Génération des embeddings (typiquement un ndarray NumPy)
+
             # Conversion en liste de listes de flottants Python standard
             # Commentaire : Assure un format de sortie cohérent, quel que soit le type de retour de model.encode().
-            if hasattr(embeddings_np, 'tolist'):
-                embeddings = embeddings_np.tolist() # Méthode standard pour les arrays NumPy
+            if hasattr(embeddings_np, "tolist"):
+                embeddings = (
+                    embeddings_np.tolist()
+                )  # Méthode standard pour les arrays NumPy
             else:
                 # Cas de repli si embeddings_np n'est pas un array NumPy (par exemple, déjà une liste de listes)
                 embeddings = [list(map(float, emb)) for emb in embeddings_np]
@@ -127,15 +141,29 @@ def get_embeddings_for_chunks(text_chunks: List[str], embedding_model_name: str)
         except OSError as e:
             # Commentaire : OSError peut survenir si le modèle n'est pas trouvé localement
             # et que le téléchargement échoue (problème de réseau, nom de modèle incorrect).
-            logger.error(f"Erreur lors du chargement du modèle Sentence Transformer '{embedding_model_name}': {e}")
-            raise ValueError(f"Impossible de charger le modèle Sentence Transformer '{embedding_model_name}'. Vérifiez le nom du modèle et votre connexion internet. Erreur: {e}")
+            logger.error(
+                f"Erreur lors du chargement du modèle Sentence Transformer '{embedding_model_name}': {e}"
+            )
+            raise ValueError(
+                f"Impossible de charger le modèle Sentence Transformer '{embedding_model_name}'. Vérifiez le nom du modèle et votre connexion internet. Erreur: {e}"
+            )
         except RuntimeError as e:
-            logger.error(f"Erreur d'exécution lors de la génération des embeddings avec Sentence Transformer '{embedding_model_name}': {e}")
-            raise RuntimeError(f"Erreur d'exécution avec Sentence Transformer '{embedding_model_name}': {e}")
+            logger.error(
+                f"Erreur d'exécution lors de la génération des embeddings avec Sentence Transformer '{embedding_model_name}': {e}"
+            )
+            raise RuntimeError(
+                f"Erreur d'exécution avec Sentence Transformer '{embedding_model_name}': {e}"
+            )
         except Exception as e:
-            logger.error(f"Erreur inattendue lors de la génération des embeddings avec Sentence Transformer '{embedding_model_name}': {e}")
+            logger.error(
+                f"Erreur inattendue lors de la génération des embeddings avec Sentence Transformer '{embedding_model_name}': {e}"
+            )
             # Encapsule l'exception originale dans un ValueError pour plus de contexte.
-            raise ValueError(f"Erreur inattendue avec Sentence Transformer '{embedding_model_name}': {e}")
+            raise ValueError(
+                f"Erreur inattendue avec Sentence Transformer '{embedding_model_name}': {e}"
+            )
+
+
 def save_embeddings_data(embeddings_data: Dict[str, Any], output_path: Path) -> bool:
     """
     Sauvegarde les données d'embeddings dans un fichier JSON.
@@ -167,24 +195,35 @@ def save_embeddings_data(embeddings_data: Dict[str, Any], output_path: Path) -> 
         # L'option `parents=True` crée les répertoires parents nécessaires.
         # `exist_ok=True` évite une erreur si le répertoire existe déjà.
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Répertoire parent {output_path.parent} pour la sauvegarde vérifié/créé.")
+        logger.debug(
+            f"Répertoire parent {output_path.parent} pour la sauvegarde vérifié/créé."
+        )
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Commentaire : Utilisation de json.dump pour sérialiser le dictionnaire en JSON.
             # `ensure_ascii=False` permet de sauvegarder correctement les caractères non-ASCII.
             # `indent=4` formate le JSON pour une meilleure lisibilité.
             json.dump(embeddings_data, f, ensure_ascii=False, indent=4)
-        
-        logger.info(f"[OK] Données d'embeddings sauvegardées avec succès dans {output_path}")
+
+        logger.info(
+            f"[OK] Données d'embeddings sauvegardées avec succès dans {output_path}"
+        )
         return True
-    except IOError as e: # Gestion spécifique des erreurs d'entrée/sortie
-        logger.error(f"❌ Erreur d'E/S lors de la sauvegarde des embeddings dans {output_path}: {e}", exc_info=True)
+    except IOError as e:  # Gestion spécifique des erreurs d'entrée/sortie
+        logger.error(
+            f"❌ Erreur d'E/S lors de la sauvegarde des embeddings dans {output_path}: {e}",
+            exc_info=True,
+        )
         return False
-    except Exception as e: # Gestion des autres erreurs potentielles
-        logger.error(f"❌ Erreur inattendue lors de la sauvegarde des embeddings dans {output_path}: {e}", exc_info=True)
+    except Exception as e:  # Gestion des autres erreurs potentielles
+        logger.error(
+            f"❌ Erreur inattendue lors de la sauvegarde des embeddings dans {output_path}: {e}",
+            exc_info=True,
+        )
         return False
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Exemple d'utilisation (nécessite une clé API OpenAI configurée)
     # Pour tester, décommentez et assurez-vous que votre clé OPENAI_API_KEY est définie.
     # logging.basicConfig(level=logging.INFO)
@@ -195,10 +234,10 @@ if __name__ == '__main__':
     #         "Les modèles d'intelligence artificielle transforment le monde."
     #     ]
     #     model_name = "text-embedding-3-small" # ou "text-embedding-ada-002"
-    #     
+    #
     #     print(f"Génération des embeddings pour {len(sample_chunks)} morceaux avec le modèle {model_name}...")
     #     embeddings_result = get_embeddings_for_chunks(sample_chunks, model_name)
-    #     
+    #
     #     print(f"Embeddings générés avec succès ({len(embeddings_result)} embeddings).")
     #     for i, emb in enumerate(embeddings_result):
     #         print(f"  Embedding {i+1} (longueur: {len(emb)}): {emb[:5]}... (premiers 5 éléments)")

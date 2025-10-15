@@ -5,6 +5,7 @@ import jpype.imports
 import os
 import sys
 
+
 @pytest.mark.jvm_test
 def test_jvm_initialization(jvm_session):
     """
@@ -16,7 +17,9 @@ def test_jvm_initialization(jvm_session):
     print(f"Version de JPype: {jpype.__version__}")
 
     # La fixture jvm_session a déjà démarré la JVM, on vérifie juste.
-    assert jpype.isJVMStarted(), "La fixture de session n'a pas réussi à démarrer la JVM."
+    assert (
+        jpype.isJVMStarted()
+    ), "La fixture de session n'a pas réussi à démarrer la JVM."
     print("Assertion OK: jpype.isJVMStarted() retourne True.")
 
     # Test simple après démarrage

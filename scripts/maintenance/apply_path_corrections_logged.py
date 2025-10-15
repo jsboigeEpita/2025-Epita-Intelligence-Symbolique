@@ -12,7 +12,7 @@ print(f"INFO: Lecture du fichier de configuration : {input_config_path}")
 
 # Charger les données depuis le fichier d'entrée
 try:
-    with open(input_config_path, 'r', encoding='utf-8') as f:
+    with open(input_config_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 except FileNotFoundError:
     print(f"ERREUR: Le fichier d'entrée {input_config_path} n'a pas été trouvé.")
@@ -42,16 +42,20 @@ for source in data:
         path_modifie = True
 
     if path_modifie:
-        print(f"INFO: -> Chemin modifié. Ancien: {ancien_path}, Nouveau: {source['path']}")
+        print(
+            f"INFO: -> Chemin modifié. Ancien: {ancien_path}, Nouveau: {source['path']}"
+        )
     else:
         print(f"INFO: -> Aucun chemin modifié pour cette source.")
-    
+
     modified_data.append(source)
 
 # Sauvegarder les données modifiées dans le fichier de sortie
 try:
-    with open(output_config_path, 'w', encoding='utf-8') as f:
+    with open(output_config_path, "w", encoding="utf-8") as f:
         json.dump(modified_data, f, indent=2, ensure_ascii=False)
     print(f"INFO: Configuration mise à jour sauvegardée dans : {output_config_path}")
 except IOError:
-    print(f"ERREUR: Impossible d'écrire dans le fichier de sortie {output_config_path}.")
+    print(
+        f"ERREUR: Impossible d'écrire dans le fichier de sortie {output_config_path}."
+    )

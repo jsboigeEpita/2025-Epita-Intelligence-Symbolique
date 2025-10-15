@@ -32,7 +32,7 @@ from typing import Dict, Any
 
 # Ajouter le répertoire racine du projet au sys.path pour permettre les imports absolus
 # Cela simule l'exécution depuis la racine du projet.
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
@@ -40,6 +40,7 @@ from src.core.plugins.plugin_loader import PluginLoader
 from src.core.services.orchestration_service import OrchestrationService
 from src.benchmarking.benchmark_service import BenchmarkService
 from src.core.contracts import OrchestrationRequest
+
 
 class TestWorkflowExecution(unittest.TestCase):
     """
@@ -49,7 +50,7 @@ class TestWorkflowExecution(unittest.TestCase):
     simple qui les enchaîne, et la validation des résultats et des métriques
     de performance.
     """
-    
+
     def setUp(self):
         """
         Initialise l'environnement de test avant chaque exécution.
@@ -57,22 +58,22 @@ class TestWorkflowExecution(unittest.TestCase):
         """
         self.plugin_loader = PluginLoader()
         self.plugins_path = os.path.join(project_root, "tests", "fixtures", "plugins")
-        
+
         # 1. Découvrir et charger les plugins
         self.plugin_registry: Dict[str, Any] = {}
         manifest_paths = self.plugin_loader.discover_plugins(self.plugins_path)
-        
+
         for manifest_path in manifest_paths:
             manifest = self.plugin_loader.load_plugin(manifest_path)
             if manifest:
                 plugin_name = manifest["plugin_name"]
                 entry_point = manifest["entry_point"]
                 class_name = manifest["class_name"]
-                
+
                 # Charger dynamiquement la classe du plugin
                 plugin_dir = os.path.dirname(manifest_path)
                 module_path = os.path.join(plugin_dir, entry_point)
-                
+
                 spec = importlib.util.spec_from_file_location(plugin_name, module_path)
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
@@ -81,8 +82,12 @@ class TestWorkflowExecution(unittest.TestCase):
                     self.plugin_registry[plugin_name] = plugin_class()
 
         # 2. Initialiser les services avec les plugins chargés
-        self.orchestration_service = OrchestrationService(plugin_registry=self.plugin_registry)
-        self.benchmark_service = BenchmarkService(orchestration_service=self.orchestration_service)
+        self.orchestration_service = OrchestrationService(
+            plugin_registry=self.plugin_registry
+        )
+        self.benchmark_service = BenchmarkService(
+            orchestration_service=self.orchestration_service
+        )
 
     def test_simple_workflow_execution_and_benchmarking(self):
         """
@@ -92,48 +97,48 @@ class TestWorkflowExecution(unittest.TestCase):
         """
         # 1. Définition du Workflow et des données d'entrée
         initial_text = "workflow"
-        
+
         # Étape 1: Appeler le plugin 'prefixer'
         prefix_request = OrchestrationRequest(
             mode="direct_plugin_call",
             target="prefixer.add_prefix",
-            payload={"text": initial_text}
+            payload={"text": initial_text},
         )
         prefix_response = self.orchestration_service.handle_request(prefix_request)
-        
+
         # Assertion de l'étape 1
         self.assertEqual(prefix_response.status, "success")
         self.assertIsNotNone(prefix_response.result)
         prefixed_text = prefix_response.result.get("processed_text")
         self.assertEqual(prefixed_text, "pre_workflow")
-        
+
         # Étape 2: Appeler le plugin 'suffixer' avec le résultat de l'étape 1
         suffix_request = OrchestrationRequest(
             mode="direct_plugin_call",
             target="suffixer.add_suffix",
-            payload={"text": prefixed_text}
+            payload={"text": prefixed_text},
         )
         suffix_response = self.orchestration_service.handle_request(suffix_request)
-        
+
         # Assertion de l'étape 2 (résultat final du workflow)
         self.assertEqual(suffix_response.status, "success")
         self.assertIsNotNone(suffix_response.result)
         final_text = suffix_response.result.get("processed_text")
         self.assertEqual(final_text, "pre_workflow_suf")
-        
+
         # 2. Validation du BenchmarkService
         # Exécuter une suite de benchmarks sur le plugin 'prefixer'
         benchmark_requests = [
             {"payload": {"text": "test1"}},
-            {"payload": {"text": "test2", "prefix": "custom_"}}
+            {"payload": {"text": "test2", "prefix": "custom_"}},
         ]
-        
+
         suite_result = self.benchmark_service.run_suite(
             plugin_name="prefixer",
             capability_name="add_prefix",
-            requests=[req["payload"] for req in benchmark_requests]
+            requests=[req["payload"] for req in benchmark_requests],
         )
-        
+
         # Assertions sur les résultats du benchmark
         self.assertEqual(suite_result.plugin_name, "prefixer")
         self.assertEqual(suite_result.capability_name, "add_prefix")
@@ -141,10 +146,14 @@ class TestWorkflowExecution(unittest.TestCase):
         self.assertEqual(suite_result.successful_runs, 2)
         self.assertEqual(suite_result.failed_runs, 0)
         self.assertTrue(suite_result.average_duration_ms > 0)
-        
+
         # Vérifier que les sorties sont correctes dans les résultats individuels
-        self.assertEqual(suite_result.results[0].output.get("processed_text"), "pre_test1")
-        self.assertEqual(suite_result.results[1].output.get("processed_text"), "custom_test2")
+        self.assertEqual(
+            suite_result.results[0].output.get("processed_text"), "pre_test1"
+        )
+        self.assertEqual(
+            suite_result.results[1].output.get("processed_text"), "custom_test2"
+        )
 
     def test_workflow_with_error_handling(self):
         """
@@ -154,41 +163,46 @@ class TestWorkflowExecution(unittest.TestCase):
         """
         # 1. Définir une requête qui doit provoquer une erreur
         error_request_payload = {"fail": True}
-        
+
         # 2. Exécuter la requête via le BenchmarkService pour capturer les métriques
         suite_result = self.benchmark_service.run_suite(
             plugin_name="chaotic",
             capability_name="process_or_fail",
-            requests=[error_request_payload]
+            requests=[error_request_payload],
         )
-        
+
         # 3. Valider la réponse de l'orchestrateur encapsulée dans le résultat du benchmark
         self.assertEqual(suite_result.total_runs, 1)
         self.assertEqual(suite_result.failed_runs, 1)
         self.assertEqual(suite_result.successful_runs, 0)
-        
+
         # Récupérer le résultat individuel qui contient la réponse de l'orchestrateur
         error_result = suite_result.results[0]
-        
+
         self.assertFalse(error_result.is_success)
         self.assertIsNone(error_result.output)
         self.assertIsNotNone(error_result.error)
-        
+
         # Vérifier que le message d'erreur de la ValueError est bien présent
-        self.assertIn("Échec intentionnel simulé par le ChaoticPlugin.", error_result.error)
+        self.assertIn(
+            "Échec intentionnel simulé par le ChaoticPlugin.", error_result.error
+        )
 
         # 4. Valider directement la réponse de l'OrchestrationService
         error_request = OrchestrationRequest(
             mode="direct_plugin_call",
             target="chaotic.process_or_fail",
-            payload=error_request_payload
+            payload=error_request_payload,
         )
         error_response = self.orchestration_service.handle_request(error_request)
 
         self.assertEqual(error_response.status, "error")
         self.assertIsNone(error_response.result)
         self.assertIsNotNone(error_response.error_message)
-        self.assertIn("Échec intentionnel simulé par le ChaoticPlugin.", error_response.error_message)
+        self.assertIn(
+            "Échec intentionnel simulé par le ChaoticPlugin.",
+            error_response.error_message,
+        )
 
     def test_full_benchmark_suite_execution(self):
         """
@@ -203,14 +217,12 @@ class TestWorkflowExecution(unittest.TestCase):
             {"text": ""},  # Chaîne vide
             {"text": "une chaîne beaucoup plus longue pour tester la variabilité"},
             {"text": "!@#$%^&*()_+-=[]{}|;':,./<>?"},  # Caractères spéciaux
-            {"text": "dernier test", "prefix": "special_"}
+            {"text": "dernier test", "prefix": "special_"},
         ]
 
         # 2. Utiliser run_suite pour exécuter le benchmark complet
         suite_result = self.benchmark_service.run_suite(
-            plugin_name="prefixer",
-            capability_name="add_prefix",
-            requests=payloads
+            plugin_name="prefixer", capability_name="add_prefix", requests=payloads
         )
 
         # 3. Assertions sur le résultat global de la suite (BenchmarkSuiteResult)
@@ -227,7 +239,7 @@ class TestWorkflowExecution(unittest.TestCase):
             "pre_",
             "pre_une chaîne beaucoup plus longue pour tester la variabilité",
             "pre_!@#$%^&*()_+-=[]{}|;':,./<>?",
-            "special_dernier test"
+            "special_dernier test",
         ]
 
         for i, result in enumerate(suite_result.results):
@@ -237,5 +249,5 @@ class TestWorkflowExecution(unittest.TestCase):
             self.assertEqual(result.output.get("processed_text"), expected_outputs[i])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

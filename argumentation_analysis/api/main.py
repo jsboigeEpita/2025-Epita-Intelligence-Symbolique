@@ -1,7 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 
-from argumentation_analysis.agents.core.orchestration_service import OrchestrationService, BasePlugin, PluginDependencyError
+from argumentation_analysis.agents.core.orchestration_service import (
+    OrchestrationService,
+    BasePlugin,
+    PluginDependencyError,
+)
+
 
 # This is a mock plugin for demonstration and testing purposes.
 class TestPlugin(BasePlugin):
@@ -16,6 +21,7 @@ class TestPlugin(BasePlugin):
         """Exécute la logique du plugin."""
         return {"status": "executed", "received_args": kwargs}
 
+
 # Initialize the OrchestrationService and register the mock plugin
 def get_orchestration_service():
     """Cette fonction sera utilisée par FastAPI pour l'injection de dépendances."""
@@ -28,17 +34,24 @@ def get_orchestration_service():
 
 app = FastAPI()
 
+
 class AnalysisRequest(BaseModel):
     text: str
     plugin_name: str
 
+
 @app.post("/api/v2/analyze")
-async def analyze(request: AnalysisRequest, service: OrchestrationService = Depends(get_orchestration_service)):
+async def analyze(
+    request: AnalysisRequest,
+    service: OrchestrationService = Depends(get_orchestration_service),
+):
     """
     Analyzes a given text using a specified plugin.
     """
     try:
-        result = service.execute_plugin(plugin_name=request.plugin_name, text=request.text)
+        result = service.execute_plugin(
+            plugin_name=request.plugin_name, text=request.text
+        )
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

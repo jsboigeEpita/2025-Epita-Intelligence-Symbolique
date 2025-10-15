@@ -12,13 +12,15 @@ import warnings
 import logging
 
 # Configure a specific logger for deprecation warnings to allow fine-grained filtering if needed.
-deprecation_logger = logging.getLogger('deprecation.student_compat')
+deprecation_logger = logging.getLogger("deprecation.student_compat")
 
 # --- Compatibility Wrapper ---
 
 try:
     # Attempt to import from the new, correct location.
-    from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
+    from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
+        PropositionalLogicAgent,
+    )
 
     # Define the legacy alias for backward compatibility.
     # This allows old code `from ...pl.pl_agent import PLAgent` to continue working.
@@ -54,13 +56,13 @@ except ImportError as e:
 # --- Metadata for Static Analysis and Tooling ---
 
 # __all__ controls what `from ... import *` imports. By defining it, we make the module's public API explicit.
-__all__ = ['PLAgent', 'PropositionalLogicAgent']
+__all__ = ["PLAgent", "PropositionalLogicAgent"]
 
 # A tuple of deprecated names helps automated tools to identify and flag usage of legacy code.
 __deprecated__ = {
     "PLAgent": {
         "new_name": "PropositionalLogicAgent",
         "since_version": "1.5.0",
-        "removal_version": "2.0.0"
+        "removal_version": "2.0.0",
     }
 }

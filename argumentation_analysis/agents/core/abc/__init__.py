@@ -13,6 +13,4 @@ Modules exportés (exemples) :
 
 from . import agent_bases
 
-__all__ = [
-    "agent_bases"
-]
+__all__ = ["agent_bases"]

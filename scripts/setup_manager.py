@@ -30,16 +30,18 @@ if str(project_root) not in sys.path:
 
 from project_core.core_from_scripts.project_setup import main as project_setup_main
 
+
 def main():
     """
     Fonction principale qui agit comme un proxy direct vers le point
     d'entrée du gestionnaire de setup principal.
-    
+
     Cette approche de "trampoline" assure que ce script reste un simple
     lanceur, tandis que toute la complexité (parsing des arguments, logique
     métier) est encapsulée dans le module `project_core`.
     """
     project_setup_main()
+
 
 if __name__ == "__main__":
     main()

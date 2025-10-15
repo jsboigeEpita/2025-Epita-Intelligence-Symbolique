@@ -6,16 +6,30 @@ from dotenv import load_dotenv
 import logging
 import json
 
-from argumentation_analysis.orchestration.engine.main_orchestrator import MainOrchestrator, OrchestrationStrategy
+from argumentation_analysis.orchestration.engine.main_orchestrator import (
+    MainOrchestrator,
+    OrchestrationStrategy,
+)
 from argumentation_analysis.orchestration.engine.config import OrchestrationConfig
-from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator
-from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
+from argumentation_analysis.orchestration.hierarchical.strategic.manager import (
+    StrategicManager,
+)
+from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import (
+    TacticalCoordinator,
+)
+from argumentation_analysis.orchestration.hierarchical.operational.manager import (
+    OperationalManager,
+)
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
-from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
+from argumentation_analysis.core.communication.hierarchical_channel import (
+    HierarchicalChannel,
+)
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 async def main():
     load_dotenv()
@@ -30,7 +44,7 @@ async def main():
 
     config = OrchestrationConfig()
     config.strategy = OrchestrationStrategy.HIERARCHICAL_FULL
-    
+
     shared_middleware = MessageMiddleware()
     shared_middleware.register_channel(HierarchicalChannel("hierarchical_channel"))
 
@@ -43,14 +57,15 @@ async def main():
         kernel=kernel,
         strategic_manager=strategic_manager,
         tactical_coordinator=tactical_coordinator,
-        operational_manager=operational_manager
+        operational_manager=operational_manager,
     )
 
     text_to_analyze = "Les voitures autonomes sont une mauvaise idée car elles vont supprimer des millions d'emplois de chauffeurs et les algorithmes ne pourront jamais prendre de décisions éthiques parfaites en cas d'accident inévitable."
-    
+
     results = await orchestrator.run_analysis(text_input=text_to_analyze)
-    
+
     print(json.dumps(results, indent=2, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     try:

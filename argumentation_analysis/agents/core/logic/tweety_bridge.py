@@ -35,21 +35,23 @@ from .tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
 
+
 class TweetyBridge:
     """
     Un pont singleton pour interagir avec la bibliothèque Java TweetyProject.
     Gère le cycle de vie de la JVM et fournit un accès aux fonctionnalités logiques.
     """
+
     _instance = None
     _lock = threading.Lock()
     _jvm_started = False
     _jvm_path: Optional[str] = None
-    
+
     # Handlers pour les différentes logiques. Initialisés avec la logique du pont.
     _pl_handler: Optional[PropositionalLogicHandler] = None
     _af_handler: Optional[ArgumentationFrameworkHandler] = None
     _modal_handler: Optional[ModalHandler] = None
-    
+
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
 
@@ -65,7 +67,7 @@ class TweetyBridge:
         Initialise le pont. La JVM n'est pas démarrée ici, mais dans `initialize_jvm`.
         Les handlers sont chargés paresseusement (lazy-loaded) lors du premier accès.
         """
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self.jar_directory = jar_directory or self._find_default_jar_dir()
             self._initializer = TweetyInitializer(self)
             # L'initialisation de la JVM et des composants est maintenant gérée par une méthode unifiée
@@ -81,11 +83,11 @@ class TweetyBridge:
         script_dir = os.path.dirname(__file__)
         # Le chemin relatif vers le répertoire des JARs natifs
         # argumentation_analysis/agents/core/logic/ -> argumentation_analysis/libs/tweety/native
-        relative_jar_path = os.path.join(script_dir, '../../../..', 'libs', 'tweety')
+        relative_jar_path = os.path.join(script_dir, "../../../..", "libs", "tweety")
         return os.path.normpath(relative_jar_path)
 
     @classmethod
-    def get_instance(cls, jar_directory: Optional[str] = None) -> 'TweetyBridge':
+    def get_instance(cls, jar_directory: Optional[str] = None) -> "TweetyBridge":
         """
         Méthode d'accès au singleton, avec initialisation si nécessaire.
         """
@@ -97,7 +99,9 @@ class TweetyBridge:
     def pl_handler(self) -> PropositionalLogicHandler:
         """Retourne le handler pour la logique propositionnelle, en l'initialisant si nécessaire."""
         if not self.initializer.is_jvm_ready():
-            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+            raise RuntimeError(
+                "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
+            )
         if self._pl_handler is None:
             logger.debug("Chargement paresseux (lazy-loading) du PLHandler.")
             self._pl_handler = PropositionalLogicHandler(self._initializer)
@@ -107,7 +111,9 @@ class TweetyBridge:
     def af_handler(self) -> ArgumentationFrameworkHandler:
         """Retourne le handler pour les frameworks d'argumentation, en l'initialisant si nécessaire."""
         if not self.initializer.is_jvm_ready():
-            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+            raise RuntimeError(
+                "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
+            )
         if self._af_handler is None:
             logger.debug("Chargement paresseux (lazy-loading) du AFHandler.")
             self._af_handler = ArgumentationFrameworkHandler(self._initializer)
@@ -117,7 +123,9 @@ class TweetyBridge:
     def modal_handler(self) -> ModalHandler:
         """Retourne le handler pour la logique modale, en l'initialisant si nécessaire."""
         if not self.initializer.is_jvm_ready():
-            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+            raise RuntimeError(
+                "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
+            )
         if self._modal_handler is None:
             logger.debug("Chargement paresseux (lazy-loading) du ModalHandler.")
             self._modal_handler = ModalHandler(self._initializer)
@@ -127,20 +135,21 @@ class TweetyBridge:
     def initializer(self) -> TweetyInitializer:
         """Retourne l'initialiseur Tweety, qui gère le chargement des classes Java."""
         return self._initializer
-        
 
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
         if TweetyInitializer.is_jvm_ready():
             return
-        
+
         waited_time = 0
         while not TweetyInitializer.is_jvm_ready() and waited_time < timeout:
             await asyncio.sleep(0.5)
             waited_time += 0.5
 
         if not TweetyInitializer.is_jvm_ready():
-            raise TimeoutError(f"La JVM n'a pas démarré dans le temps imparti de {timeout} secondes.")
+            raise TimeoutError(
+                f"La JVM n'a pas démarré dans le temps imparti de {timeout} secondes."
+            )
 
     def set_jvm_path(self, jvm_path: str):
         """Définit manuellement le chemin vers la bibliothèque de la JVM (dll, so, etc.)."""
@@ -154,34 +163,43 @@ class TweetyBridge:
         """
         with self._lock:  # Utilise un verrou pour éviter le démarrage concurrent de la JVM
             if TweetyInitializer.is_jvm_ready():
-                logger.warning("La JVM est déjà démarrée. L'appel d'initialisation est ignoré.")
+                logger.warning(
+                    "La JVM est déjà démarrée. L'appel d'initialisation est ignoré."
+                )
                 return
 
             effective_jvm_path = jvm_path or self._jvm_path or jpype.getDefaultJVMPath()
-            logger.info(f"Tentative de démarrage de la JVM avec le chemin : {effective_jvm_path}")
+            logger.info(
+                f"Tentative de démarrage de la JVM avec le chemin : {effective_jvm_path}"
+            )
 
             try:
-                jar_paths = glob.glob(os.path.join(self.jar_directory, '*.jar'))
+                jar_paths = glob.glob(os.path.join(self.jar_directory, "*.jar"))
                 if not jar_paths:
-                    raise IOError(f"Aucun fichier .jar trouvé dans le répertoire : {self.jar_directory}")
+                    raise IOError(
+                        f"Aucun fichier .jar trouvé dans le répertoire : {self.jar_directory}"
+                    )
 
                 classpath = os.pathsep.join(jar_paths)
                 logger.info(f"Classpath configuré avec {len(jar_paths)} JARs.")
-                
+
                 jpype.startJVM(
                     effective_jvm_path,
                     "-ea",  # Enable assertions
                     f"-Djava.class.path={classpath}",
-                    convertStrings=False
+                    convertStrings=False,
                 )
                 TweetyBridge._jvm_started = True
                 logger.info("La JVM a démarré avec succès.")
-                
+
                 # Une fois la JVM démarrée, on peut charger les classes
                 self._initializer.import_java_classes()
-                
+
             except (Exception, jpype.JException) as e:
-                logger.error(f"Échec du démarrage de la JVM avec le chemin '{effective_jvm_path}'. Erreur : {e}", exc_info=True)
+                logger.error(
+                    f"Échec du démarrage de la JVM avec le chemin '{effective_jvm_path}'. Erreur : {e}",
+                    exc_info=True,
+                )
                 TweetyBridge._jvm_started = False
                 # Propage l'exception pour que les appelants sachent que l'initialisation a échoué.
                 raise RuntimeError("Échec de l'initialisation de la JVM.") from e
@@ -192,6 +210,7 @@ class TweetyBridge:
             if TweetyInitializer.is_jvm_ready():
                 # shutdown_jvm est maintenant géré de manière centralisée
                 from argumentation_analysis.core.jvm_setup import shutdown_jvm
+
                 shutdown_jvm()
                 self._jvm_started = False
                 logger.info("La JVM a été arrêtée via le gestionnaire centralisé.")
@@ -212,10 +231,11 @@ class TweetyBridge:
         """
         return self.pl_handler.pl_query(knowledge_base, query)
 
-    def create_pl_belief_base_from_string(self, formula_string: str) -> Optional["java.lang.Object"]:
+    def create_pl_belief_base_from_string(
+        self, formula_string: str
+    ) -> Optional["java.lang.Object"]:
         """Crée un objet PlBeliefSet Java à partir d'une chaîne."""
         return self.pl_handler.create_belief_base_from_string(formula_string)
-
 
     @staticmethod
     def get_tweety_project_version() -> str:
@@ -225,11 +245,13 @@ class TweetyBridge:
         """
         bridge = TweetyBridge.get_instance()
         try:
-            jar_paths = glob.glob(os.path.join(bridge.jar_directory, 'tweetyproject-*.jar'))
+            jar_paths = glob.glob(
+                os.path.join(bridge.jar_directory, "tweetyproject-*.jar")
+            )
             if jar_paths:
                 filename = os.path.basename(jar_paths[0])
                 # Extrait la version, par ex. de 'tweetyproject-2.0.jar'
-                version = filename.replace('tweetyproject-', '').replace('.jar', '')
+                version = filename.replace("tweetyproject-", "").replace(".jar", "")
                 return version
         except Exception as e:
             logger.warning(f"Impossible d'extraire la version de TweetyProject : {e}")

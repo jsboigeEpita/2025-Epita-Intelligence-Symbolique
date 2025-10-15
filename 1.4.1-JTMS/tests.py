@@ -6,9 +6,11 @@ strict_jtms = True
 
 # ---------- Setup helpers ----------
 
+
 @pytest.fixture
 def atms():
     return ATMS()
+
 
 def setup_simple_jtms():
     jtms = JTMS(strict_jtms)
@@ -17,18 +19,21 @@ def setup_simple_jtms():
     jtms.add_belief("C")
     return jtms
 
+
 # -------------- Tests --------------
 
 # -------------- JTMS ---------------
 
+
 def test_invalid_justification_belief_not_found():
     jtms = setup_simple_jtms()
-    
+
     with pytest.raises(KeyError):
         jtms.add_justification(["A", "Z"], [], "D")
 
     with pytest.raises(KeyError):
         jtms.add_justification(["A"], ["X"], "D")
+
 
 def test_non_monotonic_justification():
     jtms = setup_simple_jtms()
@@ -45,6 +50,7 @@ def test_non_monotonic_justification():
 
     assert jtms.beliefs["C"].valid is None
 
+
 def test_change_propagation():
     jtms = setup_simple_jtms()
     jtms.add_belief("D")
@@ -60,6 +66,7 @@ def test_change_propagation():
 
     assert jtms.beliefs["D"].valid is None
 
+
 def test_circular_justifications_handled():
     jtms = JTMS()
     jtms.add_belief("A")
@@ -72,6 +79,7 @@ def test_circular_justifications_handled():
     assert jtms.beliefs["A"].non_monotonic is True
     assert jtms.beliefs["B"].non_monotonic is True
 
+
 def test_remove_belief_with_dependents():
     jtms = setup_simple_jtms()
     jtms.add_justification(["A"], [], "C")
@@ -83,6 +91,7 @@ def test_remove_belief_with_dependents():
     assert "A" not in jtms.beliefs
 
     assert jtms.beliefs["C"].valid is None  # C ne peut plus être validé sans A
+
 
 def test_graph_consistency_after_multiple_changes():
     jtms = JTMS()
@@ -102,13 +111,15 @@ def test_graph_consistency_after_multiple_changes():
     for b in "BCDE":
         assert jtms.beliefs[b].valid is None
 
+
 # -------------- ATMS ---------------
 def test_simple_justification(atms):
     atms.add_assumption("A")
     atms.add_node("B")
     atms.add_justification(["A"], [], "B")
 
-    assert atms.get_environments("B") == {frozenset({'A'})}
+    assert atms.get_environments("B") == {frozenset({"A"})}
+
 
 def test_multiple_justifications(atms):
     atms.add_assumption("A")
@@ -122,6 +133,7 @@ def test_multiple_justifications(atms):
     assert {"C"} in envs
     assert len(envs) == 2
 
+
 def test_environment_removed_on_contradiction(atms):
     atms.add_assumption("A")
     atms.add_assumption("B")
@@ -132,6 +144,7 @@ def test_environment_removed_on_contradiction(atms):
 
     assert {"A", "B"} not in atms.get_environments("C")
     assert atms.get_environments("C") == set()
+
 
 def test_environment_removed_on_contradiction_recurs(atms):
     atms.add_assumption("a")
@@ -145,11 +158,12 @@ def test_environment_removed_on_contradiction_recurs(atms):
     atms.add_justification(["b"], [], "B")
     atms.add_justification(["A", "B"], [], "C")
 
-    assert atms.get_environments("C") == {frozenset({'a', 'b'}), frozenset({'b'})}
-    
+    assert atms.get_environments("C") == {frozenset({"a", "b"}), frozenset({"b"})}
+
     atms.add_justification(["a"], [], "⊥")
-    
-    assert atms.get_environments("C") == {frozenset({'b'})}
+
+    assert atms.get_environments("C") == {frozenset({"b"})}
+
 
 def test_out_list_blocks_justification(atms):
     atms.add_assumption("A")
@@ -160,6 +174,7 @@ def test_out_list_blocks_justification(atms):
     envs = atms.get_environments("C")
     assert envs == {frozenset({"A"})}
 
+
 def test_combined_environments(atms):
     atms.add_assumption("A")
     atms.add_assumption("B")
@@ -168,4 +183,3 @@ def test_combined_environments(atms):
 
     envs = atms.get_environments("C")
     assert envs == {frozenset({"A", "B"})}
-    

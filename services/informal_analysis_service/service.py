@@ -22,7 +22,7 @@ class InformalAnalysisService:
         """
         Initializes the service, setting up access to core components like
         the ProjectManagerAgent and StateManager.
-        
+
         (Dependencies will be injected in a later step)
         """
         # self.project_manager = ProjectManagerAgent()

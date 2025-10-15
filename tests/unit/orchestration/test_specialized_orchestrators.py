@@ -21,7 +21,10 @@ import logging
 from unittest.mock import patch, AsyncMock, Mock
 from typing import Dict, Any, List, Optional
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+
 
 @pytest.fixture
 def llm_service() -> Mock:
@@ -31,6 +34,7 @@ def llm_service() -> Mock:
     mock_service.service_id = "mock_llm_service"
     return mock_service
 
+
 @pytest.fixture
 def mock_kernel(llm_service: Mock) -> Kernel:
     """Fixture pour un kernel Semantic Kernel avec un service LLM mocké."""
@@ -38,16 +42,26 @@ def mock_kernel(llm_service: Mock) -> Kernel:
     kernel.add_service(llm_service)
     return kernel
 
+
 # Configuration du logging pour les tests
 logging.basicConfig(level=logging.WARNING)
 
 # Imports à tester
 try:
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator
-    from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
-    from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
-    from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+        CluedoExtendedOrchestrator as CluedoOrchestrator,
+    )
+    from argumentation_analysis.orchestration.conversation_orchestrator import (
+        ConversationOrchestrator,
+    )
+    from argumentation_analysis.orchestration.real_llm_orchestrator import (
+        RealLLMOrchestrator,
+    )
+    from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
+        LogiqueComplexeOrchestrator,
+    )
     from argumentation_analysis.config.settings import AppSettings
+
     SPECIALIZED_AVAILABLE = True
 except ImportError as e:
     SPECIALIZED_AVAILABLE = False
@@ -66,12 +80,12 @@ def mock_settings() -> Mock:
 
 class TestCluedoOrchestrator:
     """Tests pour l'orchestrateur Cluedo (investigations)."""
-    
+
     @pytest.fixture
     def cluedo_orchestrator(self, mock_kernel: Kernel, mock_settings: Mock):
         """Instance de CluedoOrchestrator pour les tests."""
         return CluedoOrchestrator(kernel=mock_kernel, settings=mock_settings)
-    
+
     @pytest.fixture
     def investigation_text(self):
         """Texte d'enquête pour les tests."""
@@ -85,22 +99,24 @@ class TestCluedoOrchestrator:
         assert cluedo_orchestrator.execution_metrics == {}
 
     @pytest.mark.asyncio
-    async def test_execute_workflow_simulation(self, cluedo_orchestrator, investigation_text):
+    async def test_execute_workflow_simulation(
+        self, cluedo_orchestrator, investigation_text
+    ):
         """Test de la méthode publique execute_workflow (simulation)."""
         # On simule que le setup a été fait.
         cluedo_orchestrator.orchestration = Mock()
         cluedo_orchestrator.oracle_state = Mock()
-        
+
         # On mock directement la méthode execute_workflow pour ne pas tester toute la logique interne complexe
         expected_result = {
             "workflow_info": {"status": "completed"},
             "solution_analysis": {"success": True},
-            "conversation_history": []
+            "conversation_history": [],
         }
         cluedo_orchestrator.execute_workflow = AsyncMock(return_value=expected_result)
-        
+
         result = await cluedo_orchestrator.execute_workflow(investigation_text)
-        
+
         cluedo_orchestrator.execute_workflow.assert_called_once_with(investigation_text)
         assert result["workflow_info"]["status"] == "completed"
         assert result["solution_analysis"]["success"] is True
@@ -128,18 +144,20 @@ class TestConversationOrchestrator:
         assert len(conversation_orchestrator.agents) > 0
 
     @pytest.mark.asyncio
-    async def test_run_demo_conversation(self, conversation_orchestrator, dialogue_text):
+    async def test_run_demo_conversation(
+        self, conversation_orchestrator, dialogue_text
+    ):
         """Test de l'orchestration d'une conversation en mode démo."""
         conversation_orchestrator.run_demo_conversation = AsyncMock(
             return_value={
                 "report": "TRACE ANALYTIQUE something",
                 "conversation_state": {"completed": True},
-                "mode": "demo"
+                "mode": "demo",
             }
         )
         # La méthode à tester est maintenant `run_demo_conversation`
         result = await conversation_orchestrator.run_demo_conversation(dialogue_text)
-        
+
         assert "report" in result
         assert "conversation_state" in result
         assert result["mode"] == "demo"
@@ -159,23 +177,30 @@ class TestRealLLMOrchestrator:
         """Test de l'initialisation de l'orchestrateur LLM réel."""
         assert real_llm_orchestrator.kernel is not None
         assert real_llm_orchestrator.is_initialized is False
-        assert real_llm_orchestrator.metrics['total_requests'] == 0
+        assert real_llm_orchestrator.metrics["total_requests"] == 0
 
     @pytest.mark.asyncio
-    @patch('argumentation_analysis.orchestration.real_llm_orchestrator.RealLLMOrchestrator.initialize', new_callable=AsyncMock)
+    @patch(
+        "argumentation_analysis.orchestration.real_llm_orchestrator.RealLLMOrchestrator.initialize",
+        new_callable=AsyncMock,
+    )
     async def test_analyze_text_mocked(self, mock_initialize, real_llm_orchestrator):
         """Test de l'orchestration d'analyse avec _perform_analysis mocké."""
         text = "Texte complexe nécessitant analyse."
 
         # L'appel à `analyze_text` déclenche `initialize` qui est mocké par le décorateur.
         # Cela évite le démarrage réel de la JVM et le crash.
-        
+
         # Mock de la méthode interne pour éviter un vrai appel LLM
-        expected_analysis = {'analysis': 'mocked_result', 'confidence': 0.95}
-        real_llm_orchestrator._perform_analysis = AsyncMock(return_value=expected_analysis)
-        
-        result = await real_llm_orchestrator.analyze_text(text, analysis_type="unified_analysis")
-        
+        expected_analysis = {"analysis": "mocked_result", "confidence": 0.95}
+        real_llm_orchestrator._perform_analysis = AsyncMock(
+            return_value=expected_analysis
+        )
+
+        result = await real_llm_orchestrator.analyze_text(
+            text, analysis_type="unified_analysis"
+        )
+
         # On vérifie que la méthode d'initialisation (mockée) a bien été appelée
         mock_initialize.assert_awaited_once()
         real_llm_orchestrator._perform_analysis.assert_called_once()
@@ -203,10 +228,12 @@ class TestLogiqueComplexeOrchestrator:
         """Test de la seule méthode disponible (simulation)."""
         puzzle_data = {"test": "data"}
         # Mock de la méthode pour la prévisibilité
-        logic_orchestrator.run_einstein_puzzle = AsyncMock(return_value={"solution": "mocked", "success": True})
-        
+        logic_orchestrator.run_einstein_puzzle = AsyncMock(
+            return_value={"solution": "mocked", "success": True}
+        )
+
         result = await logic_orchestrator.run_einstein_puzzle(puzzle_data)
-        
+
         logic_orchestrator.run_einstein_puzzle.assert_called_once_with(puzzle_data)
         assert result["success"] is True
         assert result["solution"] == "mocked"
@@ -230,33 +257,53 @@ class TestSpecializedOrchestratorsIntegration:
         assert isinstance(logic, LogiqueComplexeOrchestrator)
 
     @pytest.mark.asyncio
-    @patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.CluedoExtendedOrchestrator.execute_workflow', new_callable=AsyncMock)
-    @patch('argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator.run_demo_conversation', new_callable=AsyncMock)
-    @patch('argumentation_analysis.orchestration.logique_complexe_orchestrator.LogiqueComplexeOrchestrator.run_einstein_puzzle', new_callable=AsyncMock)
-    async def test_orchestrator_collaboration_mocked(self, mock_logic_run, mock_convo_run, mock_cluedo_run, mock_kernel: Kernel, mock_settings: Mock):
+    @patch(
+        "argumentation_analysis.orchestration.cluedo_extended_orchestrator.CluedoExtendedOrchestrator.execute_workflow",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator.run_demo_conversation",
+        new_callable=AsyncMock,
+    )
+    @patch(
+        "argumentation_analysis.orchestration.logique_complexe_orchestrator.LogiqueComplexeOrchestrator.run_einstein_puzzle",
+        new_callable=AsyncMock,
+    )
+    async def test_orchestrator_collaboration_mocked(
+        self,
+        mock_logic_run,
+        mock_convo_run,
+        mock_cluedo_run,
+        mock_kernel: Kernel,
+        mock_settings: Mock,
+    ):
         """Test de collaboration simulée entre les orchestrateurs."""
         mock_cluedo_run.return_value = {"workflow_info": {"status": "completed"}}
         mock_convo_run.return_value = {"status": "success", "report": "report"}
         mock_logic_run.return_value = {"solution": "mocked", "success": True}
 
         complex_text = "Un texte complexe pour tester tout le monde."
-        
-        cluedo_orchestrator = CluedoOrchestrator(kernel=mock_kernel, settings=mock_settings)
+
+        cluedo_orchestrator = CluedoOrchestrator(
+            kernel=mock_kernel, settings=mock_settings
+        )
         # La méthode setup_workflow est nécessaire avant execute_workflow
         cluedo_orchestrator.setup_workflow = AsyncMock()
         await cluedo_orchestrator.setup_workflow()
 
         conversation_orchestrator = ConversationOrchestrator(mode="demo")
         logic_orchestrator = LogiqueComplexeOrchestrator(kernel=mock_kernel)
-        
+
         investigation_result = await cluedo_orchestrator.execute_workflow(complex_text)
-        dialogue_result = await conversation_orchestrator.run_demo_conversation(complex_text)
+        dialogue_result = await conversation_orchestrator.run_demo_conversation(
+            complex_text
+        )
         logic_result = await logic_orchestrator.run_einstein_puzzle({})
-        
+
         mock_cluedo_run.assert_called_once_with(complex_text)
         mock_convo_run.assert_called_once_with(complex_text)
         mock_logic_run.assert_called_once_with({})
-        
+
         assert "workflow_info" in investigation_result
         assert "report" in dialogue_result
         assert "success" in logic_result

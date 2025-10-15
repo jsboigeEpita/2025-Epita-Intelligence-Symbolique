@@ -18,6 +18,7 @@ from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.kernel.kernel_builder import KernelBuilder
 from argumentation_analysis.orchestration.orchestrator import Orchestrator
 
+
 def main(scenario_path_str: str):
     """
     Fonction principale du worker. Charge un scénario, exécute l'analyse
@@ -25,7 +26,10 @@ def main(scenario_path_str: str):
     """
     scenario_path = Path(scenario_path_str)
     if not scenario_path.exists():
-        print(f"Erreur: Le fichier de scénario '{scenario_path_str}' n'existe pas.", file=sys.stderr)
+        print(
+            f"Erreur: Le fichier de scénario '{scenario_path_str}' n'existe pas.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     print(f"Worker: Exécution du scénario de durcissement: {scenario_path.name}")
@@ -37,7 +41,10 @@ def main(scenario_path_str: str):
     expected_outcome = scenario_data.get("expected_outcome")
 
     if not facts or not expected_outcome:
-        print("Erreur: Le fichier de scénario doit contenir 'facts' et 'expected_outcome'.", file=sys.stderr)
+        print(
+            "Erreur: Le fichier de scénario doit contenir 'facts' et 'expected_outcome'.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     print(f"Worker: Faits chargés: {len(facts)}")
@@ -58,18 +65,27 @@ def main(scenario_path_str: str):
         # Validation
         # C'est ici que l'assertion principale du test a lieu.
         # En cas d'échec, pytest (qui exécute ce script) le capturera.
-        assert expected_outcome in result, f"Le résultat attendu '{expected_outcome}' n'a pas été trouvé dans le résultat réel '{result}'"
+        assert (
+            expected_outcome in result
+        ), f"Le résultat attendu '{expected_outcome}' n'a pas été trouvé dans le résultat réel '{result}'"
         print(f"Worker: Validation réussie pour {scenario_path.name}!")
 
     except Exception as e:
-        print(f"Worker: Une erreur est survenue pendant l'analyse du scénario {scenario_path.name}: {e}", file=sys.stderr)
+        print(
+            f"Worker: Une erreur est survenue pendant l'analyse du scénario {scenario_path.name}: {e}",
+            file=sys.stderr,
+        )
         # Sortir avec un code d'erreur pour que le processus parent sache que le test a échoué.
         sys.exit(1)
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python worker_logic_puzzles_hardening.py <path_to_scenario.json>", file=sys.stderr)
+        print(
+            "Usage: python worker_logic_puzzles_hardening.py <path_to_scenario.json>",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    
+
     scenario_file_path = sys.argv[1]
     main(scenario_file_path)

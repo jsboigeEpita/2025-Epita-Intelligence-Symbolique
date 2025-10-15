@@ -13,8 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # Configuration du logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -22,17 +21,17 @@ logger = logging.getLogger(__name__)
 async def test_fallacy_detection():
     """Test de détection de sophismes avec le ServiceManager."""
     logger.info("=== TEST DÉTECTION DE SOPHISMES ===")
-    
+
     try:
         from app import initialize_services, service_manager, _extract_fallacy_analysis
-        
+
         # Initialisation
         await initialize_services()
-        
+
         if not service_manager:
             logger.error("ServiceManager non disponible")
             return False
-        
+
         # Texte de test contenant plusieurs sophismes
         texte_test = """
         Si nous laissons les immigrants entrer dans notre pays, 
@@ -47,49 +46,52 @@ async def test_fallacy_detection():
         D'ailleurs, tous les économistes sont payés par les lobbies, 
         donc leurs études sur l'immigration ne valent rien.
         """
-        
+
         logger.info("Analyse d'un texte contenant des sophismes...")
         logger.info(f"Texte: {texte_test[:100]}...")
-        
+
         # Analyse avec le ServiceManager
         result = await service_manager.analyze_text(
             text=texte_test,
             analysis_type="comprehensive",
-            options={'detect_fallacies': True}
+            options={"detect_fallacies": True},
         )
-        
+
         logger.info(f"Analyse terminée en {result.get('duration', 0):.2f}s")
         logger.info(f"Statut: {result.get('status', 'unknown')}")
-        
+
         # Extraction des analyses de sophismes
         fallacy_analysis = _extract_fallacy_analysis(result)
-        
+
         logger.info("=== RÉSULTATS ===")
         logger.info(f"Sophismes détectés: {fallacy_analysis['total_fallacies']}")
         logger.info(f"Catégories: {fallacy_analysis['categories_found']}")
-        logger.info(f"Distribution sévérité: {fallacy_analysis['severity_distribution']}")
-        
+        logger.info(
+            f"Distribution sévérité: {fallacy_analysis['severity_distribution']}"
+        )
+
         # Affichage des détails des résultats
-        if 'results' in result:
-            results = result['results']
+        if "results" in result:
+            results = result["results"]
             logger.info("Structure des résultats:")
             for key in results.keys():
                 logger.info(f"  - {key}")
-                
+
         # Analyse des composants utilisés
-        hierarchical = results.get('hierarchical', {})
+        hierarchical = results.get("hierarchical", {})
         if hierarchical:
             logger.info("Analyses hiérarchiques:")
-            for level in ['strategic', 'tactical', 'operational']:
+            for level in ["strategic", "tactical", "operational"]:
                 if level in hierarchical:
                     logger.info(f"  - {level}: {type(hierarchical[level])}")
-        
+
         logger.info("SUCCESS: Test de détection de sophismes terminé")
         return True
-        
+
     except Exception as e:
         logger.error(f"Erreur dans le test: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

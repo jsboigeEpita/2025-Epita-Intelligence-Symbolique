@@ -6,6 +6,7 @@ from pathlib import Path
 PROVER9_BIN_DIR = Path(__file__).parent.parent.parent / "libs" / "prover9" / "bin"
 PROVER9_EXECUTABLE = PROVER9_BIN_DIR / "prover9.bat"
 
+
 def run_prover9(input_content: str) -> str:
     """
     Exécute Prover9 dans un processus externe avec le contenu d'entrée fourni.
@@ -29,11 +30,7 @@ def run_prover9(input_content: str) -> str:
         # Créer un fichier temporaire pour l'entrée
         # Créer un fichier temporaire en ASCII avec des fins de ligne Unix (\n) pour Prover9
         with tempfile.NamedTemporaryFile(
-            mode='w+',
-            delete=False,
-            suffix=".in",
-            encoding='ascii',
-            newline='\n'
+            mode="w+", delete=False, suffix=".in", encoding="ascii", newline="\n"
         ) as temp_input_file:
             temp_input_file.write(input_content)
             temp_input_path = temp_input_file.name
@@ -52,16 +49,18 @@ def run_prover9(input_content: str) -> str:
             text=True,
             check=True,
             cwd=str(PROVER9_BIN_DIR),
-            encoding='cp1252',
-            shell=True
+            encoding="cp1252",
+            shell=True,
         )
         return process.stdout
     except subprocess.CalledProcessError as e:
         error_message = f"Prover9 failed with exit code {e.returncode}.\n"
         error_message += f"Input was:\n{input_content}\n"
         error_message += f"Stderr:\n{e.stderr}"
-        raise subprocess.CalledProcessError(e.returncode, e.cmd, output=e.stdout, stderr=error_message)
+        raise subprocess.CalledProcessError(
+            e.returncode, e.cmd, output=e.stdout, stderr=error_message
+        )
     finally:
         # S'assurer que le fichier temporaire est supprimé
-        if 'temp_input_path' in locals() and os.path.exists(temp_input_path):
+        if "temp_input_path" in locals() and os.path.exists(temp_input_path):
             os.remove(temp_input_path)

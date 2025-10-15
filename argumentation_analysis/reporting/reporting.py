@@ -1,6 +1,7 @@
 import jinja2
 import os
 
+
 def render_markdown_report(template_path: str, data: dict) -> str:
     """
     Charge un template Jinja2, le remplit avec les données fournies et retourne le contenu rendu.
@@ -20,5 +21,5 @@ def render_markdown_report(template_path: str, data: dict) -> str:
 
     # Rendu du template avec les données
     rendered_output = template.render(data)
-    
+
     return rendered_output

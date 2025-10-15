@@ -6,6 +6,7 @@ from semantic_kernel.functions import KernelArguments
 
 logger = logging.getLogger(__name__)
 
+
 class CluedoInvestigatorPlugin:
     """Un plugin pour les actions d'investigation de Sherlock."""
 
@@ -14,7 +15,7 @@ class CluedoInvestigatorPlugin:
 
     @kernel_function(
         description="Fait une suggestion formelle pour une combinaison suspect, arme et lieu.",
-        name="make_suggestion"
+        name="make_suggestion",
     )
     async def make_suggestion(
         self,
@@ -32,12 +33,20 @@ class CluedoInvestigatorPlugin:
         try:
             # Note: le 'suggesting_agent_name' devra être passé d'une manière ou d'une autre,
             # ou l'abstraire du handler. Pour l'instant, hardcodons "Sherlock" comme exemple.
-            oracle_revelation = await self._suggestion_handler.force_moriarty_oracle_revelation(raw_suggestion, "Sherlock")
-            if oracle_revelation and oracle_revelation.get('content'):
-                logger.info(f"Réponse de Moriarty (via plugin): {oracle_revelation['content']}")
-                return oracle_revelation['content']
+            oracle_revelation = (
+                await self._suggestion_handler.force_moriarty_oracle_revelation(
+                    raw_suggestion, "Sherlock"
+                )
+            )
+            if oracle_revelation and oracle_revelation.get("content"):
+                logger.info(
+                    f"Réponse de Moriarty (via plugin): {oracle_revelation['content']}"
+                )
+                return oracle_revelation["content"]
             else:
                 return "Moriarty n'a rien à ajouter."
         except Exception as e:
-            logger.error(f"Erreur lors de l'appel à Moriarty via le plugin: {e}", exc_info=True)
+            logger.error(
+                f"Erreur lors de l'appel à Moriarty via le plugin: {e}", exc_info=True
+            )
             return f"Une erreur a empêché Moriarty de répondre: {e}"

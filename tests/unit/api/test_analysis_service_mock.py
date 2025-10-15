@@ -18,6 +18,7 @@ app.dependency_overrides[get_analysis_service] = get_mock_analysis_service
 
 client = TestClient(app)
 
+
 def test_status_endpoint_with_mock():
     """
     Vérifie que l'endpoint de statut fonctionne correctement avec le service mocké.
@@ -25,13 +26,13 @@ def test_status_endpoint_with_mock():
     """
     # L'endpoint est /status, mais le routeur est préfixé par /api/v1/analyzer
     response = client.get("/api/v1/analyzer/status")
-    
+
     # Vérifications
     assert response.status_code == 200
     data = response.json()
-    
+
     # Vérifier que la réponse provient bien du mock
     data = response.json()
-    assert data["status"] == "operational" # Le mock se déclare comme "available"
+    assert data["status"] == "operational"  # Le mock se déclare comme "available"
     assert data["service_status"]["service_type"] == "MockAnalysisService"
     assert data["service_status"]["gpt4o_mini_enabled"] is False

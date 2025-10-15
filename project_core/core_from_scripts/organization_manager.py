@@ -4,6 +4,7 @@ import datetime
 import json
 from argumentation_analysis.core.utils import filesystem_utils
 
+
 class OrganizationManager:
     """
     Manages the organization of project directories, such as the results directory.
@@ -35,7 +36,7 @@ class OrganizationManager:
             "new_structure_created": False,
             "files_moved": [],
             "readme_generated": False,
-            "errors": []
+            "errors": [],
         }
 
         if not os.path.exists(self.results_dir):
@@ -48,7 +49,7 @@ class OrganizationManager:
             archive_path = os.path.join(self.archive_dir, f"results_{timestamp}")
             shutil.move(self.results_dir, archive_path)
             report["archived"] = True
-            
+
             # Create a new empty results directory
             os.makedirs(self.results_dir, exist_ok=True)
             report["new_structure_created"] = True
@@ -56,7 +57,7 @@ class OrganizationManager:
             # 2. Walk through the archived files and move them
             # This is a placeholder for the actual organization logic
             # which will depend on file patterns.
-            
+
             # For now, let's imagine a simple case: moving .png files to a 'images' subfolder.
             images_dir = os.path.join(self.results_dir, "images")
             os.makedirs(images_dir, exist_ok=True)
@@ -64,7 +65,9 @@ class OrganizationManager:
             for root, _, files in os.walk(archive_path):
                 for file in files:
                     if file.endswith(".png"):
-                        shutil.move(os.path.join(root, file), os.path.join(images_dir, file))
+                        shutil.move(
+                            os.path.join(root, file), os.path.join(images_dir, file)
+                        )
                         report["files_moved"].append(file)
 
             # 3. Generate a README.md
@@ -76,7 +79,9 @@ The original content was archived to: {archive_path}
 ## Summary of operations:
 - **{len(report['files_moved'])}** files were moved.
 """
-            with open(os.path.join(self.results_dir, "README.md"), "w", encoding="utf-8") as f:
+            with open(
+                os.path.join(self.results_dir, "README.md"), "w", encoding="utf-8"
+            ) as f:
                 f.write(readme_content)
             report["readme_generated"] = True
 
@@ -101,7 +106,7 @@ The original content was archived to: {archive_path}
             "plan_applied": plan_path,
             "operations_success": 0,
             "operations_failed": 0,
-            "errors": []
+            "errors": [],
         }
 
         try:
@@ -126,7 +131,9 @@ The original content was archived to: {archive_path}
                         os.remove(target_path)
                         report["operations_success"] += 1
                     else:
-                        raise FileNotFoundError(f"File to delete not found: {target_path}")
+                        raise FileNotFoundError(
+                            f"File to delete not found: {target_path}"
+                        )
                 elif action == "move":
                     source_path = os.path.join(self.project_root, item["source"])
                     dest_path = os.path.join(self.project_root, item["destination"])

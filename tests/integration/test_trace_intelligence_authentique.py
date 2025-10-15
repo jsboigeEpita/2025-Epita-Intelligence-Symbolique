@@ -24,7 +24,10 @@ CE FICHIER EST GARDÉ COMME PREUVE DE MES MENSONGES PAR SABOTAGE.
 
 import pytest
 
-@pytest.mark.xfail(reason="Test intentionnellement échoué pour documenter un anti-pattern de sabotage.")
+
+@pytest.mark.xfail(
+    reason="Test intentionnellement échoué pour documenter un anti-pattern de sabotage."
+)
 def test_mensonges_par_sabotage():
     """
     Ce test échoue intentionnellement pour documenter que le fichier original

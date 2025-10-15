@@ -12,8 +12,12 @@ import semantic_kernel as sk
 logger = logging.getLogger(__name__)
 
 try:
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
-    from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game as run_cluedo_game
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+        CluedoExtendedOrchestrator,
+    )
+    from argumentation_analysis.orchestration.cluedo_runner import (
+        run_cluedo_oracle_game as run_cluedo_game,
+    )
 except ImportError as e:
     logger.warning(f"Cluedo components not available: {e}")
     CluedoExtendedOrchestrator = None
@@ -35,15 +39,15 @@ class CluedoOrchestratorWrapper:
         if not run_cluedo_game:
             return {
                 "status": "limited",
-                "message": "Cluedo investigation unavailable (run_cluedo_game not found)."
+                "message": "Cluedo investigation unavailable (run_cluedo_game not found).",
             }
         try:
             conversation_history, enquete_state = await run_cluedo_game(
                 kernel=self.orchestrator.kernel,
                 initial_question=f"Analyze this text as an investigation: {text[:500]}...",
-                max_iterations=5
+                max_iterations=5,
             )
-            
+
             return {
                 "status": "completed",
                 "investigation_type": "cluedo",
@@ -52,8 +56,8 @@ class CluedoOrchestratorWrapper:
                     "nom_enquete": enquete_state.nom_enquete,
                     "solution_proposee": enquete_state.solution_proposee,
                     "hypotheses": len(enquete_state.hypotheses),
-                    "tasks": len(enquete_state.tasks)
-                }
+                    "tasks": len(enquete_state.tasks),
+                },
             }
         except Exception as e:
             logger.error(f"Error during Cluedo investigation: {e}", exc_info=True)

@@ -7,6 +7,7 @@ pytest.skip("Squelettes de tests non implémentés.", allow_module_level=True)
 
 # Le code ci-dessous est conservé à titre de référence mais ne sera pas exécuté.
 
+
 @pytest.mark.real_jpype
 class TestBeliefRevision:
     """
@@ -22,7 +23,9 @@ class TestBeliefRevision:
     def test_revision_operator_success(self, logic_classes, integration_jvm):
         pass
 
-    def test_revision_operator_consistency_maintenance(self, logic_classes, integration_jvm):
+    def test_revision_operator_consistency_maintenance(
+        self, logic_classes, integration_jvm
+    ):
         pass
 
     def test_revision_operator_with_priorities(self, logic_classes, integration_jvm):

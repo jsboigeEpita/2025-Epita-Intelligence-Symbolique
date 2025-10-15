@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -10,22 +9,26 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 
-from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
+from argumentation_analysis.pipelines.analysis_pipeline import (
+    run_text_analysis_pipeline,
+)
 
 MODULE_PATH = "argumentation_analysis.pipelines.analysis_pipeline"
+
 
 @pytest.fixture
 def mock_initialize_services():
     with patch(f"{MODULE_PATH}.initialize_analysis_services") as mock:
         yield mock
 
+
 @pytest.fixture
 def mock_perform_analysis():
     with patch(f"{MODULE_PATH}.perform_text_analysis") as mock:
         yield mock
 
+
 @pytest.fixture
- 
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_success(
     mock_initialize_services, mock_perform_analysis
@@ -51,25 +54,25 @@ async def test_run_text_analysis_pipeline_success(
     # Pour l'instant, on se concentre sur l'AttributeError et la signature.
     # Le test devrait être marqué @pytest.mark.asyncio et utiliser await.
     # Cependant, l'erreur actuelle est l'AttributeError avant même l'appel.
-    
+
     # Appel corrigé pour correspondre à la signature de la fonction source
     # et en supposant que le test sera adapté pour asyncio si nécessaire.
     # Pour l'instant, on suppose que le retour direct de run_text_analysis_pipeline est ce qui est testé.
     result = await run_text_analysis_pipeline(
-        input_text_content=text_input,
-        config_for_services=config_for_services
+        input_text_content=text_input, config_for_services=config_for_services
     )
 
     mock_initialize_services.assert_called_once_with(config_for_services)
     mock_perform_analysis.assert_called_once_with(
         text=text_input,
         services={"service_status": "initialized"},
-        analysis_type="default"
+        analysis_type="default",
     )
     # mock_store_results n'est plus appelé
 
     # La fonction retourne directement les résultats de l'analyse
     assert result == expected_analysis_results
+
 
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_service_initialization_failure(
@@ -78,15 +81,14 @@ async def test_run_text_analysis_pipeline_service_initialization_failure(
     """
     Tests pipeline failure if service initialization fails.
     """
-    mock_initialize_services.return_value = None # Simule un échec d'initialisation
+    mock_initialize_services.return_value = None  # Simule un échec d'initialisation
 
     text_input = "Sample text"
     config_for_services = {}
     # storage_settings n'est plus un paramètre
 
     result = await run_text_analysis_pipeline(
-        input_text_content=text_input,
-        config_for_services=config_for_services
+        input_text_content=text_input, config_for_services=config_for_services
     )
 
     mock_initialize_services.assert_called_once_with(config_for_services)
@@ -96,6 +98,7 @@ async def test_run_text_analysis_pipeline_service_initialization_failure(
     # La fonction retourne None en cas d'échec d'initialisation des services
     assert result is None
 
+
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_analysis_failure(
     mock_initialize_services, mock_perform_analysis
@@ -104,31 +107,32 @@ async def test_run_text_analysis_pipeline_analysis_failure(
     Tests pipeline failure if text analysis fails.
     """
     mock_initialize_services.return_value = {"service_status": "initialized"}
-    mock_perform_analysis.return_value = None # Simule un échec d'analyse
+    mock_perform_analysis.return_value = None  # Simule un échec d'analyse
 
     text_input = "Sample text"
     config_for_services = {}
     # storage_settings n'est plus un paramètre
 
     result = await run_text_analysis_pipeline(
-        input_text_content=text_input,
-        config_for_services=config_for_services
+        input_text_content=text_input, config_for_services=config_for_services
     )
 
     mock_initialize_services.assert_called_once_with(config_for_services)
     mock_perform_analysis.assert_called_once_with(
         text=text_input,
         services={"service_status": "initialized"},
-        analysis_type="default"
+        analysis_type="default",
     )
     # mock_store_results n'est plus pertinent
 
     # La fonction retourne None si perform_text_analysis retourne None
     assert result is None
 
+
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_storage_failure(
-    mock_initialize_services, mock_perform_analysis
+    mock_initialize_services,
+    mock_perform_analysis
     # mock_store_results n'est plus utilisé ici car le stockage n'est plus géré par le pipeline de cette manière
 ):
     """
@@ -149,20 +153,20 @@ async def test_run_text_analysis_pipeline_storage_failure(
     # storage_settings n'est plus un paramètre
 
     result = await run_text_analysis_pipeline(
-        input_text_content=text_input,
-        config_for_services=config_for_services
+        input_text_content=text_input, config_for_services=config_for_services
     )
 
     mock_initialize_services.assert_called_once_with(config_for_services)
     mock_perform_analysis.assert_called_once_with(
         text=text_input,
         services={"service_status": "initialized"},
-        analysis_type="default"
+        analysis_type="default",
     )
     # mock_store_results.assert_called_once_with(...) n'est plus valide
 
     # La fonction retourne les résultats de l'analyse
     assert result == expected_analysis_results
+
 
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_empty_input_handled_by_analysis_step(
@@ -180,15 +184,14 @@ async def test_run_text_analysis_pipeline_empty_input_handled_by_analysis_step(
     # la fonction retourne None avant même d'appeler perform_text_analysis.
     # Donc, mock_perform_analysis ne devrait pas être appelé si text_input est vide.
 
-    text_input = "" # Empty input
+    text_input = ""  # Empty input
     config_for_services = {"lang": "en"}
     # storage_settings n'est plus un paramètre
 
     result = await run_text_analysis_pipeline(
-        input_text_content=text_input,
-        config_for_services=config_for_services
+        input_text_content=text_input, config_for_services=config_for_services
     )
-    
+
     # Si le texte est vide, initialize_analysis_services ne devrait même pas être appelé
     # car le pipeline sort avant (lignes 147-149 dans analysis_pipeline.py).
     # Cependant, les mocks sont configurés au niveau du module.

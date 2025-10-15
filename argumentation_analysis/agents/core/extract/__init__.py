@@ -26,5 +26,8 @@ try:
     ]
 except ImportError as e:
     import logging
-    logging.warning(f"Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: {e}")
+
+    logging.warning(
+        f"Certaines classes/fonctions de 'agents.core.extract' n'ont pas pu être exposées: {e}"
+    )
     __all__ = []

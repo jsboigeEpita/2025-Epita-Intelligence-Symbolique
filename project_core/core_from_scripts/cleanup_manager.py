@@ -6,6 +6,7 @@ Cleanup Manager
 import os
 import shutil
 
+
 class CleanupManager:
     """
     Manages the cleaning of the project.
@@ -24,11 +25,13 @@ class CleanupManager:
             dict: A report of the deleted items.
         """
         if root_dir is None:
-            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            root_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
 
         deleted_items = {"dirs": [], "files": []}
-        dirs_to_remove_names = ['__pycache__', '.pytest_cache']
-        files_to_remove_patterns = ['.pyc']
+        dirs_to_remove_names = ["__pycache__", ".pytest_cache"]
+        files_to_remove_patterns = [".pyc"]
 
         # Use topdown=True to be able to modify `dirs` in-place and avoid traversing
         # into directories that are going to be deleted, or symbolic links causing loops.
@@ -46,7 +49,9 @@ class CleanupManager:
                         dirs.remove(d)  # Prune from traversal
                     except OSError as e:
                         print(f"Error removing directory {dir_path}: {e}")
-                        dirs.remove(d) # Also prune if error to avoid descending into it
+                        dirs.remove(
+                            d
+                        )  # Also prune if error to avoid descending into it
 
             # Second, clean files in the current directory.
             for name in files:
@@ -57,5 +62,5 @@ class CleanupManager:
                         deleted_items["files"].append(file_path)
                     except OSError as e:
                         print(f"Error removing file {file_path}: {e}")
-        
+
         return deleted_items

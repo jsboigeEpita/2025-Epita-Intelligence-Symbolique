@@ -26,7 +26,10 @@ from typing import Dict, List, Any
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 try:
-    from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption_key, encrypt_data_with_fernet
+    from argumentation_analysis.utils.core_utils.crypto_utils import (
+        load_encryption_key,
+        encrypt_data_with_fernet,
+    )
     from argumentation_analysis.paths import DATA_DIR
 except ImportError as e:
     print(f"Erreur d'import: {e}")
@@ -35,15 +38,15 @@ except ImportError as e:
 
 # Configuration du logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 def create_test_corpus_data() -> List[Dict[str, Any]]:
     """
     Crée un corpus de test avec des extraits d'exemple.
-    
+
     Returns:
         List[Dict]: Données du corpus de test
     """
@@ -71,8 +74,8 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Candidat A",
                         "topic": "transition_energetique",
                         "date": "2024-03-15",
-                        "duration_seconds": 120
-                    }
+                        "duration_seconds": 120,
+                    },
                 },
                 {
                     "extract_name": "Rhétorique de l'urgence climatique",
@@ -89,14 +92,14 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Candidat B",
                         "topic": "urgence_climatique",
                         "date": "2024-03-15",
-                        "duration_seconds": 90
-                    }
-                }
-            ]
+                        "duration_seconds": 90,
+                    },
+                },
+            ],
         },
         {
             "source_name": "Discours économique - Inflation",
-            "source_type": "text", 
+            "source_type": "text",
             "schema": "political_speech",
             "host_parts": ["speech", "economic", "inflation"],
             "path": "/speeches/economic/inflation_response",
@@ -116,8 +119,8 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Économiste gouvernemental",
                         "topic": "analyse_inflation",
                         "date": "2024-02-10",
-                        "duration_seconds": 150
-                    }
+                        "duration_seconds": 150,
+                    },
                 },
                 {
                     "extract_name": "Accusation contre l'opposition",
@@ -133,15 +136,15 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Ministre de l'Économie",
                         "topic": "blame_opposition",
                         "date": "2024-02-12",
-                        "duration_seconds": 75
-                    }
-                }
-            ]
+                        "duration_seconds": 75,
+                    },
+                },
+            ],
         },
         {
             "source_name": "Débat santé publique",
             "source_type": "text",
-            "schema": "parliamentary_debate", 
+            "schema": "parliamentary_debate",
             "host_parts": ["parliament", "health", "public"],
             "path": "/debates/parliament/health_system",
             "extracts": [
@@ -160,8 +163,8 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Rapporteur de la commission",
                         "topic": "reforme_sante",
                         "date": "2024-01-25",
-                        "duration_seconds": 180
-                    }
+                        "duration_seconds": 180,
+                    },
                 },
                 {
                     "extract_name": "Attaque ad hominem sur la santé",
@@ -177,108 +180,113 @@ def create_test_corpus_data() -> List[Dict[str, Any]]:
                         "speaker": "Député d'opposition",
                         "topic": "attaque_ministre",
                         "date": "2024-01-26",
-                        "duration_seconds": 60
-                    }
-                }
-            ]
-        }
+                        "duration_seconds": 60,
+                    },
+                },
+            ],
+        },
     ]
-    
+
     return test_corpus
+
 
 def create_encrypted_test_file(passphrase: str, output_path: Path) -> bool:
     """
     Crée un fichier chiffré de test.
-    
+
     Args:
         passphrase: Phrase secrète pour le chiffrement
         output_path: Chemin du fichier de sortie
-        
+
     Returns:
         bool: True si succès, False sinon
     """
     logger.info("Création du corpus de test...")
-    
+
     try:
         # Générer les données de test
         test_data = create_test_corpus_data()
-        
+
         # Convertir en JSON
         json_data = json.dumps(test_data, ensure_ascii=False, indent=2)
         logger.info(f"Corpus généré: {len(test_data)} sources")
-        
+
         # Compresser
-        compressed_data = gzip.compress(json_data.encode('utf-8'))
+        compressed_data = gzip.compress(json_data.encode("utf-8"))
         logger.info(f"Données compressées: {len(compressed_data)} octets")
-        
+
         # Chiffrer
         encryption_key = load_encryption_key(passphrase_arg=passphrase)
         if not encryption_key:
             logger.error("Impossible de dériver la clé de chiffrement")
             return False
-        
+
         encrypted_data = encrypt_data_with_fernet(compressed_data, encryption_key)
         if not encrypted_data:
             logger.error("Échec du chiffrement")
             return False
-        
+
         logger.info(f"Données chiffrées: {len(encrypted_data)} octets")
-        
+
         # Sauvegarder
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(encrypted_data)
-        
+
         logger.info(f"Fichier chiffré créé: {output_path}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Erreur lors de la création du fichier chiffré: {e}")
         return False
+
 
 def main():
     """Fonction principale du script."""
     parser = argparse.ArgumentParser(
         description="Crée un fichier chiffré de test avec des extraits d'exemple"
     )
-    
+
     parser.add_argument(
         "--passphrase",
         type=str,
         default="Propaganda",
-        help="Phrase secrète pour le chiffrement (défaut: Propaganda)"
+        help="Phrase secrète pour le chiffrement (défaut: Propaganda)",
     )
-    
+
     parser.add_argument(
         "--output",
         type=str,
-        help="Chemin de sortie (défaut: extract_sources.json.gz.enc dans DATA_DIR)"
+        help="Chemin de sortie (défaut: extract_sources.json.gz.enc dans DATA_DIR)",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Déterminer le chemin de sortie
     if args.output:
         output_path = Path(args.output)
     else:
         output_path = DATA_DIR / "extract_sources.json.gz.enc"
-    
+
     # Créer une sauvegarde si le fichier existe
     if output_path.exists():
-        backup_path = output_path.with_suffix('.enc.backup')
+        backup_path = output_path.with_suffix(".enc.backup")
         logger.info(f"Sauvegarde du fichier existant: {backup_path}")
         output_path.rename(backup_path)
-    
+
     # Créer le fichier chiffré de test
     success = create_encrypted_test_file(args.passphrase, output_path)
-    
+
     if success:
         logger.info("Fichier de test créé avec succès !")
         logger.info(f"Vous pouvez maintenant tester avec:")
-        logger.info(f"python scripts/utils/list_encrypted_extracts.py --passphrase '{args.passphrase}'")
+        logger.info(
+            f"python scripts/utils/list_encrypted_extracts.py --passphrase '{args.passphrase}'"
+        )
         return 0
     else:
         logger.error("Échec de la création du fichier de test")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

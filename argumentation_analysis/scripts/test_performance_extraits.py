@@ -35,8 +35,8 @@ if str(root_dir) not in sys.path:
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("TestPerformanceExtraits")
 
@@ -48,13 +48,14 @@ RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 # Chemins des extraits à tester (laissés vides car les fichiers sont manquants)
 EXTRAITS_PATHS = []
 
+
 # Charger les textes pour les tests paramétrés
 def load_all_extraits_for_test():
     """Charge tous les extraits de texte définis dans EXTRAITS_PATHS."""
     textes = []
     for path in EXTRAITS_PATHS:
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 textes.append(f.read())
         except Exception as e:
             logger.warning(f"Impossible de charger l'extrait {path}: {e}")
@@ -63,6 +64,7 @@ def load_all_extraits_for_test():
         textes.append("Ceci est un texte de secours. Les chats sont des liquides.")
     return textes
 
+
 TEXTES_POUR_TEST = load_all_extraits_for_test()
 
 
@@ -70,18 +72,19 @@ class StateManagerMock:
     """
     Mock du StateManager pour les tests isolés.
     """
+
     def __init__(self):
         """Initialise le StateManagerMock avec un état vide et des compteurs."""
         self.state: Dict[str, Any] = {
             "raw_text": "",
             "identified_arguments": [],
             "identified_fallacies": [],
-            "answers": []
+            "answers": [],
         }
         self.arg_id_counter: int = 1
         self.fallacy_id_counter: int = 1
         self.answer_id_counter: int = 1
-    
+
     def get_current_state_snapshot(self, summarize: bool = True) -> str:
         """Retourne un snapshot JSON de l'état actuel.
 
@@ -91,7 +94,7 @@ class StateManagerMock:
         :rtype: str
         """
         return json.dumps(self.state, indent=2)
-    
+
     def add_identified_argument(self, description: str) -> str:
         """Ajoute un argument identifié à l'état.
 
@@ -102,14 +105,18 @@ class StateManagerMock:
         """
         arg_id = f"arg_{self.arg_id_counter}"
         self.arg_id_counter += 1
-        self.state["identified_arguments"].append({
-            "id": arg_id,
-            "description": description,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.state["identified_arguments"].append(
+            {
+                "id": arg_id,
+                "description": description,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         return arg_id
-    
-    def add_identified_fallacy(self, fallacy_type: str, justification: str, target_argument_id: str) -> str:
+
+    def add_identified_fallacy(
+        self, fallacy_type: str, justification: str, target_argument_id: str
+    ) -> str:
         """Ajoute un sophisme identifié à l'état.
 
         :param fallacy_type: Le type de sophisme.
@@ -123,16 +130,20 @@ class StateManagerMock:
         """
         fallacy_id = f"fallacy_{self.fallacy_id_counter}"
         self.fallacy_id_counter += 1
-        self.state["identified_fallacies"].append({
-            "id": fallacy_id,
-            "fallacy_type": fallacy_type,
-            "justification": justification,
-            "target_argument_id": target_argument_id,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.state["identified_fallacies"].append(
+            {
+                "id": fallacy_id,
+                "fallacy_type": fallacy_type,
+                "justification": justification,
+                "target_argument_id": target_argument_id,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         return fallacy_id
-    
-    def add_answer(self, task_id: str, answer_text: str, source_ids: Optional[List[str]] = None) -> str:
+
+    def add_answer(
+        self, task_id: str, answer_text: str, source_ids: Optional[List[str]] = None
+    ) -> str:
         """Ajoute une réponse à l'état.
 
         :param task_id: L'ID de la tâche associée à la réponse.
@@ -146,14 +157,17 @@ class StateManagerMock:
         """
         answer_id = f"answer_{self.answer_id_counter}"
         self.answer_id_counter += 1
-        self.state["answers"].append({
-            "id": answer_id,
-            "task_id": task_id,
-            "text": answer_text,
-            "source_ids": source_ids or [],
-            "timestamp": datetime.now().isoformat()
-        })
+        self.state["answers"].append(
+            {
+                "id": answer_id,
+                "task_id": task_id,
+                "text": answer_text,
+                "source_ids": source_ids or [],
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         return answer_id
+
 
 async def setup_informal_agent(llm_service: Any) -> Tuple[Any, StateManagerMock]:
     """
@@ -168,26 +182,31 @@ async def setup_informal_agent(llm_service: Any) -> Tuple[Any, StateManagerMock]
     :rtype: Tuple[Any, StateManagerMock]
     """
     from semantic_kernel import Kernel
-    from argumentation_analysis.agents.informal.informal_definitions import setup_informal_kernel
-    
+    from argumentation_analysis.agents.informal.informal_definitions import (
+        setup_informal_kernel,
+    )
+
     # Créer un nouveau kernel
     kernel = Kernel()
-    
+
     # Ajouter le service LLM au kernel
     kernel.add_service(llm_service)
-    
+
     # Configurer le kernel pour l'agent Informel
     setup_informal_kernel(kernel, llm_service)
-    
+
     # Ajouter le StateManager mock
     state_manager = StateManagerMock()
     kernel.add_plugin(state_manager, plugin_name="StateManager")
-    
+
     return kernel, state_manager
+
 
 @pytest.mark.parametrize("texte", TEXTES_POUR_TEST)
 @pytest.mark.asyncio
-async def test_identify_arguments(kernel: Any, state_manager: StateManagerMock, texte: str) -> Tuple[List[str], float]:
+async def test_identify_arguments(
+    kernel: Any, state_manager: StateManagerMock, texte: str
+) -> Tuple[List[str], float]:
     """
     Teste la fonction d'identification des arguments de l'agent Informel.
 
@@ -206,36 +225,41 @@ async def test_identify_arguments(kernel: Any, state_manager: StateManagerMock, 
     :rtype: Tuple[List[str], float]
     """
     logger.info("Test d'identification des arguments...")
-    
+
     # Mesurer le temps d'exécution
     start_time = time.time()
-    
+
     # Mettre à jour le texte brut dans l'état
     state_manager.state["raw_text"] = texte
-    
+
     # Appeler la fonction d'identification des arguments
     arguments = KernelArguments(input=texte)
     result = await kernel.invoke(
         plugin_name="InformalAnalyzer",
         function_name="semantic_IdentifyArguments",
-        arguments=arguments
+        arguments=arguments,
     )
-    
+
     # Calculer le temps d'exécution
     execution_time = time.time() - start_time
-    
+
     # Enregistrer les arguments identifiés
     arg_ids = []
-    for line in str(result).strip().split('\n'):
+    for line in str(result).strip().split("\n"):
         if line.strip():
             arg_id = state_manager.add_identified_argument(line.strip())
             arg_ids.append(arg_id)
-    
-    logger.info(f"Arguments identifiés: {len(arg_ids)} en {execution_time:.2f} secondes")
+
+    logger.info(
+        f"Arguments identifiés: {len(arg_ids)} en {execution_time:.2f} secondes"
+    )
     return arg_ids, execution_time
 
+
 @pytest.mark.asyncio
-async def test_explore_fallacy_hierarchy(kernel: Any, root_pk: str = "0") -> Tuple[Optional[Dict[str, Any]], float]:
+async def test_explore_fallacy_hierarchy(
+    kernel: Any, root_pk: str = "0"
+) -> Tuple[Optional[Dict[str, Any]], float]:
     """
     Teste la fonction d'exploration de la hiérarchie des sophismes de l'agent Informel.
 
@@ -251,33 +275,40 @@ async def test_explore_fallacy_hierarchy(kernel: Any, root_pk: str = "0") -> Tup
     :rtype: Tuple[Optional[Dict[str, Any]], float]
     """
     logger.info(f"Test d'exploration de la hiérarchie des sophismes (PK={root_pk})...")
-    
+
     # Mesurer le temps d'exécution
     start_time = time.time()
-    
+
     # Appeler la fonction d'exploration de la hiérarchie
     arguments = KernelArguments(current_pk_str=root_pk)
     result = await kernel.invoke(
         plugin_name="InformalAnalyzer",
         function_name="explore_fallacy_hierarchy",
-        arguments=arguments
+        arguments=arguments,
     )
-    
+
     # Calculer le temps d'exécution
     execution_time = time.time() - start_time
-    
+
     # Analyser le résultat JSON
     try:
         hierarchy = json.loads(str(result))
-        logger.info(f"Hiérarchie des sophismes explorée en {execution_time:.2f} secondes")
+        logger.info(
+            f"Hiérarchie des sophismes explorée en {execution_time:.2f} secondes"
+        )
         return hierarchy, execution_time
     except json.JSONDecodeError:
-        logger.error("Erreur de décodage JSON dans le résultat de explore_fallacy_hierarchy")
+        logger.error(
+            "Erreur de décodage JSON dans le résultat de explore_fallacy_hierarchy"
+        )
         return None, execution_time
+
 
 @pytest.mark.parametrize("fallacy_pk", [0, 1, 13])
 @pytest.mark.asyncio
-async def test_get_fallacy_details(kernel: Any, fallacy_pk: Any) -> Tuple[Optional[Dict[str, Any]], float]:
+async def test_get_fallacy_details(
+    kernel: Any, fallacy_pk: Any
+) -> Tuple[Optional[Dict[str, Any]], float]:
     """
     Teste la fonction de récupération des détails d'un sophisme de l'agent Informel.
 
@@ -293,21 +324,21 @@ async def test_get_fallacy_details(kernel: Any, fallacy_pk: Any) -> Tuple[Option
     :rtype: Tuple[Optional[Dict[str, Any]], float]
     """
     logger.info(f"Test de récupération des détails du sophisme (PK={fallacy_pk})...")
-    
+
     # Mesurer le temps d'exécution
     start_time = time.time()
-    
+
     # Appeler la fonction de récupération des détails
     arguments = KernelArguments(fallacy_pk_str=str(fallacy_pk))
     result = await kernel.invoke(
         plugin_name="InformalAnalyzer",
         function_name="get_fallacy_details",
-        arguments=arguments
+        arguments=arguments,
     )
-    
+
     # Calculer le temps d'exécution
     execution_time = time.time() - start_time
-    
+
     # Analyser le résultat JSON
     try:
         details = json.loads(str(result))
@@ -317,8 +348,13 @@ async def test_get_fallacy_details(kernel: Any, fallacy_pk: Any) -> Tuple[Option
         logger.error("Erreur de décodage JSON dans le résultat de get_fallacy_details")
         return None, execution_time
 
-@pytest.mark.skip(reason="Nécessite de chaîner les fixtures pour obtenir un arg_id valide. À implémenter.")
-async def test_attribute_fallacy(kernel: Any, state_manager: StateManagerMock, fallacy_pk: Any, arg_id: str) -> Tuple[Optional[str], float]:
+
+@pytest.mark.skip(
+    reason="Nécessite de chaîner les fixtures pour obtenir un arg_id valide. À implémenter."
+)
+async def test_attribute_fallacy(
+    kernel: Any, state_manager: StateManagerMock, fallacy_pk: Any, arg_id: str
+) -> Tuple[Optional[str], float]:
     """
     Teste l'attribution d'un sophisme à un argument via le StateManagerMock.
 
@@ -337,39 +373,54 @@ async def test_attribute_fallacy(kernel: Any, state_manager: StateManagerMock, f
              et le temps d'exécution en secondes.
     :rtype: Tuple[Optional[str], float]
     """
-    logger.info(f"Test d'attribution du sophisme PK={fallacy_pk} à l'argument {arg_id}...")
-    
+    logger.info(
+        f"Test d'attribution du sophisme PK={fallacy_pk} à l'argument {arg_id}..."
+    )
+
     # Mesurer le temps d'exécution
     start_time = time.time()
-    
+
     # Récupérer les détails du sophisme
     fallacy_details, _ = await test_get_fallacy_details(kernel, fallacy_pk)
-    
+
     if fallacy_details.get("error"):
-        logger.error(f"Erreur lors de la récupération des détails du sophisme: {fallacy_details['error']}")
+        logger.error(
+            f"Erreur lors de la récupération des détails du sophisme: {fallacy_details['error']}"
+        )
         return None, time.time() - start_time
-    
+
     # Déterminer le label du sophisme
-    fallacy_label = fallacy_details.get("nom_vulgarisé") or fallacy_details.get("text_fr") or f"Sophisme {fallacy_pk}"
-    
+    fallacy_label = (
+        fallacy_details.get("nom_vulgarisé")
+        or fallacy_details.get("text_fr")
+        or f"Sophisme {fallacy_pk}"
+    )
+
     # Générer une justification
     justification = f"Ce sophisme de type '{fallacy_label}' est identifié dans l'argument car il présente les caractéristiques typiques de ce type de raisonnement fallacieux."
-    
+
     # Attribuer le sophisme à l'argument
     fallacy_id = state_manager.add_identified_fallacy(
         fallacy_type=fallacy_label,
         justification=justification,
-        target_argument_id=arg_id
+        target_argument_id=arg_id,
     )
-    
+
     # Calculer le temps d'exécution
     execution_time = time.time() - start_time
-    
-    logger.info(f"Sophisme attribué avec l'ID: {fallacy_id} en {execution_time:.2f} secondes")
+
+    logger.info(
+        f"Sophisme attribué avec l'ID: {fallacy_id} en {execution_time:.2f} secondes"
+    )
     return fallacy_id, execution_time
 
-@pytest.mark.skip(reason="Nécessite de chaîner les fixtures pour obtenir un arg_id valide. À implémenter.")
-async def test_analyze_fallacies(kernel: Any, state_manager: StateManagerMock, arg_id: str) -> Tuple[List[str], float]:
+
+@pytest.mark.skip(
+    reason="Nécessite de chaîner les fixtures pour obtenir un arg_id valide. À implémenter."
+)
+async def test_analyze_fallacies(
+    kernel: Any, state_manager: StateManagerMock, arg_id: str
+) -> Tuple[List[str], float]:
     """
     Teste la fonction d'analyse des sophismes dans un argument de l'agent Informel.
 
@@ -388,50 +439,53 @@ async def test_analyze_fallacies(kernel: Any, state_manager: StateManagerMock, a
     :rtype: Tuple[List[str], float]
     """
     logger.info(f"Test d'analyse des sophismes pour l'argument {arg_id}...")
-    
+
     # Mesurer le temps d'exécution
     start_time = time.time()
-    
+
     # Trouver l'argument dans l'état
     argument = None
     for arg in state_manager.state["identified_arguments"]:
         if arg["id"] == arg_id:
             argument = arg
             break
-    
+
     if not argument:
         logger.error(f"Argument {arg_id} non trouvé dans l'état")
         return [], time.time() - start_time
-    
+
     # Appeler la fonction d'analyse des sophismes
     arguments = KernelArguments(input=argument["description"])
     result = await kernel.invoke(
         plugin_name="InformalAnalyzer",
         function_name="semantic_AnalyzeFallacies",
-        arguments=arguments
+        arguments=arguments,
     )
-    
+
     # Calculer le temps d'exécution
     execution_time = time.time() - start_time
-    
+
     # Analyser le résultat
     fallacy_ids = []
-    for line in str(result).strip().split('\n'):
+    for line in str(result).strip().split("\n"):
         if line.strip():
             # Format attendu: "Type de sophisme: Justification"
-            parts = line.split(':', 1)
+            parts = line.split(":", 1)
             if len(parts) == 2:
                 fallacy_type = parts[0].strip()
                 justification = parts[1].strip()
                 fallacy_id = state_manager.add_identified_fallacy(
                     fallacy_type=fallacy_type,
                     justification=justification,
-                    target_argument_id=arg_id
+                    target_argument_id=arg_id,
                 )
                 fallacy_ids.append(fallacy_id)
-    
-    logger.info(f"Sophismes identifiés: {len(fallacy_ids)} en {execution_time:.2f} secondes")
+
+    logger.info(
+        f"Sophismes identifiés: {len(fallacy_ids)} en {execution_time:.2f} secondes"
+    )
     return fallacy_ids, execution_time
+
 
 # Le code `main` et les fonctions associées (`load_extrait`, `run_performance_test`, `generate_performance_report`)
 # sont supprimés car ce fichier est maintenant un module de test Pytest et non un script autonome.

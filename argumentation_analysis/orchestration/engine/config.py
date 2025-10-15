@@ -11,8 +11,10 @@ from enum import Enum
 
 # Définition des Enums pour la configuration de l'orchestration.
 
+
 class OrchestrationMode(Enum):
     """Modes d'orchestration disponibles."""
+
     PIPELINE = "pipeline"
     REAL = "real"
     CONVERSATION = "conversation"
@@ -25,8 +27,10 @@ class OrchestrationMode(Enum):
     ADAPTIVE_HYBRID = "adaptive_hybrid"
     AUTO_SELECT = "auto_select"
 
+
 class AnalysisType(Enum):
     """Types d'analyse supportés."""
+
     COMPREHENSIVE = "comprehensive"
     RHETORICAL = "rhetorical"
     LOGICAL = "logical"
@@ -36,13 +40,17 @@ class AnalysisType(Enum):
     DEBATE_ANALYSIS = "debate_analysis"
     CUSTOM = "custom"
 
+
 @dataclasses.dataclass
 class OrchestrationConfig:
     """
     Configuration unifiée et non redondante pour le moteur d'orchestration.
     Synthétise UnifiedAnalysisConfig et ExtendedOrchestrationConfig.
     """
-    analysis_modes: List[str] = dataclasses.field(default_factory=lambda: ["informal", "formal"])
+
+    analysis_modes: List[str] = dataclasses.field(
+        default_factory=lambda: ["informal", "formal"]
+    )
     orchestration_mode: Union[str, OrchestrationMode] = OrchestrationMode.PIPELINE
     analysis_type: Union[str, AnalysisType] = AnalysisType.COMPREHENSIVE
     logic_type: str = "fol"
@@ -58,10 +66,17 @@ class OrchestrationConfig:
     auto_select_orchestrator_enabled: bool = True
     hierarchical_coordination_level: str = "full"
     specialized_orchestrator_priority_order: List[str] = dataclasses.field(
-        default_factory=lambda: ["cluedo_investigation", "logic_complex", "conversation", "real"]
+        default_factory=lambda: [
+            "cluedo_investigation",
+            "logic_complex",
+            "conversation",
+            "real",
+        ]
     )
     save_orchestration_trace_enabled: bool = True
-    communication_middleware_config: Dict[str, Any] = dataclasses.field(default_factory=dict)
+    communication_middleware_config: Dict[str, Any] = dataclasses.field(
+        default_factory=dict
+    )
 
     def __post_init__(self):
         if isinstance(self.orchestration_mode, str):
@@ -75,4 +90,3 @@ class OrchestrationConfig:
                 self.analysis_type = AnalysisType(self.analysis_type)
             except ValueError:
                 pass
-

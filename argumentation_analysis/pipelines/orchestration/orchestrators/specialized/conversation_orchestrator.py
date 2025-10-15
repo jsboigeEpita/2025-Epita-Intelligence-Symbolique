@@ -11,7 +11,9 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
+    from argumentation_analysis.orchestration.conversation_orchestrator import (
+        ConversationOrchestrator,
+    )
 except ImportError as e:
     logger.warning(f"ConversationOrchestrator not available: {e}")
     ConversationOrchestrator = None
@@ -29,8 +31,11 @@ class ConversationOrchestratorWrapper:
         Runs a conversational analysis.
         """
         logger.info("[CONVERSATION] Running conversational analysis...")
-        if not hasattr(self.orchestrator, 'run_conversation'):
-             return {"status": "error", "error": "Method 'run_conversation' not found in orchestrator."}
+        if not hasattr(self.orchestrator, "run_conversation"):
+            return {
+                "status": "error",
+                "error": "Method 'run_conversation' not found in orchestrator.",
+            }
         try:
             return await self.orchestrator.run_conversation(text)
         except Exception as e:

@@ -1,7 +1,11 @@
 import time
 from typing import List, Dict, Any
 from src.core.contracts import BenchmarkResult, BenchmarkSuiteResult
-from src.core.services.orchestration_service import OrchestrationService, OrchestrationRequest
+from src.core.services.orchestration_service import (
+    OrchestrationService,
+    OrchestrationRequest,
+)
+
 
 class BenchmarkService:
     """
@@ -59,7 +63,7 @@ class BenchmarkService:
         self._clear_metrics()
         individual_results: List[BenchmarkResult] = []
         successful_durations: List[float] = []
-        
+
         target = f"{plugin_name}.{capability_name}"
 
         for i, request_payload in enumerate(requests):
@@ -67,9 +71,9 @@ class BenchmarkService:
                 mode="direct_plugin_call",
                 target=target,
                 payload=request_payload,
-                session_id=None
+                session_id=None,
             )
-            
+
             start_time = time.perf_counter()
             response = self.orchestration_service.handle_request(request)
             end_time = time.perf_counter()
@@ -95,12 +99,14 @@ class BenchmarkService:
                 custom_metrics=run_metrics,
             )
             individual_results.append(result)
-        
+
         total_runs = len(requests)
         successful_runs = len(successful_durations)
         failed_runs = total_runs - successful_runs
-        
-        avg_duration = sum(successful_durations) / successful_runs if successful_runs > 0 else 0
+
+        avg_duration = (
+            sum(successful_durations) / successful_runs if successful_runs > 0 else 0
+        )
         min_duration = min(successful_durations) if successful_runs > 0 else 0
         max_duration = max(successful_durations) if successful_runs > 0 else 0
         total_duration = sum(r.duration_ms for r in individual_results)
@@ -112,12 +118,11 @@ class BenchmarkService:
                 if key not in aggregated_metrics:
                     aggregated_metrics[key] = []
                 aggregated_metrics[key].append(value)
-        
+
         # Calculer la somme pour les métriques numériques
         for key, values in aggregated_metrics.items():
             if all(isinstance(v, (int, float)) for v in values):
                 aggregated_metrics[key] = sum(values)
-
 
         return BenchmarkSuiteResult(
             plugin_name=plugin_name,

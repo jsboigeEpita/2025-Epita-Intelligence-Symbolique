@@ -15,10 +15,10 @@ from .contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 from .nlp_model_manager import NLPModelManager, nlp_model_manager
 
 __all__ = [
-    'EnhancedRhetoricalResultAnalyzer',
-    'EnhancedComplexFallacyAnalyzer',
-    'EnhancedFallacySeverityEvaluator',
-    'EnhancedContextualFallacyAnalyzer',
-    'NLPModelManager',
-    'nlp_model_manager'
+    "EnhancedRhetoricalResultAnalyzer",
+    "EnhancedComplexFallacyAnalyzer",
+    "EnhancedFallacySeverityEvaluator",
+    "EnhancedContextualFallacyAnalyzer",
+    "NLPModelManager",
+    "nlp_model_manager",
 ]

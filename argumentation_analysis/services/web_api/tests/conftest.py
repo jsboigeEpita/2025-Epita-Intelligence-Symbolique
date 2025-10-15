@@ -26,9 +26,10 @@ if str(root_dir) not in sys.path:
 def client():
     """Client de test Flask."""
     from argumentation_analysis.services.web_api.app import app
-    app.config['TESTING'] = True
-    app.config['DEBUG'] = False
-    
+
+    app.config["TESTING"] = True
+    app.config["DEBUG"] = False
+
     with app.test_client() as client:
         with app.app_context():
             yield client
@@ -37,34 +38,45 @@ def client():
 @pytest.fixture
 def mock_analysis_service():
     """Mock du service d'analyse."""
-    with patch('argumentation_analysis.services.web_api.app.analysis_service') as mock: # MODIFIÉ
+    with patch(
+        "argumentation_analysis.services.web_api.app.analysis_service"
+    ) as mock:  # MODIFIÉ
         # Configuration du mock pour is_healthy
         mock.is_healthy.return_value = True
-        
+
         # Configuration du mock pour analyze_text
-        from argumentation_analysis.services.web_api.models.response_models import AnalysisResponse, ArgumentStructure
-        from argumentation_analysis.services.web_api.models.request_models import AnalysisRequest
+        from argumentation_analysis.services.web_api.models.response_models import (
+            AnalysisResponse,
+            ArgumentStructure,
+        )
+        from argumentation_analysis.services.web_api.models.request_models import (
+            AnalysisRequest,
+        )
 
         def dynamic_analyze_text(analysis_request: AnalysisRequest):
             # analysis_request est l'objet Pydantic passé au service
             return AnalysisResponse(
                 success=True,
-                text_analyzed=analysis_request.text, # Utilise le texte de la requête
+                text_analyzed=analysis_request.text,  # Utilise le texte de la requête
                 fallacies=[],
                 argument_structure=ArgumentStructure(
-                    premises=["Prémisse 1"], # Garder des valeurs fixes pour les autres champs pour la simplicité du mock
+                    premises=[
+                        "Prémisse 1"
+                    ],  # Garder des valeurs fixes pour les autres champs pour la simplicité du mock
                     conclusion="Conclusion",
                     argument_type="deductive",
                     strength=0.8,
-                    coherence=0.7
+                    coherence=0.7,
                 ),
                 overall_quality=0.8,
                 coherence_score=0.7,
                 fallacy_count=0,
                 processing_time=0.1,
-                analysis_options=analysis_request.options.dict() if analysis_request.options else {}
+                analysis_options=analysis_request.options.dict()
+                if analysis_request.options
+                else {},
             )
-        
+
         mock.analyze_text.side_effect = dynamic_analyze_text
         yield mock
 
@@ -72,10 +84,16 @@ def mock_analysis_service():
 @pytest.fixture
 def mock_validation_service():
     """Mock du service de validation."""
-    with patch('argumentation_analysis.services.web_api.app.validation_service') as mock: # MODIFIÉ
+    with patch(
+        "argumentation_analysis.services.web_api.app.validation_service"
+    ) as mock:  # MODIFIÉ
         mock.is_healthy.return_value = True
-        
-        from argumentation_analysis.services.web_api.models.response_models import ValidationResponse, ValidationResult
+
+        from argumentation_analysis.services.web_api.models.response_models import (
+            ValidationResponse,
+            ValidationResult,
+        )
+
         mock_response = ValidationResponse(
             success=True,
             premises=["Prémisse 1"],
@@ -89,9 +107,9 @@ def mock_validation_service():
                 conclusion_analysis={},
                 logical_structure={},
                 issues=[],
-                suggestions=[]
+                suggestions=[],
             ),
-            processing_time=0.1
+            processing_time=0.1,
         )
         mock.validate_argument.return_value = mock_response
         yield mock
@@ -100,10 +118,16 @@ def mock_validation_service():
 @pytest.fixture
 def mock_fallacy_service():
     """Mock du service de détection de sophismes."""
-    with patch('argumentation_analysis.services.web_api.app.fallacy_service') as mock: # MODIFIÉ
+    with patch(
+        "argumentation_analysis.services.web_api.app.fallacy_service"
+    ) as mock:  # MODIFIÉ
         mock.is_healthy.return_value = True
-        
-        from argumentation_analysis.services.web_api.models.response_models import FallacyResponse, FallacyDetection
+
+        from argumentation_analysis.services.web_api.models.response_models import (
+            FallacyResponse,
+            FallacyDetection,
+        )
+
         mock_response = FallacyResponse(
             success=True,
             text_analyzed="Texte de test",
@@ -114,14 +138,14 @@ def mock_fallacy_service():
                     description="Attaque contre la personne plutôt que l'argument",
                     severity=0.7,
                     confidence=0.8,
-                    context="Contexte du sophisme"
+                    context="Contexte du sophisme",
                 )
             ],
             fallacy_count=1,
             severity_distribution={"high": 1},
             category_distribution={"personal_attack": 1},
             processing_time=0.1,
-            detection_options={}
+            detection_options={},
         )
         mock.detect_fallacies.return_value = mock_response
         yield mock
@@ -130,10 +154,17 @@ def mock_fallacy_service():
 @pytest.fixture
 def mock_framework_service():
     """Mock du service de framework."""
-    with patch('argumentation_analysis.services.web_api.app.framework_service') as mock: # MODIFIÉ
+    with patch(
+        "argumentation_analysis.services.web_api.app.framework_service"
+    ) as mock:  # MODIFIÉ
         mock.is_healthy.return_value = True
-        
-        from argumentation_analysis.services.web_api.models.response_models import FrameworkResponse, ArgumentNode, Extension
+
+        from argumentation_analysis.services.web_api.models.response_models import (
+            FrameworkResponse,
+            ArgumentNode,
+            Extension,
+        )
+
         mock_response = FrameworkResponse(
             success=True,
             arguments=[
@@ -144,7 +175,7 @@ def mock_framework_service():
                     attacks=[],
                     attacked_by=[],
                     supports=[],
-                    supported_by=[]
+                    supported_by=[],
                 )
             ],
             attack_relations=[],
@@ -154,7 +185,7 @@ def mock_framework_service():
                     type="preferred",
                     arguments=["arg1"],
                     is_complete=True,
-                    is_preferred=True
+                    is_preferred=True,
                 )
             ],
             semantics_used="preferred",
@@ -163,7 +194,7 @@ def mock_framework_service():
             support_count=0,
             extension_count=1,
             processing_time=0.1,
-            framework_options={}
+            framework_options={},
         )
         mock.build_framework.return_value = mock_response
         yield mock
@@ -177,8 +208,8 @@ def sample_analysis_request():
         "options": {
             "detect_fallacies": True,
             "analyze_structure": True,
-            "evaluate_coherence": True
-        }
+            "evaluate_coherence": True,
+        },
     }
 
 
@@ -188,7 +219,7 @@ def sample_validation_request():
     return {
         "premises": ["Tous les hommes sont mortels", "Socrate est un homme"],
         "conclusion": "Socrate est mortel",
-        "argument_type": "deductive"
+        "argument_type": "deductive",
     }
 
 
@@ -197,10 +228,7 @@ def sample_fallacy_request():
     """Requête de détection de sophismes d'exemple."""
     return {
         "text": "Tu ne peux pas avoir raison car tu es stupide.",
-        "options": {
-            "severity_threshold": 0.5,
-            "include_context": True
-        }
+        "options": {"severity_threshold": 0.5, "include_context": True},
     }
 
 
@@ -212,18 +240,15 @@ def sample_framework_request():
             {
                 "id": "arg1",
                 "content": "Il faut protéger l'environnement",
-                "attacks": ["arg2"]
+                "attacks": ["arg2"],
             },
             {
                 "id": "arg2",
                 "content": "Le développement économique est prioritaire",
-                "attacks": ["arg1"]
-            }
+                "attacks": ["arg1"],
+            },
         ],
-        "options": {
-            "compute_extensions": True,
-            "semantics": "preferred"
-        }
+        "options": {"compute_extensions": True, "semantics": "preferred"},
     }
 
 
@@ -232,9 +257,7 @@ def invalid_json_data():
     """Données JSON invalides pour les tests d'erreur."""
     return {
         "text": "",  # Texte vide
-        "options": {
-            "severity_threshold": 2.0  # Valeur invalide
-        }
+        "options": {"severity_threshold": 2.0},  # Valeur invalide
     }
 
 
@@ -242,11 +265,14 @@ def invalid_json_data():
 @pytest.fixture(autouse=True)
 def mock_analysis_imports():
     """Mock automatique des imports d'analyse pour éviter les erreurs."""
-    with patch.dict('sys.modules', {
-        'argumentation_analysis.agents.core.informal.informal_agent': Mock(),
-        'argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer': Mock(),
-        'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer': Mock(),
-        'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator': Mock(),
-        'argumentation_analysis.orchestration.hierarchical.operational.manager': Mock(),
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "argumentation_analysis.agents.core.informal.informal_agent": Mock(),
+            "argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer": Mock(),
+            "argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer": Mock(),
+            "argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator": Mock(),
+            "argumentation_analysis.orchestration.hierarchical.operational.manager": Mock(),
+        },
+    ):
         yield

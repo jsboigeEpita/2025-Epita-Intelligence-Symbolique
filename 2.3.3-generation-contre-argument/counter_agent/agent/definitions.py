@@ -12,6 +12,7 @@ from typing import List, Dict, Optional, Any
 
 class CounterArgumentType(Enum):
     """Types de contre-arguments possibles."""
+
     DIRECT_REFUTATION = "direct_refutation"
     COUNTER_EXAMPLE = "counter_example"
     ALTERNATIVE_EXPLANATION = "alternative_explanation"
@@ -21,6 +22,7 @@ class CounterArgumentType(Enum):
 
 class ArgumentStrength(Enum):
     """Force d'un argument."""
+
     WEAK = "weak"
     MODERATE = "moderate"
     STRONG = "strong"
@@ -29,6 +31,7 @@ class ArgumentStrength(Enum):
 
 class RhetoricalStrategy(Enum):
     """Stratégies rhétoriques pour les contre-arguments."""
+
     SOCRATIC_QUESTIONING = "socratic_questioning"
     REDUCTIO_AD_ABSURDUM = "reductio_ad_absurdum"
     ANALOGICAL_COUNTER = "analogical_counter"
@@ -39,6 +42,7 @@ class RhetoricalStrategy(Enum):
 @dataclass
 class Argument:
     """Structure représentant un argument."""
+
     content: str
     premises: List[str]
     conclusion: str
@@ -49,6 +53,7 @@ class Argument:
 @dataclass
 class Vulnerability:
     """Structure représentant une vulnérabilité dans un argument."""
+
     type: str
     target: str
     description: str
@@ -59,6 +64,7 @@ class Vulnerability:
 @dataclass
 class CounterArgument:
     """Structure représentant un contre-argument."""
+
     original_argument: Argument
     counter_type: CounterArgumentType
     counter_content: str
@@ -72,6 +78,7 @@ class CounterArgument:
 @dataclass
 class EvaluationResult:
     """Résultat de l'évaluation d'un contre-argument."""
+
     relevance: float
     logical_strength: float
     persuasiveness: float
@@ -84,8 +91,9 @@ class EvaluationResult:
 @dataclass
 class ValidationResult:
     """Résultat de la validation logique d'un contre-argument."""
+
     is_valid_attack: bool
     original_survives: bool
     counter_succeeds: bool
     logical_consistency: bool
-    formal_representation: Optional[str] = None 
+    formal_representation: Optional[str] = None

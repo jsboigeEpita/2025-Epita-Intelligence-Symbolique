@@ -3,7 +3,10 @@ import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
+from semantic_kernel.connectors.ai.open_ai import (
+    OpenAIChatCompletion,
+    AzureChatCompletion,
+)
 from typing import Union, AsyncGenerator, List
 import httpx
 from openai import AsyncOpenAI
@@ -11,9 +14,12 @@ import json
 import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+
 # Tentative de correction en supprimant l'import qui échoue
 # from semantic_kernel.contents.tool_call_content import ToolCallContent
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
 from argumentation_analysis.config.settings import settings
 from tests.mocks.llm_service_mocks import MockChatCompletion
@@ -22,11 +28,14 @@ from tests.mocks.llm_service_mocks import MockChatCompletion
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+    )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
+
 
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
 # pour la logique principale.
@@ -66,20 +75,26 @@ def create_llm_service(
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Gestion des mocks pour les tests
-    is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
+    is_test_environment = "PYTEST_CURRENT_TEST" in os.environ
     if force_mock or (is_test_environment and not force_authentic):
         if force_mock:
-            logger.warning(f"Création forcée d'un service LLM MOCKÉ pour '{service_id}'.")
+            logger.warning(
+                f"Création forcée d'un service LLM MOCKÉ pour '{service_id}'."
+            )
         else:
-            logger.warning(f"Environnement de test détecté. Création d'un service LLM MOCKÉ pour '{service_id}'.")
+            logger.warning(
+                f"Environnement de test détecté. Création d'un service LLM MOCKÉ pour '{service_id}'."
+            )
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
     logger.info("Tentative de création d'un service LLM AUTHENTIQUE...")
-    
+
     # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
     if not model_id:
         model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
-        logger.info(f"model_id non fourni, utilisation de la valeur de .env: {model_id}")
+        logger.info(
+            f"model_id non fourni, utilisation de la valeur de .env: {model_id}"
+        )
 
     # Correction automatique pour les modèles obsolètes
     if model_id == "gpt-4-32k":
@@ -95,43 +110,44 @@ def create_llm_service(
     org_id = os.environ.get("OPENAI_ORG_ID")
 
     if not api_key:
-        raise ValueError("La variable d'environnement OPENAI_API_KEY n'est pas définie.")
+        raise ValueError(
+            "La variable d'environnement OPENAI_API_KEY n'est pas définie."
+        )
 
     resilient_client = get_resilient_async_client()
     llm_instance = None
 
     try:
         if service_type == "OpenAIChatCompletion":
-            logger.info("Configuration Service: OpenAIChatCompletion pour l'API OpenAI officielle...")
-            
-            client_kwargs = {
-                "api_key": api_key,
-                "http_client": resilient_client
-            }
+            logger.info(
+                "Configuration Service: OpenAIChatCompletion pour l'API OpenAI officielle..."
+            )
+
+            client_kwargs = {"api_key": api_key, "http_client": resilient_client}
             if org_id:
                 client_kwargs["organization"] = org_id
-            
+
             async_client = AsyncOpenAI(**client_kwargs)
-            
+
             llm_instance = OpenAIChatCompletion(
-                service_id=service_id,
-                ai_model_id=model_id,
-                async_client=async_client
+                service_id=service_id, ai_model_id=model_id, async_client=async_client
             )
             logger.info(f"Service LLM OpenAI ({model_id}) créé avec succès.")
-        
+
         # NOTE: La logique pour Azure est conservée mais non utilisée si service_type est OpenAIChatCompletion
         elif service_type == "AzureChatCompletion":
             endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
             if not endpoint:
-                raise ValueError("La variable d'environnement AZURE_OPENAI_ENDPOINT est requise pour Azure.")
-            
+                raise ValueError(
+                    "La variable d'environnement AZURE_OPENAI_ENDPOINT est requise pour Azure."
+                )
+
             logger.info("Configuration Service: AzureChatCompletion...")
             llm_instance = AzureChatCompletion(
                 service_id=service_id,
                 deployment_name=model_id,
                 endpoint=endpoint,
-                api_key=api_key
+                api_key=api_key,
             )
             logger.info(f"Service LLM Azure ({model_id}) créé.")
         else:
@@ -141,13 +157,16 @@ def create_llm_service(
         logger.critical(f"Erreur de configuration LLM: {ve}")
         raise
     except Exception as e:
-        logger.critical(f"Erreur critique lors de la création du service LLM: {e}", exc_info=True)
+        logger.critical(
+            f"Erreur critique lors de la création du service LLM: {e}", exc_info=True
+        )
         raise RuntimeError(f"Impossible de configurer le service LLM: {e}")
 
     if not llm_instance:
         raise RuntimeError("La configuration du service LLM a échoué silencieusement.")
 
     return llm_instance
+
 
 # Conserver la classe LLMService pour la compatibilité, bien que la logique principale
 # soit maintenant dans la factory `create_llm_service`.
@@ -161,6 +180,7 @@ class LLMService:
 
     # La méthode `create_llm_service` est maintenant statique et à l'extérieur
     # pour une meilleure séparation des préoccupations.
+
 
 # Optionnel : Log de chargement
 module_logger = logging.getLogger(__name__)

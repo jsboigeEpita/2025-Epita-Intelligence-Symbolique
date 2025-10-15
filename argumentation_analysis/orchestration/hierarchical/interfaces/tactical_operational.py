@@ -18,12 +18,22 @@ import uuid
 import json
 from pathlib import Path
 
-from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.orchestration.hierarchical.tactical.state import (
+    TacticalState,
+)
+from argumentation_analysis.orchestration.hierarchical.operational.state import (
+    OperationalState,
+)
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
-    MessageMiddleware, TacticalAdapter, OperationalAdapter,
-    ChannelType, MessagePriority, Message, MessageType, AgentLevel
+    MessageMiddleware,
+    TacticalAdapter,
+    OperationalAdapter,
+    ChannelType,
+    MessagePriority,
+    Message,
+    MessageType,
+    AgentLevel,
 )
 
 
@@ -47,10 +57,12 @@ class TacticalOperationalInterface:
                                                   en tant que couche opérationnelle.
     """
 
-    def __init__(self,
-                 tactical_state: Optional[TacticalState] = None,
-                 operational_state: Optional[OperationalState] = None,
-                 middleware: Optional[MessageMiddleware] = None):
+    def __init__(
+        self,
+        tactical_state: Optional[TacticalState] = None,
+        operational_state: Optional[OperationalState] = None,
+        middleware: Optional[MessageMiddleware] = None,
+    ):
         """
         Initialise l'interface tactique-opérationnelle.
 
@@ -64,12 +76,13 @@ class TacticalOperationalInterface:
         self.logger = logging.getLogger(__name__)
 
         self.middleware = middleware or MessageMiddleware()
-        self.tactical_adapter = TacticalAdapter(agent_id="tactical_interface", middleware=self.middleware)
-        self.operational_adapter = OperationalAdapter(
-            agent_id="operational_interface",
-            middleware=self.middleware
+        self.tactical_adapter = TacticalAdapter(
+            agent_id="tactical_interface", middleware=self.middleware
         )
-    
+        self.operational_adapter = OperationalAdapter(
+            agent_id="operational_interface", middleware=self.middleware
+        )
+
     def translate_task_to_command(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
         Traduit une tâche tactique en une commande opérationnelle détaillée.
@@ -85,11 +98,13 @@ class TacticalOperationalInterface:
         Returns:
             La commande opérationnelle enrichie, prête à être assignée à un agent.
         """
-        self.logger.info(f"Traduction de la tâche {task.get('id', 'unknown')} en commande opérationnelle.")
-        
+        self.logger.info(
+            f"Traduction de la tâche {task.get('id', 'unknown')} en commande opérationnelle."
+        )
+
         operational_task_id = f"op-{task.get('id', uuid.uuid4().hex[:8])}"
         required_capabilities = task.get("required_capabilities", [])
-        
+
         operational_command = {
             "id": operational_task_id,
             "tactical_task_id": task.get("id"),
@@ -102,25 +117,29 @@ class TacticalOperationalInterface:
             "expected_outputs": self._determine_expected_outputs(task),
             "priority": task.get("priority", "medium"),
             "deadline": self._determine_deadline(task),
-            "context": self._get_local_context(task)
+            "context": self._get_local_context(task),
         }
-        
+
         recipient_id = self._determine_appropriate_agent(required_capabilities)
-        
+
         self.tactical_adapter.assign_task(
             task_type="operational_command",
             parameters=operational_command,
             recipient_id=recipient_id,
             priority=self._map_priority_to_enum(operational_command["priority"]),
             requires_ack=True,
-            metadata={"objective_id": operational_command["objective_id"]}
+            metadata={"objective_id": operational_command["objective_id"]},
         )
-        
-        self.logger.info(f"Commande {operational_task_id} assignée à l'agent {recipient_id}.")
-        
+
+        self.logger.info(
+            f"Commande {operational_task_id} assignée à l'agent {recipient_id}."
+        )
+
         return operational_command
-    
-    def process_operational_result(self, original_task: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+
+    def process_operational_result(
+        self, original_task: Dict[str, Any], result: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Traite un résultat brut d'un agent et le consolide pour la couche tactique.
 
@@ -137,50 +156,60 @@ class TacticalOperationalInterface:
             Le résultat consolidé et structuré pour la couche tactique.
         """
         tactical_task_id = original_task.get("tactical_task_id")
-        self.logger.info(f"Traitement du résultat opérationnel pour la tâche {tactical_task_id}")
-        
+        self.logger.info(
+            f"Traitement du résultat opérationnel pour la tâche {tactical_task_id}"
+        )
+
         tactical_report = {
             "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
             "outputs": self._translate_outputs(result.get("outputs", {})),
             "results_path": str(RESULTS_DIR / f"{tactical_task_id}_results.json"),
             "execution_metrics": self._translate_metrics(result.get("metrics", {})),
-            "issues": self._translate_issues(result.get("issues", []))
+            "issues": self._translate_issues(result.get("issues", [])),
         }
-        
+
         self.operational_adapter.send_result(
             task_id=tactical_task_id,
             result_type="task_completion_report",
             result=tactical_report,
             recipient_id="tactical_coordinator",
-            metadata={"original_task_id": tactical_task_id}
+            metadata={"original_task_id": tactical_task_id},
         )
-        
+
         self._save_result_to_file(tactical_report)
-        
+
         return tactical_report
 
     def _save_result_to_file(self, report: Dict[str, Any]):
         """Sauvegarde un rapport de résultat dans un fichier JSON."""
         results_path_str = report.get("results_path")
         if not results_path_str:
-            self.logger.warning("Aucun chemin de résultats spécifié, la sauvegarde est annulée.")
+            self.logger.warning(
+                "Aucun chemin de résultats spécifié, la sauvegarde est annulée."
+            )
             return
 
         try:
             results_path = Path(results_path_str)
             # S'assurer que le répertoire parent existe
             results_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(results_path, 'w', encoding='utf-8') as f:
+
+            with open(results_path, "w", encoding="utf-8") as f:
                 json.dump(report, f, indent=4, ensure_ascii=False)
-            
-            self.logger.info(f"Rapport de résultat sauvegardé avec succès dans : {results_path}")
+
+            self.logger.info(
+                f"Rapport de résultat sauvegardé avec succès dans : {results_path}"
+            )
 
         except (IOError, TypeError) as e:
-            self.logger.error(f"Échec de la sauvegarde du rapport de résultat dans {results_path_str}: {e}")
+            self.logger.error(
+                f"Échec de la sauvegarde du rapport de résultat dans {results_path_str}: {e}"
+            )
 
-    def subscribe_to_operational_updates(self, update_types: List[str], callback: Callable) -> str:
+    def subscribe_to_operational_updates(
+        self, update_types: List[str], callback: Callable
+    ) -> str:
         """
         Abonne la couche tactique aux mises à jour du niveau opérationnel.
 
@@ -195,11 +224,12 @@ class TacticalOperationalInterface:
             Un identifiant d'abonnement pour une éventuelle désinscription.
         """
         return self.tactical_adapter.subscribe_to_operational_updates(
-            update_types=update_types,
-            callback=callback
+            update_types=update_types, callback=callback
         )
-    
-    def request_operational_status(self, agent_id: str, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
+
+    def request_operational_status(
+        self, agent_id: str, timeout: float = 5.0
+    ) -> Optional[Dict[str, Any]]:
         """
         Demande le statut d'un agent opérationnel spécifique.
 
@@ -215,29 +245,35 @@ class TacticalOperationalInterface:
                 request_type="agent_status",
                 parameters={"agent_id": agent_id},
                 recipient_id=agent_id,
-                timeout=timeout
+                timeout=timeout,
             )
             if response:
                 self.logger.info(f"Statut de l'agent {agent_id} reçu")
                 return response
-            
-            self.logger.warning(f"Timeout pour la demande de statut de l'agent {agent_id}")
+
+            self.logger.warning(
+                f"Timeout pour la demande de statut de l'agent {agent_id}"
+            )
             return None
-                
+
         except Exception as e:
-            self.logger.error(f"Erreur lors de la demande de statut de l'agent {agent_id}: {e}")
+            self.logger.error(
+                f"Erreur lors de la demande de statut de l'agent {agent_id}: {e}"
+            )
             return None
 
     # Les méthodes privées restent inchangées car elles sont des détails d'implémentation.
     # ... (le reste des méthodes privées de _determine_techniques à _determine_appropriate_agent)
-    def _determine_techniques(self, required_capabilities: List[str]) -> List[Dict[str, Any]]:
+    def _determine_techniques(
+        self, required_capabilities: List[str]
+    ) -> List[Dict[str, Any]]:
         capability_technique_mapping = {
             "argument_identification": [{"name": "premise_conclusion_extraction"}],
             "fallacy_detection": [{"name": "fallacy_pattern_matching"}],
             "complex_fallacy_analysis": [{"name": "complex_fallacy_analysis"}],
             "contextual_fallacy_analysis": [{"name": "contextual_fallacy_analysis"}],
             "formal_logic": [{"name": "propositional_logic_formalization"}],
-            "text_extraction": [{"name": "text_extraction"}]
+            "text_extraction": [{"name": "text_extraction"}],
         }
         techniques = []
         for capability in required_capabilities:
@@ -245,8 +281,16 @@ class TacticalOperationalInterface:
                 techniques.extend(capability_technique_mapping[capability])
         return techniques
 
-    def _determine_relevant_extracts(self, task: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return [{"id": f"extract-{uuid.uuid4().hex[:8]}", "source": "raw_text", "content": "Extrait à analyser..."}]
+    def _determine_relevant_extracts(
+        self, task: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        return [
+            {
+                "id": f"extract-{uuid.uuid4().hex[:8]}",
+                "source": "raw_text",
+                "content": "Extrait à analyser...",
+            }
+        ]
 
     def _determine_execution_parameters(self, task: Dict[str, Any]) -> Dict[str, Any]:
         return {"timeout": 60, "max_iterations": 3, "precision_target": 0.8}
@@ -262,7 +306,7 @@ class TacticalOperationalInterface:
             "position_in_workflow": self._determine_position_in_workflow(task),
             "related_tasks": self._find_related_tasks(task),
             "dependencies": self._translate_dependencies(task),
-            "constraints": self._determine_constraints(task)
+            "constraints": self._determine_constraints(task),
         }
 
     def _determine_position_in_workflow(self, task: Dict[str, Any]) -> Dict[str, Any]:
@@ -276,7 +320,10 @@ class TacticalOperationalInterface:
             return related_tasks
         for status, tasks in self.tactical_state.tasks.items():
             for other_task in tasks:
-                if other_task.get("id") != task_id and other_task.get("objective_id") == objective_id:
+                if (
+                    other_task.get("id") != task_id
+                    and other_task.get("objective_id") == objective_id
+                ):
                     related_tasks.append(other_task.get("id"))
         return related_tasks
 
@@ -293,7 +340,7 @@ class TacticalOperationalInterface:
     def _translate_metrics(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "processing_time": metrics.get("execution_time", 0.0),
-            "confidence_score": metrics.get("confidence", 0.0)
+            "confidence_score": metrics.get("confidence", 0.0),
         }
 
     def _translate_issues(self, issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -301,15 +348,23 @@ class TacticalOperationalInterface:
         for issue in issues:
             issue_type = issue.get("type")
             if issue_type == "execution_error":
-                tactical_issues.append({"type": "task_failure", "description": issue.get("description")})
+                tactical_issues.append(
+                    {"type": "task_failure", "description": issue.get("description")}
+                )
             elif issue_type == "timeout":
-                tactical_issues.append({"type": "task_timeout", "description": "Timeout"})
+                tactical_issues.append(
+                    {"type": "task_timeout", "description": "Timeout"}
+                )
             else:
                 tactical_issues.append(issue)
         return tactical_issues
 
     def _map_priority_to_enum(self, priority: str) -> MessagePriority:
-        return {"high": MessagePriority.HIGH, "medium": MessagePriority.NORMAL, "low": MessagePriority.LOW}.get(priority.lower(), MessagePriority.NORMAL)
+        return {
+            "high": MessagePriority.HIGH,
+            "medium": MessagePriority.NORMAL,
+            "low": MessagePriority.LOW,
+        }.get(priority.lower(), MessagePriority.NORMAL)
 
     def _determine_appropriate_agent(self, required_capabilities: List[str]) -> str:
         capability_agent_mapping = {
@@ -318,15 +373,15 @@ class TacticalOperationalInterface:
             "formal_logic": "logic_analyzer",
             "text_extraction": "extract_processor",
             "complex_fallacy_analysis": "rhetorical_analyzer",
-            "contextual_fallacy_analysis": "rhetorical_analyzer"
+            "contextual_fallacy_analysis": "rhetorical_analyzer",
         }
         agent_counts = {}
         for capability in required_capabilities:
             agent = capability_agent_mapping.get(capability)
             if agent:
                 agent_counts[agent] = agent_counts.get(agent, 0) + 1
-        
+
         if agent_counts:
             return max(agent_counts, key=agent_counts.get)
-        
+
         return "default_operational_agent"

@@ -1,10 +1,18 @@
 from typing import Callable, List, Dict, Any
 
+
 class AnalysisLayer:
     """
     Base class for all analysis layers (jailbreak, bias, fallacy, output leak, etc.)
     """
-    def __init__(self, name: str, system_prompt: str, llm_fn: Callable[[str], str], threshold: float = 0.5):
+
+    def __init__(
+        self,
+        name: str,
+        system_prompt: str,
+        llm_fn: Callable[[str], str],
+        threshold: float = 0.5,
+    ):
         self.name = name
         self.system_prompt = system_prompt
         self.llm_fn = llm_fn
@@ -24,6 +32,6 @@ class AnalysisLayer:
             "layer": self.name,
             "score": score,
             "passed": score < self.threshold,
-            "explanation": f"Score={score} (threshold={self.threshold})"
+            "explanation": f"Score={score} (threshold={self.threshold})",
         }
         return result

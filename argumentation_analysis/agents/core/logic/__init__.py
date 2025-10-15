@@ -15,17 +15,22 @@ from .propositional_logic_agent import PropositionalLogicAgent
 from .fol_logic_agent import FOLLogicAgent
 from .modal_logic_agent import ModalLogicAgent
 from .logic_factory import LogicAgentFactory
-from .belief_set import BeliefSet, PropositionalBeliefSet, FirstOrderBeliefSet, ModalBeliefSet
+from .belief_set import (
+    BeliefSet,
+    PropositionalBeliefSet,
+    FirstOrderBeliefSet,
+    ModalBeliefSet,
+)
 from .query_executor import QueryExecutor
 
 __all__ = [
-    'PropositionalLogicAgent',
-    'FOLLogicAgent',
-    'ModalLogicAgent',
-    'LogicAgentFactory',
-    'BeliefSet',
-    'PropositionalBeliefSet',
-    'FirstOrderBeliefSet',
-    'ModalBeliefSet',
-    'QueryExecutor'
+    "PropositionalLogicAgent",
+    "FOLLogicAgent",
+    "ModalLogicAgent",
+    "LogicAgentFactory",
+    "BeliefSet",
+    "PropositionalBeliefSet",
+    "FirstOrderBeliefSet",
+    "ModalBeliefSet",
+    "QueryExecutor",
 ]

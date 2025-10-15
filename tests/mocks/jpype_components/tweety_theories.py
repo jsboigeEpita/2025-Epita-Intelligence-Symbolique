@@ -1,5 +1,6 @@
 import jpype
 from unittest.mock import MagicMock
+
 # Assurez-vous que les mocks de syntaxe sont disponibles si nécessaire pour les types d'arguments/attaques
 # from .tweety_syntax import MockArgument, MockAttack # Exemple si des mocks locaux sont utilisés
 
@@ -9,6 +10,7 @@ from unittest.mock import MagicMock
 # Selon le PLAN_REFACTORING_JPYPE_MOCK.md (section 3), la logique détaillée
 # de DungTheory (add, contains, isAttackedBy, etc.) doit être supprimée
 # au profit de l'utilisation directe des classes Java.
+
 
 def configure_tweety_theories_specific_classes(jclass_func):
     """
@@ -53,6 +55,7 @@ def configure_tweety_theories_specific_classes(jclass_func):
     # Les mocks spécifiques seront ajoutés ici si des tests échouent et nécessitent
     # un comportement mocké particulier.
     pass
+
 
 # Exemple de ce qui pourrait être une classe mock légère si nécessaire.
 # La logique de `add`, `contains`, `isAttackedBy`, `getNodes`, `getAttacks`

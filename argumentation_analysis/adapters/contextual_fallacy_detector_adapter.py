@@ -1,4 +1,6 @@
-from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
+from argumentation_analysis.core.interfaces.fallacy_detector import (
+    AbstractFallacyDetector,
+)
 from argumentation_analysis.agents.tools.analysis.new import ContextualFallacyDetector
 
 

@@ -35,12 +35,16 @@ from typing import Optional, Dict, Any
 
 # Imports des modules du projet
 from argumentation_analysis.core.utils.logging_utils import setup_logging
-from argumentation_analysis.service_setup.analysis_services import initialize_analysis_services
+from argumentation_analysis.service_setup.analysis_services import (
+    initialize_analysis_services,
+)
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
+
 # Les imports pour LIBS_DIR et l'UI seront conditionnels ou gérés différemment
 # from argumentation_analysis.paths import LIBS_DIR # Sera nécessaire pour config_for_services
 # from argumentation_analysis.ui.app import configure_analysis_task # Si use_ui_input est True
+
 
 async def run_text_analysis_pipeline(
     input_file_path: Optional[str] = None,
@@ -103,103 +107,157 @@ async def run_text_analysis_pipeline(
     """
     # Étape 1: Configuration du logging
     setup_logging(log_level_str=log_level)
-    logging.info(f"Démarrage du pipeline d'analyse argumentative avec log_level={log_level}")
+    logging.info(
+        f"Démarrage du pipeline d'analyse argumentative avec log_level={log_level}"
+    )
 
     actual_text_content: Optional[str] = None
 
     # Étape 2: Récupération du texte à analyser
     # La priorité est : fichier > contenu direct > UI
     if input_file_path:
-        logging.info(f"Tentative de chargement du texte depuis le fichier : {input_file_path}")
+        logging.info(
+            f"Tentative de chargement du texte depuis le fichier : {input_file_path}"
+        )
         try:
             file_path = Path(input_file_path)
             if not file_path.exists():
                 logging.error(f"Le fichier spécifié '{file_path}' n'existe pas.")
                 # Conforme à la docstring : :raises FileNotFoundError (géré en interne)
                 return None
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 actual_text_content = f.read()
-            logging.info(f"Texte chargé avec succès depuis {file_path} ({len(actual_text_content)} caractères).")
-        except IOError as e: # Plus spécifique que Exception pour les erreurs de lecture
-            logging.error(f"Erreur d'E/S lors de la lecture du fichier '{input_file_path}': {e}", exc_info=True)
+            logging.info(
+                f"Texte chargé avec succès depuis {file_path} ({len(actual_text_content)} caractères)."
+            )
+        except (
+            IOError
+        ) as e:  # Plus spécifique que Exception pour les erreurs de lecture
+            logging.error(
+                f"Erreur d'E/S lors de la lecture du fichier '{input_file_path}': {e}",
+                exc_info=True,
+            )
             # Conforme à la docstring : :raises IOError (géré en interne)
             return None
-        except Exception as e: # Catch-all pour autres erreurs de lecture
-            logging.error(f"Erreur inattendue lors de la lecture du fichier '{input_file_path}': {e}", exc_info=True)
+        except Exception as e:  # Catch-all pour autres erreurs de lecture
+            logging.error(
+                f"Erreur inattendue lors de la lecture du fichier '{input_file_path}': {e}",
+                exc_info=True,
+            )
             return None
     elif input_text_content:
         actual_text_content = input_text_content
-        logging.info(f"Utilisation du texte fourni directement ({len(actual_text_content)} caractères).")
+        logging.info(
+            f"Utilisation du texte fourni directement ({len(actual_text_content)} caractères)."
+        )
     elif use_ui_input:
         logging.info("Tentative de récupération du texte via l'interface utilisateur.")
         try:
             # Cet import est localisé car il peut dépendre de bibliothèques UI
             # qui ne sont pas toujours nécessaires ou installées.
             from argumentation_analysis.ui.app import configure_analysis_task
-            logging.info("Lancement de l'interface utilisateur pour la saisie du texte...")
-            actual_text_content = configure_analysis_task() # Supposée synchrone ici
+
+            logging.info(
+                "Lancement de l'interface utilisateur pour la saisie du texte..."
+            )
+            actual_text_content = configure_analysis_task()  # Supposée synchrone ici
             if not actual_text_content:
-                logging.warning("Aucun texte n'a été sélectionné ou fourni via l'interface utilisateur.")
-                return None # Pas de texte, pas d'analyse
-            logging.info(f"Texte récupéré via l'interface utilisateur ({len(actual_text_content)} caractères).")
+                logging.warning(
+                    "Aucun texte n'a été sélectionné ou fourni via l'interface utilisateur."
+                )
+                return None  # Pas de texte, pas d'analyse
+            logging.info(
+                f"Texte récupéré via l'interface utilisateur ({len(actual_text_content)} caractères)."
+            )
         except ImportError:
-            logging.error("L'option 'use_ui_input' est True, mais le module UI 'argumentation_analysis.ui.app' "
-                          "ou la fonction 'configure_analysis_task' n'a pas pu être importé. "
-                          "L'interface utilisateur n'est probablement pas disponible.", exc_info=True)
+            logging.error(
+                "L'option 'use_ui_input' est True, mais le module UI 'argumentation_analysis.ui.app' "
+                "ou la fonction 'configure_analysis_task' n'a pas pu être importé. "
+                "L'interface utilisateur n'est probablement pas disponible.",
+                exc_info=True,
+            )
             # Conforme à la docstring : :raises ImportError (géré en interne)
             return None
         except Exception as e:
-            logging.error(f"Erreur lors de l'utilisation de l'interface utilisateur pour obtenir le texte: {e}", exc_info=True)
+            logging.error(
+                f"Erreur lors de l'utilisation de l'interface utilisateur pour obtenir le texte: {e}",
+                exc_info=True,
+            )
             return None
     else:
         # Cas où aucune source de texte n'est spécifiée
-        logging.error("Aucune source de texte n'a été fournie (ni input_file_path, "
-                      "ni input_text_content, et use_ui_input est False).")
+        logging.error(
+            "Aucune source de texte n'a été fournie (ni input_file_path, "
+            "ni input_text_content, et use_ui_input est False)."
+        )
         return None
 
     # Vérification finale si le contenu textuel a bien été chargé
     if not actual_text_content:
-        logging.error("Le contenu textuel est vide ou n'a pas pu être chargé. Arrêt du pipeline.")
+        logging.error(
+            "Le contenu textuel est vide ou n'a pas pu être chargé. Arrêt du pipeline."
+        )
         return None
 
     # Étape 3: Initialisation des services d'analyse
     # Gère la configuration pour les services, en utilisant une valeur par défaut si nécessaire.
     effective_config_for_services = config_for_services
     if effective_config_for_services is None:
-        logging.info("Aucune configuration spécifique fournie pour les services, tentative d'utilisation de la configuration par défaut.")
+        logging.info(
+            "Aucune configuration spécifique fournie pour les services, tentative d'utilisation de la configuration par défaut."
+        )
         try:
             # Tentative d'importation de LIBS_DIR pour la configuration par défaut.
             # Cet import est localisé pour éviter une dépendance stricte si non nécessaire.
             from argumentation_analysis.paths import LIBS_DIR
+
             effective_config_for_services = {"LIBS_DIR_PATH": LIBS_DIR}
-            logging.info(f"Utilisation de LIBS_DIR ({LIBS_DIR}) pour la configuration des services.")
+            logging.info(
+                f"Utilisation de LIBS_DIR ({LIBS_DIR}) pour la configuration des services."
+            )
         except ImportError:
-            logging.warning("Impossible d'importer LIBS_DIR depuis 'argumentation_analysis.paths'. "
-                            "La configuration des services pourrait être incomplète si elle en dépend. "
-                            "Continuons avec une configuration vide.", exc_info=True)
+            logging.warning(
+                "Impossible d'importer LIBS_DIR depuis 'argumentation_analysis.paths'. "
+                "La configuration des services pourrait être incomplète si elle en dépend. "
+                "Continuons avec une configuration vide.",
+                exc_info=True,
+            )
             # Conforme à la docstring : :raises ImportError (géré en interne, tentative de continuer)
             effective_config_for_services = {}
-        except Exception as e: # Autres erreurs lors de la config par défaut
-            logging.error(f"Erreur inattendue lors de la création de la configuration par défaut pour les services: {e}", exc_info=True)
+        except Exception as e:  # Autres erreurs lors de la config par défaut
+            logging.error(
+                f"Erreur inattendue lors de la création de la configuration par défaut pour les services: {e}",
+                exc_info=True,
+            )
             effective_config_for_services = {}
-
 
     logging.info("Initialisation des services d'analyse...")
     try:
-        initialized_services = initialize_analysis_services(effective_config_for_services)
+        initialized_services = initialize_analysis_services(
+            effective_config_for_services
+        )
         # `initialized_services` contient typiquement `llm_service`, `jvm_ready_status`, etc.
-        if not initialized_services: # initialize_analysis_services pourrait retourner None ou un dict vide en cas d'échec partiel
-            logging.error("L'initialisation des services a échoué ou n'a retourné aucun service valide.")
+        if (
+            not initialized_services
+        ):  # initialize_analysis_services pourrait retourner None ou un dict vide en cas d'échec partiel
+            logging.error(
+                "L'initialisation des services a échoué ou n'a retourné aucun service valide."
+            )
             return None
         logging.info("Services d'analyse initialisés avec succès.")
         logging.debug(f"SERVICES INITIALISÉS: {initialized_services}")
     except Exception as e:
-        logging.error(f"Erreur critique lors de l'initialisation des services d'analyse: {e}", exc_info=True)
+        logging.error(
+            f"Erreur critique lors de l'initialisation des services d'analyse: {e}",
+            exc_info=True,
+        )
         # Conforme à la docstring : :raises Exception (géré en interne)
         return None
 
     # Étape 4: Exécution de l'analyse textuelle
-    logging.info(f"Préparation pour lancer l'analyse de type '{analysis_type}' sur un texte de {len(actual_text_content)} caractères...")
+    logging.info(
+        f"Préparation pour lancer l'analyse de type '{analysis_type}' sur un texte de {len(actual_text_content)} caractères..."
+    )
     analysis_results: Optional[Dict[str, Any]] = None
     try:
         # Appel à la fonction principale qui effectue l'analyse.
@@ -207,14 +265,16 @@ async def run_text_analysis_pipeline(
         analysis_results = await perform_text_analysis(
             text=actual_text_content,
             services=initialized_services,
-            analysis_type=analysis_type
+            analysis_type=analysis_type,
         )
-        
+
         logging.debug(f"RESULTAT BRUT DE perform_text_analysis: {analysis_results}")
 
         if analysis_results is None:
-            logging.warning("L'analyse textuelle (perform_text_analysis) n'a retourné aucun résultat (None). "
-                            "Cela peut être normal pour certains types d'analyse ou indiquer un problème.")
+            logging.warning(
+                "L'analyse textuelle (perform_text_analysis) n'a retourné aucun résultat (None). "
+                "Cela peut être normal pour certains types d'analyse ou indiquer un problème."
+            )
         else:
             logging.info("L'analyse textuelle a été complétée avec succès.")
             # Étape 5 (Optionnel): Sauvegarde des résultats (logique commentée pour l'instant)
@@ -226,13 +286,21 @@ async def run_text_analysis_pipeline(
             #     except Exception as e:
             #         logging.error(f"Erreur lors de la sauvegarde des résultats dans '{output_path}': {e}", exc_info=True)
 
-    except ImportError as ie: # Spécifiquement pour les erreurs d'import dans perform_text_analysis
-        logging.error(f"Erreur d'importation lors de la tentative d'exécution de 'perform_text_analysis': {ie}. "
-                      "Vérifiez les dépendances de 'argumentation_analysis.analytics.text_analyzer'.", exc_info=True)
+    except (
+        ImportError
+    ) as ie:  # Spécifiquement pour les erreurs d'import dans perform_text_analysis
+        logging.error(
+            f"Erreur d'importation lors de la tentative d'exécution de 'perform_text_analysis': {ie}. "
+            "Vérifiez les dépendances de 'argumentation_analysis.analytics.text_analyzer'.",
+            exc_info=True,
+        )
         # Conforme à la docstring : :raises ImportError (géré en interne)
         return None
-    except Exception as e: # Erreurs générales durant perform_text_analysis
-        logging.error(f"Erreur inattendue lors de l'exécution de 'perform_text_analysis': {e}", exc_info=True)
+    except Exception as e:  # Erreurs générales durant perform_text_analysis
+        logging.error(
+            f"Erreur inattendue lors de l'exécution de 'perform_text_analysis': {e}",
+            exc_info=True,
+        )
         # Conforme à la docstring : :raises Exception (géré en interne)
         return None
 

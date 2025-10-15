@@ -134,12 +134,12 @@ Répondez au format JSON:
 def format_prompt(template: str, **kwargs) -> str:
     """
     Formate un template de prompt avec les valeurs fournies.
-    
+
     Args:
         template: Le template de prompt à formater
         **kwargs: Les valeurs à insérer dans le template
-        
+
     Returns:
         Le prompt formaté
     """
-    return template.format(**kwargs) 
+    return template.format(**kwargs)

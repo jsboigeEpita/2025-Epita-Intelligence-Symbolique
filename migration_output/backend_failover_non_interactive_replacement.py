@@ -11,12 +11,13 @@ from pathlib import Path
 # Ajout du chemin du projet
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
 def main():
     """Exécute le remplacement pour backend_failover_non_interactive"""
     replacement_cmd = "python -c \"from project_core.service_manager import *; sm = ServiceManager(); sm.start_service_with_failover('backend-flask')\""
     print(f"Exécution du remplacement pour backend_failover_non_interactive")
     print(f"Commande: {replacement_cmd}")
-    
+
     try:
         if replacement_cmd.startswith("python -m"):
             # Commande module Python
@@ -32,7 +33,7 @@ def main():
             # Commande shell générique
             result = subprocess.run(replacement_cmd, shell=True, check=True)
             return result.returncode
-    
+
     except subprocess.CalledProcessError as e:
         print(f"Erreur exécution: {e}")
         return e.returncode

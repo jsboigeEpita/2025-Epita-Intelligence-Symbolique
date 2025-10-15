@@ -1,19 +1,26 @@
 # agents/core/pm/pm_definitions.py
 import semantic_kernel as sk
 import logging
+
 # Importer les prompts depuis le fichier voisin
 from .prompts import prompt_define_tasks_v12, prompt_write_conclusion_v6
 
 logger = logging.getLogger("Orchestration.AgentPM.Defs")
-setup_logger = logging.getLogger("Orchestration.AgentPM.Setup") # Pour la fonction setup
+setup_logger = logging.getLogger(
+    "Orchestration.AgentPM.Setup"
+)  # Pour la fonction setup
+
 
 # --- Plugin Spécifique PM (Vide actuellement) ---
 class ProjectManagerPlugin:
     """Plugin pour fonctions natives spécifiques au Project Manager (si nécessaire)."""
+
     # Ajoutez ici des @kernel_function natives si besoin plus tard
     pass
 
+
 logger.info("Plugin PM (vide) défini.")
+
 
 # --- Fonction setup_pm_kernel ---
 def setup_pm_kernel(kernel: sk.Kernel, llm_service):
@@ -30,32 +37,49 @@ def setup_pm_kernel(kernel: sk.Kernel, llm_service):
     default_settings = None
     if llm_service:
         try:
-            default_settings = kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
+            default_settings = kernel.get_prompt_execution_settings_from_service_id(
+                llm_service.service_id
+            )
             logger.debug(f"Settings LLM récupérés pour {plugin_name}.")
         except Exception as e:
-            logger.warning(f"Impossible de récupérer les settings LLM pour {plugin_name}: {e}")
+            logger.warning(
+                f"Impossible de récupérer les settings LLM pour {plugin_name}: {e}"
+            )
 
     try:
         kernel.add_function(
             prompt=prompt_define_tasks_v12,
-            plugin_name=plugin_name, function_name="semantic_DefineTasksAndDelegate",
+            plugin_name=plugin_name,
+            function_name="semantic_DefineTasksAndDelegate",
             description="Définit la PROCHAINE tâche unique, l'enregistre, désigne 1 agent (Nom Exact Requis).",
-            prompt_execution_settings=default_settings
+            prompt_execution_settings=default_settings,
         )
-        logger.debug(f"Fonction {plugin_name}.semantic_DefineTasksAndDelegate (V10) ajoutée/mise à jour.")
-    except ValueError as ve: logger.warning(f"Problème ajout/MàJ {plugin_name}.semantic_DefineTasksAndDelegate: {ve}")
+        logger.debug(
+            f"Fonction {plugin_name}.semantic_DefineTasksAndDelegate (V10) ajoutée/mise à jour."
+        )
+    except ValueError as ve:
+        logger.warning(
+            f"Problème ajout/MàJ {plugin_name}.semantic_DefineTasksAndDelegate: {ve}"
+        )
 
     try:
         kernel.add_function(
             prompt=prompt_write_conclusion_v6,
-            plugin_name=plugin_name, function_name="semantic_WriteAndSetConclusion",
+            plugin_name=plugin_name,
+            function_name="semantic_WriteAndSetConclusion",
             description="Rédige/enregistre conclusion finale (avec pré-vérification état).",
-            prompt_execution_settings=default_settings
+            prompt_execution_settings=default_settings,
         )
-        logger.debug(f"Fonction {plugin_name}.semantic_WriteAndSetConclusion (V6) ajoutée/mise à jour.")
-    except ValueError as ve: logger.warning(f"Problème ajout/MàJ {plugin_name}.semantic_WriteAndSetConclusion: {ve}")
+        logger.debug(
+            f"Fonction {plugin_name}.semantic_WriteAndSetConclusion (V6) ajoutée/mise à jour."
+        )
+    except ValueError as ve:
+        logger.warning(
+            f"Problème ajout/MàJ {plugin_name}.semantic_WriteAndSetConclusion: {ve}"
+        )
 
     logger.info(f"Kernel {plugin_name} configuré (V10).")
+
 
 # --- Instructions Système ---
 # (Provenant de la cellule [ID: 35a8132b] du notebook 'Argument_Analysis_Agentic-0-init.ipynb')

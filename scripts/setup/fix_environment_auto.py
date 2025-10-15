@@ -23,36 +23,41 @@ from typing import Dict, List, Tuple, Optional
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("fix_environment")
 
+
 class EnvironmentFixer:
     """Classe pour résoudre automatiquement les problèmes d'environnement."""
-    
+
     def __init__(self):
         self.project_root = Path(__file__).parent.parent.parent
         self.diagnostic_report = None
-        
+
     def load_diagnostic_report(self) -> Optional[Dict]:
         """Charge le rapport de diagnostic s'il existe."""
         report_path = self.project_root / "diagnostic_report.json"
-        
+
         if report_path.exists():
             try:
-                with open(report_path, 'r', encoding='utf-8') as f:
+                with open(report_path, "r", encoding="utf-8") as f:
                     self.diagnostic_report = json.load(f)
                 logger.info("✅ Rapport de diagnostic chargé")
                 return self.diagnostic_report
             except Exception as e:
                 logger.warning(f"Erreur lors du chargement du rapport: {e}")
         else:
-            logger.info("ℹ️  Aucun rapport de diagnostic trouvé, exécution du diagnostic...")
-            
+            logger.info(
+                "ℹ️  Aucun rapport de diagnostic trouvé, exécution du diagnostic..."
+            )
+
         return None
-    
-    def run_command(self, cmd: List[str], cwd: Optional[Path] = None) -> Tuple[int, str, str]:
+
+    def run_command(
+        self, cmd: List[str], cwd: Optional[Path] = None
+    ) -> Tuple[int, str, str]:
         """Exécute une commande et retourne le résultat."""
         try:
             logger.info(f"Exécution: {' '.join(cmd)}")
@@ -61,104 +66,104 @@ class EnvironmentFixer:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                cwd=cwd or self.project_root
+                cwd=cwd or self.project_root,
             )
             stdout, stderr = process.communicate()
             return process.returncode, stdout, stderr
         except Exception as e:
             logger.error(f"Erreur lors de l'exécution de {cmd}: {e}")
             return -1, "", str(e)
-    
+
     def fix_package_installation(self) -> bool:
         """Installe le package en mode développement."""
         logger.info("🔧 Installation du package en mode développement...")
-        
+
         # Vérifier si setup.py existe
         setup_py = self.project_root / "setup.py"
         if not setup_py.exists():
             logger.error("❌ Fichier setup.py non trouvé")
             return False
-        
+
         # Installer en mode développement
-        returncode, stdout, stderr = self.run_command([
-            sys.executable, "-m", "pip", "install", "-e", "."
-        ])
-        
+        returncode, stdout, stderr = self.run_command(
+            [sys.executable, "-m", "pip", "install", "-e", "."]
+        )
+
         if returncode == 0:
             logger.info("✅ Package installé en mode développement")
             return True
         else:
             logger.error(f"❌ Erreur lors de l'installation: {stderr}")
             return False
-    
+
     def fix_essential_dependencies(self) -> bool:
         """Installe les dépendances essentielles manquantes."""
         logger.info("🔧 Installation des dépendances essentielles...")
-        
+
         # Dépendances essentielles de base
         essential_deps = [
             "numpy>=1.24.0",
-            "pandas>=2.0.0", 
+            "pandas>=2.0.0",
             "matplotlib>=3.5.0",
             "cryptography>=37.0.0",
             "cffi>=1.15.0",
-            "psutil>=5.9.0"
+            "psutil>=5.9.0",
         ]
-        
+
         # Installer les dépendances essentielles
-        returncode, stdout, stderr = self.run_command([
-            sys.executable, "-m", "pip", "install"
-        ] + essential_deps)
-        
+        returncode, stdout, stderr = self.run_command(
+            [sys.executable, "-m", "pip", "install"] + essential_deps
+        )
+
         if returncode == 0:
             logger.info("✅ Dépendances essentielles installées")
         else:
-            logger.warning(f"⚠️  Problème lors de l'installation des dépendances: {stderr}")
-        
+            logger.warning(
+                f"⚠️  Problème lors de l'installation des dépendances: {stderr}"
+            )
+
         return returncode == 0
-    
+
     def fix_test_dependencies(self) -> bool:
         """Installe les dépendances de test."""
         logger.info("🔧 Installation des dépendances de test...")
-        
-        test_deps = [
-            "pytest>=7.0.0",
-            "pytest-cov>=3.0.0",
-            "pytest-asyncio>=0.18.0"
-        ]
-        
-        returncode, stdout, stderr = self.run_command([
-            sys.executable, "-m", "pip", "install"
-        ] + test_deps)
-        
+
+        test_deps = ["pytest>=7.0.0", "pytest-cov>=3.0.0", "pytest-asyncio>=0.18.0"]
+
+        returncode, stdout, stderr = self.run_command(
+            [sys.executable, "-m", "pip", "install"] + test_deps
+        )
+
         if returncode == 0:
             logger.info("✅ Dépendances de test installées")
             return True
         else:
-            logger.warning(f"⚠️  Problème lors de l'installation des dépendances de test: {stderr}")
+            logger.warning(
+                f"⚠️  Problème lors de l'installation des dépendances de test: {stderr}"
+            )
             return False
-    
+
     def fix_jpype_configuration(self) -> bool:
         """Configure JPype ou le mock JPype."""
         logger.info("🔧 Configuration de JPype...")
-        
+
         # Vérifier la version de Python
         python_version = sys.version_info
-        
+
         if python_version >= (3, 12):
             logger.info("Python 3.12+ détecté, configuration du mock JPype...")
             return self.setup_jpype_mock()
         else:
             logger.info("Python < 3.12 détecté, tentative d'installation de JPype1...")
             return self.install_jpype1()
-    
+
     def install_jpype1(self) -> bool:
         """Tente d'installer JPype1."""
         try:
-            returncode, stdout, stderr = self.run_command([
-                sys.executable, "-m", "pip", "install", "jpype1>=1.4.0"
-            ])
-            
+            returncode, stdout, stderr = self.run_command(
+                [sys.executable, "-m", "pip", "install", "jpype1>=1.4.0"]
+            )
+
             if returncode == 0:
                 logger.info("✅ JPype1 installé avec succès")
                 return True
@@ -166,25 +171,25 @@ class EnvironmentFixer:
                 logger.warning(f"⚠️  Échec de l'installation de JPype1: {stderr}")
                 logger.info("Basculement vers le mock JPype...")
                 return self.setup_jpype_mock()
-                
+
         except Exception as e:
             logger.warning(f"⚠️  Erreur lors de l'installation de JPype1: {e}")
             logger.info("Basculement vers le mock JPype...")
             return self.setup_jpype_mock()
-    
+
     def setup_jpype_mock(self) -> bool:
         """Configure le mock JPype."""
         logger.info("🔧 Configuration du mock JPype...")
-        
+
         # Créer le répertoire des mocks s'il n'existe pas
         mock_dir = self.project_root / "tests" / "mocks"
         mock_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Créer le fichier __init__.py
         init_file = mock_dir / "__init__.py"
         if not init_file.exists():
             init_file.write_text("# Mock modules\n")
-        
+
         # Créer le mock JPype
         mock_content = '''"""
 Mock de JPype1 pour la compatibilité avec Python 3.12+.
@@ -259,13 +264,13 @@ sys.modules['jpype'] = sys.modules[__name__]
 
 print("[MOCK] Mock JPype1 activé pour la compatibilité Python 3.12+")
 '''
-        
+
         mock_file = mock_dir / "jpype_mock.py"
-        with open(mock_file, 'w', encoding='utf-8') as f:
+        with open(mock_file, "w", encoding="utf-8") as f:
             f.write(mock_content)
-        
+
         logger.info("✅ Mock JPype configuré")
-        
+
         # Créer un script d'activation du mock
         activation_script = '''"""
 Script d'activation du mock JPype.
@@ -277,13 +282,13 @@ from tests.mocks import jpype_mock
 
 print("Mock JPype activé")
 '''
-        
+
         activation_file = mock_dir / "activate_jpype_mock.py"
-        with open(activation_file, 'w', encoding='utf-8') as f:
+        with open(activation_file, "w", encoding="utf-8") as f:
             f.write(activation_script)
-        
+
         return True
-    
+
     def create_installation_script(self) -> Path:
         """Crée un script d'installation complet pour les étudiants."""
         script_content = '''#!/usr/bin/env python
@@ -369,25 +374,27 @@ if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
 '''
-        
+
         script_path = self.project_root / "install_environment.py"
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(script_content)
-        
+
         logger.info(f"✅ Script d'installation créé: {script_path}")
         return script_path
-    
+
     def run_validation(self) -> bool:
         """Exécute la validation finale."""
         logger.info("🔍 Validation finale de l'environnement...")
-        
-        validation_script = self.project_root / "scripts" / "setup" / "validate_environment.py"
-        
+
+        validation_script = (
+            self.project_root / "scripts" / "setup" / "validate_environment.py"
+        )
+
         if validation_script.exists():
-            returncode, stdout, stderr = self.run_command([
-                sys.executable, str(validation_script)
-            ])
-            
+            returncode, stdout, stderr = self.run_command(
+                [sys.executable, str(validation_script)]
+            )
+
             if returncode == 0:
                 logger.info("✅ Validation réussie!")
                 return True
@@ -398,36 +405,36 @@ if __name__ == "__main__":
         else:
             logger.warning("Script de validation non trouvé")
             return False
-    
+
     def fix_all_issues(self) -> bool:
         """Résout tous les problèmes détectés."""
         logger.info("🚀 Résolution automatique des problèmes...")
         logger.info("=" * 60)
-        
+
         success = True
-        
+
         # 1. Installer le package en mode développement
         if not self.fix_package_installation():
             success = False
-        
+
         # 2. Installer les dépendances essentielles
         if not self.fix_essential_dependencies():
             success = False
-        
+
         # 3. Installer les dépendances de test
         if not self.fix_test_dependencies():
             success = False
-        
+
         # 4. Configurer JPype
         if not self.fix_jpype_configuration():
             success = False
-        
+
         # 5. Créer le script d'installation pour les étudiants
         self.create_installation_script()
-        
+
         # 6. Validation finale
         validation_success = self.run_validation()
-        
+
         # Résumé
         logger.info("=" * 60)
         if success and validation_success:
@@ -437,27 +444,31 @@ if __name__ == "__main__":
             logger.info("⚠️  PARTIEL: La plupart des problèmes ont été résolus.")
             logger.info("Quelques problèmes mineurs peuvent subsister.")
         else:
-            logger.info("❌ ÉCHEC: Certains problèmes n'ont pas pu être résolus automatiquement.")
+            logger.info(
+                "❌ ÉCHEC: Certains problèmes n'ont pas pu être résolus automatiquement."
+            )
             logger.info("Consultez les logs ci-dessus pour plus de détails.")
-        
+
         logger.info("\\n📁 FICHIERS CRÉÉS:")
         logger.info("   - install_environment.py (installation automatique)")
         logger.info("   - tests/mocks/jpype_mock.py (mock JPype)")
         logger.info("   - scripts/setup/validate_environment.py (validation)")
-        
+
         return success and validation_success
+
 
 def main():
     """Fonction principale."""
     fixer = EnvironmentFixer()
-    
+
     # Charger le rapport de diagnostic si disponible
     fixer.load_diagnostic_report()
-    
+
     # Résoudre tous les problèmes
     success = fixer.fix_all_issues()
-    
+
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

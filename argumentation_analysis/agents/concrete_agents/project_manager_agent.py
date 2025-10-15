@@ -6,8 +6,11 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from argumentation_analysis.agents.plugins.project_management_plugin import ProjectManagementPlugin
+from argumentation_analysis.agents.plugins.project_management_plugin import (
+    ProjectManagementPlugin,
+)
 from argumentation_analysis.utils.path_operations import get_prompt_path
+
 
 class ProjectManagerAgent(BaseAgent):
     """
@@ -15,7 +18,13 @@ class ProjectManagerAgent(BaseAgent):
     d'assigner des tâches et de suivre l'état d'avancement.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Project_Manager", llm_service_id: str = None, plugins: list = None):
+    def __init__(
+        self,
+        kernel: Kernel,
+        agent_name: str = "Project_Manager",
+        llm_service_id: str = None,
+        plugins: list = None,
+    ):
         """
         Initialise une instance de ProjectManagerAgent.
 
@@ -39,7 +48,7 @@ class ProjectManagerAgent(BaseAgent):
             system_prompt=prompt,
             description="Un agent chef de projet pour décomposer et organiser le travail.",
             llm_service_id=llm_service_id,
-            plugins=plugins
+            plugins=plugins,
         )
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
@@ -49,9 +58,7 @@ class ProjectManagerAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Un dictionnaire détaillant les plugins utilisés.
         """
-        return {
-            "plugins": ["ProjectMgmtPlugin"]
-        }
+        return {"plugins": ["ProjectMgmtPlugin"]}
 
     async def get_response(self, topic: str) -> Any:
         """
@@ -75,12 +82,9 @@ class ProjectManagerAgent(BaseAgent):
         Returns:
             Any: Le plan généré par le plugin.
         """
-        arguments = KernelArguments(
-            input=topic,
-            tool_choice="required"
-        )
+        arguments = KernelArguments(input=topic, tool_choice="required")
         return await self._kernel.invoke_prompt(
             function_name="create_project_plan",
             plugin_name="ProjectMgmtPlugin",
-            arguments=arguments
+            arguments=arguments,
         )

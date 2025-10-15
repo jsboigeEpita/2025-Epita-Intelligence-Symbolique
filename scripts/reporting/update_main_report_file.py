@@ -1,4 +1,5 @@
 import argumentation_analysis.core.environment
+
 """
 Script pour mettre à jour le rapport final des tests avec les informations de couverture des tests mockés.
 """
@@ -9,7 +10,7 @@ from pathlib import Path
 import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(parent_dir)
 
 # Chemin du rapport final
@@ -92,32 +93,42 @@ L'approche des tests mockés autonomes s'est révélée efficace pour tester la 
 Cependant, cette approche ne remplace pas complètement les tests réels, qui restent nécessaires pour vérifier l'intégration avec les dépendances externes. Une combinaison des deux approches, avec des environnements de test appropriés, permettrait d'obtenir une couverture optimale tout en évitant les problèmes liés aux modules PyO3 et aux dépendances externes.
 """
 
+
 def update_rapport():
     """Met à jour le rapport final des tests en utilisant l'utilitaire centralisé."""
-    
-    section_header_to_update = "## Partie 3 : Tests mockés et couverture de code (21/05/2025)"
+
+    section_header_to_update = (
+        "## Partie 3 : Tests mockés et couverture de code (21/05/2025)"
+    )
     # RAPPORT_UPDATE contient déjà l'en-tête. Pour une utilisation propre avec
     # update_markdown_section, new_content ne devrait pas inclure l'en-tête.
-    
-    header_in_update = "## Partie 3 : Tests mockés et couverture de code (21/05/2025)\n" # Doit correspondre
-    
+
+    header_in_update = "## Partie 3 : Tests mockés et couverture de code (21/05/2025)\n"  # Doit correspondre
+
     # Extraire le contenu réel à insérer (sans l'en-tête)
-    content_for_section = RAPPORT_UPDATE.split(header_in_update, 1)[-1] if header_in_update in RAPPORT_UPDATE else RAPPORT_UPDATE
-    if content_for_section == RAPPORT_UPDATE and RAPPORT_UPDATE.strip().startswith(section_header_to_update.strip()):
+    content_for_section = (
+        RAPPORT_UPDATE.split(header_in_update, 1)[-1]
+        if header_in_update in RAPPORT_UPDATE
+        else RAPPORT_UPDATE
+    )
+    if content_for_section == RAPPORT_UPDATE and RAPPORT_UPDATE.strip().startswith(
+        section_header_to_update.strip()
+    ):
         # Cas où split n'a rien fait car RAPPORT_UPDATE ne contenait pas exactement header_in_update (ex: pas de \n final)
         # mais commence bien par l'en-tête.
         temp_header_check = section_header_to_update.strip()
         if RAPPORT_UPDATE.strip().startswith(temp_header_check):
-             content_for_section = RAPPORT_UPDATE.strip()[len(temp_header_check):].strip()
-
+            content_for_section = RAPPORT_UPDATE.strip()[
+                len(temp_header_check) :
+            ].strip()
 
     if update_markdown_section(
         file_path=RAPPORT_PATH,
-        section_header=section_header_to_update, # L'en-tête que l'on cherche/veut créer
-        new_content=content_for_section,         # Le contenu à mettre sous cet en-tête
-        ensure_header_level=2,                   # C'est un '##'
-        add_if_not_found=True,                   # Ajouter si la section n'existe pas
-        replace_entire_section=True              # Remplacer toute la section si trouvée
+        section_header=section_header_to_update,  # L'en-tête que l'on cherche/veut créer
+        new_content=content_for_section,  # Le contenu à mettre sous cet en-tête
+        ensure_header_level=2,  # C'est un '##'
+        add_if_not_found=True,  # Ajouter si la section n'existe pas
+        replace_entire_section=True,  # Remplacer toute la section si trouvée
     ):
         print(f"Rapport final mis à jour avec succès: {RAPPORT_PATH}")
         return True
@@ -125,8 +136,11 @@ def update_rapport():
         # update_markdown_section logue déjà les erreurs spécifiques si le fichier n'est pas trouvé
         # ou si la section n'est pas trouvée et add_if_not_found est False.
         # Si elle retourne False ici, c'est soit une erreur d'écriture, soit aucune modif n'a été faite.
-        print(f"Échec de la mise à jour du rapport final ou aucune modification nécessaire: {RAPPORT_PATH}")
+        print(
+            f"Échec de la mise à jour du rapport final ou aucune modification nécessaire: {RAPPORT_PATH}"
+        )
         return False
+
 
 if __name__ == "__main__":
     update_rapport()

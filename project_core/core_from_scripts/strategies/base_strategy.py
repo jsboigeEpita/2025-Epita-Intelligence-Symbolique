@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from argumentation_analysis.core.utils.shell_utils import run_shell_command
 from pathlib import Path
 
+
 class BaseStrategy(abc.ABC):
     """
     Classe de base abstraite pour toutes les stratégies de réparation.

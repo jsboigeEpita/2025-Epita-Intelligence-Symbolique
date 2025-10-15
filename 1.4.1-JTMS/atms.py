@@ -1,6 +1,7 @@
 from pyvis.network import Network
 from itertools import product
 
+
 class Node:
     def __init__(self, name, is_assumption=False):
         self.name = name
@@ -19,11 +20,13 @@ class Node:
     def __repr__(self):
         return self.name
 
+
 class Justification:
     def __init__(self, in_nodes, out_nodes, conclusion):
         self.in_nodes = in_nodes
         self.out_nodes = out_nodes
         self.conclusion = conclusion
+
 
 class ATMS:
     def __init__(self):
@@ -45,14 +48,17 @@ class ATMS:
 
         justification = Justification(in_nodes, out_nodes, conclusion)
         conclusion.justifications.append(justification)
-        
+
         in_env_lists = [node.label for node in justification.in_nodes]
         out_nodes = justification.out_nodes
 
         for combination in product(*in_env_lists):
             merged_env = frozenset().union(*combination)
 
-            if any(any(env.issubset(merged_env) for env in out_node.label) for out_node in out_nodes):
+            if any(
+                any(env.issubset(merged_env) for env in out_node.label)
+                for out_node in out_nodes
+            ):
                 continue
 
             if self.is_consistent(merged_env):
@@ -62,7 +68,9 @@ class ATMS:
 
     def invalidate_environment(self, env):
         for node in self.nodes.values():
-            node.label = {node_env for node_env in node.label if not env.issubset(node_env)}
+            node.label = {
+                node_env for node_env in node.label if not env.issubset(node_env)
+            }
 
     def get_environments(self, node_name):
         return self.nodes[node_name].label

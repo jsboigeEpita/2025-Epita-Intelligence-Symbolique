@@ -1,4 +1,5 @@
 from typing import List
+
 # argumentation_analysis/agents/core/logic/logic_factory.py
 """
 Factory pour créer les agents logiques appropriés.
@@ -17,24 +18,27 @@ from .modal_logic_agent import ModalLogicAgent
 # Configuration du logger
 logger = logging.getLogger("Orchestration.LogicAgentFactory")
 
+
 class LogicAgentFactory:
     """
     Factory pour créer les agents logiques appropriés.
-    
+
     Cette classe permet de créer des instances d'agents logiques
     en fonction du type de logique spécifié.
     """
-    
+
     # Mapping des types de logique vers les classes d'agents
     _agent_classes: Dict[str, Type[BaseLogicAgent]] = {
         "propositional": PropositionalLogicAgent,
         "first_order": FOLLogicAgent,
         "fol": FOLLogicAgent,
-        "modal": ModalLogicAgent
+        "modal": ModalLogicAgent,
     }
-    
+
     @classmethod
-    def create_agent(cls, logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> Optional[BaseLogicAgent]:
+    def create_agent(
+        cls, logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None
+    ) -> Optional[BaseLogicAgent]:
         """
         Crée une instance d'un agent logique basé sur le type de logique spécifié.
 
@@ -56,17 +60,17 @@ class LogicAgentFactory:
         """
         logger.info(f"Création d'un agent logique de type '{logic_type}'")
         logger.info(f"DEBUG: Logic type received: {logic_type}")
-        
+
         # Normaliser le type de logique
         logic_type = logic_type.lower().strip()
         logger.info(f"DEBUG: Normalized logic type: {logic_type}")
-        
+
         # Vérifier si le type de logique est supporté
         if logic_type not in cls._agent_classes:
             logger.error(f"Type de logique non supporté: {logic_type}")
             logger.info(f"Types supportés: {', '.join(cls._agent_classes.keys())}")
             return None
-        
+
         try:
             # Créer l'instance de l'agent
             agent_class = cls._agent_classes[logic_type]
@@ -74,25 +78,31 @@ class LogicAgentFactory:
             # Préparer les arguments pour le constructeur de l'agent
             agent_args = {
                 "kernel": kernel,
-                "agent_name": f"{logic_type.capitalize()}Agent"
+                "agent_name": f"{logic_type.capitalize()}Agent",
             }
-            if llm_service and hasattr(llm_service, 'service_id'):
+            if llm_service and hasattr(llm_service, "service_id"):
                 agent_args["service_id"] = llm_service.service_id
 
             # Créer l'agent avec les arguments
             agent = agent_class(**agent_args)
-            
+
             logger.info(f"Agent logique de type '{logic_type}' créé avec succès")
             return agent
-        
+
         except Exception as e:
-            logger.error(f"Erreur lors de la création de l'agent logique de type '{logic_type}': {str(e)}", exc_info=True)
+            logger.error(
+                f"Erreur lors de la création de l'agent logique de type '{logic_type}': {str(e)}",
+                exc_info=True,
+            )
             import traceback
+
             logger.error(traceback.format_exc())
             return None
-    
+
     @classmethod
-    def register_agent_class(cls, logic_type: str, agent_class: Type[BaseLogicAgent]) -> None:
+    def register_agent_class(
+        cls, logic_type: str, agent_class: Type[BaseLogicAgent]
+    ) -> None:
         """
         Enregistre une nouvelle classe d'agent pour un type de logique spécifique.
 
@@ -105,9 +115,11 @@ class LogicAgentFactory:
         :return: None
         :rtype: None
         """
-        logger.info(f"Enregistrement de la classe d'agent '{agent_class.__name__}' pour le type de logique '{logic_type}'")
+        logger.info(
+            f"Enregistrement de la classe d'agent '{agent_class.__name__}' pour le type de logique '{logic_type}'"
+        )
         cls._agent_classes[logic_type.lower().strip()] = agent_class
-    
+
     @classmethod
     def get_supported_logic_types(cls) -> List[str]:
         """

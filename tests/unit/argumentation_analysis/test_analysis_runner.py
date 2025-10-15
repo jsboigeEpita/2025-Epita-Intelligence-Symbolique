@@ -29,22 +29,43 @@ class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
         self.runner = AnalysisRunnerV2(llm_service=self.mock_llm_service)
         self.test_text = "Ceci est un texte de test pour l'analyse."
 
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat', new_callable=MagicMock)
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory')
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState')
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.start_enhanced_pm_capture')
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.stop_enhanced_pm_capture')
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.save_enhanced_pm_report')
-    async def test_run_analysis_v2_flow(self, mock_save_report, mock_stop_capture, mock_start_capture, mock_state, mock_factory, mock_chat_class):
+    @patch(
+        "argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat",
+        new_callable=MagicMock,
+    )
+    @patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory")
+    @patch(
+        "argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState"
+    )
+    @patch(
+        "argumentation_analysis.orchestration.analysis_runner_v2.start_enhanced_pm_capture"
+    )
+    @patch(
+        "argumentation_analysis.orchestration.analysis_runner_v2.stop_enhanced_pm_capture"
+    )
+    @patch(
+        "argumentation_analysis.orchestration.analysis_runner_v2.save_enhanced_pm_report"
+    )
+    async def test_run_analysis_v2_flow(
+        self,
+        mock_save_report,
+        mock_stop_capture,
+        mock_start_capture,
+        mock_state,
+        mock_factory,
+        mock_chat_class,
+    ):
         """
         Teste le flux principal de `run_analysis` dans `AnalysisRunnerV2`.
         """
         # --- Arrange ---
         mock_state_instance = mock_state.return_value
-        mock_state_instance.to_json.return_value = '{}'  # Retourne un JSON valide
+        mock_state_instance.to_json.return_value = "{}"  # Retourne un JSON valide
 
         mock_chat_instance = mock_chat_class.return_value
-        mock_chat_instance.invoke = AsyncMock(return_value=self.mock_async_iterator([])) # invoke est une méthode async
+        mock_chat_instance.invoke = AsyncMock(
+            return_value=self.mock_async_iterator([])
+        )  # invoke est une méthode async
 
         # --- Act ---
         result = await self.runner.run_analysis(self.test_text)
@@ -59,14 +80,17 @@ class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
         mock_stop_capture.assert_called_once()
         mock_save_report.assert_called_once()
 
-        self.assertEqual(result['status'], 'success')
+        self.assertEqual(result["status"], "success")
 
     def mock_async_iterator(self, items):
         """Crée un itérateur asynchrone à partir d'une liste d'éléments."""
+
         async def _iterator():
             for item in items:
                 yield item
+
         return _iterator()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

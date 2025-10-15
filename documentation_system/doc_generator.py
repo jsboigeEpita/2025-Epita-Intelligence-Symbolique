@@ -23,188 +23,198 @@ import markdown
 
 class DocumentationGenerator:
     """Générateur automatique de documentation pour le projet IA symbolique"""
-    
+
     def __init__(self, analysis_file: str = "project_analysis.json"):
         self.analysis_file = analysis_file
         self.analysis_data = None
         self.output_dir = Path("generated_docs")
         self.templates_dir = Path("doc_templates")
-        
+
         # Créer les répertoires de sortie
         self.output_dir.mkdir(exist_ok=True)
         (self.output_dir / "guides").mkdir(exist_ok=True)
         (self.output_dir / "reference").mkdir(exist_ok=True)
         (self.output_dir / "tutorials").mkdir(exist_ok=True)
-        
+
         self._load_analysis()
         self._setup_templates()
-    
+
     def _load_analysis(self):
         """Charge les données d'analyse"""
         try:
-            with open(self.analysis_file, 'r', encoding='utf-8') as f:
+            with open(self.analysis_file, "r", encoding="utf-8") as f:
                 self.analysis_data = json.load(f)
             print(f" Analyse chargée depuis {self.analysis_file}")
         except Exception as e:
             print(f" Erreur lors du chargement de l'analyse: {e}")
             raise
-    
+
     def _setup_templates(self):
         """Configure le système de templates"""
         # Templates embarqués pour éviter les dépendances externes
         self.templates = {
-            'index': self._get_index_template(),
-            'module_reference': self._get_module_reference_template(),
-            'agent_guide': self._get_agent_guide_template(),
-            'tutorial': self._get_tutorial_template(),
-            'architecture_overview': self._get_architecture_overview_template()
+            "index": self._get_index_template(),
+            "module_reference": self._get_module_reference_template(),
+            "agent_guide": self._get_agent_guide_template(),
+            "tutorial": self._get_tutorial_template(),
+            "architecture_overview": self._get_architecture_overview_template(),
         }
-    
+
     def generate_complete_documentation(self):
         """Génère la documentation complète"""
         print(" Génération de la documentation complète...")
-        
+
         # 1. Page d'index principale
         self._generate_index_page()
-        
+
         # 2. Documentation technique par module
         self._generate_module_references()
-        
+
         # 3. Guides par catégorie d'agents
         self._generate_agent_guides()
-        
+
         # 4. Tutoriels d'onboarding
         self._generate_tutorials()
-        
+
         # 5. Vue d'ensemble de l'architecture
         self._generate_architecture_overview()
-        
+
         # 6. Fichier CSS pour le style
         self._generate_css()
-        
+
         print(f" Documentation générée dans {self.output_dir}")
         return self.output_dir
-    
+
     def _generate_index_page(self):
         """Génère la page d'index principale"""
         print(" Génération de la page d'index...")
-        
-        template = Template(self.templates['index'])
-        
+
+        template = Template(self.templates["index"])
+
         # Préparer les données pour la page d'index
         context = {
-            'project_name': "Système d'IA Symbolique - Analyse Argumentative",
-            'generation_date': datetime.now().strftime("%d/%m/%Y à %H:%M"),
-            'metrics': self.analysis_data['metrics'],
-            'categories': self._get_category_summary(),
-            'entry_points': self.analysis_data['entry_points'],
-            'quick_start_modules': self._get_quick_start_modules()
+            "project_name": "Système d'IA Symbolique - Analyse Argumentative",
+            "generation_date": datetime.now().strftime("%d/%m/%Y à %H:%M"),
+            "metrics": self.analysis_data["metrics"],
+            "categories": self._get_category_summary(),
+            "entry_points": self.analysis_data["entry_points"],
+            "quick_start_modules": self._get_quick_start_modules(),
         }
-        
+
         output = template.render(**context)
-        
-        with open(self.output_dir / "index.html", 'w', encoding='utf-8') as f:
+
+        with open(self.output_dir / "index.html", "w", encoding="utf-8") as f:
             f.write(output)
-    
+
     def _generate_module_references(self):
         """Génère la documentation de référence pour chaque module"""
         print(" Génération des références de modules...")
-        
-        template = Template(self.templates['module_reference'])
-        
-        for module_path, module_data in self.analysis_data['modules'].items():
+
+        template = Template(self.templates["module_reference"])
+
+        for module_path, module_data in self.analysis_data["modules"].items():
             context = {
-                'module': module_data,
-                'module_path': module_path,
-                'dependencies': self._get_module_dependencies(module_path),
-                'dependents': self._get_module_dependents(module_path),
-                'examples': self._find_module_examples(module_data)
+                "module": module_data,
+                "module_path": module_path,
+                "dependencies": self._get_module_dependencies(module_path),
+                "dependents": self._get_module_dependents(module_path),
+                "examples": self._find_module_examples(module_data),
             }
-            
+
             output = template.render(**context)
-            
+
             # Nom de fichier sécurisé
-            safe_name = module_path.replace('/', '_').replace('.py', '') + '.html'
-            
-            with open(self.output_dir / "reference" / safe_name, 'w', encoding='utf-8') as f:
+            safe_name = module_path.replace("/", "_").replace(".py", "") + ".html"
+
+            with open(
+                self.output_dir / "reference" / safe_name, "w", encoding="utf-8"
+            ) as f:
                 f.write(output)
-    
+
     def _generate_agent_guides(self):
         """Génère des guides spécialisés par catégorie d'agents"""
         print(" Génération des guides d'agents...")
-        
-        template = Template(self.templates['agent_guide'])
-        
-        agent_categories = self.analysis_data['agent_categories']
-        
+
+        template = Template(self.templates["agent_guide"])
+
+        agent_categories = self.analysis_data["agent_categories"]
+
         for category, modules in agent_categories.items():
-            if category in ['extract', 'informal', 'logic', 'rhetorical']:
+            if category in ["extract", "informal", "logic", "rhetorical"]:
                 context = {
-                    'category': category,
-                    'category_title': self._get_category_title(category),
-                    'category_description': self._get_category_description(category),
-                    'modules': modules,
-                    'usage_examples': self._get_category_examples(category),
-                    'best_practices': self._get_category_best_practices(category)
+                    "category": category,
+                    "category_title": self._get_category_title(category),
+                    "category_description": self._get_category_description(category),
+                    "modules": modules,
+                    "usage_examples": self._get_category_examples(category),
+                    "best_practices": self._get_category_best_practices(category),
                 }
-                
+
                 output = template.render(**context)
-                
-                with open(self.output_dir / "guides" / f"{category}_guide.html", 'w', encoding='utf-8') as f:
+
+                with open(
+                    self.output_dir / "guides" / f"{category}_guide.html",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     f.write(output)
-    
+
     def _generate_tutorials(self):
         """Génère des tutoriels d'onboarding automatiques"""
         print(" Génération des tutoriels...")
-        
-        template = Template(self.templates['tutorial'])
-        
+
+        template = Template(self.templates["tutorial"])
+
         tutorials = [
             {
-                'name': 'getting_started',
-                'title': 'Démarrage Rapide',
-                'description': 'Comment commencer avec le système d\'IA symbolique',
-                'steps': self._generate_getting_started_steps()
+                "name": "getting_started",
+                "title": "Démarrage Rapide",
+                "description": "Comment commencer avec le système d'IA symbolique",
+                "steps": self._generate_getting_started_steps(),
             },
             {
-                'name': 'agent_development',
-                'title': 'Développement d\'Agents',
-                'description': 'Guide pour créer de nouveaux agents spécialisés',
-                'steps': self._generate_agent_development_steps()
+                "name": "agent_development",
+                "title": "Développement d'Agents",
+                "description": "Guide pour créer de nouveaux agents spécialisés",
+                "steps": self._generate_agent_development_steps(),
             },
             {
-                'name': 'orchestration_usage',
-                'title': 'Utilisation de l\'Orchestration',
-                'description': 'Comment utiliser le système d\'orchestration hiérarchique',
-                'steps': self._generate_orchestration_steps()
-            }
+                "name": "orchestration_usage",
+                "title": "Utilisation de l'Orchestration",
+                "description": "Comment utiliser le système d'orchestration hiérarchique",
+                "steps": self._generate_orchestration_steps(),
+            },
         ]
-        
+
         for tutorial_data in tutorials:
             context = tutorial_data
             output = template.render(**context)
-            
-            with open(self.output_dir / "tutorials" / f"{tutorial_data['name']}.html", 'w', encoding='utf-8') as f:
+
+            with open(
+                self.output_dir / "tutorials" / f"{tutorial_data['name']}.html",
+                "w",
+                encoding="utf-8",
+            ) as f:
                 f.write(output)
-    
+
     def _generate_architecture_overview(self):
         """Génère une vue d'ensemble de l'architecture"""
         print(" Génération de la vue d'architecture...")
-        
-        template = Template(self.templates['architecture_overview'])
-        
+
+        template = Template(self.templates["architecture_overview"])
+
         context = {
-            'architecture_tree': self.analysis_data['architecture_tree'],
-            'dependency_graph': self._build_visual_dependency_graph(),
-            'component_overview': self._get_component_overview(),
-            'data_flow': self._describe_data_flow()
+            "architecture_tree": self.analysis_data["architecture_tree"],
+            "dependency_graph": self._build_visual_dependency_graph(),
+            "component_overview": self._get_component_overview(),
+            "data_flow": self._describe_data_flow(),
         }
-        
+
         output = template.render(**context)
-        
-        with open(self.output_dir / "architecture.html", 'w', encoding='utf-8') as f:
+
+        with open(self.output_dir / "architecture.html", "w", encoding="utf-8") as f:
             f.write(output)
-    
+
     def _generate_css(self):
         """Génère le fichier CSS pour le style"""
         css_content = """
@@ -314,185 +324,203 @@ class DocumentationGenerator:
             margin: 1rem 0;
         }
         """
-        
-        with open(self.output_dir / "style.css", 'w', encoding='utf-8') as f:
+
+        with open(self.output_dir / "style.css", "w", encoding="utf-8") as f:
             f.write(css_content)
-    
+
     # Méthodes utilitaires pour préparer les données
-    
+
     def _get_category_summary(self) -> Dict[str, int]:
         """Résumé par catégorie"""
         categories = {}
-        for category, modules in self.analysis_data['agent_categories'].items():
+        for category, modules in self.analysis_data["agent_categories"].items():
             categories[category] = len(modules)
         return categories
-    
+
     def _get_quick_start_modules(self) -> List[Dict]:
         """Modules recommandés pour démarrer"""
-        entry_points = self.analysis_data['entry_points']
-        return sorted(entry_points, key=lambda x: x['name'])[:5]
-    
+        entry_points = self.analysis_data["entry_points"]
+        return sorted(entry_points, key=lambda x: x["name"])[:5]
+
     def _get_module_dependencies(self, module_path: str) -> List[str]:
         """Dépendances d'un module"""
-        return self.analysis_data['dependency_graph'].get(module_path, [])
-    
+        return self.analysis_data["dependency_graph"].get(module_path, [])
+
     def _get_module_dependents(self, module_path: str) -> List[str]:
         """Modules qui dépendent de ce module"""
         dependents = []
-        for path, deps in self.analysis_data['dependency_graph'].items():
+        for path, deps in self.analysis_data["dependency_graph"].items():
             if module_path in deps:
                 dependents.append(path)
         return dependents
-    
+
     def _find_module_examples(self, module_data: Dict) -> List[str]:
         """Trouve des exemples d'utilisation pour un module"""
         examples = []
-        
+
         # Logique simple pour proposer des exemples
-        if module_data['category'] == 'extract':
+        if module_data["category"] == "extract":
             examples.append("Extraction de segments argumentatifs depuis un texte")
-        elif module_data['category'] == 'informal':
+        elif module_data["category"] == "informal":
             examples.append("Détection de sophismes dans un discours")
-        elif module_data['category'] == 'logic':
+        elif module_data["category"] == "logic":
             examples.append("Raisonnement logique avec TweetyProject")
-        
+
         return examples
-    
+
     def _get_category_title(self, category: str) -> str:
         """Titre formaté pour une catégorie"""
         titles = {
-            'extract': 'Agents d\'Extraction',
-            'informal': 'Agents d\'Analyse Informelle',
-            'logic': 'Agents de Logique Formelle',
-            'rhetorical': 'Outils d\'Analyse Rhétorique'
+            "extract": "Agents d'Extraction",
+            "informal": "Agents d'Analyse Informelle",
+            "logic": "Agents de Logique Formelle",
+            "rhetorical": "Outils d'Analyse Rhétorique",
         }
         return titles.get(category, category.title())
-    
+
     def _get_category_description(self, category: str) -> str:
         """Description d'une catégorie"""
         descriptions = {
-            'extract': 'Ces agents sont spécialisés dans l\'extraction automatique de segments argumentatifs depuis des textes.',
-            'informal': 'Ces agents analysent les arguments de manière informelle, détectant les sophismes et biais cognitifs.',
-            'logic': 'Ces agents utilisent la logique formelle pour le raisonnement symbolique et la validation d\'arguments.',
-            'rhetorical': 'Ces outils fournissent des analyses avancées de la structure rhétorique et de la qualité argumentative.'
+            "extract": "Ces agents sont spécialisés dans l'extraction automatique de segments argumentatifs depuis des textes.",
+            "informal": "Ces agents analysent les arguments de manière informelle, détectant les sophismes et biais cognitifs.",
+            "logic": "Ces agents utilisent la logique formelle pour le raisonnement symbolique et la validation d'arguments.",
+            "rhetorical": "Ces outils fournissent des analyses avancées de la structure rhétorique et de la qualité argumentative.",
         }
-        return descriptions.get(category, f'Modules de la catégorie {category}')
-    
+        return descriptions.get(category, f"Modules de la catégorie {category}")
+
     def _get_category_examples(self, category: str) -> List[str]:
         """Exemples d'utilisation par catégorie"""
         examples = {
-            'extract': [
+            "extract": [
                 "text_extractor.extract_arguments(discourse_text)",
-                "segments = extract_agent.find_markers(political_speech)"
+                "segments = extract_agent.find_markers(political_speech)",
             ],
-            'informal': [
+            "informal": [
                 "fallacies = informal_agent.detect_fallacies(argument_text)",
-                "bias_score = informal_agent.evaluate_bias(statement)"
+                "bias_score = informal_agent.evaluate_bias(statement)",
             ],
-            'logic': [
+            "logic": [
                 "proof = logic_agent.prove_theorem(premises, conclusion)",
-                "consistent = logic_agent.check_consistency(belief_set)"
-            ]
+                "consistent = logic_agent.check_consistency(belief_set)",
+            ],
         }
         return examples.get(category, [])
-    
+
     def _get_category_best_practices(self, category: str) -> List[str]:
         """Bonnes pratiques par catégorie"""
         practices = {
-            'extract': [
+            "extract": [
                 "Valider les marqueurs d'extraction avant traitement",
-                "Utiliser des templates adaptés au type de discours"
+                "Utiliser des templates adaptés au type de discours",
             ],
-            'informal': [
+            "informal": [
                 "Combiner plusieurs heuristiques pour la détection",
-                "Valider les résultats avec des experts humains"
+                "Valider les résultats avec des experts humains",
             ],
-            'logic': [
+            "logic": [
                 "Vérifier la cohérence des bases de connaissances",
-                "Optimiser les requêtes pour de meilleures performances"
-            ]
+                "Optimiser les requêtes pour de meilleures performances",
+            ],
         }
         return practices.get(category, [])
-    
+
     def _generate_getting_started_steps(self) -> List[Dict]:
         """Étapes pour démarrer"""
         return [
             {
-                'title': 'Installation des dépendances',
-                'description': 'Installer les bibliothèques requises',
-                'code': 'pip install -r requirements.txt'
+                "title": "Installation des dépendances",
+                "description": "Installer les bibliothèques requises",
+                "code": "pip install -r requirements.txt",
             },
             {
-                'title': 'Initialisation du projet',
-                'description': 'Configurer l\'environnement de base',
-                'code': 'python setup_env.py'
+                "title": "Initialisation du projet",
+                "description": "Configurer l'environnement de base",
+                "code": "python setup_env.py",
             },
             {
-                'title': 'Premier test',
-                'description': 'Exécuter un exemple simple',
-                'code': 'python examples/simple_analysis.py'
-            }
+                "title": "Premier test",
+                "description": "Exécuter un exemple simple",
+                "code": "python examples/simple_analysis.py",
+            },
         ]
-    
+
     def _generate_agent_development_steps(self) -> List[Dict]:
         """Étapes pour développer un agent"""
         return [
             {
-                'title': 'Créer la structure de base',
-                'description': 'Utiliser le template d\'agent',
-                'code': 'cp -r agents/templates/student_template agents/my_agent'
+                "title": "Créer la structure de base",
+                "description": "Utiliser le template d'agent",
+                "code": "cp -r agents/templates/student_template agents/my_agent",
             },
             {
-                'title': 'Implémenter la logique',
-                'description': 'Modifier agent.py avec votre logique',
-                'code': '# Voir le guide détaillé dans agent.py'
+                "title": "Implémenter la logique",
+                "description": "Modifier agent.py avec votre logique",
+                "code": "# Voir le guide détaillé dans agent.py",
             },
             {
-                'title': 'Tester l\'agent',
-                'description': 'Créer des tests unitaires',
-                'code': 'python -m pytest tests/test_my_agent.py'
-            }
+                "title": "Tester l'agent",
+                "description": "Créer des tests unitaires",
+                "code": "python -m pytest tests/test_my_agent.py",
+            },
         ]
-    
+
     def _generate_orchestration_steps(self) -> List[Dict]:
         """Étapes pour l'orchestration"""
         return [
             {
-                'title': 'Comprendre la hiérarchie',
-                'description': 'Trois niveaux : Strategic, Tactical, Operational',
-                'code': '# Voir documentation architecture'
+                "title": "Comprendre la hiérarchie",
+                "description": "Trois niveaux : Strategic, Tactical, Operational",
+                "code": "# Voir documentation architecture",
             },
             {
-                'title': 'Configurer une tâche',
-                'description': 'Définir le workflow d\'analyse',
-                'code': 'task = AnalysisTask(...); orchestrator.execute(task)'
-            }
+                "title": "Configurer une tâche",
+                "description": "Définir le workflow d'analyse",
+                "code": "task = AnalysisTask(...); orchestrator.execute(task)",
+            },
         ]
-    
+
     def _build_visual_dependency_graph(self) -> str:
         """Construit une représentation visuelle du graphe de dépendances"""
         # Version simplifiée pour l'exemple
         return "Graphique de dépendances (à implémenter avec D3.js ou similar)"
-    
+
     def _get_component_overview(self) -> Dict:
         """Vue d'ensemble des composants"""
         return {
-            'agents': len([m for m in self.analysis_data['modules'].values() if m['type'] == 'agent']),
-            'orchestration': len([m for m in self.analysis_data['modules'].values() if m['type'] == 'orchestration']),
-            'tools': len([m for m in self.analysis_data['modules'].values() if m['type'] == 'tool'])
+            "agents": len(
+                [
+                    m
+                    for m in self.analysis_data["modules"].values()
+                    if m["type"] == "agent"
+                ]
+            ),
+            "orchestration": len(
+                [
+                    m
+                    for m in self.analysis_data["modules"].values()
+                    if m["type"] == "orchestration"
+                ]
+            ),
+            "tools": len(
+                [
+                    m
+                    for m in self.analysis_data["modules"].values()
+                    if m["type"] == "tool"
+                ]
+            ),
         }
-    
+
     def _describe_data_flow(self) -> List[str]:
         """Décrit le flux de données général"""
         return [
             "1. Entrée de texte → Agents d'extraction",
             "2. Segments extraits → Agents d'analyse informelle",
             "3. Arguments structurés → Agents de logique formelle",
-            "4. Résultats consolidés → Outils de visualisation"
+            "4. Résultats consolidés → Outils de visualisation",
         ]
-    
+
     # Templates embarqués
-    
+
     def _get_index_template(self) -> str:
         return """
         <!DOCTYPE html>
@@ -571,7 +599,7 @@ class DocumentationGenerator:
         </body>
         </html>
         """
-    
+
     def _get_module_reference_template(self) -> str:
         return """
         <!DOCTYPE html>
@@ -653,7 +681,7 @@ class DocumentationGenerator:
         </body>
         </html>
         """
-    
+
     def _get_agent_guide_template(self) -> str:
         return """
         <!DOCTYPE html>
@@ -708,7 +736,7 @@ class DocumentationGenerator:
         </body>
         </html>
         """
-    
+
     def _get_tutorial_template(self) -> str:
         return """
         <!DOCTYPE html>
@@ -741,7 +769,7 @@ class DocumentationGenerator:
         </body>
         </html>
         """
-    
+
     def _get_architecture_overview_template(self) -> str:
         return """
         <!DOCTYPE html>
@@ -810,15 +838,15 @@ def main():
     """Fonction principale"""
     print("📚 Générateur de Documentation IA Symbolique")
     print("=" * 50)
-    
+
     try:
         generator = DocumentationGenerator()
         output_dir = generator.generate_complete_documentation()
-        
+
         print(f"\n Documentation générée avec succès !")
         print(f" Consultez: {output_dir}/index.html")
         print(f" Ouvrez dans votre navigateur pour voir le résultat")
-        
+
     except Exception as e:
         print(f"❌ Erreur: {e}")
 

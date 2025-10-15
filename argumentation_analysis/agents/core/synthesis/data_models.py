@@ -53,16 +53,16 @@ class LogicAnalysisResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet en un dictionnaire sérialisable."""
         return {
-            'propositional_result': self.propositional_result,
-            'first_order_result': self.first_order_result,
-            'modal_result': self.modal_result,
-            'logical_validity': self.logical_validity,
-            'consistency_check': self.consistency_check,
-            'satisfiability': self.satisfiability,
-            'formulas_extracted': self.formulas_extracted,
-            'queries_executed': self.queries_executed,
-            'analysis_timestamp': self.analysis_timestamp,
-            'processing_time_ms': self.processing_time_ms
+            "propositional_result": self.propositional_result,
+            "first_order_result": self.first_order_result,
+            "modal_result": self.modal_result,
+            "logical_validity": self.logical_validity,
+            "consistency_check": self.consistency_check,
+            "satisfiability": self.satisfiability,
+            "formulas_extracted": self.formulas_extracted,
+            "queries_executed": self.queries_executed,
+            "analysis_timestamp": self.analysis_timestamp,
+            "processing_time_ms": self.processing_time_ms,
         }
 
 
@@ -106,16 +106,16 @@ class InformalAnalysisResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'objet en un dictionnaire sérialisable."""
         return {
-            'fallacies_detected': self.fallacies_detected,
-            'arguments_structure': self.arguments_structure,
-            'rhetorical_devices': self.rhetorical_devices,
-            'argument_strength': self.argument_strength,
-            'persuasion_level': self.persuasion_level,
-            'credibility_score': self.credibility_score,
-            'text_segments_analyzed': self.text_segments_analyzed,
-            'context_factors': self.context_factors,
-            'analysis_timestamp': self.analysis_timestamp,
-            'processing_time_ms': self.processing_time_ms
+            "fallacies_detected": self.fallacies_detected,
+            "arguments_structure": self.arguments_structure,
+            "rhetorical_devices": self.rhetorical_devices,
+            "argument_strength": self.argument_strength,
+            "persuasion_level": self.persuasion_level,
+            "credibility_score": self.credibility_score,
+            "text_segments_analyzed": self.text_segments_analyzed,
+            "context_factors": self.context_factors,
+            "analysis_timestamp": self.analysis_timestamp,
+            "processing_time_ms": self.processing_time_ms,
         }
 
 
@@ -169,22 +169,22 @@ class UnifiedReport:
     def to_dict(self) -> Dict[str, Any]:
         """Convertit le rapport complet en un dictionnaire sérialisable."""
         return {
-            'original_text': self.original_text,
-            'logic_analysis': self.logic_analysis.to_dict(),
-            'informal_analysis': self.informal_analysis.to_dict(),
-            'executive_summary': self.executive_summary,
-            'coherence_assessment': self.coherence_assessment,
-            'contradictions_identified': self.contradictions_identified,
-            'overall_validity': self.overall_validity,
-            'confidence_level': self.confidence_level,
-            'recommendations': self.recommendations,
-            'logic_informal_alignment': self.logic_informal_alignment,
-            'analysis_completeness': self.analysis_completeness,
-            'synthesis_timestamp': self.synthesis_timestamp,
-            'total_processing_time_ms': self.total_processing_time_ms,
-            'synthesis_version': self.synthesis_version
+            "original_text": self.original_text,
+            "logic_analysis": self.logic_analysis.to_dict(),
+            "informal_analysis": self.informal_analysis.to_dict(),
+            "executive_summary": self.executive_summary,
+            "coherence_assessment": self.coherence_assessment,
+            "contradictions_identified": self.contradictions_identified,
+            "overall_validity": self.overall_validity,
+            "confidence_level": self.confidence_level,
+            "recommendations": self.recommendations,
+            "logic_informal_alignment": self.logic_informal_alignment,
+            "analysis_completeness": self.analysis_completeness,
+            "synthesis_timestamp": self.synthesis_timestamp,
+            "total_processing_time_ms": self.total_processing_time_ms,
+            "synthesis_version": self.synthesis_version,
         }
-    
+
     def to_json(self, indent: int = 2) -> str:
         """
         Convertit le rapport complet en une chaîne de caractères JSON.
@@ -206,11 +206,11 @@ class UnifiedReport:
             sur l'analyse (nombre de sophismes, validité, etc.).
         """
         return {
-            'text_length': len(self.original_text),
-            'formulas_count': len(self.logic_analysis.formulas_extracted),
-            'fallacies_count': len(self.informal_analysis.fallacies_detected),
-            'contradictions_count': len(self.contradictions_identified),
-            'recommendations_count': len(self.recommendations),
-            'overall_validity': self.overall_validity,
-            'confidence_level': self.confidence_level
+            "text_length": len(self.original_text),
+            "formulas_count": len(self.logic_analysis.formulas_extracted),
+            "fallacies_count": len(self.informal_analysis.fallacies_detected),
+            "contradictions_count": len(self.contradictions_identified),
+            "recommendations_count": len(self.recommendations),
+            "overall_validity": self.overall_validity,
+            "confidence_level": self.confidence_level,
         }

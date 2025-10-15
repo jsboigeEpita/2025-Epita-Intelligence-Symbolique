@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from src.core.contracts import OrchestrationRequest, OrchestrationResponse
 
+
 class OrchestrationService:
     """
     Guichet de Service Unique. Centralise les requêtes et les dirige
@@ -28,26 +29,30 @@ class OrchestrationService:
         else:
             return OrchestrationResponse(
                 status="error",
-                error_message=f"Le mode d'orchestration '{request.mode}' n'est pas supporté."
+                error_message=f"Le mode d'orchestration '{request.mode}' n'est pas supporté.",
             )
 
-    def _handle_direct_plugin_call(self, request: OrchestrationRequest) -> OrchestrationResponse:
+    def _handle_direct_plugin_call(
+        self, request: OrchestrationRequest
+    ) -> OrchestrationResponse:
         """
         Gère l'appel direct à une capacité d'un plugin standard.
         """
         try:
-            plugin_name, function_name = request.target.split('.')
-            
+            plugin_name, function_name = request.target.split(".")
+
             if plugin_name not in self.plugin_registry:
                 raise ValueError(f"Plugin '{plugin_name}' non trouvé dans le registre.")
-            
+
             plugin_instance = self.plugin_registry[plugin_name]
-            
+
             if not hasattr(plugin_instance, function_name):
-                raise ValueError(f"La capacité '{function_name}' n'a pas été trouvée dans le plugin '{plugin_name}'.")
+                raise ValueError(
+                    f"La capacité '{function_name}' n'a pas été trouvée dans le plugin '{plugin_name}'."
+                )
 
             function_to_call = getattr(plugin_instance, function_name)
-            
+
             # Invocation de la fonction avec le payload
             result = function_to_call(**request.payload)
 

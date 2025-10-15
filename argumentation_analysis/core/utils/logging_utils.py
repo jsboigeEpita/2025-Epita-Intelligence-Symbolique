@@ -7,16 +7,17 @@ standards, et de contrôler la verbosité des bibliothèques tierces.
 import logging
 import sys
 
+
 def setup_logging(log_level_str: str = "INFO") -> None:
     # Correction pour forcer UTF-8 sur stdout/stderr pour la compatibilité des tests
-    if sys.stdout.encoding != 'utf-8':
+    if sys.stdout.encoding != "utf-8":
         try:
-            sys.stdout.reconfigure(encoding='utf-8')
-        except TypeError: # en cas d'environnement où reconfigure n'est pas dispo
+            sys.stdout.reconfigure(encoding="utf-8")
+        except TypeError:  # en cas d'environnement où reconfigure n'est pas dispo
             pass
-    if sys.stderr.encoding != 'utf-8':
+    if sys.stderr.encoding != "utf-8":
         try:
-            sys.stderr.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding="utf-8")
         except TypeError:
             pass
     """
@@ -43,7 +44,9 @@ def setup_logging(log_level_str: str = "INFO") -> None:
     if not isinstance(numeric_level, int):
         # Si le niveau de log fourni n'est pas valide (ex: "INFOS" au lieu de "INFO"),
         # un avertissement est émis et le niveau INFO est utilisé par défaut.
-        logging.warning(f"Niveau de log invalide: {log_level_str}. Utilisation du niveau INFO par défaut.")
+        logging.warning(
+            f"Niveau de log invalide: {log_level_str}. Utilisation du niveau INFO par défaut."
+        )
         numeric_level = logging.INFO
 
     # La suppression manuelle des handlers existants n'est plus nécessaire
@@ -52,7 +55,7 @@ def setup_logging(log_level_str: str = "INFO") -> None:
     # if root_logger.hasHandlers():
     #     for handler in root_logger.handlers[:]: # Itérer sur une copie de la liste des handlers
     #         root_logger.removeHandler(handler)
-            
+
     # Configuration de base du logging.
     # - `level`: Définit le seuil de criticité pour les messages qui seront traités.
     # - `format`: Spécifie le format des messages de log.
@@ -63,19 +66,25 @@ def setup_logging(log_level_str: str = "INFO") -> None:
     #   attachés au logger racine avant d'effectuer la configuration.
     logging.basicConfig(
         level=numeric_level,
-        format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%H:%M:%S',
-        handlers=[logging.StreamHandler(sys.stdout)], # Dirige les logs vers stdout
-        force=True # Assure que les handlers existants sont retirés et la config appliquée.
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+        handlers=[logging.StreamHandler(sys.stdout)],  # Dirige les logs vers stdout
+        force=True,  # Assure que les handlers existants sont retirés et la config appliquée.
     )
-    
+
     # Réduction de la verbosité de certaines bibliothèques tierces.
     # Ces bibliothèques peuvent générer un grand nombre de logs aux niveaux INFO ou DEBUG,
     # ce qui peut polluer la sortie. Leur niveau est donc fixé à WARNING.
-    libraries_to_quiet = ["httpx", "openai", "requests", "urllib3", "semantic_kernel.connectors.ai"]
+    libraries_to_quiet = [
+        "httpx",
+        "openai",
+        "requests",
+        "urllib3",
+        "semantic_kernel.connectors.ai",
+    ]
     for lib_name in libraries_to_quiet:
         logging.getLogger(lib_name).setLevel(logging.WARNING)
-    
+
     # Configuration des loggers spécifiques au projet.
     # Par défaut, les loggers enfants héritent du niveau de leur parent (le logger racine ici).
     # Si `numeric_level` est DEBUG, ces loggers seront aussi à DEBUG.

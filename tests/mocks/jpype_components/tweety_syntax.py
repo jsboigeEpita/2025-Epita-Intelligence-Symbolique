@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 # initialement prévue ici (equals, hashCode, parseFormula détaillé)
 # devrait être supprimée au profit de l'utilisation directe des classes Java.
 
+
 def configure_tweety_syntax_specific_classes(jclass_func):
     """
     Configure les comportements spécifiques pour les classes de syntaxe Tweety
@@ -37,6 +38,7 @@ def configure_tweety_syntax_specific_classes(jclass_func):
     # un comportement mocké particulier qui ne peut être obtenu via la vraie classe Java
     # ou si l'objectif est de tester l'interaction avec JPype sans dépendre de la logique Java.
     pass
+
 
 # Potentiellement, des classes mockées très légères si absolument nécessaire.
 # class MockArgument:

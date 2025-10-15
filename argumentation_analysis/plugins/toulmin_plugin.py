@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult
 
+
 class ToulminPlugin:
     """
     A Semantic Kernel plugin that provides functions to analyze arguments
@@ -20,9 +21,9 @@ class ToulminPlugin:
 
     @kernel_function(
         description="Analyzes an argumentative text and extracts its components according to the Toulmin model.",
-        name="analyze_argument"
+        name="analyze_argument",
     )
-    async def analyze_argument(self, text: str) -> 'ToulminAnalysisResult':
+    async def analyze_argument(self, text: str) -> "ToulminAnalysisResult":
         """
         Takes an argumentative text and returns its structured components
         based on the Toulmin model.
@@ -32,10 +33,12 @@ class ToulminPlugin:
 
         Returns:
             A ToulminAnalysisResult object containing the structured components of the argument.
-        
+
         Note:
             This is the skeleton of the function. The actual implementation will be done
             by a semantic function orchestrated by the Semantic Kernel, which will call
             a more detailed function based on the LLM's tool-calling capabilities.
         """
-        raise NotImplementedError("The core logic of Toulmin analysis is not yet implemented.")
+        raise NotImplementedError(
+            "The core logic of Toulmin analysis is not yet implemented."
+        )

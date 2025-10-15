@@ -29,7 +29,8 @@ FILES_TO_FIX = [
     # tests/unit/agents/test_fol_agent_sort_repair.py was not found.
 ]
 
-UTF8_BOM = b'\xef\xbb\xbf'
+UTF8_BOM = b"\xef\xbb\xbf"
+
 
 def fix_bom_in_file(file_path):
     """
@@ -41,21 +42,22 @@ def fix_bom_in_file(file_path):
         return False
 
     try:
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             content = f.read()
 
         if content.startswith(UTF8_BOM):
             print(f"Fixing BOM in: {file_path}")
-            content = content[len(UTF8_BOM):]
-            with open(file_path, 'wb') as f:
+            content = content[len(UTF8_BOM) :]
+            with open(file_path, "wb") as f:
                 f.write(content)
             return True
         else:
             return False
-            
+
     except Exception as e:
         print(f"Error processing file {file_path}: {e}", file=sys.stderr)
         return False
+
 
 def main():
     """
@@ -63,17 +65,18 @@ def main():
     """
     fixed_count = 0
     not_bom_count = 0
-    
+
     print("--- Starting BOM Fixer ---")
     for file_path in FILES_TO_FIX:
         if fix_bom_in_file(file_path):
             fixed_count += 1
         else:
             not_bom_count += 1
-    
+
     print("\n--- BOM Fixer Complete ---")
     print(f"Successfully fixed {fixed_count} files.")
     print(f"{not_bom_count} files did not have a BOM.")
+
 
 if __name__ == "__main__":
     main()

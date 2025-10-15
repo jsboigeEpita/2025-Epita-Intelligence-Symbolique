@@ -19,7 +19,10 @@ from argumentation_analysis.config.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
-async def perform_text_analysis(text: str, services: dict[str, Any], analysis_type: str = "default") -> Any:
+
+async def perform_text_analysis(
+    text: str, services: dict[str, Any], analysis_type: str = "default"
+) -> Any:
     """
     Effectue une analyse de texte en utilisant l'orchestrateur `AnalysisRunnerV2`.
 
@@ -33,37 +36,49 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
     :raises ValueError: Si le service LLM est manquant.
     :raises Exception: Propage les autres exceptions de l'orchestrateur.
     """
-    logger.info(f"Lancement de l'analyse de texte de type '{analysis_type}' sur un texte de {len(text)} caractères.")
-    
+    logger.info(
+        f"Lancement de l'analyse de texte de type '{analysis_type}' sur un texte de {len(text)} caractères."
+    )
+
     llm_service = services.get("llm_service")
     if not llm_service:
-        logger.critical("Le service LLM n'est pas disponible dans les services fournis.")
+        logger.critical(
+            "Le service LLM n'est pas disponible dans les services fournis."
+        )
         raise ValueError("Le service LLM est requis pour l'analyse.")
 
     try:
-        from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2
+        from argumentation_analysis.orchestration.analysis_runner_v2 import (
+            AnalysisRunnerV2,
+        )
     except ImportError as e:
         logger.critical(f"Impossible d'importer 'AnalysisRunnerV2': {e}", exc_info=True)
         raise
 
     try:
         runner = AnalysisRunnerV2()
-        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunnerV2...")
-        
+        logger.info(
+            f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunnerV2..."
+        )
+
         # Le runner V2 attend un service LLM, qui est maintenant géré en interne
         # ou passé à run_analysis. Pour la compatibilité, nous passons le service
         # depuis le dictionnaire `services` s'il existe.
         llm_service = services.get("llm_service")
-        
+
         analysis_result = await runner.run_analysis(
-            text_content=text,
-            llm_service=llm_service
+            text_content=text, llm_service=llm_service
         )
-        
-        logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via AnalysisRunnerV2.")
+
+        logger.info(
+            f"Analyse principale (type: '{analysis_type}') terminée avec succès via AnalysisRunnerV2."
+        )
         logger.debug(f"RÉSULTAT BRUT de AnalysisRunnerV2: {analysis_result}")
         return analysis_result
 
     except Exception as e:
-        logger.error(f"Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
+        logger.error(
+            f"Erreur lors de l'analyse du texte (type: {analysis_type}): {e}",
+            exc_info=True,
+        )
         raise

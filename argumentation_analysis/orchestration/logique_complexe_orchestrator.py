@@ -4,6 +4,7 @@ import logging
 import asyncio
 from typing import Optional, List, Dict, Any
 from semantic_kernel import Kernel
+
 # PURGE PHASE 3A: Utilisation des définitions minimales de cluedo_extended_orchestrator
 # pour Agent, SelectionStrategy, etc. car semantic_kernel.agents n'est pas disponible.
 # Note: AgentGroupChat et ChatCompletionAgent ne sont pas directement remplacés ici,
@@ -12,8 +13,11 @@ from semantic_kernel import Kernel
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent # N'existe pas dans SK 0.9.6b1
 
 # Import des définitions de base depuis l'orchestrateur principal
-from argumentation_analysis.orchestration.cluedo_components.strategies import CyclicSelectionStrategy
+from argumentation_analysis.orchestration.cluedo_components.strategies import (
+    CyclicSelectionStrategy,
+)
 from .base import Agent, SelectionStrategy, TerminationStrategy
+
 # Si AgentGroupChat ou ChatCompletionAgent sont réellement utilisés, il faudra les définir ici
 # ou adapter le code pour utiliser des mécanismes d'orchestration plus simples.
 # Les définitions locales de SequentialSelectionStrategy, ChatCompletionAgent et AgentGroupChat ont été supprimées.
@@ -76,15 +80,21 @@ from .base import Agent, SelectionStrategy, TerminationStrategy
 # `CyclicSelectionStrategy` est maintenant importée et pourrait être passée à `SKAgentGroupChat`
 # si son constructeur accepte un `selection_strategy`.
 
+
 # Définition minimale pour LogiqueComplexeOrchestrator
 class LogiqueComplexeOrchestrator:
     def __init__(self, kernel: Kernel = None, **kwargs):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.kernel = kernel
-        self._logger.info("LogiqueComplexeOrchestrator initialisé (définition minimale).")
+        self._logger.info(
+            "LogiqueComplexeOrchestrator initialisé (définition minimale)."
+        )
 
     async def run_einstein_puzzle(self, puzzle_data: Dict[str, Any]) -> Dict[str, Any]:
         self._logger.info("Exécution du puzzle Einstein (simulation minimale).")
         # Simulation d'une exécution
         await asyncio.sleep(0.01)
-        return {"solution": "L'Allemand possède le poisson (simulation)", "success": True}
+        return {
+            "solution": "L'Allemand possède le poisson (simulation)",
+            "success": True,
+        }

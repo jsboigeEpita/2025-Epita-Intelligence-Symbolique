@@ -29,7 +29,7 @@ try:
         MockDetector,
         ComponentAuthenticator,
         TaxonomyManager,
-        LLMServiceManager
+        LLMServiceManager,
     )
 except ImportError:
     # Mock classes pour les tests si les composants n'existent pas encore
@@ -38,10 +38,10 @@ except ImportError:
             self.detected_mocks = []
 
         def detect_mocks(self, component) -> bool:
-            return hasattr(component, '_is_mock') or 'Mock' in str(type(component))
+            return hasattr(component, "_is_mock") or "Mock" in str(type(component))
 
         def get_mock_level(self) -> str:
-            return os.getenv('MOCK_LEVEL', 'minimal')
+            return os.getenv("MOCK_LEVEL", "minimal")
 
     class ComponentAuthenticator:
         def __init__(self):
@@ -58,7 +58,10 @@ except ImportError:
             self.fallacy_count = 3  # Mock count
 
         def load_complete_taxonomy(self) -> Dict[str, Any]:
-            return {"fallacies": list(range(1408)), "categories": ["formal", "informal"]}
+            return {
+                "fallacies": list(range(1408)),
+                "categories": ["formal", "informal"],
+            }
 
         def get_fallacy_count(self) -> int:
             return self.fallacy_count
@@ -103,7 +106,7 @@ class TestMockDetector:
         """Test d'initialisation du détecteur de mocks."""
         detector = MockDetector()
 
-        assert hasattr(detector, 'detected_mocks')
+        assert hasattr(detector, "detected_mocks")
         assert isinstance(detector.detected_mocks, list)
 
     def test_detect_mock_component(self):
@@ -118,6 +121,7 @@ class TestMockDetector:
 
     def test_detect_real_component(self):
         """Test de détection d'un composant authentique."""
+
         # Créer un composant réel (pas un mock)
         class RealComponent:
             def __init__(self):
@@ -129,7 +133,7 @@ class TestMockDetector:
         # Si la méthode est bien implémentée, devrait retourner False
         # Sinon, test basique sur le type
         assert isinstance(real_component, RealComponent)
-        assert not hasattr(real_component, '_is_mock')
+        assert not hasattr(real_component, "_is_mock")
 
     def test_detect_unittest_mock(self):
         """Test de détection des mocks unittest."""
@@ -142,10 +146,10 @@ class TestMockDetector:
     def test_get_mock_level_from_environment(self):
         """Test de récupération du niveau de mock depuis l'environnement."""
         # Test avec différents niveaux
-        test_levels = ['none', 'minimal', 'full']
+        test_levels = ["none", "minimal", "full"]
 
         for level in test_levels:
-            with patch.dict(os.environ, {'MOCK_LEVEL': level}):
+            with patch.dict(os.environ, {"MOCK_LEVEL": level}):
                 mock_level = self.detector.get_mock_level()
                 assert mock_level == level
 
@@ -153,7 +157,7 @@ class TestMockDetector:
         """Test de niveau de mock par défaut."""
         with patch.dict(os.environ, {}, clear=True):
             mock_level = self.detector.get_mock_level()
-            assert mock_level == 'minimal'  # Valeur par défaut
+            assert mock_level == "minimal"  # Valeur par défaut
 
 
 class TestComponentAuthenticator:
@@ -167,7 +171,7 @@ class TestComponentAuthenticator:
         """Test d'initialisation de l'authentificateur."""
         authenticator = ComponentAuthenticator()
 
-        assert hasattr(authenticator, 'authentic_components')
+        assert hasattr(authenticator, "authentic_components")
         assert isinstance(authenticator.authentic_components, dict)
 
     def test_authenticate_llm_service(self):
@@ -187,6 +191,7 @@ class TestComponentAuthenticator:
 
     def test_validate_authenticity_real_component(self):
         """Test de validation d'un composant authentique."""
+
         class RealTweetyService:
             def __init__(self):
                 self.jar_path = "/real/path/tweety.jar"
@@ -199,8 +204,8 @@ class TestComponentAuthenticator:
             assert is_authentic is True
         except AttributeError:
             # Test fallback si méthode pas implémentée
-            assert hasattr(real_service, 'jar_path')
-            assert hasattr(real_service, 'use_real_jpype')
+            assert hasattr(real_service, "jar_path")
+            assert hasattr(real_service, "use_real_jpype")
 
     def test_validate_authenticity_mock_component(self):
         """Test de validation d'un composant mock."""
@@ -212,9 +217,9 @@ class TestComponentAuthenticator:
             assert is_authentic is False
         except AttributeError:
             # Test fallback
-            assert 'Mock' in str(type(mock_service))
+            assert "Mock" in str(type(mock_service))
 
-    @patch.dict(os.environ, {'USE_REAL_JPYPE': 'true'})
+    @patch.dict(os.environ, {"USE_REAL_JPYPE": "true"})
     def test_authenticate_with_environment_flags(self):
         """Test d'authentification avec flags d'environnement."""
         # Quand USE_REAL_JPYPE=true, les composants doivent être authentiques
@@ -223,7 +228,7 @@ class TestComponentAuthenticator:
         authentic_tweety = authenticator.authenticate_component("TweetyService")
 
         # Vérifier que l'environnement influence l'authentification
-        assert os.getenv('USE_REAL_JPYPE') == 'true'
+        assert os.getenv("USE_REAL_JPYPE") == "true"
         assert isinstance(authentic_tweety, str)
 
 
@@ -238,7 +243,7 @@ class TestTaxonomyManager:
         """Test d'initialisation du gestionnaire de taxonomie."""
         manager = TaxonomyManager()
 
-        assert hasattr(manager, 'fallacy_count')
+        assert hasattr(manager, "fallacy_count")
         assert isinstance(manager.fallacy_count, int)
 
     def test_load_complete_taxonomy(self):
@@ -246,11 +251,11 @@ class TestTaxonomyManager:
         taxonomy = self.taxonomy_manager.load_complete_taxonomy()
 
         assert isinstance(taxonomy, dict)
-        assert 'fallacies' in taxonomy
-        assert 'categories' in taxonomy
+        assert "fallacies" in taxonomy
+        assert "categories" in taxonomy
 
         # Vérifier que c'est la taxonomie complète (1408 sophismes)
-        fallacies = taxonomy.get('fallacies', [])
+        fallacies = taxonomy.get("fallacies", [])
         assert len(fallacies) > 1000  # Beaucoup plus que les 3 mocks
 
     def test_get_fallacy_count(self):
@@ -286,7 +291,7 @@ class TestTaxonomyManager:
         complete_taxonomy = self.taxonomy_manager.load_complete_taxonomy()
 
         # Vérifier la mise à niveau
-        assert len(complete_taxonomy['fallacies']) > 1000
+        assert len(complete_taxonomy["fallacies"]) > 1000
 
 
 class TestLLMServiceManager:
@@ -300,7 +305,7 @@ class TestLLMServiceManager:
         """Test d'initialisation du gestionnaire LLM."""
         manager = LLMServiceManager()
 
-        assert hasattr(manager, 'service_type')
+        assert hasattr(manager, "service_type")
 
     def test_create_real_llm_service(self):
         """Test de création d'un service LLM réel."""
@@ -324,13 +329,13 @@ class TestLLMServiceManager:
         is_authentic = self.llm_manager.is_authentic_llm(mock_service)
         assert is_authentic is False
 
-    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test_key'})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
     def test_create_real_llm_with_api_key(self):
         """Test de création de service LLM réel avec clé API."""
         manager = LLMServiceManager()
 
         # Vérifier que la clé API est disponible
-        assert os.getenv('OPENAI_API_KEY') == 'test_key'
+        assert os.getenv("OPENAI_API_KEY") == "test_key"
 
         real_service = manager.create_real_llm_service()
         assert "Real" in str(real_service)
@@ -347,7 +352,7 @@ class TestLLMServiceManager:
                 assert service is not None
             except Exception:
                 # Si échec, c'est attendu sans clé API
-                assert os.getenv('OPENAI_API_KEY') is None
+                assert os.getenv("OPENAI_API_KEY") is None
 
 
 class TestMockEliminationIntegration:
@@ -379,24 +384,24 @@ class TestMockEliminationIntegration:
             # Test de base si méthode pas implémentée
             assert isinstance(authentic_component, str)
 
-    @patch.dict(os.environ, {'MOCK_LEVEL': 'none'})
+    @patch.dict(os.environ, {"MOCK_LEVEL": "none"})
     def test_mock_level_none_forces_authentic_components(self):
         """Test que MOCK_LEVEL=none force l'usage de composants authentiques."""
         mock_level = self.detector.get_mock_level()
-        assert mock_level == 'none'
+        assert mock_level == "none"
 
         # Avec niveau 'none', tous les composants doivent être authentiques
         llm_service = self.llm_manager.create_real_llm_service()
         assert "Real" in str(llm_service)
 
         taxonomy = self.taxonomy_manager.load_complete_taxonomy()
-        assert len(taxonomy['fallacies']) > 1000
+        assert len(taxonomy["fallacies"]) > 1000
 
-    @patch.dict(os.environ, {'MOCK_LEVEL': 'full'})
+    @patch.dict(os.environ, {"MOCK_LEVEL": "full"})
     def test_mock_level_full_allows_mocks(self):
         """Test que MOCK_LEVEL=full permet l'usage de mocks."""
         mock_level = self.detector.get_mock_level()
-        assert mock_level == 'full'
+        assert mock_level == "full"
 
         # Avec niveau 'full', les mocks sont acceptés
         mock_component = MagicMock()
@@ -414,8 +419,8 @@ class TestMockEliminationIntegration:
         complete_taxonomy = self.taxonomy_manager.load_complete_taxonomy()
 
         # Vérification de la migration
-        assert len(complete_taxonomy['fallacies']) == 1408
-        assert len(complete_taxonomy['categories']) >= 2
+        assert len(complete_taxonomy["fallacies"]) == 1408
+        assert len(complete_taxonomy["categories"]) >= 2
 
     def test_component_authenticity_validation_comprehensive(self):
         """Test complet de validation d'authenticité des composants."""
@@ -423,12 +428,17 @@ class TestMockEliminationIntegration:
         components_to_test = [
             ("LLMService", "GPT"),
             ("TweetyService", "Tweety"),
-            ("TaxonomyService", "Taxonomy")
+            ("TaxonomyService", "Taxonomy"),
         ]
 
         for component_type, expected_keyword in components_to_test:
-            authentic_component = self.authenticator.authenticate_component(component_type)
-            assert expected_keyword in authentic_component or "Authentic" in authentic_component
+            authentic_component = self.authenticator.authenticate_component(
+                component_type
+            )
+            assert (
+                expected_keyword in authentic_component
+                or "Authentic" in authentic_component
+            )
 
 
 if __name__ == "__main__":

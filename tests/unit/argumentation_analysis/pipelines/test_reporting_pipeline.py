@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -8,20 +7,23 @@ from config.unified_config import UnifiedConfig
 # tests/unit/argumentation_analysis/pipelines/test_reporting_pipeline.py
 import pytest
 
-import pandas as actual_pandas_module # Renommé pour clarté
+import pandas as actual_pandas_module  # Renommé pour clarté
+
 # Capture des vrais types pandas avant tout mock potentiel par des fixtures ou autres imports
 REAL_PANDAS_DATAFRAME_TYPE = actual_pandas_module.DataFrame
 REAL_PANDAS_SERIES_TYPE = actual_pandas_module.Series
 from pathlib import Path
 import sys
 
-from argumentation_analysis.pipelines.reporting_pipeline import run_comprehensive_report_pipeline
+from argumentation_analysis.pipelines.reporting_pipeline import (
+    run_comprehensive_report_pipeline,
+)
 
 MODULE_PATH = "argumentation_analysis.pipelines.reporting_pipeline"
 PANDAS_DATAFRAME_PATH = f"{MODULE_PATH}.pd.DataFrame"
 MATPLOTLIB_PYPLOT_FIGURE_PATH = f"{MODULE_PATH}.plt.figure"
 MATPLOTLIB_PYPLOT_CLOSE_PATH = f"{MODULE_PATH}.plt.close"
-SEABORN_BARPLOT_PATH = f"{MODULE_PATH}.sns.barplot" 
+SEABORN_BARPLOT_PATH = f"{MODULE_PATH}.sns.barplot"
 
 # @pytest.fixture
 # def mock_load_results():
@@ -30,52 +32,87 @@ SEABORN_BARPLOT_PATH = f"{MODULE_PATH}.sns.barplot"
 #     #     yield mock
 #     yield Magicawait self._create_authentic_gpt4o_mini_instance()
 
+
 @pytest.fixture
 def mock_group_results():
     with patch(f"{MODULE_PATH}.group_results_by_corpus") as mock:
         yield mock
+
 
 @pytest.fixture
 def mock_calculate_scores():
     with patch(f"{MODULE_PATH}.calculate_average_scores") as mock:
         yield mock
 
+
 @pytest.fixture
 def mock_generate_md():
     with patch(f"{MODULE_PATH}.generate_markdown_report_for_corpus") as mock:
         yield mock
+
 
 @pytest.fixture
 def mock_save_html():
     with patch(f"{MODULE_PATH}.save_markdown_to_html") as mock:
         yield mock
 
+
 @pytest.fixture
 def default_config():
-    return {
-        "load_config": {"format": "json"},
-        "save_config": {}
-    }
+    return {"load_config": {"format": "json"}, "save_config": {}}
+
 
 @pytest.fixture
-def sample_analysis_data_list(): # Renommé pour refléter que c'est une liste
+def sample_analysis_data_list():  # Renommé pour refléter que c'est une liste
     return [
-        {"text_id": "a1", "corpus_id": "corpus_A", "score": 0.8, "argument_type": "pro"},
-        {"text_id": "a2", "corpus_id": "corpus_A", "score": 0.6, "argument_type": "con"},
-        {"text_id": "b1", "corpus_id": "corpus_B", "score": 0.9, "argument_type": "pro"}
+        {
+            "text_id": "a1",
+            "corpus_id": "corpus_A",
+            "score": 0.8,
+            "argument_type": "pro",
+        },
+        {
+            "text_id": "a2",
+            "corpus_id": "corpus_A",
+            "score": 0.6,
+            "argument_type": "con",
+        },
+        {
+            "text_id": "b1",
+            "corpus_id": "corpus_B",
+            "score": 0.9,
+            "argument_type": "pro",
+        },
     ]
 
+
 @pytest.fixture
-def grouped_sample_analysis_data(): # Renommé pour clarté
+def grouped_sample_analysis_data():  # Renommé pour clarté
     return {
         "corpus_A": [
-            {"text_id": "a1", "corpus_id": "corpus_A", "score": 0.8, "argument_type": "pro"},
-            {"text_id": "a2", "corpus_id": "corpus_A", "score": 0.6, "argument_type": "con"}
+            {
+                "text_id": "a1",
+                "corpus_id": "corpus_A",
+                "score": 0.8,
+                "argument_type": "pro",
+            },
+            {
+                "text_id": "a2",
+                "corpus_id": "corpus_A",
+                "score": 0.6,
+                "argument_type": "con",
+            },
         ],
         "corpus_B": [
-            {"text_id": "b1", "corpus_id": "corpus_B", "score": 0.9, "argument_type": "pro"}
-        ]
+            {
+                "text_id": "b1",
+                "corpus_id": "corpus_B",
+                "score": 0.9,
+                "argument_type": "pro",
+            }
+        ],
     }
+
 
 # Les tests suivants sont commentés car ils dépendent de l'ancienne structure du pipeline
 # et des mocks qui ne sont plus valides (mock_load_results, etc.).

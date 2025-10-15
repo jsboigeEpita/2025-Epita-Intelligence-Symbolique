@@ -12,10 +12,12 @@ et les dépendances Python.
 import os
 import logging
 import subprocess
-from pathlib import Path as _PathInternal # Modifié: import spécifique pour patching ciblé
-import pathlib # Gardé pour les annotations de type si nécessaire, ou peut être enlevé si _PathInternal suffit.
-import typing # Ajouté pour l'annotation de type
-import importlib.metadata # Ajouté pour la vérification des versions
+from pathlib import (
+    Path as _PathInternal,
+)  # Modifié: import spécifique pour patching ciblé
+import pathlib  # Gardé pour les annotations de type si nécessaire, ou peut être enlevé si _PathInternal suffit.
+import typing  # Ajouté pour l'annotation de type
+import importlib.metadata  # Ajouté pour la vérification des versions
 from typing import List, Tuple, Optional
 
 # Imports pour alternatives à pkg_resources
@@ -25,43 +27,51 @@ from packaging.requirements import Requirement
 # Logger défini après les imports
 logger = logging.getLogger(__name__)
 
+
 def _parse_requirement(req_string):
     """Parse une requirement string en utilisant packaging."""
     try:
         return Requirement(req_string)
     except Exception as e:
-        logger.error(f"Impossible de parser la chaîne de prérequis '{req_string}' avec la bibliothèque 'packaging'. Erreur : {e}")
+        logger.error(
+            f"Impossible de parser la chaîne de prérequis '{req_string}' avec la bibliothèque 'packaging'. Erreur : {e}"
+        )
         raise
+
 
 def _parse_version(version_string):
     """Parse une version string en utilisant packaging."""
     try:
         return parse_version(version_string)
     except Exception as e:
-        logger.error(f"Impossible de parser la chaîne de version '{version_string}' avec la bibliothèque 'packaging'. Erreur : {e}")
+        logger.error(
+            f"Impossible de parser la chaîne de version '{version_string}' avec la bibliothèque 'packaging'. Erreur : {e}"
+        )
         raise
+
 
 # Configuration du logging pour ce module
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+    )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-def _run_command(cmd: List[str], cwd: Optional[_PathInternal] = None) -> Tuple[int, str, str]:
+
+def _run_command(
+    cmd: List[str], cwd: Optional[_PathInternal] = None
+) -> Tuple[int, str, str]:
     """
     Exécute une commande et retourne le code de retour, stdout, et stderr.
     Fonction utilitaire interne.
     """
     try:
         process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            cwd=cwd
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=cwd
         )
         stdout, stderr = process.communicate(timeout=30)  # Ajout d'un timeout
         return process.returncode, stdout, stderr
@@ -74,6 +84,7 @@ def _run_command(cmd: List[str], cwd: Optional[_PathInternal] = None) -> Tuple[i
     except Exception as e:
         logger.error(f"Erreur lors de l'exécution de {cmd}: {e}")
         return -1, "", str(e)
+
 
 def check_java_environment() -> bool:
     """
@@ -102,20 +113,34 @@ def check_java_environment() -> bool:
         java_home_path = _PathInternal(java_home)
         if java_home_path.is_dir():
             # Vérifier si java.exe (ou java pour non-Windows) existe dans JAVA_HOME/bin
-            java_exe_in_home = java_home_path / "bin" / ("java.exe" if os.name == 'nt' else "java")
+            java_exe_in_home = (
+                java_home_path / "bin" / ("java.exe" if os.name == "nt" else "java")
+            )
             if java_exe_in_home.exists() and java_exe_in_home.is_file():
-                logger.info(f"    JAVA_HOME pointe vers un répertoire Java valide ({java_exe_in_home}).")
+                logger.info(
+                    f"    JAVA_HOME pointe vers un répertoire Java valide ({java_exe_in_home})."
+                )
                 java_home_valid = True
             else:
-                logger.warning(f"    JAVA_HOME ({java_home}) ne semble pas contenir une installation Java valide (exécutable non trouvé à {java_exe_in_home}).")
-                java_home_valid = False # Correction: S'assurer que java_home_valid est False ici
-                java_ok = False # java_ok peut aussi être False si JAVA_HOME est la seule source de Java
+                logger.warning(
+                    f"    JAVA_HOME ({java_home}) ne semble pas contenir une installation Java valide (exécutable non trouvé à {java_exe_in_home})."
+                )
+                java_home_valid = (
+                    False  # Correction: S'assurer que java_home_valid est False ici
+                )
+                java_ok = False  # java_ok peut aussi être False si JAVA_HOME est la seule source de Java
         else:
-            logger.warning(f"    JAVA_HOME ({java_home}) n'est pas un répertoire valide.")
-            java_home_valid = False # Correction: S'assurer que java_home_valid est False ici
+            logger.warning(
+                f"    JAVA_HOME ({java_home}) n'est pas un répertoire valide."
+            )
+            java_home_valid = (
+                False  # Correction: S'assurer que java_home_valid est False ici
+            )
             java_ok = False
     else:
-        logger.warning("    JAVA_HOME n'est pas défini. Cette variable est souvent nécessaire pour les outils basés sur Java.")
+        logger.warning(
+            "    JAVA_HOME n'est pas défini. Cette variable est souvent nécessaire pour les outils basés sur Java."
+        )
         # Ne pas mettre java_ok à False ici, car java peut être dans le PATH.
         # Cependant, pour de nombreux outils, JAVA_HOME est crucial.
 
@@ -126,38 +151,58 @@ def check_java_environment() -> bool:
         # stderr contient souvent la version pour 'java -version'
         version_info = stderr.strip() if stderr else stdout.strip()
         if version_info:
-            first_line_version = version_info.split('\n')[0]
-            logger.info(f"    Commande 'java -version' exécutée avec succès. Version détectée : {first_line_version}")
+            first_line_version = version_info.split("\n")[0]
+            logger.info(
+                f"    Commande 'java -version' exécutée avec succès. Version détectée : {first_line_version}"
+            )
         else:
-            logger.warning("    Commande 'java -version' exécutée, mais n'a retourné aucune information de version.")
-            java_ok = False # Si pas d'info de version, c'est un problème
-    else: # returncode != 0
-        logger.error(f"    Échec de l'exécution de 'java -version'. Code de retour : {returncode}")
-        if stderr: # Log stderr s'il y a quelque chose
+            logger.warning(
+                "    Commande 'java -version' exécutée, mais n'a retourné aucune information de version."
+            )
+            java_ok = False  # Si pas d'info de version, c'est un problème
+    else:  # returncode != 0
+        logger.error(
+            f"    Échec de l'exécution de 'java -version'. Code de retour : {returncode}"
+        )
+        if stderr:  # Log stderr s'il y a quelque chose
             logger.error(f"    Stderr: {stderr.strip()}")
-        #else: # Optionnel: log si stderr est vide mais il y a une erreur
-            #logger.info("    Stderr était vide pour l'échec de 'java -version'.")
-        if stdout: # Log stdout s'il y a quelque chose
+        # else: # Optionnel: log si stderr est vide mais il y a une erreur
+        # logger.info("    Stderr était vide pour l'échec de 'java -version'.")
+        if stdout:  # Log stdout s'il y a quelque chose
             logger.error(f"    Stdout: {stdout.strip()}")
-        #else: # Optionnel: log si stdout est vide
-            #logger.info("    Stdout était vide pour l'échec de 'java -version'.")
+        # else: # Optionnel: log si stdout est vide
+        # logger.info("    Stdout était vide pour l'échec de 'java -version'.")
 
-        if returncode == -1 and "FileNotFoundError" in stderr: # Cas spécifique de _run_command
-            logger.warning("    Java n'est pas trouvé dans le PATH (FileNotFoundError).")
-        elif returncode != 0 : # Autres erreurs d'exécution où java a été trouvé mais a échoué
-             logger.warning("    La commande 'java -version' a échoué (voir logs ci-dessus), bien que Java semble être dans le PATH.")
+        if (
+            returncode == -1 and "FileNotFoundError" in stderr
+        ):  # Cas spécifique de _run_command
+            logger.warning(
+                "    Java n'est pas trouvé dans le PATH (FileNotFoundError)."
+            )
+        elif (
+            returncode != 0
+        ):  # Autres erreurs d'exécution où java a été trouvé mais a échoué
+            logger.warning(
+                "    La commande 'java -version' a échoué (voir logs ci-dessus), bien que Java semble être dans le PATH."
+            )
         # Si returncode est 0, on ne devrait pas être dans ce bloc 'else'
 
         java_ok = False
 
-    if not java_home_valid and java_ok : # Si JAVA_HOME n'est pas bon mais java -version fonctionne
-        logger.info("    Java est accessible via le PATH, mais JAVA_HOME n'est pas (correctement) défini.")
+    if (
+        not java_home_valid and java_ok
+    ):  # Si JAVA_HOME n'est pas bon mais java -version fonctionne
+        logger.info(
+            "    Java est accessible via le PATH, mais JAVA_HOME n'est pas (correctement) défini."
+        )
         # Selon les exigences strictes, cela pourrait être un False.
         # Pour l'instant, si `java -version` fonctionne, on considère que c'est un minimum.
         # Mais on a déjà loggué un warning pour JAVA_HOME.
 
     if java_ok:
-        logger.info("[OK] L'environnement Java semble correctement configuré (au moins 'java -version' fonctionne).")
+        logger.info(
+            "[OK] L'environnement Java semble correctement configuré (au moins 'java -version' fonctionne)."
+        )
     else:
         logger.error("❌ Des problèmes ont été détectés avec l'environnement Java.")
 
@@ -170,17 +215,24 @@ def check_java_environment() -> bool:
     final_status = java_ok and java_home_valid
 
     if java_ok and not java_home_valid:
-        logger.warning("    Bien que 'java -version' fonctionne, JAVA_HOME n'est pas défini ou est invalide. "
-                       "Cela peut causer des problèmes avec certains outils qui dépendent de JAVA_HOME.")
+        logger.warning(
+            "    Bien que 'java -version' fonctionne, JAVA_HOME n'est pas défini ou est invalide. "
+            "Cela peut causer des problèmes avec certains outils qui dépendent de JAVA_HOME."
+        )
         # La fonction retourne False si JAVA_HOME n'est pas valide, même si 'java -version' fonctionne,
         # car une configuration "correcte" implique généralement un JAVA_HOME valide.
 
     if final_status:
-        logger.info("[OK] L'environnement Java est jugé correctement configuré (java -version OK et JAVA_HOME valide).")
+        logger.info(
+            "[OK] L'environnement Java est jugé correctement configuré (java -version OK et JAVA_HOME valide)."
+        )
     else:
-        logger.error("❌ L'environnement Java n'est pas considéré comme correctement configuré.")
-        
+        logger.error(
+            "❌ L'environnement Java n'est pas considéré comme correctement configuré."
+        )
+
     return final_status
+
 
 def check_jpype_config() -> bool:
     """
@@ -211,6 +263,7 @@ def check_jpype_config() -> bool:
     try:
         import jpype
         import jpype.imports
+
         logger.info("    Module JPype importé avec succès.")
 
         if jpype.isJVMStarted():
@@ -231,26 +284,37 @@ def check_jpype_config() -> bool:
                 jpype_ok = True
             except Exception as e:
                 logger.error(f"    Échec du démarrage de la JVM : {e}")
-                logger.error("    Vérifiez votre installation Java et la configuration de JPype (JAVA_HOME, etc.).")
+                logger.error(
+                    "    Vérifiez votre installation Java et la configuration de JPype (JAVA_HOME, etc.)."
+                )
                 jpype_ok = False
 
         if jpype_ok:
             # Tentative d'importer une classe Java simple pour confirmer la communication
             try:
                 # jpype.JClass("java.lang.String") # Décommenter pour un test plus poussé
-                logger.info("    Test d'accès à une classe Java de base (java.lang.String) via JPype réussi (implicitement).")
+                logger.info(
+                    "    Test d'accès à une classe Java de base (java.lang.String) via JPype réussi (implicitement)."
+                )
             except Exception as e:
-                logger.warning(f"    Avertissement : Impossible de vérifier l'accès à une classe Java de base : {e}")
+                logger.warning(
+                    f"    Avertissement : Impossible de vérifier l'accès à une classe Java de base : {e}"
+                )
                 # Ne pas marquer jpype_ok à False pour cela, le démarrage de la JVM est le principal.
                 pass
 
-
     except ImportError:
-        logger.error("    Échec de l'import du module JPype. JPype n'est probablement pas installé.")
-        logger.error("    Veuillez installer JPype1 (par exemple, via 'pip install JPype1').")
+        logger.error(
+            "    Échec de l'import du module JPype. JPype n'est probablement pas installé."
+        )
+        logger.error(
+            "    Veuillez installer JPype1 (par exemple, via 'pip install JPype1')."
+        )
         jpype_ok = False
     except Exception as e:
-        logger.error(f"    Une erreur inattendue est survenue lors de la vérification de JPype : {e}")
+        logger.error(
+            f"    Une erreur inattendue est survenue lors de la vérification de JPype : {e}"
+        )
         jpype_ok = False
     finally:
         if jvm_started_by_this_function and jpype.isJVMStarted():
@@ -261,15 +325,23 @@ def check_jpype_config() -> bool:
             except Exception as e:
                 logger.error(f"    Erreur lors de l'arrêt de la JVM : {e}")
                 # Cela pourrait indiquer un problème plus profond.
-                jpype_ok = False # Si on ne peut pas arrêter proprement, c'est un souci.
+                jpype_ok = (
+                    False  # Si on ne peut pas arrêter proprement, c'est un souci.
+                )
 
     if jpype_ok:
         logger.info("[OK] JPype semble correctement configuré et la JVM est gérable.")
     else:
-        logger.error("❌ Des problèmes ont été détectés avec la configuration de JPype ou la gestion de la JVM.")
+        logger.error(
+            "❌ Des problèmes ont été détectés avec la configuration de JPype ou la gestion de la JVM."
+        )
 
     return jpype_ok
-def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInternal]) -> bool: # Annotation de type modifiée
+
+
+def check_python_dependencies(
+    requirements_file_path: typing.Union[str, _PathInternal]
+) -> bool:  # Annotation de type modifiée
     """
     Vérifie si les dépendances Python spécifiées dans un fichier de requirements
     sont présentes et satisfont aux contraintes de version.
@@ -289,29 +361,44 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
     """
     # S'assurer que requirements_file_path est un objet pathlib.Path
     logger.debug(f"Type de '_PathInternal' avant isinstance: {type(_PathInternal)}")
-    if not isinstance(requirements_file_path, _PathInternal): # Modifié pour utiliser _PathInternal
-        logger.debug(f"requirements_file_path n'est pas un _PathInternal, c'est un {type(requirements_file_path)}. Conversion...")
-        requirements_file_path = _PathInternal(requirements_file_path) # Modifié pour utiliser _PathInternal
-        
-    logger.info(f"🐍 Vérification des dépendances Python depuis {requirements_file_path}...")
-    overall_all_ok = True # Renommé pour éviter confusion avec all_ok de la boucle de parsing
-    
+    if not isinstance(
+        requirements_file_path, _PathInternal
+    ):  # Modifié pour utiliser _PathInternal
+        logger.debug(
+            f"requirements_file_path n'est pas un _PathInternal, c'est un {type(requirements_file_path)}. Conversion..."
+        )
+        requirements_file_path = _PathInternal(
+            requirements_file_path
+        )  # Modifié pour utiliser _PathInternal
+
+    logger.info(
+        f"🐍 Vérification des dépendances Python depuis {requirements_file_path}..."
+    )
+    overall_all_ok = (
+        True  # Renommé pour éviter confusion avec all_ok de la boucle de parsing
+    )
+
     if not requirements_file_path.is_file():
-        logger.error(f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé.")
+        logger.error(
+            f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé."
+        )
         return False
 
     try:
-        with open(requirements_file_path, 'r', encoding='utf-8') as f:
+        with open(requirements_file_path, "r", encoding="utf-8") as f:
             requirements_content = f.read()
-        
+
         valid_lines = [
-            line for line in requirements_content.splitlines()
-            if line.strip() and not line.strip().startswith('#')
+            line
+            for line in requirements_content.splitlines()
+            if line.strip() and not line.strip().startswith("#")
         ]
-        
+
         if not valid_lines:
-            logger.info(f"    Le fichier de dépendances {requirements_file_path} est vide ou ne contient que des commentaires.")
-            return True 
+            logger.info(
+                f"    Le fichier de dépendances {requirements_file_path} est vide ou ne contient que des commentaires."
+            )
+            return True
 
         parsed_requirements = []
         # parsing_completely_failed_for_a_line = False # Ce drapeau n'est plus nécessaire avec la nouvelle logique
@@ -320,23 +407,42 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
             current_processing_line = line.strip()
             line_successfully_parsed_or_recovered = False
             try:
-                if current_processing_line.startswith('-e') or current_processing_line.startswith('git+') or '.git@' in current_processing_line:
-                    logger.info(f"    Ligne ignorée (dépendance éditable/VCS) : {current_processing_line}")
-                    continue 
-                if current_processing_line.startswith('-r'):
-                    logger.info(f"    Ligne ignorée (inclusion d'un autre fichier) : {current_processing_line}")
-                    continue 
-                
-                line_parts = current_processing_line.split('#')[0].split(';')[0].strip()
+                if (
+                    current_processing_line.startswith("-e")
+                    or current_processing_line.startswith("git+")
+                    or ".git@" in current_processing_line
+                ):
+                    logger.info(
+                        f"    Ligne ignorée (dépendance éditable/VCS) : {current_processing_line}"
+                    )
+                    continue
+                if current_processing_line.startswith("-r"):
+                    logger.info(
+                        f"    Ligne ignorée (inclusion d'un autre fichier) : {current_processing_line}"
+                    )
+                    continue
+
+                line_parts = current_processing_line.split("#")[0].split(";")[0].strip()
                 parsed_req = _parse_requirement(line_parts)
                 parsed_requirements.append(parsed_req)
                 line_successfully_parsed_or_recovered = True
             except ValueError as ve_initial_parse:
                 # Tentative de récupération en extrayant juste le nom du paquet.
-                potential_name = current_processing_line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("[")[0].strip()
-                
+                potential_name = (
+                    current_processing_line.split("==")[0]
+                    .split(">=")[0]
+                    .split("<=")[0]
+                    .split("!=")[0]
+                    .split("~=")[0]
+                    .split(";")[0]
+                    .split("[")[0]
+                    .strip()
+                )
+
                 if potential_name:
-                    logger.warning(f"    Impossible de parser complètement la ligne '{current_processing_line}': {ve_initial_parse}. Tentative avec le nom '{potential_name}'.")
+                    logger.warning(
+                        f"    Impossible de parser complètement la ligne '{current_processing_line}': {ve_initial_parse}. Tentative avec le nom '{potential_name}'."
+                    )
                     try:
                         # On réessaye de parser juste avec le nom, ce qui devrait toujours fonctionner.
                         parsed_requirements.append(_parse_requirement(potential_name))
@@ -344,10 +450,14 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                         # Marquer comme un échec global car la contrainte de version a été perdue.
                         overall_all_ok = False
                     except Exception as ve_heuristic_parse:
-                        logger.error(f"    Échec critique du parsing de la ligne '{current_processing_line}' même après heuristique: {ve_heuristic_parse}")
+                        logger.error(
+                            f"    Échec critique du parsing de la ligne '{current_processing_line}' même après heuristique: {ve_heuristic_parse}"
+                        )
                         overall_all_ok = False
                 else:
-                    logger.error(f"    Impossible de parser la ligne de dépendance et d'extraire un nom de package: '{current_processing_line}': {ve_initial_parse}")
+                    logger.error(
+                        f"    Impossible de parser la ligne de dépendance et d'extraire un nom de package: '{current_processing_line}': {ve_initial_parse}"
+                    )
                     overall_all_ok = False
 
         for req in parsed_requirements:
@@ -360,34 +470,55 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                 installed_version = _parse_version(installed_version_str)
 
                 if not req.specifier:
-                    logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée (aucune version spécifique requise).")
+                    logger.info(
+                        f"    [OK] {req_name}: Version {installed_version_str} installée (aucune version spécifique requise)."
+                    )
                 elif req.specifier.contains(installed_version_str, prereleases=True):
-                    logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée satisfait {req.specifier}")
+                    logger.info(
+                        f"    [OK] {req_name}: Version {installed_version_str} installée satisfait {req.specifier}"
+                    )
                 else:
-                    logger.warning(f"    ❌ {req_name}: Version {installed_version_str} installée ne satisfait PAS {req.specifier}")
+                    logger.warning(
+                        f"    ❌ {req_name}: Version {installed_version_str} installée ne satisfait PAS {req.specifier}"
+                    )
                     overall_all_ok = False
             except importlib.metadata.PackageNotFoundError:
-                logger.warning(f"    ❌ {req_name}: Non installé (requis: {req.specifier if req.specifier else 'any version'})")
+                logger.warning(
+                    f"    ❌ {req_name}: Non installé (requis: {req.specifier if req.specifier else 'any version'})"
+                )
                 overall_all_ok = False
-            except Exception as e: # Capturer d'autres erreurs potentielles (ex: parsing de version invalide)
+            except (
+                Exception
+            ) as e:  # Capturer d'autres erreurs potentielles (ex: parsing de version invalide)
                 logger.error(f"    ❓ Erreur lors de la vérification de {req_name}: {e}")
                 overall_all_ok = False
-                
-    except FileNotFoundError: # Gérer explicitement FileNotFoundError pour le fichier de requirements
-        logger.error(f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé.")
-        return False # Retourner False directement si le fichier n'est pas trouvé
-    except Exception as e: # Gérer d'autres exceptions lors de la lecture/traitement du fichier
-        logger.error(f"    Erreur majeure lors de la lecture ou du traitement du fichier {requirements_file_path}: {e}")
-        return False # Retourner False en cas d'erreur majeure
+
+    except (
+        FileNotFoundError
+    ):  # Gérer explicitement FileNotFoundError pour le fichier de requirements
+        logger.error(
+            f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé."
+        )
+        return False  # Retourner False directement si le fichier n'est pas trouvé
+    except (
+        Exception
+    ) as e:  # Gérer d'autres exceptions lors de la lecture/traitement du fichier
+        logger.error(
+            f"    Erreur majeure lors de la lecture ou du traitement du fichier {requirements_file_path}: {e}"
+        )
+        return False  # Retourner False en cas d'erreur majeure
 
     if overall_all_ok:
         logger.info("[OK] Toutes les dépendances Python du fichier sont satisfaites.")
     else:
-        logger.warning("⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes.")
-        
+        logger.warning(
+            "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes."
+        )
+
     return overall_all_ok
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Pour des tests rapides
     logging.basicConfig(level=logging.INFO)
     logger.info("Test direct de check_java_environment():")

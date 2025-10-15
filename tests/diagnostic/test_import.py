@@ -6,6 +6,7 @@ __test__ = False
 import sys
 import traceback
 
+
 def test_import(module_name, class_name):
     try:
         module = __import__(module_name, fromlist=[class_name])
@@ -17,18 +18,30 @@ def test_import(module_name, class_name):
         print(f"Traceback: {traceback.format_exc()}")
         return False
 
+
 print("=== Test des imports d'orchestrateurs ===")
 
 # Test CluedoExtendedOrchestrator
-test_import('argumentation_analysis.orchestration.cluedo_extended_orchestrator', 'CluedoExtendedOrchestrator')
+test_import(
+    "argumentation_analysis.orchestration.cluedo_extended_orchestrator",
+    "CluedoExtendedOrchestrator",
+)
 
 # Test ConversationOrchestrator
-test_import('argumentation_analysis.orchestration.conversation_orchestrator', 'ConversationOrchestrator')
+test_import(
+    "argumentation_analysis.orchestration.conversation_orchestrator",
+    "ConversationOrchestrator",
+)
 
-# Test RealLLMOrchestrator  
-test_import('argumentation_analysis.orchestration.real_llm_orchestrator', 'RealLLMOrchestrator')
+# Test RealLLMOrchestrator
+test_import(
+    "argumentation_analysis.orchestration.real_llm_orchestrator", "RealLLMOrchestrator"
+)
 
 # Test LogiqueComplexeOrchestrator
-test_import('argumentation_analysis.orchestration.logique_complexe_orchestrator', 'LogiqueComplexeOrchestrator')
+test_import(
+    "argumentation_analysis.orchestration.logique_complexe_orchestrator",
+    "LogiqueComplexeOrchestrator",
+)
 
 print("=== Fin des tests ===")

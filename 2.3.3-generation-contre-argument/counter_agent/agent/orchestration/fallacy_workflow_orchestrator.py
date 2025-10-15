@@ -9,10 +9,12 @@ from ..plugins.exploration_tool import ExplorationTool
 from ..plugins.hypothesis_validation_tool import HypothesisValidationTool
 from ..plugins.aggregation_tool import AggregationTool
 
+
 class FallacyWorkflowOrchestrator:
     """
     Orchestre le workflow d'analyse de sophismes en utilisant des outils modulaires.
     """
+
     ALL_TOOLS = {
         "ExplorationTool": ExplorationTool,
         "HypothesisValidationTool": HypothesisValidationTool,
@@ -31,7 +33,9 @@ class FallacyWorkflowOrchestrator:
         self.kernel = kernel
         self.enabled_tools = enabled_tools or list(self.ALL_TOOLS.keys())
         self.plugins = {}
-        print(f"FallacyWorkflowOrchestrator initialisé avec les outils : {self.enabled_tools}")
+        print(
+            f"FallacyWorkflowOrchestrator initialisé avec les outils : {self.enabled_tools}"
+        )
 
     def _load_plugins(self, taxonomy: Any):
         """Charge les plugins demandés dans le kernel."""
@@ -50,7 +54,9 @@ class FallacyWorkflowOrchestrator:
                 self.plugins[tool_name] = self.kernel.add_plugin(instance, tool_name)
                 print(f"Plugin '{tool_name}' chargé.")
 
-    async def analyze_argument(self, argument_text: str, taxonomy: Any) -> Dict[str, Any]:
+    async def analyze_argument(
+        self, argument_text: str, taxonomy: Any
+    ) -> Dict[str, Any]:
         """
         Exécute le workflow complet d'analyse d'un argument.
 
@@ -62,29 +68,35 @@ class FallacyWorkflowOrchestrator:
             Un rapport d'analyse final et complet.
         """
         print(f"\n--- Début de l'analyse de l'argument : '{argument_text[:60]}...' ---")
-        
+
         # Charger les plugins configurés
         self._load_plugins(taxonomy)
 
         # Vérifier que les outils nécessaires sont bien chargés
         if "ExplorationTool" not in self.plugins:
-            raise ValueError("L'outil 'ExplorationTool' est essentiel et doit être activé.")
-
+            raise ValueError(
+                "L'outil 'ExplorationTool' est essentiel et doit être activé."
+            )
 
         # === Étape 1: Générer des hypothèses d'exploration ===
         print("\n[Étape 1/3] Génération des hypothèses d'exploration...")
         hypotheses_result = await self.kernel.invoke(
             self.plugins["ExplorationTool"]["get_exploration_hypotheses"],
-            input=argument_text
+            input=argument_text,
         )
         # La valeur de retour est un dictionnaire de la forme {node_id: branch_details}
         fallacy_hypotheses = hypotheses_result.value
-        
+
         if not fallacy_hypotheses:
             print("Aucune hypothèse de sophisme pertinente n'a été trouvée.")
-            return {"summary": "L'analyse n'a pas pu identifier de pistes de sophismes à explorer.", "details": []}
-            
-        print(f"-> {len(fallacy_hypotheses)} hypothèses de sophismes à valider trouvées.")
+            return {
+                "summary": "L'analyse n'a pas pu identifier de pistes de sophismes à explorer.",
+                "details": [],
+            }
+
+        print(
+            f"-> {len(fallacy_hypotheses)} hypothèses de sophismes à valider trouvées."
+        )
 
         # === Étape 2: Valider chaque hypothèse en parallèle ===
         print("\n[Étape 2/3] Validation des hypothèses en parallèle...")
@@ -99,14 +111,16 @@ class FallacyWorkflowOrchestrator:
                 task = self.kernel.invoke(
                     self.plugins["HypothesisValidationTool"]["validate_fallacy"],
                     argument_text=argument_text,
-                    fallacy_hypothesis=hypothesis_input
+                    fallacy_hypothesis=hypothesis_input,
                 )
                 validation_tasks.append(task)
         else:
             # Si l'outil de validation est désactivé, on passe les hypothèses comme résultats validés.
-            print("-> Outil de validation désactivé. Les hypothèses sont considérées comme des rapports bruts.")
+            print(
+                "-> Outil de validation désactivé. Les hypothèses sont considérées comme des rapports bruts."
+            )
             validation_results = [hypotheses_result]
-        
+
         # Exécuter toutes les tâches de validation simultanément
         validation_results = await asyncio.gather(*validation_tasks)
         print(f"-> {len(validation_results)} rapports de validation reçus.")
@@ -120,20 +134,19 @@ class FallacyWorkflowOrchestrator:
             report_list = [res.value for res in validation_results]
         else:
             # On transforme directement les hypothèses en "rapport"
-             report_list = list(fallacy_hypotheses.values())
-
+            report_list = list(fallacy_hypotheses.values())
 
         if "AggregationTool" in self.plugins:
-             final_report_result = await self.kernel.invoke(
+            final_report_result = await self.kernel.invoke(
                 self.plugins["AggregationTool"]["summarize_reports"],
-                reports=str(report_list)
+                reports=str(report_list),
             )
         else:
             print("-> Outil d'agrégation désactivé. Retour des rapports bruts.")
             return {"summary": "Agrégation désactivée.", "details": report_list}
-        
+
         final_report = final_report_result.value
         print("-> Rapport final généré.")
-        
+
         print("\n--- Analyse terminée. ---")
         return final_report

@@ -7,12 +7,21 @@ import logging
 from datetime import datetime
 import uuid
 
-from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
+from argumentation_analysis.orchestration.hierarchical.tactical.state import (
+    TacticalState,
+)
 from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
 from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
-from argumentation_analysis.core.communication.operational_adapter import OperationalAdapter
-from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
+from argumentation_analysis.core.communication.operational_adapter import (
+    OperationalAdapter,
+)
+from argumentation_analysis.core.communication.message import (
+    Message,
+    MessageType,
+    MessagePriority,
+    AgentLevel,
+)
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
@@ -47,9 +56,11 @@ class TaskCoordinator:
             compétences connues des agents opérationnels pour l'assignation.
     """
 
-    def __init__(self,
-                 tactical_state: Optional[TacticalState] = None,
-                 middleware: Optional[MessageMiddleware] = None):
+    def __init__(
+        self,
+        tactical_state: Optional[TacticalState] = None,
+        middleware: Optional[MessageMiddleware] = None,
+    ):
         """
         Initialise le `TaskCoordinator`.
 
@@ -63,18 +74,27 @@ class TaskCoordinator:
         self.logger = logging.getLogger(__name__)
         self.middleware = middleware or MessageMiddleware()
         self.adapter = TacticalAdapter(
-            agent_id="tactical_coordinator",
-            middleware=self.middleware
+            agent_id="tactical_coordinator", middleware=self.middleware
         )
         self.agent_capabilities = {
-            "informal_analyzer": ["argument_identification", "fallacy_detection", "rhetorical_analysis"],
-            "logic_analyzer": ["formal_logic", "validity_checking", "consistency_analysis"],
+            "informal_analyzer": [
+                "argument_identification",
+                "fallacy_detection",
+                "rhetorical_analysis",
+            ],
+            "logic_analyzer": [
+                "formal_logic",
+                "validity_checking",
+                "consistency_analysis",
+            ],
             "extract_processor": ["text_extraction", "preprocessing"],
             "visualizer": ["argument_visualization", "summary_generation"],
         }
         self._subscribe_to_strategic_directives()
 
-    def process_strategic_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def process_strategic_objectives(
+        self, objectives: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Traite une liste d'objectifs stratégiques et génère un plan d'action.
 
@@ -89,24 +109,32 @@ class TaskCoordinator:
             Un résumé de l'opération, incluant le nombre de tâches créées.
         """
         self.logger.info(f"Traitement de {len(objectives)} objectifs stratégiques.")
-        
+
         all_tasks = []
         for objective in objectives:
             self.state.add_assigned_objective(objective)
             tasks = self._decompose_objective_to_tasks(objective)
             all_tasks.extend(tasks)
-        
+
         self._establish_task_dependencies(all_tasks)
-        
+
         for task in all_tasks:
             self.state.add_task(task)
             self.assign_task_to_operational(task)
-        
-        self._log_action("Décomposition des objectifs", f"{len(objectives)} objectifs décomposés en {len(all_tasks)} tâches.")
-        
+
+        self._log_action(
+            "Décomposition des objectifs",
+            f"{len(objectives)} objectifs décomposés en {len(all_tasks)} tâches.",
+        )
+
         return {
             "tasks_created": len(all_tasks),
-            "tasks_by_objective": {obj["id"]: [t["id"] for t in all_tasks if t["objective_id"] == obj["id"]] for obj in objectives}
+            "tasks_by_objective": {
+                obj["id"]: [
+                    t["id"] for t in all_tasks if t["objective_id"] == obj["id"]
+                ]
+                for obj in objectives
+            },
         }
 
     def assign_task_to_operational(self, task: Dict[str, Any]) -> None:
@@ -122,14 +150,16 @@ class TaskCoordinator:
         required_capabilities = task.get("required_capabilities", [])
         recipient_id = self._determine_appropriate_agent(required_capabilities)
         message_priority = self._map_priority_to_enum(task.get("priority", "medium"))
-        
-        self.logger.info(f"Assignation de la tâche {task.get('id')} à l'agent {recipient_id}.")
+
+        self.logger.info(
+            f"Assignation de la tâche {task.get('id')} à l'agent {recipient_id}."
+        )
         self.adapter.assign_task(
             task_type="operational_task",
             parameters=task,
             recipient_id=recipient_id,
             priority=message_priority,
-            requires_ack=True
+            requires_ack=True,
         )
 
     def handle_task_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
@@ -151,30 +181,35 @@ class TaskCoordinator:
         if not tactical_task_id:
             self.logger.warning(f"Résultat reçu sans ID de tâche tactique: {result}")
             return {"status": "error", "message": "ID de tâche manquant"}
-        
+
         self.logger.info(f"Traitement du résultat pour la tâche {tactical_task_id}.")
-        
+
         # Mettre à jour l'état
         status = result.get("completion_status", "failed")
         self.state.update_task_status(tactical_task_id, status)
         self.state.add_intermediate_result(tactical_task_id, result)
-        
+
         # Vérifier si l'objectif parent est terminé
         objective_id = self.state.get_objective_for_task(tactical_task_id)
         if objective_id and self.state.are_all_tasks_for_objective_done(objective_id):
-            self.logger.info(f"Objectif {objective_id} terminé. Envoi du rapport au stratégique.")
+            self.logger.info(
+                f"Objectif {objective_id} terminé. Envoi du rapport au stratégique."
+            )
             self.adapter.send_report(
                 report_type="objective_completion",
                 content={
                     "objective_id": objective_id,
                     "status": "completed",
-                    RESULTS_DIR: self.state.get_objective_results(objective_id)
+                    RESULTS_DIR: self.state.get_objective_results(objective_id),
                 },
                 recipient_id="strategic_manager",
-                priority=MessagePriority.HIGH
+                priority=MessagePriority.HIGH,
             )
-        
-        self._log_action("Réception de résultat", f"Résultat pour la tâche {tactical_task_id} traité.")
+
+        self._log_action(
+            "Réception de résultat",
+            f"Résultat pour la tâche {tactical_task_id} traité.",
+        )
         return {"status": "success"}
 
     def generate_status_report(self) -> Dict[str, Any]:
@@ -187,19 +222,25 @@ class TaskCoordinator:
         Returns:
             Le rapport de statut qui a été envoyé.
         """
-        self.logger.info("Génération d'un rapport de statut pour la couche stratégique.")
+        self.logger.info(
+            "Génération d'un rapport de statut pour la couche stratégique."
+        )
         report = self.state.get_status_summary()
         self.adapter.send_report(
             report_type="status_update",
             content=report,
             recipient_id="strategic_manager",
-            priority=MessagePriority.NORMAL
+            priority=MessagePriority.NORMAL,
         )
         return report
 
     # ... Les méthodes privées restent inchangées comme détails d'implémentation ...
     def _log_action(self, action_type: str, description: str) -> None:
-        action = {"timestamp": datetime.now().isoformat(), "type": action_type, "description": description}
+        action = {
+            "timestamp": datetime.now().isoformat(),
+            "type": action_type,
+            "description": description,
+        }
         self.state.log_tactical_action(action)
         self.logger.info(f"Action Tactique: {action_type} - {description}")
 
@@ -212,60 +253,102 @@ class TaskCoordinator:
                 self.process_strategic_objectives(objectives)
             elif directive_type == "strategic_adjustment":
                 self._apply_strategic_adjustments(message.content)
-        
+
         # self.adapter.subscribe_to_directives(handle_directive)
-        self.logger.warning("Subscription to directives is currently disabled due to API changes.")
+        self.logger.warning(
+            "Subscription to directives is currently disabled due to API changes."
+        )
         self.logger.info("Abonné aux directives stratégiques.")
 
-    def _determine_appropriate_agent(self, required_capabilities: List[str]) -> Optional[str]:
+    def _determine_appropriate_agent(
+        self, required_capabilities: List[str]
+    ) -> Optional[str]:
         agent_scores = {}
         for cap in required_capabilities:
             for agent, agent_caps in self.agent_capabilities.items():
                 if cap in agent_caps:
                     agent_scores[agent] = agent_scores.get(agent, 0) + 1
-        
+
         if not agent_scores:
-            return "default_operational_agent" # Fallback
-        
+            return "default_operational_agent"  # Fallback
+
         return max(agent_scores, key=agent_scores.get)
 
-    def _decompose_objective_to_tasks(self, objective: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _decompose_objective_to_tasks(
+        self, objective: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         tasks = []
         obj_id = objective["id"]
         obj_description = objective["description"].lower()
         base_task_id = f"task-{obj_id}-"
-        
+
         if "identifier" in obj_description and "arguments" in obj_description:
-            tasks.append({"id": f"{base_task_id}1", "description": "Extraire segments pertinents", "objective_id": obj_id, "required_capabilities": ["text_extraction"]})
-            tasks.append({"id": f"{base_task_id}2", "description": "Identifier prémisses et conclusions", "objective_id": obj_id, "required_capabilities": ["argument_identification"]})
+            tasks.append(
+                {
+                    "id": f"{base_task_id}1",
+                    "description": "Extraire segments pertinents",
+                    "objective_id": obj_id,
+                    "required_capabilities": ["text_extraction"],
+                }
+            )
+            tasks.append(
+                {
+                    "id": f"{base_task_id}2",
+                    "description": "Identifier prémisses et conclusions",
+                    "objective_id": obj_id,
+                    "required_capabilities": ["argument_identification"],
+                }
+            )
         elif "détecter" in obj_description and "sophisme" in obj_description:
-            tasks.append({"id": f"{base_task_id}1", "description": "Analyser pour sophismes", "objective_id": obj_id, "required_capabilities": ["fallacy_detection"]})
+            tasks.append(
+                {
+                    "id": f"{base_task_id}1",
+                    "description": "Analyser pour sophismes",
+                    "objective_id": obj_id,
+                    "required_capabilities": ["fallacy_detection"],
+                }
+            )
         else:
-            tasks.append({"id": f"{base_task_id}1", "description": f"Tâche générique pour {obj_description}", "objective_id": obj_id, "required_capabilities": []}) # Fallback
-        
+            tasks.append(
+                {
+                    "id": f"{base_task_id}1",
+                    "description": f"Tâche générique pour {obj_description}",
+                    "objective_id": obj_id,
+                    "required_capabilities": [],
+                }
+            )  # Fallback
+
         for task in tasks:
             task["priority"] = objective.get("priority", "medium")
-        
+
         return tasks
 
     def _establish_task_dependencies(self, tasks: List[Dict[str, Any]]) -> None:
         tasks_by_objective = {}
         for task in tasks:
             tasks_by_objective.setdefault(task["objective_id"], []).append(task)
-        
+
         for obj_id, obj_tasks in tasks_by_objective.items():
             sorted_tasks = sorted(obj_tasks, key=lambda t: t["id"])
             for i in range(len(sorted_tasks) - 1):
-                self.state.add_task_dependency(sorted_tasks[i]["id"], sorted_tasks[i+1]["id"])
+                self.state.add_task_dependency(
+                    sorted_tasks[i]["id"], sorted_tasks[i + 1]["id"]
+                )
 
     def _apply_strategic_adjustments(self, adjustments: Dict[str, Any]) -> None:
         self.logger.info(f"Application des ajustements stratégiques : {adjustments}")
         # Logique pour modifier les tâches, priorités, etc.
         # ...
-        self._log_action("Application d'ajustement", f"Ajustements {adjustments.keys()} appliqués.")
-    
+        self._log_action(
+            "Application d'ajustement", f"Ajustements {adjustments.keys()} appliqués."
+        )
+
     def _map_priority_to_enum(self, priority: str) -> MessagePriority:
-        return {"high": MessagePriority.HIGH, "medium": MessagePriority.NORMAL, "low": MessagePriority.LOW}.get(priority.lower(), MessagePriority.NORMAL)
+        return {
+            "high": MessagePriority.HIGH,
+            "medium": MessagePriority.NORMAL,
+            "low": MessagePriority.LOW,
+        }.get(priority.lower(), MessagePriority.NORMAL)
 
 
 # Alias pour compatibilité

@@ -10,12 +10,15 @@ pour permettre aux étudiants de créer des interfaces web facilement.
 
 import os
 import sys
+
 # --- Chargement de l'environnement ---
 # DOIT être exécuté avant tout autre import du projet pour garantir que
 # les variables d'environnement (depuis .env) sont chargées.
 import sys
+
 try:
     from scripts.utils.environment_loader import load_environment
+
     load_environment()
 except ImportError:
     print("CRITICAL: Failed to import or run environment_loader utility.")
@@ -44,13 +47,20 @@ from .services.framework_service import FrameworkService
 from .services.logic_service import LogicService
 from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
 from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
- 
- # Import des modèles locaux
+
+# Import des modèles locaux
 from .models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+    AnalysisRequest,
+    ValidationRequest,
+    FallacyRequest,
+    FrameworkRequest,
 )
 from .models.response_models import (
-    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
+    AnalysisResponse,
+    ValidationResponse,
+    FallacyResponse,
+    FrameworkResponse,
+    ErrorResponse,
 )
 
 # Import du Blueprint pour les routes
@@ -60,15 +70,18 @@ from .routes.main_routes import main_bp
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("WebAPI")
 
 # Chemin vers le build du frontend React
-react_build_dir = root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
+react_build_dir = (
+    root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
+)
 
 # --- Factory Function pour l'Application Flask ---
+
 
 def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
     """
@@ -78,33 +91,45 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
     d'imports circulaires et de contexte, notamment avec pytest.
     """
     # On configure le service des fichiers statiques pour qu'il pointe vers le build de React
-    app = Flask(__name__, static_folder=str(react_build_dir / "static"), static_url_path='/static')
-    
+    app = Flask(
+        __name__,
+        static_folder=str(react_build_dir / "static"),
+        static_url_path="/static",
+    )
+
     # --- Configuration ---
     # Initialisation de CORS pour autoriser les requêtes cross-origin
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    app.config['JSON_AS_ASCII'] = False
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    app.config["JSON_AS_ASCII"] = False
+    app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
     if config_overrides:
         app.config.update(config_overrides)
 
     # --- Initialisation des Services ---
     # Les services sont attachés à l'application via app.extensions pour un accès
     # global et sécurisé via le contexte de l'application (current_app).
-    force_mock = os.environ.get('FORCE_MOCK_LLM', 'false').lower() == 'true'
+    force_mock = os.environ.get("FORCE_MOCK_LLM", "false").lower() == "true"
     llm_service = create_llm_service(service_id="default", force_mock=force_mock)
-    
+
     # --- Initialisation des Services avec Injection de Dépendances ---
     mock_fallacy_detector = MockFallacyDetector()
-    
+
     # Initialisation des analyseurs qui peuvent être des dépendances
     # Note: `EnhancedContextualFallacyAnalyzer` est importé en tant que `ContextualFallacyAnalyzer` dans `fallacy_service`
-    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-    from plugins.AnalysisToolsPlugin.logic.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer
-    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator
-    
-    contextual_analyzer = EnhancedContextualFallacyAnalyzer(fallacy_detector=mock_fallacy_detector)
+    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import (
+        EnhancedContextualFallacyAnalyzer,
+    )
+    from plugins.AnalysisToolsPlugin.logic.complex_fallacy_analyzer import (
+        EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer,
+    )
+    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import (
+        EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator,
+    )
+
+    contextual_analyzer = EnhancedContextualFallacyAnalyzer(
+        fallacy_detector=mock_fallacy_detector
+    )
     complex_analyzer = ComplexFallacyAnalyzer(fallacy_detector=mock_fallacy_detector)
     severity_evaluator = FallacySeverityEvaluator()
 
@@ -114,21 +139,21 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
         complex_analyzer=complex_analyzer,
         contextual_analyzer=contextual_analyzer,
         severity_evaluator=severity_evaluator,
-        informal_agent=None  # L'agent informel n'est pas nécessaire pour les tests E2E de base
+        informal_agent=None,  # L'agent informel n'est pas nécessaire pour les tests E2E de base
     )
 
-    app.extensions['racine_services'] = {
-        'analysis': analysis_service,
-        'validation': ValidationService(),
-        'fallacy': fallacy_service,
-        'framework': FrameworkService(),
-        'logic': LogicService(),
-        'llm': llm_service
+    app.extensions["racine_services"] = {
+        "analysis": analysis_service,
+        "validation": ValidationService(),
+        "fallacy": fallacy_service,
+        "framework": FrameworkService(),
+        "logic": LogicService(),
+        "llm": llm_service,
     }
 
     # --- Enregistrement des Blueprints ---
-    app.register_blueprint(main_bp, url_prefix='/api')
-    app.register_blueprint(logic_bp, url_prefix='/api/logic')
+    app.register_blueprint(main_bp, url_prefix="/api")
+    app.register_blueprint(logic_bp, url_prefix="/api/logic")
 
     # --- Gestionnaires d'Erreurs ---
     @app.errorhandler(Exception)
@@ -136,24 +161,23 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
         """Gestionnaire d'erreurs global."""
         logger.error(f"Erreur non gérée: {str(error)}", exc_info=True)
         error_response = ErrorResponse(
-            error="Erreur interne du serveur",
-            message=str(error),
-            status_code=500
+            error="Erreur interne du serveur", message=str(error), status_code=500
         )
         return jsonify(error_response.dict()), 500
 
     # --- Route de Fallback pour l'Application React ---
     # Doit être enregistré après les blueprints API pour ne pas les intercepter.
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
     def serve(path: str) -> Any:
         # Si le chemin correspond à un fichier existant dans le build React, on le sert.
         if path != "" and os.path.exists(os.path.join(str(react_build_dir), path)):
             return send_from_directory(str(react_build_dir), path)
         # Sinon, on sert l'index.html, en laissant React gérer le routage côté client.
-        return send_from_directory(str(react_build_dir), 'index.html')
+        return send_from_directory(str(react_build_dir), "index.html")
 
     return app
+
 
 # --- Point d'entrée pour l'exécution directe et les serveurs WSGI ---
 app = create_app()
@@ -161,6 +185,7 @@ app = create_app()
 # --- Adaptateur ASGI pour Uvicorn ---
 try:
     from asgiref.wsgi import WsgiToAsgi
+
     # Créer une version ASGI de l'app Flask pour Uvicorn
     asgi_app = WsgiToAsgi(app)
     # Export pour Uvicorn
@@ -170,6 +195,7 @@ except ImportError:
     # Fallback : utiliser l'app Flask directement (ne fonctionnera qu'avec WSGI)
     asgi_app = app
     app_asgi = app
+
 
 # --- Routine de Nettoyage ---
 @atexit.register
@@ -186,11 +212,14 @@ def cleanup_on_exit():
     else:
         logger.info("La JVM n'était pas active, aucun arrêt nécessaire.")
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5004))
-    debug = os.environ.get('DEBUG', 'True').lower() == 'true'
-    
-    logger.info(f"Démarrage de l'API Flask en mode {'Debug' if debug else 'Production'} sur le port {port}")
-    
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5004))
+    debug = os.environ.get("DEBUG", "True").lower() == "true"
+
+    logger.info(
+        f"Démarrage de l'API Flask en mode {'Debug' if debug else 'Production'} sur le port {port}"
+    )
+
     # Utilise l'application créée par la factory
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host="0.0.0.0", port=port, debug=debug)

@@ -5,7 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 import importlib
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
-from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
+from argumentation_analysis.agents.plugins.taxonomy_display_plugin import (
+    TaxonomyDisplayPlugin,
+)
 from argumentation_analysis.config.settings import AppSettings
 
 from semantic_kernel.kernel import Kernel
@@ -14,12 +16,23 @@ from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.contents.function_result_content import FunctionResultContent
-# from semantic_kernel.tools.function_view import FunctionView
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent, AgentResponseItem
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
-from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecutionSettings
 
-from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
+# from semantic_kernel.tools.function_view import FunctionView
+from semantic_kernel.agents.chat_completion.chat_completion_agent import (
+    ChatCompletionAgent,
+    AgentResponseItem,
+)
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+from semantic_kernel.connectors.ai.prompt_execution_settings import (
+    PromptExecutionSettings,
+)
+
+from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
+    ComplexFallacyAnalyzer,
+)
+
 # L'alias 'as IdentificationPlugin' est supprimé pour plus de clarté,
 # la classe sera référencée par son vrai nom ci-dessous.
 
@@ -27,29 +40,107 @@ from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer impor
 
 # Le LLM explore la racine, puis une branche, puis identifie.
 MOCK_COMPLEX_WORKFLOW_RESPONSE = [
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[FunctionCallContent(id="call_1", name="explore_branch", arguments={'node_id': 'fallacy_root'})])],
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[FunctionCallContent(id="call_2", name="explore_branch", arguments={'node_id': 'relevance'})])],
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[FunctionCallContent(id="call_3", name="identify_fallacies", arguments=json.dumps({"fallacies": [{"fallacy_type": "Ad Hominem", "problematic_quote": "Ne l'écoutez pas...", "explanation": "Attaque la personne."}]}))])],
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_1",
+                    name="explore_branch",
+                    arguments={"node_id": "fallacy_root"},
+                )
+            ],
+        )
+    ],
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_2",
+                    name="explore_branch",
+                    arguments={"node_id": "relevance"},
+                )
+            ],
+        )
+    ],
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_3",
+                    name="identify_fallacies",
+                    arguments=json.dumps(
+                        {
+                            "fallacies": [
+                                {
+                                    "fallacy_type": "Ad Hominem",
+                                    "problematic_quote": "Ne l'écoutez pas...",
+                                    "explanation": "Attaque la personne.",
+                                }
+                            ]
+                        }
+                    ),
+                )
+            ],
+        )
+    ],
 ]
 
 # Le LLM identifie directement le sophisme sans exploration.
 MOCK_SIMPLE_WORKFLOW_RESPONSE = [
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[FunctionCallContent(id="call_1", name="identify_fallacies", arguments=json.dumps({"fallacies": [{"fallacy_type": "Ad Hominem", "problematic_quote": "Ne l'écoutez pas...", "explanation": "Attaque la personne."}]}))])],
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_1",
+                    name="identify_fallacies",
+                    arguments=json.dumps(
+                        {
+                            "fallacies": [
+                                {
+                                    "fallacy_type": "Ad Hominem",
+                                    "problematic_quote": "Ne l'écoutez pas...",
+                                    "explanation": "Attaque la personne.",
+                                }
+                            ]
+                        }
+                    ),
+                )
+            ],
+        )
+    ],
 ]
 
-@pytest.fixture(params=[
-    ("complex_workflow", None, MOCK_COMPLEX_WORKFLOW_RESPONSE, 3),
-    ("simple_workflow_only", ["identify_fallacies"], MOCK_SIMPLE_WORKFLOW_RESPONSE, 1),
-])
+
+@pytest.fixture(
+    params=[
+        ("complex_workflow", None, MOCK_COMPLEX_WORKFLOW_RESPONSE, 3),
+        (
+            "simple_workflow_only",
+            ["identify_fallacies"],
+            MOCK_SIMPLE_WORKFLOW_RESPONSE,
+            1,
+        ),
+    ]
+)
 def case_config(request):
     """Fixture paramétrée pour fournir les configurations de test."""
     return request.param
+
 
 @pytest.fixture
 def informal_fallacy_plugin(case_config):
     """Fixture pour le plugin, configuré selon le cas de test."""
     _, allowed_ops, _, _ = case_config
-    return ComplexFallacyAnalyzer() # Pas d'allowed_operations dans le constructeur
+    return ComplexFallacyAnalyzer()  # Pas d'allowed_operations dans le constructeur
+
 
 @pytest.fixture
 def mock_chat_completion_service(case_config):
@@ -64,7 +155,10 @@ def mock_chat_completion_service(case_config):
     service.service_id = "test_service"
     return service
 
-@pytest.mark.skip(reason="Test is outdated due to ComplexFallacyAnalyzer and workflow refactoring")
+
+@pytest.mark.skip(
+    reason="Test is outdated due to ComplexFallacyAnalyzer and workflow refactoring"
+)
 def test_agent_workflow_with_different_configurations(
     informal_fallacy_plugin, mock_chat_completion_service, case_config
 ):
@@ -72,10 +166,11 @@ def test_agent_workflow_with_different_configurations(
     Teste si l'agent suit le bon workflow (simple ou complexe) en fonction
     de la configuration du plugin.
     """
+
     async def run_test():
         # --- Configuration du Test ---
         config_name, _, _, expected_call_count = case_config
-        
+
         # --- Initialisation de l'Agent ---
         # Pour que la validation Pydantic fonctionne, on doit créer un vrai Kernel
         # et y attacher le service mocké.
@@ -84,16 +179,17 @@ def test_agent_workflow_with_different_configurations(
 
         agent = ChatCompletionAgent(
             kernel=kernel,
-            service=mock_chat_completion_service, # On passe le service explicitement
+            service=mock_chat_completion_service,  # On passe le service explicitement
             plugins=[informal_fallacy_plugin],
-            instructions="Test instructions"
+            instructions="Test instructions",
         )
-
 
         # --- Exécution et Assertions ---
         chat_history = ChatHistory()
-        chat_history.add_user_message("Analyse ce texte : Ne l'écoutez pas, c'est un idiot.")
-        
+        chat_history.add_user_message(
+            "Analyse ce texte : Ne l'écoutez pas, c'est un idiot."
+        )
+
         final_answer = []
         # L'agent invoke retourne une boucle. On doit simuler le retour des appels de fonction
         # pour que l'agent continue son exécution jusqu'à la fin.
@@ -108,15 +204,16 @@ def test_agent_workflow_with_different_configurations(
                     result = FunctionResultContent(
                         id=tool_call.id,
                         name=tool_call.name,
-                        result='{"status": "Function call simulated by test."}'
+                        result='{"status": "Function call simulated by test."}',
                     )
                     chat_history.add_message(result)
 
-
         # Vérifier que le service a été appelé le bon nombre de fois
-        assert mock_chat_completion_service.get_chat_message_contents.call_count == expected_call_count, \
-            f"Test case '{config_name}' failed: incorrect number of LLM calls."
-        
+        assert (
+            mock_chat_completion_service.get_chat_message_contents.call_count
+            == expected_call_count
+        ), f"Test case '{config_name}' failed: incorrect number of LLM calls."
+
         # La dernière réponse de l'agent n'est plus un FunctionResultContent directement
         # mais un ChatMessageContent de l'assistant après avoir traité la dernière fonction.
         # On vérifie ici la dernière interaction.
@@ -125,21 +222,26 @@ def test_agent_workflow_with_different_configurations(
         # La dernière interaction du LLM est de faire un appel à la fonction `identify_fallacies`
         assert len(last_agent_message.tool_calls) > 0
         assert last_agent_message.tool_calls[0].name == "identify_fallacies"
+
     asyncio.run(run_test())
 
+
 # --- Tests pour le FallacyWorkflowPlugin ---
-@pytest.mark.skip(reason="Test is outdated due to FallacyWorkflowPlugin refactoring, parallel_exploration method removed.")
+@pytest.mark.skip(
+    reason="Test is outdated due to FallacyWorkflowPlugin refactoring, parallel_exploration method removed."
+)
 def test_parallel_exploration_workflow_unit():
     """
     Teste le workflow d'exploration parallèle en s'assurant que le plugin
     invoque correctement le kernel injecté (Test d'unité).
     Version corrigée pour éviter les problèmes de patch sur un objet Pydantic (Kernel).
     """
+
     async def run_test():
         # 1. Configuration des Mocks
         # On mocke entièrement le kernel pour ne pas dépendre de son implémentation Pydantic.
         mock_kernel = MagicMock(spec=Kernel)
-        
+
         # Préparer le mock de la fonction noyau qui sera retournée
         mock_display_function = MagicMock()
 
@@ -150,10 +252,10 @@ def test_parallel_exploration_workflow_unit():
         async def invoke_side_effect(func, arguments):
             # La fonction passée devrait être celle que nous avons mockée.
             assert func == mock_display_function
-            node_id = arguments['node_id']
+            node_id = arguments["node_id"]
             # On simule le retour de l'invocation du kernel
             return MagicMock(value=f"Résultat pour le noeud {node_id}")
-        
+
         # Attacher l'AsyncMock directement au mock du kernel
         mock_kernel.invoke = AsyncMock(side_effect=invoke_side_effect)
 
@@ -164,19 +266,24 @@ def test_parallel_exploration_workflow_unit():
 
         # 3. Exécution de la méthode à tester
         result_json = await workflow_plugin.parallel_exploration(
-            nodes=['relevance', 'clarity'],
-            depth=2
+            nodes=["relevance", "clarity"], depth=2
         )
-        
+
         # 4. Assertions
         assert mock_kernel.invoke.call_count == 2
-        assert mock_kernel.plugins.get_function.call_count == 2 # Doit chercher la fonction à chaque fois
+        assert (
+            mock_kernel.plugins.get_function.call_count == 2
+        )  # Doit chercher la fonction à chaque fois
 
         taxonomy_json = workflow_plugin.taxonomy.get_full_taxonomy_json()
-        
+
         # Arguments attendus pour chaque appel
-        relevance_args = KernelArguments(node_id='relevance', depth=2, taxonomy=taxonomy_json)
-        clarity_args = KernelArguments(node_id='clarity', depth=2, taxonomy=taxonomy_json)
+        relevance_args = KernelArguments(
+            node_id="relevance", depth=2, taxonomy=taxonomy_json
+        )
+        clarity_args = KernelArguments(
+            node_id="clarity", depth=2, taxonomy=taxonomy_json
+        )
 
         # Vérification des appels
         mock_kernel.invoke.assert_any_call(mock_display_function, relevance_args)
@@ -185,65 +292,99 @@ def test_parallel_exploration_workflow_unit():
         result_data = json.loads(result_json)
         assert result_data["branch_relevance"] == "Résultat pour le noeud relevance"
         assert result_data["branch_clarity"] == "Résultat pour le noeud clarity"
+
     asyncio.run(run_test())
+
 
 # --- Test d'Intégration de l'Agent avec le Workflow Parallèle ---
 
 # Le LLM explore plusieurs branches, puis identifie.
 MOCK_MULTI_EXPLORE_RESPONSE = [
     # Premier appel: le LLM décide de faire une exploration parallèle
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[
-        FunctionCallContent(
-            id="call_multi",
-            name="parallel_exploration",
-            arguments=json.dumps({'nodes': ['relevance', 'ambiguity']})
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_multi",
+                    name="parallel_exploration",
+                    arguments=json.dumps({"nodes": ["relevance", "ambiguity"]}),
+                )
+            ],
         )
-    ])],
+    ],
     # Deuxième appel: Le LLM a reçu les résultats et identifie le sophisme
-    [ChatMessageContent(role="assistant", content=None, tool_calls=[
-        FunctionCallContent(
-            id="call_final",
-            name="identify_fallacies",
-            arguments=json.dumps({"fallacies": [{"fallacy_type": "Equivocation", "problematic_quote": "...", "explanation": "..."}]})
+    [
+        ChatMessageContent(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                FunctionCallContent(
+                    id="call_final",
+                    name="identify_fallacies",
+                    arguments=json.dumps(
+                        {
+                            "fallacies": [
+                                {
+                                    "fallacy_type": "Equivocation",
+                                    "problematic_quote": "...",
+                                    "explanation": "...",
+                                }
+                            ]
+                        }
+                    ),
+                )
+            ],
         )
-    ])],
+    ],
 ]
 
-@pytest.mark.skip(reason="Test is outdated due to FallacyWorkflowPlugin refactoring, parallel_exploration method removed.")
+
+@pytest.mark.skip(
+    reason="Test is outdated due to FallacyWorkflowPlugin refactoring, parallel_exploration method removed."
+)
 def test_informal_fallacy_agent_uses_parallel_exploration():
     """
     Teste si l'agent utilise le workflow d'exploration multiple de bout en bout.
     """
+
     async def run_test():
         # --- Configuration du Test ---
         mock_service = MagicMock(spec=ChatCompletionClientBase)
-        mock_service.get_chat_message_contents = AsyncMock(side_effect=MOCK_MULTI_EXPLORE_RESPONSE)
+        mock_service.get_chat_message_contents = AsyncMock(
+            side_effect=MOCK_MULTI_EXPLORE_RESPONSE
+        )
         # Nécessaire pour la validation Pydantic interne
-        mock_service.get_prompt_execution_settings_class.return_value = PromptExecutionSettings
+        mock_service.get_prompt_execution_settings_class.return_value = (
+            PromptExecutionSettings
+        )
         mock_service.service_id = "test_service"
 
         # --- Initialisation de l'Agent ---
         # On utilise la même approche que pour le premier test pour la validation Pydantic
         kernel = Kernel()
         kernel.add_service(mock_service)
-        
+
         # On a besoin des deux plugins pour ce workflow
         module = importlib.import_module("plugins.FallacyWorkflow.plugin")
         FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
         workflow_plugin = FallacyWorkflowPlugin(kernel=kernel)
         identification_plugin = ComplexFallacyAnalyzer()
-        
+
         agent = ChatCompletionAgent(
             kernel=kernel,
             service=mock_service,
             plugins=[workflow_plugin, identification_plugin],
-            instructions="Test instructions"
+            instructions="Test instructions",
         )
 
         # --- Exécution et Assertions ---
         chat_history = ChatHistory()
-        chat_history.add_user_message("Compare les sophismes de pertinence et d'ambiguité.")
-        
+        chat_history.add_user_message(
+            "Compare les sophismes de pertinence et d'ambiguité."
+        )
+
         final_answer = []
         all_messages = []
         async for message in agent.invoke(chat_history):
@@ -254,32 +395,37 @@ def test_informal_fallacy_agent_uses_parallel_exploration():
                 for tool_call in inner_content.tool_calls:
                     # Simuler le résultat de la fonction `parallel_exploration`
                     if tool_call.name == "parallel_exploration":
-                        result_content = '{"branch_relevance": "...", "branch_ambiguity": "..."}'
+                        result_content = (
+                            '{"branch_relevance": "...", "branch_ambiguity": "..."}'
+                        )
                     else:
                         result_content = '{"status": "Function call simulated."}'
-                    
+
                     result = FunctionResultContent(
-                        id=tool_call.id,
-                        name=tool_call.name,
-                        result=result_content
+                        id=tool_call.id, name=tool_call.name, result=result_content
                     )
                     chat_history.add_message(result)
-            
+
         # Vérifier que le service a été appelé deux fois (1. explore, 2. identify)
         assert mock_service.get_chat_message_contents.call_count == 2
-        
+
         # Vérifier que la première décision du LLM était bien d'explorer en parallèle
-        first_call_content = mock_service.get_chat_message_contents.call_args_list[0].kwargs['chat_history']
+        first_call_content = mock_service.get_chat_message_contents.call_args_list[
+            0
+        ].kwargs["chat_history"]
         last_message = first_call_content[-1]
         assert isinstance(last_message, ChatMessageContent)
         assert last_message.tool_calls[0].name == "parallel_exploration"
-        
+
         # Vérifier la réponse finale
         final_tool_call = all_messages[-1].message.tool_calls[0]
         assert final_tool_call.name == "identify_fallacies"
+
     asyncio.run(run_test())
 
+
 # --- Tests pour AgentFactory ---
+
 
 @pytest.fixture
 def kernel():
@@ -289,18 +435,21 @@ def kernel():
     """
     kernel = Kernel()
     mock_service = MagicMock(spec=ChatCompletionClientBase)
-    
+
     # Correction pour la validation interne du kernel
-    mock_service.get_prompt_execution_settings_class.return_value = PromptExecutionSettings
-    
+    mock_service.get_prompt_execution_settings_class.return_value = (
+        PromptExecutionSettings
+    )
+
     # CRUCIAL: L'attribut 'service_id' doit exister sur le mock AVANT de l'ajouter au kernel.
     # Le kernel l'utilise comme clé.
     mock_service.service_id = "test_service"
 
     # Correction de l'API: plus de 'service_id' dans l'appel
     kernel.add_service(mock_service)
-    
+
     return kernel
+
 
 @pytest.mark.parametrize(
     "config_name, expected_plugin_names",
@@ -308,7 +457,14 @@ def kernel():
         ("simple", ["FallacyIdentificationPlugin"]),
         ("explore_only", ["TaxonomyDisplayPlugin"]),
         ("workflow_only", ["FallacyWorkflowPlugin", "TaxonomyDisplayPlugin"]),
-        ("full", ["FallacyIdentificationPlugin", "FallacyWorkflowPlugin", "TaxonomyDisplayPlugin"]),
+        (
+            "full",
+            [
+                "FallacyIdentificationPlugin",
+                "FallacyWorkflowPlugin",
+                "TaxonomyDisplayPlugin",
+            ],
+        ),
     ],
 )
 def test_agent_factory_configurations(kernel, config_name, expected_plugin_names):
@@ -323,7 +479,7 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_names
 
     # --- Act ---
     agent = factory.create_agent(AgentType.INFORMAL_FALLACY, config_name=config_name)
-    
+
     # Récupère les types des plugins réellement chargés dans le kernel de l'agent
     # L'API a changé, les plugins sont maintenant dans le kernel
     # On vérifie les NOMS des plugins enregistrés dans le kernel de l'agent
@@ -331,7 +487,8 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_names
 
     # --- Assert ---
     # Utiliser un set pour comparer l'égalité sans se soucier de l'ordre
-    assert set(loaded_plugin_names) == set(expected_plugin_names), \
-        f"Mismatch in plugins for config '{config_name}'.\n" \
-        f"Expected: {sorted(expected_plugin_names)}\n" \
+    assert set(loaded_plugin_names) == set(expected_plugin_names), (
+        f"Mismatch in plugins for config '{config_name}'.\n"
+        f"Expected: {sorted(expected_plugin_names)}\n"
         f"Got:      {sorted(loaded_plugin_names)}"
+    )

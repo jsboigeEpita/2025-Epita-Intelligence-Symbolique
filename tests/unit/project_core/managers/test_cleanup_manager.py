@@ -7,6 +7,7 @@ import sys
 
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
 
+
 class TestCleanupManager(unittest.TestCase):
     """
     Unit tests for the CleanupManager.
@@ -62,7 +63,7 @@ class TestCleanupManager(unittest.TestCase):
         # Check the report
         self.assertEqual(len(report["dirs"]), 3)
         self.assertEqual(len(report["files"]), 2)
-        
+
     def test_cleanup_temporary_files_on_clean_dir(self):
         """
         Test that the function runs without error on a clean directory.
@@ -71,7 +72,7 @@ class TestCleanupManager(unittest.TestCase):
         clean_dir = self.test_dir / "clean_subdirectory"
         clean_dir.mkdir()
         (clean_dir / "some_file.txt").touch()
-        
+
         # --- Act ---
         report = CleanupManager.cleanup_temporary_files(root_dir=str(clean_dir))
 
@@ -80,5 +81,6 @@ class TestCleanupManager(unittest.TestCase):
         self.assertEqual(len(report["dirs"]), 0)
         self.assertEqual(len(report["files"]), 0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -3,24 +3,31 @@ import json
 from unittest.mock import patch, MagicMock, AsyncMock
 
 import semantic_kernel as sk
-from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
-from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult, ToulminComponent
+from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import (
+    SemanticArgumentAnalyzer,
+)
+from argumentation_analysis.core.models.toulmin_model import (
+    ToulminAnalysisResult,
+    ToulminComponent,
+)
+
 
 # Fixture pour initialiser l'analyseur une seule fois pour tous les tests
 @pytest.fixture
 def analyzer():
     # On mock le Kernel pour ne pas dépendre du service externe
-    with patch('semantic_kernel.Kernel') as mock_kernel_class:
+    with patch("semantic_kernel.Kernel") as mock_kernel_class:
         # On simule le comportement de la chaîne d'appel de semantic kernel
         mock_kernel_instance = MagicMock()
         mock_kernel_class.return_value = mock_kernel_instance
-        
+
         # Le kernel est instancié dans le __init__, donc on doit patcher *avant* de créer l'analyseur
         analyzer_instance = SemanticArgumentAnalyzer()
-        
+
         # On attache notre kernel mocké à l'instance pour les tests
         analyzer_instance.kernel = mock_kernel_instance
         yield analyzer_instance
+
 
 @pytest.mark.asyncio
 async def test_run_success_with_valid_json(analyzer: SemanticArgumentAnalyzer):
@@ -30,11 +37,23 @@ async def test_run_success_with_valid_json(analyzer: SemanticArgumentAnalyzer):
     """
     # 1. Préparation des données de test (mock)
     mock_json_response = {
-        "claim": {"text": "Le projet est un succès", "confidence_score": 0.95, "source_sentences": [0]},
+        "claim": {
+            "text": "Le projet est un succès",
+            "confidence_score": 0.95,
+            "source_sentences": [0],
+        },
         "data": [
-            {"text": "Le code est bien testé", "confidence_score": 0.9, "source_sentences": [1]}
+            {
+                "text": "Le code est bien testé",
+                "confidence_score": 0.9,
+                "source_sentences": [1],
+            }
         ],
-        "warrant": {"text": "Un code bien testé mène au succès", "confidence_score": 0.85, "source_sentences": [2]}
+        "warrant": {
+            "text": "Un code bien testé mène au succès",
+            "confidence_score": 0.85,
+            "source_sentences": [2],
+        },
     }
     mock_json_string = json.dumps(mock_json_response)
 
@@ -42,7 +61,7 @@ async def test_run_success_with_valid_json(analyzer: SemanticArgumentAnalyzer):
     # Simuler l'objet retourné par run_async pour avoir un attribut `result`
     mock_run_async_result = MagicMock()
     mock_run_async_result.result = mock_json_string
-    
+
     # Configurer la méthode run_async du kernel pour retourner notre mock
     # Comme c'est une méthode asynchrone, on utilise AsyncMock pour la simuler
     analyzer.kernel.run_async = AsyncMock(return_value=mock_run_async_result)
@@ -58,9 +77,10 @@ async def test_run_success_with_valid_json(analyzer: SemanticArgumentAnalyzer):
     assert len(result.data) == 1
     assert result.data[0].text == "Le code est bien testé"
     assert result.warrant.text == "Un code bien testé mène au succès"
-    
+
     # Vérifier que le kernel a bien été appelé
     analyzer.kernel.run_async.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_run_handles_invalid_json(analyzer: SemanticArgumentAnalyzer):
@@ -79,6 +99,7 @@ async def test_run_handles_invalid_json(analyzer: SemanticArgumentAnalyzer):
     # 3. Exécution et Assertion
     with pytest.raises(ValueError, match="Failed to decode JSON from LLM result"):
         await analyzer.run("un argument quelconque")
+
 
 @pytest.mark.asyncio
 async def test_run_handles_unexpected_return_type(analyzer: SemanticArgumentAnalyzer):

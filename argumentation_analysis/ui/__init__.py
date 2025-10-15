@@ -13,4 +13,5 @@ d'autres utilitaires spécifiques à l'interface.
 
 # Log de chargement du package (optionnel)
 import logging
+
 logging.getLogger(__name__).debug("Package UI chargé.")

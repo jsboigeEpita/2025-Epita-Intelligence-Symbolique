@@ -9,7 +9,7 @@ from .request_models import (
     AnalysisRequest,
     ValidationRequest,
     FallacyRequest,
-    FrameworkRequest
+    FrameworkRequest,
 )
 
 from .response_models import (
@@ -17,17 +17,17 @@ from .response_models import (
     ValidationResponse,
     FallacyResponse,
     FrameworkResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 __all__ = [
-    'AnalysisRequest',
-    'ValidationRequest',
-    'FallacyRequest',
-    'FrameworkRequest',
-    'AnalysisResponse',
-    'ValidationResponse',
-    'FallacyResponse',
-    'FrameworkResponse',
-    'ErrorResponse'
+    "AnalysisRequest",
+    "ValidationRequest",
+    "FallacyRequest",
+    "FrameworkRequest",
+    "AnalysisResponse",
+    "ValidationResponse",
+    "FallacyResponse",
+    "FrameworkResponse",
+    "ErrorResponse",
 ]

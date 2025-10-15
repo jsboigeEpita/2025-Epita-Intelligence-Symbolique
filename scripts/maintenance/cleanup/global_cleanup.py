@@ -40,7 +40,7 @@ BACKUP_DIR = ARCHIVES_DIR / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("global_cleanup")
 
@@ -56,5 +56,5 @@ TEMP_FILE_PATTERNS = [
     "*.pyc",
     "__pycache__",
     ".ipynb_checkpoints",
-    "*.log"
+    "*.log",
 ]

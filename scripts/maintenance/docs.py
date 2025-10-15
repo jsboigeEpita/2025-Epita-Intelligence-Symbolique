@@ -20,7 +20,14 @@ import difflib
 from collections import defaultdict, Counter
 
 try:
-    from flask import Flask, render_template_string, request, jsonify, send_from_directory
+    from flask import (
+        Flask,
+        render_template_string,
+        request,
+        jsonify,
+        send_from_directory,
+    )
+
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
@@ -29,239 +36,300 @@ except ImportError:
 
 class AdvancedDocumentationSearcher:
     """Moteur de recherche avancé pour la documentation"""
-    
+
     def __init__(self):
         self.documents = {}  # {filepath: content}
-        self.metadata = {}   # {filepath: {size, lines, modified, etc.}}
+        self.metadata = {}  # {filepath: {size, lines, modified, etc.}}
         self.indexed_docs = {}  # {filepath: {word: positions}}
-        self.file_tree = {}     # Structure hiérarchique
+        self.file_tree = {}  # Structure hiérarchique
         self.stats = {
-            'total_files': 0,
-            'total_size': 0,
-            'file_types': Counter(),
-            'languages': Counter(),
-            'last_scan': None
+            "total_files": 0,
+            "total_size": 0,
+            "file_types": Counter(),
+            "languages": Counter(),
+            "last_scan": None,
         }
-        
+
     def normalize_text(self, text: str) -> str:
         """Normalise le texte pour la recherche"""
-        text = unicodedata.normalize('NFD', text)
-        text = ''.join(char for char in text if unicodedata.category(char) != 'Mn')
+        text = unicodedata.normalize("NFD", text)
+        text = "".join(char for char in text if unicodedata.category(char) != "Mn")
         return text.lower()
-    
+
     def detect_language(self, filepath: str, content: str) -> str:
         """Détecte le langage de programmation ou type de fichier"""
         ext = Path(filepath).suffix.lower()
-        
+
         language_map = {
-            '.py': 'Python',
-            '.js': 'JavaScript', 
-            '.ts': 'TypeScript',
-            '.html': 'HTML',
-            '.css': 'CSS',
-            '.md': 'Markdown',
-            '.rst': 'reStructuredText',
-            '.txt': 'Text',
-            '.json': 'JSON',
-            '.yml': 'YAML',
-            '.yaml': 'YAML',
-            '.xml': 'XML',
-            '.sql': 'SQL',
-            '.sh': 'Shell',
-            '.bat': 'Batch',
-            '.dockerfile': 'Docker',
-            '.java': 'Java',
-            '.c': 'C',
-            '.cpp': 'C++',
-            '.h': 'C Header',
-            '.cs': 'C#',
-            '.php': 'PHP',
-            '.rb': 'Ruby',
-            '.go': 'Go',
-            '.rs': 'Rust',
-            '.swift': 'Swift',
-            '.kt': 'Kotlin'
+            ".py": "Python",
+            ".js": "JavaScript",
+            ".ts": "TypeScript",
+            ".html": "HTML",
+            ".css": "CSS",
+            ".md": "Markdown",
+            ".rst": "reStructuredText",
+            ".txt": "Text",
+            ".json": "JSON",
+            ".yml": "YAML",
+            ".yaml": "YAML",
+            ".xml": "XML",
+            ".sql": "SQL",
+            ".sh": "Shell",
+            ".bat": "Batch",
+            ".dockerfile": "Docker",
+            ".java": "Java",
+            ".c": "C",
+            ".cpp": "C++",
+            ".h": "C Header",
+            ".cs": "C#",
+            ".php": "PHP",
+            ".rb": "Ruby",
+            ".go": "Go",
+            ".rs": "Rust",
+            ".swift": "Swift",
+            ".kt": "Kotlin",
         }
-        
-        return language_map.get(ext, 'Unknown')
-    
+
+        return language_map.get(ext, "Unknown")
+
     def analyze_file_content(self, filepath: str, content: str) -> Dict:
         """Analyse le contenu d'un fichier pour extraire des métadonnées"""
-        lines = content.split('\n')
-        
+        lines = content.split("\n")
+
         analysis = {
-            'lines_count': len(lines),
-            'chars_count': len(content),
-            'words_count': len(re.findall(r'\b\w+\b', content)),
-            'blank_lines': len([l for l in lines if not l.strip()]),
-            'language': self.detect_language(filepath, content),
-            'has_code': False,
-            'has_comments': False,
-            'complexity_score': 0
+            "lines_count": len(lines),
+            "chars_count": len(content),
+            "words_count": len(re.findall(r"\b\w+\b", content)),
+            "blank_lines": len([l for l in lines if not l.strip()]),
+            "language": self.detect_language(filepath, content),
+            "has_code": False,
+            "has_comments": False,
+            "complexity_score": 0,
         }
-        
+
         # Détection de code
-        code_indicators = ['def ', 'class ', 'function ', 'import ', 'from ', '= ', '{', '}', '()', ';']
-        analysis['has_code'] = any(indicator in content for indicator in code_indicators)
-        
+        code_indicators = [
+            "def ",
+            "class ",
+            "function ",
+            "import ",
+            "from ",
+            "= ",
+            "{",
+            "}",
+            "()",
+            ";",
+        ]
+        analysis["has_code"] = any(
+            indicator in content for indicator in code_indicators
+        )
+
         # Détection de commentaires
-        comment_indicators = ['#', '//', '/*', '*/', '<!--', '-->', '"""', "'''"]
-        analysis['has_comments'] = any(indicator in content for indicator in comment_indicators)
-        
+        comment_indicators = ["#", "//", "/*", "*/", "<!--", "-->", '"""', "'''"]
+        analysis["has_comments"] = any(
+            indicator in content for indicator in comment_indicators
+        )
+
         # Score de complexité simple
-        complexity_indicators = ['if ', 'for ', 'while ', 'try:', 'except:', 'class ', 'def ']
-        analysis['complexity_score'] = sum(content.count(indicator) for indicator in complexity_indicators)
-        
+        complexity_indicators = [
+            "if ",
+            "for ",
+            "while ",
+            "try:",
+            "except:",
+            "class ",
+            "def ",
+        ]
+        analysis["complexity_score"] = sum(
+            content.count(indicator) for indicator in complexity_indicators
+        )
+
         return analysis
-    
-    def load_documents_from_directory(self, directory: str, max_file_size: int = 1024*1024) -> None:
+
+    def load_documents_from_directory(
+        self, directory: str, max_file_size: int = 1024 * 1024
+    ) -> None:
         """Charge et analyse tous les documents d'un répertoire"""
         print(f"🔍 Scan du répertoire : {directory}")
-        
+
         supported_extensions = {
-            '.md', '.txt', '.rst', '.py', '.js', '.ts', '.html', '.css', 
-            '.json', '.yml', '.yaml', '.xml', '.sql', '.sh', '.bat',
-            '.java', '.c', '.cpp', '.h', '.cs', '.php', '.rb', '.go'
+            ".md",
+            ".txt",
+            ".rst",
+            ".py",
+            ".js",
+            ".ts",
+            ".html",
+            ".css",
+            ".json",
+            ".yml",
+            ".yaml",
+            ".xml",
+            ".sql",
+            ".sh",
+            ".bat",
+            ".java",
+            ".c",
+            ".cpp",
+            ".h",
+            ".cs",
+            ".php",
+            ".rb",
+            ".go",
         }
-        
+
         total_files = 0
         processed_files = 0
         skipped_files = 0
-        
+
         for root, dirs, files in os.walk(directory):
             # Ignorer certains répertoires
-            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in {
-                '__pycache__', 'node_modules', 'venv', 'env', 'build', 'dist'
-            }]
-            
+            dirs[:] = [
+                d
+                for d in dirs
+                if not d.startswith(".")
+                and d
+                not in {"__pycache__", "node_modules", "venv", "env", "build", "dist"}
+            ]
+
             for file in files:
                 if any(file.endswith(ext) for ext in supported_extensions):
                     total_files += 1
                     filepath = os.path.join(root, file)
-                    
+
                     try:
                         # Vérifier la taille du fichier
                         file_size = os.path.getsize(filepath)
                         if file_size > max_file_size:
                             skipped_files += 1
                             continue
-                        
+
                         # Lire et analyser le fichier
-                        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                        with open(
+                            filepath, "r", encoding="utf-8", errors="ignore"
+                        ) as f:
                             content = f.read()
-                        
+
                         # Stocker le document
                         rel_path = os.path.relpath(filepath, directory)
                         self.documents[rel_path] = content
-                        
+
                         # Analyser le contenu
                         analysis = self.analyze_file_content(rel_path, content)
-                        
+
                         # Métadonnées du fichier
                         stat = os.stat(filepath)
                         self.metadata[rel_path] = {
-                            'size': file_size,
-                            'modified': datetime.fromtimestamp(stat.st_mtime),
-                            'extension': Path(filepath).suffix,
-                            'directory': os.path.dirname(rel_path),
-                            **analysis
+                            "size": file_size,
+                            "modified": datetime.fromtimestamp(stat.st_mtime),
+                            "extension": Path(filepath).suffix,
+                            "directory": os.path.dirname(rel_path),
+                            **analysis,
                         }
-                        
+
                         # Indexer pour la recherche
                         self.index_document(rel_path, content)
-                        
+
                         # Statistiques
-                        self.stats['file_types'][Path(filepath).suffix] += 1
-                        self.stats['languages'][analysis['language']] += 1
-                        self.stats['total_size'] += file_size
-                        
+                        self.stats["file_types"][Path(filepath).suffix] += 1
+                        self.stats["languages"][analysis["language"]] += 1
+                        self.stats["total_size"] += file_size
+
                         processed_files += 1
-                        
+
                         if processed_files % 50 == 0:
                             print(f"   Traité: {processed_files} fichiers...")
-                            
+
                     except Exception as e:
                         print(f"   ⚠️ Erreur {filepath}: {e}")
                         skipped_files += 1
-        
-        self.stats['total_files'] = processed_files
-        self.stats['last_scan'] = datetime.now()
-        
+
+        self.stats["total_files"] = processed_files
+        self.stats["last_scan"] = datetime.now()
+
         # Construire l'arbre des fichiers
         self._build_file_tree()
-        
-        print(f" Scan terminé: {processed_files} fichiers traités, {skipped_files} ignorés")
-    
+
+        print(
+            f" Scan terminé: {processed_files} fichiers traités, {skipped_files} ignorés"
+        )
+
     def _build_file_tree(self):
         """Construit l'arborescence des fichiers"""
         self.file_tree = {}
-        
+
         for filepath in self.documents.keys():
             parts = Path(filepath).parts
             current = self.file_tree
-            
+
             for part in parts[:-1]:  # Répertoires
                 if part not in current:
-                    current[part] = {'type': 'directory', 'children': {}, 'files': []}
-                current = current[part]['children']
-            
+                    current[part] = {"type": "directory", "children": {}, "files": []}
+                current = current[part]["children"]
+
             # Fichier final
             filename = parts[-1]
-            if 'files' not in current:
-                current['files'] = []
-            current['files'].append({
-                'name': filename,
-                'path': filepath,
-                'size': self.metadata[filepath]['size'],
-                'language': self.metadata[filepath]['language']
-            })
-    
+            if "files" not in current:
+                current["files"] = []
+            current["files"].append(
+                {
+                    "name": filename,
+                    "path": filepath,
+                    "size": self.metadata[filepath]["size"],
+                    "language": self.metadata[filepath]["language"],
+                }
+            )
+
     def index_document(self, filepath: str, content: str) -> None:
         """Indexe un document pour la recherche rapide"""
         words = {}
         normalized_content = self.normalize_text(content)
-        
+
         # Extraire les mots avec positions
-        for match in re.finditer(r'\b\w+\b', normalized_content):
+        for match in re.finditer(r"\b\w+\b", normalized_content):
             word = match.group()
             if len(word) >= 2:  # Mots de 2+ caractères
                 if word not in words:
                     words[word] = []
                 words[word].append(match.start())
-        
+
         self.indexed_docs[filepath] = words
-    
-    def advanced_search(self, query: str, filters: Dict = None, max_results: int = 50) -> List[Dict]:
+
+    def advanced_search(
+        self, query: str, filters: Dict = None, max_results: int = 50
+    ) -> List[Dict]:
         """Recherche avancée avec filtres"""
         if not query.strip():
             return []
-        
+
         filters = filters or {}
-        query_words = [self.normalize_text(word) 
-                      for word in re.findall(r'\b\w+\b', query.lower())
-                      if len(word) >= 2]
-        
+        query_words = [
+            self.normalize_text(word)
+            for word in re.findall(r"\b\w+\b", query.lower())
+            if len(word) >= 2
+        ]
+
         if not query_words:
             return []
-        
+
         results = []
-        
+
         for filepath, word_index in self.indexed_docs.items():
             # Appliquer les filtres
             if not self._passes_filters(filepath, filters):
                 continue
-            
+
             score = 0
             matches = []
             match_details = []
-            
+
             # Recherche pour chaque mot
             for query_word in query_words:
                 word_matches = self.find_word_matches(query_word, word_index)
-                
+
                 for matched_word, positions in word_matches.items():
                     word_score = len(positions)
-                    
+
                     # Bonus selon le type de correspondance
                     if matched_word == query_word:
                         word_score *= 3  # Exact
@@ -269,106 +337,112 @@ class AdvancedDocumentationSearcher:
                         word_score *= 2  # Préfixe
                     elif query_word in matched_word:
                         word_score *= 1.5  # Contient
-                    
+
                     score += word_score
                     matches.extend(positions)
-                    match_details.append({
-                        'query_word': query_word,
-                        'matched_word': matched_word,
-                        'positions': positions,
-                        'match_type': self.get_match_type(query_word, matched_word)
-                    })
-            
+                    match_details.append(
+                        {
+                            "query_word": query_word,
+                            "matched_word": matched_word,
+                            "positions": positions,
+                            "match_type": self.get_match_type(query_word, matched_word),
+                        }
+                    )
+
             if score > 0:
                 contexts = self.extract_contexts(filepath, matches)
                 metadata = self.metadata.get(filepath, {})
-                
-                results.append({
-                    'filepath': filepath,
-                    'filename': os.path.basename(filepath),
-                    'directory': os.path.dirname(filepath),
-                    'score': score,
-                    'matches': len(matches),
-                    'contexts': contexts,
-                    'match_details': match_details,
-                    'metadata': metadata,
-                    'preview': self._generate_preview(filepath, contexts)
-                })
-        
+
+                results.append(
+                    {
+                        "filepath": filepath,
+                        "filename": os.path.basename(filepath),
+                        "directory": os.path.dirname(filepath),
+                        "score": score,
+                        "matches": len(matches),
+                        "contexts": contexts,
+                        "match_details": match_details,
+                        "metadata": metadata,
+                        "preview": self._generate_preview(filepath, contexts),
+                    }
+                )
+
         # Trier par score et filtrer
-        results.sort(key=lambda x: x['score'], reverse=True)
+        results.sort(key=lambda x: x["score"], reverse=True)
         return results[:max_results]
-    
+
     def _passes_filters(self, filepath: str, filters: Dict) -> bool:
         """Vérifie si un fichier passe les filtres"""
         metadata = self.metadata.get(filepath, {})
-        
+
         # Filtre par extension
-        if 'extensions' in filters and filters['extensions']:
-            if metadata.get('extension', '') not in filters['extensions']:
+        if "extensions" in filters and filters["extensions"]:
+            if metadata.get("extension", "") not in filters["extensions"]:
                 return False
-        
+
         # Filtre par langage
-        if 'languages' in filters and filters['languages']:
-            if metadata.get('language', '') not in filters['languages']:
+        if "languages" in filters and filters["languages"]:
+            if metadata.get("language", "") not in filters["languages"]:
                 return False
-        
+
         # Filtre par taille
-        if 'min_size' in filters:
-            if metadata.get('size', 0) < filters['min_size']:
+        if "min_size" in filters:
+            if metadata.get("size", 0) < filters["min_size"]:
                 return False
-        
-        if 'max_size' in filters:
-            if metadata.get('size', 0) > filters['max_size']:
+
+        if "max_size" in filters:
+            if metadata.get("size", 0) > filters["max_size"]:
                 return False
-        
+
         # Filtre par date de modification
-        if 'date_from' in filters and filters['date_from']:
-            file_date = metadata.get('modified')
-            if file_date and file_date < filters['date_from']:
+        if "date_from" in filters and filters["date_from"]:
+            file_date = metadata.get("modified")
+            if file_date and file_date < filters["date_from"]:
                 return False
-        
+
         # Filtre par répertoire
-        if 'directories' in filters and filters['directories']:
+        if "directories" in filters and filters["directories"]:
             file_dir = os.path.dirname(filepath)
-            if not any(file_dir.startswith(d) for d in filters['directories']):
+            if not any(file_dir.startswith(d) for d in filters["directories"]):
                 return False
-        
+
         return True
-    
-    def find_word_matches(self, query_word: str, word_index: Dict) -> Dict[str, List[int]]:
+
+    def find_word_matches(
+        self, query_word: str, word_index: Dict
+    ) -> Dict[str, List[int]]:
         """Trouve les correspondances de mots avec différents types"""
         matches = {}
-        
+
         for indexed_word, positions in word_index.items():
             # Correspondance exacte
             if indexed_word == query_word:
                 matches[indexed_word] = positions
-            
+
             # Correspondance par préfixe
             elif indexed_word.startswith(query_word):
                 matches[indexed_word] = positions
-            
+
             # Correspondance par sous-chaîne
             elif query_word in indexed_word and len(query_word) >= 3:
                 matches[indexed_word] = positions
-            
+
             # Correspondance floue
             elif len(query_word) >= 4 and self.is_fuzzy_match(query_word, indexed_word):
                 matches[indexed_word] = positions
-        
+
         return matches
-    
+
     def is_fuzzy_match(self, query_word: str, indexed_word: str) -> bool:
         """Correspondance floue avec Levenshtein"""
         if abs(len(query_word) - len(indexed_word)) > 3:
             return False
-        
+
         similarity = difflib.SequenceMatcher(None, query_word, indexed_word).ratio()
         threshold = 0.8 if len(query_word) <= 5 else 0.75
-        
+
         return similarity >= threshold
-    
+
     def get_match_type(self, query_word: str, matched_word: str) -> str:
         """Type de correspondance"""
         if matched_word == query_word:
@@ -379,168 +453,179 @@ class AdvancedDocumentationSearcher:
             return "substring"
         else:
             return "fuzzy"
-    
-    def extract_contexts(self, filepath: str, positions: List[int], context_size: int = 150) -> List[str]:
+
+    def extract_contexts(
+        self, filepath: str, positions: List[int], context_size: int = 150
+    ) -> List[str]:
         """Extrait des contextes autour des positions"""
         content = self.documents[filepath]
         contexts = []
-        
+
         positions = sorted(set(positions))[:5]  # Limiter à 5 contextes
-        
+
         for pos in positions:
             start = max(0, pos - context_size)
             end = min(len(content), pos + context_size)
             context = content[start:end].strip()
-            
+
             # Nettoyer et améliorer le contexte
-            context = re.sub(r'\s+', ' ', context)
+            context = re.sub(r"\s+", " ", context)
             if context and len(context) > 20:
                 # Ajouter des points de suspension si tronqué
                 if start > 0:
                     context = "..." + context
                 if end < len(content):
                     context = context + "..."
-                
+
                 contexts.append(context)
-        
+
         return contexts
-    
+
     def _generate_preview(self, filepath: str, contexts: List[str]) -> str:
         """Génère un aperçu du fichier"""
         if contexts:
             return contexts[0][:200] + "..." if len(contexts[0]) > 200 else contexts[0]
-        
+
         # Aperçu depuis le début du fichier
         content = self.documents[filepath]
-        lines = content.split('\n')[:5]
-        preview = '\n'.join(lines)
-        
+        lines = content.split("\n")[:5]
+        preview = "\n".join(lines)
+
         return preview[:300] + "..." if len(preview) > 300 else preview
-    
+
     def get_statistics(self) -> Dict:
         """Retourne les statistiques du corpus"""
         return {
-            'overview': self.stats,
-            'top_languages': dict(self.stats['languages'].most_common(10)),
-            'top_extensions': dict(self.stats['file_types'].most_common(10)),
-            'size_distribution': self._get_size_distribution(),
-            'directory_structure': self._get_directory_stats()
+            "overview": self.stats,
+            "top_languages": dict(self.stats["languages"].most_common(10)),
+            "top_extensions": dict(self.stats["file_types"].most_common(10)),
+            "size_distribution": self._get_size_distribution(),
+            "directory_structure": self._get_directory_stats(),
         }
-    
+
     def _get_size_distribution(self) -> Dict:
         """Distribution des tailles de fichiers"""
-        sizes = [meta['size'] for meta in self.metadata.values()]
-        
+        sizes = [meta["size"] for meta in self.metadata.values()]
+
         return {
-            'small': len([s for s in sizes if s < 1024]),      # < 1KB
-            'medium': len([s for s in sizes if 1024 <= s < 10240]),  # 1-10KB
-            'large': len([s for s in sizes if 10240 <= s < 102400]), # 10-100KB
-            'xlarge': len([s for s in sizes if s >= 102400])   # > 100KB
+            "small": len([s for s in sizes if s < 1024]),  # < 1KB
+            "medium": len([s for s in sizes if 1024 <= s < 10240]),  # 1-10KB
+            "large": len([s for s in sizes if 10240 <= s < 102400]),  # 10-100KB
+            "xlarge": len([s for s in sizes if s >= 102400]),  # > 100KB
         }
-    
+
     def _get_directory_stats(self) -> Dict:
         """Statistiques par répertoire"""
-        dir_stats = defaultdict(lambda: {'files': 0, 'size': 0})
-        
+        dir_stats = defaultdict(lambda: {"files": 0, "size": 0})
+
         for filepath, metadata in self.metadata.items():
-            directory = os.path.dirname(filepath) or 'root'
-            dir_stats[directory]['files'] += 1
-            dir_stats[directory]['size'] += metadata['size']
-        
+            directory = os.path.dirname(filepath) or "root"
+            dir_stats[directory]["files"] += 1
+            dir_stats[directory]["size"] += metadata["size"]
+
         return dict(dir_stats)
 
 
 class DocumentationWebServer:
     """Serveur web moderne pour l'interface de recherche"""
-    
+
     def __init__(self, port: int = 8081):
         self.port = port
         self.searcher = AdvancedDocumentationSearcher()
         self.app = Flask(__name__)
-        self.app.secret_key = 'documentation_search_2025'
+        self.app.secret_key = "documentation_search_2025"
         self._setup_routes()
-        
+
     def _setup_routes(self):
         """Configure les routes Flask"""
-        self.app.add_url_rule('/', 'index', self.index)
-        self.app.add_url_rule('/api/search', 'search', self.api_search, methods=['POST'])
-        self.app.add_url_rule('/api/stats', 'stats', self.api_stats)
-        self.app.add_url_rule('/api/file/<path:filepath>', 'get_file', self.api_get_file)
-        self.app.add_url_rule('/api/tree', 'file_tree', self.api_file_tree)
-        self.app.add_url_rule('/scan/<path:directory>', 'scan', self.scan_directory)
-        
+        self.app.add_url_rule("/", "index", self.index)
+        self.app.add_url_rule(
+            "/api/search", "search", self.api_search, methods=["POST"]
+        )
+        self.app.add_url_rule("/api/stats", "stats", self.api_stats)
+        self.app.add_url_rule(
+            "/api/file/<path:filepath>", "get_file", self.api_get_file
+        )
+        self.app.add_url_rule("/api/tree", "file_tree", self.api_file_tree)
+        self.app.add_url_rule("/scan/<path:directory>", "scan", self.scan_directory)
+
     def load_project(self, project_path: str = "."):
         """Charge et indexe un projet"""
         print(f" Chargement du projet depuis : {project_path}")
         self.searcher.load_documents_from_directory(project_path)
         print(f" Projet indexé : {self.searcher.stats['total_files']} fichiers")
-        
+
     def index(self):
         """Page principale de l'interface"""
         return render_template_string(self._get_main_template())
-    
+
     def api_search(self):
         """API de recherche avancée"""
         data = request.get_json()
-        query = data.get('query', '')
-        filters = data.get('filters', {})
-        max_results = data.get('max_results', 50)
-        
+        query = data.get("query", "")
+        filters = data.get("filters", {})
+        max_results = data.get("max_results", 50)
+
         results = self.searcher.advanced_search(query, filters, max_results)
-        
-        return jsonify({
-            'status': 'success',
-            'query': query,
-            'total_results': len(results),
-            'results': results,
-            'stats': self.searcher.get_statistics()['overview']
-        })
-    
+
+        return jsonify(
+            {
+                "status": "success",
+                "query": query,
+                "total_results": len(results),
+                "results": results,
+                "stats": self.searcher.get_statistics()["overview"],
+            }
+        )
+
     def api_stats(self):
         """API des statistiques"""
         return jsonify(self.searcher.get_statistics())
-    
+
     def api_get_file(self, filepath):
         """API pour récupérer le contenu d'un fichier"""
         if filepath in self.searcher.documents:
             content = self.searcher.documents[filepath]
             metadata = self.searcher.metadata[filepath]
-            
-            return jsonify({
-                'status': 'success',
-                'filepath': filepath,
-                'content': content,
-                'metadata': metadata
-            })
-        
-        return jsonify({'status': 'error', 'message': 'Fichier non trouvé'}), 404
-    
+
+            return jsonify(
+                {
+                    "status": "success",
+                    "filepath": filepath,
+                    "content": content,
+                    "metadata": metadata,
+                }
+            )
+
+        return jsonify({"status": "error", "message": "Fichier non trouvé"}), 404
+
     def api_file_tree(self):
         """API pour l'arborescence des fichiers"""
-        return jsonify({
-            'status': 'success',
-            'tree': self.searcher.file_tree,
-            'stats': self.searcher.get_statistics()
-        })
-    
+        return jsonify(
+            {
+                "status": "success",
+                "tree": self.searcher.file_tree,
+                "stats": self.searcher.get_statistics(),
+            }
+        )
+
     def scan_directory(self, directory):
         """Rescanner un répertoire"""
         try:
             self.searcher.load_documents_from_directory(directory)
-            return jsonify({
-                'status': 'success',
-                'message': f'Répertoire {directory} scanné avec succès',
-                'stats': self.searcher.stats
-            })
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": f"Répertoire {directory} scanné avec succès",
+                    "stats": self.searcher.stats,
+                }
+            )
         except Exception as e:
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 500
-    
+            return jsonify({"status": "error", "message": str(e)}), 500
+
     def _get_main_template(self):
         """Template HTML principal moderne"""
-        return '''
+        return """
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1239,18 +1324,20 @@ class DocumentationWebServer:
     </script>
 </body>
 </html>
-        '''
-    
-    def run(self, host: str = '127.0.0.1', debug: bool = False):
+        """
+
+    def run(self, host: str = "127.0.0.1", debug: bool = False):
         """Lance le serveur web"""
         print(f" Démarrage du serveur sur http://{host}:{self.port}")
         print(f" Interface accessible à l'adresse : http://{host}:{self.port}")
         print(" Utilisez Ctrl+C pour arrêter le serveur")
-        
+
         # Ouvrir automatiquement le navigateur
         if not debug:
-            threading.Timer(1.5, lambda: webbrowser.open(f'http://{host}:{self.port}')).start()
-        
+            threading.Timer(
+                1.5, lambda: webbrowser.open(f"http://{host}:{self.port}")
+            ).start()
+
         try:
             self.app.run(host=host, port=self.port, debug=debug)
         except KeyboardInterrupt:
@@ -1260,29 +1347,37 @@ class DocumentationWebServer:
 def main():
     """Fonction principale"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Documentation Search Engine - Version Web Moderne")
-    parser.add_argument('--port', type=int, default=8081, help='Port du serveur (défaut: 8081)')
-    parser.add_argument('--host', default='127.0.0.1', help='Host du serveur (défaut: 127.0.0.1)')
-    parser.add_argument('--project', default='.', help='Chemin du projet à analyser (défaut: .)')
-    parser.add_argument('--debug', action='store_true', help='Mode debug Flask')
-    
+
+    parser = argparse.ArgumentParser(
+        description="Documentation Search Engine - Version Web Moderne"
+    )
+    parser.add_argument(
+        "--port", type=int, default=8081, help="Port du serveur (défaut: 8081)"
+    )
+    parser.add_argument(
+        "--host", default="127.0.0.1", help="Host du serveur (défaut: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--project", default=".", help="Chemin du projet à analyser (défaut: .)"
+    )
+    parser.add_argument("--debug", action="store_true", help="Mode debug Flask")
+
     args = parser.parse_args()
-    
+
     if not FLASK_AVAILABLE:
         print(" Flask requis pour le serveur web")
         print(" Installation : pip install flask")
         return
-    
+
     print(" Documentation Search Engine - Version Web Moderne")
     print("=" * 60)
-    
+
     # Créer et configurer le serveur
     server = DocumentationWebServer(port=args.port)
-    
+
     # Charger le projet
     server.load_project(args.project)
-    
+
     # Lancer le serveur
     server.run(host=args.host, debug=args.debug)
 

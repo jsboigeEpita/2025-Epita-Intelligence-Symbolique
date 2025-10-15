@@ -5,7 +5,7 @@ Utilitaires pour la manipulation de Markdown et sa conversion en HTML.
 from pathlib import Path
 from typing import Optional
 import logging
-import markdown # type: ignore
+import markdown  # type: ignore
 
 # Importation des fonctions de chargement nécessaires
 from .file_loaders import load_text_file
@@ -14,10 +14,13 @@ from .file_loaders import load_text_file
 markdown_logger = logging.getLogger("App.ProjectCore.MarkdownUtils")
 if not markdown_logger.handlers and not markdown_logger.propagate:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+    )
     handler.setFormatter(formatter)
     markdown_logger.addHandler(handler)
     markdown_logger.setLevel(logging.INFO)
+
 
 def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     """
@@ -26,12 +29,16 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
     Les extensions Markdown 'tables' et 'fenced_code' sont activées.
     Crée les répertoires parents si nécessaire.
     """
-    markdown_logger.info(f"Conversion du Markdown en HTML et sauvegarde vers {output_path}")
+    markdown_logger.info(
+        f"Conversion du Markdown en HTML et sauvegarde vers {output_path}"
+    )
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        html_content = markdown.markdown(markdown_content, extensions=['tables', 'fenced_code'])
-        
+
+        html_content = markdown.markdown(
+            markdown_content, extensions=["tables", "fenced_code"]
+        )
+
         html_document = f"""
         <!DOCTYPE html>
         <html lang="fr">
@@ -127,29 +134,48 @@ def save_markdown_to_html(markdown_content: str, output_path: Path) -> bool:
         </body>
         </html>
         """
-        with open(output_path, 'w', encoding='utf-8', errors="replace") as f:
+        with open(output_path, "w", encoding="utf-8", errors="replace") as f:
             f.write(html_document)
-        markdown_logger.info(f"[OK] Contenu HTML sauvegardé avec succès dans {output_path}")
+        markdown_logger.info(
+            f"[OK] Contenu HTML sauvegardé avec succès dans {output_path}"
+        )
         return True
     except Exception as e:
-        markdown_logger.error(f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}", exc_info=True)
+        markdown_logger.error(
+            f"❌ Erreur lors de la conversion Markdown en HTML ou de la sauvegarde dans {output_path}: {e}",
+            exc_info=True,
+        )
         return False
 
-def convert_markdown_file_to_html(markdown_file_path: Path, output_html_path: Path, visualization_dir: Optional[Path] = None) -> bool:
+
+def convert_markdown_file_to_html(
+    markdown_file_path: Path,
+    output_html_path: Path,
+    visualization_dir: Optional[Path] = None,
+) -> bool:
     """
     Lit un fichier Markdown, le convertit en HTML et le sauvegarde.
     Utilise la fonction save_markdown_to_html pour la conversion et la sauvegarde.
     """
-    markdown_logger.info(f"Tentative de conversion du fichier Markdown {markdown_file_path} en HTML vers {output_html_path}.")
-    
-    markdown_content = load_text_file(markdown_file_path) # Utilise la fonction importée
+    markdown_logger.info(
+        f"Tentative de conversion du fichier Markdown {markdown_file_path} en HTML vers {output_html_path}."
+    )
+
+    markdown_content = load_text_file(
+        markdown_file_path
+    )  # Utilise la fonction importée
     if markdown_content is None:
-        markdown_logger.error(f"Impossible de lire le contenu du fichier Markdown: {markdown_file_path}")
+        markdown_logger.error(
+            f"Impossible de lire le contenu du fichier Markdown: {markdown_file_path}"
+        )
         return False
-    
+
     if visualization_dir:
-        markdown_logger.debug(f"Le répertoire de visualisations {visualization_dir} est fourni mais non utilisé activement dans cette version de la conversion.")
+        markdown_logger.debug(
+            f"Le répertoire de visualisations {visualization_dir} est fourni mais non utilisé activement dans cette version de la conversion."
+        )
 
     return save_markdown_to_html(markdown_content, output_html_path)
+
 
 markdown_logger.info("Utilitaires Markdown (MarkdownUtils) définis.")

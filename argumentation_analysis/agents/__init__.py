@@ -19,6 +19,7 @@ la maintenance et l'extension des capacités agentiques du système.
 # dans le package 'agents'.
 try:
     from . import core
+
     # L'import de 'argumentation_analysis.core' était potentiellement une erreur
     # ou une ancienne structure. Si 'core' est un sous-module de 'agents',
     # l'importation correcte est 'from . import core'.
@@ -37,6 +38,7 @@ try:
 
 except ImportError as e:
     import logging
+
     logging.warning(f"Un sous-module de 'agents' n'a pas pu être importé: {e}")
     __all__ = []
 

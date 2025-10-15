@@ -14,8 +14,8 @@ from .contextual_fallacy_detector import ContextualFallacyDetector
 from .semantic_argument_analyzer import SemanticArgumentAnalyzer
 
 __all__ = [
-    'ArgumentCoherenceEvaluator',
-    'ArgumentStructureVisualizer',
-    'ContextualFallacyDetector',
-    'SemanticArgumentAnalyzer'
+    "ArgumentCoherenceEvaluator",
+    "ArgumentStructureVisualizer",
+    "ContextualFallacyDetector",
+    "SemanticArgumentAnalyzer",
 ]

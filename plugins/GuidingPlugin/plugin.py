@@ -3,6 +3,7 @@ from core.plugins.interfaces import BasePlugin, IWorkflowPlugin
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 
+
 class GuidingPlugin(BasePlugin):
     """
     A plugin to guide the analysis by identifying relevant categories of fallacies.
@@ -30,16 +31,16 @@ Response:
         self.guiding_function = self.kernel.add_function(
             function_name="suggest_categories_semantic",
             plugin_name="GuidingPlugin",
-            prompt=self.guiding_prompt
+            prompt=self.guiding_prompt,
         )
 
-    @kernel_function(name="suggest_categories", description="Suggests relevant fallacy categories to focus on.")
+    @kernel_function(
+        name="suggest_categories",
+        description="Suggests relevant fallacy categories to focus on.",
+    )
     async def suggest_categories(self, text: str) -> str:
         """
         Suggests relevant fallacy categories based on the input text.
         """
-        response = await self.kernel.invoke(
-            self.guiding_function,
-            input=text
-        )
+        response = await self.kernel.invoke(self.guiding_function, input=text)
         return str(response)

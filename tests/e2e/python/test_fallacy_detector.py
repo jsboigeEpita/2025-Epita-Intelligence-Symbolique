@@ -2,6 +2,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.e2e
@@ -13,40 +14,43 @@ def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     """
     # 1. Navigation et attente API connectée
     page.goto(frontend_url)
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-    
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=15000)
+
     # 2. Activation de l'onglet Sophismes
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
     expect(fallacy_tab).to_be_enabled()
     fallacy_tab.click()
-    
+
     # 3. Localisation des éléments d'interface
     text_input = page.locator('[data-testid="fallacy-text-input"]')
     submit_button = page.locator('[data-testid="fallacy-submit-button"]')
     results_container = page.locator('[data-testid="fallacy-results-container"]')
-    
+
     # 4. Saisie d'un exemple Ad Hominem
     ad_hominem_text = "Cette théorie sur le climat est fausse parce que son auteur a été condamné pour fraude fiscale."
     expect(text_input).to_be_visible()
     text_input.fill(ad_hominem_text)
-    
+
     # 5. Soumission du formulaire
     expect(submit_button).to_be_enabled()
     submit_button.click()
-    
+
     # 6. Attente des résultats
     expect(results_container).to_be_visible(timeout=10000)
-    
+
     # 7. Vérification de la détection
     # Vérification plus flexible qui accepte un ou plusieurs sophismes
-    expect(results_container).to_contain_text(re.compile(r"\d+ sophisme\(s\) détecté\(s\)"))
+    expect(results_container).to_contain_text(
+        re.compile(r"\d+ sophisme\(s\) détecté\(s\)")
+    )
     # Utilise une expression régulière insensible à la casse pour plus de robustesse
     # face aux variations de formatage (ex: "Ad Hominem (Simulé)").
     expect(results_container).to_contain_text(re.compile(r"ad hominem", re.IGNORECASE))
-    
+
     # 8. Vérification présence d'un niveau de sévérité
-    severity_badge = results_container.locator('.severity-badge').first
+    severity_badge = results_container.locator(".severity-badge").first
     expect(severity_badge).to_be_visible()
+
 
 @pytest.mark.e2e
 @pytest.mark.playwright
@@ -57,28 +61,29 @@ def test_severity_threshold_adjustment(page: Page, frontend_url: str):
     """
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-    
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=15000)
+
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
     fallacy_tab.click()
-    
+
     # 2. Localisation des éléments
     text_input = page.locator('[data-testid="fallacy-text-input"]')
     submit_button = page.locator('[data-testid="fallacy-submit-button"]')
     results_container = page.locator('[data-testid="fallacy-results-container"]')
-    severity_slider = page.locator('.severity-slider')
-    
+    severity_slider = page.locator(".severity-slider")
+
     # 3. Saisie d'un texte avec sophisme modéré
     moderate_fallacy = "Si on autorise les gens à conduire à 85 km/h, bientôt ils voudront conduire à 200 km/h."
     text_input.fill(moderate_fallacy)
-    
+
     # 4. Test avec seuil élevé (0.8) - devrait détecter moins
-    severity_slider.fill('0.8')
+    severity_slider.fill("0.8")
     submit_button.click()
-    
+
     # Attendre les résultats du premier test
     expect(results_container).to_be_visible(timeout=10000)
     expect(results_container).to_be_visible(timeout=10000)
+
 
 @pytest.mark.e2e
 @pytest.mark.playwright
@@ -89,41 +94,44 @@ def test_fallacy_example_loading(page: Page, frontend_url: str):
     """
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-    
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=15000)
+
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
     fallacy_tab.click()
-    
+
     # 2. Localisation des éléments
     text_input = page.locator('[data-testid="fallacy-text-input"]')
-    examples_section = page.locator('.fallacy-examples')
-    
+    examples_section = page.locator(".fallacy-examples")
+
     # 3. Vérification présence des exemples
     expect(examples_section).to_be_visible()
     expect(examples_section).to_contain_text("Exemples de sophismes courants")
-    
+
     # 4. Recherche du premier bouton "Tester" (Ad Hominem)
     # Utilise "Tester" car c'est le libellé réel du bouton dans le composant React.
     # Le rapport de débogage mentionnait "Essayer", ce qui était une piste incorrecte.
     first_test_button = examples_section.locator('button.btn:has-text("Tester")').first
     expect(first_test_button).to_be_visible()
-    
+
     # 5. Vérification que le champ est initialement vide
     expect(text_input).to_have_value("")
-    
+
     # 6. Clic sur le bouton "Tester"
     first_test_button.click()
-    
+
     # 7. Vérification que le texte a été rempli automatiquement
     expect(text_input).not_to_have_value("")
-    
+
     # 8. Vérification que le texte contient bien un exemple
     input_value = text_input.input_value()
-    assert len(input_value) > 10, f"Le texte d'exemple devrait contenir plus de 10 caractères, mais contient seulement {len(input_value)}"
-    
+    assert (
+        len(input_value) > 10
+    ), f"Le texte d'exemple devrait contenir plus de 10 caractères, mais contient seulement {len(input_value)}"
+
     # 9. Vérification que le bouton submit est maintenant activé
     submit_button = page.locator('[data-testid="fallacy-submit-button"]')
     expect(submit_button).to_be_enabled()
+
 
 @pytest.mark.e2e
 @pytest.mark.playwright
@@ -134,30 +142,30 @@ def test_fallacy_detector_reset_functionality(page: Page, frontend_url: str):
     """
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-    
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=15000)
+
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
     fallacy_tab.click()
-    
+
     # 2. Localisation des éléments
     text_input = page.locator('[data-testid="fallacy-text-input"]')
     submit_button = page.locator('[data-testid="fallacy-submit-button"]')
     reset_button = page.locator('[data-testid="fallacy-reset-button"]')
     results_container = page.locator('[data-testid="fallacy-results-container"]')
-    
+
     # 3. Effectuer une détection complète d'abord
     test_text = "Cette théorie est fausse parce que son auteur est stupide."
     text_input.fill(test_text)
     submit_button.click()
-    
+
     # 4. Attendre les résultats
     expect(results_container).to_be_visible(timeout=10000)
     expect(text_input).to_have_value(test_text)
-    
+
     # 5. Clic sur le bouton reset
     expect(reset_button).to_be_enabled()
     reset_button.click()
-    
+
     # 6. Vérifications après reset
     expect(text_input).to_have_value("")
     expect(results_container).not_to_be_visible()

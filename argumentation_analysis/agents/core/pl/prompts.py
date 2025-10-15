@@ -82,4 +82,6 @@ prompt_gen_pl_queries_v8 = prompt_gen_pl_queries_v9
 prompt_interpret_pl_v8 = prompt_interpret_pl_v9
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.pl.prompts chargé (V9 - Format corrigé).")
+logging.getLogger(__name__).debug(
+    "Module agents.core.pl.prompts chargé (V9 - Format corrigé)."
+)

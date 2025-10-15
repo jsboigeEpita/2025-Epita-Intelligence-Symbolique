@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BasePlugin(ABC):
     """Abstract base class for all plugins."""
 

@@ -1,4 +1,5 @@
 import argumentation_analysis.core.environment
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -20,8 +21,8 @@ from pathlib import Path
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("RunExtractRepair")
 
@@ -32,8 +33,13 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Importer le pipeline de réparation et le parseur d'arguments
-from argumentation_analysis.utils.dev_tools.repair_utils import run_extract_repair_pipeline
-from argumentation_analysis.utils.core_utils.cli_utils import parse_extract_repair_arguments
+from argumentation_analysis.utils.dev_tools.repair_utils import (
+    run_extract_repair_pipeline,
+)
+from argumentation_analysis.utils.core_utils.cli_utils import (
+    parse_extract_repair_arguments,
+)
+
 # Les imports spécifiques (repair_extract_markers, core_services, etc.)
 # sont maintenant gérés à l'intérieur du pipeline.
 
@@ -41,17 +47,19 @@ from argumentation_analysis.utils.core_utils.cli_utils import parse_extract_repa
 async def main():
     """Fonction principale."""
     args = parse_extract_repair_arguments()
-    
+
     # Configurer le niveau de journalisation
     if args.verbose:
         logger.setLevel(logging.DEBUG)
         for handler in logger.handlers:
             handler.setLevel(logging.DEBUG)
         logger.debug("Mode verbeux activé.")
-    
+
     logger.info("Démarrage du script de réparation des bornes défectueuses...")
-    logger.info(f"Répertoire de travail actuel: {os.getcwd()}") # Peut être conservé pour info
-    
+    logger.info(
+        f"Répertoire de travail actuel: {os.getcwd()}"
+    )  # Peut être conservé pour info
+
     # Appel du pipeline modularisé
     await run_extract_repair_pipeline(
         project_root_dir=project_root,

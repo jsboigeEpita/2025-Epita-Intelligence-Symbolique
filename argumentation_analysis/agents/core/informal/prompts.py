@@ -157,4 +157,6 @@ Votre justification doit:
 """
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V9 - Template dynamique pour analyse).")
+logging.getLogger(__name__).debug(
+    "Module agents.core.informal.prompts chargé (V9 - Template dynamique pour analyse)."
+)

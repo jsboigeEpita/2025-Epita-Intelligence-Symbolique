@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+
 def load_environment():
     """
     Charge le fichier .env et configure le PYTHONPATH pour l'ensemble du projet.
@@ -11,7 +12,7 @@ def load_environment():
     """
     # Chemin vers la racine du projet, calculé à partir de l'emplacement de ce script
     project_root = Path(__file__).resolve().parent.parent.parent
-    
+
     # Chemin vers le fichier .env
     dotenv_path = project_root / ".env"
 
@@ -30,21 +31,22 @@ def load_environment():
         sys.path.insert(0, str(project_root))
         # print(f"Racine du projet ajoutée au PYTHONPATH : {project_root}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Ce bloc est exécuté si le script est appelé directement.
     # Il sert de test rapide pour s'assurer que le chargement fonctionne.
     print("--- Test du chargeur d'environnement ---")
     load_environment()
     print("Environnement chargé.")
-    
+
     # Affiche quelques variables clés pour vérification
     print("\nVérification des variables clés :")
     conda_env = os.getenv("CONDA_ENV_NAME", "Non défini")
     java_home = os.getenv("JAVA_HOME", "Non défini")
-    
+
     print(f"  Nom de l'environnement Conda : {conda_env}")
     print(f"  JAVA_HOME : {java_home}")
-    
+
     print("\nContenu partiel du PYTHONPATH :")
     for i, path in enumerate(sys.path[:3]):
         print(f"  {i}: {path}")

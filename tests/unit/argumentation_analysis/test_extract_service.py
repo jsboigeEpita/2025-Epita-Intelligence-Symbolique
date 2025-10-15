@@ -50,29 +50,41 @@ class TestExtractService:
         """Test d'extraction avec des marqueurs valides."""
         start_marker = "DEBUT_EXTRAIT"
         end_marker = "FIN_EXTRAIT"
-        
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
+
+        (
+            extracted_text,
+            status,
+            start_found,
+            end_found,
+        ) = extract_service.extract_text_with_markers(
             sample_text, start_marker, end_marker
         )
-        
+
         # Vérifier que l'extraction a réussi
         assert start_found is True
         assert end_found is True
         assert "✅ Extraction réussie" in status
-        
+
         # Vérifier le contenu extrait (incluant le texte avant le marqueur de fin)
         expected_text = "Ceci est le contenu de l'extrait.\n    Il peut contenir plusieurs lignes.\n    Voici un marqueur de fin:"
         assert extracted_text.strip() == expected_text.strip()
 
-    def test_extract_text_with_markers_invalid_start(self, extract_service, sample_text):
+    def test_extract_text_with_markers_invalid_start(
+        self, extract_service, sample_text
+    ):
         """Test d'extraction avec un marqueur de début invalide."""
         invalid_start_marker = "MARQUEUR_INEXISTANT"
         end_marker = "FIN_EXTRAIT"
-        
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
+
+        (
+            extracted_text,
+            status,
+            start_found,
+            end_found,
+        ) = extract_service.extract_text_with_markers(
             sample_text, invalid_start_marker, end_marker
         )
-        
+
         # Vérifier que l'extraction a échoué
         assert start_found is False
         assert end_found is True
@@ -82,11 +94,16 @@ class TestExtractService:
         """Test d'extraction avec un marqueur de fin invalide."""
         start_marker = "DEBUT_EXTRAIT"
         invalid_end_marker = "MARQUEUR_INEXISTANT"
-        
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
+
+        (
+            extracted_text,
+            status,
+            start_found,
+            end_found,
+        ) = extract_service.extract_text_with_markers(
             sample_text, start_marker, invalid_end_marker
         )
-        
+
         # Vérifier que l'extraction a échoué
         assert start_found is True
         assert end_found is False
@@ -106,21 +123,26 @@ class TestExtractService:
         
         Et voici la suite du texte après l'extrait.
         """
-        
+
         # Template qui ajoute la lettre 'D' au début
         template_start = "D{0}"
         start_marker = "EBUT_EXTRAIT"
         end_marker = "FIN_EXTRAIT"
-        
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
+
+        (
+            extracted_text,
+            status,
+            start_found,
+            end_found,
+        ) = extract_service.extract_text_with_markers(
             text_with_missing_letter, start_marker, end_marker, template_start
         )
-        
+
         # Vérifier que l'extraction a réussi
         assert start_found is True
         assert end_found is True
         assert "✅ Extraction réussie" in status
-        
+
         # Vérifier le contenu extrait (incluant le texte avant le marqueur de fin)
         expected_text = "Ceci est le contenu de l'extrait.\n        Il peut contenir plusieurs lignes.\n        Voici un marqueur de fin:"
         assert extracted_text.strip() == expected_text.strip()
@@ -129,11 +151,14 @@ class TestExtractService:
         """Test d'extraction avec un texte vide."""
         start_marker = "DEBUT_EXTRAIT"
         end_marker = "FIN_EXTRAIT"
-        
-        extracted_text, status, start_found, end_found = extract_service.extract_text_with_markers(
-            "", start_marker, end_marker
-        )
-        
+
+        (
+            extracted_text,
+            status,
+            start_found,
+            end_found,
+        ) = extract_service.extract_text_with_markers("", start_marker, end_marker)
+
         assert extracted_text is None
         assert "Texte source vide" in status
         assert start_found is False
@@ -143,12 +168,12 @@ class TestExtractService:
         """Test de recherche de texte similaire."""
         text = "Ceci est un exemple de texte. Il contient des mots similaires comme exemple et texte."
         search_text = "exemple de texte"
-        
+
         results = extract_service.find_similar_text(text, search_text)
-        
+
         # Vérifier qu'au moins un résultat a été trouvé
         assert len(results) > 0
-        
+
         # Vérifier que le premier résultat contient une partie du texte recherché
         context, position, found_text = results[0]
         # Le service trouve des correspondances partielles, donc vérifier une partie
@@ -161,18 +186,20 @@ class TestExtractService:
         # Cas 1: Texte vide
         results = extract_service.find_similar_text("", "exemple")
         assert len(results) == 0
-        
+
         # Cas 2: Marqueur vide
         results = extract_service.find_similar_text("Ceci est un exemple", "")
         assert len(results) == 0
 
     def test_find_similar_text_long_marker(self, extract_service):
         """Test de recherche de texte similaire avec un marqueur long."""
-        text = "Ceci est un exemple de texte long pour tester la recherche de similarité."
+        text = (
+            "Ceci est un exemple de texte long pour tester la recherche de similarité."
+        )
         search_text = "exemple de texte long pour tester la recherche"
-        
+
         results = extract_service.find_similar_text(text, search_text)
-        
+
         assert len(results) > 0
         context, position, found_text = results[0]
         assert position >= 0
@@ -182,22 +209,28 @@ class TestExtractService:
         """Test de mise en évidence des marqueurs dans le texte."""
         start_marker = "DEBUT_EXTRAIT"
         end_marker = "FIN_EXTRAIT"
-        
+
         html_text, start_found, end_found = extract_service.highlight_text(
             sample_text, start_marker, end_marker
         )
-        
+
         assert start_found is True
         assert end_found is True
-        assert "<span style='background-color: #FFFF00; font-weight: bold;'>DEBUT_EXTRAIT</span>" in html_text
-        assert "<span style='background-color: #FFFF00; font-weight: bold;'>FIN_EXTRAIT</span>" in html_text
+        assert (
+            "<span style='background-color: #FFFF00; font-weight: bold;'>DEBUT_EXTRAIT</span>"
+            in html_text
+        )
+        assert (
+            "<span style='background-color: #FFFF00; font-weight: bold;'>FIN_EXTRAIT</span>"
+            in html_text
+        )
 
     def test_highlight_text_empty(self, extract_service):
         """Test de mise en évidence avec un texte vide."""
         html_text, start_found, end_found = extract_service.highlight_text(
             "", "DEBUT", "FIN"
         )
-        
+
         assert start_found is False
         assert end_found is False
         assert "<p>Texte vide</p>" in html_text
@@ -205,9 +238,9 @@ class TestExtractService:
     def test_search_in_text(self, extract_service, sample_text):
         """Test de recherche dans le texte."""
         search_term = "exemple"
-        
+
         matches = extract_service.search_in_text(sample_text, search_term)
-        
+
         assert len(matches) > 0
         assert isinstance(matches[0], re.Match)
         assert matches[0].group() == search_term
@@ -215,25 +248,34 @@ class TestExtractService:
     def test_search_in_text_case_sensitive(self, extract_service):
         """Test de recherche sensible à la casse."""
         text = "Exemple et exemple sont différents en casse."
-        
+
         # Recherche insensible à la casse
-        matches_insensitive = extract_service.search_in_text(text, "exemple", case_sensitive=False)
+        matches_insensitive = extract_service.search_in_text(
+            text, "exemple", case_sensitive=False
+        )
         assert len(matches_insensitive) == 2
-        
+
         # Recherche sensible à la casse
-        matches_sensitive = extract_service.search_in_text(text, "exemple", case_sensitive=True)
+        matches_sensitive = extract_service.search_in_text(
+            text, "exemple", case_sensitive=True
+        )
         assert len(matches_sensitive) == 1
         assert matches_sensitive[0].group() == "exemple"
 
     def test_highlight_search_results(self, extract_service, sample_text):
         """Test de mise en évidence des résultats de recherche."""
         search_term = "exemple"
-        
-        html_results, count = extract_service.highlight_search_results(sample_text, search_term)
-        
+
+        html_results, count = extract_service.highlight_search_results(
+            sample_text, search_term
+        )
+
         assert count > 0
         # Vérifier qu'il y a bien une mise en évidence avec le style correct
-        assert "background-color: #4CAF50; color: white; font-weight: bold;" in html_results
+        assert (
+            "background-color: #4CAF50; color: white; font-weight: bold;"
+            in html_results
+        )
         assert "<span style=" in html_results
 
     def test_highlight_search_results_empty(self, extract_service):
@@ -242,9 +284,11 @@ class TestExtractService:
         html_results, count = extract_service.highlight_search_results("", "exemple")
         assert count == 0
         assert "Texte vide ou terme de recherche manquant" in html_results
-        
+
         # Cas 2: Terme de recherche vide
-        html_results, count = extract_service.highlight_search_results("Ceci est un exemple", "")
+        html_results, count = extract_service.highlight_search_results(
+            "Ceci est un exemple", ""
+        )
         assert count == 0
         assert "Texte vide ou terme de recherche manquant" in html_results
 
@@ -253,14 +297,14 @@ class TestExtractService:
         text = "A" * 1000  # Texte de 1000 caractères
         block_size = 300
         overlap = 50
-        
+
         blocks = extract_service.extract_blocks(text, block_size, overlap)
-        
+
         assert len(blocks) > 0
         assert blocks[0]["start_pos"] == 0
         assert blocks[0]["end_pos"] == 300
         assert len(blocks[0]["block"]) == 300
-        
+
         # Vérifier le chevauchement
         assert blocks[1]["start_pos"] == 250  # 300 - 50
         assert blocks[1]["end_pos"] == 550
@@ -274,9 +318,9 @@ class TestExtractService:
         """Test de recherche dichotomique dans le texte."""
         text = "Ceci est un exemple. " * 100  # Répéter pour avoir un texte long
         search_term = "exemple"
-        
+
         results = extract_service.search_text_dichotomically(text, search_term)
-        
+
         assert len(results) > 0
         assert results[0]["match"] == search_term
         assert "context" in results[0]
@@ -287,7 +331,7 @@ class TestExtractService:
         # Cas 1: Texte vide
         results = extract_service.search_text_dichotomically("", "exemple")
         assert len(results) == 0
-        
+
         # Cas 2: Terme de recherche vide
         results = extract_service.search_text_dichotomically("Ceci est un exemple", "")
         assert len(results) == 0

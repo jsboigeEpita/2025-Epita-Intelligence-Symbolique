@@ -2,7 +2,11 @@ import argumentation_analysis.core.environment
 import json
 
 input_config_path = "_temp/config_paths_corrected_v3.json"
-ids_to_inspect = ["assemblee_nationale_2024_pg_attal", "rapport_ia_commission_2024", "Source_Ibsen_Vildanden"]
+ids_to_inspect = [
+    "assemblee_nationale_2024_pg_attal",
+    "rapport_ia_commission_2024",
+    "Source_Ibsen_Vildanden",
+]
 
 found_ids = set()
 
@@ -11,7 +15,7 @@ try:
     if not config_file.exists():
         print(f"Erreur: Le fichier {input_config_path} n'a pas été trouvé.")
         exit()
-    with open(config_file, 'r', encoding='utf-8') as f:
+    with open(config_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 except json.JSONDecodeError:
     print(f"Erreur: Impossible de décoder le JSON du fichier {input_config_path}.")

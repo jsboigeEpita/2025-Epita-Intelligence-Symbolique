@@ -14,7 +14,4 @@ try:
 except ImportError:
     MockAPIServer = None
 
-__all__ = [
-    'app',
-    'MockAPIServer'
-] 
+__all__ = ["app", "MockAPIServer"]

@@ -3,6 +3,7 @@ import sys
 import os
 from pathlib import Path
 
+
 def main():
     """
     Lance les tests E2E avec pytest en utilisant subprocess.run pour
@@ -20,9 +21,11 @@ def main():
         "pytest",
         "-v",
         "-s",
-        "--backend-url", "http://localhost:8000",
-        "--frontend-url", "http://localhost:8000",
-        test_path
+        "--backend-url",
+        "http://localhost:8000",
+        "--frontend-url",
+        "http://localhost:8000",
+        test_path,
     ]
 
     print(f"--- Lancement de la commande : {' '.join(command)}")
@@ -34,29 +37,30 @@ def main():
             timeout=timeout_seconds,
             capture_output=True,
             text=True,
-            encoding='utf-8'
+            encoding="utf-8",
         )
 
         print("--- STDOUT ---")
         print(result.stdout)
         print("--- STDERR ---")
         print(result.stderr)
-        
+
         exit_code = result.returncode
         print(f"\n--- Pytest terminé avec le code de sortie : {exit_code}")
 
     except subprocess.TimeoutExpired as e:
         print(f"\n--- !!! TIMEOUT ATTEINT ({timeout_seconds}s) !!!")
         print("--- Le processus de test a été tué.")
-        
+
         print("--- STDOUT (partiel) ---")
         print(e.stdout)
         print("--- STDERR (partiel) ---")
         print(e.stderr)
 
-        exit_code = -99 # Code de sortie spécial pour le timeout
+        exit_code = -99  # Code de sortie spécial pour le timeout
 
     sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()

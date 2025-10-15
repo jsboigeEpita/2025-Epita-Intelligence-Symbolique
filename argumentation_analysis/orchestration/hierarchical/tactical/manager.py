@@ -5,4 +5,4 @@ Il s'agit d'un alias pour TacticalCoordinator (lui-même un alias de TaskCoordin
 """
 from .coordinator import TacticalCoordinator as TacticalManager
 
-__all__ = ['TacticalManager']
+__all__ = ["TacticalManager"]

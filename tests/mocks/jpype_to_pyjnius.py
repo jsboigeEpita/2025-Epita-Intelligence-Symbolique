@@ -13,8 +13,8 @@ from typing import Any, Dict, List, Optional, Union, Callable
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("JPypeToPyJNIus")
 
@@ -22,6 +22,7 @@ logger = logging.getLogger("JPypeToPyJNIus")
 try:
     import jpype
     import jpype.imports
+
     HAS_JPYPE = True
     logger.info("JPype est disponible, utilisation de JPype")
 except ImportError:
@@ -31,6 +32,7 @@ except ImportError:
 # Vérifier si PyJNIus est disponible
 try:
     import jnius
+
     HAS_PYJNIUS = True
     logger.info("PyJNIus est disponible, utilisation de PyJNIus")
 except ImportError:
@@ -41,13 +43,24 @@ except ImportError:
 if not HAS_JPYPE and not HAS_PYJNIUS:
     try:
         from tests.mocks.jpype_mock import (
-            isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
-            JClass, JException, JObject, JVMNotFoundException, imports, _jpype
+            isJVMStarted,
+            startJVM,
+            getJVMPath,
+            getJVMVersion,
+            getDefaultJVMPath,
+            JClass,
+            JException,
+            JObject,
+            JVMNotFoundException,
+            imports,
+            _jpype,
         )
+
         logger.info("Mock JPype importé avec succès")
     except ImportError:
         logger.error("Impossible d'importer le mock JPype")
         raise
+
 
 # Fonctions de compatibilité
 def is_jvm_started() -> bool:
@@ -55,9 +68,10 @@ def is_jvm_started() -> bool:
     if HAS_JPYPE:
         return jpype.isJVMStarted()
     elif HAS_PYJNIUS:
-        return jnius.autoclass('java.lang.System') is not None
+        return jnius.autoclass("java.lang.System") is not None
     else:
         return isJVMStarted()
+
 
 def start_jvm(jvmpath: str, *args, **kwargs) -> None:
     """Démarre la JVM."""
@@ -71,6 +85,7 @@ def start_jvm(jvmpath: str, *args, **kwargs) -> None:
     else:
         startJVM(jvmpath, *args, **kwargs)
 
+
 def get_jvm_path() -> str:
     """Retourne le chemin de la JVM."""
     if HAS_JPYPE:
@@ -79,6 +94,7 @@ def get_jvm_path() -> str:
         return "PyJNIus JVM path"
     else:
         return getJVMPath()
+
 
 def get_default_jvm_path() -> str:
     """Retourne le chemin par défaut de la JVM."""
@@ -89,17 +105,19 @@ def get_default_jvm_path() -> str:
     else:
         return getDefaultJVMPath()
 
+
 def get_jvm_version() -> str:
     """Retourne la version de la JVM."""
     if HAS_JPYPE:
         return jpype.getJVMVersion()
     elif HAS_PYJNIUS:
         if is_jvm_started():
-            System = jnius.autoclass('java.lang.System')
-            return System.getProperty('java.version')
+            System = jnius.autoclass("java.lang.System")
+            return System.getProperty("java.version")
         return "Unknown"
     else:
         return getJVMVersion()
+
 
 def get_class(class_name: str) -> Any:
     """Retourne une classe Java."""
@@ -110,6 +128,7 @@ def get_class(class_name: str) -> Any:
     else:
         return JClass(class_name)
 
+
 def import_java_package(package_name: str) -> None:
     """Importe un package Java."""
     if HAS_JPYPE:
@@ -119,6 +138,7 @@ def import_java_package(package_name: str) -> None:
         pass
     else:
         imports(package_name)
+
 
 # Alias pour la compatibilité
 JClass = get_class

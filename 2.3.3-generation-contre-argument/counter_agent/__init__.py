@@ -15,19 +15,19 @@ from counter_agent.agent import (
     RhetoricalStrategy,
     Vulnerability,
     EvaluationResult,
-    ValidationResult
+    ValidationResult,
 )
 
 __version__ = "0.1.0"
 
 __all__ = [
-    'CounterArgumentAgent',
-    'Argument',
-    'CounterArgument',
-    'CounterArgumentType',
-    'ArgumentStrength',
-    'RhetoricalStrategy',
-    'Vulnerability',
-    'EvaluationResult',
-    'ValidationResult'
-] 
+    "CounterArgumentAgent",
+    "Argument",
+    "CounterArgument",
+    "CounterArgumentType",
+    "ArgumentStrength",
+    "RhetoricalStrategy",
+    "Vulnerability",
+    "EvaluationResult",
+    "ValidationResult",
+]

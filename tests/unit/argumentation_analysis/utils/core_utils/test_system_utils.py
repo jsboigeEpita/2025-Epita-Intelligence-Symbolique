@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -16,12 +15,14 @@ import subprocess
 
 from unittest.mock import MagicMock, patch
 from argumentation_analysis.core.utils.system_utils import run_shell_command
- 
+
+
 @pytest.fixture
 def mock_subprocess_run():
     """Fixture pour mocker subprocess.run."""
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         yield mock_run
+
 
 def test_run_shell_command_success(mock_subprocess_run):
     """Teste l'exécution réussie d'une commande."""
@@ -39,17 +40,18 @@ def test_run_shell_command_success(mock_subprocess_run):
     ret_code, out, err = run_shell_command(command)
 
     assert ret_code == expected_return_code
-    assert out == expected_stdout.strip() # .strip() est appliqué dans la fonction
+    assert out == expected_stdout.strip()  # .strip() est appliqué dans la fonction
     assert err == expected_stderr.strip()
     mock_subprocess_run.assert_called_once_with(
-        ["ls", "-l"], # shlex.split(command)
+        ["ls", "-l"],  # shlex.split(command)
         cwd=None,
         capture_output=True,
         text=True,
-        timeout=60, # Default timeout
+        timeout=60,  # Default timeout
         check=False,
-        env=None
+        env=None,
     )
+
 
 def test_run_shell_command_with_error_output(mock_subprocess_run):
     """Teste une commande qui réussit mais produit une sortie d'erreur."""
@@ -70,6 +72,7 @@ def test_run_shell_command_with_error_output(mock_subprocess_run):
     assert out == expected_stdout.strip()
     assert err == expected_stderr.strip()
 
+
 def test_run_shell_command_failure_return_code(mock_subprocess_run):
     """Teste une commande qui échoue avec un code de retour non nul."""
     command = "failing_command"
@@ -89,6 +92,7 @@ def test_run_shell_command_failure_return_code(mock_subprocess_run):
     assert out == expected_stdout
     assert err == expected_stderr.strip()
 
+
 def test_run_shell_command_timeout(mock_subprocess_run, caplog):
     """Teste la gestion d'un timeout de commande."""
     command = "sleep 10"
@@ -103,29 +107,39 @@ def test_run_shell_command_timeout(mock_subprocess_run, caplog):
 
     ret_code, out, err = run_shell_command(command, timeout_seconds=timeout_seconds)
 
-    assert ret_code == -9 # Code spécifique pour timeout
-    assert out == "Partial output before timeout" # Décodé et strippé
+    assert ret_code == -9  # Code spécifique pour timeout
+    assert out == "Partial output before timeout"  # Décodé et strippé
     assert err == "Partial error before timeout"
-    assert f"La commande '{command}' a expiré après {timeout_seconds} secondes." in caplog.text
+    assert (
+        f"La commande '{command}' a expiré après {timeout_seconds} secondes."
+        in caplog.text
+    )
+
 
 def test_run_shell_command_file_not_found(mock_subprocess_run, caplog):
     """Teste la gestion d'une commande non trouvée (FileNotFoundError)."""
     command = "command_that_does_not_exist"
-    
+
     # Simuler FileNotFoundError
-    mock_subprocess_run.side_effect = FileNotFoundError(f"[Errno 2] No such file or directory: '{command.split()[0]}'")
+    mock_subprocess_run.side_effect = FileNotFoundError(
+        f"[Errno 2] No such file or directory: '{command.split()[0]}'"
+    )
 
     ret_code, out, err = run_shell_command(command)
 
-    assert ret_code == -10 # Code spécifique pour FileNotFoundError
+    assert ret_code == -10  # Code spécifique pour FileNotFoundError
     assert out == ""
     assert f"Commande non trouvée: {command.split()[0]}" in err
-    assert f"Erreur : La commande ou l'exécutable '{command.split()[0]}' n'a pas été trouvé." in caplog.text
+    assert (
+        f"Erreur : La commande ou l'exécutable '{command.split()[0]}' n'a pas été trouvé."
+        in caplog.text
+    )
+
 
 def test_run_shell_command_unexpected_exception(mock_subprocess_run, caplog):
     """Teste la gestion d'une exception générique inattendue."""
     command = "command_with_other_problem"
-    
+
     # Simuler une exception générique
     # L'exception peut avoir ou non stdout/stderr.
     generic_exception = Exception("A very unexpected error occurred.")
@@ -135,17 +149,21 @@ def test_run_shell_command_unexpected_exception(mock_subprocess_run, caplog):
 
     ret_code, out, err = run_shell_command(command)
 
-    assert ret_code == -11 # Code spécifique pour autre exception
+    assert ret_code == -11  # Code spécifique pour autre exception
     # out et err peuvent être vides ou contenir des infos de l'exception
     # Ici, on s'attend à ce que err contienne la description de l'exception.
-    assert "A very unexpected error occurred." in err 
-    assert f"Une erreur inattendue est survenue lors de l'exécution de '{command}'" in caplog.text
+    assert "A very unexpected error occurred." in err
+    assert (
+        f"Une erreur inattendue est survenue lors de l'exécution de '{command}'"
+        in caplog.text
+    )
+
 
 def test_run_shell_command_with_work_dir(mock_subprocess_run, tmp_path):
     """Teste l'exécution d'une commande avec un répertoire de travail spécifié."""
     command = "pwd"
     work_dir = tmp_path / "my_work_dir"
-    work_dir.mkdir() # Le répertoire doit exister pour subprocess.run
+    work_dir.mkdir()  # Le répertoire doit exister pour subprocess.run
 
     expected_stdout = str(work_dir.resolve())
     mock_process = MagicMock()
@@ -159,14 +177,15 @@ def test_run_shell_command_with_work_dir(mock_subprocess_run, tmp_path):
     assert ret_code == 0
     assert out == expected_stdout.strip()
     mock_subprocess_run.assert_called_once_with(
-        ["pwd"], # shlex.split(command)
-        cwd=work_dir, # Vérifie que work_dir est passé
+        ["pwd"],  # shlex.split(command)
+        cwd=work_dir,  # Vérifie que work_dir est passé
         capture_output=True,
         text=True,
         timeout=60,
         check=False,
-        env=None
+        env=None,
     )
+
 
 def test_run_shell_command_empty_command_string(caplog):
     """Teste le comportement avec une chaîne de commande vide."""
@@ -174,11 +193,16 @@ def test_run_shell_command_empty_command_string(caplog):
     # subprocess.run([]) lèvera probablement une exception (FileNotFoundError ou autre)
     # car il n'y a pas de commande à exécuter.
     ret_code, out, err = run_shell_command("")
-    
-    assert ret_code == -11 # OSError: [WinError 87] Paramètre incorrect est capturée par le except Exception générique
-    assert "Paramètre incorrect" in err # Vérifie une partie du message de OSError
+
+    assert (
+        ret_code == -11
+    )  # OSError: [WinError 87] Paramètre incorrect est capturée par le except Exception générique
+    assert "Paramètre incorrect" in err  # Vérifie une partie du message de OSError
     # Le log devrait indiquer une erreur générique car OSError est attrapée par le bloc Exception
-    assert "Une erreur inattendue est survenue lors de l'exécution de '': OSError - [WinError 87] Paramètre incorrect" in caplog.text
+    assert (
+        "Une erreur inattendue est survenue lors de l'exécution de '': OSError - [WinError 87] Paramètre incorrect"
+        in caplog.text
+    )
     # Les commentaires et assertions précédents supposaient un FileNotFoundError ou IndexError,
     # mais c'est une OSError sur Windows pour une commande vide passée à subprocess.run,
     # qui est ensuite attrapée par le bloc `except Exception`.

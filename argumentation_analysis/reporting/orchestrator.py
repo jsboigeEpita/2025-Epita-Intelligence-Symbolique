@@ -1,13 +1,15 @@
 from datetime import datetime
 from . import data_collector
 from . import document_assembler
-from .models import ReportMetadata # Import ReportMetadata
+from .models import ReportMetadata  # Import ReportMetadata
+
 
 class ReportOrchestrator:
     """
     Orchestrates the generation of reports by coordinating data collection
     and document assembly.
     """
+
     def __init__(self, config):
         """
         Initializes the ReportOrchestrator with necessary services.
@@ -21,13 +23,17 @@ class ReportOrchestrator:
         self.config = config
         # Assuming DataCollector exists in data_collector.py
         # Pass the relevant part of the config or the whole config
-        self.collector = data_collector.DataCollector(config.get("data_collector_config", config))
-        
+        self.collector = data_collector.DataCollector(
+            config.get("data_collector_config", config)
+        )
+
         # Using UnifiedReportTemplate from document_assembler.py
         # Pass the relevant part of the config or the whole config.
         # The assembler's config should specify the desired format, e.g., {"format": "html"}
         assembler_config = config.get("document_assembler_config", {})
-        if "format" not in assembler_config: # Default to html if not specified for the orchestrator's purpose
+        if (
+            "format" not in assembler_config
+        ):  # Default to html if not specified for the orchestrator's purpose
             assembler_config["format"] = config.get("default_report_format", "html")
         self.assembler = document_assembler.UnifiedReportTemplate(assembler_config)
 
@@ -55,7 +61,7 @@ class ReportOrchestrator:
             # format_type and template_name in ReportMetadata are for informational purposes
             # The actual rendering format is controlled by UnifiedReportTemplate's instance config
             format_type=self.assembler.format_type,
-            template_name=self.assembler.name
+            template_name=self.assembler.name,
         )
 
         # 3. Assemble the final report document

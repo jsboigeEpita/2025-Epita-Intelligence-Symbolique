@@ -3,13 +3,14 @@
 try:
     import torch
 except ImportError:
-    pass # Si torch n'est pas là, on ne peut rien faire.
+    pass  # Si torch n'est pas là, on ne peut rien faire.
 
 import jpype
 import jpype.imports
 import os
 from pathlib import Path
 import sys
+
 
 def get_project_root_from_env() -> Path:
     """
@@ -18,9 +19,12 @@ def get_project_root_from_env() -> Path:
     """
     project_root_str = os.getenv("PROJECT_ROOT")
     if not project_root_str:
-        raise RuntimeError("La variable d'environnement PROJECT_ROOT n'est pas définie. "
-                           "Assurez-vous d'exécuter ce script via activate_project_env.ps1")
+        raise RuntimeError(
+            "La variable d'environnement PROJECT_ROOT n'est pas définie. "
+            "Assurez-vous d'exécuter ce script via activate_project_env.ps1"
+        )
     return Path(project_root_str)
+
 
 def test_asp_reasoner_consistency_logic():
     """
@@ -28,19 +32,25 @@ def test_asp_reasoner_consistency_logic():
     destinée à être exécutée dans un sous-processus avec une JVM propre.
     """
     print("--- Début du worker pour test_asp_reasoner_consistency_logic ---")
-    
+
     # Construction explicite et robuste du classpath
     project_root = get_project_root_from_env()
     libs_dir = project_root / "libs" / "tweety"
     print(f"Recherche des JARs dans : {libs_dir}")
 
     if not libs_dir.exists():
-        raise FileNotFoundError(f"Le répertoire des bibliothèques Tweety n'existe pas : {libs_dir}")
+        raise FileNotFoundError(
+            f"Le répertoire des bibliothèques Tweety n'existe pas : {libs_dir}"
+        )
 
     # Utiliser uniquement le JAR complet pour éviter les conflits de classpath
-    full_jar_path = libs_dir / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+    full_jar_path = (
+        libs_dir / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+    )
     if not full_jar_path.exists():
-        raise FileNotFoundError(f"Le JAR complet 'tweety-full' n'a pas été trouvé dans {libs_dir}")
+        raise FileNotFoundError(
+            f"Le JAR complet 'tweety-full' n'a pas été trouvé dans {libs_dir}"
+        )
 
     classpath = str(full_jar_path.resolve())
     print(f"Classpath construit avec un seul JAR : {classpath}")
@@ -48,14 +58,26 @@ def test_asp_reasoner_consistency_logic():
     # Démarrer la JVM uniquement si elle n'est pas déjà démarrée (pour la compatibilité avec pytest)
     if not jpype.isJVMStarted():
         try:
-            print("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
-            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            print(
+                "--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---"
+            )
+            jpype.startJVM(
+                jpype.getDefaultJVMPath(),
+                "-ea",
+                classpath=classpath,
+                convertStrings=False,
+            )
             print("--- JVM démarrée avec succès par le worker ---")
         except Exception as e:
-            print(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", file=sys.stderr)
+            print(
+                f"ERREUR: Échec du démarrage de la JVM par le worker : {e}",
+                file=sys.stderr,
+            )
             raise
     else:
-        print("--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---")
+        print(
+            "--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---"
+        )
 
     # Effectuer les importations nécessaires pour le test
     try:
@@ -64,7 +86,10 @@ def test_asp_reasoner_consistency_logic():
         from org.tweetyproject.arg.asp.reasoner import AnswerSetSolver
         from java.util import HashSet
     except Exception as e:
-        print(f"ERREUR irrécupérable: Échec de l'importation d'une classe Java requise: {e}", file=sys.stderr)
+        print(
+            f"ERREUR irrécupérable: Échec de l'importation d'une classe Java requise: {e}",
+            file=sys.stderr,
+        )
         if jpype.isJVMStarted():
             jpype.shutdownJVM()
         raise
@@ -72,6 +97,7 @@ def test_asp_reasoner_consistency_logic():
     try:
         print("DEBUG: Tentative d'importation de 'org.tweetyproject.arg.asp.reasoner'")
         from org.tweetyproject.arg.asp import reasoner as asp_reasoner
+
         print("DEBUG: Importation de 'asp_reasoner' réussie.")
     except Exception as e:
         print(f"ERREUR: Échec de l'importation de asp_reasoner: {e}", file=sys.stderr)
@@ -86,16 +112,18 @@ def test_asp_reasoner_consistency_logic():
     theory.add(asp_syntax.AspRule(b, []))
 
     reasoner = asp_reasoner.SimpleAspReasoner()
-    
+
     # Assertions
     assert reasoner.query(theory, a)
     assert not reasoner.query(theory, pl_syntax.Proposition("c"))
-    
+
     print("--- Assertions du worker réussies ---")
 
     # Ne pas arrêter la JVM ici. La fixture pytest s'en chargera.
     # jpype.shutdownJVM()
-    print("--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---")
+    print(
+        "--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---"
+    )
 
 
 if __name__ == "__main__":

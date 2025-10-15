@@ -11,7 +11,9 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
+    from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
+        LogiqueComplexeOrchestrator,
+    )
 except ImportError as e:
     logger.warning(f"LogiqueComplexeOrchestrator not available: {e}")
     LogiqueComplexeOrchestrator = None
@@ -29,8 +31,11 @@ class LogicOrchestratorWrapper:
         Runs a complex logic analysis.
         """
         logger.info("[LOGIC_COMPLEX] Running complex logic analysis...")
-        if not hasattr(self.orchestrator, 'analyze_complex_logic'):
-            return {"status": "error", "error": "Method 'analyze_complex_logic' not found in orchestrator."}
+        if not hasattr(self.orchestrator, "analyze_complex_logic"):
+            return {
+                "status": "error",
+                "error": "Method 'analyze_complex_logic' not found in orchestrator.",
+            }
 
         try:
             results = await self.orchestrator.analyze_complex_logic(text)

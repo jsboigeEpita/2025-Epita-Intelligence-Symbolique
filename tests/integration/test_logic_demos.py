@@ -17,8 +17,12 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Chemin vers les scripts de démonstration à tester
-CLUEDO_DEMO_SCRIPT = PROJECT_ROOT / "scripts" / "sherlock_watson" / "run_cluedo_oracle_enhanced.py"
-EINSTEIN_DEMO_SCRIPT = PROJECT_ROOT / "scripts" / "sherlock_watson" / "run_einstein_oracle_demo.py"
+CLUEDO_DEMO_SCRIPT = (
+    PROJECT_ROOT / "scripts" / "sherlock_watson" / "run_cluedo_oracle_enhanced.py"
+)
+EINSTEIN_DEMO_SCRIPT = (
+    PROJECT_ROOT / "scripts" / "sherlock_watson" / "run_einstein_oracle_demo.py"
+)
 
 
 @pytest.mark.integration
@@ -29,7 +33,9 @@ def test_einstein_demo_runs_successfully():
     Le test vérifie que le script se termine avec un code de succès et que la
     solution correcte est présente dans la sortie.
     """
-    assert EINSTEIN_DEMO_SCRIPT.exists(), f"Script Einstein non trouvé à {EINSTEIN_DEMO_SCRIPT}"
+    assert (
+        EINSTEIN_DEMO_SCRIPT.exists()
+    ), f"Script Einstein non trouvé à {EINSTEIN_DEMO_SCRIPT}"
 
     command = [
         sys.executable,
@@ -41,15 +47,15 @@ def test_einstein_demo_runs_successfully():
     env = os.environ.copy()
     if "PYTEST_RUNNING" in env:
         del env["PYTEST_RUNNING"]
-    
+
     result = subprocess.run(
         command,
         capture_output=True,
         text=True,
         encoding=sys.stdout.encoding,
-        errors='replace',
+        errors="replace",
         cwd=PROJECT_ROOT,
-        env=env
+        env=env,
     )
 
     # Affichage pour le débogage en cas d'échec
@@ -58,9 +64,15 @@ def test_einstein_demo_runs_successfully():
     print("--- STDERR (Einstein Demo) ---")
     print(result.stderr)
 
-    assert result.returncode == 0, f"Le script Einstein a échoué avec le code {result.returncode}"
-    assert "L'Allemand possède le poisson" in result.stdout, "La solution de l'énigme d'Einstein n'a pas été trouvée dans la sortie."
-    assert "SOLUTION TROUVÉE" in result.stdout, "La mention 'SOLUTION TROUVÉE' est absente de la sortie."
+    assert (
+        result.returncode == 0
+    ), f"Le script Einstein a échoué avec le code {result.returncode}"
+    assert (
+        "L'Allemand possède le poisson" in result.stdout
+    ), "La solution de l'énigme d'Einstein n'a pas été trouvée dans la sortie."
+    assert (
+        "SOLUTION TROUVÉE" in result.stdout
+    ), "La mention 'SOLUTION TROUVÉE' est absente de la sortie."
 
 
 @pytest.mark.integration
@@ -70,13 +82,16 @@ def test_cluedo_demo_runs_successfully():
     Teste l'exécution du script de la démo Cluedo en mode intégration.
     Le test vérifie que le script s'exécute jusqu'au bout sans erreur technique.
     """
-    assert CLUEDO_DEMO_SCRIPT.exists(), f"Script Cluedo non trouvé à {CLUEDO_DEMO_SCRIPT}"
+    assert (
+        CLUEDO_DEMO_SCRIPT.exists()
+    ), f"Script Cluedo non trouvé à {CLUEDO_DEMO_SCRIPT}"
 
     command = [
         sys.executable,
         str(CLUEDO_DEMO_SCRIPT),
         "--integration-test",
-        "--max-turns", "5",  # Limiter le nombre de tours pour un test rapide
+        "--max-turns",
+        "5",  # Limiter le nombre de tours pour un test rapide
     ]
 
     result = subprocess.run(
@@ -84,8 +99,8 @@ def test_cluedo_demo_runs_successfully():
         capture_output=True,
         text=True,
         encoding=sys.stdout.encoding,
-        errors='ignore',
-        cwd=PROJECT_ROOT
+        errors="ignore",
+        cwd=PROJECT_ROOT,
     )
 
     # Affichage pour le débogage
@@ -94,6 +109,12 @@ def test_cluedo_demo_runs_successfully():
     print("--- STDERR (Cluedo Demo) ---")
     print(result.stderr)
 
-    assert result.returncode == 0, f"Le script Cluedo a échoué avec le code {result.returncode}"
-    assert "RAPPORT FINAL DE LA PARTIE" in result.stdout, "Le rapport final de la partie de Cluedo n'a pas été trouvé dans la sortie."
-    assert "Initialisation du scénario Cluedo Oracle Enhanced" in result.stdout, "Le script Cluedo ne semble pas s'être initialisé correctement."
+    assert (
+        result.returncode == 0
+    ), f"Le script Cluedo a échoué avec le code {result.returncode}"
+    assert (
+        "RAPPORT FINAL DE LA PARTIE" in result.stdout
+    ), "Le rapport final de la partie de Cluedo n'a pas été trouvé dans la sortie."
+    assert (
+        "Initialisation du scénario Cluedo Oracle Enhanced" in result.stdout
+    ), "Le script Cluedo ne semble pas s'être initialisé correctement."

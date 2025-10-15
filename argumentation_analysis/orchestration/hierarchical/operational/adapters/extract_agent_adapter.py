@@ -13,8 +13,12 @@ import uuid
 from typing import Dict, List, Any, Optional
 
 from argumentation_analysis.core.bootstrap import ProjectContext
-from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
-from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
+    OperationalAgent,
+)
+from argumentation_analysis.orchestration.hierarchical.operational.state import (
+    OperationalState,
+)
 from argumentation_analysis.core.communication import MessageMiddleware
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
@@ -34,10 +38,13 @@ class ExtractAgentAdapter(OperationalAgent):
         par l'`OperationalManager`.
     """
 
-    def __init__(self, name: str = "ExtractAgent",
-                 operational_state: Optional[OperationalState] = None,
-                 middleware: Optional[MessageMiddleware] = None,
-                 project_context: Optional[ProjectContext] = None):
+    def __init__(
+        self,
+        name: str = "ExtractAgent",
+        operational_state: Optional[OperationalState] = None,
+        middleware: Optional[MessageMiddleware] = None,
+        project_context: Optional[ProjectContext] = None,
+    ):
         """
         Initialise l'adaptateur pour l'agent d'extraction.
 
@@ -55,7 +62,9 @@ class ExtractAgentAdapter(OperationalAgent):
         self.initialized = False
         self.logger = logging.getLogger(f"ExtractAgentAdapter.{name}")
 
-    async def initialize(self, kernel: Any, llm_service_id: str, project_context: ProjectContext) -> bool:
+    async def initialize(
+        self, kernel: Any, llm_service_id: str, project_context: ProjectContext
+    ) -> bool:
         """
         Initialise l'agent d'extraction sous-jacent avec son kernel.
 
@@ -69,39 +78,41 @@ class ExtractAgentAdapter(OperationalAgent):
         """
         if self.initialized:
             return True
-        
+
         self.kernel = kernel
         self.llm_service_id = llm_service_id
         self.project_context = project_context
 
         try:
             self.logger.info("Initialisation de l'agent d'extraction interne...")
-            self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent", llm_service_id=self.llm_service_id)
-            
+            self.agent = ExtractAgent(
+                kernel=self.kernel,
+                agent_name=f"{self.name}_ExtractAgent",
+                llm_service_id=self.llm_service_id,
+            )
+
             if self.agent is None:
                 self.logger.error("Échec de l'instanciation de l'agent d'extraction.")
                 return False
-            
+
             self.initialized = True
             self.logger.info("Agent d'extraction interne initialisé.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation de l'agent: {e}", exc_info=True)
+            self.logger.error(
+                f"Erreur lors de l'initialisation de l'agent: {e}", exc_info=True
+            )
             return False
 
     def get_capabilities(self) -> List[str]:
         """Retourne les capacités de cet agent."""
-        return [
-            "text_extraction",
-            "preprocessing",
-            "extract_validation"
-        ]
+        return ["text_extraction", "preprocessing", "extract_validation"]
 
     def can_process_task(self, task: Dict[str, Any]) -> bool:
         """Vérifie si l'agent peut traiter la tâche."""
         if not self.initialized:
             return False
-        
+
         required = task.get("required_capabilities", [])
         return any(cap in self.get_capabilities() for cap in required)
 
@@ -128,8 +139,12 @@ class ExtractAgentAdapter(OperationalAgent):
         start_time = time.time()
 
         if not self.initialized:
-            self.logger.error(f"Tentative de traitement de la tâche {task_id} sans initialisation.")
-            return self.format_result(task, [], {}, [{"type": "initialization_error"}], task_id)
+            self.logger.error(
+                f"Tentative de traitement de la tâche {task_id} sans initialisation."
+            )
+            return self.format_result(
+                task, [], {}, [{"type": "initialization_error"}], task_id
+            )
 
         try:
             results = []
@@ -138,49 +153,68 @@ class ExtractAgentAdapter(OperationalAgent):
             text_extracts = task.get("text_extracts", [])
 
             if not text_extracts:
-                raise ValueError("Aucun extrait de texte (`text_extracts`) fourni dans la tâche.")
+                raise ValueError(
+                    "Aucun extrait de texte (`text_extracts`) fourni dans la tâche."
+                )
 
             for technique in techniques:
                 technique_name = technique.get("name")
                 params = technique.get("parameters", {})
-                
+
                 if technique_name == "relevant_segment_extraction":
                     for extract in text_extracts:
                         extract_result = await self._process_extract(extract, params)
                         if extract_result.status == "valid":
-                            results.append({
-                                "type": "extracted_segments",
-                                "extract_id": extract.get("id"),
-                                "content": extract_result.extracted_text,
-                            })
+                            results.append(
+                                {
+                                    "type": "extracted_segments",
+                                    "extract_id": extract.get("id"),
+                                    "content": extract_result.extracted_text,
+                                }
+                            )
                         else:
-                            issues.append({"type": "extraction_error", "description": extract_result.message})
+                            issues.append(
+                                {
+                                    "type": "extraction_error",
+                                    "description": extract_result.message,
+                                }
+                            )
                 # Ajouter d'autres techniques ici si nécessaire
-            
+
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"
             self.update_task_status(task_id, status)
-            
+
             return self.format_result(task, results, metrics, issues, task_id)
 
         except Exception as e:
-            self.logger.error(f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True
+            )
             self.update_task_status(task_id, "failed")
-            return self.format_result(task, [], {}, [{"type": "execution_error", "description": str(e)}], task_id)
+            return self.format_result(
+                task,
+                [],
+                {},
+                [{"type": "execution_error", "description": str(e)}],
+                task_id,
+            )
 
-    async def _process_extract(self, extract: Dict[str, Any], parameters: Dict[str, Any]) -> ExtractResult:
+    async def _process_extract(
+        self, extract: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> ExtractResult:
         """Appelle la méthode d'extraction de l'agent sous-jacent."""
         if not self.agent:
             raise RuntimeError("Agent `ExtractAgent` non initialisé.")
 
         source_info = {
             "source_name": extract.get("source", "Source inconnue"),
-            "source_text": extract.get("content", "")
+            "source_text": extract.get("content", ""),
         }
         extract_name = extract.get("id", "Extrait sans nom")
-        
+
         return await self.agent.extract_from_name(source_info, extract_name)
-    
+
     async def shutdown(self) -> bool:
         """Arrête l'adaptateur et nettoie les ressources."""
         self.logger.info("Arrêt de l'adaptateur d'agent d'extraction.")
@@ -189,17 +223,24 @@ class ExtractAgentAdapter(OperationalAgent):
         self.initialized = False
         return True
 
-    def format_result(self, task: Dict[str, Any], results: List[Dict[str, Any]], metrics: Dict[str, Any], issues: List[Dict[str, Any]], task_id_to_report: Optional[str] = None) -> Dict[str, Any]:
+    def format_result(
+        self,
+        task: Dict[str, Any],
+        results: List[Dict[str, Any]],
+        metrics: Dict[str, Any],
+        issues: List[Dict[str, Any]],
+        task_id_to_report: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Formate le résultat final dans la structure attendue."""
         final_task_id = task_id_to_report or task.get("id")
-        
+
         outputs = {}
         for res_item in results:
             res_type = res_item.pop("type", "unknown")
             if res_type not in outputs:
                 outputs[res_type] = []
             outputs[res_type].append(res_item)
-            
+
         return {
             "id": f"result-{final_task_id}",
             "task_id": final_task_id,
@@ -207,5 +248,5 @@ class ExtractAgentAdapter(OperationalAgent):
             "status": "completed" if not issues else "completed_with_issues",
             "outputs": outputs,
             "metrics": metrics,
-            "issues": issues
+            "issues": issues,
         }

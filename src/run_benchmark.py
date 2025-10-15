@@ -12,6 +12,7 @@ from src.core.plugin_loader import PluginLoader
 from src.core.services.orchestration_service import OrchestrationService
 from src.benchmarking.benchmark_service import BenchmarkService
 
+
 def main():
     """
     Point d'entrée pour l'exécution du framework de benchmarking.
@@ -20,29 +21,36 @@ def main():
 
     # 1. Initialiser le PluginLoader et charger les plugins
     # Le chemin pointe vers le répertoire standard des plugins.
-    plugins_path = os.path.join(os.path.dirname(__file__), 'core', 'plugins', 'standard')
-    
+    plugins_path = os.path.join(
+        os.path.dirname(__file__), "core", "plugins", "standard"
+    )
+
     # Pour ce test, nous créons un plugin factice "hello_world"
     # car il n'existe pas encore dans la structure.
     # Ceci est une mesure temporaire pour la validation.
-    hello_world_plugin_path = os.path.join(plugins_path, 'hello_world')
+    hello_world_plugin_path = os.path.join(plugins_path, "hello_world")
     os.makedirs(hello_world_plugin_path, exist_ok=True)
-    with open(os.path.join(hello_world_plugin_path, '__init__.py'), 'w') as f:
-        f.write("""
+    with open(os.path.join(hello_world_plugin_path, "__init__.py"), "w") as f:
+        f.write(
+            """
 from src.core.plugins.interfaces import BasePlugin
 
 class HelloWorldPlugin(BasePlugin):
     def greet(self, name: str) -> dict:
         return {"greeting": f"Hello, {name}!"}
-""")
+"""
+        )
 
     plugin_loader = PluginLoader(plugin_paths=[plugins_path])
     plugin_registry = plugin_loader.discover()
-    
+
     if not plugin_registry:
-        print("Erreur: Aucun plugin n'a été chargé. Vérifiez le chemin et la structure des plugins.", file=sys.stderr)
+        print(
+            "Erreur: Aucun plugin n'a été chargé. Vérifiez le chemin et la structure des plugins.",
+            file=sys.stderr,
+        )
         sys.exit(1)
-        
+
     print(f"Plugins chargés : {list(plugin_registry.keys())}")
 
     # 2. Initialiser l'OrchestrationService avec le registre de plugins
@@ -54,9 +62,12 @@ class HelloWorldPlugin(BasePlugin):
     # 4. Définir et exécuter une suite de tests
     plugin_to_test = "HelloWorldPlugin"
     capability_to_test = "greet"
-    
+
     if plugin_to_test not in plugin_registry:
-        print(f"Erreur: Le plugin de test '{plugin_to_test}' n'est pas dans le registre.", file=sys.stderr)
+        print(
+            f"Erreur: Le plugin de test '{plugin_to_test}' n'est pas dans le registre.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     test_queries = [
@@ -64,10 +75,12 @@ class HelloWorldPlugin(BasePlugin):
         {"name": "Bob"},
         {"name": "Charlie"},
         {"name": "Développeur"},
-        {}, # Test avec une entrée potentiellement invalide
+        {},  # Test avec une entrée potentiellement invalide
     ]
 
-    print(f"\nLancement de la suite de tests pour : {plugin_to_test}.{capability_to_test}")
+    print(
+        f"\nLancement de la suite de tests pour : {plugin_to_test}.{capability_to_test}"
+    )
 
     # 5. Appel au service de benchmark
     suite_result = benchmark_service.run_suite(
@@ -90,13 +103,13 @@ class HelloWorldPlugin(BasePlugin):
     print(f"    Durée moyenne: {suite_result.average_duration_ms:.2f} ms")
     print(f"    Durée min: {suite_result.min_duration_ms:.2f} ms")
     print(f"    Durée max: {suite_result.max_duration_ms:.2f} ms")
-    
+
     print("\n  Détails des exécutions:")
     # Utilisation de model_dump() de Pydantic pour une sérialisation propre
     pprint([result.model_dump() for result in suite_result.results])
-    
+
     # Nettoyage du plugin factice
-    os.remove(os.path.join(hello_world_plugin_path, '__init__.py'))
+    os.remove(os.path.join(hello_world_plugin_path, "__init__.py"))
     shutil.rmtree(hello_world_plugin_path)
 
 

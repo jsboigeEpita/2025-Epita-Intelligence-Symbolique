@@ -15,13 +15,14 @@ log_file = log_dir / "backend_launcher.log"
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(name)s - %(message)s',
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_file, mode='w', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler(log_file, mode="w", encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 def start_server():
     """Lances the Uvicorn server."""
@@ -31,13 +32,14 @@ def start_server():
             "argumentation_analysis.services.web_api.app:app",
             host="0.0.0.0",
             port=8095,
-            log_level="debug"
+            log_level="debug",
         )
         logger.info("Uvicorn server shut down gracefully.")
     except Exception as e:
         logger.critical("Failed to start Uvicorn server.", exc_info=True)
         # Re-raise the exception to allow programmatic control
         raise
+
 
 if __name__ == "__main__":
     start_server()

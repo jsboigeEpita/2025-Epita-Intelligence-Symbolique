@@ -13,7 +13,16 @@ from datetime import datetime
 import webbrowser
 
 try:
-    from flask import Flask, render_template_string, request, jsonify, redirect, url_for, session
+    from flask import (
+        Flask,
+        render_template_string,
+        request,
+        jsonify,
+        redirect,
+        url_for,
+        session,
+    )
+
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
@@ -22,10 +31,12 @@ except ImportError:
 
 class InteractiveDocumentationGuide:
     """Interface interactive pour la documentation IA symbolique"""
-    
-    def __init__(self, 
-                 analysis_file: str = "project_analysis.json",
-                 knowledge_summary_file: str = "knowledge_summary.json"):
+
+    def __init__(
+        self,
+        analysis_file: str = "project_analysis.json",
+        knowledge_summary_file: str = "knowledge_summary.json",
+    ):
         self.analysis_file = analysis_file
         self.knowledge_summary_file = knowledge_summary_file
         self.analysis_data = None
@@ -33,87 +44,91 @@ class InteractiveDocumentationGuide:
         self.app = None
         self.docs_dir = Path("generated_docs")
         self.static_mode = not FLASK_AVAILABLE
-        
+
         self._load_data()
         if FLASK_AVAILABLE:
             self._setup_flask_app()
-    
+
     def _load_data(self):
         """Charge les données d'analyse et de connaissances"""
         try:
-            with open(self.analysis_file, 'r', encoding='utf-8') as f:
+            with open(self.analysis_file, "r", encoding="utf-8") as f:
                 self.analysis_data = json.load(f)
-            
+
             if os.path.exists(self.knowledge_summary_file):
-                with open(self.knowledge_summary_file, 'r', encoding='utf-8') as f:
+                with open(self.knowledge_summary_file, "r", encoding="utf-8") as f:
                     self.knowledge_data = json.load(f)
-            
+
             print(" Données chargées pour l'interface interactive")
         except Exception as e:
             print(f" Erreur lors du chargement: {e}")
             raise
-    
+
     def _setup_flask_app(self):
         """Configure l'application Flask"""
         self.app = Flask(__name__)
-        self.app.secret_key = 'doc_system_ia_symbolique_2025'
-        
+        self.app.secret_key = "doc_system_ia_symbolique_2025"
+
         # Routes principales
-        self.app.add_url_rule('/', 'index', self.index)
-        self.app.add_url_rule('/search', 'search', self.search, methods=['GET', 'POST'])
-        self.app.add_url_rule('/demo', 'demo_mode', self.demo_mode)
-        self.app.add_url_rule('/api/search', 'api_search', self.api_search, methods=['POST'])
-    
+        self.app.add_url_rule("/", "index", self.index)
+        self.app.add_url_rule("/search", "search", self.search, methods=["GET", "POST"])
+        self.app.add_url_rule("/demo", "demo_mode", self.demo_mode)
+        self.app.add_url_rule(
+            "/api/search", "api_search", self.api_search, methods=["POST"]
+        )
+
     def generate_static_interface(self):
         """Génère une interface HTML statique complète"""
         print("🌐 Génération de l'interface HTML statique...")
-        
+
         static_dir = Path("static_interface")
         static_dir.mkdir(exist_ok=True)
-        
+
         # Page principale avec toutes les informations
         self._generate_complete_static_page(static_dir)
-        
+
         # CSS
         self._generate_static_css(static_dir)
-        
+
         # JS
         self._generate_static_js(static_dir)
-        
+
         index_file = static_dir / "index.html"
         print(f"✅ Interface statique générée: {index_file}")
         return index_file
-    
+
     def _generate_complete_static_page(self, static_dir: Path):
         """Génère une page HTML statique complète avec toutes les fonctionnalités"""
-        metrics = self.analysis_data['metrics']
-        entry_points = self.analysis_data['entry_points'][:10]
-        
+        metrics = self.analysis_data["metrics"]
+        entry_points = self.analysis_data["entry_points"][:10]
+
         # Préparer les données pour la recherche client-side
         search_data = {}
-        for module_path, module in self.analysis_data['modules'].items():
+        for module_path, module in self.analysis_data["modules"].items():
             search_data[module_path] = {
-                'name': module['name'],
-                'category': module['category'],
-                'type': module['type'],
-                'docstring': module.get('docstring', ''),
-                'complexity': module['complexity_score']
+                "name": module["name"],
+                "category": module["category"],
+                "type": module["type"],
+                "docstring": module.get("docstring", ""),
+                "complexity": module["complexity_score"],
             }
-        
+
         # Grouper par catégories
         categories = {}
-        for module_path, module in self.analysis_data['modules'].items():
-            cat = module['category']
+        for module_path, module in self.analysis_data["modules"].items():
+            cat = module["category"]
             if cat not in categories:
                 categories[cat] = []
-            categories[cat].append({
-                'name': module['name'],
-                'path': module_path,
-                'complexity': module['complexity_score'],
-                'type': module['type']
-            })
-        
-        html_content = f'''<!DOCTYPE html>
+            categories[cat].append(
+                {
+                    "name": module["name"],
+                    "path": module_path,
+                    "complexity": module["complexity_score"],
+                    "type": module["type"],
+                }
+            )
+
+        html_content = f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -171,7 +186,7 @@ class InteractiveDocumentationGuide:
             <div class="section-grid">
                 <div class="info-section">
                     <h2>🚀 Points d'Entrée Recommandés</h2>
-                    <div class="entry-points">'''
+                    <div class="entry-points">"""
 
         # Ajouter les points d'entrée
         for entry in entry_points[:8]:
@@ -182,27 +197,29 @@ class InteractiveDocumentationGuide:
                             <p>{entry.get('docstring', 'Module d\'entrée du système')[:120]}...</p>
                         </div>'''
 
-        html_content += '''
+        html_content += """
                     </div>
                 </div>
                 
                 <div class="info-section">
                     <h2>📊 Répartition par Catégories</h2>
-                    <div class="category-stats">'''
+                    <div class="category-stats">"""
 
         # Ajouter les statistiques par catégorie
         category_counts = {}
         for cat, modules in categories.items():
             category_counts[cat] = len(modules)
-        
-        for category, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
-            html_content += f'''
+
+        for category, count in sorted(
+            category_counts.items(), key=lambda x: x[1], reverse=True
+        ):
+            html_content += f"""
                         <div class="category-stat">
                             <span class="category-name">{category.title()}</span>
                             <span class="category-count">{count} modules</span>
-                        </div>'''
+                        </div>"""
 
-        html_content += '''
+        html_content += """
                     </div>
                 </div>
             </div>
@@ -237,33 +254,33 @@ class InteractiveDocumentationGuide:
     <div id="categories" class="tab-content">
         <div class="categories-container">
             <h2>📚 Navigation par Catégories</h2>
-            <div class="categories-grid">'''
+            <div class="categories-grid">"""
 
         # Ajouter les catégories
         for category, modules in categories.items():
             if len(modules) > 0:
-                html_content += f'''
+                html_content += f"""
                 <div class="category-card" onclick="showCategoryDetails('{category}')">
                     <h3>{category.title()}</h3>
                     <div class="category-meta">
                         <span class="module-count">{len(modules)} modules</span>
                         <span class="avg-complexity">Complexité moy: {sum(m['complexity'] for m in modules) / len(modules):.1f}</span>
                     </div>
-                    <div class="module-preview">'''
-                
-                for module in modules[:3]:
-                    html_content += f'''
-                        <div class="module-preview-item">{module['name']}</div>'''
-                
-                if len(modules) > 3:
-                    html_content += f'''
-                        <div class="module-preview-item more">+{len(modules) - 3} autres...</div>'''
-                
-                html_content += '''
-                    </div>
-                </div>'''
+                    <div class="module-preview">"""
 
-        html_content += '''
+                for module in modules[:3]:
+                    html_content += f"""
+                        <div class="module-preview-item">{module['name']}</div>"""
+
+                if len(modules) > 3:
+                    html_content += f"""
+                        <div class="module-preview-item more">+{len(modules) - 3} autres...</div>"""
+
+                html_content += """
+                    </div>
+                </div>"""
+
+        html_content += """
             </div>
             
             <div id="categoryDetails" class="category-details" style="display: none;">
@@ -359,19 +376,19 @@ class InteractiveDocumentationGuide:
     
     <script src="scripts.js"></script>
 </body>
-</html>'''
+</html>"""
 
         # Préparer les données pour JavaScript (sans problème de f-string)
-        with open(static_dir / "search_data.js", 'w', encoding='utf-8') as f:
+        with open(static_dir / "search_data.js", "w", encoding="utf-8") as f:
             f.write(f"const searchData = {json.dumps(search_data, indent=2)};")
             f.write(f"const categoriesData = {json.dumps(categories, indent=2)};")
-        
-        with open(static_dir / "index.html", 'w', encoding='utf-8') as f:
+
+        with open(static_dir / "index.html", "w", encoding="utf-8") as f:
             f.write(html_content)
-    
+
     def _generate_static_css(self, static_dir: Path):
         """Génère le CSS moderne et attractif"""
-        css_content = '''
+        css_content = """
         * {
             margin: 0;
             padding: 0;
@@ -829,14 +846,14 @@ class InteractiveDocumentationGuide:
                 flex-direction: column;
             }
         }
-        '''
-        
-        with open(static_dir / "styles.css", 'w', encoding='utf-8') as f:
+        """
+
+        with open(static_dir / "styles.css", "w", encoding="utf-8") as f:
             f.write(css_content)
-    
+
     def _generate_static_js(self, static_dir: Path):
         """Génère le JavaScript pour l'interactivité"""
-        js_content = '''
+        js_content = """
         // Interface interactive pour la documentation IA Symbolique
         
         // Chargement des données
@@ -1017,50 +1034,56 @@ class InteractiveDocumentationGuide:
                 }, index * 100);
             });
         });
-        '''
-        
-        with open(static_dir / "scripts.js", 'w', encoding='utf-8') as f:
+        """
+
+        with open(static_dir / "scripts.js", "w", encoding="utf-8") as f:
             f.write(js_content)
-    
-    def run_interactive_server(self, host: str = '127.0.0.1', port: int = 5000, debug: bool = True):
+
+    def run_interactive_server(
+        self, host: str = "127.0.0.1", port: int = 5000, debug: bool = True
+    ):
         """Lance le serveur interactif Flask ou génère l'interface statique"""
         if not FLASK_AVAILABLE:
             print(" Flask non disponible. Génération de l'interface statique...")
             return self.generate_static_interface()
-        
+
         print(f" Lancement du serveur interactif sur http://{host}:{port}")
-        
+
         try:
             self.app.run(host=host, port=port, debug=debug)
         except Exception as e:
             print(f" Erreur du serveur Flask: {e}")
             print(" Génération de l'interface statique en alternative...")
             return self.generate_static_interface()
-    
+
     # Routes Flask simplifiées
     def index(self):
         """Page d'accueil Flask"""
         from flask import render_template_string
-        return render_template_string('''
+
+        return render_template_string(
+            """
         <h1>Interface Interactive IA Symbolique</h1>
         <p>Flask fonctionne ! Consultez la documentation générée.</p>
         <ul>
             <li><a href="/demo">Mode Démonstration</a></li>
             <li><a href="/search">Recherche</a></li>
         </ul>
-        ''')
-    
+        """
+        )
+
     def search(self):
         """Page de recherche Flask"""
         return "Recherche disponible - Développement en cours"
-    
+
     def demo_mode(self):
         """Mode démonstration Flask"""
         return "Mode démonstration - Interface Flask fonctionnelle"
-    
+
     def api_search(self):
         """API de recherche Flask"""
         from flask import jsonify
+
         return jsonify({"status": "API fonctionnelle"})
 
 
@@ -1068,27 +1091,28 @@ def main():
     """Fonction principale"""
     print(" Interface Interactive de Documentation IA Symbolique")
     print("=" * 60)
-    
+
     try:
         guide = InteractiveDocumentationGuide()
-        
+
         # Toujours générer l'interface statique pour éviter les problèmes
         static_file = guide.generate_static_interface()
         print(f" Interface statique générée: {static_file}")
-        
+
         # Ouvrir automatiquement dans le navigateur
         try:
-            webbrowser.open(f'file://{static_file.absolute()}')
+            webbrowser.open(f"file://{static_file.absolute()}")
             print("🌐 Interface ouverte dans votre navigateur")
         except Exception as e:
             print(f" Impossible d'ouvrir automatiquement: {e}")
             print(f" Ouvrez manuellement: {static_file.absolute()}")
-        
+
         return static_file
-        
+
     except Exception as e:
         print(f" Erreur lors du lancement: {e}")
         import traceback
+
         traceback.print_exc()
 
 

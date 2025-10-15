@@ -13,23 +13,23 @@ from .definitions import (
     RhetoricalStrategy,
     Vulnerability,
     EvaluationResult,
-    ValidationResult
+    ValidationResult,
 )
 from .counter_agent import CounterArgumentAgent
 from .parser import ArgumentParser, VulnerabilityAnalyzer
 from .strategies import RhetoricalStrategies
 
 __all__ = [
-    'Argument',
-    'CounterArgument',
-    'CounterArgumentType',
-    'ArgumentStrength',
-    'RhetoricalStrategy',
-    'Vulnerability',
-    'EvaluationResult',
-    'ValidationResult',
-    'CounterArgumentAgent',
-    'ArgumentParser',
-    'VulnerabilityAnalyzer',
-    'RhetoricalStrategies'
-] 
+    "Argument",
+    "CounterArgument",
+    "CounterArgumentType",
+    "ArgumentStrength",
+    "RhetoricalStrategy",
+    "Vulnerability",
+    "EvaluationResult",
+    "ValidationResult",
+    "CounterArgumentAgent",
+    "ArgumentParser",
+    "VulnerabilityAnalyzer",
+    "RhetoricalStrategies",
+]

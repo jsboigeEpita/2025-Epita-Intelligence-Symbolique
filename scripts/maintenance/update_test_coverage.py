@@ -13,42 +13,51 @@ try:
 except ImportError as e:
     raise ImportError(f"Erreur d'importation de modules stdlib: {e}")
 
+
 class TestCoverageUpdater:
     """Mise à jour de la couverture de tests pour Oracle Enhanced"""
-    
+
     def __init__(self):
         self.root_dir = Path(".")
-        self.tests_dir = self.root_dir / "tests" / "unit" / "argumentation_analysis" / "agents" / "core" / "oracle"
+        self.tests_dir = (
+            self.root_dir
+            / "tests"
+            / "unit"
+            / "argumentation_analysis"
+            / "agents"
+            / "core"
+            / "oracle"
+        )
         self.update_log = []
-        
+
     def run_coverage_update(self):
         """Exécute la mise à jour complète de la couverture"""
         print("🧪 Début mise à jour couverture de tests Oracle Enhanced...")
-        
+
         # Phase 3.1: Tests pour error_handling.py
         self._create_error_handling_tests()
-        
+
         # Phase 3.2: Tests pour interfaces.py
         self._create_interfaces_tests()
-        
+
         # Phase 3.3: Tests d'intégration pour nouveaux modules
         self._create_integration_tests()
-        
+
         # Phase 3.4: Mise à jour des tests existants
         self._update_existing_tests()
-        
+
         # Phase 3.5: Validation de la couverture
         self._validate_coverage()
-        
+
         # Génération du rapport
         self._generate_coverage_report()
-        
+
         print("✅ Mise à jour couverture terminée.")
-        
+
     def _create_error_handling_tests(self):
         """Crée les tests pour error_handling.py"""
         print("🔍 Création tests error_handling.py...")
-        
+
         test_content = '''"""
 Tests pour le module error_handling.py du système Oracle Enhanced
 """
@@ -243,17 +252,17 @@ class TestOracleErrorDecorator:
             
         mock_logger.error.assert_called_once()
 '''
-        
+
         test_path = self.tests_dir / "test_error_handling.py"
-        with open(test_path, 'w', encoding='utf-8') as f:
+        with open(test_path, "w", encoding="utf-8") as f:
             f.write(test_content)
-            
+
         self.update_log.append("✅ Tests error_handling.py créés")
-        
+
     def _create_interfaces_tests(self):
         """Crée les tests pour interfaces.py"""
         print("🎯 Création tests interfaces.py...")
-        
+
         test_content = '''"""
 Tests pour le module interfaces.py du système Oracle Enhanced
 """
@@ -497,17 +506,17 @@ class TestInterfacesIntegration:
         result = manager.execute_query("unauthorized", "validate", {})
         assert result["status"] == "permission_denied"
 '''
-        
+
         test_path = self.tests_dir / "test_interfaces.py"
-        with open(test_path, 'w', encoding='utf-8') as f:
+        with open(test_path, "w", encoding="utf-8") as f:
             f.write(test_content)
-            
+
         self.update_log.append("✅ Tests interfaces.py créés")
-        
+
     def _create_integration_tests(self):
         """Crée les tests d'intégration pour les nouveaux modules"""
         print("🔗 Création tests d'intégration nouveaux modules...")
-        
+
         integration_test_content = '''"""
 Tests d'intégration pour les nouveaux modules Oracle Enhanced
 """
@@ -742,17 +751,17 @@ class TestNewModulesIntegration:
             
         asyncio.run(test_integration())
 '''
-        
+
         integration_test_path = self.tests_dir / "test_new_modules_integration.py"
-        with open(integration_test_path, 'w', encoding='utf-8') as f:
+        with open(integration_test_path, "w", encoding="utf-8") as f:
             f.write(integration_test_content)
-            
+
         self.update_log.append("✅ Tests d'intégration nouveaux modules créés")
-        
+
     def _update_existing_tests(self):
         """Met à jour les tests existants"""
         print("🔄 Mise à jour tests existants...")
-        
+
         # Mise à jour du fichier conftest pour incluire les nouveaux modules
         conftest_update = '''
 # Ajout de fixtures pour les nouveaux modules Oracle Enhanced
@@ -784,22 +793,22 @@ def standard_oracle_response_error():
         error_code="TEST_ERROR"
     )
 '''
-        
+
         # Ajouter au conftest existant
         conftest_path = self.root_dir / "conftest.py"
         if conftest_path.exists():
-            with open(conftest_path, 'a', encoding='utf-8') as f:
+            with open(conftest_path, "a", encoding="utf-8") as f:
                 f.write(conftest_update)
         else:
-            with open(conftest_path, 'w', encoding='utf-8') as f:
+            with open(conftest_path, "w", encoding="utf-8") as f:
                 f.write(conftest_update)
-                
+
         self.update_log.append("✅ Conftest.py mis à jour avec nouvelles fixtures")
-        
+
     def _validate_coverage(self):
         """Valide la couverture de tests"""
         print("📊 Validation de la couverture...")
-        
+
         # Création d'un script de validation de couverture
         coverage_script = '''#!/usr/bin/env python3
 """Script de validation de la couverture Oracle Enhanced"""
@@ -843,16 +852,18 @@ if __name__ == "__main__":
     success = run_coverage_check()
     sys.exit(0 if success else 1)
 '''
-        
-        coverage_script_path = self.root_dir / "scripts" / "maintenance" / "validate_oracle_coverage.py"
-        with open(coverage_script_path, 'w', encoding='utf-8') as f:
+
+        coverage_script_path = (
+            self.root_dir / "scripts" / "maintenance" / "validate_oracle_coverage.py"
+        )
+        with open(coverage_script_path, "w", encoding="utf-8") as f:
             f.write(coverage_script)
-            
+
         self.update_log.append("✅ Script de validation de couverture créé")
-        
+
     def _generate_coverage_report(self):
         """Génère le rapport de mise à jour de couverture"""
-        
+
         report_content = f"""# Rapport de Mise à Jour Couverture Tests Oracle Enhanced
 
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -963,12 +974,18 @@ Phase 5: Commits Git progressifs et validation finale
 ---
 *Couverture Oracle Enhanced: 100% maintenue et étendue aux nouveaux composants*
 """
-        
-        report_path = self.root_dir / "docs" / "rapports" / f"mise_a_jour_couverture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-        with open(report_path, 'w', encoding='utf-8') as f:
+
+        report_path = (
+            self.root_dir
+            / "docs"
+            / "rapports"
+            / f"mise_a_jour_couverture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_content)
-            
+
         print(f"📄 Rapport de couverture généré: {report_path}")
+
 
 if __name__ == "__main__":
     updater = TestCoverageUpdater()

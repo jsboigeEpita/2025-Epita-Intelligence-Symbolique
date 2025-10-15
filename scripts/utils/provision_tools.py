@@ -3,8 +3,11 @@ from pathlib import Path
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
+)
 logger = logging.getLogger("provision_tools")
+
 
 def provision():
     """
@@ -20,25 +23,30 @@ def provision():
 
         tools_dir = project_root / "argumentation_analysis" / "libs"
         tools_dir.mkdir(exist_ok=True)
-        
+
         logger.info(f"--- Starting Portable Tools Provisioning ---")
         logger.info(f"Target tools directory: {tools_dir}")
 
         setup_tools(
             tools_dir_base_path=tools_dir,
             force_reinstall=False,
-            skip_octave=True  # Skipping Octave as it's not critical for core tests
+            skip_octave=True,  # Skipping Octave as it's not critical for core tests
         )
 
         logger.info("--- Portable Tools Provisioning Finished Successfully ---")
 
     except ImportError as e:
         logger.error(f"Failed to import a required module: {e}", exc_info=True)
-        logger.error("Please ensure you are running this script from within the 'projet-is' conda environment.")
+        logger.error(
+            "Please ensure you are running this script from within the 'projet-is' conda environment."
+        )
         sys.exit(1)
     except Exception as e:
-        logger.error(f"An unexpected error occurred during tool provisioning: {e}", exc_info=True)
+        logger.error(
+            f"An unexpected error occurred during tool provisioning: {e}", exc_info=True
+        )
         sys.exit(1)
+
 
 if __name__ == "__main__":
     provision()

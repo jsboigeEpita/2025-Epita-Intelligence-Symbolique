@@ -3,11 +3,11 @@ from .knowledge_base import KnowledgeBase
 from .argumentation_engine import ArgumentationEngine
 
 __all__ = [
-    'DialogueType',
-    'SpeechAct', 
-    'Proposition',
-    'Argument',
-    'DialogueMove',
-    'KnowledgeBase',
-    'ArgumentationEngine'
+    "DialogueType",
+    "SpeechAct",
+    "Proposition",
+    "Argument",
+    "DialogueMove",
+    "KnowledgeBase",
+    "ArgumentationEngine",
 ]

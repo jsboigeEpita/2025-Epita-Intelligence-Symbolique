@@ -31,12 +31,15 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setLevel(logging.INFO)
 
 # Formatter pour le log structuré en JSON
-formatter = logging.Formatter('{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "message": %(message)s}')
+formatter = logging.Formatter(
+    '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "message": %(message)s}'
+)
 file_handler.setFormatter(formatter)
 
 # Ajoute le handler uniquement si aucun n'est déjà configuré
 if not performance_logger.handlers:
     performance_logger.addHandler(file_handler)
+
 
 def monitor_performance(log_args: bool = False):
     """
@@ -46,6 +49,7 @@ def monitor_performance(log_args: bool = False):
         log_args (bool): Si True, loggue les arguments de la fonction.
                          À utiliser avec prudence pour ne pas exposer de données sensibles.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -56,10 +60,10 @@ def monitor_performance(log_args: bool = False):
             finally:
                 end_time = time.perf_counter()
                 execution_time = end_time - start_time
-                
+
                 log_data = {
                     "execution_time_ms": round(execution_time * 1000, 2),
-                    "function_name": func.__qualname__
+                    "function_name": func.__qualname__,
                 }
 
                 if log_args:
@@ -67,10 +71,15 @@ def monitor_performance(log_args: bool = False):
                     try:
                         args_repr = [repr(a) for a in args]
                         kwargs_repr = {k: repr(v) for k, v in kwargs.items()}
-                        log_data["arguments"] = {"args": args_repr, "kwargs": kwargs_repr}
+                        log_data["arguments"] = {
+                            "args": args_repr,
+                            "kwargs": kwargs_repr,
+                        }
                     except Exception:
                         log_data["arguments"] = "Could not serialize arguments"
 
                 performance_logger.info(json.dumps(log_data))
+
         return wrapper
+
     return decorator

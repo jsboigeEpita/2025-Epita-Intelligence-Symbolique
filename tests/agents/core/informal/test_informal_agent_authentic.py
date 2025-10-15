@@ -11,7 +11,7 @@ import pytest
 from typing import Optional, List, Dict
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
- 
+
 # Import auto-configuration environnement
 from argumentation_analysis.core import environment as auto_env
 from .fixtures_authentic import simple_authentic_informal_agent
@@ -25,22 +25,26 @@ from .fixtures_authentic import (
     authentic_informal_agent,
     setup_authentic_taxonomy_csv,
     authentic_informal_analysis_plugin,
-    sample_authentic_test_text
+    sample_authentic_test_text,
 )
 
 # Imports composants authentiques
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
+from argumentation_analysis.agents.core.informal.informal_agent import (
+    InformalAnalysisAgent,
+)
+from argumentation_analysis.agents.core.informal.informal_definitions import (
+    InformalAnalysisPlugin,
+)
 
 
 class TestInformalAnalysisAgentAuthentic:
     """
     Tests authentiques pour InformalAnalysisAgent - Sans mocks, composants réels
-    
+
     Phase 5: Élimination complète des mocks
     - Semantic Kernel authentique avec connecteurs Azure/OpenAI réels
     - Détecteurs de sophismes authentiques avec vraie logique
-    - Analyseurs rhétoriques et contextuels authentiques  
+    - Analyseurs rhétoriques et contextuels authentiques
     - InformalAnalysisAgent sans mocks
     - Tests d'analyse argumentative avec taxonomie réelle
     """
@@ -54,33 +58,39 @@ class TestInformalAnalysisAgentAuthentic:
         Test authentique d'initialisation et configuration - AUCUN MOCK
         """
         start_time = time.time()
-        
+
         agent = authentic_informal_agent
-        
+
         # Vérifications de base authentiques
         assert agent.name == "authentic_informal_agent"
         assert agent._kernel is not None
         # Le nouvel agent 'ChatCompletionAgent' n'a plus de 'kernel_wrapper'
         # assert hasattr(agent, 'kernel_wrapper')
-        
+
         # Le nouvel agent expose ses fonctions (outils) via la propriété 'plugins'
         # Correction: Les plugins sont dans le kernel, pas directement sur l'agent.
         assert agent._kernel.plugins is not None
         assert len(agent._kernel.plugins) > 0
-        
+
         # On vérifie la présence d'au moins un plugin important
         assert "FallacyIdentificationPlugin" in agent._kernel.plugins
-        
-        print(f"[AUTHENTIC] Plugins chargés dans le kernel de l'agent: {list(agent._kernel.plugins.keys())}")
-        
+
+        print(
+            f"[AUTHENTIC] Plugins chargés dans le kernel de l'agent: {list(agent._kernel.plugins.keys())}"
+        )
+
         # Les méthodes get_agent_capabilities() et get_agent_info() n'existent plus
         # sur le ChatCompletionAgent. On vérifie les attributs directement.
         assert agent.instructions is not None
         assert len(agent.instructions) > 10
-        assert agent.id is not None # L'id du service LLM est dans le kernel, pas directement sur l'agent
-        
-        print(f"[AUTHENTIC] Agent initialisé avec un prompt de {len(agent.instructions)} caractères.")
-        
+        assert (
+            agent.id is not None
+        )  # L'id du service LLM est dans le kernel, pas directement sur l'agent
+
+        print(
+            f"[AUTHENTIC] Agent initialisé avec un prompt de {len(agent.instructions)} caractères."
+        )
+
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test d'initialisation terminé en {execution_time:.2f}s")
 
@@ -90,7 +100,9 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    async def test_analyze_fallacies_authentic(self, simple_authentic_informal_agent, sample_authentic_test_text):
+    async def test_analyze_fallacies_authentic(
+        self, simple_authentic_informal_agent, sample_authentic_test_text
+    ):
         """
         Test authentique d'analyse de sophismes avec vrai LLM, utilisant le nouveau paradigme d'invocation.
         """
@@ -101,7 +113,7 @@ class TestInformalAnalysisAgentAuthentic:
 
         agent = simple_authentic_informal_agent
         text = sample_authentic_test_text
-        
+
         # Le 'full' agent configuré dans la fixture devrait utiliser des outils.
         chat_history = ChatHistory()
         prompt = (
@@ -118,36 +130,57 @@ class TestInformalAnalysisAgentAuthentic:
 
             # La méthode retourne maintenant un dictionnaire formaté
             assert isinstance(result, dict), "Le résultat doit être un dictionnaire."
-            print(f"[AUTHENTIC] Réponse de l'agent (analyse de sophismes): {json.dumps(result, indent=2)}")
+            print(
+                f"[AUTHENTIC] Réponse de l'agent (analyse de sophismes): {json.dumps(result, indent=2)}"
+            )
 
-            assert "fallacies" in result, "La clé 'fallacies' doit être dans le résultat."
-            assert "error" not in result, f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
-            
+            assert (
+                "fallacies" in result
+            ), "La clé 'fallacies' doit être dans le résultat."
+            assert (
+                "error" not in result
+            ), f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
+
             # Vérifier que nous avons obtenu une liste de sophismes
             fallacies = result["fallacies"]
-            assert isinstance(fallacies, list), "La valeur de 'fallacies' doit être une liste."
-            
+            assert isinstance(
+                fallacies, list
+            ), "La valeur de 'fallacies' doit être une liste."
+
             # Le test est réussi si au moins un sophisme est détecté.
-            assert len(fallacies) > 0, "Au moins un sophisme aurait dû être détecté dans le texte de test."
-            
+            assert (
+                len(fallacies) > 0
+            ), "Au moins un sophisme aurait dû être détecté dans le texte de test."
+
             # Vérification du contenu d'un sophisme détecté
             first_fallacy = fallacies[0]
-            assert "fallacy_type" in first_fallacy, "Chaque sophisme doit avoir un 'fallacy_type'."
-            assert "justification" in first_fallacy, "Chaque sophisme doit avoir une 'justification'."
-            
+            assert (
+                "fallacy_type" in first_fallacy
+            ), "Chaque sophisme doit avoir un 'fallacy_type'."
+            assert (
+                "justification" in first_fallacy
+            ), "Chaque sophisme doit avoir une 'justification'."
+
         except Exception as e:
-            pytest.fail(f"L'invocation de l'agent a échoué avec une exception non gérée: {e}", pytrace=True)
-        
+            pytest.fail(
+                f"L'invocation de l'agent a échoué avec une exception non gérée: {e}",
+                pytrace=True,
+            )
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test d'analyse de sophismes (invoke) terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test d'analyse de sophismes (invoke) terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.asyncio
-    @pytest.mark.requires_llm  
+    @pytest.mark.requires_llm
     @pytest.mark.authentic
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    async def test_identify_arguments_authentic(self, simple_authentic_informal_agent, sample_authentic_test_text):
+    async def test_identify_arguments_authentic(
+        self, simple_authentic_informal_agent, sample_authentic_test_text
+    ):
         """
         Test authentique d'identification d'arguments via le nouveau paradigme d'invocation.
         """
@@ -158,7 +191,7 @@ class TestInformalAnalysisAgentAuthentic:
 
         agent = simple_authentic_informal_agent
         text = sample_authentic_test_text
-        
+
         # On utilise ChatHistory pour formuler une demande claire
         prompt = (
             "Instruction: Tu es un expert en analyse argumentative. Identifie les arguments principaux dans le texte suivant. "
@@ -175,26 +208,40 @@ class TestInformalAnalysisAgentAuthentic:
 
             # La méthode retourne un dictionnaire
             assert isinstance(result, dict), "Le résultat doit être un dictionnaire."
-            print(f"[AUTHENTIC] Réponse de l'agent (identification d'arguments): {json.dumps(result, indent=2)}")
+            print(
+                f"[AUTHENTIC] Réponse de l'agent (identification d'arguments): {json.dumps(result, indent=2)}"
+            )
 
-            assert "arguments" in result, "La clé 'arguments' doit être dans le résultat."
-            assert "error" not in result, f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
+            assert (
+                "arguments" in result
+            ), "La clé 'arguments' doit être dans le résultat."
+            assert (
+                "error" not in result
+            ), f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
 
             # Vérifier que nous avons une liste d'arguments
             arguments = result["arguments"]
-            assert isinstance(arguments, list), "La valeur de 'arguments' doit être une liste."
+            assert isinstance(
+                arguments, list
+            ), "La valeur de 'arguments' doit être une liste."
             assert len(arguments) > 0, "Au moins un argument aurait dû être identifié."
-            
+
             # Vérifier le contenu d'un argument
             first_argument = arguments[0]
-            assert isinstance(first_argument, str), "Chaque argument identifié doit être une chaîne de caractères."
+            assert isinstance(
+                first_argument, str
+            ), "Chaque argument identifié doit être une chaîne de caractères."
             assert len(first_argument) > 10, "L'argument identifié semble trop court."
 
         except Exception as e:
-            pytest.fail(f"L'invocation directe de 'analyze_text' a échoué: {e}", pytrace=True)
-        
+            pytest.fail(
+                f"L'invocation directe de 'analyze_text' a échoué: {e}", pytrace=True
+            )
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test d'identification d'arguments (invoke) terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test d'identification d'arguments (invoke) terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.requires_llm
@@ -208,12 +255,12 @@ class TestInformalAnalysisAgentAuthentic:
         """
         if not simple_authentic_informal_agent.id:
             pytest.skip("Service LLM non configuré - test authentique impossible")
-        
+
         start_time = time.time()
-        
+
         agent = simple_authentic_informal_agent
         test_argument = "Les experts affirment que ce produit est sûr. N'est-il pas évident que vous devriez l'acheter?"
-        
+
         try:
             # Utilisation de la méthode directe 'analyze_text' pour la cohérence et la fiabilité
             # Appel de la méthode d'analyse avec le type 'fallacies'
@@ -221,24 +268,41 @@ class TestInformalAnalysisAgentAuthentic:
 
             # La méthode retourne un dictionnaire
             assert isinstance(result, dict), "Le résultat doit être un dictionnaire."
-            print(f"[AUTHENTIC] Réponse de l'agent (analyse d'argument): {json.dumps(result, indent=2)}")
+            print(
+                f"[AUTHENTIC] Réponse de l'agent (analyse d'argument): {json.dumps(result, indent=2)}"
+            )
 
-            assert "fallacies" in result, "La clé 'fallacies' doit être dans le résultat."
-            assert "error" not in result, f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
-            
+            assert (
+                "fallacies" in result
+            ), "La clé 'fallacies' doit être dans le résultat."
+            assert (
+                "error" not in result
+            ), f"L'analyse ne devrait pas retourner d'erreur: {result.get('error')}"
+
             fallacies = result["fallacies"]
             assert isinstance(fallacies, list)
-            assert len(fallacies) > 0, "Au moins un sophisme (ex: appel à l'autorité) aurait du être détecté."
+            assert (
+                len(fallacies) > 0
+            ), "Au moins un sophisme (ex: appel à l'autorité) aurait du être détecté."
 
             # Vérifier le contenu du sophisme
             first_fallacy = fallacies[0]
-            assert "appel à l'autorité" in first_fallacy.get("fallacy_type", "").lower() or "appeal to authority" in first_fallacy.get("fallacy_type", "").lower()
+            assert (
+                "appel à l'autorité" in first_fallacy.get("fallacy_type", "").lower()
+                or "appeal to authority"
+                in first_fallacy.get("fallacy_type", "").lower()
+            )
 
         except Exception as e:
-            pytest.fail(f"L'invocation directe de 'analyze_text' a échoué pour l'analyse d'argument: {e}", pytrace=True)
-        
+            pytest.fail(
+                f"L'invocation directe de 'analyze_text' a échoué pour l'analyse d'argument: {e}",
+                pytrace=True,
+            )
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test d'analyse d'argument (invoke) terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test d'analyse d'argument (invoke) terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.requires_llm
@@ -246,18 +310,20 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    async def test_analyze_text_authentic(self, authentic_informal_agent, sample_authentic_test_text):
+    async def test_analyze_text_authentic(
+        self, authentic_informal_agent, sample_authentic_test_text
+    ):
         """
         Test authentique d'analyse de texte complète via le nouveau paradigme d'invocation.
         """
         if not authentic_informal_agent.id:
             pytest.skip("Service LLM non configuré - test authentique impossible")
-        
+
         start_time = time.time()
-        
+
         agent = authentic_informal_agent
         text = sample_authentic_test_text
-        
+
         # On utilise ChatHistory pour formuler une demande claire
         prompt = (
             "Instruction: Tu es un expert en analyse argumentative. Analyse de manière complète le texte suivant, en identifiant les arguments, les sophismes et le ton général. "
@@ -269,46 +335,60 @@ class TestInformalAnalysisAgentAuthentic:
         final_answer = None
         try:
             async for message in agent.invoke(chat_history):
-                if isinstance(message, ChatMessageContent) and message.role == "assistant" and not message.tool_calls:
+                if (
+                    isinstance(message, ChatMessageContent)
+                    and message.role == "assistant"
+                    and not message.tool_calls
+                ):
                     final_answer = message.content[0].text if message.content else None
-            
+
             # Vérification de la réponse finale
-            assert final_answer is not None, "L'agent n'a pas produit de réponse finale."
+            assert (
+                final_answer is not None
+            ), "L'agent n'a pas produit de réponse finale."
             print(f"[AUTHENTIC] Réponse de l'agent (analyse de texte): {final_answer}")
-            
+
             # Vérification de base du contenu
             final_answer_lower = final_answer.lower()
             assert "analyse" in final_answer_lower
             assert "sophisme" in final_answer_lower
             assert "argument" in final_answer_lower
-            assert "voitures électriques" in final_answer_lower # Contenu spécifique du texte
-            
+            assert (
+                "voitures électriques" in final_answer_lower
+            )  # Contenu spécifique du texte
+
         except Exception as e:
-            pytest.fail(f"L'invocation de l'agent a échoué pour l'analyse de texte: {e}")
-        
+            pytest.fail(
+                f"L'invocation de l'agent a échoué pour l'analyse de texte: {e}"
+            )
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test d'analyse de texte (invoke) terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test d'analyse de texte (invoke) terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.authentic
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    def test_fallacy_detection_local_authentic(self, authentic_fallacy_detector, sample_authentic_test_text):
+    def test_fallacy_detection_local_authentic(
+        self, authentic_fallacy_detector, sample_authentic_test_text
+    ):
         """
         Test authentique du détecteur de sophismes local (sans LLM)
         """
         start_time = time.time()
-        
+
         detector = authentic_fallacy_detector
         text = sample_authentic_test_text
-        
+
         # Détection authentique locale
         fallacies = detector.detect(text)
-        
+
         # Vérifications authentiques
         assert isinstance(fallacies, list)
         print(f"[AUTHENTIC] Sophismes détectés localement: {len(fallacies)}")
-        
+
         for fallacy in fallacies:
             assert isinstance(fallacy, dict)
             assert "fallacy_type" in fallacy
@@ -316,12 +396,14 @@ class TestInformalAnalysisAgentAuthentic:
             assert "confidence" in fallacy
             assert "details" in fallacy
             assert "pattern" in fallacy
-            
+
             assert isinstance(fallacy["confidence"], float)
             assert 0.0 <= fallacy["confidence"] <= 1.0
-            
-            print(f"[AUTHENTIC] Sophisme local: {fallacy['fallacy_type']} (confiance: {fallacy['confidence']:.2f})")
-        
+
+            print(
+                f"[AUTHENTIC] Sophisme local: {fallacy['fallacy_type']} (confiance: {fallacy['confidence']:.2f})"
+            )
+
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test de détection locale terminé en {execution_time:.2f}s")
 
@@ -329,18 +411,20 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    def test_rhetorical_analysis_authentic(self, authentic_rhetorical_analyzer, sample_authentic_test_text):
+    def test_rhetorical_analysis_authentic(
+        self, authentic_rhetorical_analyzer, sample_authentic_test_text
+    ):
         """
         Test authentique de l'analyseur rhétorique
         """
         start_time = time.time()
-        
+
         analyzer = authentic_rhetorical_analyzer
         text = sample_authentic_test_text
-        
+
         # Analyse rhétorique authentique
         analysis = analyzer.analyze(text)
-        
+
         # Vérifications authentiques
         assert isinstance(analysis, dict)
         assert "tone" in analysis
@@ -348,17 +432,17 @@ class TestInformalAnalysisAgentAuthentic:
         assert "techniques" in analysis
         assert "effectiveness" in analysis
         assert "tone_scores" in analysis
-        
+
         assert isinstance(analysis["techniques"], list)
         assert isinstance(analysis["effectiveness"], float)
         assert 0.0 <= analysis["effectiveness"] <= 1.0
         assert isinstance(analysis["tone_scores"], dict)
-        
+
         print(f"[AUTHENTIC] Ton: {analysis['tone']}")
         print(f"[AUTHENTIC] Style: {analysis['style']}")
         print(f"[AUTHENTIC] Techniques: {analysis['techniques']}")
         print(f"[AUTHENTIC] Efficacité: {analysis['effectiveness']:.2f}")
-        
+
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test d'analyse rhétorique terminé en {execution_time:.2f}s")
 
@@ -366,18 +450,20 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    def test_contextual_analysis_authentic(self, authentic_contextual_analyzer, sample_authentic_test_text):
+    def test_contextual_analysis_authentic(
+        self, authentic_contextual_analyzer, sample_authentic_test_text
+    ):
         """
         Test authentique de l'analyseur contextuel
         """
         start_time = time.time()
-        
+
         analyzer = authentic_contextual_analyzer
         text = sample_authentic_test_text
-        
+
         # Analyse contextuelle authentique
         analysis = analyzer.analyze_context(text)
-        
+
         # Vérifications authentiques
         assert isinstance(analysis, dict)
         assert "context_type" in analysis
@@ -385,18 +471,20 @@ class TestInformalAnalysisAgentAuthentic:
         assert "intent" in analysis
         assert "confidence" in analysis
         assert "all_contexts" in analysis
-        
+
         assert isinstance(analysis["confidence"], float)
         assert 0.0 <= analysis["confidence"] <= 1.0
         assert isinstance(analysis["all_contexts"], dict)
-        
+
         print(f"[AUTHENTIC] Type de contexte: {analysis['context_type']}")
         print(f"[AUTHENTIC] Audience: {analysis['audience']}")
         print(f"[AUTHENTIC] Intention: {analysis['intent']}")
         print(f"[AUTHENTIC] Confiance: {analysis['confidence']:.2f}")
-        
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test d'analyse contextuelle terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test d'analyse contextuelle terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -404,18 +492,20 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    async def test_complete_informal_analysis_workflow_authentic(self, authentic_informal_agent, sample_authentic_test_text):
+    async def test_complete_informal_analysis_workflow_authentic(
+        self, authentic_informal_agent, sample_authentic_test_text
+    ):
         """
         Test authentique du workflow complet d'analyse informelle via une seule invocation.
         """
         if not authentic_informal_agent.id:
             pytest.skip("Service LLM requis pour test intégration authentique")
-        
+
         start_time = time.time()
-        
+
         agent = authentic_informal_agent
         text = sample_authentic_test_text
-        
+
         # On formule un prompt complexe qui demande un workflow complet
         prompt = (
             "Instruction: Tu es un expert en analyse argumentative. "
@@ -424,81 +514,100 @@ class TestInformalAnalysisAgentAuthentic:
             "et que tu fournisses un résumé global de ta conclusion. "
             f"Texte à analyser: '{text}'"
         )
-        
+
         chat_history = ChatHistory()
         chat_history.add_user_message(prompt)
 
         final_answer = None
         try:
             async for message in agent.invoke(chat_history):
-                if isinstance(message, ChatMessageContent) and message.role == "assistant" and not message.tool_calls:
+                if (
+                    isinstance(message, ChatMessageContent)
+                    and message.role == "assistant"
+                    and not message.tool_calls
+                ):
                     final_answer = message.content[0].text if message.content else None
-            
+
             # Vérification de la réponse finale
-            assert final_answer is not None, "L'agent n'a pas produit de réponse finale."
+            assert (
+                final_answer is not None
+            ), "L'agent n'a pas produit de réponse finale."
             print(f"[AUTHENTIC] Réponse de l'agent (workflow complet): {final_answer}")
-            
+
             # Vérification que la réponse contient les éléments clés du workflow
             final_answer_lower = final_answer.lower()
             assert "argument" in final_answer_lower
             assert "sophisme" in final_answer_lower
             assert "conclusion" in final_answer_lower or "résumé" in final_answer_lower
-            assert "gouvernement" in final_answer_lower # Contenu du texte
-            
+            assert "gouvernement" in final_answer_lower  # Contenu du texte
+
         except Exception as e:
-            pytest.fail(f"L'invocation de l'agent a échoué pour le workflow complet: {e}")
-        
+            pytest.fail(
+                f"L'invocation de l'agent a échoué pour le workflow complet: {e}"
+            )
+
         execution_time = time.time() - start_time
-        print(f"[AUTHENTIC] Test du workflow complet (invoke) terminé en {execution_time:.2f}s")
+        print(
+            f"[AUTHENTIC] Test du workflow complet (invoke) terminé en {execution_time:.2f}s"
+        )
 
     @pytest.mark.performance
     @pytest.mark.authentic
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.informal
-    def test_local_components_performance_authentic(self, authentic_fallacy_detector, authentic_rhetorical_analyzer, authentic_contextual_analyzer):
+    def test_local_components_performance_authentic(
+        self,
+        authentic_fallacy_detector,
+        authentic_rhetorical_analyzer,
+        authentic_contextual_analyzer,
+    ):
         """
         Test authentique de performance des composants locaux
         """
         start_time = time.time()
-        
+
         # Textes de test variés
         test_texts = [
             "Les experts affirment que ce produit est révolutionnaire.",
             "Vous êtes trop jeune pour comprendre cette situation complexe.",
             "Si nous permettons cela, bientôt tout sera autorisé.",
             "N'est-ce pas évident que cette solution est la meilleure?",
-            "Pensez aux enfants qui souffriront de cette décision."
+            "Pensez aux enfants qui souffriront de cette décision.",
         ]
-        
+
         total_fallacies = 0
         total_analyses = 0
-        
+
         for i, text in enumerate(test_texts):
             # Test détecteur de sophismes
             fallacies = authentic_fallacy_detector.detect(text)
             total_fallacies += len(fallacies)
-            
+
             # Test analyseur rhétorique
             rhetorical = authentic_rhetorical_analyzer.analyze(text)
             assert isinstance(rhetorical, dict)
-            
+
             # Test analyseur contextuel
             contextual = authentic_contextual_analyzer.analyze_context(text)
             assert isinstance(contextual, dict)
-            
+
             total_analyses += 3
             print(f"[AUTHENTIC] Texte {i+1}: {len(fallacies)} sophismes détectés")
-        
+
         execution_time = time.time() - start_time
-        
-        print(f"[AUTHENTIC] Performance: {total_analyses} analyses en {execution_time:.2f}s")
+
+        print(
+            f"[AUTHENTIC] Performance: {total_analyses} analyses en {execution_time:.2f}s"
+        )
         print(f"[AUTHENTIC] Total sophismes détectés: {total_fallacies}")
         if execution_time > 0:
-            print(f"[AUTHENTIC] Vitesse: {total_analyses/execution_time:.1f} analyses/seconde")
+            print(
+                f"[AUTHENTIC] Vitesse: {total_analyses/execution_time:.1f} analyses/seconde"
+            )
         else:
             print("[AUTHENTIC] Vitesse: Exécution trop rapide pour mesurer.")
-        
+
         # Performance attendue : traitement rapide local
         assert execution_time < 2.0  # Moins de 2 secondes pour traitement local
 
@@ -506,9 +615,9 @@ class TestInformalAnalysisAgentAuthentic:
 # Marqueurs pytest pour organisation des tests authentiques
 pytestmark = [
     pytest.mark.authentic,  # Marqueur pour tests authentiques
-    pytest.mark.phase5,     # Marqueur Phase 5
-    pytest.mark.no_mocks,   # Marqueur sans mocks
-    pytest.mark.informal,   # Marqueur spécifique analyse informelle
+    pytest.mark.phase5,  # Marqueur Phase 5
+    pytest.mark.no_mocks,  # Marqueur sans mocks
+    pytest.mark.informal,  # Marqueur spécifique analyse informelle
 ]
 
 

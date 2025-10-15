@@ -1,10 +1,12 @@
 import pandas as pd
 from typing import Dict, Any, Optional
 
+
 class Taxonomy:
     """
     Classe pour charger et interroger la taxonomie des sophismes à partir d'un fichier CSV.
     """
+
     def __init__(self, file_path: str):
         """
         Initialise la taxonomie en chargeant le fichier CSV.
@@ -14,7 +16,9 @@ class Taxonomy:
         """
         self.df = pd.read_csv(file_path)
         # Normalise les noms de colonnes pour un accès simplifié (ex: "Fallacy Name" -> "fallacy_name")
-        self.df.columns = [col.lower().replace(' ', '_').replace('-', '_') for col in self.df.columns]
+        self.df.columns = [
+            col.lower().replace(" ", "_").replace("-", "_") for col in self.df.columns
+        ]
 
     def get_branch(self, node_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -28,9 +32,9 @@ class Taxonomy:
         """
         try:
             # La clé primaire dans le CSV est 'PK'
-            row = self.df[self.df['pk'] == int(node_id)]
+            row = self.df[self.df["pk"] == int(node_id)]
             if not row.empty:
-                return row.to_dict('records')[0]
+                return row.to_dict("records")[0]
         except (ValueError, KeyError):
             # Ignore les erreurs si node_id n'est pas un entier valide ou si la colonne 'pk' n'existe pas
             pass
@@ -49,11 +53,11 @@ class Taxonomy:
         try:
             # Normalisation simple et robuste : minuscule et suppression des espaces avant/après
             search_name = name.lower().strip()
-            
+
             # Appliquer la même normalisation à la colonne du dataframe
-            row = self.df[self.df['name'].str.lower().str.strip() == search_name]
+            row = self.df[self.df["name"].str.lower().str.strip() == search_name]
             if not row.empty:
-                return row.to_dict('records')[0]
+                return row.to_dict("records")[0]
         except KeyError:
             # La colonne 'name' n'existe peut-être pas
             pass

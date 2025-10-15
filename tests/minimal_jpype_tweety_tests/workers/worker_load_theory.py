@@ -11,11 +11,14 @@ import jpype.imports
 from jpype.types import JString
 
 # Ajout du chemin racine du projet
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+project_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..")
+)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from tests.fixtures.jvm_session_fixture import jvm_session_unmanaged
+
 
 def main():
     """
@@ -31,11 +34,16 @@ def main():
         PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
 
         # Le chemin du fichier de théorie est relatif au worker
-        theory_file_path = os.path.join(os.path.dirname(__file__), "..", "sample_theory.lp")
+        theory_file_path = os.path.join(
+            os.path.dirname(__file__), "..", "sample_theory.lp"
+        )
         print(f"Worker: Chemin du fichier de théorie: {theory_file_path}")
 
         if not os.path.exists(theory_file_path):
-            print(f"Erreur: Fichier de théorie introuvable: {theory_file_path}", file=sys.stderr)
+            print(
+                f"Erreur: Fichier de théorie introuvable: {theory_file_path}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         parser = PlParser()
@@ -43,15 +51,17 @@ def main():
 
         assert belief_set is not None, "Le belief set ne devrait pas être null."
         assert belief_set.size() > 0, "Le belief set ne devrait pas être vide."
-        
+
         print(f"Worker: Théorie chargée. Nombre de formules : {belief_set.size()}")
         print("Worker: Test de chargement de théorie RÉUSSI.")
 
     except Exception as e:
         print(f"Worker: Le test a échoué: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

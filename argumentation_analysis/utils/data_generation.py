@@ -5,9 +5,10 @@ pour l'analyse d'argumentation.
 """
 
 import logging
-from typing import Dict, Any # Ajouté pour type hinting
+from typing import Dict, Any  # Ajouté pour type hinting
 
 logger = logging.getLogger(__name__)
+
 
 def generate_sample_text(extract_name: str, source_name: str) -> str:
     """
@@ -25,8 +26,10 @@ def generate_sample_text(extract_name: str, source_name: str) -> str:
     :return: Un texte d'exemple généré.
     :rtype: str
     """
-    logger.debug(f"Génération de texte d'exemple pour extract_name='{extract_name}', source_name='{source_name}'")
-    
+    logger.debug(
+        f"Génération de texte d'exemple pour extract_name='{extract_name}', source_name='{source_name}'"
+    )
+
     # Logique de génération de texte d'exemple
     if "Lincoln" in extract_name or "Lincoln" in source_name:
         return """
@@ -35,9 +38,14 @@ def generate_sample_text(extract_name: str, source_name: str) -> str:
         Il est tout à fait approprié et juste que nous le fassions. Mais, dans un sens plus large, nous ne pouvons pas dédier, nous ne pouvons pas consacrer, nous ne pouvons pas sanctifier ce sol.
         Les braves hommes, vivants et morts, qui ont lutté ici, l'ont consacré, bien au-delà de notre pauvre pouvoir d'ajouter ou de retrancher.
         """
-    elif "Débat" in extract_name or "Discours" in extract_name or \
-         "Hitler" in source_name or "hitler" in extract_name.lower() or \
-         "Churchill" in source_name or "churchill" in extract_name.lower(): # Étendre pour couvrir plus de cas des scripts
+    elif (
+        "Débat" in extract_name
+        or "Discours" in extract_name
+        or "Hitler" in source_name
+        or "hitler" in extract_name.lower()
+        or "Churchill" in source_name
+        or "churchill" in extract_name.lower()
+    ):  # Étendre pour couvrir plus de cas des scripts
         return """
         Mesdames et messieurs, je me présente devant vous aujourd'hui pour discuter d'une question d'importance nationale.
         Premièrement, nous devons considérer les principes fondamentaux qui guident notre nation.
@@ -53,6 +61,7 @@ def generate_sample_text(extract_name: str, source_name: str) -> str:
         La cohérence argumentative est essentielle pour maintenir la crédibilité d'un discours.
         En conclusion, l'analyse rhétorique nous permet d'évaluer la qualité et l'efficacité des arguments présentés.
         """
+
 
 # Potentiellement d'autres fonctions de génération de données ici à l'avenir.
 # Par exemple, générer des structures de résultats d'analyse simulées, etc.

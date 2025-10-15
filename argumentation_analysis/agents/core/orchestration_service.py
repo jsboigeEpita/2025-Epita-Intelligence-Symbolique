@@ -14,6 +14,7 @@ Ce service est implémenté en tant que Singleton pour garantir une instance uni
 import threading
 from typing import Dict, Optional, List
 
+
 # Pour l'instant, nous définissons une classe de base pour les plugins.
 # Cela sera probablement remplacé par une interface plus formelle.
 class BasePlugin:
@@ -30,19 +31,23 @@ class BasePlugin:
         """Exécute la logique du plugin."""
         raise NotImplementedError
 
+
 class PluginDependencyError(Exception):
     """Exception levée lorsque les dépendances d'un plugin ne sont pas satisfaites."""
+
     pass
+
 
 class OrchestrationService:
     """
     Le Guichet de Service Unique pour orchestrer les capacités d'analyse.
     """
+
     _instance = None
     _lock = threading.Lock()
 
     def __init__(self):
-        if not hasattr(self, 'initialized'):
+        if not hasattr(self, "initialized"):
             self.initialized = True
             self._plugins: Dict[str, BasePlugin] = {}
             # Dans le futur, nous utiliserons le ServiceRegistry pour obtenir
@@ -84,7 +89,9 @@ class OrchestrationService:
             raise ValueError("Plugin invalide ou sans nom.")
 
         if plugin.name in self._plugins:
-            raise ValueError(f"A plugin with the name '{plugin.name}' is already registered.")
+            raise ValueError(
+                f"A plugin with the name '{plugin.name}' is already registered."
+            )
         self._plugins[plugin.name] = plugin
 
     def get_plugin(self, plugin_name: str) -> Optional[BasePlugin]:
@@ -148,8 +155,8 @@ class OrchestrationService:
             raise ValueError(f"Plugin '{plugin_name}' non trouvé.")
 
         resolved_dependencies = self._resolve_dependencies(plugin)
-        
+
         # Injecte les dépendances dans les arguments d'exécution
-        kwargs['dependencies'] = resolved_dependencies
-        
+        kwargs["dependencies"] = resolved_dependencies
+
         return plugin.execute(**kwargs)

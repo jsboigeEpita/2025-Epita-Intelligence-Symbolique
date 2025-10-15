@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -17,7 +16,9 @@ import unittest
 import json
 
 from argumentation_analysis.agents.core.extract.extract_definitions import (
-    ExtractResult, ExtractAgentPlugin, ExtractDefinition
+    ExtractResult,
+    ExtractAgentPlugin,
+    ExtractDefinition,
 )
 
 
@@ -26,7 +27,7 @@ class TestExtractResult(unittest.TestCase):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
-        
+
     async def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
@@ -51,9 +52,9 @@ class TestExtractResult(unittest.TestCase):
             end_marker="Fin",
             template_start="T{0}",
             explanation="Explication de l'extraction",
-            extracted_text="Texte extrait de test"
+            extracted_text="Texte extrait de test",
         )
-        
+
         # Créer un résultat d'extraction avec erreur
         self.error_result = ExtractResult(
             source_name="Source de test",
@@ -61,9 +62,9 @@ class TestExtractResult(unittest.TestCase):
             status="error",
             message="Erreur lors de l'extraction",
             start_marker="Début",
-            end_marker="Fin"
+            end_marker="Fin",
         )
-        
+
         # Créer un résultat d'extraction rejeté
         self.rejected_result = ExtractResult(
             source_name="Source de test",
@@ -71,7 +72,7 @@ class TestExtractResult(unittest.TestCase):
             status="rejected",
             message="Extraction rejetée",
             start_marker="Début",
-            end_marker="Fin"
+            end_marker="Fin",
         )
 
     def test_init(self):
@@ -90,7 +91,7 @@ class TestExtractResult(unittest.TestCase):
     def test_to_dict(self):
         """Test de conversion d'un résultat d'extraction en dictionnaire."""
         result_dict = self.valid_result.to_dict()
-        
+
         # Vérifier les propriétés du dictionnaire
         self.assertEqual(result_dict["source_name"], "Source de test")
         self.assertEqual(result_dict["extract_name"], "Extrait de test")
@@ -113,11 +114,11 @@ class TestExtractResult(unittest.TestCase):
             "end_marker": "Nouvelle fin",
             "template_start": "N{0}",
             "explanation": "Nouvelle explication",
-            "extracted_text": "Nouveau texte extrait"
+            "extracted_text": "Nouveau texte extrait",
         }
-        
+
         result = ExtractResult.from_dict(result_dict)
-        
+
         # Vérifier les propriétés du résultat
         self.assertEqual(result.source_name, "Nouvelle source")
         self.assertEqual(result.extract_name, "Nouvel extrait")
@@ -135,11 +136,11 @@ class TestExtractResult(unittest.TestCase):
             "source_name": "Source minimale",
             "extract_name": "Extrait minimal",
             "status": "valid",
-            "message": "Extraction minimale"
+            "message": "Extraction minimale",
         }
-        
+
         result = ExtractResult.from_dict(result_dict)
-        
+
         # Vérifier les propriétés du résultat
         self.assertEqual(result.source_name, "Source minimale")
         self.assertEqual(result.extract_name, "Extrait minimal")
@@ -168,10 +169,10 @@ class TestExtractAgentPlugin(unittest.TestCase):
         """Test de la méthode find_similar_markers avec la fonction par défaut."""
         marker = "texte de test"
         results = self.plugin.find_similar_markers(self.test_text, marker)
-        
+
         # Vérifier que des résultats sont retournés
         self.assertTrue(len(results) > 0)
-        
+
         # Vérifier la structure des résultats
         for result in results:
             self.assertIn("marker", result)
@@ -181,7 +182,7 @@ class TestExtractAgentPlugin(unittest.TestCase):
     async def test_find_similar_markers_with_custom_function(self):
         """Test de la méthode find_similar_markers avec une fonction personnalisée."""
         marker = "texte de test"
-        
+
         # Créer une fonction mock
         mock_find_similar_text = AsyncMock()
         # Simuler le retour de la fonction find_similar_text
@@ -189,30 +190,32 @@ class TestExtractAgentPlugin(unittest.TestCase):
         mock_find_similar_text.return_value = [
             ("contexte avant texte de test contexte après", 10, "texte de test")
         ]
-        
-        results = await self.plugin.find_similar_markers( # find_similar_markers est probablement async
+
+        results = await self.plugin.find_similar_markers(  # find_similar_markers est probablement async
             self.test_text, marker, find_similar_text_func=mock_find_similar_text
         )
-        
+
         # Vérifier que la fonction mock a été appelée
         mock_find_similar_text.assert_called_once_with(
             self.test_text, marker, context_size=50, max_results=5
         )
-        
+
         # Vérifier les résultats
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["marker"], "texte de test")
         self.assertEqual(results[0]["position"], 10)
-        self.assertEqual(results[0]["context"], "contexte avant texte de test contexte après")
+        self.assertEqual(
+            results[0]["context"], "contexte avant texte de test contexte après"
+        )
 
     def test_search_text_dichotomically(self):
         """Test de la méthode search_text_dichotomically."""
         search_term = "texte de test"
         results = self.plugin.search_text_dichotomically(self.test_text, search_term)
-        
+
         # Vérifier que des résultats sont retournés
         self.assertTrue(len(results) > 0)
-        
+
         # Vérifier la structure des résultats
         for result in results:
             self.assertIn("match", result)
@@ -224,30 +227,30 @@ class TestExtractAgentPlugin(unittest.TestCase):
     def test_extract_blocks(self):
         """Test de la méthode extract_blocks."""
         blocks = self.plugin.extract_blocks(self.test_text, block_size=100, overlap=20)
-        
+
         # Vérifier que des blocs sont retournés
         self.assertTrue(len(blocks) > 0)
-        
+
         # Vérifier la structure des blocs
         for block in blocks:
             self.assertIn("block", block)
             self.assertIn("start_pos", block)
             self.assertIn("end_pos", block)
-            
+
         # Vérifier le chevauchement
         for i in range(1, len(blocks)):
-            self.assertTrue(blocks[i]["start_pos"] < blocks[i-1]["end_pos"])
+            self.assertTrue(blocks[i]["start_pos"] < blocks[i - 1]["end_pos"])
 
     def test_get_extract_results(self):
         """Test de la méthode get_extract_results."""
         # Ajouter des résultats
         self.plugin.extract_results = [
             {"source_name": "Source 1", "extract_name": "Extrait 1"},
-            {"source_name": "Source 2", "extract_name": "Extrait 2"}
+            {"source_name": "Source 2", "extract_name": "Extrait 2"},
         ]
-        
+
         results = self.plugin.get_extract_results()
-        
+
         # Vérifier les résultats
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0]["source_name"], "Source 1")
@@ -267,7 +270,7 @@ class TestExtractDefinition(unittest.TestCase):
             start_marker="Début",
             end_marker="Fin",
             template_start="T{0}",
-            description="Description de l'extrait"
+            description="Description de l'extrait",
         )
 
     def test_init(self):
@@ -282,7 +285,7 @@ class TestExtractDefinition(unittest.TestCase):
     def test_to_dict(self):
         """Test de conversion d'une définition d'extraction en dictionnaire."""
         definition_dict = self.definition.to_dict()
-        
+
         # Vérifier les propriétés du dictionnaire
         self.assertEqual(definition_dict["source_name"], "Source de test")
         self.assertEqual(definition_dict["extract_name"], "Extrait de test")
@@ -299,11 +302,11 @@ class TestExtractDefinition(unittest.TestCase):
             "start_marker": "Nouveau début",
             "end_marker": "Nouvelle fin",
             "template_start": "N{0}",
-            "description": "Nouvelle description"
+            "description": "Nouvelle description",
         }
-        
+
         definition = ExtractDefinition.from_dict(definition_dict)
-        
+
         # Vérifier les propriétés de la définition
         self.assertEqual(definition.source_name, "Nouvelle source")
         self.assertEqual(definition.extract_name, "Nouvel extrait")
@@ -318,11 +321,11 @@ class TestExtractDefinition(unittest.TestCase):
             "source_name": "Source minimale",
             "extract_name": "Extrait minimal",
             "start_marker": "Début minimal",
-            "end_marker": "Fin minimale"
+            "end_marker": "Fin minimale",
         }
-        
+
         definition = ExtractDefinition.from_dict(definition_dict)
-        
+
         # Vérifier les propriétés de la définition
         self.assertEqual(definition.source_name, "Source minimale")
         self.assertEqual(definition.extract_name, "Extrait minimal")

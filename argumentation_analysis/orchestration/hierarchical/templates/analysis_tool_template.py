@@ -9,14 +9,15 @@ from argumentation_analysis.paths import RESULTS_DIR
 
 # Template d'outil d'analyse pour l'architecture hiérarchique
 
+
 class BaseAnalysisTool:
     """Classe de base pour les outils d'analyse rhétorique.
-    
+
     Attributs:
         config: Configuration de l'outil
         name: Nom de l'outil
     """
-    
+
     def __init__(self, config: dict):
         """Initialise l'outil d'analyse avec sa configuration.
 
@@ -24,8 +25,8 @@ class BaseAnalysisTool:
         :type config: dict
         """
         self.config = config
-        self.name = config.get('name', 'base_analysis_tool')
-    
+        self.name = config.get("name", "base_analysis_tool")
+
     def analyze(self, input_data: str) -> dict:
         """Analyse les données d'entrée et retourne les résultats.
 
@@ -38,7 +39,7 @@ class BaseAnalysisTool:
         :raises NotImplementedError: Si la méthode n'est pas implémentée dans la classe dérivée.
         """
         raise NotImplementedError("La méthode analyze doit être implémentée")
-    
+
     def validate_input(self, input_data: str) -> bool:
         """Valide le format des données d'entrée.
 
@@ -51,7 +52,7 @@ class BaseAnalysisTool:
         :rtype: bool
         """
         return True
-    
+
     def get_results(self) -> dict:
         """Retourne les résultats de l'analyse.
 
@@ -63,10 +64,11 @@ class BaseAnalysisTool:
         :rtype: dict
         """
         return {
-            'tool': self.name,
-            'status': 'completed',
-            RESULTS_DIR: {}  # RESULTS_DIR est une constante Path, son utilisation comme clé ici pourrait être revue.
+            "tool": self.name,
+            "status": "completed",
+            RESULTS_DIR: {},  # RESULTS_DIR est une constante Path, son utilisation comme clé ici pourrait être revue.
         }
+
 
 # Exemple de configuration
 ANALYSIS_TOOL_CONFIG_EXAMPLE = {
@@ -75,9 +77,5 @@ ANALYSIS_TOOL_CONFIG_EXAMPLE = {
     "input_format": "text/plain",
     "output_format": "application/json",
     "dependencies": ["base_agent", "argument_coherence_evaluator"],
-    "parameters": {
-        "language": "fr",
-        "depth": 3,
-        "include_visualization": True
-    }
+    "parameters": {"language": "fr", "depth": 3, "include_visualization": True},
 }

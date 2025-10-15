@@ -3,6 +3,7 @@ import json
 import importlib.util
 from typing import List, Dict, Any, Optional
 
+
 class PluginLoader:
     """
     Handles the discovery and loading of plugins based on their manifests.
@@ -32,7 +33,7 @@ class PluginLoader:
             if "plugin_manifest.json" in files:
                 manifest_path = os.path.join(root, "plugin_manifest.json")
                 discovered_manifests.append(manifest_path)
-        
+
         return discovered_manifests
 
     def load_plugin(self, plugin_manifest_path: str) -> Optional[Dict[str, Any]]:
@@ -52,13 +53,20 @@ class PluginLoader:
             return None
 
         try:
-            with open(plugin_manifest_path, 'r', encoding='utf-8') as f:
+            with open(plugin_manifest_path, "r", encoding="utf-8") as f:
                 manifest_data = json.load(f)
-            
+
             # Basic validation can be expanded here (e.g., with JSON Schema)
-            required_keys = ["manifest_version", "plugin_name", "version", "entry_point"]
+            required_keys = [
+                "manifest_version",
+                "plugin_name",
+                "version",
+                "entry_point",
+            ]
             if not all(key in manifest_data for key in required_keys):
-                print(f"Warning: Manifest {plugin_manifest_path} is missing required keys.")
+                print(
+                    f"Warning: Manifest {plugin_manifest_path} is missing required keys."
+                )
                 return None
 
             return manifest_data
@@ -66,5 +74,7 @@ class PluginLoader:
             print(f"Error: Could not decode JSON from {plugin_manifest_path}")
             return None
         except Exception as e:
-            print(f"An unexpected error occurred while loading plugin {plugin_manifest_path}: {e}")
+            print(
+                f"An unexpected error occurred while loading plugin {plugin_manifest_path}: {e}"
+            )
             return None

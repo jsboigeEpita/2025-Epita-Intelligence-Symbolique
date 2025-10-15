@@ -2,6 +2,7 @@ import functools
 import tiktoken
 from src.benchmarking.benchmark_service import BenchmarkService
 
+
 def track_tokens(benchmark_service: BenchmarkService):
     """
     Décorateur pour suivre la consommation de tokens d'une fonction.
@@ -15,6 +16,7 @@ def track_tokens(benchmark_service: BenchmarkService):
         benchmark_service: L'instance du service de benchmark à utiliser
                            pour enregistrer les métriques.
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -34,14 +36,14 @@ def track_tokens(benchmark_service: BenchmarkService):
 
             # Inspecte les arguments nommés
             for key, value in kwargs.items():
-                 if isinstance(value, str):
+                if isinstance(value, str):
                     input_tokens += len(encoding.encode(value))
-                 elif isinstance(value, dict):
+                elif isinstance(value, dict):
                     for v in value.values():
                         if isinstance(v, str):
                             input_tokens += len(encoding.encode(v))
 
-            benchmark_service.record_metric('input_tokens', input_tokens)
+            benchmark_service.record_metric("input_tokens", input_tokens)
 
             # Exécute la fonction originale
             result = func(*args, **kwargs)
@@ -52,12 +54,14 @@ def track_tokens(benchmark_service: BenchmarkService):
                 output_tokens = len(encoding.encode(result))
             # Si le résultat est un dictionnaire, on cherche des valeurs string
             elif isinstance(result, dict):
-                 for value in result.values():
+                for value in result.values():
                     if isinstance(value, str):
                         output_tokens += len(encoding.encode(value))
-            
-            benchmark_service.record_metric('output_tokens', output_tokens)
+
+            benchmark_service.record_metric("output_tokens", output_tokens)
 
             return result
+
         return wrapper
+
     return decorator

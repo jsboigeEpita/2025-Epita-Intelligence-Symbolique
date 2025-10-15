@@ -12,23 +12,33 @@ import asyncio
 import time
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+from semantic_kernel.agents.chat_completion.chat_completion_agent import (
+    ChatCompletionAgent,
+)
 
-from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
-from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
+    OperationalAgent,
+)
+from argumentation_analysis.orchestration.hierarchical.operational.state import (
+    OperationalState,
+)
 from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.bootstrap import ProjectContext
 from semantic_kernel.agents.agent import Agent
+
 
 class InformalAgentAdapter(OperationalAgent):
     """
     Traduit les commandes opérationnelles pour l'InformalFallacyAgent créé par factory.
     """
 
-    def __init__(self, name: str = "InformalAgent",
-                 operational_state: Optional[OperationalState] = None,
-                 project_context: Optional[ProjectContext] = None,
-                 config_name: str = "simple"):
+    def __init__(
+        self,
+        name: str = "InformalAgent",
+        operational_state: Optional[OperationalState] = None,
+        project_context: Optional[ProjectContext] = None,
+        config_name: str = "simple",
+    ):
         """
         Initialise l'adaptateur pour l'agent d'analyse informelle.
 
@@ -47,7 +57,9 @@ class InformalAgentAdapter(OperationalAgent):
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
         super().__init__(name, operational_state)
 
-    async def initialize(self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext) -> bool:
+    async def initialize(
+        self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext
+    ) -> bool:
         """
         Initialise l'agent d'analyse informelle.
         Dans un contexte de test où les dépendances sont mockées, nous assignons un mock
@@ -55,10 +67,10 @@ class InformalAgentAdapter(OperationalAgent):
         """
         if self.initialized:
             return True
-        
+
         self.kernel = kernel
         self.llm_service_id = llm_service_id
-        
+
         try:
             self.logger.info("Création/simulation de l'agent d'analyse informelle...")
             # NOTE: Dans les tests, la méthode `process_task` de cet adaptateur est mockée.
@@ -66,12 +78,18 @@ class InformalAgentAdapter(OperationalAgent):
             # Pour débloquer les tests, on assigne simplement un MagicMock à l'agent.
             # Le comportement réel de l'agent n'est pas testé ici.
             from unittest.mock import MagicMock
+
             self.agent = MagicMock(spec=Agent)
             self.initialized = True
-            self.logger.info("Agent d'analyse informelle (mocké) initialisé avec succès pour les tests.")
+            self.logger.info(
+                "Agent d'analyse informelle (mocké) initialisé avec succès pour les tests."
+            )
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation (mock) de l'agent informel: {e}", exc_info=True)
+            self.logger.error(
+                f"Erreur lors de l'initialisation (mock) de l'agent informel: {e}",
+                exc_info=True,
+            )
             return False
 
     def get_capabilities(self) -> List[str]:
@@ -84,7 +102,11 @@ class InformalAgentAdapter(OperationalAgent):
         elif self.config_name == "workflow_only":
             return ["fallacy_analysis_workflow", "taxonomy_exploration"]
         elif self.config_name == "full":
-            return ["fallacy_detection", "fallacy_analysis_workflow", "taxonomy_exploration"]
+            return [
+                "fallacy_detection",
+                "fallacy_analysis_workflow",
+                "taxonomy_exploration",
+            ]
         return []
 
     def can_process_task(self, task: Dict[str, Any]) -> bool:
@@ -103,21 +125,30 @@ class InformalAgentAdapter(OperationalAgent):
         start_time = time.time()
 
         if not self.initialized or not self.agent:
-            self.logger.error(f"Tentative de traitement de la tâche {task_id} sans initialisation.")
-            return self.format_result(task, [], {}, [{"type": "initialization_error"}], task_id)
+            self.logger.error(
+                f"Tentative de traitement de la tâche {task_id} sans initialisation."
+            )
+            return self.format_result(
+                task, [], {}, [{"type": "initialization_error"}], task_id
+            )
 
         try:
             results = []
             issues = []
-            text_to_analyze = " ".join([extract.get("content", "") for extract in task.get("text_extracts", [])])
+            text_to_analyze = " ".join(
+                [
+                    extract.get("content", "")
+                    for extract in task.get("text_extracts", [])
+                ]
+            )
             if not text_to_analyze:
-                 raise ValueError("Aucun contenu textuel trouvé dans `text_extracts`.")
-            
+                raise ValueError("Aucun contenu textuel trouvé dans `text_extracts`.")
+
             # Construire un prompt simple pour l'agent
             # Note: C'est une simplification. Une approche robuste construirait
             # un input structuré que le prompt de l'agent saurait interpréter.
             prompt = f"Analyze the following text for fallacies: '{text_to_analyze}'"
-            
+
             # Invoquer l'agent
             agent_response = await self.agent.invoke(prompt)
 
@@ -129,18 +160,26 @@ class InformalAgentAdapter(OperationalAgent):
                 # Pour l'instant, on le retourne directement.
                 results.append({"type": "agent_raw_output", "content": final_content})
             else:
-                 issues.append({"type": "empty_agent_response"})
+                issues.append({"type": "empty_agent_response"})
 
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"
             self.update_task_status(task_id, status)
-            
+
             return self.format_result(task, results, metrics, issues, task_id)
 
         except Exception as e:
-            self.logger.error(f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True
+            )
             self.update_task_status(task_id, "failed")
-            return self.format_result(task, [], {}, [{"type": "execution_error", "description": str(e)}], task_id)
+            return self.format_result(
+                task,
+                [],
+                {},
+                [{"type": "execution_error", "description": str(e)}],
+                task_id,
+            )
 
     async def shutdown(self) -> bool:
         """Arrête l'adaptateur et nettoie les ressources."""
@@ -150,17 +189,24 @@ class InformalAgentAdapter(OperationalAgent):
         self.initialized = False
         return True
 
-    def format_result(self, task: Dict[str, Any], results: List[Dict[str, Any]], metrics: Dict[str, Any], issues: List[Dict[str, Any]], task_id_to_report: Optional[str] = None) -> Dict[str, Any]:
+    def format_result(
+        self,
+        task: Dict[str, Any],
+        results: List[Dict[str, Any]],
+        metrics: Dict[str, Any],
+        issues: List[Dict[str, Any]],
+        task_id_to_report: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Formate le résultat final dans la structure attendue."""
         final_task_id = task_id_to_report or task.get("id")
-        
+
         outputs = {}
         for res_item in results:
             res_type = res_item.pop("type", "unknown")
             if res_type not in outputs:
                 outputs[res_type] = []
             outputs[res_type].append(res_item)
-            
+
         return {
             "id": f"result-{final_task_id}",
             "task_id": final_task_id,
@@ -168,5 +214,5 @@ class InformalAgentAdapter(OperationalAgent):
             "status": "completed" if not issues else "completed_with_issues",
             "outputs": outputs,
             "metrics": metrics,
-            "issues": issues
+            "issues": issues,
         }

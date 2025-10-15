@@ -2,6 +2,7 @@ import pytest
 from agent import DungAgent
 from enhanced_agent import EnhancedDungAgent
 
+
 def test_self_attacking_argument(initialize_jvm):
     """
     Teste le comportement des agents face à un argument qui s'auto-attaque.

@@ -6,4 +6,4 @@ Ce module fournit une interface web pour interagir avec l'agent.
 
 from .web_app import start_app
 
-__all__ = ['start_app'] 
+__all__ = ["start_app"]

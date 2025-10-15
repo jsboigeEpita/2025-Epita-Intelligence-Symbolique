@@ -10,11 +10,15 @@ logger = logging.getLogger(__name__)
 
 # --- Imports depuis notre application ---
 # Ces imports doivent être légers. L'initialisation lourde est maintenant déplacée.
-from argumentation_analysis.services.web_api.app import create_app, initialize_heavy_dependencies
+from argumentation_analysis.services.web_api.app import (
+    create_app,
+    initialize_heavy_dependencies,
+)
 
 # Variable globale pour contenir l'application WSGI (Flask)
 # Elle sera initialisée pendant le lifespan de Starlette.
 flask_app_instance = None
+
 
 @asynccontextmanager
 async def lifespan(app: Starlette):
@@ -42,7 +46,7 @@ async def lifespan(app: Starlette):
     # Wrapper l'app Flask dans le middleware pour la rendre compatible ASGI
     # et la monter dans l'application Starlette principale.
     app.mount("/", WSGIMiddleware(flask_app_instance))
-    
+
     logger.info("ASGI startup complete. Application is ready.")
     yield
     # --- Code d'arrêt (si nécessaire) ---

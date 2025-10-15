@@ -2,6 +2,7 @@ import pytest
 from abs_arg_dung.agent import DungAgent
 from abs_arg_dung.enhanced_agent import EnhancedDungAgent
 
+
 def test_self_attacking_argument():
     """
     Teste le comportement des agents avec un argument qui s'auto-attaque.
@@ -17,4 +18,3 @@ def test_self_attacking_argument():
 
     assert standard_agent.get_grounded_extension() == []
     assert enhanced_agent.get_grounded_extension() == []
-

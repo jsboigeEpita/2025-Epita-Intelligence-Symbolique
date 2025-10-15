@@ -3,6 +3,7 @@
 import os
 from argumentation_analysis.paths import ROOT_DIR
 
+
 def get_prompt_path(agent_name: str, filename: str = "skprompt.txt") -> str:
     """
     Construit le chemin d'accès complet au fichier de prompt d'un agent.
@@ -15,10 +16,4 @@ def get_prompt_path(agent_name: str, filename: str = "skprompt.txt") -> str:
     Returns:
         str: Le chemin d'accès complet et absolu au fichier de prompt.
     """
-    return os.path.join(
-        ROOT_DIR,
-        "agents",
-        "prompts",
-        agent_name,
-        filename
-    )
+    return os.path.join(ROOT_DIR, "agents", "prompts", agent_name, filename)

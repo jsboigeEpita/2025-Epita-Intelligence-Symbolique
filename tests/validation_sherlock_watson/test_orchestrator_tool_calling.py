@@ -10,32 +10,40 @@ for path in sys.path:
 
 try:
     import semantic_kernel
+
     spec = importlib.util.find_spec("semantic_kernel")
     if spec and spec.origin:
         print(f"\n'semantic_kernel' est chargé depuis: {spec.origin}")
-        sk_version = getattr(semantic_kernel, '__version__', 'Version non trouvée')
+        sk_version = getattr(semantic_kernel, "__version__", "Version non trouvée")
         print(f"Version de semantic_kernel: {sk_version}")
     else:
-        print("\n'semantic_kernel' a été trouvé, mais son chemin d'origine (spec.origin) est introuvable.")
+        print(
+            "\n'semantic_kernel' a été trouvé, mais son chemin d'origine (spec.origin) est introuvable."
+        )
 except ImportError:
     print("\nERREUR: 'semantic_kernel' ne peut pas être importé.")
 except Exception as e:
-    print(f"\nUne erreur inattendue est survenue lors de l'inspection de semantic_kernel: {e}")
+    print(
+        f"\nUne erreur inattendue est survenue lors de l'inspection de semantic_kernel: {e}"
+    )
 
 print("--- FIN DU DIAGNOSTIC ---\n")
 import asyncio
 import logging
 import json
 from config.unified_config import PresetConfigs
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+    CluedoExtendedOrchestrator,
+)
 
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
 
 def run_test():
     """
@@ -57,7 +65,7 @@ def run_test():
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel,
             max_turns=10,  # Limiter le nombre de tours pour le test
-            service_id="gpt-4o-mini-authentic" # Utiliser le service ID correct
+            service_id="gpt-4o-mini-authentic",  # Utiliser le service ID correct
         )
         logger.info("✅ Orchestrateur instancié.")
 
@@ -68,23 +76,30 @@ def run_test():
 
         # 5. Exécuter le workflow
         initial_question = "L'enquête sur le meurtre du Manoir Tudor commence. Sherlock, à vous l'honneur."
-        logger.info(f"▶️  Exécution du workflow avec la question initiale : '{initial_question}'")
+        logger.info(
+            f"▶️  Exécution du workflow avec la question initiale : '{initial_question}'"
+        )
         results = asyncio.run(orchestrator.execute_workflow(initial_question))
         logger.info("✅ Workflow terminé.")
 
         # 6. Afficher les résultats
-        logger.info("\n" + "="*50 + " RÉSULTATS FINALS " + "="*50)
+        logger.info("\n" + "=" * 50 + " RÉSULTATS FINALS " + "=" * 50)
         print(json.dumps(results, indent=2, ensure_ascii=False))
-        logger.info("="*120 + "\n")
+        logger.info("=" * 120 + "\n")
 
         # Validation simple
         if results and results.get("final_state", {}).get("solution_trouvee"):
             logger.info("✅ SUCCÈS : La solution a été trouvée !")
         else:
-            logger.warning("⚠️ AVERTISSEMENT : La solution n'a pas été trouvée dans les tours impartis.")
+            logger.warning(
+                "⚠️ AVERTISSEMENT : La solution n'a pas été trouvée dans les tours impartis."
+            )
 
     except Exception as e:
-        logger.error(f"❌ ERREUR FATALE durant le test d'orchestration : {e}", exc_info=True)
+        logger.error(
+            f"❌ ERREUR FATALE durant le test d'orchestration : {e}", exc_info=True
+        )
+
 
 if __name__ == "__main__":
     # Assurez-vous que les variables d'environnement (comme OPENAI_API_KEY) sont chargées.

@@ -8,5 +8,8 @@ from argumentation_analysis.core.io_manager import (
 
 # You can also add a logger to warn about the redirection if you want.
 import logging
+
 file_ops_logger = logging.getLogger(__name__)
-file_ops_logger.warning("This module is deprecated. Please import from argumentation_analysis.core.io_manager directly.")
+file_ops_logger.warning(
+    "This module is deprecated. Please import from argumentation_analysis.core.io_manager directly."
+)

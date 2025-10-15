@@ -13,10 +13,13 @@ from . import config as ui_config
 cache_logger = logging.getLogger("App.UI.CacheUtils")
 if not cache_logger.handlers and not cache_logger.propagate:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+    )
     handler.setFormatter(formatter)
     cache_logger.addHandler(handler)
-    cache_logger.setLevel(logging.INFO) # Ou INFO selon le besoin
+    cache_logger.setLevel(logging.INFO)  # Ou INFO selon le besoin
+
 
 def get_cache_filepath(url: str) -> Path:
     """Génère le chemin du fichier cache pour une URL donnée.
@@ -31,6 +34,7 @@ def get_cache_filepath(url: str) -> Path:
     url_hash = hashlib.sha256(url.encode()).hexdigest()
     return ui_config.CACHE_DIR / f"{url_hash}.txt"
 
+
 def load_from_cache(url: str) -> Optional[str]:
     """Charge le contenu textuel depuis le cache fichier si disponible pour une URL donnée.
 
@@ -43,12 +47,13 @@ def load_from_cache(url: str) -> Optional[str]:
     if filepath.exists():
         try:
             cache_logger.info(f"   -> Lecture depuis cache : {filepath.name}")
-            return filepath.read_text(encoding='utf-8')
+            return filepath.read_text(encoding="utf-8")
         except Exception as e:
             cache_logger.warning(f"   -> Erreur lecture cache {filepath.name}: {e}")
             return None
     cache_logger.debug(f"Cache miss pour URL: {url}")
     return None
+
 
 def save_to_cache(url: str, text: str) -> None:
     """Sauvegarde le contenu textuel dans le cache fichier pour une URL donnée.
@@ -69,9 +74,10 @@ def save_to_cache(url: str, text: str) -> None:
     try:
         # S'assurer que le dossier cache existe
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_text(text, encoding='utf-8')
+        filepath.write_text(text, encoding="utf-8")
         cache_logger.info(f"   -> Texte sauvegardé : {filepath.name}")
     except Exception as e:
         cache_logger.error(f"   -> Erreur sauvegarde cache {filepath.name}: {e}")
+
 
 cache_logger.info("Utilitaires de cache UI définis.")

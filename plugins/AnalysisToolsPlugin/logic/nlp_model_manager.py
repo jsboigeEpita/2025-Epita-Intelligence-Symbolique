@@ -28,6 +28,7 @@ pipeline = None
 
 try:
     from transformers import pipeline as hf_pipeline
+
     pipeline = hf_pipeline
     HAS_TRANSFORMERS = True
     logger.info("Bibliothèque Transformers chargée avec succès.")
@@ -58,6 +59,7 @@ class NLPModelManager:
        Cette méthode est bloquante et doit être gérée avec soin.
     3. Les modèles sont ensuite accessibles via `get_model(model_name)`.
     """
+
     _instance = None
     _lock = Lock()
     _models = {}
@@ -83,7 +85,7 @@ class NLPModelManager:
 
         Cette méthode est le point d'entrée pour le chargement des modèles. Elle est
         conçue pour être appelée une seule fois au démarrage de l'application.
-        
+
         Caractéristiques :
         - **Bloquante :** L'appelant attendra que tous les modèles soient chargés.
           À utiliser dans un thread de démarrage pour ne pas geler une IHM.
@@ -96,26 +98,37 @@ class NLPModelManager:
             if self._models_loaded:
                 logger.info("Modèles déjà chargés (appel synchrone).")
             else:
-                logger.warning("Impossible de charger les modèles car 'transformers' n'est pas disponible.")
+                logger.warning(
+                    "Impossible de charger les modèles car 'transformers' n'est pas disponible."
+                )
             return
 
         with self._lock:
             if self._models_loaded:
                 return
-                
+
             logger.info("Début du chargement SYNC des modèles NLP...")
             try:
-                logger.info(f"Chargement du modèle de classification: {TEXT_CLASSIFICATION_MODEL}")
-                self._models['sentiment'] = pipeline("sentiment-analysis", model=TEXT_CLASSIFICATION_MODEL)
-                
+                logger.info(
+                    f"Chargement du modèle de classification: {TEXT_CLASSIFICATION_MODEL}"
+                )
+                self._models["sentiment"] = pipeline(
+                    "sentiment-analysis", model=TEXT_CLASSIFICATION_MODEL
+                )
+
                 logger.info(f"Chargement du modèle NER: {NER_MODEL}")
-                self._models['ner'] = pipeline("ner", model=NER_MODEL)
-                
+                self._models["ner"] = pipeline("ner", model=NER_MODEL)
+
                 self._models_loaded = True
-                logger.info("Tous les modèles NLP ont été chargés et sont prêts (mode synchrone).")
+                logger.info(
+                    "Tous les modèles NLP ont été chargés et sont prêts (mode synchrone)."
+                )
 
             except Exception as e:
-                logger.error(f"Erreur critique lors du chargement synchrone des modèles NLP : {e}", exc_info=True)
+                logger.error(
+                    f"Erreur critique lors du chargement synchrone des modèles NLP : {e}",
+                    exc_info=True,
+                )
                 self._models_loaded = False
 
     def get_model(self, model_name: str):
@@ -129,13 +142,16 @@ class NLPModelManager:
             Le pipeline Hugging Face si le modèle est chargé et trouvé, sinon None.
         """
         if not self._models_loaded:
-            logger.warning(f"Tentative d'accès au modèle '{model_name}' avant la fin du chargement.")
+            logger.warning(
+                f"Tentative d'accès au modèle '{model_name}' avant la fin du chargement."
+            )
             return None
         return self._models.get(model_name)
 
     def are_models_loaded(self) -> bool:
         """Vérifie si les modèles sont chargés."""
         return self._models_loaded
+
 
 # L'instance sera maintenant gérée par l'application principale
 nlp_model_manager = NLPModelManager()

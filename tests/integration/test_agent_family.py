@@ -5,7 +5,7 @@ import os
 import sys
 
 # Add the project root to the Python path to allow for absolute imports
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, root_dir)
 
 import semantic_kernel as sk
@@ -14,13 +14,16 @@ from argumentation_analysis.core.llm_service import create_llm_service
 
 # --- Test Data Loading ---
 
+
 def load_test_cases():
     """Loads test cases from the JSON file."""
-    test_data_path = os.path.join(os.path.dirname(__file__), 'test_cases.json')
-    with open(test_data_path, 'r') as f:
+    test_data_path = os.path.join(os.path.dirname(__file__), "test_cases.json")
+    with open(test_data_path, "r") as f:
         return json.load(f)
 
+
 # --- Pytest Fixtures ---
+
 
 @pytest.fixture(scope="module")
 def agent_factory():
@@ -28,18 +31,23 @@ def agent_factory():
     kernel = sk.Kernel()
     llm_service_id = "default"
     try:
-        llm_service = create_llm_service(service_id=llm_service_id, model_id="test_model", force_authentic=True)
+        llm_service = create_llm_service(
+            service_id=llm_service_id, model_id="test_model", force_authentic=True
+        )
         kernel.add_service(llm_service)
     except Exception as e:
         pytest.fail(f"LLM service setup failed: {e}")
     return AgentFactory(kernel, llm_service_id)
 
-@pytest.fixture(scope="module", params=load_test_cases(), ids=lambda tc: tc['id'])
+
+@pytest.fixture(scope="module", params=load_test_cases(), ids=lambda tc: tc["id"])
 def test_case(request):
     """Fixture to provide each test case one by one."""
     return request.param
 
+
 # --- Parameterized Integration Test ---
+
 
 @pytest.mark.parametrize("agent_type", list(AgentType))
 def test_agent_performance(agent_factory, agent_type, test_case):
@@ -53,7 +61,7 @@ def test_agent_performance(agent_factory, agent_type, test_case):
 
     # Act
     result = asyncio.run(agent.analyze_text(input_text))
-    
+
     # Assert
     # 1. Check for valid response structure
     assert result is not None, "Agent returned a null result."
@@ -62,29 +70,45 @@ def test_agent_performance(agent_factory, agent_type, test_case):
 
     # For the placeholder agent, we don't need to check further
     if agent_type == AgentType.RESEARCH_ASSISTANT:
-        assert result["summary"] == "This agent is a placeholder and is not yet implemented."
+        assert (
+            result["summary"]
+            == "This agent is a placeholder and is not yet implemented."
+        )
         return
 
     # 2. Check if findings are plausible
     if not expected_fallacies:
         # If no fallacies are expected, we can't make a strong assertion on findings,
         # but we can check that it didn't return an error.
-        print(f"Agent {agent_type.name} on {test_case['id']} produced summary: {result['summary']}")
+        print(
+            f"Agent {agent_type.name} on {test_case['id']} produced summary: {result['summary']}"
+        )
     else:
-        assert result["findings"], f"Agent {agent_type.name} found no fallacies where {len(expected_fallacies)} were expected."
-        
+        assert result[
+            "findings"
+        ], f"Agent {agent_type.name} found no fallacies where {len(expected_fallacies)} were expected."
+
         # 3. Check if expected fallacies are detected
         # We check for a subset, as the agent might find other plausible ones.
         if agent_type == AgentType.SHERLOCK_JTMS:
             # Sherlock produces 'hypotheses', not 'fallacies'. We just check that it produced some.
-            assert len(result["findings"]) > 0, "SherlockJTMSAgent should produce at least one hypothesis."
+            assert (
+                len(result["findings"]) > 0
+            ), "SherlockJTMSAgent should produce at least one hypothesis."
         else:
-            found_fallacies = {finding["fallacy_name"] for finding in result["findings"]}
-            
+            found_fallacies = {
+                finding["fallacy_name"] for finding in result["findings"]
+            }
+
             # Normalize for comparison
-            found_fallacies_normalized = {name.replace('_', ' ').lower() for name in found_fallacies}
-            expected_fallacies_normalized = {name.replace('_', ' ').lower() for name in expected_fallacies}
-            
-            assert expected_fallacies_normalized.issubset(found_fallacies_normalized), \
-                f"Agent {agent_type.name} failed to find all expected fallacies for {test_case['id']}. " \
+            found_fallacies_normalized = {
+                name.replace("_", " ").lower() for name in found_fallacies
+            }
+            expected_fallacies_normalized = {
+                name.replace("_", " ").lower() for name in expected_fallacies
+            }
+
+            assert expected_fallacies_normalized.issubset(found_fallacies_normalized), (
+                f"Agent {agent_type.name} failed to find all expected fallacies for {test_case['id']}. "
                 f"Expected: {expected_fallacies_normalized}, Found: {found_fallacies_normalized}"
+            )

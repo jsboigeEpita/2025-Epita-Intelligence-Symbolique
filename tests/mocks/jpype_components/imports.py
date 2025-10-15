@@ -7,18 +7,23 @@ import os
 mock_logger = logging.getLogger(__name__)
 if not mock_logger.hasHandlers():
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('[MOCK JPYPE IMPORTS LOG] %(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "[MOCK JPYPE IMPORTS LOG] %(asctime)s - %(levelname)s - %(message)s"
+    )
     handler.setFormatter(formatter)
     mock_logger.addHandler(handler)
 mock_logger.setLevel(logging.DEBUG)
 
-imports = None # Initialisation par défaut
+imports = None  # Initialisation par défaut
 
-if os.environ.get('USE_REAL_JPYPE', 'false').lower() != 'true':
+if os.environ.get("USE_REAL_JPYPE", "false").lower() != "true":
+
     class MockJpypeImports:
         def registerDomain(self, domain, alias=None):
             """Simule jpype.imports.registerDomain()."""
-            mock_logger.info(f"jpype.imports.registerDomain('{domain}', alias='{alias}') appelé.")
+            mock_logger.info(
+                f"jpype.imports.registerDomain('{domain}', alias='{alias}') appelé."
+            )
             # Ne fait rien, car c'est un mock.
             pass
 
@@ -29,18 +34,20 @@ if os.environ.get('USE_REAL_JPYPE', 'false').lower() != 'true':
     # Créer un objet module factice pour 'jpype.imports'
     # C'est cet objet 'imports_module' qui sera accessible via `from jpype_components import imports`
     # ou `jpype.imports` après le patch dans jpype_mock.py principal.
-    imports_module = types.ModuleType('jpype.imports')
+    imports_module = types.ModuleType("jpype.imports")
     mock_logger.debug(f"Module factice 'jpype.imports' créé: {imports_module}")
 
     # Attribuer les fonctionnalités de notre instance '_the_actual_imports_object' à ce module factice.
-    if hasattr(_the_actual_imports_object, 'registerDomain'):
+    if hasattr(_the_actual_imports_object, "registerDomain"):
         imports_module.registerDomain = _the_actual_imports_object.registerDomain
-        mock_logger.debug(f"Fonction 'registerDomain' attachée au module factice 'jpype.imports'.")
+        mock_logger.debug(
+            f"Fonction 'registerDomain' attachée au module factice 'jpype.imports'."
+        )
 
     # Mettre ce module factice dans sys.modules pour qu'il soit trouvable par 'import jpype.imports'
     # Ceci est crucial pour que les imports directs de jpype.imports fonctionnent comme attendu
     # après que ce module (jpype_components.imports) soit importé et exécuté.
-    sys.modules['jpype.imports'] = imports_module
+    sys.modules["jpype.imports"] = imports_module
     mock_logger.info(f"MOCK: Module factice 'jpype.imports' injecté dans sys.modules.")
 
     # Exposer le module factice comme 'imports' pour ce fichier,
@@ -50,9 +57,14 @@ else:
     mock_logger.info(f"REAL JPYPE: Injection du mock pour 'jpype.imports' ANNULÉE.")
     try:
         import jpype.imports as real_jpype_imports
+
         imports = real_jpype_imports
-        mock_logger.info("REAL JPYPE: Le vrai 'jpype.imports' a été importé et assigné à 'imports'.")
+        mock_logger.info(
+            "REAL JPYPE: Le vrai 'jpype.imports' a été importé et assigné à 'imports'."
+        )
     except ImportError:
-        mock_logger.warning("REAL JPYPE: Impossible d'importer le vrai 'jpype.imports'. 'imports' restera None.")
+        mock_logger.warning(
+            "REAL JPYPE: Impossible d'importer le vrai 'jpype.imports'. 'imports' restera None."
+        )
 
 mock_logger.info("Module jpype_components.imports initialisé.")

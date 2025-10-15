@@ -10,16 +10,35 @@ __author__ = "Sherlock-Watson-Moriarty Oracle Enhanced Team"
 # Imports principaux
 from .oracle_base_agent import OracleBaseAgent, OracleTools
 from .moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTools
-from .cluedo_dataset import CluedoDataset, CluedoSuggestion, ValidationResult, RevelationRecord
-from .dataset_access_manager import DatasetAccessManager, CluedoDatasetManager, QueryCache
+from .cluedo_dataset import (
+    CluedoDataset,
+    CluedoSuggestion,
+    ValidationResult,
+    RevelationRecord,
+)
+from .dataset_access_manager import (
+    DatasetAccessManager,
+    CluedoDatasetManager,
+    QueryCache,
+)
 from .permissions import (
-    QueryType, RevealPolicy, PermissionRule, QueryResult,
-    OracleResponse, AccessLog, PermissionManager,
-    validate_cluedo_method_access, get_default_cluedo_permissions
+    QueryType,
+    RevealPolicy,
+    PermissionRule,
+    QueryResult,
+    OracleResponse,
+    AccessLog,
+    PermissionManager,
+    validate_cluedo_method_access,
+    get_default_cluedo_permissions,
 )
 from .phase_d_extensions import (
-    PhaseDExtensions, RevealStrategy, NarrativeTwist,
-    RevealationTiming, NarrativeMoment, extend_oracle_state_phase_d
+    PhaseDExtensions,
+    RevealStrategy,
+    NarrativeTwist,
+    RevealationTiming,
+    NarrativeMoment,
+    extend_oracle_state_phase_d,
 )
 
 # Classes principales exportées
@@ -29,7 +48,6 @@ __all__ = [
     "OracleTools",
     "MoriartyInterrogatorAgent",
     "MoriartyTools",
-    
     # Dataset et gestion
     "CluedoDataset",
     "CluedoSuggestion",
@@ -38,7 +56,6 @@ __all__ = [
     "DatasetAccessManager",
     "CluedoDatasetManager",
     "QueryCache",
-    
     # Permissions et types
     "QueryType",
     "RevealPolicy",
@@ -49,7 +66,6 @@ __all__ = [
     "PermissionManager",
     "validate_cluedo_method_access",
     "get_default_cluedo_permissions",
-    
     # Extensions Phase D
     "PhaseDExtensions",
     "RevealStrategy",
@@ -66,19 +82,22 @@ DEFAULT_ORACLE_CONFIG = {
     "cache_size": 1000,
     "cache_ttl": 300,
     "enable_logging": True,
-    "log_level": "INFO"
+    "log_level": "INFO",
 }
+
 
 def get_oracle_version() -> str:
     """Retourne la version du système Oracle Enhanced"""
     return __version__
 
+
 def get_oracle_info():
     """Retourne les informations du système Oracle"""
     from typing import Dict, Any
+
     return {
         "version": __version__,
         "author": __author__,
         "components": len(__all__),
-        "config": DEFAULT_ORACLE_CONFIG
+        "config": DEFAULT_ORACLE_CONFIG,
     }

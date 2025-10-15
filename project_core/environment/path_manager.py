@@ -30,19 +30,30 @@ except ImportError:
             warnings.warn(
                 "Le module de configuration centralisé 'argumentation_analysis.config.settings' n'a pas pu être importé. "
                 "PathManager fonctionne en mode dégradé et ne peut pas accéder à la configuration.",
-                ImportWarning
+                ImportWarning,
             )
             return None
+
     settings = MockSettings()
 
 
 # --- Fallback Logger pour la compatibilité de l'API ---
 class PrintLogger:
-    def debug(self, msg): logger.debug(msg)
-    def info(self, msg): logger.info(msg)
-    def warning(self, msg): logger.warning(msg)
-    def error(self, msg): logger.error(msg)
-    def success(self, msg): logger.info(f"SUCCESS: {msg}")
+    def debug(self, msg):
+        logger.debug(msg)
+
+    def info(self, msg):
+        logger.info(msg)
+
+    def warning(self, msg):
+        logger.warning(msg)
+
+    def error(self, msg):
+        logger.error(msg)
+
+    def success(self, msg):
+        logger.info(f"SUCCESS: {msg}")
+
 
 Logger = PrintLogger
 
@@ -59,7 +70,7 @@ class PathManager:
             "La classe 'PathManager' est obsolète. La configuration est maintenant gérée par "
             "`argumentation_analysis.config.settings`. Veuillez migrer les appels.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         self.project_root = project_root
         self.logger = logger_instance if logger_instance is not None else PrintLogger()
@@ -69,7 +80,7 @@ class PathManager:
         warnings.warn(
             "PathManager.get_project_root() est obsolète. Utilisez une méthode centralisée pour obtenir la racine du projet si nécessaire.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         return self.project_root
 
@@ -82,13 +93,14 @@ class PathManager:
             "PathManager.setup_project_pythonpath() est obsolète. La gestion du PYTHONPATH est maintenant implicite "
             "ou doit être configurée au niveau de l'environnement.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         project_path_str = str(self.project_root.resolve())
         # Assure la compatibilité minimale pour la session en cours
 
-
-    def normalize_and_validate_java_home(self, auto_install_if_missing: bool = False) -> Optional[str]:
+    def normalize_and_validate_java_home(
+        self, auto_install_if_missing: bool = False
+    ) -> Optional[str]:
         """
         Méthode obsolète. La validation de JAVA_HOME est maintenant implicite via
         la configuration centralisée si nécessaire (ex: `settings.java.home`).
@@ -97,10 +109,10 @@ class PathManager:
             "PathManager.normalize_and_validate_java_home() est obsolète. "
             "Utilisez directement `settings.java.home` ou une configuration similaire.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         # Tente de retourner la variable d'environnement si elle existe pour ne pas casser le code appelant
-        java_home = os.environ.get('JAVA_HOME')
+        java_home = os.environ.get("JAVA_HOME")
         if java_home and Path(java_home).exists():
             return java_home
         return None
@@ -114,7 +126,7 @@ class PathManager:
             "PathManager.load_environment_variables() est obsolète. "
             "Le chargement est automatique via `argumentation_analysis.config.settings`.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         # Ne fait plus rien, car pydantic-settings s'en charge.
 
@@ -127,11 +139,14 @@ class PathManager:
             "PathManager.initialize_environment_paths() est obsolète. Cette initialisation est maintenant "
             "déclenchée par l'import de `argumentation_analysis.config.settings`.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
-        self.setup_project_pythonpath() # Conserve un comportement minimal
+        self.setup_project_pythonpath()  # Conserve un comportement minimal
+
 
 if __name__ == "__main__":
     logger.warning("Le script `path_manager.py` est exécuté directement.")
-    logger.warning("Ce module est obsolète et ne doit plus être utilisé pour de nouveaux développements.")
+    logger.warning(
+        "Ce module est obsolète et ne doit plus être utilisé pour de nouveaux développements."
+    )
     logger.warning("Veuillez migrer vers `argumentation_analysis.config.settings`.")

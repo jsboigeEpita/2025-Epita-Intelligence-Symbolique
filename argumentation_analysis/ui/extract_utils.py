@@ -17,7 +17,10 @@ from typing import List, Dict, Any, Tuple, Optional, Union
 # Imports depuis les modules du projet (chemins absolus pour la robustesse)
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
-from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition
+from argumentation_analysis.models.extract_definition import (
+    ExtractDefinitions,
+    SourceDefinition,
+)
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.cache_service import CacheService
@@ -31,7 +34,9 @@ CACHE_DIR = PROJECT_ROOT / "_temp" / "text_cache"
 CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"
 CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
 CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
-ENCRYPTION_KEY = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+ENCRYPTION_KEY = (
+    settings.encryption_key.get_secret_value() if settings.encryption_key else None
+)
 
 
 # Initialisation des services
@@ -40,7 +45,10 @@ cache_service = CacheService(CACHE_DIR)
 fetch_service = FetchService(cache_service)
 crypto_service = CryptoService()
 
-def load_source_text(source_info: Union[Dict[str, Any], SourceDefinition]) -> Tuple[Optional[str], str]:
+
+def load_source_text(
+    source_info: Union[Dict[str, Any], SourceDefinition]
+) -> Tuple[Optional[str], str]:
     """
     Charge le texte source à partir des informations de la source en utilisant `FetchService`.
 
@@ -59,11 +67,9 @@ def load_source_text(source_info: Union[Dict[str, Any], SourceDefinition]) -> Tu
         logger.error(f"Erreur lors du chargement du texte source: {e}")
         return "", f"Erreur: {str(e)}"
 
+
 def extract_text_with_markers(
-    text: str, 
-    start_marker: str, 
-    end_marker: str, 
-    template_start: Optional[str] = None
+    text: str, start_marker: str, end_marker: str, template_start: Optional[str] = None
 ) -> Tuple[Optional[str], str, bool, bool]:
     """
     Extrait le texte situé entre des marqueurs de début et de fin spécifiés,
@@ -82,13 +88,13 @@ def extract_text_with_markers(
     :rtype: Tuple[Optional[str], str, bool, bool]
     """
     # Utiliser le service d'extraction pour extraire le texte
-    return extract_service.extract_text_with_markers(text, start_marker, end_marker, template_start)
+    return extract_service.extract_text_with_markers(
+        text, start_marker, end_marker, template_start
+    )
+
 
 def find_similar_text(
-    text: str, 
-    marker: str, 
-    context_size: int = 50, 
-    max_results: int = 5
+    text: str, marker: str, context_size: int = 50, max_results: int = 5
 ) -> List[Tuple[str, int, str]]:
     """
     Trouve des portions de texte similaires à un marqueur donné dans un texte source,
@@ -109,11 +115,9 @@ def find_similar_text(
     # Utiliser le service d'extraction pour trouver du texte similaire
     return extract_service.find_similar_text(text, marker, context_size, max_results)
 
+
 def highlight_text(
-    text: str, 
-    start_marker: str, 
-    end_marker: str, 
-    template_start: Optional[str] = None
+    text: str, start_marker: str, end_marker: str, template_start: Optional[str] = None
 ) -> Tuple[str, bool, bool]:
     """
     Met en évidence les marqueurs de début et de fin dans un texte,
@@ -132,12 +136,13 @@ def highlight_text(
     :rtype: Tuple[str, bool, bool]
     """
     # Utiliser le service d'extraction pour mettre en évidence le texte
-    return extract_service.highlight_text(text, start_marker, end_marker, template_start)
+    return extract_service.highlight_text(
+        text, start_marker, end_marker, template_start
+    )
+
 
 def search_in_text(
-    text: str, 
-    search_term: str, 
-    case_sensitive: bool = False
+    text: str, search_term: str, case_sensitive: bool = False
 ) -> List[re.Match]:
     """
     Recherche toutes les occurrences d'un terme dans un texte,
@@ -155,11 +160,9 @@ def search_in_text(
     # Utiliser le service d'extraction pour rechercher dans le texte
     return extract_service.search_in_text(text, search_term, case_sensitive)
 
+
 def highlight_search_results(
-    text: str, 
-    search_term: str, 
-    case_sensitive: bool = False, 
-    context_size: int = 50
+    text: str, search_term: str, case_sensitive: bool = False, context_size: int = 50
 ) -> Tuple[str, int]:
     """
     Met en évidence toutes les occurrences d'un terme de recherche dans un texte,
@@ -178,12 +181,15 @@ def highlight_search_results(
     :rtype: Tuple[str, int]
     """
     # Utiliser le service d'extraction pour mettre en évidence les résultats de recherche
-    return extract_service.highlight_search_results(text, search_term, case_sensitive, context_size)
+    return extract_service.highlight_search_results(
+        text, search_term, case_sensitive, context_size
+    )
+
 
 def load_extract_definitions_safely(
-    config_file: Union[str, Path], 
-    encryption_key: Optional[str], 
-    fallback_json_file: Optional[Union[str, Path]] = None
+    config_file: Union[str, Path],
+    encryption_key: Optional[str],
+    fallback_json_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """
     Charge les définitions d'extraits de manière sécurisée, en essayant d'abord
@@ -214,35 +220,41 @@ def load_extract_definitions_safely(
                 config_path = Path(config_file)
                 if config_path.exists():
                     # Déchiffrer le fichier
-                    decrypted_data = crypto_service.decrypt_file(config_path, encryption_key)
+                    decrypted_data = crypto_service.decrypt_file(
+                        config_path, encryption_key
+                    )
                     if decrypted_data:
                         # Décompresser les données
-                        json_data = gzip.decompress(decrypted_data).decode('utf-8')
+                        json_data = gzip.decompress(decrypted_data).decode("utf-8")
                         extract_definitions = json.loads(json_data)
-                        return extract_definitions, f"Définitions chargées depuis {config_path}"
+                        return (
+                            extract_definitions,
+                            f"Définitions chargées depuis {config_path}",
+                        )
             except Exception as e:
                 logger.error(f"Erreur lors du déchiffrement: {e}")
                 # Continuer avec le fallback
-        
+
         # Si le déchiffrement échoue ou si pas de clé, essayer le fichier JSON
         if fallback_json_file:
             json_path = Path(fallback_json_file)
             if json_path.exists():
-                with open(json_path, 'r', encoding='utf-8') as f:
+                with open(json_path, "r", encoding="utf-8") as f:
                     extract_definitions = json.load(f)
                 return extract_definitions, f"Définitions chargées depuis {json_path}"
-        
+
         # Si tout échoue, retourner une liste vide
         return [], "Aucun fichier de définitions trouvé"
     except Exception as e:
         logger.error(f"Erreur lors du chargement des définitions: {e}")
         return [], f"Erreur: {str(e)}"
 
+
 def save_extract_definitions_safely(
     extract_definitions: List[Dict[str, Any]],
     config_file: Union[str, Path],
     encryption_key: Optional[str],
-    fallback_json_file: Optional[Union[str, Path]] = None
+    fallback_json_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[bool, str]:
     """
     Sauvegarde les définitions d'extraits de manière sécurisée.
@@ -269,48 +281,53 @@ def save_extract_definitions_safely(
     try:
         # Convertir en JSON
         json_data = json.dumps(extract_definitions, ensure_ascii=False, indent=2)
-        
+
         # Sauvegarder dans le fichier JSON de secours si spécifié
         if fallback_json_file:
             json_path = Path(fallback_json_file)
             json_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(json_path, 'w', encoding='utf-8') as f:
+            with open(json_path, "w", encoding="utf-8") as f:
                 f.write(json_data)
             logger.info(f"Définitions sauvegardées dans {json_path}")
-        
+
         # Sauvegarder dans le fichier chiffré si une clé est fournie
         if encryption_key:
             try:
                 config_path = Path(config_file)
                 config_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 # Compresser les données
-                compressed_data = gzip.compress(json_data.encode('utf-8'))
-                
+                compressed_data = gzip.compress(json_data.encode("utf-8"))
+
                 # Chiffrer les données
-                crypto_service.encrypt_file(compressed_data, config_path, encryption_key)
+                crypto_service.encrypt_file(
+                    compressed_data, config_path, encryption_key
+                )
                 logger.info(f"Définitions chiffrées sauvegardées dans {config_path}")
-                
+
                 return True, f"Définitions sauvegardées avec succès"
             except Exception as e:
                 logger.error(f"Erreur lors du chiffrement: {e}")
                 if fallback_json_file:
-                    return True, f"Définitions sauvegardées uniquement dans {fallback_json_file}"
+                    return (
+                        True,
+                        f"Définitions sauvegardées uniquement dans {fallback_json_file}",
+                    )
                 return False, f"Erreur lors du chiffrement: {str(e)}"
-        
+
         # Si pas de clé mais JSON sauvegardé
         if fallback_json_file:
             return True, f"Définitions sauvegardées dans {fallback_json_file}"
-        
+
         # Si ni clé ni JSON
         return False, "Aucun fichier de destination spécifié"
     except Exception as e:
         logger.error(f"Erreur lors de la sauvegarde des définitions: {e}")
         return False, f"Erreur: {str(e)}"
 
+
 def export_definitions_to_json(
-    extract_definitions: List[Dict[str, Any]],
-    output_path: Union[str, Path]
+    extract_definitions: List[Dict[str, Any]], output_path: Union[str, Path]
 ) -> Tuple[bool, str]:
     """
     Exporte les définitions d'extraits vers un fichier JSON non chiffré.
@@ -326,17 +343,18 @@ def export_definitions_to_json(
     try:
         # Convertir en JSON
         json_data = json.dumps(extract_definitions, ensure_ascii=False, indent=2)
-        
+
         # Sauvegarder dans le fichier
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(json_data)
-        
+
         return True, f"[OK] Définitions exportées avec succès vers {output_path}"
     except Exception as e:
         logger.error(f"Erreur lors de l'exportation des définitions: {e}")
         return False, f"❌ Erreur lors de l'exportation: {str(e)}"
+
 
 def import_definitions_from_json(
     input_path: Union[str, Path]
@@ -356,10 +374,10 @@ def import_definitions_from_json(
         input_path = Path(input_path)
         if not input_path.exists():
             return False, f"❌ Fichier non trouvé: {input_path}"
-        
-        with open(input_path, 'r', encoding='utf-8') as f:
+
+        with open(input_path, "r", encoding="utf-8") as f:
             extract_definitions = json.load(f)
-        
+
         return True, extract_definitions
     except json.JSONDecodeError:
         logger.error(f"Erreur de format JSON dans le fichier {input_path}")

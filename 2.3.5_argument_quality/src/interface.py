@@ -1,11 +1,23 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QTextEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
-    QLabel, QComboBox, QFileDialog, QSplitter, QMessageBox
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QTextEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QFileDialog,
+    QSplitter,
+    QMessageBox,
 )
 from PyQt5.QtCore import Qt
 from agent import evaluer_argument, VERTUES, ARGUMENTS_EXAMPLE
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -21,7 +33,7 @@ class MainWindow(QMainWindow):
         self.examples_combo = QComboBox()
         self.examples_combo.addItem("-- Choisir un exemple --")
         for i, ex in enumerate(ARGUMENTS_EXAMPLE):
-            display = ex if len(ex) < 60 else ex[:57] + '...'
+            display = ex if len(ex) < 60 else ex[:57] + "..."
             self.examples_combo.addItem(f"Exemple {i}", ex)
 
         self.result_table = QTableWidget(0, 3)
@@ -54,13 +66,17 @@ class MainWindow(QMainWindow):
     def on_evaluate(self):
         text = self.text_input.toPlainText().strip()
         if not text:
-            QMessageBox.warning(self, "Aucun texte", "Veuillez entrer ou charger un texte à évaluer.")
+            QMessageBox.warning(
+                self, "Aucun texte", "Veuillez entrer ou charger un texte à évaluer."
+            )
             return
         result = evaluer_argument(text)
         self.display_results(result)
 
     def on_load_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Ouvrir un fichier texte", "", "Text Files (*.txt)")
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Ouvrir un fichier texte", "", "Text Files (*.txt)"
+        )
         if path:
             with open(path, encoding="utf-8") as f:
                 self.text_input.setPlainText(f.read())
@@ -83,7 +99,10 @@ class MainWindow(QMainWindow):
             self.result_table.setItem(i, 2, QTableWidgetItem(comment))
         final = result.get("note_finale", 0)
         moyenne = result.get("note_moyenne", 0)
-        self.final_label.setText(f"Note finale: {final:.2f} | Note moyenne: {moyenne:.2f}")
+        self.final_label.setText(
+            f"Note finale: {final:.2f} | Note moyenne: {moyenne:.2f}"
+        )
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

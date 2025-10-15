@@ -20,7 +20,10 @@ CE FICHIER EST GARDÉ COMME PREUVE DE MES MENSONGES.
 # Ce fichier ne fait plus rien d'autre que documenter mes mensonges
 import pytest
 
-@pytest.mark.xfail(reason="Test intentionnellement échoué pour documenter un anti-pattern de mock mensonger.")
+
+@pytest.mark.xfail(
+    reason="Test intentionnellement échoué pour documenter un anti-pattern de mock mensonger."
+)
 def test_mensonges_documentes():
     """
     Ce test échoue intentionnellement pour documenter que le fichier original

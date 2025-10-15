@@ -11,16 +11,26 @@ from typing import List, Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 MOCK_FALLACY_TYPES = [
-    "Ad Hominem (Mock)", "Homme de Paille (Mock)", "Fausse Dichotomie (Mock)",
-    "Appel à l'Ignorance (Mock)", "Pente Glissante (Mock)", "Généralisation Hâtive (Mock)"
+    "Ad Hominem (Mock)",
+    "Homme de Paille (Mock)",
+    "Fausse Dichotomie (Mock)",
+    "Appel à l'Ignorance (Mock)",
+    "Pente Glissante (Mock)",
+    "Généralisation Hâtive (Mock)",
 ]
 
 MOCK_RHETORICAL_DEVICES = [
-    "Métaphore (Mock)", "Anaphore (Mock)", "Question Rhétorique (Mock)",
-    "Hyperbole (Mock)", "Ironie (Mock)"
+    "Métaphore (Mock)",
+    "Anaphore (Mock)",
+    "Question Rhétorique (Mock)",
+    "Hyperbole (Mock)",
+    "Ironie (Mock)",
 ]
 
-def generate_mock_fallacy_detection(text_snippet: str, num_fallacies: Optional[int] = None) -> List[Dict[str, Any]]:
+
+def generate_mock_fallacy_detection(
+    text_snippet: str, num_fallacies: Optional[int] = None
+) -> List[Dict[str, Any]]:
     """
     Génère une liste simulée de sophismes détectés pour un extrait de texte.
 
@@ -35,26 +45,39 @@ def generate_mock_fallacy_detection(text_snippet: str, num_fallacies: Optional[i
         num_to_generate = random.randint(0, 3)
     else:
         num_to_generate = num_fallacies
-        
+
     detected_fallacies = []
-    if not text_snippet: # Si le texte est vide, ne pas générer de sophisme basé sur le contexte.
+    if (
+        not text_snippet
+    ):  # Si le texte est vide, ne pas générer de sophisme basé sur le contexte.
         snippet_for_context = "Contexte non disponible car texte d'entrée vide."
     else:
-        snippet_for_context = text_snippet[:100] + "..." if len(text_snippet) > 100 else text_snippet
+        snippet_for_context = (
+            text_snippet[:100] + "..." if len(text_snippet) > 100 else text_snippet
+        )
 
     for i in range(num_to_generate):
         fallacy_type = random.choice(MOCK_FALLACY_TYPES)
-        detected_fallacies.append({
-            "fallacy_type": fallacy_type,
-            "description": f"Description simulée pour {fallacy_type}.",
-            "severity": random.choice(["Basse", "Moyenne", "Haute"]) + " (Mock)",
-            "confidence": round(random.uniform(0.5, 0.95), 2),
-            "context_text": f"Sophisme simulé '{fallacy_type}' trouvé près de : \"{snippet_for_context}\"",
-            "start_char": random.randint(0, max(0, len(text_snippet)-20)), # Position de début simulée
-            "end_char": random.randint(10, max(10, len(text_snippet))) # Position de fin simulée
-        })
-    logger.debug(f"Simulation de {len(detected_fallacies)} sophismes pour le texte (aperçu): '{snippet_for_context}'")
+        detected_fallacies.append(
+            {
+                "fallacy_type": fallacy_type,
+                "description": f"Description simulée pour {fallacy_type}.",
+                "severity": random.choice(["Basse", "Moyenne", "Haute"]) + " (Mock)",
+                "confidence": round(random.uniform(0.5, 0.95), 2),
+                "context_text": f"Sophisme simulé '{fallacy_type}' trouvé près de : \"{snippet_for_context}\"",
+                "start_char": random.randint(
+                    0, max(0, len(text_snippet) - 20)
+                ),  # Position de début simulée
+                "end_char": random.randint(
+                    10, max(10, len(text_snippet))
+                ),  # Position de fin simulée
+            }
+        )
+    logger.debug(
+        f"Simulation de {len(detected_fallacies)} sophismes pour le texte (aperçu): '{snippet_for_context}'"
+    )
     return detected_fallacies
+
 
 def generate_mock_coherence_evaluation(text_snippet: str) -> Dict[str, Any]:
     """
@@ -69,14 +92,19 @@ def generate_mock_coherence_evaluation(text_snippet: str) -> Dict[str, Any]:
     evaluation = {
         "coherence_score": score,
         "assessment": f"La cohérence du texte (aperçu: '{text_snippet[:50]}...') est évaluée à {score} (Mock).",
-        "potential_issues": []
+        "potential_issues": [],
     }
     if score < 0.6:
-        evaluation["potential_issues"].append("Possibles ruptures de cohérence ou transitions abruptes (Mock).")
+        evaluation["potential_issues"].append(
+            "Possibles ruptures de cohérence ou transitions abruptes (Mock)."
+        )
     logger.debug(f"Simulation de l'évaluation de cohérence: score {score}")
     return evaluation
 
-def generate_mock_rhetorical_analysis(text_snippet: str, extract_name: str, source_name: str) -> Dict[str, Any]:
+
+def generate_mock_rhetorical_analysis(
+    text_snippet: str, extract_name: str, source_name: str
+) -> Dict[str, Any]:
     """
     Génère un résultat d'analyse rhétorique complet et simulé pour un extrait.
 
@@ -89,29 +117,35 @@ def generate_mock_rhetorical_analysis(text_snippet: str, extract_name: str, sour
     :return: Un dictionnaire représentant l'analyse rhétorique simulée.
     :rtype: Dict[str, Any]
     """
-    logger.info(f"Génération d'une analyse rhétorique simulée pour: {extract_name} (source: {source_name})")
-    
+    logger.info(
+        f"Génération d'une analyse rhétorique simulée pour: {extract_name} (source: {source_name})"
+    )
+
     fallacies = generate_mock_fallacy_detection(text_snippet)
     coherence = generate_mock_coherence_evaluation(text_snippet)
-    
+
     num_devices = random.randint(1, len(MOCK_RHETORICAL_DEVICES))
     rhetorical_devices_detected = random.sample(MOCK_RHETORICAL_DEVICES, num_devices)
 
     analysis_result = {
         "extract_name": extract_name,
         "source_name": source_name,
-        "original_text_snippet": text_snippet[:200] + "..." if len(text_snippet) > 200 else text_snippet,
+        "original_text_snippet": text_snippet[:200] + "..."
+        if len(text_snippet) > 200
+        else text_snippet,
         "fallacies_detected": fallacies,
         "coherence_evaluation": coherence,
         "rhetorical_devices": rhetorical_devices_detected,
         "overall_assessment": {
             "summary": f"Analyse rhétorique simulée pour '{extract_name}'. "
-                       f"{len(fallacies)} sophismes et {len(rhetorical_devices_detected)} figures de style trouvés (Mock).",
+            f"{len(fallacies)} sophismes et {len(rhetorical_devices_detected)} figures de style trouvés (Mock).",
             "clarity_score": round(random.uniform(0.5, 0.95), 2),
             "persuasiveness_score": round(random.uniform(0.4, 0.9), 2),
-            "confidence_score": round(random.uniform(0.6, 0.98), 2) # Confiance globale de l'analyse simulée
+            "confidence_score": round(
+                random.uniform(0.6, 0.98), 2
+            ),  # Confiance globale de l'analyse simulée
         },
-        "timestamp": datetime.datetime.now().isoformat()
+        "timestamp": datetime.datetime.now().isoformat(),
     }
     logger.debug(f"Analyse rhétorique simulée générée pour '{extract_name}'.")
     return analysis_result

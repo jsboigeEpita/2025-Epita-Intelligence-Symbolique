@@ -11,7 +11,9 @@ import os
 try:
     import argumentation_analysis.core.environment
 except (ImportError, RuntimeError) as e:
-    print(f"ERREUR CRITIQUE: Impossible d'activer ou de valider l'environnement du projet.")
+    print(
+        f"ERREUR CRITIQUE: Impossible d'activer ou de valider l'environnement du projet."
+    )
     print(f"Erreur: {e}")
     sys.exit(1)
 
@@ -21,13 +23,15 @@ if __name__ == "__main__":
     pytest_args = sys.argv[1:]
 
     if not pytest_args:
-        print("Usage: python run_pytest.py <chemin_vers_test_ou_dossier> [options_pytest_supplémentaires]")
+        print(
+            "Usage: python run_pytest.py <chemin_vers_test_ou_dossier> [options_pytest_supplémentaires]"
+        )
         sys.exit(1)
-        
+
     print(f"Lanceur Pytest: Démarrage de pytest avec les arguments: {pytest_args}")
-    
+
     # 3. Exécution de pytest par programmation
     exit_code = pytest.main(pytest_args)
-    
+
     print(f"Lanceur Pytest: Pytest terminé avec le code de sortie: {exit_code}")
     sys.exit(exit_code)

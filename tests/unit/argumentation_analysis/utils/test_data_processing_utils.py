@@ -10,6 +10,7 @@ from argumentation_analysis.utils.data_processing_utils import group_results_by_
 
 # Fixtures pour les données de test
 
+
 @pytest.fixture
 def sample_results_various_sources():
     """Retourne un échantillon de résultats avec diverses sources."""
@@ -23,14 +24,16 @@ def sample_results_various_sources():
         {"id": 7, "text": "Texte G", "source_name": "Analyse Douglas"},
     ]
 
+
 @pytest.fixture
 def results_with_missing_source_name():
     """Retourne des résultats où 'source_name' est manquant pour certains."""
     return [
         {"id": 1, "text": "Texte A", "source_name": "Discours d'Hitler - 1933"},
-        {"id": 2, "text": "Texte B"}, # source_name manquant
+        {"id": 2, "text": "Texte B"},  # source_name manquant
         {"id": 3, "text": "Texte C", "source_name": "Article de Blog X"},
     ]
+
 
 @pytest.fixture
 def results_with_non_dict_elements():
@@ -41,12 +44,14 @@ def results_with_non_dict_elements():
         {"id": 3, "text": "Texte C", "source_name": "Article de Blog X"},
     ]
 
+
 # Tests pour group_results_by_corpus
+
 
 def test_group_results_nominal_case(sample_results_various_sources):
     """Teste le regroupement nominal des résultats."""
     grouped = group_results_by_corpus(sample_results_various_sources)
-    
+
     assert "Discours d'Hitler" in grouped
     assert len(grouped["Discours d'Hitler"]) == 2
     assert any(r["id"] == 1 for r in grouped["Discours d'Hitler"])
@@ -66,24 +71,26 @@ def test_group_results_nominal_case(sample_results_various_sources):
     assert len(grouped["Document Y"]) == 1
     assert grouped["Document Y"][0]["id"] == 6
 
+
 def test_group_results_empty_list():
     """Teste le regroupement avec une liste de résultats vide."""
     grouped = group_results_by_corpus([])
     assert grouped == {}
 
+
 def test_group_results_missing_source_name(results_with_missing_source_name):
     """Teste le regroupement quand 'source_name' est manquant."""
     grouped = group_results_by_corpus(results_with_missing_source_name)
-    
+
     assert "Discours d'Hitler" in grouped
     assert len(grouped["Discours d'Hitler"]) == 1
     assert grouped["Discours d'Hitler"][0]["id"] == 1
 
     assert "Corpus Inconnu" in grouped
     assert len(grouped["Corpus Inconnu"]) == 1
-    assert grouped["Corpus Inconnu"][0]["id"] == 2 # Celui sans source_name
+    assert grouped["Corpus Inconnu"][0]["id"] == 2  # Celui sans source_name
 
-    assert "Article de Blog X" in grouped # Celui avec source_name explicite
+    assert "Article de Blog X" in grouped  # Celui avec source_name explicite
     assert len(grouped["Article de Blog X"]) == 1
     assert grouped["Article de Blog X"][0]["id"] == 3
 
@@ -91,7 +98,7 @@ def test_group_results_missing_source_name(results_with_missing_source_name):
 def test_group_results_with_non_dict_elements(results_with_non_dict_elements):
     """Teste le regroupement avec des éléments non-dictionnaires dans la liste."""
     grouped = group_results_by_corpus(results_with_non_dict_elements)
-    
+
     assert "Discours d'Hitler" in grouped
     assert len(grouped["Discours d'Hitler"]) == 1
     assert grouped["Discours d'Hitler"][0]["id"] == 1
@@ -99,7 +106,7 @@ def test_group_results_with_non_dict_elements(results_with_non_dict_elements):
     assert "Article de Blog X" in grouped
     assert len(grouped["Article de Blog X"]) == 1
     assert grouped["Article de Blog X"][0]["id"] == 3
-    
+
     # Vérifie que le nombre total d'éléments groupés est correct (ignore les non-dictionnaires)
     total_grouped_items = sum(len(items) for items in grouped.values())
     assert total_grouped_items == 2
@@ -114,6 +121,7 @@ def test_group_results_input_not_list():
     with pytest.raises(TypeError) as excinfo:
         group_results_by_corpus({"un": "dict"})
     assert "L'argument 'results' doit être une liste." in str(excinfo.value)
+
 
 def test_group_results_all_other_corpus():
     """Teste le cas où tous les résultats vont dans 'Autres corpus'."""
@@ -132,10 +140,15 @@ def test_group_results_all_other_corpus():
     assert "Discours d'Hitler" not in grouped
     assert "Débats Lincoln-Douglas" not in grouped
 
+
 def test_group_results_specific_corpus_names():
     """Teste des noms de source qui pourraient être ambigus mais doivent être correctement classés."""
     results = [
-        {"id": 1, "text": "Texte H", "source_name": "Un document sur Hitler et la guerre"},
+        {
+            "id": 1,
+            "text": "Texte H",
+            "source_name": "Un document sur Hitler et la guerre",
+        },
         {"id": 2, "text": "Texte LD", "source_name": "Notes sur Lincoln"},
         {"id": 3, "text": "Texte D", "source_name": "Commentaire de Douglas"},
     ]

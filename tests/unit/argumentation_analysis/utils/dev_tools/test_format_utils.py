@@ -3,11 +3,15 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from argumentation_analysis.utils.dev_tools.format_utils import fix_docstrings_apostrophes, logger as format_utils_logger # Importer le logger
-import logging # Importer logging
+from argumentation_analysis.utils.dev_tools.format_utils import (
+    fix_docstrings_apostrophes,
+    logger as format_utils_logger,
+)  # Importer le logger
+import logging  # Importer logging
+
 
 @pytest.fixture
-def temp_file_for_docstring_test(request): # Ajouter request pour le nom du test
+def temp_file_for_docstring_test(request):  # Ajouter request pour le nom du test
     # Sauvegarder le niveau de log original et le restaurer après le test
     original_level = format_utils_logger.level
     # Mettre le logger en DEBUG pour ce test spécifique si besoin
@@ -18,10 +22,10 @@ def temp_file_for_docstring_test(request): # Ajouter request pour le nom du test
         format_utils_logger.setLevel(logging.DEBUG)
         print(f"\n[DEBUG LOGGING ENABLED FOR {request.node.name}]")
 
-
     """Crée un fichier temporaire et retourne son chemin."""
     """Crée un fichier temporaire et retourne son chemin."""
     temp_files = []
+
     def _create_temp_file(content: str, suffix=".py"):
         # Utiliser NamedTemporaryFile pour s'assurer que le fichier est supprimé même en cas d'erreur
         # mais on a besoin du chemin, donc on le ferme et le rouvre si nécessaire, ou on gère la suppression manuellement.
@@ -30,12 +34,12 @@ def temp_file_for_docstring_test(request): # Ajouter request pour le nom du test
         path = Path(path_str)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
-        os.close(fd) # Fermer le descripteur de fichier initial
+        os.close(fd)  # Fermer le descripteur de fichier initial
         temp_files.append(path)
         return path
-    
+
     yield _create_temp_file
-    
+
     # Restaurer le niveau de log original
     format_utils_logger.setLevel(original_level)
     if "debuglog" in request.keywords:
@@ -45,7 +49,8 @@ def temp_file_for_docstring_test(request): # Ajouter request pour le nom du test
         if f_path.exists():
             f_path.unlink()
 
-@pytest.mark.debuglog # Marqueur pour activer les logs DEBUG pour ce test si besoin
+
+@pytest.mark.debuglog  # Marqueur pour activer les logs DEBUG pour ce test si besoin
 def test_fix_docstrings_apostrophes_no_change(temp_file_for_docstring_test):
     """Teste que le fichier n'est pas modifié si aucune apostrophe problématique n'est trouvée."""
     content = """
@@ -56,11 +61,12 @@ def func1():
     file_path = temp_file_for_docstring_test(content)
     result = fix_docstrings_apostrophes(str(file_path))
     assert result is True
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         new_content = f.read()
     assert new_content == content
 
-@pytest.mark.debuglog # Marqueur pour activer les logs DEBUG pour ce test si besoin
+
+@pytest.mark.debuglog  # Marqueur pour activer les logs DEBUG pour ce test si besoin
 def test_fix_docstrings_apostrophes_single_change(temp_file_for_docstring_test):
     """Teste un remplacement simple d'apostrophe."""
     content = """
@@ -76,11 +82,12 @@ def func1():
     file_path = temp_file_for_docstring_test(content)
     result = fix_docstrings_apostrophes(str(file_path))
     assert result is True
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         new_content = f.read()
     assert new_content == expected_content
 
-@pytest.mark.debuglog # Marqueur pour activer les logs DEBUG pour ce test si besoin
+
+@pytest.mark.debuglog  # Marqueur pour activer les logs DEBUG pour ce test si besoin
 def test_fix_docstrings_apostrophes_multiple_changes(temp_file_for_docstring_test):
     """Teste plusieurs remplacements d'apostrophes dans le même fichier."""
     content = """
@@ -102,11 +109,12 @@ def func1():
     file_path = temp_file_for_docstring_test(content)
     result = fix_docstrings_apostrophes(str(file_path))
     assert result is True
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         new_content = f.read()
     assert new_content == expected_content
 
-@pytest.mark.debuglog # Marqueur pour activer les logs DEBUG pour ce test si besoin
+
+@pytest.mark.debuglog  # Marqueur pour activer les logs DEBUG pour ce test si besoin
 def test_fix_docstrings_apostrophes_no_docstrings(temp_file_for_docstring_test):
     """Teste un fichier sans docstrings mais avec des chaînes qui pourraient correspondre."""
     # Le contenu initial est défini sans indentation de base pour correspondre à la sortie attendue.
@@ -120,8 +128,8 @@ def func1():
 """
     file_path = temp_file_for_docstring_test(content)
     result = fix_docstrings_apostrophes(str(file_path))
-    assert result is True # La fonction devrait toujours réussir
-    with open(file_path, 'r', encoding='utf-8') as f:
+    assert result is True  # La fonction devrait toujours réussir
+    with open(file_path, "r", encoding="utf-8") as f:
         new_content = f.read()
 
     # La fonction remplace globalement, donc les chaînes en dehors des docstrings sont aussi affectées.
@@ -144,7 +152,8 @@ def test_fix_docstrings_apostrophes_file_not_found():
     result = fix_docstrings_apostrophes("fichier_qui_n_existe_pas_du_tout.py")
     assert result is False
 
-@pytest.mark.debuglog # Marqueur pour activer les logs DEBUG pour ce test si besoin
+
+@pytest.mark.debuglog  # Marqueur pour activer les logs DEBUG pour ce test si besoin
 def test_fix_docstrings_idempotency(temp_file_for_docstring_test):
     """Teste que réappliquer la fonction ne change plus le contenu."""
     content = """
@@ -158,17 +167,19 @@ def func1():
     pass
 """
     file_path = temp_file_for_docstring_test(content)
-    
+
     # Premier passage
     result1 = fix_docstrings_apostrophes(str(file_path))
     assert result1 is True
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content_pass1 = f.read()
     assert content_pass1 == expected_content_pass1
-    
+
     # Deuxième passage
     result2 = fix_docstrings_apostrophes(str(file_path))
     assert result2 is True
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content_pass2 = f.read()
-    assert content_pass2 == expected_content_pass1 # Doit être identique au premier passage corrigé
+    assert (
+        content_pass2 == expected_content_pass1
+    )  # Doit être identique au premier passage corrigé

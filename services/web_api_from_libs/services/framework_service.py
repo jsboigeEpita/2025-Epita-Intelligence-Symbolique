@@ -11,7 +11,10 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 
 from ..models.request_models import FrameworkRequest, Argument
 from ..models.response_models import (
-    FrameworkResponse, ArgumentNode, Extension, FrameworkVisualization
+    FrameworkResponse,
+    ArgumentNode,
+    Extension,
+    FrameworkVisualization,
 )
 
 logger = logging.getLogger("FrameworkService")
@@ -20,94 +23,125 @@ logger = logging.getLogger("FrameworkService")
 class FrameworkService:
     """
     Service pour la construction et l'analyse de frameworks de Dung.
-    
+
     Ce service implémente les algorithmes de base pour calculer
     les extensions selon différentes sémantiques.
     """
-    
+
     def __init__(self):
         """Initialise le service de framework."""
         self.logger = logger
         self.is_initialized = True
         self.logger.info("Service de framework initialisé")
-    
+
     def is_healthy(self) -> bool:
         """Vérifie l'état de santé du service."""
         return self.is_initialized
-    
+
     def build_framework(self, request: FrameworkRequest) -> FrameworkResponse:
         """Construit et analyse un framework de Dung avec instrumentation complète."""
         start_time = time.time()
-        self.logger.info(f"[FrameworkService] Début build_framework - Arguments reçus: {len(request.arguments)}")
-        self.logger.debug(f"[FrameworkService] Détail des arguments: {[arg.dict() for arg in request.arguments]}")
-        
+        self.logger.info(
+            f"[FrameworkService] Début build_framework - Arguments reçus: {len(request.arguments)}"
+        )
+        self.logger.debug(
+            f"[FrameworkService] Détail des arguments: {[arg.dict() for arg in request.arguments]}"
+        )
+
         try:
             # Construction du graphe d'arguments
-            self.logger.debug(f"[FrameworkService] Construction des nœuds d'arguments...")
+            self.logger.debug(
+                f"[FrameworkService] Construction des nœuds d'arguments..."
+            )
             argument_nodes = self._build_argument_nodes(request.arguments)
-            self.logger.debug(f"[FrameworkService] {len(argument_nodes)} nœuds d'arguments construits")
-            
+            self.logger.debug(
+                f"[FrameworkService] {len(argument_nodes)} nœuds d'arguments construits"
+            )
+
             # Extraction des relations d'attaque
-            attack_relations = self._extract_attack_relations_from_arguments(request.arguments)
-            self.logger.info(f"[FrameworkService] Relations d'attaque extraites: {len(attack_relations)} relations")
-            
+            attack_relations = self._extract_attack_relations_from_arguments(
+                request.arguments
+            )
+            self.logger.info(
+                f"[FrameworkService] Relations d'attaque extraites: {len(attack_relations)} relations"
+            )
+
             # Construction des relations de support
-            self.logger.debug(f"[FrameworkService] Construction des relations de support...")
+            self.logger.debug(
+                f"[FrameworkService] Construction des relations de support..."
+            )
             support_relations = self._build_support_relations(request.arguments)
-            self.logger.debug(f"[FrameworkService] {len(support_relations)} relations de support construites")
-            
+            self.logger.debug(
+                f"[FrameworkService] {len(support_relations)} relations de support construites"
+            )
+
             # Calcul des extensions si demandé
             extensions = []
             if request.options and request.options.compute_extensions:
-                self.logger.debug(f"[FrameworkService] Calcul des extensions avec sémantique: {request.options.semantics}")
-                extensions = self._compute_extensions(
-                    argument_nodes,
-                    attack_relations,
-                    request.options.semantics
+                self.logger.debug(
+                    f"[FrameworkService] Calcul des extensions avec sémantique: {request.options.semantics}"
                 )
-                self.logger.info(f"[FrameworkService] {len(extensions)} extensions calculées")
-                
+                extensions = self._compute_extensions(
+                    argument_nodes, attack_relations, request.options.semantics
+                )
+                self.logger.info(
+                    f"[FrameworkService] {len(extensions)} extensions calculées"
+                )
+
                 # Mise à jour du statut des arguments
                 self._update_argument_status(argument_nodes, extensions)
                 self.logger.debug(f"[FrameworkService] Statut des arguments mis à jour")
-            
+
             # Génération de la visualisation si demandée
             visualization = None
             if request.options and request.options.include_visualization:
-                self.logger.debug(f"[FrameworkService] Génération de la visualisation...")
+                self.logger.debug(
+                    f"[FrameworkService] Génération de la visualisation..."
+                )
                 visualization = self._generate_visualization(
                     argument_nodes, attack_relations, support_relations
                 )
                 self.logger.debug(f"[FrameworkService] Visualisation générée")
-            
+
             # Calcul des statistiques
             self.logger.debug(f"[FrameworkService] Calcul des statistiques...")
-            stats = self._calculate_statistics(argument_nodes, attack_relations, support_relations, extensions)
-            
+            stats = self._calculate_statistics(
+                argument_nodes, attack_relations, support_relations, extensions
+            )
+
             processing_time = time.time() - start_time
-            self.logger.info(f"[FrameworkService] Framework construit avec succès en {processing_time:.3f}s")
-            
+            self.logger.info(
+                f"[FrameworkService] Framework construit avec succès en {processing_time:.3f}s"
+            )
+
             return FrameworkResponse(
                 success=True,
                 arguments=argument_nodes,
                 attack_relations=attack_relations,
                 support_relations=support_relations,
                 extensions=extensions,
-                semantics_used=request.options.semantics if request.options else "preferred",
-                argument_count=stats['argument_count'],
-                attack_count=stats['attack_count'],
-                support_count=stats['support_count'],
-                extension_count=stats['extension_count'],
+                semantics_used=request.options.semantics
+                if request.options
+                else "preferred",
+                argument_count=stats["argument_count"],
+                attack_count=stats["attack_count"],
+                support_count=stats["support_count"],
+                extension_count=stats["extension_count"],
                 visualization=visualization,
                 processing_time=processing_time,
-                framework_options=request.options.dict() if request.options else {}
+                framework_options=request.options.dict() if request.options else {},
             )
-            
+
         except Exception as e:
-            self.logger.error(f"[FrameworkService] Erreur lors de la construction du framework: {e}", exc_info=True)
+            self.logger.error(
+                f"[FrameworkService] Erreur lors de la construction du framework: {e}",
+                exc_info=True,
+            )
             processing_time = time.time() - start_time
-            self.logger.error(f"[FrameworkService] Échec de construction après {processing_time:.3f}s")
-            
+            self.logger.error(
+                f"[FrameworkService] Échec de construction après {processing_time:.3f}s"
+            )
+
             return FrameworkResponse(
                 success=False,
                 arguments=[],
@@ -121,24 +155,24 @@ class FrameworkService:
                 extension_count=0,
                 visualization=None,
                 processing_time=processing_time,
-                framework_options=request.options.dict() if request.options else {}
+                framework_options=request.options.dict() if request.options else {},
             )
-    
+
     def _build_argument_nodes(self, arguments: List[Argument]) -> List[ArgumentNode]:
         """Construit les nœuds d'arguments."""
         nodes = []
-        
+
         for arg in arguments:
             # Calcul des relations inverses
             attacked_by = []
             supported_by = []
-            
+
             for other_arg in arguments:
                 if arg.id in (other_arg.attacks or []):
                     attacked_by.append(other_arg.id)
                 if arg.id in (other_arg.supports or []):
                     supported_by.append(other_arg.id)
-            
+
             node = ArgumentNode(
                 id=arg.id,
                 content=arg.content,
@@ -146,58 +180,66 @@ class FrameworkService:
                 attacks=arg.attacks or [],
                 attacked_by=attacked_by,
                 supports=arg.supports or [],
-                supported_by=supported_by
+                supported_by=supported_by,
             )
             nodes.append(node)
-        
+
         return nodes
-    
-    def _extract_attack_relations_from_arguments(self, arguments: List[Argument]) -> List[Dict[str, str]]:
+
+    def _extract_attack_relations_from_arguments(
+        self, arguments: List[Argument]
+    ) -> List[Dict[str, str]]:
         """Extrait les relations d'attaque depuis les arguments."""
-        self.logger.debug(f"Extraction des relations d'attaque depuis {len(arguments)} arguments")
-        
+        self.logger.debug(
+            f"Extraction des relations d'attaque depuis {len(arguments)} arguments"
+        )
+
         relations = []
         for arg in arguments:
-            for target_id in (arg.attacks or []):
-                relations.append({
-                    'attacker': arg.id,
-                    'target': target_id,
-                    'type': 'attack'
-                })
-        
+            for target_id in arg.attacks or []:
+                relations.append(
+                    {"attacker": arg.id, "target": target_id, "type": "attack"}
+                )
+
         self.logger.info(f"Relations d'attaque extraites: {len(relations)} relations")
         return relations
 
-    def _build_attack_relations(self, attacks: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        self.logger.info(f"VALIDATION_CORRECTIF: _build_attack_relations a reçu {len(attacks)} attaques.")
+    def _build_attack_relations(
+        self, attacks: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
+        self.logger.info(
+            f"VALIDATION_CORRECTIF: _build_attack_relations a reçu {len(attacks)} attaques."
+        )
         self.logger.info("CACHE_BUSTER: Forcer le rechargement du module.")
         """Construit les relations d'attaque à partir de la liste fournie."""
         # La requête fournit déjà une liste de dictionnaires {'source': ..., 'target': ...}
         # Il suffit de les reformater en {'attacker': ..., 'target': ..., 'type': 'attack'}
         return [
             {
-                'attacker': attack.get('source'),
-                'target': attack.get('target'),
-                'type': 'attack'
+                "attacker": attack.get("source"),
+                "target": attack.get("target"),
+                "type": "attack",
             }
             for attack in attacks
         ]
-    
-    def _build_support_relations(self, arguments: List[Argument]) -> List[Dict[str, str]]:
+
+    def _build_support_relations(
+        self, arguments: List[Argument]
+    ) -> List[Dict[str, str]]:
         """Construit les relations de support."""
         relations = []
-        
+
         for arg in arguments:
-            for target_id in (arg.supports or []):
-                relations.append({
-                    'supporter': arg.id,
-                    'target': target_id,
-                    'type': 'support'
-                })
-        
+            for target_id in arg.supports or []:
+                relations.append(
+                    {"supporter": arg.id, "target": target_id, "type": "support"}
+                )
+
         return relations
-    
-    def _compute_extensions(self, nodes: List[ArgumentNode], attacks: List[Dict], semantics: str) -> List[Extension]:
+
+    def _compute_extensions(
+        self, nodes: List[ArgumentNode], attacks: List[Dict], semantics: str
+    ) -> List[Extension]:
         """Calcule les extensions selon la sémantique spécifiée."""
         try:
             if semantics == "grounded":
@@ -213,25 +255,27 @@ class FrameworkService:
             else:
                 self.logger.warning(f"Sémantique inconnue: {semantics}")
                 return []
-        
+
         except Exception as e:
             self.logger.error(f"Erreur calcul extensions: {e}")
             return []
-    
-    def _compute_grounded_extension(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> List[Extension]:
+
+    def _compute_grounded_extension(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> List[Extension]:
         """Calcule l'extension grounded (unique)."""
         # Construction du graphe d'attaque
         attack_graph = self._build_attack_graph(nodes, attacks)
-        
+
         # Algorithme de l'extension grounded
         in_set = set()
         out_set = set()
         undecided = {node.id for node in nodes}
-        
+
         changed = True
         while changed:
             changed = False
-            
+
             # Arguments sans attaquants -> IN
             for arg_id in list(undecided):
                 attackers = attack_graph.get(arg_id, set())
@@ -239,7 +283,7 @@ class FrameworkService:
                     in_set.add(arg_id)
                     undecided.remove(arg_id)
                     changed = True
-            
+
             # Arguments attaqués par IN -> OUT
             for arg_id in list(undecided):
                 attackers = attack_graph.get(arg_id, set())
@@ -247,75 +291,86 @@ class FrameworkService:
                     out_set.add(arg_id)
                     undecided.remove(arg_id)
                     changed = True
-        
-        return [Extension(
-            type="grounded",
-            arguments=list(in_set),
-            is_complete=True,
-            is_preferred=True
-        )]
-    
-    def _compute_complete_extensions(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> List[Extension]:
+
+        return [
+            Extension(
+                type="grounded",
+                arguments=list(in_set),
+                is_complete=True,
+                is_preferred=True,
+            )
+        ]
+
+    def _compute_complete_extensions(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> List[Extension]:
         """Calcule toutes les extensions complètes."""
         attack_graph = self._build_attack_graph(nodes, attacks)
         all_args = {node.id for node in nodes}
-        
+
         # Génération de tous les sous-ensembles possibles
         extensions = []
-        
+
         # Pour simplifier, on utilise une approche heuristique
         # Dans un vrai système, il faudrait implémenter l'algorithme complet
-        
+
         # Extension vide (toujours complète)
         if self._is_complete_extension(set(), attack_graph, all_args):
-            extensions.append(Extension(
-                type="complete",
-                arguments=[],
-                is_complete=True,
-                is_preferred=False
-            ))
-        
+            extensions.append(
+                Extension(
+                    type="complete", arguments=[], is_complete=True, is_preferred=False
+                )
+            )
+
         # Extension grounded
         grounded = self._compute_grounded_extension(nodes, attacks)
         if grounded:
-            extensions.append(Extension(
-                type="complete",
-                arguments=grounded[0].arguments,
-                is_complete=True,
-                is_preferred=len(grounded[0].arguments) > 0
-            ))
-        
+            extensions.append(
+                Extension(
+                    type="complete",
+                    arguments=grounded[0].arguments,
+                    is_complete=True,
+                    is_preferred=len(grounded[0].arguments) > 0,
+                )
+            )
+
         return extensions
-    
-    def _compute_preferred_extensions(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> List[Extension]:
+
+    def _compute_preferred_extensions(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> List[Extension]:
         """Calcule les extensions préférées."""
         # Pour simplifier, on retourne l'extension grounded comme préférée
         grounded = self._compute_grounded_extension(nodes, attacks)
-        
+
         if grounded:
-            return [Extension(
-                type="preferred",
-                arguments=grounded[0].arguments,
-                is_complete=True,
-                is_preferred=True
-            )]
-        
+            return [
+                Extension(
+                    type="preferred",
+                    arguments=grounded[0].arguments,
+                    is_complete=True,
+                    is_preferred=True,
+                )
+            ]
+
         return []
-    
-    def _compute_stable_extensions(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> List[Extension]:
+
+    def _compute_stable_extensions(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> List[Extension]:
         """Calcule les extensions stables."""
         attack_graph = self._build_attack_graph(nodes, attacks)
         all_args = {node.id for node in nodes}
-        
+
         # Une extension stable attaque tous les arguments qu'elle ne contient pas
         extensions = []
-        
+
         # Vérification de l'extension grounded
         grounded = self._compute_grounded_extension(nodes, attacks)
         if grounded and grounded[0].arguments:
             in_set = set(grounded[0].arguments)
             out_set = all_args - in_set
-            
+
             # Vérifier si tous les arguments OUT sont attaqués par IN
             is_stable = True
             for out_arg in out_set:
@@ -323,58 +378,68 @@ class FrameworkService:
                 if not attackers.intersection(in_set):
                     is_stable = False
                     break
-            
+
             if is_stable:
-                extensions.append(Extension(
-                    type="stable",
-                    arguments=list(in_set),
-                    is_complete=True,
-                    is_preferred=True
-                ))
-        
+                extensions.append(
+                    Extension(
+                        type="stable",
+                        arguments=list(in_set),
+                        is_complete=True,
+                        is_preferred=True,
+                    )
+                )
+
         return extensions
-    
-    def _compute_semi_stable_extensions(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> List[Extension]:
+
+    def _compute_semi_stable_extensions(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> List[Extension]:
         """Calcule les extensions semi-stables."""
         # Pour simplifier, on retourne les extensions préférées
         return self._compute_preferred_extensions(nodes, attacks)
-    
-    def _build_attack_graph(self, nodes: List[ArgumentNode], attacks: List[Dict]) -> Dict[str, Set[str]]:
+
+    def _build_attack_graph(
+        self, nodes: List[ArgumentNode], attacks: List[Dict]
+    ) -> Dict[str, Set[str]]:
         """Construit un graphe d'attaque pour les calculs."""
         graph = {node.id: set() for node in nodes}
-        
+
         for attack in attacks:
-            target = attack['target']
-            attacker = attack['attacker']
+            target = attack["target"]
+            attacker = attack["attacker"]
             if target in graph:
                 graph[target].add(attacker)
-        
+
         return graph
-    
-    def _is_complete_extension(self, extension: Set[str], attack_graph: Dict[str, Set[str]], all_args: Set[str]) -> bool:
+
+    def _is_complete_extension(
+        self, extension: Set[str], attack_graph: Dict[str, Set[str]], all_args: Set[str]
+    ) -> bool:
         """Vérifie si un ensemble est une extension complète."""
         # Un ensemble S est complet si :
         # 1. S est sans conflit (conflict-free)
         # 2. S défend tous ses éléments
         # 3. S contient tous les arguments qu'il défend
-        
+
         # Vérification sans conflit
         for arg in extension:
             attackers = attack_graph.get(arg, set())
             if attackers.intersection(extension):
                 return False
-        
+
         # Vérification défense (simplifié)
         return True
-    
-    def _update_argument_status(self, nodes: List[ArgumentNode], extensions: List[Extension]):
+
+    def _update_argument_status(
+        self, nodes: List[ArgumentNode], extensions: List[Extension]
+    ):
         """Met à jour le statut des arguments selon les extensions."""
         # Collecte des arguments dans les extensions
         in_args = set()
         for ext in extensions:
             if ext.is_preferred:
                 in_args.update(ext.arguments)
-        
+
         # Mise à jour du statut
         for node in nodes:
             if node.id in in_args:
@@ -383,153 +448,161 @@ class FrameworkService:
                 node.status = "undecided"
             else:
                 node.status = "rejected"
-    
-    def _generate_visualization(self, nodes: List[ArgumentNode], attacks: List[Dict], supports: List[Dict]) -> FrameworkVisualization:
+
+    def _generate_visualization(
+        self, nodes: List[ArgumentNode], attacks: List[Dict], supports: List[Dict]
+    ) -> FrameworkVisualization:
         """Génère les données de visualisation."""
         # Nœuds pour la visualisation
         vis_nodes = []
         for i, node in enumerate(nodes):
-            vis_nodes.append({
-                'id': node.id,
-                'label': node.content[:30] + "..." if len(node.content) > 30 else node.content,
-                'status': node.status,
-                'x': (i % 5) * 100,  # Layout simple en grille
-                'y': (i // 5) * 100,
-                'color': self._get_node_color(node.status)
-            })
-        
+            vis_nodes.append(
+                {
+                    "id": node.id,
+                    "label": node.content[:30] + "..."
+                    if len(node.content) > 30
+                    else node.content,
+                    "status": node.status,
+                    "x": (i % 5) * 100,  # Layout simple en grille
+                    "y": (i // 5) * 100,
+                    "color": self._get_node_color(node.status),
+                }
+            )
+
         # Arêtes pour la visualisation
         vis_edges = []
-        
+
         # Attaques
         for attack in attacks:
-            vis_edges.append({
-                'from': attack['attacker'],
-                'to': attack['target'],
-                'type': 'attack',
-                'color': 'red',
-                'arrows': 'to'
-            })
-        
+            vis_edges.append(
+                {
+                    "from": attack["attacker"],
+                    "to": attack["target"],
+                    "type": "attack",
+                    "color": "red",
+                    "arrows": "to",
+                }
+            )
+
         # Supports
         for support in supports:
-            vis_edges.append({
-                'from': support['supporter'],
-                'to': support['target'],
-                'type': 'support',
-                'color': 'green',
-                'arrows': 'to'
-            })
-        
+            vis_edges.append(
+                {
+                    "from": support["supporter"],
+                    "to": support["target"],
+                    "type": "support",
+                    "color": "green",
+                    "arrows": "to",
+                }
+            )
+
         return FrameworkVisualization(
-            nodes=vis_nodes,
-            edges=vis_edges,
-            layout={
-                'type': 'grid',
-                'spacing': 100
-            }
+            nodes=vis_nodes, edges=vis_edges, layout={"type": "grid", "spacing": 100}
         )
-    
+
     def _get_node_color(self, status: str) -> str:
         """Retourne la couleur selon le statut."""
         colors = {
-            'accepted': '#4CAF50',    # Vert
-            'rejected': '#F44336',    # Rouge
-            'undecided': '#FF9800'    # Orange
+            "accepted": "#4CAF50",  # Vert
+            "rejected": "#F44336",  # Rouge
+            "undecided": "#FF9800",  # Orange
         }
-        return colors.get(status, '#9E9E9E')  # Gris par défaut
-    
-    def _calculate_statistics(self, nodes: List[ArgumentNode], attacks: List[Dict], supports: List[Dict], extensions: List[Extension]) -> Dict[str, int]:
+        return colors.get(status, "#9E9E9E")  # Gris par défaut
+
+    def _calculate_statistics(
+        self,
+        nodes: List[ArgumentNode],
+        attacks: List[Dict],
+        supports: List[Dict],
+        extensions: List[Extension],
+    ) -> Dict[str, int]:
         """Calcule les statistiques du framework."""
         return {
-            'argument_count': len(nodes),
-            'attack_count': len(attacks),
-            'support_count': len(supports),
-            'extension_count': len(extensions)
+            "argument_count": len(nodes),
+            "attack_count": len(attacks),
+            "support_count": len(supports),
+            "extension_count": len(extensions),
         }
-    
+
     def get_supported_semantics(self) -> List[str]:
         """Retourne la liste des sémantiques supportées."""
-        return ['grounded', 'complete', 'preferred', 'stable', 'semi-stable']
-    
+        return ["grounded", "complete", "preferred", "stable", "semi-stable"]
+
     def validate_framework(self, arguments: List[Argument]) -> Dict[str, Any]:
         """Valide la structure d'un framework."""
         issues = []
         warnings = []
-        
+
         # Vérification des cycles
         if self._has_cycles(arguments):
             warnings.append("Le framework contient des cycles d'attaque")
-        
+
         # Vérification des arguments isolés
         isolated = self._find_isolated_arguments(arguments)
         if isolated:
             warnings.append(f"Arguments isolés détectés: {', '.join(isolated)}")
-        
+
         # Vérification de la cohérence
         if not self._is_coherent(arguments):
             issues.append("Incohérence détectée dans les relations")
-        
-        return {
-            'is_valid': len(issues) == 0,
-            'issues': issues,
-            'warnings': warnings
-        }
-    
+
+        return {"is_valid": len(issues) == 0, "issues": issues, "warnings": warnings}
+
     def _has_cycles(self, arguments: List[Argument]) -> bool:
         """Détecte les cycles dans le graphe d'attaque."""
         # Implémentation simplifiée
         graph = {}
         for arg in arguments:
             graph[arg.id] = arg.attacks or []
-        
+
         # DFS pour détecter les cycles
         visited = set()
         rec_stack = set()
-        
+
         def has_cycle_util(node):
             visited.add(node)
             rec_stack.add(node)
-            
+
             for neighbor in graph.get(node, []):
                 if neighbor not in visited:
                     if has_cycle_util(neighbor):
                         return True
                 elif neighbor in rec_stack:
                     return True
-            
+
             rec_stack.remove(node)
             return False
-        
+
         for arg_id in graph:
             if arg_id not in visited:
                 if has_cycle_util(arg_id):
                     return True
-        
+
         return False
-    
+
     def _find_isolated_arguments(self, arguments: List[Argument]) -> List[str]:
         """Trouve les arguments isolés (sans relations)."""
         isolated = []
         all_ids = {arg.id for arg in arguments}
-        
+
         for arg in arguments:
             has_relations = bool(arg.attacks or arg.supports)
             is_targeted = any(
                 arg.id in (other.attacks or []) or arg.id in (other.supports or [])
-                for other in arguments if other.id != arg.id
+                for other in arguments
+                if other.id != arg.id
             )
-            
+
             if not has_relations and not is_targeted:
                 isolated.append(arg.id)
-        
+
         return isolated
-    
+
     def _is_coherent(self, arguments: List[Argument]) -> bool:
         """Vérifie la cohérence du framework."""
         # Vérification basique : pas d'auto-attaque
         for arg in arguments:
             if arg.id in (arg.attacks or []) or arg.id in (arg.supports or []):
                 return False
-        
+
         return True

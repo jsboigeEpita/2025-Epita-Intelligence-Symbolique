@@ -22,9 +22,9 @@ except ImportError:
     WebAPIFallacyDetector = None
 
 __all__ = [
-    'FallacyDetectionService',
-    'get_fallacy_detection_service',
-    'WebAPIClient', 
-    'SimpleFallacyDetector',
-    'WebAPIFallacyDetector'
-] 
+    "FallacyDetectionService",
+    "get_fallacy_detection_service",
+    "WebAPIClient",
+    "SimpleFallacyDetector",
+    "WebAPIFallacyDetector",
+]

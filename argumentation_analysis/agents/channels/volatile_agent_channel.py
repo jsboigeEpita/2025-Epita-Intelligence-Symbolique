@@ -29,7 +29,9 @@ class VolatileAgentChannel(AgentChannel):
         self._history.extend(history)
 
     @override
-    async def invoke(self, agent: "Agent", **kwargs: Any) -> AsyncIterable[tuple[bool, "ChatMessageContent"]]:
+    async def invoke(
+        self, agent: "Agent", **kwargs: Any
+    ) -> AsyncIterable[tuple[bool, "ChatMessageContent"]]:
         """Invokes the agent."""
         messages = await agent.invoke(self._history)
         for message in messages:

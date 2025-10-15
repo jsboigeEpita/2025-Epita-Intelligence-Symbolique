@@ -20,7 +20,7 @@ def test_valid_request_creation():
     valid_data = {
         "mode": "direct_plugin_call",
         "target": "test_plugin.test_capability",
-        "payload": {"arg1": "value1", "arg2": 123}
+        "payload": {"arg1": "value1", "arg2": 123},
     }
     request = OrchestrationRequest(**valid_data)
     assert request.mode == "direct_plugin_call"
@@ -43,17 +43,16 @@ def test_invalid_request_raises_error():
 
     # Cas 3: Payload n'est pas un dictionnaire
     with pytest.raises(ValidationError):
-        OrchestrationRequest(mode="direct_plugin_call", target="t", payload="not_a_dict")
+        OrchestrationRequest(
+            mode="direct_plugin_call", target="t", payload="not_a_dict"
+        )
 
 
 def test_valid_success_response():
     """
     Vérifie que le modèle OrchestrationResponse peut être instancié pour un cas de succès.
     """
-    response_data = {
-        "status": "success",
-        "result": {"data": "some_result"}
-    }
+    response_data = {"status": "success", "result": {"data": "some_result"}}
     response = OrchestrationResponse(**response_data)
     assert response.status == "success"
     assert response.result == {"data": "some_result"}
@@ -64,10 +63,7 @@ def test_valid_error_response():
     """
     Vérifie que le modèle OrchestrationResponse peut être instancié pour un cas d'échec.
     """
-    response_data = {
-        "status": "error",
-        "error_message": "Something went wrong"
-    }
+    response_data = {"status": "error", "error_message": "Something went wrong"}
     response = OrchestrationResponse(**response_data)
     assert response.status == "error"
     assert response.result is None

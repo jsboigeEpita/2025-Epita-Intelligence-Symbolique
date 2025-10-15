@@ -6,6 +6,7 @@ from .tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
 
+
 class ModalHandler:
     """
     Handles Modal Logic operations using TweetyProject.
@@ -23,8 +24,12 @@ class ModalHandler:
         self._modal_reasoner = TweetyInitializer.get_modal_reasoner()
 
         if self._modal_parser is None or self._modal_reasoner is None:
-            logger.error("Modal Logic components not initialized. Ensure TweetyInitializer is configured for Modal Logic.")
-            raise RuntimeError("ModalHandler initialized before TweetyInitializer completed Modal Logic setup.")
+            logger.error(
+                "Modal Logic components not initialized. Ensure TweetyInitializer is configured for Modal Logic."
+            )
+            raise RuntimeError(
+                "ModalHandler initialized before TweetyInitializer completed Modal Logic setup."
+            )
 
     def validate_modal_formula(self, formula_str: str) -> Tuple[bool, str]:
         """
@@ -40,7 +45,10 @@ class ModalHandler:
             logger.warning(error_message)
             return False, error_message
         except Exception as e:
-            logger.error(f"Unexpected error validating modal formula '{formula_str}': {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error validating modal formula '{formula_str}': {e}",
+                exc_info=True,
+            )
             return False, "An unexpected error occurred during validation."
 
     def execute_modal_query(self, belief_set_content: str, query_string: str) -> str:
@@ -50,29 +58,37 @@ class ModalHandler:
         logger.debug(f"Executing modal query '{query_string}'")
         try:
             StringReader = jpype.JClass("java.io.StringReader")
-            
+
             # Parse belief set
             belief_set_reader = StringReader(belief_set_content)
             belief_set = self._modal_parser.parseBeliefBase(belief_set_reader)
 
             # Parse query
-            query_formula = self._modal_parser.parseFormula(jpype.JClass("java.lang.String")(query_string))
+            query_formula = self._modal_parser.parseFormula(
+                jpype.JClass("java.lang.String")(query_string)
+            )
 
             # Execute query
             result = self._modal_reasoner.query(belief_set, query_formula)
 
             # The result is typically a boolean. We format it for consistency.
             if bool(result):
-                return f"Tweety Result: Modal Query '{query_string}' is ACCEPTED (True)."
+                return (
+                    f"Tweety Result: Modal Query '{query_string}' is ACCEPTED (True)."
+                )
             else:
-                return f"Tweety Result: Modal Query '{query_string}' is REJECTED (False)."
+                return (
+                    f"Tweety Result: Modal Query '{query_string}' is REJECTED (False)."
+                )
 
         except jpype.JException as e:
             error_msg = f"Error executing modal query: {e.getMessage()}"
             logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
         except Exception as e:
-            error_msg = f"An unexpected error occurred during modal query execution: {e}"
+            error_msg = (
+                f"An unexpected error occurred during modal query execution: {e}"
+            )
             logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
 
@@ -90,16 +106,22 @@ class ModalHandler:
             # Tweety's reasoners often have a specific method for this.
             # Assuming a method 'isConsistent' exists on the reasoner.
             is_consistent = self._modal_reasoner.isConsistent(belief_set)
-            
-            message = "Knowledge base is consistent." if is_consistent else "Knowledge base is inconsistent."
+
+            message = (
+                "Knowledge base is consistent."
+                if is_consistent
+                else "Knowledge base is inconsistent."
+            )
             return bool(is_consistent), message
 
         except jpype.JException as e:
             # If a method is not found, it will raise a JException.
             if "no method found" in str(e).lower():
-                logger.warning("The 'isConsistent' method might not be available on the ModalReasoner. Returning default.")
+                logger.warning(
+                    "The 'isConsistent' method might not be available on the ModalReasoner. Returning default."
+                )
                 return True, "Consistency check method not found, assuming consistent."
-            
+
             error_msg = f"Error checking modal KB consistency: {e.getMessage()}"
             logger.error(error_msg, exc_info=True)
             return False, error_msg

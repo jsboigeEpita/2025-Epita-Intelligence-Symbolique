@@ -12,24 +12,39 @@ try:
     project_root = current_file_path.parent.parent
 
     # Vérifier si la détection est correcte en cherchant un marqueur de projet
-    if not (project_root / "argumentation_analysis").exists() or not (project_root / "pyproject.toml").exists():
+    if (
+        not (project_root / "argumentation_analysis").exists()
+        or not (project_root / "pyproject.toml").exists()
+    ):
         # Si le script est déplacé, remonter jusqu'à trouver la racine
-        project_root = next((p for p in current_file_path.parents if (p / "pyproject.toml").exists()), None)
+        project_root = next(
+            (p for p in current_file_path.parents if (p / "pyproject.toml").exists()),
+            None,
+        )
         if project_root is None:
-            raise FileNotFoundError("Impossible de localiser la racine du projet. Assurez-vous que 'pyproject.toml' est présent.")
+            raise FileNotFoundError(
+                "Impossible de localiser la racine du projet. Assurez-vous que 'pyproject.toml' est présent."
+            )
 
     # Ajouter la racine au sys.path si elle n'y est pas déjà
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    
+
     # Maintenant, l'appel explicite du vérificateur d'environnement est effectué
     from argumentation_analysis.core.environment import ensure_env
+
     ensure_env()
 
 except (NameError, FileNotFoundError, RuntimeError) as e:
-    print(f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.", file=sys.stderr)
+    print(
+        f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.",
+        file=sys.stderr,
+    )
     print(f"Détails: {e}", file=sys.stderr)
-    print(f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.", file=sys.stderr)
+    print(
+        f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 # --- FIN DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
 
@@ -68,11 +83,13 @@ SCRIPTS_DEMO_DIR = PROJECT_ROOT / "examples" / "scripts_demonstration"
 DEMOS_DIR = PROJECT_ROOT / "demos"
 ARGUMENTATION_DIR = PROJECT_ROOT / "argumentation_analysis"
 
+
 class ValidationMode(Enum):
     BASIC = "basic"
     STANDARD = "standard"
     ADVANCED = "advanced"
     EXHAUSTIVE = "exhaustive"
+
 
 class ComplexityLevel(Enum):
     SIMPLE = "simple"
@@ -80,34 +97,40 @@ class ComplexityLevel(Enum):
     COMPLEX = "complex"
     RESEARCH = "research"
 
+
 class AnalysisLevel(Enum):
-   LEXICAL = "lexical"
-   SEMANTIC = "semantic"
-   HYBRID = "hybrid"
+    LEXICAL = "lexical"
+    SEMANTIC = "semantic"
+    HYBRID = "hybrid"
+
 
 class Colors:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    MAGENTA = '\033[95m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    MAGENTA = "\033[95m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+
 
 class ValidationEpitaComplete:
-    def __init__(self, mode: ValidationMode = ValidationMode.EXHAUSTIVE,
-                 complexity: ComplexityLevel = ComplexityLevel.COMPLEX,
-                 level: AnalysisLevel = AnalysisLevel.SEMANTIC,
-                 agent_type: str = "full",
-                 enable_synthetic: bool = False,
-                 taxonomy_file_path: Optional[str] = None,
-                 trace_log_path: Optional[str] = None,
-                 dialogue_text: Optional[str] = None,
-                 file_path: Optional[str] = None,
-                 integration_test: bool = False):
+    def __init__(
+        self,
+        mode: ValidationMode = ValidationMode.EXHAUSTIVE,
+        complexity: ComplexityLevel = ComplexityLevel.COMPLEX,
+        level: AnalysisLevel = AnalysisLevel.SEMANTIC,
+        agent_type: str = "full",
+        enable_synthetic: bool = False,
+        taxonomy_file_path: Optional[str] = None,
+        trace_log_path: Optional[str] = None,
+        dialogue_text: Optional[str] = None,
+        file_path: Optional[str] = None,
+        integration_test: bool = False,
+    ):
         self.mode = mode
         self.complexity = complexity
         self.level = level
@@ -129,79 +152,178 @@ class ValidationEpitaComplete:
                 "taxonomy_file": taxonomy_file_path,
                 "trace_log_path": trace_log_path,
                 "integration_test_mode": integration_test,
-                "version": "3.0_factory_and_validation_fix"
+                "version": "3.0_factory_and_validation_fix",
             },
             "components": {},
-            "score": 0, "max_score": 0, "certification": "PENDING",
-            "performance_metrics": {}, "authenticity_scores": {}
+            "score": 0,
+            "max_score": 0,
+            "certification": "PENDING",
+            "performance_metrics": {},
+            "authenticity_scores": {},
         }
         self._setup_environment()
         if "argumentation_analysis.core.environment" in sys.modules:
-            print(f"{Colors.GREEN}[OK] [SETUP] Module auto_env est bien chargé.{Colors.ENDC}")
+            print(
+                f"{Colors.GREEN}[OK] [SETUP] Module auto_env est bien chargé.{Colors.ENDC}"
+            )
         else:
-            print(f"{Colors.WARNING}[WARN] [SETUP] Le module auto_env n'a pas été pré-chargé.{Colors.ENDC}")
+            print(
+                f"{Colors.WARNING}[WARN] [SETUP] Le module auto_env n'a pas été pré-chargé.{Colors.ENDC}"
+            )
 
     INTEGRATION_TEST_CASES = [
-        {"test_name": "Question Piège", "dialogue": "As-tu arrêté de manipuler les chiffres ?", "expected_fallacy_id": "179", "expected_fallacy_name": "Question piège"},
-        {"test_name": "Pente Savonneuse", "dialogue": "Si on autorise les trottinettes, demain ce sera les motos.", "expected_fallacy_id": "987", "expected_fallacy_name": "Pente savonneuse"},
-        {"test_name": "Argument par le Scénario", "dialogue": "Il a acheté une pelle. Son voisin a disparu. C'est évident.", "expected_fallacy_id": "61", "expected_fallacy_name": "Argument par le scénario"},
-        {"test_name": "Homme de Paille", "dialogue": "Les écolos veulent nous faire revenir à l'âge de pierre.", "expected_fallacy_id": "944", "expected_fallacy_name": "Homme de paille"},
+        {
+            "test_name": "Question Piège",
+            "dialogue": "As-tu arrêté de manipuler les chiffres ?",
+            "expected_fallacy_id": "179",
+            "expected_fallacy_name": "Question piège",
+        },
+        {
+            "test_name": "Pente Savonneuse",
+            "dialogue": "Si on autorise les trottinettes, demain ce sera les motos.",
+            "expected_fallacy_id": "987",
+            "expected_fallacy_name": "Pente savonneuse",
+        },
+        {
+            "test_name": "Argument par le Scénario",
+            "dialogue": "Il a acheté une pelle. Son voisin a disparu. C'est évident.",
+            "expected_fallacy_id": "61",
+            "expected_fallacy_name": "Argument par le scénario",
+        },
+        {
+            "test_name": "Homme de Paille",
+            "dialogue": "Les écolos veulent nous faire revenir à l'âge de pierre.",
+            "expected_fallacy_id": "944",
+            "expected_fallacy_name": "Homme de paille",
+        },
     ]
 
     def _setup_environment(self):
         print(f"{Colors.CYAN}[SETUP] Configuration de l'environnement...{Colors.ENDC}")
-        paths_to_add = [str(p) for p in [PROJECT_ROOT, PROJECT_ROOT / "argumentation_analysis", PROJECT_ROOT / "examples", PROJECT_ROOT / "scripts", PROJECT_ROOT / "tests", PROJECT_ROOT / "demos"]]
+        paths_to_add = [
+            str(p)
+            for p in [
+                PROJECT_ROOT,
+                PROJECT_ROOT / "argumentation_analysis",
+                PROJECT_ROOT / "examples",
+                PROJECT_ROOT / "scripts",
+                PROJECT_ROOT / "tests",
+                PROJECT_ROOT / "demos",
+            ]
+        ]
         for path in paths_to_add:
             if path not in sys.path:
                 sys.path.insert(0, path)
-        os.environ['PYTHONPATH'] = os.pathsep.join(paths_to_add + [os.environ.get('PYTHONPATH', '')])
-        print(f"{Colors.GREEN}[OK] Environnement configuré avec {len(paths_to_add)} chemins{Colors.ENDC}")
+        os.environ["PYTHONPATH"] = os.pathsep.join(
+            paths_to_add + [os.environ.get("PYTHONPATH", "")]
+        )
+        print(
+            f"{Colors.GREEN}[OK] Environnement configuré avec {len(paths_to_add)} chemins{Colors.ENDC}"
+        )
 
-    def log_test(self, component: str, test: str, status: str, details: str = "", execution_time: float = 0.0, authenticity_score: float = 0.0):
+    def log_test(
+        self,
+        component: str,
+        test: str,
+        status: str,
+        details: str = "",
+        execution_time: float = 0.0,
+        authenticity_score: float = 0.0,
+    ):
         if component not in self.results["components"]:
-            self.results["components"][component] = {"tests": [], "score": 0, "status": "PENDING", "total_execution_time": 0.0, "average_authenticity": 0.0}
-        test_result = {"name": test, "status": status, "details": details, "timestamp": datetime.now().isoformat(), "execution_time": execution_time, "authenticity_score": authenticity_score}
+            self.results["components"][component] = {
+                "tests": [],
+                "score": 0,
+                "status": "PENDING",
+                "total_execution_time": 0.0,
+                "average_authenticity": 0.0,
+            }
+        test_result = {
+            "name": test,
+            "status": status,
+            "details": details,
+            "timestamp": datetime.now().isoformat(),
+            "execution_time": execution_time,
+            "authenticity_score": authenticity_score,
+        }
         self.results["components"][component]["tests"].append(test_result)
         self.results["components"][component]["total_execution_time"] += execution_time
-        auth_scores = [t.get("authenticity_score", 0) for t in self.results["components"][component]["tests"]]
-        self.results["components"][component]["average_authenticity"] = sum(auth_scores) / len(auth_scores) if auth_scores else 0
-        color = {"SUCCESS": Colors.GREEN, "WARNING": Colors.WARNING, "FAILED": Colors.FAIL, "PARTIAL": Colors.CYAN}.get(status, Colors.ENDC)
+        auth_scores = [
+            t.get("authenticity_score", 0)
+            for t in self.results["components"][component]["tests"]
+        ]
+        self.results["components"][component]["average_authenticity"] = (
+            sum(auth_scores) / len(auth_scores) if auth_scores else 0
+        )
+        color = {
+            "SUCCESS": Colors.GREEN,
+            "WARNING": Colors.WARNING,
+            "FAILED": Colors.FAIL,
+            "PARTIAL": Colors.CYAN,
+        }.get(status, Colors.ENDC)
         print(f"{color}[{status}]{Colors.ENDC} {component} - {test}")
-        if details: print(f"     [INFO] {details}")
+        if details:
+            print(f"     [INFO] {details}")
 
     def _load_taxonomy_data(self, file_path: str) -> List[Dict[str, Any]]:
         """Charge les données de la taxonomie à partir d'un fichier CSV."""
         if not file_path or not Path(file_path).exists():
-            logging.error(f"Fichier de taxonomie non trouvé ou chemin non spécifié : {file_path}")
+            logging.error(
+                f"Fichier de taxonomie non trouvé ou chemin non spécifié : {file_path}"
+            )
             return []
         try:
             # Utiliser codecs.open pour une meilleure gestion des encodages si nécessaire
-            with codecs.open(file_path, 'r', 'utf-8') as infile:
+            with codecs.open(file_path, "r", "utf-8") as infile:
                 reader = csv.DictReader(infile)
                 return list(reader)
         except Exception as e:
-            logging.error(f"Erreur lors du chargement ou du parsing du fichier de taxonomie '{file_path}': {e}", exc_info=True)
+            logging.error(
+                f"Erreur lors du chargement ou du parsing du fichier de taxonomie '{file_path}': {e}",
+                exc_info=True,
+            )
             return []
 
     async def validate_informal_analysis_scenarios(self) -> bool:
-        print(f"\n{Colors.BOLD}VALIDATION DE L'ANALYSE INFORMELLE (AGENT: {self.agent_type.upper()}){Colors.ENDC}")
+        print(
+            f"\n{Colors.BOLD}VALIDATION DE L'ANALYSE INFORMELLE (AGENT: {self.agent_type.upper()}){Colors.ENDC}"
+        )
         trace_dir = PROJECT_ROOT / "_temp" / "validation_traces"
         trace_dir.mkdir(exist_ok=True, parents=True)
 
         if self.integration_test:
             logging.info("Lancement des tests d'intégration...")
-            scenarios = {case["test_name"]: {"text": case["dialogue"], "expected_sophisms": [case["expected_fallacy_name"]], "expected_id": case["expected_fallacy_id"]} for case in self.INTEGRATION_TEST_CASES}
-            if self.agent_type != 'explore_only':
-                logging.warning("Le mode intégration nécessite 'explore_only'. Forçage du type.")
-                self.agent_type = 'explore_only'
+            scenarios = {
+                case["test_name"]: {
+                    "text": case["dialogue"],
+                    "expected_sophisms": [case["expected_fallacy_name"]],
+                    "expected_id": case["expected_fallacy_id"],
+                }
+                for case in self.INTEGRATION_TEST_CASES
+            }
+            if self.agent_type != "explore_only":
+                logging.warning(
+                    "Le mode intégration nécessite 'explore_only'. Forçage du type."
+                )
+                self.agent_type = "explore_only"
         else:
-            scenarios = {"Ad Hominem": {"text": "C'est un idiot, donc il a tort.", "expected_sophisms": ["ad-hominem"]}}
+            scenarios = {
+                "Ad Hominem": {
+                    "text": "C'est un idiot, donc il a tort.",
+                    "expected_sophisms": ["ad-hominem"],
+                }
+            }
 
         taxonomy_data = self._load_taxonomy_data(self.taxonomy_file_path)
         if not taxonomy_data:
-            self.log_test("Configuration", "Chargement de la Taxonomie", "FAILED", f"Impossible de charger les données depuis {self.taxonomy_file_path}.")
+            self.log_test(
+                "Configuration",
+                "Chargement de la Taxonomie",
+                "FAILED",
+                f"Impossible de charger les données depuis {self.taxonomy_file_path}.",
+            )
             return False
-        
+
         taxonomy_navigator = TaxonomyNavigator(taxonomy_data)
         overall_success = True
 
@@ -209,48 +331,63 @@ class ValidationEpitaComplete:
             kernel = sk.Kernel()
             # En mode test d'intégration, forcer l'utilisation d'un service mock pour éviter les appels réseau.
             if self.integration_test:
-                llm_service = create_llm_service(service_id="default", model_id="mock", force_mock=True)
+                llm_service = create_llm_service(
+                    service_id="default", model_id="mock", force_mock=True
+                )
             else:
-                llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True)
-            
+                llm_service = create_llm_service(
+                    service_id="default", model_id="gpt-4o-mini", force_authentic=True
+                )
+
             kernel.add_service(llm_service)
             from argumentation_analysis.config.settings import AppSettings
+
             settings = AppSettings()
             agent_factory = AgentFactory(kernel, settings)
             start_time = time.time()
-            safe_test_name = re.sub(r'[\s\(\)]+', '_', test_name).lower()
-            
+            safe_test_name = re.sub(r"[\s\(\)]+", "_", test_name).lower()
+
             logging.info(f"Début du scénario de test : '{test_name}'")
             try:
                 informal_agent = agent_factory.create_informal_fallacy_agent(
                     config_name=self.agent_type,
                     trace_log_path=str(trace_dir / f"{safe_test_name}.log"),
-                    taxonomy_file_path=self.taxonomy_file_path
+                    taxonomy_file_path=self.taxonomy_file_path,
                 )
-                logging.debug(f"Agent '{self.agent_type}' créé pour le test '{test_name}'.")
+                logging.debug(
+                    f"Agent '{self.agent_type}' créé pour le test '{test_name}'."
+                )
 
                 chat_history = ChatHistory()
                 chat_history.add_user_message(config["text"])
-                logging.info(f"--- Invocation de l'agent pour '{test_name}' avec le texte : '{config['text']}' ---")
+                logging.info(
+                    f"--- Invocation de l'agent pour '{test_name}' avec le texte : '{config['text']}' ---"
+                )
 
                 final_answer_content = await informal_agent.invoke_single(
                     text_to_analyze=config["text"], history=chat_history
                 )
                 final_answer = str(final_answer_content)
-                
+
                 logging.info(f"Réponse brute de l'agent: {final_answer[:500]}...")
 
                 # Tentative de parsing manuel de la réponse comme contournement (décrit dans le rapport)
                 try:
                     # Si la réponse est une chaîne JSON, la parser
-                    if final_answer.strip().startswith('{') or final_answer.strip().startswith('['):
+                    if final_answer.strip().startswith(
+                        "{"
+                    ) or final_answer.strip().startswith("["):
                         parsed_json = json.loads(final_answer)
                         # Extraire une information pertinente pour la validation
                         # Ceci est une rustine et dépendra du format exact du JSON retourné
                         if isinstance(parsed_json, dict):
-                             final_answer = parsed_json.get('fallacy_name', str(parsed_json))
+                            final_answer = parsed_json.get(
+                                "fallacy_name", str(parsed_json)
+                            )
                         elif isinstance(parsed_json, list) and parsed_json:
-                             final_answer = parsed_json[0].get('fallacy_name', str(parsed_json[0]))
+                            final_answer = parsed_json[0].get(
+                                "fallacy_name", str(parsed_json[0])
+                            )
 
                 except json.JSONDecodeError:
                     # La réponse n'est pas du JSON, on continue avec la chaîne brute
@@ -258,12 +395,31 @@ class ValidationEpitaComplete:
 
                 expected_sophism = config["expected_sophisms"][0].lower()
                 success = expected_sophism in final_answer.lower()
-                details = f"Attendu: '{expected_sophism}', Obtenu: '{final_answer.strip()}'"
-                self.log_test("Analyse Informelle", test_name, "SUCCESS" if success else "FAILED", details, time.time() - start_time, 0.9 if success else 0.1)
-                if not success: overall_success = False
+                details = (
+                    f"Attendu: '{expected_sophism}', Obtenu: '{final_answer.strip()}'"
+                )
+                self.log_test(
+                    "Analyse Informelle",
+                    test_name,
+                    "SUCCESS" if success else "FAILED",
+                    details,
+                    time.time() - start_time,
+                    0.9 if success else 0.1,
+                )
+                if not success:
+                    overall_success = False
             except Exception as e:
-                logging.error(f"Exception inattendue pour le test '{test_name}'", exc_info=True)
-                self.log_test("Analyse Informelle", test_name, "FAILED", f"Exception: {e}", time.time() - start_time, 0.0)
+                logging.error(
+                    f"Exception inattendue pour le test '{test_name}'", exc_info=True
+                )
+                self.log_test(
+                    "Analyse Informelle",
+                    test_name,
+                    "FAILED",
+                    f"Exception: {e}",
+                    time.time() - start_time,
+                    0.0,
+                )
                 overall_success = False
         return overall_success
 
@@ -271,39 +427,72 @@ class ValidationEpitaComplete:
         if self.integration_test or self.dialogue_text:
             await self.validate_informal_analysis_scenarios()
         else:
-            logging.error("Mode de validation non spécifié ou non supporté pour exécution directe.")
+            logging.error(
+                "Mode de validation non spécifié ou non supporté pour exécution directe."
+            )
         return self.results
 
     async def shutdown(self):
         logging.info("Arrêt des services.")
 
+
 def main():
     parser = argparse.ArgumentParser(description="Validation Complète EPITA")
-    parser.add_argument('--mode', type=str, default='exhaustive', choices=[e.value for e in ValidationMode])
-    parser.add_argument('--complexity', type=str, default='complex', choices=[e.value for e in ComplexityLevel])
-    parser.add_argument('--level', type=str, default='semantic', choices=[e.value for e in AnalysisLevel])
-    parser.add_argument('--agent-type', type=str, default='workflow_only', choices=['simple', 'explore_only', 'workflow_only'])
-    parser.add_argument('--taxonomy', type=str, default='argumentation_analysis/data/argumentum_fallacies_taxonomy.csv')
-    parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--integration-test', action='store_true')
-    parser.add_argument('--dialogue-text', type=str, default=None)
-    parser.add_argument('--activate-env', action='store_true')
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="exhaustive",
+        choices=[e.value for e in ValidationMode],
+    )
+    parser.add_argument(
+        "--complexity",
+        type=str,
+        default="complex",
+        choices=[e.value for e in ComplexityLevel],
+    )
+    parser.add_argument(
+        "--level",
+        type=str,
+        default="semantic",
+        choices=[e.value for e in AnalysisLevel],
+    )
+    parser.add_argument(
+        "--agent-type",
+        type=str,
+        default="workflow_only",
+        choices=["simple", "explore_only", "workflow_only"],
+    )
+    parser.add_argument(
+        "--taxonomy",
+        type=str,
+        default="argumentation_analysis/data/argumentum_fallacies_taxonomy.csv",
+    )
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--integration-test", action="store_true")
+    parser.add_argument("--dialogue-text", type=str, default=None)
+    parser.add_argument("--activate-env", action="store_true")
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', stream=sys.stdout)
-    
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        stream=sys.stdout,
+    )
+
     if args.activate_env:
         # Reconstruct the command by removing the --activate-env flag to avoid recursion.
-        command_to_run = [arg for arg in sys.argv if arg != '--activate-env']
-        
+        command_to_run = [arg for arg in sys.argv if arg != "--activate-env"]
+
         try:
-            logging.info(f"Re-running script inside 'projet-is' environment with command: {command_to_run}")
+            logging.info(
+                f"Re-running script inside 'projet-is' environment with command: {command_to_run}"
+            )
             # The run is synchronous. Output will be streamed to the console by the underlying run_sync.
             result = run_in_activated_env(
                 command=command_to_run,
                 env_name="projet-is",
                 cwd=PROJECT_ROOT,
-                check_errors=True  # Will raise ShellCommandError on failure
+                check_errors=True,  # Will raise ShellCommandError on failure
             )
             # The script has finished. We exit with the return code of the child process.
             sys.exit(result.returncode)
@@ -311,7 +500,9 @@ def main():
             logging.error(f"Failed to re-run script in activated environment: {e}")
             sys.exit(1)
 
-    print(f"{Colors.BOLD}{'='*80}\n   VALIDATION COMPLETE DEMO EPITA - V2.8\n{'='*80}{Colors.ENDC}")
+    print(
+        f"{Colors.BOLD}{'='*80}\n   VALIDATION COMPLETE DEMO EPITA - V2.8\n{'='*80}{Colors.ENDC}"
+    )
     validator = None
     success = False
     try:
@@ -322,11 +513,11 @@ def main():
             agent_type=args.agent_type,
             taxonomy_file_path=args.taxonomy,
             dialogue_text=args.dialogue_text,
-            integration_test=args.integration_test
+            integration_test=args.integration_test,
         )
         print(f"{Colors.GREEN}[OK] Validateur initialisé.{Colors.ENDC}")
         results = asyncio.run(validator.run_complete_validation())
-        
+
         # Simple check for now
         comp = results.get("components", {}).get("Analyse Informelle", {})
         tests = comp.get("tests", [])
@@ -340,8 +531,9 @@ def main():
         if validator:
             logging.info("Nettoyage...")
             asyncio.run(validator.shutdown())
-    
+
     return success
+
 
 if __name__ == "__main__":
     if main():

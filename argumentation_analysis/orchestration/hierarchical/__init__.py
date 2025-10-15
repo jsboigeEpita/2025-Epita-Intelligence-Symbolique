@@ -19,14 +19,9 @@ try:
     from . import templates
 except ImportError as e:
     import logging
+
     logger = logging.getLogger(__name__)
     logger.warning(f"Erreur d'import dans le module hiérarchique: {e}")
 
 # Exposition des modules principaux
-__all__ = [
-    'strategic',
-    'tactical',
-    'operational',
-    'interfaces',
-    'templates'
-]
+__all__ = ["strategic", "tactical", "operational", "interfaces", "templates"]

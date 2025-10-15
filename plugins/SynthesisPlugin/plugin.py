@@ -4,6 +4,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
+
 class SynthesisPlugin(BasePlugin):
     """
     A plugin to synthesize findings from multiple explorations into a single report.
@@ -33,21 +34,24 @@ Produce a single, valid JSON object as your output.
         self.synthesis_function = self.kernel.add_function(
             function_name="synthesize_findings_semantic",
             plugin_name="SynthesisPlugin",
-            prompt=self.PROMPT
+            prompt=self.PROMPT,
         )
 
-    @kernel_function(name="synthesize_findings", description="Synthesizes a list of JSON findings into a final report.")
+    @kernel_function(
+        name="synthesize_findings",
+        description="Synthesizes a list of JSON findings into a final report.",
+    )
     async def synthesize_findings(self, findings: str) -> str:
         """
         Synthesizes a list of JSON findings.
         """
         arguments = KernelArguments(input_findings=findings)
         response = await self.kernel.invoke(self.synthesis_function, arguments)
-        
+
         response_str = str(response).strip()
         if response_str.startswith("```json"):
             response_str = response_str[7:]
         if response_str.endswith("```"):
             response_str = response_str[:-3]
-        
+
         return response_str

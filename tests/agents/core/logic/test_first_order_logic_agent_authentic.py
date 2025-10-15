@@ -9,6 +9,7 @@ import pytest
 from semantic_kernel import Kernel
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 
+
 @pytest.mark.jvm_test
 @pytest.mark.asyncio
 async def test_agent_initialization_simplified(tweety_bridge_fixture):
@@ -18,11 +19,13 @@ async def test_agent_initialization_simplified(tweety_bridge_fixture):
     """
     kernel = Kernel()
     llm_service_id = "test_service"
-    
+
     tweety_bridge = tweety_bridge_fixture
     tweety_available = tweety_bridge.initializer.is_jvm_ready()
     assert tweety_available, "La JVM de TweetyBridge devrait être prête via la fixture."
 
-    agent = FOLLogicAgent(kernel, tweety_bridge=tweety_bridge, service_id=llm_service_id)
+    agent = FOLLogicAgent(
+        kernel, tweety_bridge=tweety_bridge, service_id=llm_service_id
+    )
     assert agent is not None
     assert agent.tweety_bridge is tweety_bridge

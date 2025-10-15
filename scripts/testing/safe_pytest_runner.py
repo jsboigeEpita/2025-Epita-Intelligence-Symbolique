@@ -3,7 +3,9 @@ import pytest
 import logging
 
 # Configurer le logging de base pour voir ce qui se passe
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s"
+)
 
 logging.info("--- safe_pytest_runner.py: Démarrage ---")
 
@@ -11,6 +13,7 @@ logging.info("--- safe_pytest_runner.py: Démarrage ---")
 try:
     logging.info("Tentative d'initialisation de la JVM...")
     from argumentation_analysis.core.jvm_setup import initialize_jvm
+
     initialize_jvm()
     logging.info("JVM initialisée avec succès.")
 except Exception as e:

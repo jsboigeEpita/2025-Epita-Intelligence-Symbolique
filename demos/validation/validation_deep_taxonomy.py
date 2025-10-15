@@ -10,6 +10,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.paths import DATA_DIR
 from demos.simple_exploration_tool import SimpleExplorationTool
 
+
 async def validate_deep_taxonomy_fallacy():
     """
     Valide l'identification d'un sophisme en utilisant une approche simplifiée.
@@ -23,8 +24,12 @@ async def validate_deep_taxonomy_fallacy():
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
 
     if not api_key or not model_id:
-        print("❌ ERREUR: OPENAI_API_KEY ou OPENAI_CHAT_MODEL_ID non défini dans l'environnement.")
-        print("Veuillez créer un fichier .env à la racine du projet avec ces variables.")
+        print(
+            "❌ ERREUR: OPENAI_API_KEY ou OPENAI_CHAT_MODEL_ID non défini dans l'environnement."
+        )
+        print(
+            "Veuillez créer un fichier .env à la racine du projet avec ces variables."
+        )
         return
 
     # 2. Créer une instance de Kernel et ajouter le service OpenAI
@@ -43,7 +48,10 @@ async def validate_deep_taxonomy_fallacy():
     try:
         taxonomy_df = pd.read_csv(taxonomy_path)
         # Créer une liste simple pour le prompt
-        taxonomy_list = "\n".join(f"- {row['PK']}: {row['nom_vulgarisé']}" for _, row in taxonomy_df.iterrows())
+        taxonomy_list = "\n".join(
+            f"- {row['PK']}: {row['nom_vulgarisé']}"
+            for _, row in taxonomy_df.iterrows()
+        )
         print(f"Taxonomie chargée avec {len(taxonomy_df)} entrées.")
     except FileNotFoundError:
         print(f"❌ ERREUR: Fichier de taxonomie introuvable à '{taxonomy_path}'")
@@ -68,9 +76,7 @@ async def validate_deep_taxonomy_fallacy():
     # --- Exécution ---
     print("\nLancement de l'analyse sémantique...")
     result = await kernel.invoke_prompt(
-        prompt,
-        input=sample_text,
-        taxonomy=taxonomy_list
+        prompt, input=sample_text, taxonomy=taxonomy_list
     )
     result_text = str(result).strip()
     print(f"Résultat du LLM : '{result_text}'")
@@ -78,15 +84,26 @@ async def validate_deep_taxonomy_fallacy():
     # --- Validation ---
     print("\n--- Conclusion de la validation ---")
     expected_fallacy_pk = "4"  # PK pour "Appel à l'ignorance"
-    alternative_fallacy_pk = "1288" # PK pour "Affirmation invérifiable" (sémantiquement proche)
-    
+    alternative_fallacy_pk = (
+        "1288"  # PK pour "Affirmation invérifiable" (sémantiquement proche)
+    )
+
     if result_text == expected_fallacy_pk:
-        print(f"✅ SUCCÈS : Le sophisme attendu (PK: {expected_fallacy_pk} - Appel à l'ignorance) a été correctement identifié.")
+        print(
+            f"✅ SUCCÈS : Le sophisme attendu (PK: {expected_fallacy_pk} - Appel à l'ignorance) a été correctement identifié."
+        )
     elif result_text == alternative_fallacy_pk:
-        print(f"✅ SUCCÈS (Alternatif) : Un sophisme sémantiquement très proche (PK: {alternative_fallacy_pk} - Affirmation invérifiable) a été identifié.")
-        print("Cela valide la capacité du système à naviguer en profondeur dans la taxonomie.")
+        print(
+            f"✅ SUCCÈS (Alternatif) : Un sophisme sémantiquement très proche (PK: {alternative_fallacy_pk} - Affirmation invérifiable) a été identifié."
+        )
+        print(
+            "Cela valide la capacité du système à naviguer en profondeur dans la taxonomie."
+        )
     else:
-        print(f"❌ ÉCHEC : Le sophisme attendu (PK: {expected_fallacy_pk}) ou son alternative (PK: {alternative_fallacy_pk}) n'a pas été trouvé. Reçu : '{result_text}'.")
+        print(
+            f"❌ ÉCHEC : Le sophisme attendu (PK: {expected_fallacy_pk}) ou son alternative (PK: {alternative_fallacy_pk}) n'a pas été trouvé. Reçu : '{result_text}'."
+        )
+
 
 if __name__ == "__main__":
     asyncio.run(validate_deep_taxonomy_fallacy())

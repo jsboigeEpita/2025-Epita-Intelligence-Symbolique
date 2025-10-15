@@ -3,8 +3,10 @@
 
 from enum import Enum
 
+
 class OrchestrationMode(Enum):
     """Modes d'orchestration disponibles."""
+
     PIPELINE = "pipeline"
     REAL = "real"
     CONVERSATION = "conversation"
@@ -17,8 +19,10 @@ class OrchestrationMode(Enum):
     ADAPTIVE_HYBRID = "adaptive_hybrid"
     AUTO_SELECT = "auto_select"
 
+
 class AnalysisType(Enum):
     """Types d'analyse supportés."""
+
     COMPREHENSIVE = "comprehensive"
     RHETORICAL = "rhetorical"
     LOGICAL = "logical"

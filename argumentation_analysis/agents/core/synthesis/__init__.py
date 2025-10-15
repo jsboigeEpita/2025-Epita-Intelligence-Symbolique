@@ -9,15 +9,11 @@ Phase 1: SynthesisAgent Core - Coordination basique des agents existants
 """
 
 from .synthesis_agent import SynthesisAgent
-from .data_models import (
-    LogicAnalysisResult,
-    InformalAnalysisResult, 
-    UnifiedReport
-)
+from .data_models import LogicAnalysisResult, InformalAnalysisResult, UnifiedReport
 
 __all__ = [
-    'SynthesisAgent',
-    'LogicAnalysisResult',
-    'InformalAnalysisResult',
-    'UnifiedReport'
+    "SynthesisAgent",
+    "LogicAnalysisResult",
+    "InformalAnalysisResult",
+    "UnifiedReport",
 ]

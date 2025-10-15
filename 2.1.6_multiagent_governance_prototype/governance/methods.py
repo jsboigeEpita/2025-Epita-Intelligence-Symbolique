@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 import numpy as np
 
+
 # --- Majority Voting ---
 def majority_voting(agents, options, context):
     """
@@ -11,9 +12,11 @@ def majority_voting(agents, options, context):
     winner, _ = tally.most_common(1)[0]
     return winner
 
+
 # --- Plurality Voting (same as majority for single-winner) ---
 def plurality_voting(agents, options, context):
     return majority_voting(agents, options, context)
+
 
 # --- Borda Count ---
 def borda_count(agents, options, context):
@@ -30,6 +33,7 @@ def borda_count(agents, options, context):
     winner = max(scores, key=scores.get)
     return winner
 
+
 # --- Condorcet Method ---
 def condorcet_method(agents, options, context):
     """
@@ -42,7 +46,9 @@ def condorcet_method(agents, options, context):
         for o2 in options:
             if o1 == o2:
                 continue
-            o1_wins = sum(a.preferences.index(o1) < a.preferences.index(o2) for a in agents)
+            o1_wins = sum(
+                a.preferences.index(o1) < a.preferences.index(o2) for a in agents
+            )
             o2_wins = len(agents) - o1_wins
             if o1_wins > o2_wins:
                 pairwise_wins[o1] += 1
@@ -53,6 +59,7 @@ def condorcet_method(agents, options, context):
     # No Condorcet winner, fallback to Borda
     return borda_count(agents, options, context)
 
+
 # --- Quadratic Voting ---
 def quadratic_voting(agents, options, context):
     """
@@ -60,12 +67,12 @@ def quadratic_voting(agents, options, context):
     Cost per option: sum of squares of votes per option. Winner is option with most votes.
     Agents allocate votes to maximize their satisfaction (simulate rational allocation).
     """
-    budget = context.get('quadratic_budget', 9) if context else 9
+    budget = context.get("quadratic_budget", 9) if context else 9
     votes = {o: 0 for o in options}
     for a in agents:
         # Rational: allocate all to top preference, or split if two top
         allocation = [0] * len(options)
-        if a.personality == 'flexible' and len(options) > 1:
+        if a.personality == "flexible" and len(options) > 1:
             # Split between top 2
             allocation[a.preferences.index(options[0])] = budget // 2
             allocation[a.preferences.index(options[1])] = budget - (budget // 2)
@@ -76,12 +83,13 @@ def quadratic_voting(agents, options, context):
     winner = max(votes, key=votes.get)
     return winner
 
+
 # --- Byzantine Consensus ---
 def byzantine_consensus(agents, options, context):
     """
     Simulate a fraction of agents as faulty (random votes), rest use majority.
     """
-    byzantine_ratio = context.get('byzantine_ratio', 0.2) if context else 0.2
+    byzantine_ratio = context.get("byzantine_ratio", 0.2) if context else 0.2
     n_byzantine = int(len(agents) * byzantine_ratio)
     honest_agents = agents[n_byzantine:]
     byzantine_agents = agents[:n_byzantine]
@@ -90,6 +98,7 @@ def byzantine_consensus(agents, options, context):
     tally = Counter(votes)
     winner, _ = tally.most_common(1)[0]
     return winner
+
 
 # --- Raft Consensus ---
 def raft_consensus(agents, options, context):
@@ -111,12 +120,13 @@ def raft_consensus(agents, options, context):
         # If not accepted, fallback to majority
         return majority_voting(agents, options, context)
 
+
 GOVERNANCE_METHODS = {
-    'majority': majority_voting,
-    'plurality': plurality_voting,
-    'borda': borda_count,
-    'condorcet': condorcet_method,
-    'quadratic': quadratic_voting,
-    'byzantine': byzantine_consensus,
-    'raft': raft_consensus,
-} 
+    "majority": majority_voting,
+    "plurality": plurality_voting,
+    "borda": borda_count,
+    "condorcet": condorcet_method,
+    "quadratic": quadratic_voting,
+    "byzantine": byzantine_consensus,
+    "raft": raft_consensus,
+}

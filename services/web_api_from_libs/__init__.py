@@ -16,21 +16,26 @@ __description__ = "API Web pour l'analyse argumentative"
 
 # from .app import app # Commenté pour éviter les dépendances circulaires lors du lancement en tant que module
 from .models import *
-from .services import AnalysisService, ValidationService, FallacyService, FrameworkService # Ne pas importer LogicService ici pour l'instant
+from .services import (
+    AnalysisService,
+    ValidationService,
+    FallacyService,
+    FrameworkService,
+)  # Ne pas importer LogicService ici pour l'instant
 
 __all__ = [
-    'app',
-    'AnalysisService',
-    'ValidationService', 
-    'FallacyService',
-    'FrameworkService',
-    'AnalysisRequest',
-    'ValidationRequest',
-    'FallacyRequest',
-    'FrameworkRequest',
-    'AnalysisResponse',
-    'ValidationResponse',
-    'FallacyResponse',
-    'FrameworkResponse',
-    'ErrorResponse'
+    "app",
+    "AnalysisService",
+    "ValidationService",
+    "FallacyService",
+    "FrameworkService",
+    "AnalysisRequest",
+    "ValidationRequest",
+    "FallacyRequest",
+    "FrameworkRequest",
+    "AnalysisResponse",
+    "ValidationResponse",
+    "FallacyResponse",
+    "FrameworkResponse",
+    "ErrorResponse",
 ]

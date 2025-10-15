@@ -13,16 +13,30 @@ from datetime import datetime
 import uuid
 import semantic_kernel as sk
 
-from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
-from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
+from argumentation_analysis.orchestration.hierarchical.operational.state import (
+    OperationalState,
+)
+from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import (
+    OperationalAgentRegistry,
+)
 from argumentation_analysis.core.bootstrap import ProjectContext
 from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
+    from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import (
+        TacticalOperationalInterface,
+    )
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
-from argumentation_analysis.core.communication.operational_adapter import OperationalAdapter
-from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
+from argumentation_analysis.core.communication.operational_adapter import (
+    OperationalAdapter,
+)
+from argumentation_analysis.core.communication.message import (
+    Message,
+    MessageType,
+    MessagePriority,
+    AgentLevel,
+)
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
@@ -54,13 +68,15 @@ class OperationalManager:
         adapter (OperationalAdapter): L'adaptateur pour la communication.
     """
 
-    def __init__(self,
-                 operational_state: Optional[OperationalState] = None,
-                 tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
-                 middleware: Optional[MessageMiddleware] = None,
-                 project_context: Optional[ProjectContext] = None,
-                 kernel: Optional[sk.Kernel] = None,
-                 llm_service_id: Optional[str] = None):
+    def __init__(
+        self,
+        operational_state: Optional[OperationalState] = None,
+        tactical_operational_interface: Optional["TacticalOperationalInterface"] = None,
+        middleware: Optional[MessageMiddleware] = None,
+        project_context: Optional[ProjectContext] = None,
+        kernel: Optional[sk.Kernel] = None,
+        llm_service_id: Optional[str] = None,
+    ):
         """
         Initialise le `OperationalManager`.
 
@@ -74,7 +90,7 @@ class OperationalManager:
         self.operational_state = operational_state or OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
         self.project_context = project_context
-        
+
         # Le kernel peut être passé directement (tests) ou via le project_context (prod)
         kernel_to_use = kernel or (project_context.kernel if project_context else None)
         llm_service_id_to_use = llm_service_id
@@ -83,7 +99,7 @@ class OperationalManager:
             operational_state=self.operational_state,
             kernel=kernel_to_use,
             llm_service_id=llm_service_id_to_use,
-            project_context=project_context
+            project_context=project_context,
         )
         self.logger = logging.getLogger(__name__)
         self.task_queue = asyncio.Queue()
@@ -91,7 +107,9 @@ class OperationalManager:
         self.running = False
         self.worker_task = None
         self.middleware = middleware or MessageMiddleware()
-        self.adapter = OperationalAdapter(agent_id="operational_manager", middleware=self.middleware)
+        self.adapter = OperationalAdapter(
+            agent_id="operational_manager", middleware=self.middleware
+        )
         self._subscribe_to_messages()
 
     async def start(self) -> None:
@@ -102,7 +120,7 @@ class OperationalManager:
 
         # Initialiser les agents d'abord
         await self.agent_registry.initialize_all_agents()
-        
+
         self.running = True
         self.worker_task = asyncio.create_task(self._worker())
         self.logger.info("Gestionnaire opérationnel démarré.")
@@ -123,14 +141,21 @@ class OperationalManager:
             except asyncio.CancelledError:
                 self.logger.info("Tâche worker annulée avec succès.")
             except asyncio.TimeoutError:
-                self.logger.error("Timeout lors de l'attente de l'arrêt du worker. La tâche pourrait ne pas s'être terminée correctement.")
+                self.logger.error(
+                    "Timeout lors de l'attente de l'arrêt du worker. La tâche pourrait ne pas s'être terminée correctement."
+                )
             except Exception as e:
-                self.logger.error(f"Exception inattendue lors de l'arrêt du worker: {e}", exc_info=True)
+                self.logger.error(
+                    f"Exception inattendue lors de l'arrêt du worker: {e}",
+                    exc_info=True,
+                )
             finally:
                 self.worker_task = None
         self.logger.info("Gestionnaire opérationnel arrêté.")
 
-    async def process_tactical_task(self, tactical_task: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_tactical_task(
+        self, tactical_task: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Orchestre le traitement d'une tâche de haut niveau de la couche tactique.
 
@@ -144,22 +169,36 @@ class OperationalManager:
         Returns:
             Le résultat de la tâche, formaté pour la couche tactique.
         """
-        self.logger.info(f"Traitement de la tâche tactique {tactical_task.get('id', 'unknown')}")
+        self.logger.info(
+            f"Traitement de la tâche tactique {tactical_task.get('id', 'unknown')}"
+        )
         if not self.tactical_operational_interface:
             self.logger.error("Interface tactique-opérationnelle non définie")
             return {"status": "failed", "error": "Interface non définie"}
-        
+
         try:
-            operational_task = self.tactical_operational_interface.translate_task_to_command(tactical_task)
+            operational_task = (
+                self.tactical_operational_interface.translate_task_to_command(
+                    tactical_task
+                )
+            )
             result_future = asyncio.Future()
-            self.operational_state.add_result_future(operational_task["id"], result_future)
+            self.operational_state.add_result_future(
+                operational_task["id"], result_future
+            )
             await self.task_queue.put(operational_task)
-            await asyncio.sleep(0)  # Céder le contrôle pour permettre au worker de s'exécuter
+            await asyncio.sleep(
+                0
+            )  # Céder le contrôle pour permettre au worker de s'exécuter
             original_task, operational_result = await result_future
-            return self.tactical_operational_interface.process_operational_result(original_task, operational_result)
-        
+            return self.tactical_operational_interface.process_operational_result(
+                original_task, operational_result
+            )
+
         except Exception as e:
-            self.logger.error(f"Erreur lors du traitement de la tâche tactique {tactical_task.get('id')}: {e}")
+            self.logger.error(
+                f"Erreur lors du traitement de la tâche tactique {tactical_task.get('id')}: {e}"
+            )
             return {"status": "failed", "error": str(e)}
 
     async def _worker(self) -> None:
@@ -175,25 +214,27 @@ class OperationalManager:
             try:
                 task = await self.task_queue.get()
                 self.logger.info(f"Worker a pris la tâche {task.get('id')}")
-                
+
                 result = await self.agent_registry.process_task(task)
-                
+
                 result_future = self.operational_state.get_result_future(task["id"])
                 if result_future and not result_future.done():
                     result_future.set_result((task, result))
-                
+
                 await self.result_queue.put(result)
                 self.task_queue.task_done()
-            
+
             except asyncio.CancelledError:
                 self.logger.info("Worker opérationnel annulé.")
                 break
-            
+
             except Exception as e:
-                self.logger.error(f"Erreur dans le worker opérationnel: {e}", exc_info=True)
-                if 'task' in locals():
+                self.logger.error(
+                    f"Erreur dans le worker opérationnel: {e}", exc_info=True
+                )
+                if "task" in locals():
                     self._handle_worker_error(e, task)
-        
+
         self.logger.info("Worker opérationnel arrêté.")
 
     def _handle_worker_error(self, error: Exception, task: Dict[str, Any]):
@@ -203,7 +244,7 @@ class OperationalManager:
             "task_id": task.get("id", "unknown"),
             "tactical_task_id": task.get("tactical_task_id", "unknown"),
             "status": "failed",
-            "issues": [{"type": "worker_error", "description": str(error)}]
+            "issues": [{"type": "worker_error", "description": str(error)}],
         }
         result_future = self.operational_state.get_result_future(task["id"])
         if result_future and not result_future.done():
@@ -217,27 +258,36 @@ class OperationalManager:
         Ce callback est appelé par le middleware lorsqu'un message de résultat
         est reçu. Il trouve la Future correspondante et la résout.
         """
-        if message.type == MessageType.INFORMATION and \
-           message.content.get("info_type") == "task_completion_report":
-            
+        if (
+            message.type == MessageType.INFORMATION
+            and message.content.get("info_type") == "task_completion_report"
+        ):
             result_data = message.content.get("data", {})
             tactical_task_id = result_data.get("tactical_task_id")
-            
+
             # Note: Le `operational_task_id` est nécessaire pour trouver la future,
             # mais le résultat de l'agent ne le contient pas toujours.
             # On va le reconstituer ou le chercher dans l'état.
             # Pour l'instant, on se base sur le `tactical_task_id` pour le retrouver.
-            op_task_id = self.operational_state.find_operational_task_by_tactical_id(tactical_task_id)
+            op_task_id = self.operational_state.find_operational_task_by_tactical_id(
+                tactical_task_id
+            )
 
             if op_task_id:
-                self.logger.info(f"Résultat reçu pour la tâche tactique {tactical_task_id} (op: {op_task_id})")
+                self.logger.info(
+                    f"Résultat reçu pour la tâche tactique {tactical_task_id} (op: {op_task_id})"
+                )
                 future = self.operational_state.get_result_future(op_task_id)
                 if future and not future.done():
                     future.set_result(result_data)
                 else:
-                    self.logger.warning(f"Future pour la tâche {op_task_id} non trouvée ou déjà résolue.")
+                    self.logger.warning(
+                        f"Future pour la tâche {op_task_id} non trouvée ou déjà résolue."
+                    )
             else:
-                self.logger.warning(f"Impossible de trouver la tâche opérationnelle pour la tâche tactique {tactical_task_id}")
+                self.logger.warning(
+                    f"Impossible de trouver la tâche opérationnelle pour la tâche tactique {tactical_task_id}"
+                )
 
     def _subscribe_to_messages(self) -> None:
         """Met en place les abonnements aux messages entrants."""
@@ -245,8 +295,7 @@ class OperationalManager:
         # Note : ceci est une simplification. Dans un système réel, on aurait
         # besoin de démultiplexer les messages d'information.
         self.middleware.register_message_handler(
-            MessageType.INFORMATION,
-            self._handle_result_message
+            MessageType.INFORMATION, self._handle_result_message
         )
         self.logger.info("Abonné aux messages de résultat opérationnel.")
 
@@ -259,10 +308,15 @@ class OperationalManager:
         # L'abonnement aux tâches directes est désactivé pour forcer l'utilisation
         # du pattern `process_tactical_task` qui utilise des Futures.
         # self.adapter.subscribe_to_tasks(handle_task_message)
-        self.logger.warning("Subscription to direct tasks is disabled; using Future-based processing.")
+        self.logger.warning(
+            "Subscription to direct tasks is disabled; using Future-based processing."
+        )
         self.logger.info("Abonnement aux messages de tâches configuré (inactif).")
-
 
     def _map_priority_to_enum(self, priority: str) -> MessagePriority:
         """Convertit une priorité textuelle en énumération `MessagePriority`."""
-        return {"high": MessagePriority.HIGH, "medium": MessagePriority.NORMAL, "low": MessagePriority.LOW}.get(priority.lower(), MessagePriority.NORMAL)
+        return {
+            "high": MessagePriority.HIGH,
+            "medium": MessagePriority.NORMAL,
+            "low": MessagePriority.LOW,
+        }.get(priority.lower(), MessagePriority.NORMAL)

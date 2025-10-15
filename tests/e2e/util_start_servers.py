@@ -19,7 +19,7 @@ def main():
     """
     # S'assurer que le répertoire du sentinel existe
     sentinel_path = PROJECT_ROOT / SERVER_READY_SENTINEL
-    
+
     # Supprimer l'ancien fichier sentinelle s'il existe
     if sentinel_path.exists():
         sentinel_path.unlink()
@@ -33,7 +33,7 @@ def main():
             host="127.0.0.1",
             port=8000,
             log_level="info",
-            reload=False
+            reload=False,
         )
     except Exception as e:
         # En cas d'erreur de démarrage, écrire l'erreur dans un fichier
@@ -45,7 +45,8 @@ def main():
             sentinel_path.unlink()
         raise
 
+
 if __name__ == "__main__":
     # Définir la variable d'environnement pour contourner la vérification de l'environnement
-    os.environ['E2E_TEST_RUNNING'] = 'true' 
+    os.environ["E2E_TEST_RUNNING"] = "true"
     main()

@@ -6,7 +6,7 @@ de cache, de chiffrement, de définition, d'extraction et de récupération.
 """
 
 # Importation explicite des services pour faciliter leur utilisation
-from . import web_api # Assurer que web_api est reconnu comme un sous-module
+from . import web_api  # Assurer que web_api est reconnu comme un sous-module
 from .cache_service import CacheService
 from .crypto_service import CryptoService
 from .definition_service import DefinitionService

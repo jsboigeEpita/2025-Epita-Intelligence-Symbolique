@@ -17,8 +17,15 @@ from pathlib import Path
 import pandas as pd
 
 # Importer les services partagés
-from argumentation_analysis.agents.tools.support.shared_services import get_configured_logger, ConfigManager
-from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
+from argumentation_analysis.agents.tools.support.shared_services import (
+    get_configured_logger,
+    ConfigManager,
+)
+from argumentation_analysis.utils.taxonomy_loader import (
+    get_taxonomy_path,
+    validate_taxonomy_file,
+)
+
 
 def _load_fallacy_taxonomy() -> Any:
     """Charge la taxonomie des sophismes à partir du fichier CSV."""
@@ -29,126 +36,193 @@ def _load_fallacy_taxonomy() -> Any:
         if not validate_taxonomy_file():
             logger.error("Le fichier de taxonomie n'est pas valide.")
             return None
-        df = pd.read_csv(path, encoding='utf-8')
+        df = pd.read_csv(path, encoding="utf-8")
         logger.info(f"Taxonomie chargée avec succès: {len(df)} sophismes.")
         return df
     except Exception as e:
         logger.error(f"Erreur lors du chargement de la taxonomie: {e}")
         return None
 
+
 class ContextualFallacyAnalyzer:
     """
     Outil pour l'analyse contextuelle des sophismes, utilisant les services partagés.
     """
-    
+
     def __init__(self):
         """
         Initialise l'analyseur contextuel de sophismes via les services partagés.
         """
         self.logger = get_configured_logger("ContextualFallacyAnalyzer")
         self.logger.info("Analyseur contextuel de sophismes initialisé.")
-    
+
     def _get_taxonomy_df(self) -> Any:
         """Récupère la taxonomie via le ConfigManager."""
         return ConfigManager.load_config("fallacy_taxonomy", _load_fallacy_taxonomy)
-    
+
     def analyze_context(self, text: str, context: str) -> Dict[str, Any]:
         """
         Analyse le contexte d'un texte pour identifier des sophismes contextuels.
-        
+
         Args:
             text: Texte à analyser
             context: Contexte du texte (ex: type de discours, audience, etc.)
-            
+
         Returns:
             Dictionnaire contenant les résultats de l'analyse
         """
         taxonomy_df = self._get_taxonomy_df()
         if taxonomy_df is None:
-            self.logger.error("Impossible d'analyser le contexte, la taxonomie est manquante.")
+            self.logger.error(
+                "Impossible d'analyser le contexte, la taxonomie est manquante."
+            )
             return {}
 
-        self.logger.info(f"Analyse contextuelle du texte (longueur: {len(text)}) dans le contexte: {context}")
-        
+        self.logger.info(
+            f"Analyse contextuelle du texte (longueur: {len(text)}) dans le contexte: {context}"
+        )
+
         # Analyser le type de contexte
         context_type = self._determine_context_type(context)
         self.logger.info(f"Type de contexte déterminé: {context_type}")
-        
+
         # Identifier les sophismes potentiels
         potential_fallacies = self._identify_potential_fallacies(text)
         self.logger.info(f"Sophismes potentiels identifiés: {len(potential_fallacies)}")
-        
+
         # Filtrer les sophismes en fonction du contexte
-        contextual_fallacies = self._filter_by_context(potential_fallacies, context_type)
-        self.logger.info(f"Sophismes contextuels identifiés: {len(contextual_fallacies)}")
-        
+        contextual_fallacies = self._filter_by_context(
+            potential_fallacies, context_type
+        )
+        self.logger.info(
+            f"Sophismes contextuels identifiés: {len(contextual_fallacies)}"
+        )
+
         # Préparer les résultats
         results = {
             "context_type": context_type,
             "potential_fallacies_count": len(potential_fallacies),
             "contextual_fallacies_count": len(contextual_fallacies),
-            "contextual_fallacies": contextual_fallacies
+            "contextual_fallacies": contextual_fallacies,
         }
-        
+
         return results
-    
+
     def _determine_context_type(self, context: str) -> str:
         """
         Détermine le type de contexte à partir de la description du contexte.
-        
+
         Args:
             context: Description du contexte
-            
+
         Returns:
             Type de contexte (ex: politique, scientifique, etc.)
         """
         context_lower = context.lower()
-        
+
         # Déterminer le type de contexte en fonction de mots-clés
-        if any(keyword in context_lower for keyword in ["politique", "élection", "gouvernement", "président"]):
+        if any(
+            keyword in context_lower
+            for keyword in ["politique", "élection", "gouvernement", "président"]
+        ):
             return "politique"
-        elif any(keyword in context_lower for keyword in ["scientifique", "recherche", "étude", "expérience"]):
+        elif any(
+            keyword in context_lower
+            for keyword in ["scientifique", "recherche", "étude", "expérience"]
+        ):
             return "scientifique"
-        elif any(keyword in context_lower for keyword in ["commercial", "publicité", "marketing", "produit"]):
+        elif any(
+            keyword in context_lower
+            for keyword in ["commercial", "publicité", "marketing", "produit"]
+        ):
             return "commercial"
-        elif any(keyword in context_lower for keyword in ["juridique", "légal", "tribunal", "procès"]):
+        elif any(
+            keyword in context_lower
+            for keyword in ["juridique", "légal", "tribunal", "procès"]
+        ):
             return "juridique"
-        elif any(keyword in context_lower for keyword in ["académique", "universitaire", "éducation"]):
+        elif any(
+            keyword in context_lower
+            for keyword in ["académique", "universitaire", "éducation"]
+        ):
             return "académique"
         else:
             return "général"
-    
+
     def _identify_potential_fallacies(self, text: str) -> List[Dict[str, Any]]:
         """
         Identifie les sophismes potentiels dans un texte.
-        
+
         Args:
             text: Texte à analyser
-            
+
         Returns:
             Liste des sophismes potentiels identifiés
         """
         # Cette méthode pourrait utiliser des techniques de NLP ou des règles heuristiques
         # pour identifier des sophismes potentiels. Pour l'instant, nous utilisons une
         # approche simplifiée basée sur des mots-clés.
-        
+
         potential_fallacies = []
-        
+
         # Recherche de mots-clés associés à des sophismes courants
         fallacy_keywords = {
-            "Appel à l'autorité": ["expert", "autorité", "scientifique", "étude", "recherche", "unanime"],
-            "Appel à la popularité": ["tout le monde", "majorité", "populaire", "commun", "consensus"],
-            "Appel à la tradition": ["tradition", "toujours", "depuis longtemps", "historiquement", "ancestral"],
-            "Appel à la nouveauté": ["nouveau", "moderne", "récent", "innovation", "dernière"],
-            "Appel à l'émotion": ["peur", "crainte", "inquiétude", "espoir", "rêve", "cauchemar"],
+            "Appel à l'autorité": [
+                "expert",
+                "autorité",
+                "scientifique",
+                "étude",
+                "recherche",
+                "unanime",
+            ],
+            "Appel à la popularité": [
+                "tout le monde",
+                "majorité",
+                "populaire",
+                "commun",
+                "consensus",
+            ],
+            "Appel à la tradition": [
+                "tradition",
+                "toujours",
+                "depuis longtemps",
+                "historiquement",
+                "ancestral",
+            ],
+            "Appel à la nouveauté": [
+                "nouveau",
+                "moderne",
+                "récent",
+                "innovation",
+                "dernière",
+            ],
+            "Appel à l'émotion": [
+                "peur",
+                "crainte",
+                "inquiétude",
+                "espoir",
+                "rêve",
+                "cauchemar",
+            ],
             "Faux dilemme": ["soit", "ou bien", "alternative", "choix", "uniquement"],
-            "Pente glissante": ["mènera à", "conduira à", "finira par", "inévitablement"],
+            "Pente glissante": [
+                "mènera à",
+                "conduira à",
+                "finira par",
+                "inévitablement",
+            ],
             "Homme de paille": ["prétendre", "caricature", "déformer", "exagérer"],
-            "Ad hominem": ["personne", "caractère", "intégrité", "moralité", "crédibilité"]
+            "Ad hominem": [
+                "personne",
+                "caractère",
+                "intégrité",
+                "moralité",
+                "crédibilité",
+            ],
         }
-        
+
         text_lower = text.lower()
-        
+
         for fallacy_type, keywords in fallacy_keywords.items():
             for keyword in keywords:
                 if keyword.lower() in text_lower:
@@ -157,37 +231,54 @@ class ContextualFallacyAnalyzer:
                     start_index = max(0, keyword_index - 50)
                     end_index = min(len(text), keyword_index + len(keyword) + 50)
                     context_text = text[start_index:end_index]
-                    
-                    potential_fallacies.append({
-                        "fallacy_type": fallacy_type,
-                        "keyword": keyword,
-                        "context_text": context_text,
-                        "confidence": 0.5  # Confiance par défaut
-                    })
-        
+
+                    potential_fallacies.append(
+                        {
+                            "fallacy_type": fallacy_type,
+                            "keyword": keyword,
+                            "context_text": context_text,
+                            "confidence": 0.5,  # Confiance par défaut
+                        }
+                    )
+
         return potential_fallacies
-    
-    def _filter_by_context(self, potential_fallacies: List[Dict[str, Any]], context_type: str) -> List[Dict[str, Any]]:
+
+    def _filter_by_context(
+        self, potential_fallacies: List[Dict[str, Any]], context_type: str
+    ) -> List[Dict[str, Any]]:
         """
         Filtre les sophismes potentiels en fonction du contexte.
-        
+
         Args:
             potential_fallacies: Liste des sophismes potentiels
             context_type: Type de contexte
-            
+
         Returns:
             Liste des sophismes contextuels
         """
         # Définir les sophismes particulièrement problématiques dans chaque contexte
         context_fallacy_mapping = {
-            "politique": ["Appel à l'émotion", "Ad hominem", "Homme de paille", "Faux dilemme"],
-            "scientifique": ["Appel à la popularité", "Appel à la tradition", "Appel à l'autorité"],
-            "commercial": ["Appel à la nouveauté", "Appel à la popularité", "Faux dilemme"],
+            "politique": [
+                "Appel à l'émotion",
+                "Ad hominem",
+                "Homme de paille",
+                "Faux dilemme",
+            ],
+            "scientifique": [
+                "Appel à la popularité",
+                "Appel à la tradition",
+                "Appel à l'autorité",
+            ],
+            "commercial": [
+                "Appel à la nouveauté",
+                "Appel à la popularité",
+                "Faux dilemme",
+            ],
             "juridique": ["Pente glissante", "Ad hominem", "Appel à l'émotion"],
             "académique": ["Appel à l'autorité", "Homme de paille", "Ad hominem"],
-            "général": []  # Pas de filtre spécifique pour le contexte général
+            "général": [],  # Pas de filtre spécifique pour le contexte général
         }
-        
+
         # Si le contexte est général, retourner tous les sophismes potentiels sans modification de confiance
         if context_type == "général" or context_type not in context_fallacy_mapping:
             contextual_fallacies = []
@@ -196,7 +287,7 @@ class ContextualFallacyAnalyzer:
                 fallacy_copy["contextual_relevance"] = "Générale"
                 contextual_fallacies.append(fallacy_copy)
             return contextual_fallacies
-        
+
         # Filtrer les sophismes en fonction du contexte
         contextual_fallacies = []
         for fallacy in potential_fallacies:
@@ -204,7 +295,9 @@ class ContextualFallacyAnalyzer:
             fallacy_copy = fallacy.copy()
             if fallacy_copy["fallacy_type"] in context_fallacy_mapping[context_type]:
                 # Ajuster la confiance en fonction du contexte
-                fallacy_copy["confidence"] = 0.8  # Confiance plus élevée pour les sophismes contextuels
+                fallacy_copy[
+                    "confidence"
+                ] = 0.8  # Confiance plus élevée pour les sophismes contextuels
                 fallacy_copy["contextual_relevance"] = "Élevée"
                 contextual_fallacies.append(fallacy_copy)
             else:
@@ -212,46 +305,55 @@ class ContextualFallacyAnalyzer:
                 fallacy_copy["confidence"] = 0.3
                 fallacy_copy["contextual_relevance"] = "Faible"
                 contextual_fallacies.append(fallacy_copy)
-        
+
         return contextual_fallacies
-    
-    def identify_contextual_fallacies(self, argument: str, context: str) -> List[Dict[str, Any]]:
+
+    def identify_contextual_fallacies(
+        self, argument: str, context: str
+    ) -> List[Dict[str, Any]]:
         """
         Identifie les sophismes contextuels dans un argument.
-        
+
         Cette méthode est une version simplifiée de analyze_context qui se concentre
         uniquement sur l'identification des sophismes contextuels dans un argument.
-        
+
         Args:
             argument: Argument à analyser
             context: Contexte de l'argument
-            
+
         Returns:
             Liste des sophismes contextuels identifiés
         """
-        self.logger.info(f"Identification des sophismes contextuels dans l'argument (longueur: {len(argument)}) dans le contexte: {context}")
-        
+        self.logger.info(
+            f"Identification des sophismes contextuels dans l'argument (longueur: {len(argument)}) dans le contexte: {context}"
+        )
+
         # Analyser le contexte
         results = self.analyze_context(argument, context)
-        
+
         # Filtrer les sophismes avec une confiance élevée
         high_confidence_fallacies = [
-            fallacy for fallacy in results["contextual_fallacies"]
+            fallacy
+            for fallacy in results["contextual_fallacies"]
             if fallacy["confidence"] >= 0.5
         ]
-        
-        self.logger.info(f"Sophismes contextuels identifiés avec confiance élevée: {len(high_confidence_fallacies)}")
-        
+
+        self.logger.info(
+            f"Sophismes contextuels identifiés avec confiance élevée: {len(high_confidence_fallacies)}"
+        )
+
         return high_confidence_fallacies
-    
-    def get_contextual_fallacy_examples(self, fallacy_type: str, context_type: str) -> List[str]:
+
+    def get_contextual_fallacy_examples(
+        self, fallacy_type: str, context_type: str
+    ) -> List[str]:
         """
         Retourne des exemples de sophismes contextuels.
-        
+
         Args:
             fallacy_type: Type de sophisme
             context_type: Type de contexte
-            
+
         Returns:
             Liste d'exemples de sophismes contextuels
         """
@@ -260,53 +362,64 @@ class ContextualFallacyAnalyzer:
             "Appel à l'autorité": {
                 "politique": [
                     "Le Dr. Smith, éminent cardiologue, soutient ma politique fiscale.",
-                    "Comme l'a dit Einstein, nous devons augmenter les impôts."
+                    "Comme l'a dit Einstein, nous devons augmenter les impôts.",
                 ],
                 "scientifique": [
                     "Le Dr. Jones, célèbre économiste, affirme que cette théorie physique est correcte.",
-                    "Cette étude a été publiée dans une revue prestigieuse, donc elle doit être vraie."
+                    "Cette étude a été publiée dans une revue prestigieuse, donc elle doit être vraie.",
                 ],
                 "commercial": [
                     "9 dentistes sur 10 recommandent ce dentifrice.",
-                    "Des experts en nutrition ont conçu ce régime miracle."
-                ]
+                    "Des experts en nutrition ont conçu ce régime miracle.",
+                ],
             },
             "Appel à la popularité": {
                 "politique": [
                     "80% des Français soutiennent cette mesure, elle doit donc être bonne.",
-                    "Tout le monde sait que cette politique est la meilleure."
+                    "Tout le monde sait que cette politique est la meilleure.",
                 ],
                 "scientifique": [
                     "La majorité des gens ne croient pas au changement climatique.",
-                    "Cette théorie est largement acceptée, elle doit donc être vraie."
+                    "Cette théorie est largement acceptée, elle doit donc être vraie.",
                 ],
                 "commercial": [
                     "C'est le smartphone le plus vendu, il doit donc être le meilleur.",
-                    "Des millions de personnes utilisent ce produit, vous devriez l'essayer aussi."
-                ]
-            }
+                    "Des millions de personnes utilisent ce produit, vous devriez l'essayer aussi.",
+                ],
+            },
         }
-        
+
         # Retourner les exemples pour le type de sophisme et le contexte spécifiés
         if fallacy_type in examples and context_type in examples[fallacy_type]:
             return examples[fallacy_type][context_type]
         else:
-            return ["Aucun exemple disponible pour ce type de sophisme dans ce contexte."]
+            return [
+                "Aucun exemple disponible pour ce type de sophisme dans ce contexte."
+            ]
 
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
     # Le ServiceRegistry gérera l'instanciation
-    from argumentation_analysis.agents.tools.support.shared_services import ServiceRegistry
+    from argumentation_analysis.agents.tools.support.shared_services import (
+        ServiceRegistry,
+    )
+
     analyzer = ServiceRegistry.get(ContextualFallacyAnalyzer)
-    
+
     # Exemple d'analyse contextuelle
     text = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà."
     context = "Discours commercial pour un produit controversé"
-    
+
     results = analyzer.analyze_context(text, context)
-    print("Résultats de l'analyse contextuelle:", json.dumps(results, indent=2, ensure_ascii=False))
-    
+    print(
+        "Résultats de l'analyse contextuelle:",
+        json.dumps(results, indent=2, ensure_ascii=False),
+    )
+
     # Exemple d'identification de sophismes contextuels
     fallacies = analyzer.identify_contextual_fallacies(text, context)
-    print("\nSophismes contextuels identifiés:", json.dumps(fallacies, indent=2, ensure_ascii=False))
+    print(
+        "\nSophismes contextuels identifiés:",
+        json.dumps(fallacies, indent=2, ensure_ascii=False),
+    )

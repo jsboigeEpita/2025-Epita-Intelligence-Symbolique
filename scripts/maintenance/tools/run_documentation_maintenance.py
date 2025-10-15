@@ -12,49 +12,51 @@ from pathlib import Path
 from datetime import datetime
 import json
 
+
 class DocumentationMaintenanceRunner:
     """Orchestrateur de maintenance de documentation"""
-    
+
     def __init__(self, project_root: str = "."):
         self.project_root = Path(project_root).resolve()
         self.logs_dir = self.project_root / "logs"
         self.logs_dir.mkdir(exist_ok=True)
-        
-    def run_obsolete_analysis(self, quick_scan: bool = False, output_format: str = 'markdown') -> dict:
+
+    def run_obsolete_analysis(
+        self, quick_scan: bool = False, output_format: str = "markdown"
+    ) -> dict:
         """Exécute l'analyse de documentation obsolète"""
         print("[MAINTENANCE] Lancement analyse documentation obsolete...")
-        
+
         cmd = [
             sys.executable,
             "scripts/maintenance/analyze_obsolete_documentation.py",
-            f"--output-format={output_format}"
+            f"--output-format={output_format}",
         ]
-        
+
         if quick_scan:
             cmd.append("--quick-scan")
         else:
             cmd.append("--full-analysis")
-            
+
         try:
-            result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
-            
+            result = subprocess.run(
+                cmd, cwd=self.project_root, capture_output=True, text=True
+            )
+
             return {
-                'success': result.returncode == 0,
-                'returncode': result.returncode,
-                'stdout': result.stdout,
-                'stderr': result.stderr
+                "success": result.returncode == 0,
+                "returncode": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
             }
         except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
+            return {"success": False, "error": str(e)}
+
     def generate_maintenance_report(self, results: dict) -> str:
         """Génère un rapport de maintenance global"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = self.logs_dir / f"documentation_maintenance_report_{timestamp}.md"
-        
+
         report = f"""# Rapport de Maintenance Documentation Oracle Enhanced v2.1.0
 
 **Date :** {datetime.now().isoformat()}
@@ -64,8 +66,8 @@ class DocumentationMaintenanceRunner:
 
 ### Analyse Documentation Obsolète
 """
-        
-        if results['obsolete_analysis']['success']:
+
+        if results["obsolete_analysis"]["success"]:
             report += """
 ✅ **Analyse complétée avec succès**
 
@@ -77,7 +79,7 @@ Détails dans les logs de sortie ci-dessous.
 
 Erreurs détectées - voir section diagnostic.
 """
-        
+
         report += f"""
 
 ## Logs d'Exécution
@@ -109,67 +111,75 @@ Erreurs détectées - voir section diagnostic.
 ---
 *Rapport généré par Oracle Enhanced v2.1.0 Documentation Maintenance*
 """
-        
-        with open(report_file, 'w', encoding='utf-8') as f:
+
+        with open(report_file, "w", encoding="utf-8") as f:
             f.write(report)
-            
+
         return str(report_file)
-    
+
     def run_comprehensive_maintenance(self, quick_scan: bool = False) -> dict:
         """Exécute une maintenance complète de la documentation"""
         print("[MAINTENANCE] Démarrage maintenance complète documentation...")
-        
+
         results = {}
-        
+
         # 1. Analyse documentation obsolète
         print("[STEP 1] Analyse documentation obsolète...")
-        results['obsolete_analysis'] = self.run_obsolete_analysis(quick_scan=quick_scan)
-        
+        results["obsolete_analysis"] = self.run_obsolete_analysis(quick_scan=quick_scan)
+
         # 2. Génération rapport global
         print("[STEP 2] Génération rapport maintenance...")
         report_file = self.generate_maintenance_report(results)
-        results['maintenance_report'] = report_file
-        
+        results["maintenance_report"] = report_file
+
         # 3. Résumé final
         total_success = all(
-            r.get('success', False) for r in results.values() 
-            if isinstance(r, dict) and 'success' in r
+            r.get("success", False)
+            for r in results.values()
+            if isinstance(r, dict) and "success" in r
         )
-        
+
         print(f"\n[MAINTENANCE] Maintenance terminée")
         print(f"   Statut global: {'SUCCESS' if total_success else 'ERREURS'}")
         print(f"   Rapport: {report_file}")
-        
+
         return {
-            'global_success': total_success,
-            'results': results,
-            'report_file': report_file
+            "global_success": total_success,
+            "results": results,
+            "report_file": report_file,
         }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Maintenance documentation Oracle Enhanced v2.1.0")
-    parser.add_argument('--project-root', default='.', help='Racine du projet')
-    parser.add_argument('--quick-scan', action='store_true', help='Analyse rapide uniquement')
-    parser.add_argument('--obsolete-only', action='store_true', help='Analyse obsolète uniquement')
-    parser.add_argument('--output-format', choices=['markdown', 'json'], default='markdown')
-    
+    parser = argparse.ArgumentParser(
+        description="Maintenance documentation Oracle Enhanced v2.1.0"
+    )
+    parser.add_argument("--project-root", default=".", help="Racine du projet")
+    parser.add_argument(
+        "--quick-scan", action="store_true", help="Analyse rapide uniquement"
+    )
+    parser.add_argument(
+        "--obsolete-only", action="store_true", help="Analyse obsolète uniquement"
+    )
+    parser.add_argument(
+        "--output-format", choices=["markdown", "json"], default="markdown"
+    )
+
     args = parser.parse_args()
-    
+
     runner = DocumentationMaintenanceRunner(args.project_root)
-    
+
     if args.obsolete_only:
         print("[MODE] Analyse documentation obsolète uniquement")
         result = runner.run_obsolete_analysis(
-            quick_scan=args.quick_scan,
-            output_format=args.output_format
+            quick_scan=args.quick_scan, output_format=args.output_format
         )
-        exit_code = 0 if result['success'] else 1
+        exit_code = 0 if result["success"] else 1
     else:
         print("[MODE] Maintenance complète documentation")
         result = runner.run_comprehensive_maintenance(quick_scan=args.quick_scan)
-        exit_code = 0 if result['global_success'] else 1
-    
+        exit_code = 0 if result["global_success"] else 1
+
     return exit_code
 
 

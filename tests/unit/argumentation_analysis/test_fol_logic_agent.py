@@ -4,6 +4,7 @@ from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet
 
+
 @pytest.mark.asyncio
 class TestFOLLogicAgent:
     """
@@ -37,23 +38,27 @@ class TestFOLLogicAgent:
 
         # Mock the agent's internal text_to_belief_set method to return a valid BeliefSet
         mock_belief_set = FirstOrderBeliefSet(content="forall X: (Cat(X) => Mammal(X))")
-        fol_agent.text_to_belief_set = AsyncMock(return_value=(mock_belief_set, "Conversion successful"))
+        fol_agent.text_to_belief_set = AsyncMock(
+            return_value=(mock_belief_set, "Conversion successful")
+        )
 
         task_id = "task_1"
         task_description = "Traduire le texte en Belief Set"
 
         # Execute the task
-        result = await fol_agent.process_task(task_id, task_description, mock_state_manager)
+        result = await fol_agent.process_task(
+            task_id, task_description, mock_state_manager
+        )
 
         # Assertions
         assert result["status"] == "success"
         assert result["belief_set_id"] == "bs_123"
         fol_agent.text_to_belief_set.assert_awaited_once_with("All cats are mammals.")
         mock_state_manager.add_belief_set.assert_called_once_with(
-            logic_type="first_order",
-            content="forall X: (Cat(X) => Mammal(X))"
+            logic_type="first_order", content="forall X: (Cat(X) => Mammal(X))"
         )
         mock_state_manager.add_answer.assert_called_once()
+
 
 class TestFirstOrderBeliefSet:
     """

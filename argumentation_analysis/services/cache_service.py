@@ -16,7 +16,7 @@ logger = logging.getLogger("Services.CacheService")
 
 class CacheService:
     """Service pour la gestion du cache de textes."""
-    
+
     def __init__(self, cache_dir: Path):
         """
         Initialise le service de cache.
@@ -26,11 +26,11 @@ class CacheService:
         """
         self.cache_dir = cache_dir
         self.logger = logger
-        
+
         # S'assurer que le répertoire de cache existe
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger.info(f"Répertoire de cache initialisé: {self.cache_dir}")
-    
+
     def get_cache_filepath(self, url: str) -> Path:
         """
         Génère le chemin du fichier cache pour une URL donnée.
@@ -44,7 +44,7 @@ class CacheService:
         """
         url_hash = hashlib.sha256(url.encode()).hexdigest()
         return self.cache_dir / f"{url_hash}.txt"
-    
+
     def load_from_cache(self, url: str) -> Optional[str]:
         """
         Charge le contenu textuel depuis le cache pour une URL donnée, si disponible.
@@ -59,13 +59,13 @@ class CacheService:
         if filepath.exists():
             try:
                 self.logger.info(f"Lecture depuis cache: {filepath.name}")
-                return filepath.read_text(encoding='utf-8')
+                return filepath.read_text(encoding="utf-8")
             except Exception as e:
                 self.logger.warning(f"Erreur lecture cache {filepath.name}: {e}")
                 return None
         self.logger.debug(f"Cache miss pour URL: {url}")
         return None
-    
+
     def save_to_cache(self, url: str, text: str) -> bool:
         """
         Sauvegarde le contenu textuel dans le cache pour une URL donnée.
@@ -80,18 +80,18 @@ class CacheService:
         if not text:
             self.logger.info("Texte vide, non sauvegardé.")
             return False
-        
+
         filepath = self.get_cache_filepath(url)
         try:
             # S'assurer que le dossier cache existe
             filepath.parent.mkdir(parents=True, exist_ok=True)
-            filepath.write_text(text, encoding='utf-8')
+            filepath.write_text(text, encoding="utf-8")
             self.logger.info(f"Texte sauvegardé: {filepath.name}")
             return True
         except Exception as e:
             self.logger.error(f"Erreur sauvegarde cache {filepath.name}: {e}")
             return False
-    
+
     def clear_cache(self, url: Optional[str] = None) -> Tuple[int, int]:
         """
         Efface le cache pour une URL spécifique ou l'intégralité du cache.
@@ -113,7 +113,9 @@ class CacheService:
                     self.logger.info(f"Cache effacé pour {url}: {filepath.name}")
                     return 1, 0
                 except Exception as e:
-                    self.logger.error(f"Erreur lors de l'effacement du cache pour {url}: {e}")
+                    self.logger.error(
+                        f"Erreur lors de l'effacement du cache pour {url}: {e}"
+                    )
                     return 0, 1
             return 0, 0
         else:
@@ -125,12 +127,16 @@ class CacheService:
                     file.unlink()
                     deleted += 1
                 except Exception as e:
-                    self.logger.error(f"Erreur lors de l'effacement du fichier {file.name}: {e}")
+                    self.logger.error(
+                        f"Erreur lors de l'effacement du fichier {file.name}: {e}"
+                    )
                     errors += 1
-            
-            self.logger.info(f"Cache entièrement effacé: {deleted} fichiers supprimés, {errors} erreurs")
+
+            self.logger.info(
+                f"Cache entièrement effacé: {deleted} fichiers supprimés, {errors} erreurs"
+            )
             return deleted, errors
-    
+
     def get_cache_size(self) -> Tuple[int, int]:
         """
         Récupère la taille actuelle du cache.
@@ -144,13 +150,13 @@ class CacheService:
         """
         file_count = 0
         total_size = 0
-        
+
         for file in self.cache_dir.glob("*.txt"):
             file_count += 1
             total_size += file.stat().st_size
-        
+
         return file_count, total_size
-    
+
     def get_cache_info(self) -> str:
         """
         Récupère des informations formatées sur l'état actuel du cache.
@@ -160,12 +166,12 @@ class CacheService:
         :rtype: str
         """
         file_count, total_size = self.get_cache_size()
-        
+
         # Convertir la taille en format lisible
         size_str = self._format_size(total_size)
-        
+
         return f"Cache: {file_count} fichiers, {size_str}"
-    
+
     def _format_size(self, size_bytes: int) -> str:
         """
         Formate une taille donnée en octets en une chaîne de caractères lisible par l'homme
@@ -176,9 +182,9 @@ class CacheService:
         :return: Une chaîne de caractères représentant la taille formatée avec son unité.
         :rtype: str
         """
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size_bytes < 1024.0 or unit == 'GB':
+        for unit in ["B", "KB", "MB", "GB"]:
+            if size_bytes < 1024.0 or unit == "GB":
                 break
             size_bytes /= 1024.0
-        
+
         return f"{size_bytes:.2f} {unit}"

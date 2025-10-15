@@ -20,6 +20,7 @@ from ..environment_manager import EnvironmentManager
 @dataclass
 class ValidationResult:
     """Résultat d'une validation"""
+
     success: bool
     message: str
     rule_name: str
@@ -28,8 +29,8 @@ class ValidationResult:
 
 class ValidationRule(abc.ABC):
     """Classe de base abstraite pour une règle de validation."""
-    
-    def __init__(self, engine: 'ValidationEngine'):
+
+    def __init__(self, engine: "ValidationEngine"):
         self.engine = engine
         self.logger = engine.logger
         self.project_root = engine.project_root
@@ -47,7 +48,7 @@ class ValidationRule(abc.ABC):
 
 class ValidationEngine:
     """Moteur principal de validation qui exécute des règles."""
-    
+
     def __init__(self, logger: Logger = None):
         self.logger = logger or Logger()
         self.env_manager = EnvironmentManager(logger_instance=self.logger)
@@ -60,11 +61,11 @@ class ValidationEngine:
         # Pour l'instant, nous chargeons manuellement.
         # Plus tard, cela pourrait être dynamique.
         from .rules.config_rules import ConfigValidationRule
-        
+
         rule_classes: List[Type[ValidationRule]] = [
             ConfigValidationRule,
         ]
-        
+
         for rule_class in rule_classes:
             self.rules.append(rule_class(self))
         self.logger.info(f"{len(self.rules)} règles de validation chargées.")
@@ -79,6 +80,6 @@ class ValidationEngine:
             results.append(result)
             if not result.success:
                 self.logger.warning(f"Règle '{rule.name}' échouée: {result.message}")
-        
+
         self.logger.info("Moteur de validation terminé.")
         return results

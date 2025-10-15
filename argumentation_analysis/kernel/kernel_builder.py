@@ -7,6 +7,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 )
 from argumentation_analysis.config.settings import AppSettings
 
+
 class KernelBuilder:
     """
     Classe responsable de la construction et de la configuration du Kernel
@@ -19,7 +20,7 @@ class KernelBuilder:
         kernel = sk.Kernel()
 
         llm_service_name = settings.service_manager.default_llm_service_id
-        
+
         if llm_service_name == "openai":
             if settings.openai.api_key:
                 service = OpenAIChatCompletion(
@@ -38,7 +39,9 @@ class KernelBuilder:
                     api_key=settings.azure_openai.api_key.get_secret_value(),
                 )
             else:
-                raise ValueError("La clé API ou l'endpoint Azure ne sont pas configurés.")
+                raise ValueError(
+                    "La clé API ou l'endpoint Azure ne sont pas configurés."
+                )
         else:
             raise ValueError(f"Service LLM global inconnu: {llm_service_name}")
 

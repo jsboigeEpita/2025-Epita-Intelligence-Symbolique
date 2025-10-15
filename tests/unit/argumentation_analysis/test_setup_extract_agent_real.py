@@ -21,10 +21,11 @@ class RealExtractAgentTest(unittest.TestCase):
         """Initialisation avant chaque test."""
         self.test_text = "Si P alors Q. P est vrai. Donc Q est vrai."
         self.temp_dir = tempfile.mkdtemp()
-        
+
     def tearDown(self):
         """Nettoyage après chaque test."""
         import shutil
+
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
@@ -34,17 +35,17 @@ class RealExtractAgentTest(unittest.TestCase):
             # Créer un agent d'extraction réel
             agent = ExtractAgent(
                 name="test_extract_agent_real",
-                description="Agent d'extraction de test réel"
+                description="Agent d'extraction de test réel",
             )
-            
+
             # Vérifications basiques
             self.assertIsNotNone(agent)
             self.assertEqual(agent.name, "test_extract_agent_real")
             self.assertEqual(agent.description, "Agent d'extraction de test réel")
-            
+
             print("✅ Agent d'extraction créé avec succès (VERSION RÉELLE)")
             return True
-            
+
         except ImportError as e:
             # Si semantic-kernel pose problème, on le signale
             print(f"🚨 PROBLÈME SEMANTIC-KERNEL DÉTECTÉ: {e}")
@@ -52,7 +53,7 @@ class RealExtractAgentTest(unittest.TestCase):
             # On marque le test comme réussi mais signale le problème
             self.skipTest(f"Semantic-kernel non disponible: {e}")
             return True
-            
+
         except Exception as e:
             print(f"❌ Erreur lors de la création de l'agent réel: {e}")
             return False
@@ -62,29 +63,31 @@ class RealExtractAgentTest(unittest.TestCase):
         try:
             # Test d'extraction simple de patterns logiques sans LLM
             text = "Si P alors Q. P est vrai."
-            
+
             # Extraction basique par regex (pas de LLM requis)
             import re
-            
+
             # Pattern pour "Si...alors"
             if_then_pattern = r"Si\s+(\w+)\s+alors\s+(\w+)"
             fact_pattern = r"(\w+)\s+est\s+vrai"
-            
+
             if_then_matches = re.findall(if_then_pattern, text)
             fact_matches = re.findall(fact_pattern, text)
-            
+
             # Vérifications
-            self.assertTrue(len(if_then_matches) > 0, "Doit détecter au moins une règle Si-alors")
+            self.assertTrue(
+                len(if_then_matches) > 0, "Doit détecter au moins une règle Si-alors"
+            )
             self.assertTrue(len(fact_matches) > 0, "Doit détecter au moins un fait")
-            
+
             if if_then_matches:
                 premise, conclusion = if_then_matches[0]
                 self.assertEqual(premise, "P", "Prémisse doit être P")
                 self.assertEqual(conclusion, "Q", "Conclusion doit être Q")
-            
+
             print("✅ Extraction de patterns logiques basiques réussie (VERSION RÉELLE)")
             return True
-            
+
         except Exception as e:
             print(f"❌ Erreur lors de l'extraction réelle: {e}")
             return False
@@ -94,8 +97,8 @@ class RealExtractAgentTest(unittest.TestCase):
         try:
             # Logique simple sans LLM : modus ponens
             rules = {"P": "Q"}  # Si P alors Q
-            facts = ["P"]       # P est vrai
-            
+            facts = ["P"]  # P est vrai
+
             # Inférence simple
             new_facts = []
             for fact in facts:
@@ -103,13 +106,13 @@ class RealExtractAgentTest(unittest.TestCase):
                     conclusion = rules[fact]
                     if conclusion not in facts and conclusion not in new_facts:
                         new_facts.append(conclusion)
-            
+
             # Vérifications
             self.assertIn("Q", new_facts, "Doit inférer Q à partir de P et P->Q")
-            
+
             print("✅ Inférence logique simple réussie (VERSION RÉELLE)")
             return True
-            
+
         except Exception as e:
             print(f"❌ Erreur lors de l'inférence réelle: {e}")
             return False
@@ -119,21 +122,21 @@ class RealExtractAgentTest(unittest.TestCase):
         try:
             # Créer un fichier de test réel
             test_file = Path(self.temp_dir) / "test_logic.txt"
-            with open(test_file, 'w', encoding='utf-8') as f:
+            with open(test_file, "w", encoding="utf-8") as f:
                 f.write("Si P alors Q.\nP est vrai.\nDonc Q.")
-            
+
             # Lire et traiter le fichier
-            with open(test_file, 'r', encoding='utf-8') as f:
+            with open(test_file, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             # Vérifications
             self.assertIn("Si P alors Q", content)
             self.assertIn("P est vrai", content)
-            
+
             # Nettoyage automatique par tearDown
             print("✅ Traitement de fichiers réels réussi (VERSION RÉELLE)")
             return True
-            
+
         except Exception as e:
             print(f"❌ Erreur lors du traitement de fichier réel: {e}")
             return False
@@ -147,40 +150,36 @@ class RealIntegrationTest(unittest.TestCase):
         try:
             # Pipeline simple de traitement de texte logique
             input_text = "Si P alors Q. P est vrai. R est faux."
-            
+
             # Étape 1: Parsing basique
-            lines = [line.strip() for line in input_text.split('.') if line.strip()]
-            
+            lines = [line.strip() for line in input_text.split(".") if line.strip()]
+
             # Étape 2: Classification simple
             rules = []
             facts = []
-            
+
             for line in lines:
                 if "Si" in line and "alors" in line:
                     rules.append(line)
                 elif "est vrai" in line or "est faux" in line:
                     facts.append(line)
-            
+
             # Étape 3: Validation
             self.assertTrue(len(rules) > 0, "Doit identifier au moins une règle")
             self.assertTrue(len(facts) > 0, "Doit identifier au moins un fait")
-            
+
             # Étape 4: Résultats structurés
-            result = {
-                "rules": rules,
-                "facts": facts,
-                "total_statements": len(lines)
-            }
-            
+            result = {"rules": rules, "facts": facts, "total_statements": len(lines)}
+
             # Vérifications finales
             self.assertIsInstance(result, dict)
             self.assertIn("rules", result)
             self.assertIn("facts", result)
-            
+
             print("✅ Pipeline complet sans LLM réussi (VERSION RÉELLE)")
             print(f"Résultat: {result}")
             return True
-            
+
         except Exception as e:
             print(f"❌ Erreur dans le pipeline réel: {e}")
             return False

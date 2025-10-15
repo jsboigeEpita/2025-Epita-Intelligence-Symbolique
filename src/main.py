@@ -3,13 +3,14 @@ import os
 
 # Ajoute la racine du projet au Python Path pour permettre les imports absolus
 # C'est une approche plus robuste pour les scripts exécutables.
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from src.core.plugin_loader import PluginLoader
 from src.core.orchestration_service import OrchestrationService
 from src.core.contracts import OrchestrationRequest
+
 
 def run_integration_test():
     """
@@ -28,8 +29,13 @@ def run_integration_test():
 
     # Vérification que le plugin est bien chargé
     if "hello_world" not in loader.plugins:
-        print("ERREUR FATALE: Le plugin 'hello_world' n'a pas pu être chargé.", flush=True)
-        print("Vérifiez les logs de 'discover_plugins' et 'load_plugins' ci-dessus.", flush=True)
+        print(
+            "ERREUR FATALE: Le plugin 'hello_world' n'a pas pu être chargé.", flush=True
+        )
+        print(
+            "Vérifiez les logs de 'discover_plugins' et 'load_plugins' ci-dessus.",
+            flush=True,
+        )
         return
 
     # 3. Initialiser le service d'orchestration
@@ -37,8 +43,7 @@ def run_integration_test():
 
     # 4. Créer et exécuter une requête de test
     test_request = OrchestrationRequest(
-        plugin_name="hello_world",
-        inputs={"name": "World"}
+        plugin_name="hello_world", inputs={"name": "World"}
     )
 
     print("\n--- Exécution de la requête de test ---", flush=True)
@@ -57,6 +62,7 @@ def run_integration_test():
         print("Aucune réponse reçue du service.", flush=True)
 
     print("\n--- FIN DU TEST D'INTÉGRATION ---", flush=True)
+
 
 if __name__ == "__main__":
     run_integration_test()

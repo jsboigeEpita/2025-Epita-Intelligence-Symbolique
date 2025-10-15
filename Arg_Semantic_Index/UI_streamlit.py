@@ -29,15 +29,19 @@ with tab1:
                 index = result.get("index", "")
                 for part in result.get("partitions", []):
                     excerpt = {
-                        "text": clean_snippet(part.get("text", "").replace("\n", " ").strip()),
+                        "text": clean_snippet(
+                            part.get("text", "").replace("\n", " ").strip()
+                        ),
                         "relevance": part.get("relevance", 0),
                         "documentId": doc_id,
-                        "index": index
+                        "index": index,
                     }
                     all_excerpts.append(excerpt)
 
             # Trier par pertinence décroissante et garder les 5 meilleurs
-            top_excerpts = sorted(all_excerpts, key=lambda x: x["relevance"], reverse=True)[:5]
+            top_excerpts = sorted(
+                all_excerpts, key=lambda x: x["relevance"], reverse=True
+            )[:5]
 
             if not top_excerpts:
                 st.warning("Aucun extrait pertinent trouvé.")
@@ -45,8 +49,12 @@ with tab1:
                 st.success(f"Top 5 extraits les plus pertinents :")
                 for i, ex in enumerate(top_excerpts, start=1):
                     st.markdown(f"### Extrait {i}")
-                    st.markdown(f"> *{clean_snippet(ex['text'][:500])}{'...' if len(ex['text']) > 500 else ''}*")
-                    st.caption(f"📄 Source: `{ex['documentId']}` — Pertinence: **{ex['relevance']:.3f}**")
+                    st.markdown(
+                        f"> *{clean_snippet(ex['text'][:500])}{'...' if len(ex['text']) > 500 else ''}*"
+                    )
+                    st.caption(
+                        f"📄 Source: `{ex['documentId']}` — Pertinence: **{ex['relevance']:.3f}**"
+                    )
                     st.markdown("---")
 
         except Exception as e:
@@ -70,7 +78,9 @@ with tab2:
                 st.write(ask_data["text"])
                 print(ask_data)
             elif ask_data.get("noResult"):
-                st.warning(f"Aucune réponse générée : {ask_data.get('noResultReason', 'pas de contexte trouvé.')}")
+                st.warning(
+                    f"Aucune réponse générée : {ask_data.get('noResultReason', 'pas de contexte trouvé.')}"
+                )
 
             # Affichage des sources pertinentes (relevantSources)
             relevant_sources = ask_data.get("relevantSources", [])
@@ -87,7 +97,9 @@ with tab2:
                         relevance = part.get("relevance", 0)
                         tags = part.get("tags", {})
 
-                        st.markdown(f"> *{text[:500]}{'...' if len(text) > 500 else ''}*")
+                        st.markdown(
+                            f"> *{text[:500]}{'...' if len(text) > 500 else ''}*"
+                        )
                         st.caption(f"Pertinence : {relevance:.3f}")
 
                     st.markdown("---")

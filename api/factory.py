@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Callable, Optional
 
+
 def create_app(
     title: str,
     description: str,
@@ -33,7 +34,7 @@ def create_app(
         description=description,
         version=version,
         on_startup=on_startup,
-        on_shutdown=on_shutdown
+        on_shutdown=on_shutdown,
     )
 
     # Configuration CORS standardisée, basée sur la version la plus robuste disponible

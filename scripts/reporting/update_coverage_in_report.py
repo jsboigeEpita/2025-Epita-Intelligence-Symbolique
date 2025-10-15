@@ -1,4 +1,5 @@
 import argumentation_analysis.core.environment
+
 """
 Script pour ajouter une section sur la couverture des tests mockés au rapport de suivi.
 """
@@ -9,7 +10,7 @@ from pathlib import Path
 import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(parent_dir)
 
 # Chemin du rapport de suivi
@@ -70,9 +71,10 @@ Le rapport est disponible dans le répertoire `htmlcov/index.html`.
 Les tests mockés autonomes offrent une excellente couverture (97%) et constituent une approche efficace pour tester la logique de communication entre agents sans dépendre des modules problématiques. Cette approche devrait être étendue à d'autres parties du système pour améliorer la couverture globale des tests.
 """
 
+
 def update_rapport():
     """Met à jour le rapport de suivi des tests en utilisant l'utilitaire centralisé."""
-    
+
     section_header_to_update = "## Mesure de couverture des tests mockés (21/05/2025)"
     # Le RAPPORT_UPDATE contient déjà l'en-tête, donc pour new_content, nous l'omettons ou passons le contenu sans.
     # Pour cette refactorisation, nous allons supposer que RAPPORT_UPDATE est le *nouveau contenu complet* de la section,
@@ -80,31 +82,33 @@ def update_rapport():
     # Cependant, la logique actuelle de RAPPORT_UPDATE inclut l'en-tête.
     # Pour une meilleure utilisation de update_markdown_section, RAPPORT_UPDATE ne devrait pas contenir l'en-tête.
     # Pour l'instant, nous allons extraire le contenu après l'en-tête de RAPPORT_UPDATE.
-    
-    header_in_update = "## Mesure de couverture des tests mockés (21/05/2025)\n" # Doit correspondre exactement
+
+    header_in_update = "## Mesure de couverture des tests mockés (21/05/2025)\n"  # Doit correspondre exactement
     if RAPPORT_UPDATE.strip().startswith(header_in_update.strip()):
-        actual_new_content = RAPPORT_UPDATE.strip()[len(header_in_update):].strip()
+        actual_new_content = RAPPORT_UPDATE.strip()[len(header_in_update) :].strip()
     else:
         # Si l'en-tête n'est pas au début de RAPPORT_UPDATE comme attendu,
         # cela pourrait indiquer un problème. On utilise tout RAPPORT_UPDATE comme contenu
         # et on espère que update_markdown_section le gère bien (il ajoutera l'en-tête).
         # Ou alors, on logue une erreur. Pour l'instant, on passe tout.
         # Idéalement, RAPPORT_UPDATE serait juste le contenu.
-        print(f"Avertissement: L'en-tête '{header_in_update.strip()}' n'a pas été trouvé au début de RAPPORT_UPDATE. "
-              "La mise à jour de la section pourrait ne pas fonctionner comme prévu si l'en-tête est dupliqué.")
-        actual_new_content = RAPPORT_UPDATE # Moins idéal, car update_markdown_section ajoutera son propre en-tête.
-                                          # Pour un remplacement propre, RAPPORT_UPDATE ne devrait pas avoir l'en-tête.
-                                          # Pour cette fois, on va laisser update_markdown_section gérer la création de l'en-tête
-                                          # et on va passer le RAPPORT_UPDATE entier comme contenu.
-                                          # Cela signifie que l'en-tête sera dupliqué si la section existe déjà.
-                                          # La meilleure solution est de s'assurer que RAPPORT_UPDATE est *uniquement le contenu*.
-                                          # Pour l'instant, on va utiliser la version qui remplace toute la section.
+        print(
+            f"Avertissement: L'en-tête '{header_in_update.strip()}' n'a pas été trouvé au début de RAPPORT_UPDATE. "
+            "La mise à jour de la section pourrait ne pas fonctionner comme prévu si l'en-tête est dupliqué."
+        )
+        actual_new_content = RAPPORT_UPDATE  # Moins idéal, car update_markdown_section ajoutera son propre en-tête.
+        # Pour un remplacement propre, RAPPORT_UPDATE ne devrait pas avoir l'en-tête.
+        # Pour cette fois, on va laisser update_markdown_section gérer la création de l'en-tête
+        # et on va passer le RAPPORT_UPDATE entier comme contenu.
+        # Cela signifie que l'en-tête sera dupliqué si la section existe déjà.
+        # La meilleure solution est de s'assurer que RAPPORT_UPDATE est *uniquement le contenu*.
+        # Pour l'instant, on va utiliser la version qui remplace toute la section.
 
     # Pour un remplacement propre, il faudrait que RAPPORT_UPDATE soit juste le contenu.
     # Ici, on va utiliser la fonction pour remplacer toute la section, en espérant que
     # l'en-tête dans RAPPORT_UPDATE et section_header_to_update sont les mêmes.
     # Si on veut juste ajouter/remplacer le *contenu* sous l'en-tête, il faut ajuster.
-    
+
     # On va supposer que RAPPORT_UPDATE est le contenu complet de la section, y compris son propre en-tête.
     # La fonction update_markdown_section va chercher section_header_to_update, et si elle le trouve,
     # elle remplacera toute la section par section_header_to_update + actual_new_content.
@@ -113,22 +117,26 @@ def update_rapport():
     # Mais section_header_to_update doit être l'en-tête que l'on cherche.
 
     # Simplifions: on va passer le contenu de RAPPORT_UPDATE *sans* son en-tête.
-    content_for_section = RAPPORT_UPDATE.split(header_in_update, 1)[-1] if header_in_update in RAPPORT_UPDATE else RAPPORT_UPDATE
-
+    content_for_section = (
+        RAPPORT_UPDATE.split(header_in_update, 1)[-1]
+        if header_in_update in RAPPORT_UPDATE
+        else RAPPORT_UPDATE
+    )
 
     if update_markdown_section(
         file_path=RAPPORT_PATH,
-        section_header=section_header_to_update, # L'en-tête que l'on cherche/veut créer
-        new_content=content_for_section, # Le contenu à mettre sous cet en-tête
-        ensure_header_level=2, # C'est un '##'
+        section_header=section_header_to_update,  # L'en-tête que l'on cherche/veut créer
+        new_content=content_for_section,  # Le contenu à mettre sous cet en-tête
+        ensure_header_level=2,  # C'est un '##'
         add_if_not_found=True,
-        replace_entire_section=True # Remplacer toute la section si trouvée
+        replace_entire_section=True,  # Remplacer toute la section si trouvée
     ):
         print(f"Rapport de suivi mis à jour avec succès: {RAPPORT_PATH}")
         return True
     else:
         print(f"Échec de la mise à jour du rapport de suivi: {RAPPORT_PATH}")
         return False
+
 
 if __name__ == "__main__":
     update_rapport()

@@ -14,7 +14,7 @@ Ce module fournit les briques de base pour l'`ExtractAgent` :
 
 import re
 import logging
-from pathlib import Path # De la version stashed
+from pathlib import Path  # De la version stashed
 from typing import List, Dict, Any, Tuple, Optional, Union
 import json
 
@@ -28,8 +28,8 @@ except ImportError:
 # Configuration du logging (de la version stashed)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("ExtractAgent.Definitions")
 
@@ -38,13 +38,21 @@ try:
     log_dir = PROJECT_ROOT / "_temp" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file_path = log_dir / "extract_agent.log"
-    
-    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
-    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'))
+
+    file_handler = logging.FileHandler(log_file_path, mode="a", encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+        )
+    )
     logger.addHandler(file_handler)
 except Exception as e:
-    logger.warning(f"Impossible d'initialiser le logging de fichier pour l'agent d'extraction : {e}")
-    logger.warning("Cela peut se produire pendant les tests ou si les permissions sont incorrectes.")
+    logger.warning(
+        f"Impossible d'initialiser le logging de fichier pour l'agent d'extraction : {e}"
+    )
+    logger.warning(
+        "Cela peut se produire pendant les tests ou si les permissions sont incorrectes."
+    )
 
 
 class ExtractResult:
@@ -77,7 +85,7 @@ class ExtractResult:
         end_marker: str = "",
         template_start: str = "",
         explanation: str = "",
-        extracted_text: str = ""
+        extracted_text: str = "",
     ):
         """Initialise une instance de ExtractResult."""
         self.source_name = source_name
@@ -106,7 +114,7 @@ class ExtractResult:
             "end_marker": self.end_marker,
             "template_start": self.template_start,
             "explanation": self.explanation,
-            "extracted_text": self.extracted_text
+            "extracted_text": self.extracted_text,
         }
 
     def to_json(self) -> str:
@@ -119,7 +127,7 @@ class ExtractResult:
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ExtractResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "ExtractResult":
         """
         Crée une instance de `ExtractResult` à partir d'un dictionnaire.
 
@@ -138,7 +146,7 @@ class ExtractResult:
             end_marker=data.get("end_marker", ""),
             template_start=data.get("template_start", ""),
             explanation=data.get("explanation", ""),
-            extracted_text=data.get("extracted_text", "")
+            extracted_text=data.get("extracted_text", ""),
         )
 
 
@@ -157,11 +165,7 @@ class ExtractAgentPlugin:
         self.extract_results: List[Dict[str, Any]] = []
 
     def find_similar_markers(
-        self,
-        text: str,
-        marker: str,
-        max_results: int = 5,
-        find_similar_text_func=None
+        self, text: str, marker: str, max_results: int = 5, find_similar_text_func=None
     ) -> List[Dict[str, Any]]:
         """
         Trouve des passages de texte similaires à un marqueur donné.
@@ -187,12 +191,14 @@ class ExtractAgentPlugin:
 
         if find_similar_text_func is None:
             # Implémentation par défaut si la fonction n'est pas fournie
-            logger.warning("Fonction find_similar_text non fournie, utilisation d'une implémentation basique")
+            logger.warning(
+                "Fonction find_similar_text non fournie, utilisation d'une implémentation basique"
+            )
 
             similar_markers = []
             try:
                 # Recherche simple avec regex
-                pattern = re.escape(marker[:min(10, len(marker))])
+                pattern = re.escape(marker[: min(10, len(marker))])
                 matches = list(re.finditer(pattern, text, re.IGNORECASE))
 
                 for match in matches[:max_results]:
@@ -200,36 +206,36 @@ class ExtractAgentPlugin:
                     end_pos = min(len(text), match.end() + 50)
                     context = text[start_pos:end_pos]
 
-                    similar_markers.append({
-                        "marker": match.group(),
-                        "position": match.start(),
-                        "context": context
-                    })
+                    similar_markers.append(
+                        {
+                            "marker": match.group(),
+                            "position": match.start(),
+                            "context": context,
+                        }
+                    )
 
                 return similar_markers
             except Exception as e:
-                logger.error(f"Erreur lors de la recherche de marqueurs similaires: {e}")
+                logger.error(
+                    f"Erreur lors de la recherche de marqueurs similaires: {e}"
+                )
                 return []
         else:
             # Utiliser la fonction fournie
             similar_markers = []
-            results = find_similar_text_func(text, marker, context_size=50, max_results=max_results)
+            results = find_similar_text_func(
+                text, marker, context_size=50, max_results=max_results
+            )
 
             for context, position, found_text in results:
-                similar_markers.append({
-                    "marker": found_text,
-                    "position": position,
-                    "context": context
-                })
+                similar_markers.append(
+                    {"marker": found_text, "position": position, "context": context}
+                )
 
             return similar_markers
 
     def search_text_dichotomically(
-        self,
-        text: str,
-        search_term: str,
-        block_size: int = 500,
-        overlap: int = 50
+        self, text: str, search_term: str, block_size: int = 500, overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
         Recherche un terme par balayage de blocs (recherche non dichotomique).
@@ -272,21 +278,20 @@ class ExtractAgentPlugin:
                     context_end = min(text_length, match_end + 50)
                     context = text[context_start:context_end]
 
-                    results.append({
-                        "match": match.group(),
-                        "position": match_start,
-                        "context": context,
-                        "block_start": start_pos,
-                        "block_end": end_pos
-                    })
+                    results.append(
+                        {
+                            "match": match.group(),
+                            "position": match_start,
+                            "context": context,
+                            "block_start": start_pos,
+                            "block_end": end_pos,
+                        }
+                    )
 
         return results
 
     def extract_blocks(
-        self,
-        text: str,
-        block_size: int = 500,
-        overlap: int = 50
+        self, text: str, block_size: int = 500, overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
         Divise un texte en blocs de taille spécifiée avec chevauchement.
@@ -314,11 +319,7 @@ class ExtractAgentPlugin:
             end_pos = min(i + block_size, text_length)
             block = text[start_pos:end_pos]
 
-            blocks.append({
-                "block": block,
-                "start_pos": start_pos,
-                "end_pos": end_pos
-            })
+            blocks.append({"block": block, "start_pos": start_pos, "end_pos": end_pos})
 
         return blocks
 
@@ -359,7 +360,7 @@ class ExtractDefinition:
         start_marker: str,
         end_marker: str,
         template_start: str = "",
-        description: str = ""
+        description: str = "",
     ):
         """Initialise une instance de ExtractDefinition."""
         self.source_name = source_name
@@ -382,11 +383,11 @@ class ExtractDefinition:
             "start_marker": self.start_marker,
             "end_marker": self.end_marker,
             "template_start": self.template_start,
-            "description": self.description
+            "description": self.description,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ExtractDefinition':
+    def from_dict(cls, data: Dict[str, Any]) -> "ExtractDefinition":
         """
         Crée une instance de `ExtractDefinition` à partir d'un dictionnaire.
 
@@ -402,5 +403,5 @@ class ExtractDefinition:
             start_marker=data.get("start_marker", ""),
             end_marker=data.get("end_marker", ""),
             template_start=data.get("template_start", ""),
-            description=data.get("description", "")
+            description=data.get("description", ""),
         )

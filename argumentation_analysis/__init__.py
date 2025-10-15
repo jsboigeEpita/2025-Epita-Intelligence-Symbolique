@@ -62,5 +62,6 @@ __all__ = [
 
 # Log de chargement du package principal
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("Package 'argumentation_analysis' chargé.")

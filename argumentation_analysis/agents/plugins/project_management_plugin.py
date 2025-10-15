@@ -2,10 +2,13 @@
 from pydantic import BaseModel, Field
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
+
 class AnalysisReport(BaseModel):
     """Modèle de données pour le rapport final d'analyse."""
+
     final_summary: str = Field(..., description="Un résumé de l'analyse effectuée.")
     # Ce modèle sera enrichi dans les futurs WO pour agréger les résultats.
+
 
 class ProjectManagementPlugin:
     """Plugin pour exposer les outils de gestion de projet au Kernel."""

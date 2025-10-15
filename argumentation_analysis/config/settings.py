@@ -4,37 +4,43 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 from pathlib import Path
 
+
 class OpenAISettings(BaseSettings):
-    api_key: Optional[SecretStr] = Field(default="sk-dummy-key-for-testing", alias='OPENAI_API_KEY')
-    chat_model_id: str = 'gpt-4o-mini'
+    api_key: Optional[SecretStr] = Field(
+        default="sk-dummy-key-for-testing", alias="OPENAI_API_KEY"
+    )
+    chat_model_id: str = "gpt-4o-mini"
     base_url: Optional[HttpUrl] = None
     model_config = SettingsConfigDict(
-        env_prefix='OPENAI_',
-        env_file='.env',
-        env_file_encoding='utf-8',
-        extra='ignore'
+        env_prefix="OPENAI_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+
 class AzureOpenAISettings(BaseSettings):
-    api_key: Optional[SecretStr] = Field(None, alias='AZURE_OPENAI_API_KEY')
-    endpoint: Optional[HttpUrl] = Field(None, alias='AZURE_OPENAI_ENDPOINT')
-    deployment_name: Optional[str] = Field(None, alias='AZURE_OPENAI_CHAT_DEPLOYMENT_NAME')
-    chat_model_id: str = 'gpt-4o-mini'
-    model_config = SettingsConfigDict(
-        env_prefix='AZURE_OPENAI_',
-        env_file='.env',
-        env_file_encoding='utf-8',
-        extra='ignore'
+    api_key: Optional[SecretStr] = Field(None, alias="AZURE_OPENAI_API_KEY")
+    endpoint: Optional[HttpUrl] = Field(None, alias="AZURE_OPENAI_ENDPOINT")
+    deployment_name: Optional[str] = Field(
+        None, alias="AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"
     )
+    chat_model_id: str = "gpt-4o-mini"
+    model_config = SettingsConfigDict(
+        env_prefix="AZURE_OPENAI_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
 
 class TikaSettings(BaseSettings):
     server_endpoint: HttpUrl = "https://tika.open-webui.myia.io/tika"
     server_timeout: int = 600
-    model_config = SettingsConfigDict(env_prefix='TIKA_')
+    model_config = SettingsConfigDict(env_prefix="TIKA_")
+
 
 class JinaSettings(BaseSettings):
     reader_prefix: HttpUrl = "https://r.jina.ai/"
-    model_config = SettingsConfigDict(env_prefix='JINA_')
+    model_config = SettingsConfigDict(env_prefix="JINA_")
+
 
 class NetworkSettings(BaseSettings):
     breaker_fail_max: int = 5
@@ -44,12 +50,22 @@ class NetworkSettings(BaseSettings):
     retry_wait_min: int = 2
     retry_wait_max: int = 10
     default_timeout: float = 15.0
-    model_config = SettingsConfigDict(env_prefix='NETWORK_')
+    model_config = SettingsConfigDict(env_prefix="NETWORK_")
+
 
 class UISettings(BaseSettings):
     temp_download_dir: Path = Path("temp_downloads")
-    plaintext_extensions: List[str] = [".txt", ".md", ".json", ".xml", ".html", ".css", ".js"]
-    model_config = SettingsConfigDict(env_prefix='UI_')
+    plaintext_extensions: List[str] = [
+        ".txt",
+        ".md",
+        ".json",
+        ".xml",
+        ".html",
+        ".css",
+        ".js",
+    ]
+    model_config = SettingsConfigDict(env_prefix="UI_")
+
 
 class ServiceManagerSettings(BaseSettings):
     enable_hierarchical: bool = True
@@ -64,7 +80,8 @@ class ServiceManagerSettings(BaseSettings):
     default_llm_service_id: str = "openai"
     default_model_id: str = "gpt-4o-mini"
     hierarchical_channel_id: str = "hierarchical_main"
-    model_config = SettingsConfigDict(env_prefix='SERVICE_MANAGER_')
+    model_config = SettingsConfigDict(env_prefix="SERVICE_MANAGER_")
+
 
 class JVMSettings(BaseSettings):
     min_java_version: int = 11
@@ -81,10 +98,13 @@ class JVMSettings(BaseSettings):
     native_libs_dir: Path = Path("libs/native")
 
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
-    model_config = SettingsConfigDict(env_prefix='JVM_')
+    model_config = SettingsConfigDict(env_prefix="JVM_")
+
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # Child settings
     openai: OpenAISettings = OpenAISettings()
@@ -96,15 +116,15 @@ class AppSettings(BaseSettings):
     jvm: JVMSettings = JVMSettings()
 
     # App-level settings
-    debug_mode: bool = Field(False, alias='DEBUG')
+    debug_mode: bool = Field(False, alias="DEBUG")
     environment: str = "development"
-    passphrase: Optional[SecretStr] = Field(None, alias='TEXT_CONFIG_PASSPHRASE')
-    encryption_key: Optional[SecretStr] = Field(None, alias='ENCRYPTION_KEY')
-    enable_jvm: bool = Field(True, alias='ENABLE_JVM')
-    use_mock_llm: bool = Field(False, alias='USE_MOCK_LLM')
-    MOCK_LLM: bool = Field(False, alias='MOCK_LLM')
-    libs_dir: Optional[DirectoryPath] = Field(None, alias='LIBS_DIR')
-    
+    passphrase: Optional[SecretStr] = Field(None, alias="TEXT_CONFIG_PASSPHRASE")
+    encryption_key: Optional[SecretStr] = Field(None, alias="ENCRYPTION_KEY")
+    enable_jvm: bool = Field(True, alias="ENABLE_JVM")
+    use_mock_llm: bool = Field(False, alias="USE_MOCK_LLM")
+    MOCK_LLM: bool = Field(False, alias="MOCK_LLM")
+    libs_dir: Optional[DirectoryPath] = Field(None, alias="LIBS_DIR")
+
     # Derived Paths
     project_root: Path = Path(__file__).resolve().parents[2]
 
@@ -122,11 +142,12 @@ class AppSettings(BaseSettings):
     @property
     def config_file_enc(self) -> Path:
         return self.config_dir / "extract_sources.json.gz.enc"
-    
+
     @computed_field
     @property
     def config_file(self) -> Path:
         # For legacy compatibility, CONFIG_FILE pointed to the encrypted file
         return self.config_file_enc
+
 
 settings = AppSettings()

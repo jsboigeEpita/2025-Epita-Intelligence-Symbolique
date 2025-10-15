@@ -9,21 +9,23 @@ core functionalities.
 # Imports des composants core (sans dépendance circulaire)
 from .shared_state import RhetoricalAnalysisState
 from .llm_service import create_llm_service
+
 # from .bootstrap import * # COMMENTÉ - L'initialisation doit être explicite
 
 # Exports principaux
-__all__ = [
-    'RhetoricalAnalysisState',
-    'create_llm_service'
-]
+__all__ = ["RhetoricalAnalysisState", "create_llm_service"]
+
 
 # Import conditionnel pour éviter la dépendance circulaire
 def get_argumentation_analyzer():
     """Importe et retourne ArgumentationAnalyzer de manière lazy."""
     from .argumentation_analyzer import ArgumentationAnalyzer
+
     return ArgumentationAnalyzer
+
 
 def get_analyzer():
     """Importe et retourne Analyzer de manière lazy."""
     from .argumentation_analyzer import Analyzer
+
     return Analyzer

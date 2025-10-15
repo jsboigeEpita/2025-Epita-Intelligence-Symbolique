@@ -1,6 +1,7 @@
 import time
 from typing import Callable, Tuple, Any
 
+
 class BenchmarkService:
     """
     Service pour mesurer et enregistrer des métriques de performance détaillées.
@@ -9,13 +10,16 @@ class BenchmarkService:
     d'enregistrer diverses métriques (succès, échecs, valeurs custom)
     dans une structure de données interne pour une analyse ultérieure.
     """
+
     def __init__(self):
         """
         Initialise le service de benchmark.
         """
         self.metrics = {}
 
-    def record_metric(self, function_name: str, success: bool, value: float, metric_type: str):
+    def record_metric(
+        self, function_name: str, success: bool, value: float, metric_type: str
+    ):
         """
         Enregistre une métrique de performance détaillée.
 
@@ -27,13 +31,15 @@ class BenchmarkService:
         """
         if function_name not in self.metrics:
             self.metrics[function_name] = []
-        
-        self.metrics[function_name].append({
-            "success": success,
-            "value": value,
-            "metric_type": metric_type,
-            "timestamp": time.time()
-        })
+
+        self.metrics[function_name].append(
+            {
+                "success": success,
+                "value": value,
+                "metric_type": metric_type,
+                "timestamp": time.time(),
+            }
+        )
 
     def measure_latency(self, func: Callable, *args, **kwargs) -> Tuple[Any, float]:
         """

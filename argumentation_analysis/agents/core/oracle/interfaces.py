@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
+
 class OracleAgentInterface(ABC):
     """
     Définit le contrat qu'un agent doit respecter pour agir comme un Oracle.
@@ -22,7 +23,9 @@ class OracleAgentInterface(ABC):
     """
 
     @abstractmethod
-    async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_oracle_request(
+        self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Traite une requête entrante adressée à l'Oracle.
 
@@ -53,6 +56,7 @@ class OracleAgentInterface(ABC):
         """Réinitialise l'état interne de l'Oracle."""
         pass
 
+
 class DatasetManagerInterface(ABC):
     """
     Définit le contrat pour un gestionnaire d'accès à un jeu de données.
@@ -62,7 +66,9 @@ class DatasetManagerInterface(ABC):
     """
 
     @abstractmethod
-    def execute_query(self, agent_name: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_query(
+        self, agent_name: str, query_type: str, query_params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Exécute une requête sur le jeu de données après vérification des permissions.
 
@@ -90,11 +96,13 @@ class DatasetManagerInterface(ABC):
         """
         pass
 
+
 @dataclass
 class StandardOracleResponse:
     """
     Structure de données standard pour toutes les réponses de l'Oracle.
     """
+
     success: bool
     """Indique si la requête a été traitée avec succès."""
     data: Optional[Dict[str, Any]] = None
@@ -113,11 +121,13 @@ class StandardOracleResponse:
             "data": self.data,
             "message": self.message,
             "error_code": self.error_code,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
+
 
 class OracleResponseStatus(Enum):
     """Codes de statut standardisés pour les réponses de l'Oracle."""
+
     SUCCESS = "success"
     """La requête a été traitée avec succès."""
     ERROR = "error"

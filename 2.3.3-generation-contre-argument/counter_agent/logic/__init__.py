@@ -9,7 +9,4 @@ de raisonnement formel comme TweetyProject.
 from .validator import CounterArgumentValidator
 from .tweety_bridge import TweetyBridge
 
-__all__ = [
-    'CounterArgumentValidator',
-    'TweetyBridge'
-] 
+__all__ = ["CounterArgumentValidator", "TweetyBridge"]

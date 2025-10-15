@@ -6,13 +6,15 @@ Utilities for programmatic code refactoring using Abstract Syntax Trees (AST).
 import ast
 from pathlib import Path
 
+
 class ImportUpdater(ast.NodeTransformer):
     """
     AST transformer to find and replace import paths.
-    
+
     This transformer walks the AST of a Python module and replaces occurrences
     of a specified import module path with a new one.
     """
+
     def __init__(self, old_path: str, new_path: str):
         self.old_path = old_path
         self.new_path = new_path
@@ -21,7 +23,7 @@ class ImportUpdater(ast.NodeTransformer):
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
         """
         Visits an `ImportFrom` node.
-        
+
         If the node's module path matches `old_path`, it is replaced with `new_path`.
         """
         if node.module and node.module == self.old_path:
@@ -30,6 +32,7 @@ class ImportUpdater(ast.NodeTransformer):
             # line numbers and column offsets.
             ast.fix_missing_locations(node)
         return self.generic_visit(node)
+
 
 def refactor_update_import(source_code: str, old_import: str, new_import: str) -> str:
     """
@@ -53,13 +56,15 @@ def refactor_update_import(source_code: str, old_import: str, new_import: str) -
     new_tree = transformer.visit(tree)
     return ast.unparse(new_tree)
 
+
 class FunctionRenamer(ast.NodeTransformer):
     """
     AST transformer to find and rename function calls.
-    
-    This transformer walks the AST and renames a function call from 
+
+    This transformer walks the AST and renames a function call from
     `old_name` to `new_name`.
     """
+
     def __init__(self, old_name: str, new_name: str):
         self.old_name = old_name
         self.new_name = new_name
@@ -68,7 +73,7 @@ class FunctionRenamer(ast.NodeTransformer):
     def visit_Call(self, node: ast.Call) -> ast.Call:
         """
         Visits a `Call` node.
-        
+
         If the function call name matches `old_name`, it is replaced with `new_name`.
         """
         if isinstance(node.func, ast.Name) and node.func.id == self.old_name:

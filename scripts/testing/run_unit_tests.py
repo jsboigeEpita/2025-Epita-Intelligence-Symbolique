@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # et de capturer sa sortie.
 
     command = [sys.executable, "-m", "pytest", "-v", "tests/unit/"]
-    
+
     try:
         # On utilise subprocess.run pour exécuter la commande et attendre sa complétion.
         # stdout et stderr sont redirigés vers un fichier log.
@@ -19,9 +19,9 @@ if __name__ == "__main__":
                 stderr=subprocess.STDOUT,
                 check=False,  # On ne lève pas d'exception si le code de sortie est non-nul
                 text=True,
-                encoding="utf-8"
+                encoding="utf-8",
             )
-        
+
         # On propage le code de sortie de pytest
         sys.exit(result.returncode)
 

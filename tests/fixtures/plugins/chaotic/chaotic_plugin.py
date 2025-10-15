@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Dict, Any
 
+
 class ChaoticPlugin:
     """
     Un plugin de test conçu pour simuler des scénarios d'erreur contrôlés.
@@ -21,6 +22,6 @@ class ChaoticPlugin:
         """
         if data.get("fail", False):
             raise ValueError("Échec intentionnel simulé par le ChaoticPlugin.")
-        
+
         data["status"] = "processed"
         return data

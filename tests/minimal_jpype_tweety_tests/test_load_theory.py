@@ -9,10 +9,19 @@ LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
 NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
 
 # Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
-all_jars_in_libs = [os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")]
-TWEETY_JARS = [jar for jar in all_jars_in_libs if "tweety-full-1.28.jar" != os.path.basename(jar) or "with-dependencies" in os.path.basename(jar)]
+all_jars_in_libs = [
+    os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")
+]
+TWEETY_JARS = [
+    jar
+    for jar in all_jars_in_libs
+    if "tweety-full-1.28.jar" != os.path.basename(jar)
+    or "with-dependencies" in os.path.basename(jar)
+]
 jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
-jar_with_deps = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+jar_with_deps = os.path.join(
+    LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+)
 
 if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
     TWEETY_JARS.remove(jar_simple)
@@ -23,7 +32,10 @@ print(f"Dynamically included JARS for test_load_theory: {TWEETY_JARS}")
 # Vérifier l'existence de ces JARs spécifiques
 for jar_path_check in TWEETY_JARS:
     if not os.path.exists(jar_path_check):
-        raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
+        raise FileNotFoundError(
+            f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths."
+        )
+
 
 def test_load_theory(jvm_session):
     """
@@ -34,7 +46,9 @@ def test_load_theory(jvm_session):
         print("Démarrage du test de chargement de théorie...")
 
         # La fixture jvm_session s'est déjà occupée de démarrer la JVM.
-        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
+        assert (
+            jpype.isJVMStarted()
+        ), "La JVM devrait être démarrée par la fixture jvm_session"
 
         PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
@@ -46,11 +60,13 @@ def test_load_theory(jvm_session):
         print(f"Chemin du fichier de théorie : {theory_file_path}")
 
         if not os.path.exists(theory_file_path):
-            raise FileNotFoundError(f"Le fichier de théorie {theory_file_path} n'a pas été trouvé.")
+            raise FileNotFoundError(
+                f"Le fichier de théorie {theory_file_path} n'a pas été trouvé."
+            )
 
         # Créer un parser et charger la théorie
         parser = PlParser()
-        belief_set = PlBeliefSet() # Crée un ensemble de croyances vide
+        belief_set = PlBeliefSet()  # Crée un ensemble de croyances vide
 
         # La méthode parseBeliefBaseFromFile de PlParser prend un java.io.File
         # Nous devons donc créer un objet File Java
@@ -65,12 +81,12 @@ def test_load_theory(jvm_session):
         # Alternativement, certains parsers peuvent retourner directement un BeliefSet.
         # Ici, nous allons essayer de parser le fichier et d'ajouter à belief_set.
         # PlParser.parseBeliefBaseFromFile retourne un BeliefSet, donc on peut l'assigner directement.
-        
+
         # Tentative de chargement direct
         # Note: La signature exacte peut varier. Vérifiez la documentation de Tweety.
         # Si PlParser().parseBeliefBaseFromFile(java_file) est la bonne méthode:
         parsed_belief_set = parser.parseBeliefBaseFromFile(theory_file_path)
-        
+
         # Copier les formules dans notre belief_set ou utiliser directement parsed_belief_set
         # Pour cet exemple, nous allons considérer que parsed_belief_set est ce que nous voulons.
         belief_set = parsed_belief_set
@@ -86,6 +102,7 @@ def test_load_theory(jvm_session):
     except Exception as e:
         print(f"Test de chargement de théorie ÉCHOUÉ : {e}")
         import traceback
+
         traceback.print_exc()
-        #pytest se chargera de lever l'exception
+        # pytest se chargera de lever l'exception
         raise e
