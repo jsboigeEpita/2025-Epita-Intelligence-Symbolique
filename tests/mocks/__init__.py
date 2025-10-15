@@ -1,2 +1,4 @@
-# This file is intentionally left blank.
-# Mocking logic is handled by tests/mocks/bootstrap.py, loaded via pytest addopts.
+# Export jpype_mock object for easy import: from tests.mocks import jpype_mock
+from tests.mocks.jpype_mock import jpype_mock
+
+__all__ = ['jpype_mock']
