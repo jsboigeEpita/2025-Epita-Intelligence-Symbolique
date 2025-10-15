@@ -25,14 +25,14 @@ jobs:
           use-mamba: true  # Résolution 5-10x plus rapide
           auto-update-conda: false  # Évite instabilités cache
 
-      - name: Format with black
-        shell: pwsh
-        run: scripts/setup/activate_project_env.ps1 -CommandToRun "black ."
-
-      - name: Check formatting and linting
+      - name: Check code formatting
         shell: pwsh
         run: |
-          scripts/setup/activate_project_env.ps1 -CommandToRun "black --check ."
+          scripts/setup/activate_project_env.ps1 -CommandToRun "black --check --diff ."
+      
+      - name: Check code linting
+        shell: pwsh
+        run: |
           scripts/setup/activate_project_env.ps1 -CommandToRun "flake8 ."
 
   automated-tests:
