@@ -15,8 +15,6 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
-import jpype
-from unittest.mock import patch, MagicMock
 
 # --- Mocking global pour les tests E2E ---
 # Si --disable-jvm-session est présent, on mocke jpype AVANT toute autre importation.
@@ -42,6 +40,11 @@ try:
 except (ImportError, OSError, RuntimeError) as e:
     # Utilise print car le logger n'est pas encore configuré à ce stade.
     print(f"[AVERTISSEMENT CONTEST] L'importation préventive d'une bibliothèque a échoué: {e}", file=sys.stderr)
+
+# --- Import jpype APRÈS torch pour éviter conflit DLL Windows ---
+# CRITIQUE : jpype doit être importé APRÈS torch/transformers pour éviter
+# "OSError: [WinError 182] torch\lib\fbgemm.dll" sur Windows
+import jpype
 # Ajouter le répertoire racine et les sous-répertoires pertinents au PYTHONPATH
 project_root = Path(__file__).parent.parent
 additional_paths = [
@@ -200,6 +203,12 @@ def pytest_sessionstart(session):
     logger.info("=" * 80)
     logger.info("pytest_sessionstart: Vérification pour l'initialisation de la JVM...")
     logger.info("=" * 80)
+
+    # Skip JVM init en mode --collect-only (évite conflit torch/JVM)
+    if session.config.option.collectonly:
+        logger.info("Mode collection uniquement : JVM non initialisée (évite conflit torch/DLL)")
+        session.config.cache.set("jvm_started", False)
+        return
 
     if session.config.getoption("--disable-jvm-session"):
         logger.warning("Initialisation de la JVM sautée via --disable-jvm-session.")
