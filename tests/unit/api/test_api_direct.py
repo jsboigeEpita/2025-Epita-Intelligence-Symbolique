@@ -36,6 +36,14 @@ try:
     if missing_files:
         API_ENVIRONMENT_AVAILABLE = False
         API_ENVIRONMENT_ERROR = f"Fichiers API manquants: {', '.join(missing_files)}"
+    
+    # Vérifier disponibilité PyTorch (requis pour démarrage API via spacy/thinc)
+    if sys.platform == "win32":
+        try:
+            import torch
+        except (ImportError, OSError) as e:
+            API_ENVIRONMENT_AVAILABLE = False
+            API_ENVIRONMENT_ERROR = f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
 except Exception as e:
     API_ENVIRONMENT_AVAILABLE = False
     API_ENVIRONMENT_ERROR = str(e)
