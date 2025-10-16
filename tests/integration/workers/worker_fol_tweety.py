@@ -349,17 +349,15 @@ class TestFOLErrorHandling:
         assert "aucune structure logique" in msg.lower()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="Needs a way to mock async methods on the instance from fixture"
-    )
     async def test_fol_timeout_handling(self, fol_agent_with_kernel):
         """Test gestion timeouts analyse FOL."""
+        from unittest.mock import AsyncMock
+        
         agent = fol_agent_with_kernel
 
-        # Mock timeout
+        # Mock timeout avec AsyncMock pour méthode async
         if agent.tweety_bridge:
-            agent.tweety_bridge = await self._create_authentic_gpt4o_mini_instance()
-            agent.tweety_bridge.check_consistency = Mock(
+            agent.tweety_bridge.check_consistency = AsyncMock(
                 side_effect=asyncio.TimeoutError("Timeout test")
             )
 
