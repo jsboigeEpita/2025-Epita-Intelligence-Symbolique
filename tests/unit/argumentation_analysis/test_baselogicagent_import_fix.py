@@ -4,7 +4,7 @@ Test unitaire pour vérifier que le cycle d'import de BaseLogicAgent a été ré
 
 Ce test valide que :
 1. BaseAgent peut être importé sans erreur
-2. BaseLogicAgent peut être importé sans cycle d'import 
+2. BaseLogicAgent peut être importé sans cycle d'import
 3. ServiceManager peut maintenant importer BaseLogicAgent
 4. Les forward references fonctionnent correctement avec TYPE_CHECKING
 """
@@ -12,6 +12,15 @@ Ce test valide que :
 import pytest
 import sys
 from typing import TYPE_CHECKING
+
+# Vérification PyTorch pour skip conditionnel Windows
+PYTORCH_AVAILABLE = True
+PYTORCH_ERROR = None
+try:
+    import torch
+except (ImportError, OSError) as e:
+    PYTORCH_AVAILABLE = False
+    PYTORCH_ERROR = str(e)
 
 
 def test_baseagent_import_success():
@@ -48,6 +57,10 @@ def test_baselogicagent_import_success():
         pytest.fail(f"ECHEC: Erreur inattendue lors de l'import BaseLogicAgent: {e}")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" and not PYTORCH_AVAILABLE,
+    reason=f"PyTorch fbgemm.dll issue on Windows - {PYTORCH_ERROR if PYTORCH_ERROR else 'WinError 182: Visual C++ Redistributable required'}"
+)
 def test_service_manager_can_import_baselogicagent():
     """Test que ServiceManager peut maintenant importer BaseLogicAgent sans problème."""
     try:
@@ -139,6 +152,10 @@ def test_logic_agents_can_inherit_from_baselogicagent():
 class TestBaseLogicAgentImportFix:
     """Classe de test pour la résolution du cycle d'import BaseLogicAgent."""
 
+    @pytest.mark.skipif(
+        sys.platform == "win32" and not PYTORCH_AVAILABLE,
+        reason=f"PyTorch fbgemm.dll issue on Windows - {PYTORCH_ERROR if PYTORCH_ERROR else 'WinError 182: Visual C++ Redistributable required'}"
+    )
     def test_complete_import_resolution(self):
         """Test complet de résolution du cycle d'import."""
         print("\n=== TEST RESOLUTION CYCLE D'IMPORT BASELOGICAGENT ===")
