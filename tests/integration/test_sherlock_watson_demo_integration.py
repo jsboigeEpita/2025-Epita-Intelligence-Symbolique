@@ -69,14 +69,11 @@ class TestSherlockWatsonDemoIntegration:
         assert demo_instance.mock_used == False
         assert demo_instance.authentic_mode == True
 
+    @pytest.mark.requires_openai
     def test_environment_setup(self, demo_instance):
         """Test configuration environnement authentique"""
 
         async def _async_test():
-            # Skip si pas de clé API
-            if not os.getenv("OPENAI_API_KEY"):
-                pytest.skip("OPENAI_API_KEY not configured")
-
             result = await demo_instance.setup_authentic_environment()
 
             if result:
@@ -221,14 +218,11 @@ class TestSherlockWatsonDemoIntegration:
 
         asyncio.run(_async_test())
 
+    @pytest.mark.requires_openai
     def test_complete_demo_flow(self, demo_instance, temp_results_dir):
         """Test flux complet de démonstration (version allégée)"""
 
         async def _async_test():
-            # Skip si pas de configuration complète
-            if not os.getenv("OPENAI_API_KEY"):
-                pytest.skip("OPENAI_API_KEY not configured for full flow test")
-
             # Test avec timeout réduit pour éviter les longs appels API
             try:
                 # Test seulement les étapes qui ne nécessitent pas d'API

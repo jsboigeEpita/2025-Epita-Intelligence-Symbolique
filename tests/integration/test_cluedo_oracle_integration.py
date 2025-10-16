@@ -572,11 +572,9 @@ class TestCluedoOracleIntegrationAuthentic:
             if original_key:
                 os.environ["OPENAI_API_KEY"] = original_key
 
+    @pytest.mark.requires_openai
     def test_game_engine_setup_with_api_key_authentic(self, test_case_data_authentic):
         """Test configuration jeu avec clé API 100% authentique"""
-        if not os.getenv("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not configured for authentic test")
-
         if COMPONENTS_AVAILABLE:
             try:
                 engine = CluedoGameEngine()
@@ -682,11 +680,9 @@ class TestCluedoOracleIntegrationAuthentic:
 
         logger.info("✅ Validation comportement Oracle authentique réussie")
 
+    @pytest.mark.requires_openai
     def test_complete_demo_authentic_fallback(self):
         """Test démonstration complète authentique avec fallback"""
-        if not os.getenv("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not configured for authentic demo")
-
         try:
             if COMPONENTS_AVAILABLE:
                 # Test avec timeout court pour éviter longs appels

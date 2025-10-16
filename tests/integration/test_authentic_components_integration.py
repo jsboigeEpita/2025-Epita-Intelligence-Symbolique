@@ -45,12 +45,9 @@ class TestRealGPT4oMiniIntegration:
     """Tests d'intégration avec GPT-4o-mini authentique."""
 
     @pytest.mark.integration
-    @pytest.mark.requires_api_key
+    @pytest.mark.requires_openai
     def test_real_gpt4o_mini_service_creation(self):
         """Test de création du service GPT-4o-mini réel."""
-        if not os.getenv("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY required for real GPT-4o-mini tests")
-
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
 
@@ -66,12 +63,9 @@ class TestRealGPT4oMiniIntegration:
             pytest.skip("LLM service components not available")
 
     @pytest.mark.integration
-    @pytest.mark.requires_api_key
+    @pytest.mark.requires_openai
     def test_real_gpt4o_mini_orchestration(self):
         """Test d'orchestration avec GPT-4o-mini réel."""
-        if not os.getenv("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY required")
-
         try:
             from argumentation_analysis.orchestration.real_llm_orchestrator import (
                 RealLLMOrchestrator,

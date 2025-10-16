@@ -147,7 +147,12 @@ def performance_profiler():
 
 @pytest.fixture
 def real_gpt_kernel_performance():
-    """Kernel optimisé pour tests de performance."""
+    """
+    Kernel optimisé pour tests de performance.
+    
+    Note: Les tests utilisant cette fixture DOIVENT être marqués avec
+    @pytest.mark.requires_openai pour un skip cohérent en l'absence de clé API.
+    """
     if not REAL_GPT_AVAILABLE:
         pytest.skip("OPENAI_API_KEY requis pour tests de performance réels")
 

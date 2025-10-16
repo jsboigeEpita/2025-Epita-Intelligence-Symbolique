@@ -182,13 +182,11 @@ class TestOrchestrationFinaleIntegration:
 
         asyncio.run(_async_test())
 
+    @pytest.mark.requires_openai
     def test_environment_initialization_with_valid_key(self, engine_instance):
         """Test initialisation avec clé API valide"""
 
         async def _async_test():
-            if not os.getenv("OPENAI_API_KEY"):
-                pytest.skip("OPENAI_API_KEY not configured")
-
             try:
                 result = await engine_instance.initialize_authentic_environment()
 

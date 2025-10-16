@@ -77,7 +77,54 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
-          scripts/setup/activate_project_env.ps1 -CommandToRun "pytest"
+          scripts/setup/activate_project_env.ps1 -CommandToRun "pytest tests/ --junitxml=pytest_report.xml -v"
+
+      - name: Generate test summary
+        if: always()
+        shell: pwsh
+        run: |
+          scripts/setup/activate_project_env.ps1 -CommandToRun @"
+          Write-Host ""
+          Write-Host "═══════════════════════════════════════════════"
+          Write-Host "📊 TEST EXECUTION SUMMARY"
+          Write-Host "═══════════════════════════════════════════════"
+          
+          if (Test-Path pytest_report.xml) {
+            [xml]`$xml = Get-Content pytest_report.xml
+            `$total = [int]`$xml.testsuites.tests
+            `$errors = [int]`$xml.testsuites.errors
+            `$failures = [int]`$xml.testsuites.failures
+            `$skipped = [int]`$xml.testsuites.skipped
+            `$passed = `$total - `$errors - `$failures - `$skipped
+            
+            Write-Host "✅ Passed:  `$passed / `$total"
+            Write-Host "❌ Failed:  `$(`$errors + `$failures) / `$total"
+            Write-Host "⏭️  Skipped: `$skipped / `$total"
+            
+            if (`$skipped -gt 0) {
+              Write-Host ""
+              Write-Host "ℹ️  Note: `$skipped tests were skipped (likely due to missing API keys)"
+              Write-Host "   These tests require OPENAI_API_KEY or other API credentials."
+              Write-Host "   Configure secrets in GitHub repository settings to run them."
+            }
+          } else {
+            Write-Host "⚠️  No test report generated (tests may have been skipped)"
+            Write-Host ""
+            Write-Host "ℹ️  API keys not configured - all tests requiring APIs were skipped"
+            Write-Host "   This is expected behavior for forks and external contributions"
+          }
+          Write-Host "═══════════════════════════════════════════════"
+          "@
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            pytest_report.xml
+            **/*.log
+          if-no-files-found: warn
 
       - name: Notify tests skipped
         if: env.API_KEYS_CONFIGURED != 'true'

@@ -319,7 +319,7 @@ class TestCluedoOrchestrationRealIntegration:
 @pytest.mark.skipif(
     not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles"
 )
-@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
+@pytest.mark.requires_openai
 def test_full_real_cluedo_integration():
     """Test d'intégration complet avec les VRAIES classes système"""
     try:
@@ -329,9 +329,6 @@ def test_full_real_cluedo_integration():
 
         # VRAI service LLM
         api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY not set, cannot run full integration test.")
-
         llm_service = OpenAIChatCompletion(
             service_id="chat_completion", ai_model_id="gpt-4o-mini", api_key=api_key
         )

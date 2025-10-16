@@ -4,10 +4,16 @@ import pytest
 from dotenv import load_dotenv
 
 
+@pytest.mark.requires_api
 def test_api_connectivity():
     """
     Vérifie la connectivité aux APIs OpenRouter et OpenAI.
     Ce test utilise les clés API stockées dans les variables d'environnement.
+    
+    Note: Ce test adapte son comportement selon les clés API disponibles:
+    - Teste OpenRouter si OPENROUTER_API_KEY est configurée
+    - Teste OpenAI si OPENAI_API_KEY est configurée
+    - Skip si aucune clé n'est disponible
     """
     # Charger les variables d'environnement du fichier .env
     load_dotenv()
