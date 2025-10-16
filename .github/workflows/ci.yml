@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.10"  # FIX: guillemets pour éviter 3.1
           environment-file: environment.yml
-          activate-environment: epita-symbolic-ai
+          activate-environment: projet-is
           use-mamba: true  # Résolution 5-10x plus rapide
           auto-update-conda: false  # Évite instabilités cache
 
@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: "3.10"  # FIX: guillemets pour éviter 3.1
           environment-file: environment.yml
-          activate-environment: epita-symbolic-ai
+          activate-environment: projet-is
           use-mamba: true  # Résolution 5-10x plus rapide
           auto-update-conda: false  # Évite instabilités cache
 

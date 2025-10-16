@@ -365,7 +365,7 @@ jobs:
         with:
           python-version: "3.10"
           environment-file: environment.yml
-          activate-environment: epita-symbolic-ai
+          activate-environment: projet-is
           use-mamba: true
           auto-update-conda: false
 

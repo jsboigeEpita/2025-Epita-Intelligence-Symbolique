@@ -437,7 +437,7 @@ Cette approche permet aux contributeurs externes de soumettre des Pull Requests 
 
 2. **Activer l'environnement Conda** :
    ```bash
-   conda activate epita-symbolic-ai
+   conda activate projet-is
    ```
 
 3. **Exécuter les tests** :

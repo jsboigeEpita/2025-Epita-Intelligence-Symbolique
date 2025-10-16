@@ -101,7 +101,7 @@ Le parser YAML considère `3.10` comme un nombre flottant, tronquant le zéro de
     auto-update-conda: true
     python-version: 3.10
     environment-file: environment.yml
-    activate-environment: epita-symbolic-ai
+    activate-environment: projet-is
 
 # APRÈS
 - name: Setup Miniconda
@@ -110,7 +110,7 @@ Le parser YAML considère `3.10` comme un nombre flottant, tronquant le zéro de
   with:
     python-version: "3.10"  # FIX: Guillemets pour forcer string
     environment-file: environment.yml
-    activate-environment: epita-symbolic-ai
+    activate-environment: projet-is
     use-mamba: true  # Optimisation: Résolution 5-10x plus rapide
     auto-update-conda: false  # Optimisation: Stabilité cache
 ```

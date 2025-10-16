@@ -38,7 +38,7 @@ cd 2025-Epita-Intelligence-Symbolique
 conda env create -f environment.yml
 
 # Activer l'environnement
-conda activate epita-symbolic-ai
+conda activate projet-is
 
 # Vérifier l'installation
 pytest --version
@@ -142,7 +142,7 @@ cp .env.example .env
 
 ```bash
 # Activer l'environnement
-conda activate epita-symbolic-ai
+conda activate projet-is
 
 # Exécuter TOUS les tests (y compris ceux avec API)
 pytest tests/

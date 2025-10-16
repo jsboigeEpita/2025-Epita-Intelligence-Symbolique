@@ -237,7 +237,7 @@ Les logs détaillés ne sont pas accessibles, mais Black a trouvé des violation
 **Pour identifier les fichiers exacts :**
 ```bash
 # Activer l'environnement
-conda activate epita-symbolic-ai
+conda activate projet-is
 
 # Lister les fichiers non conformes
 black --check --diff .
@@ -414,7 +414,7 @@ dependencies:
 **Actions :**
 ```bash
 # 1. Activer l'environnement
-conda activate epita-symbolic-ai
+conda activate projet-is
 
 # 2. Identifier les fichiers non conformes
 black --check --diff . | tee formatting_violations.txt
