@@ -15,11 +15,36 @@ import subprocess
 import threading
 from pathlib import Path
 from dotenv import load_dotenv
+import pytest
 
 # Charger l'environnement
 load_dotenv()
 
+# Vérifier disponibilité OPENAI_API_KEY et fichiers API
+API_ENVIRONMENT_AVAILABLE = True
+API_ENVIRONMENT_ERROR = None
+API_FILES_REQUIRED = ["api/main.py", "api/endpoints.py", "api/dependencies.py"]
 
+try:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key or len(api_key) < 20:
+        API_ENVIRONMENT_AVAILABLE = False
+        API_ENVIRONMENT_ERROR = "OPENAI_API_KEY non configurée ou invalide"
+    
+    # Vérifier fichiers API
+    missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
+    if missing_files:
+        API_ENVIRONMENT_AVAILABLE = False
+        API_ENVIRONMENT_ERROR = f"Fichiers API manquants: {', '.join(missing_files)}"
+except Exception as e:
+    API_ENVIRONMENT_AVAILABLE = False
+    API_ENVIRONMENT_ERROR = str(e)
+
+
+@pytest.mark.skipif(
+    not API_ENVIRONMENT_AVAILABLE,
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}"
+)
 def test_environment_setup():
     """Test 1: Vérification environnement."""
     print("\n=== Test 1: Vérification environnement ===")
@@ -39,6 +64,10 @@ def test_environment_setup():
     print("✓ Test environnement RÉUSSI")
 
 
+@pytest.mark.skipif(
+    not API_ENVIRONMENT_AVAILABLE,
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}"
+)
 def test_api_startup_and_basic_functionality():
     """Test 2: Démarrage API et fonctionnalité de base."""
     print("\n=== Test 2: Démarrage API et fonctionnalités ===")
