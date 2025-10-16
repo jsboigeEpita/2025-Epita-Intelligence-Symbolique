@@ -89,10 +89,16 @@ class EnvironmentManager:
         return self.project_root / ".env"
 
     def get_var_from_dotenv(self, var_name: str) -> Optional[str]:
-        """Lit une variable spécifique depuis le fichier .env à la racine."""
+        """
+        Lit une variable spécifique depuis le fichier .env à la racine.
+        
+        Note: L'absence du fichier .env est considérée comme normale dans certains
+        contextes (CI, tests, etc.) et ne constitue pas une erreur critique.
+        """
         if not self.target_env_file.is_file():
-            self.logger.error(
-                f"Le fichier .env cible est introuvable à : {self.target_env_file}"
+            self.logger.info(
+                f"Fichier .env introuvable à : {self.target_env_file}. "
+                f"Utilisation des valeurs par défaut (normal en CI/tests)."
             )
             return None
 
