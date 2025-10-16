@@ -55,7 +55,7 @@ except ImportError:
 # Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
-COMPARISON_TESTS_ENABLED = False
+COMPARISON_TESTS_ENABLED = True
 
 
 class BehaviorComparator:
