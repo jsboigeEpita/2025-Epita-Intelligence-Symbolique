@@ -91,7 +91,7 @@ class EnvironmentManager:
     def get_var_from_dotenv(self, var_name: str) -> Optional[str]:
         """
         Lit une variable spécifique depuis le fichier .env à la racine.
-        
+
         Note: L'absence du fichier .env est considérée comme normale dans certains
         contextes (CI, tests, etc.) et ne constitue pas une erreur critique.
         """
