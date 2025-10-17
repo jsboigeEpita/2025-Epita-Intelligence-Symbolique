@@ -43,7 +43,6 @@ python demos/validation/validation_complete_epita.py
 | Démo | Description | Niveau |
 |------|-------------|--------|
 | [validation_complete_epita.py](./validation/validation_complete_epita.py) | Validation complète du système avec bootstrap robuste et détection automatique de la racine projet | Avancé |
-| [validation_deep_taxonomy.py](./validation/validation_deep_taxonomy.py) | Validation approfondie de la taxonomie des sophismes | Intermédiaire |
 | [validation_report.md](./validation/validation_report.md) | Rapport de validation consolidé avec métriques | Documentation |
 
 **📖 [Documentation détaillée](./validation/README.md)**

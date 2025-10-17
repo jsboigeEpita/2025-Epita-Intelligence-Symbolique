@@ -5,5 +5,5 @@ $projectRoot = Join-Path -Path $currentDir -ChildPath "2.3.3-generation-contre-a
 # Ajouter le chemin au PYTHONPATH pour la session courante
 $env:PYTHONPATH = $projectRoot
 
-# Exécuter le script de validation
-python (Join-Path -Path $currentDir -ChildPath "demos/validation_deep_taxonomy.py")
+# Le script de validation a été supprimé, cette ligne est donc commentée pour éviter les erreurs.
+# python (Join-Path -Path $currentDir -ChildPath "demos/validation_deep_taxonomy.py")

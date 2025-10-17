@@ -160,7 +160,7 @@ python demos/debugging/debug_single_fallacy.py --text "texte problématique"
 **Démarche** :
 ```bash
 # 1. Vérifier que le sophisme est dans la taxonomie
-python demos/validation/validation_deep_taxonomy.py
+# python demos/validation/validation_deep_taxonomy.py (script obsolète)
 
 # 2. Déboguer l'analyse
 python demos/debugging/debug_single_fallacy.py --text "texte avec sophisme" --expected "type_sophisme"

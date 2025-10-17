@@ -11,7 +11,6 @@ Ce répertoire contient les démonstrations de validation exhaustive et de tests
 | Fichier | Description | Niveau |
 |---------|-------------|--------|
 | [`validation_complete_epita.py`](./validation_complete_epita.py) | Validation complète du système avec bootstrap robuste et détection automatique de la racine projet | Avancé |
-| [`validation_deep_taxonomy.py`](./validation_deep_taxonomy.py) | Validation approfondie de la taxonomie des sophismes et de leur classification | Intermédiaire |
 | [`validation_report.md`](./validation_report.md) | Rapport de validation consolidé avec métriques de performance et résultats | Documentation |
 
 ## Utilisation
@@ -41,7 +40,8 @@ python validation_complete_epita.py
 Validation approfondie de la taxonomie des sophismes :
 
 ```bash
-python demos/validation/validation_deep_taxonomy.py
+# La commande suivante est obsolète car le script a été supprimé.
+# python demos/validation/validation_deep_taxonomy.py
 ```
 
 **Ce que ce script valide** :
@@ -125,8 +125,8 @@ Dans votre workflow CI/CD :
 - name: Validation système
   run: python demos/validation/validation_complete_epita.py
   
-- name: Validation taxonomie
-  run: python demos/validation/validation_deep_taxonomy.py
+- name: Validation taxonomie (obsolète)
+  run: # python demos/validation/validation_deep_taxonomy.py
 ```
 
 ### Pour le Débogage
