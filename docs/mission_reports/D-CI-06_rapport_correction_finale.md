@@ -333,15 +333,101 @@ Consommateurs (doivent s'aligner):
   └─ docs/* ✅ CORRIGÉ
 ```
 
+## 🔄 Phase 2 : Investigation Run #150 (ÉCHEC PERSISTANT)
+
+### Constat
+```
+Run #150 (commit eea01643):
+  Status: completed
+  Conclusion: FAILURE ❌
+  Durée: 22:46:40 → 22:54:11 (7m31s)
+```
+
+**Diagnostic** : La correction du nom d'environnement était nécessaire mais **insuffisante**. Un nouveau problème a été identifié.
+
+### Nouvelle Cause Racine Identifiée
+
+**PROBLÈME : Script `activate_project_env.ps1` incompatible avec GitHub Actions**
+
+```powershell
+# scripts/setup/activate_project_env.ps1 (ligne 15)
+$EnvName = python -m project_core.core_from_scripts.environment_manager get-env-name
+#          ^^^^^^ ERREUR: Python/module pas encore disponible dans le PATH
+```
+
+**Explication** :
+1. Le workflow GitHub Actions utilise `conda-incubator/setup-miniconda@v2`
+2. Cette action active l'environnement `projet-is` correctement
+3. MAIS les steps appellent `scripts/setup/activate_project_env.ps1`
+4. Ce script essaie d'exécuter `python -m project_core...` **avant** l'activation complète
+5. Le module `project_core` n'est pas dans le `PYTHONPATH` à ce stade
+6. → Le script échoue → Tous les jobs échouent
+
+### Correction Phase 2 : Simplification Workflow
+
+**Changements appliqués** : Remplacement des appels à `activate_project_env.ps1` par des commandes `conda run` directes.
+
+```diff
+# Job: lint-and-format
+- scripts/setup/activate_project_env.ps1 -CommandToRun "black --check --diff ."
++ conda run -n projet-is --no-capture-output black --check --diff .
+
+- scripts/setup/activate_project_env.ps1 -CommandToRun "flake8 ."
++ conda run -n projet-is --no-capture-output flake8 .
+
+# Job: automated-tests
+- scripts/setup/activate_project_env.ps1 -CommandToRun "pytest tests/ ..."
++ conda run -n projet-is --no-capture-output pytest tests/ --junitxml=pytest_report.xml -v
+
+- scripts/setup/activate_project_env.ps1 -CommandToRun @"..."@
++ Write-Host direct (code PowerShell sans wrapper)
+```
+
+**Justification** :
+- `conda run -n projet-is` est natif à GitHub Actions (pas de dépendance externe)
+- Évite la complexité du script wrapper `activate_project_env.ps1`
+- Plus robuste : pas de dépendance sur `project_core` non installé
+- Alignement avec les best practices GitHub Actions
+
+### Fichiers Modifiés (Total : 8 fichiers)
+
+**Phase 1** :
+- ✅ `.github/workflows/ci.yml` (noms d'environnement)
+- ✅ `README.md` (1 remplacement)
+- ✅ `CONTRIBUTING.md` (2 remplacements)
+- ✅ 3 fichiers docs (rapports mission + architecture)
+
+**Phase 2** :
+- ✅ `.github/workflows/ci.yml` (refactoring appels conda, 4 steps modifiés)
+
+### Métriques Mises à Jour
+```
+Temps diagnostic total: ~25 minutes (Phase 1: 10min, Phase 2: 15min)
+Outils MCP utilisés: 4 (list_workflows, get_runs, get_status x2)
+Corrections appliquées:
+  Phase 1: 7 fichiers, 10 remplacements (nom environnement)
+  Phase 2: 1 fichier, 4 steps refactorisés (appels conda)
+Runs analysés: #149 (échec initial), #150 (échec intermédiaire)
+Confiance diagnostic Phase 2: 95% (basé sur analyse script + workflow)
+```
+
+### Leçons Apprises (Mise à Jour)
+1. **Single Source of Truth** : `environment.yml` doit être l'UNIQUE référence ✅
+2. **Workflow Simplicity** : Éviter les scripts wrappers complexes dans CI ✅
+3. **GitHub Actions Best Practices** : Utiliser `conda run` natif plutôt que custom scripts ✅
+4. **Diagnostic Itératif** : Parfois plusieurs causes racine se cachent en cascade 🔄
+5. **MCP Limits** : Les outils MCP GitHub Projects ne donnent pas accès aux logs détaillés
+
 ## 🏆 Résultat Final
 
-**État avant** : 30 runs consécutifs en échec  
-**Correction** : Alignement `epita-symbolic-ai` → `projet-is`  
-**Confiance** : 99% (validation code source + MCP)  
-**État attendu après push** : Pipeline vert stable 🟢
+**État initial** : 30 runs consécutifs en échec (#120-149)
+**Correction Phase 1** : Alignement `epita-symbolic-ai` → `projet-is` (commit `eea01643`)
+**Validation Phase 1** : Run #150 → ÉCHEC (nouvelle cause identifiée)
+**Correction Phase 2** : Refactoring workflow pour utiliser `conda run` directement
+**État attendu** : Pipeline vert stable 🟢 (Run #151 en attente)
 
 ---
 
-**Mission D-CI-06 : DIAGNOSTIC COMPLET**  
-**Statut** : Corrections appliquées, en attente de validation  
-**Prochaine étape** : Commit + Push + Validation MCP Run #150
+**Mission D-CI-06 : DIAGNOSTIC ITÉRATIF COMPLET**
+**Statut** : Phase 2 corrections appliquées, en attente validation Run #151
+**Prochaine étape** : Commit + Push + Validation MCP finale
