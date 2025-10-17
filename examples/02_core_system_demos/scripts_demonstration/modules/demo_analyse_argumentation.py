@@ -24,7 +24,7 @@ def _create_kernel_and_factory() -> tuple[sk.Kernel, AgentFactory, str]:
     llm_service_id = (
         settings.service_manager.default_llm_service_id or "default_service"
     )
-    model_id = settings.service_manager.default_model_id or "gpt-4o-mini"  # Fallback
+    model_id = settings.service_manager.default_model_id or "gpt-5-mini"  # Fallback
 
     # Utilise la factory centralisée pour créer le service LLM
     llm_service = create_llm_service(

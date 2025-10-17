@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -25,13 +25,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 async def _create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
     config = UnifiedConfig()
     return config.get_kernel_with_gpt4o_mini()
 
 
 async def _make_authentic_llm_call(prompt: str) -> str:
-    """Fait un appel authentique à gpt-4o-mini."""
+    """Fait un appel authentique à gpt-5-mini."""
     try:
         kernel = await _create_authentic_gpt4o_mini_instance()
         result = await kernel.invoke("chat", input=prompt)
@@ -52,7 +52,7 @@ class TestRealGPT4oMiniIntegration:
             from argumentation_analysis.core.llm_service import create_llm_service
 
             service = create_llm_service(
-                service_id="test_creation", model_id="gpt-4o-mini"
+                service_id="test_creation", model_id="gpt-5-mini"
             )
 
             assert service is not None
@@ -75,7 +75,7 @@ class TestRealGPT4oMiniIntegration:
 
             # Créer service LLM réel
             llm_service = create_llm_service(
-                service_id="orchestration_service", model_id="gpt-4o-mini"
+                service_id="orchestration_service", model_id="gpt-5-mini"
             )
 
             # Créer un kernel et ajouter le service
@@ -313,7 +313,7 @@ class TestUnifiedAuthenticComponentsIntegration:
 
             # 1. Service LLM authentique
             llm_service = create_llm_service(
-                service_id="test_full_pipeline", model_id="gpt-4o-mini"
+                service_id="test_full_pipeline", model_id="gpt-5-mini"
             )
             kernel = Kernel()
             kernel.add_service(llm_service)

@@ -31,7 +31,7 @@ def llm_service():
     # avec OPENAI_API_KEY et OPENAI_CHAT_MODEL_ID
     try:
         service = create_llm_service(
-            service_id="real_test_llm_service", model_id="gpt-4o-mini", force_mock=False
+            service_id="real_test_llm_service", model_id="gpt-5-mini", force_mock=False
         )
         return service
     except Exception as e:

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -126,7 +126,7 @@ class MockAdapter:
 
 class TestMockCommunication(unittest.TestCase):
     def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
 
         async def run_get_kernel():
             config = UnifiedConfig()
@@ -135,7 +135,7 @@ class TestMockCommunication(unittest.TestCase):
         return asyncio.run(run_get_kernel())
 
     def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
 
         async def run_llm_call():
             try:

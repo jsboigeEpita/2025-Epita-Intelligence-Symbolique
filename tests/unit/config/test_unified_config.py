@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -43,7 +43,7 @@ from config.unified_config import (
 
 class TestUnifiedConfig:
     def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
 
         async def _run():
             config = UnifiedConfig()
@@ -52,7 +52,7 @@ class TestUnifiedConfig:
         return asyncio.run(_run())
 
     def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
 
         async def _run():
             try:

@@ -3,7 +3,7 @@
 VALIDATION POINT 2 - Applications web Flask + React avec vrais LLMs
 ================================================================
 
-Script de validation autonome pour Point 2 avec OpenRouter gpt-4o-mini authentique.
+Script de validation autonome pour Point 2 avec OpenRouter gpt-5-mini authentique.
 """
 
 import sys

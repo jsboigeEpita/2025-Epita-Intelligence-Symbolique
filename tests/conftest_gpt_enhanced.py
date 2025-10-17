@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -126,7 +126,7 @@ class GPTTestSession:
             kernel = Kernel()
 
             chat_service = OpenAIChatCompletion(
-                service_id=service_id, ai_model_id="gpt-4o-mini", api_key=OPENAI_API_KEY
+                service_id=service_id, ai_model_id="gpt-5-mini", api_key=OPENAI_API_KEY
             )
 
             kernel.add_service(chat_service)
@@ -252,7 +252,7 @@ async def mock_gpt_kernel():
     # Mock du service
     mock_service = Mock(spec=type(authentic_service))
     mock_service.service_id = "mock-gpt4o-mini"
-    mock_service.ai_model_id = "gpt-4o-mini"
+    mock_service.ai_model_id = "gpt-5-mini"
 
     kernel.add_service(mock_service)
 

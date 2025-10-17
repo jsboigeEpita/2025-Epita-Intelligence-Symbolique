@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -48,7 +48,7 @@ except ImportError as e:
 
 class TestMockEliminationAdvanced:
     def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
 
         async def _run():
             config = UnifiedConfig()
@@ -57,7 +57,7 @@ class TestMockEliminationAdvanced:
         return asyncio.run(_run())
 
     def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
 
         async def _run():
             try:
@@ -151,7 +151,7 @@ class TestMockEliminationAdvanced:
         class AuthenticLLMService:
             def __init__(self):
                 self.service_type = "openai"
-                self.model = "gpt-4o-mini"
+                self.model = "gpt-5-mini"
                 self.api_key = "real_key"
 
         class MockLLMService:
@@ -259,7 +259,7 @@ class TestComponentMockDetection:
         class AuthenticLLM:
             def __init__(self):
                 self.api_key = os.getenv("OPENAI_API_KEY", "test_key")
-                self.model = "gpt-4o-mini"
+                self.model = "gpt-5-mini"
 
             def generate_response(self, prompt):
                 return f"Real response from {self.model}"
@@ -403,7 +403,7 @@ class TestAuthenticityMetrics:
 
         # Test composants authentiques
         authentic_llm = type(
-            "AuthenticLLM", (), {"api_key": "real_key", "model": "gpt-4o-mini"}
+            "AuthenticLLM", (), {"api_key": "real_key", "model": "gpt-5-mini"}
         )()
 
         authentic_tweety = type(

@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import patch
 
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -42,12 +42,12 @@ from argumentation_analysis.agents.core.oracle.permissions import (
 
 class TestValidationIntegriteApresCorrections:
     def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = self._create_authentic_gpt4o_mini_instance()
             result = asyncio.run(kernel.invoke("chat", input=prompt))
@@ -110,7 +110,7 @@ class TestValidationIntegriteApresCorrections:
         # Cette méthode NE DOIT PLUS appeler get_autres_joueurs_cards()
         with patch.object(self.dataset, "get_autres_joueurs_cards") as mock_method:
             # Configuration du mock pour lever l'exception si appelé
-            mock_method  # Mock eliminated - using authentic gpt-4o-mini PermissionError("Méthode interdite")
+            mock_method  # Mock eliminated - using authentic gpt-5-mini PermissionError("Méthode interdite")
 
             # La simulation doit fonctionner sans appeler la méthode interdite
             result = tools.simulate_other_player_response(

@@ -29,7 +29,7 @@ def test_informal_agent_forced_tool_choice(tmp_path):
     llm_service_id = "default"
     try:
         llm_service = create_llm_service(
-            service_id=llm_service_id, model_id="gpt-4o-mini", force_authentic=True
+            service_id=llm_service_id, model_id="gpt-5-mini", force_authentic=True
         )
         kernel.add_service(llm_service)
     except Exception as e:

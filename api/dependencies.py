@@ -48,7 +48,7 @@ class MockAnalysisService:
             "analysis_metadata": {
                 "text_length": len(text),
                 "processing_time": duration,
-                "model_used": "gpt-4o-mini-mock",
+                "model_used": "gpt-5-mini-mock",
                 "fallback_reason": "Mode mock forcé via FORCE_MOCK_LLM",
             },
         }
@@ -150,7 +150,7 @@ class AnalysisService:
                 "analysis_metadata": {
                     "text_length": len(text),
                     "processing_time": duration,
-                    "model_used": "gpt-4o-mini",
+                    "model_used": "gpt-5-mini",
                     "raw_llm_payload": llm_payload,  # Pour le débogage
                 },
             }

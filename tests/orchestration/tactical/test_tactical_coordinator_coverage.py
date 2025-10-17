@@ -590,18 +590,18 @@ class TestTacticalCoordinatorCoverageAuthentic(unittest.TestCase):
         logger.info("Teardown authentique étendu terminé")
 
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini."""
+        """Crée une instance authentique de gpt-5-mini."""
         try:
             config = UnifiedConfig()
             kernel = config.get_kernel_with_gpt4o_mini()
-            logger.info("Instance authentique gpt-4o-mini créée pour couverture")
+            logger.info("Instance authentique gpt-5-mini créée pour couverture")
             return kernel
         except Exception as e:
-            logger.warning(f"Impossible de créer l'instance gpt-4o-mini: {e}")
+            logger.warning(f"Impossible de créer l'instance gpt-5-mini: {e}")
             return None
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini avec retry."""
+        """Fait un appel authentique à gpt-5-mini avec retry."""
         max_retries = 2
         for attempt in range(max_retries):
             try:

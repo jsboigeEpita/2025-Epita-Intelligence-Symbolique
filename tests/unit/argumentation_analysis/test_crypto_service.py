@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -113,12 +113,12 @@ def mock_decompress(mocker):
 
 class TestCryptoService:
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = await self._create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)
@@ -172,7 +172,7 @@ class TestCryptoService:
     def test_derive_key_exception(self, mock_derive):
         """Test de dérivation de clé avec une exception."""
         service = CryptoService()
-        mock_derive  # Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de dérivation")
+        mock_derive  # Mock eliminated - using authentic gpt-5-mini Exception("Erreur de dérivation")
 
         # Dériver la clé
         derived_key = service.derive_key_from_passphrase("phrase_secrete_test")
@@ -216,7 +216,7 @@ class TestCryptoService:
 
     def test_encrypt_data_exception(self, mock_encrypt, crypto_service, sample_data):
         """Test de chiffrement avec une exception."""
-        mock_encrypt  # Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de chiffrement")
+        mock_encrypt  # Mock eliminated - using authentic gpt-5-mini Exception("Erreur de chiffrement")
 
         # Chiffrer les données
         encrypted_data = crypto_service.encrypt_data(sample_data)
@@ -267,7 +267,7 @@ class TestCryptoService:
         encrypted_data = crypto_service.encrypt_data(sample_data)
 
         # Simuler une exception
-        mock_decrypt  # Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de déchiffrement")
+        mock_decrypt  # Mock eliminated - using authentic gpt-5-mini Exception("Erreur de déchiffrement")
 
         # Déchiffrer les données
         decrypted_data = crypto_service.decrypt_data(encrypted_data)
@@ -308,7 +308,7 @@ class TestCryptoService:
         self, mock_dumps, crypto_service, sample_json_data
     ):
         """Test de chiffrement et compression avec une exception."""
-        mock_dumps  # Mock eliminated - using authentic gpt-4o-mini Exception("Erreur JSON")
+        mock_dumps  # Mock eliminated - using authentic gpt-5-mini Exception("Erreur JSON")
 
         # Chiffrer et compresser les données
         encrypted_data = crypto_service.encrypt_and_compress_json(sample_json_data)
@@ -363,7 +363,7 @@ class TestCryptoService:
         encrypted_data = crypto_service.encrypt_and_compress_json(sample_json_data)
 
         # Simuler une exception
-        mock_decompress  # Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de décompression")
+        mock_decompress  # Mock eliminated - using authentic gpt-5-mini Exception("Erreur de décompression")
 
         # Déchiffrer et décompresser les données
         json_data = crypto_service.decrypt_and_decompress_json(encrypted_data)

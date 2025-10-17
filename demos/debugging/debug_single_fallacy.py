@@ -96,7 +96,7 @@ async def main():
 
     kernel = sk.Kernel()
     llm_service = create_llm_service(
-        service_id="default", model_id="gpt-4o-mini", force_authentic=True
+        service_id="default", model_id="gpt-5-mini", force_authentic=True
     )
     kernel.add_service(llm_service)
 

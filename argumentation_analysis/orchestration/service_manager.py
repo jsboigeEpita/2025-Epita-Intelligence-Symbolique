@@ -222,7 +222,7 @@ class OrchestrationServiceManager:
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[
             str
-        ] = "gpt-4o-mini"  # Default, sera confirmé lors de l'ajout au kernel
+        ] = "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
 
         # État d'initialisation
@@ -795,7 +795,7 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
 
             # Configuration OpenAI standard avec AsyncOpenAI
             client = openai.AsyncOpenAI(api_key=api_key)
-            model = "gpt-4o-mini"
+            model = "gpt-5-mini"
 
             # Mesurer le temps de début
             start_time = time.time()
@@ -888,7 +888,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
 
             # Configuration OpenAI standard avec AsyncOpenAI
             client = openai.AsyncOpenAI(api_key=api_key)
-            model = "gpt-4o-mini"
+            model = "gpt-5-mini"
 
             # Mesurer le temps de début
             start_time = time.time()

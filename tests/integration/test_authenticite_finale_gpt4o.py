@@ -80,7 +80,7 @@ class AuthenticAPITester:
             start_time = time.time()
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {
                         "role": "system",
@@ -120,7 +120,7 @@ class AuthenticAPITester:
                 "test_id": self.test_id,
                 "timestamp": datetime.now().isoformat(),
                 "prompt_hash": prompt_hash,
-                "model": "gpt-4o-mini",
+                "model": "gpt-5-mini",
                 "latency_ms": latency_ms,
                 "tokens_used": response.usage.total_tokens if response.usage else 0,
                 "response_length": len(ai_response),
@@ -135,7 +135,7 @@ class AuthenticAPITester:
 
             return {
                 "success": True,
-                "model": "gpt-4o-mini",
+                "model": "gpt-5-mini",
                 "latency_ms": latency_ms,
                 "tokens_used": response.usage.total_tokens if response.usage else 0,
                 "response_length": len(ai_response),
@@ -179,7 +179,7 @@ class AuthenticAPITester:
                 }
 
             service = OpenAIChatCompletion(
-                service_id="authentic_test", ai_model_id="gpt-4o-mini", api_key=api_key
+                service_id="authentic_test", ai_model_id="gpt-5-mini", api_key=api_key
             )
             kernel.add_service(service)
 

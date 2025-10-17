@@ -86,12 +86,12 @@ def authentic_agent(tweety_bridge_fixture):
             if openai_api_key and OpenAIChatCompletion:
                 chat_service = OpenAIChatCompletion(
                     service_id=llm_service_id,
-                    ai_model_id="gpt-4o-mini",
+                    ai_model_id="gpt-5-mini",
                     api_key=openai_api_key,
                 )
                 kernel.add_service(chat_service)
                 llm_available = True
-                print("✅ Service LLM OpenAI configuré pour Modal: gpt-4o-mini")
+                print("✅ Service LLM OpenAI configuré pour Modal: gpt-5-mini")
             else:
                 print(
                     "⚠️ Connecteurs LLM non disponibles ou clés API manquantes pour Modal"

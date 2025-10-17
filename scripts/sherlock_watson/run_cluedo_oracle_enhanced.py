@@ -15,7 +15,7 @@ dans un environnement contrôlé.
 
 Fonctionnalités clés :
 - Orchestration d'une partie de Cluedo via `CluedoExtendedOrchestrator`.
-- Utilisation de `gpt-4o-mini` comme modèle de langage par défaut.
+- Utilisation de `gpt-5-mini` comme modèle de langage par défaut.
 - Support de stratégies d'Oracle multiples (`enhanced_auto_reveal`, `enhanced_progressive`).
 - Journalisation détaillée des interactions pour analyse post-mortem.
 - Paramètres de ligne de commande pour la configuration de la partie.

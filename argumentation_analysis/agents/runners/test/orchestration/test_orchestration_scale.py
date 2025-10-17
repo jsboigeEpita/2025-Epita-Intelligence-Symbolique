@@ -90,7 +90,7 @@ async def run_orchestration_test():
     from argumentation_analysis.core.llm_service import create_llm_service
 
     llm_service = create_llm_service(
-        service_id="orchestration_scale_test", model_id="gpt-4o-mini"
+        service_id="orchestration_scale_test", model_id="gpt-5-mini"
     )
 
     if not llm_service:

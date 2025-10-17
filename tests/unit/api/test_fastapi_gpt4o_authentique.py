@@ -218,7 +218,7 @@ class TestAPIFastAPIAuthentique:
 
         # Vérifier que GPT-4o-mini est utilisé
         assert data["metadata"]["gpt_model"].startswith(
-            "gpt-4o-mini"
+            "gpt-5-mini"
         ), "Service utilisé incorrect"
 
     def test_07_analyze_endpoint_fallacy_detection(self):

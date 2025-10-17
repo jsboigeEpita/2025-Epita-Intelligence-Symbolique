@@ -64,7 +64,7 @@ class TestPhase2AuthenticLLMValidation:
             use_authentic_llm=True,
             use_mock_llm=False,
             require_real_gpt=True,
-            default_model="gpt-4o-mini",
+            default_model="gpt-5-mini",
             default_provider="openai",
         )
 
@@ -81,7 +81,7 @@ class TestPhase2AuthenticLLMValidation:
         assert self.config.use_authentic_llm is True
         assert self.config.use_mock_llm is False
         assert self.config.require_real_gpt is True
-        assert self.config.default_model == "gpt-4o-mini"
+        assert self.config.default_model == "gpt-5-mini"
         assert self.config.default_provider == "openai"
 
         # Validation configuration LLM
@@ -90,7 +90,7 @@ class TestPhase2AuthenticLLMValidation:
         assert llm_config["mock_level"] == "none"
         assert llm_config["use_mock_llm"] is False
         assert llm_config["use_authentic_llm"] is True
-        assert llm_config["default_model"] == "gpt-4o-mini"
+        assert llm_config["default_model"] == "gpt-5-mini"
 
         logger.info("✅ Configuration UnifiedConfig strictement authentique validée")
 
@@ -132,7 +132,7 @@ class TestPhase2AuthenticLLMValidation:
 
         # Création service LLM authentique
         service = create_llm_service(
-            service_id="test_authentic", model_id="gpt-4o-mini", force_mock=False
+            service_id="test_authentic", model_id="gpt-5-mini", force_mock=False
         )
 
         # Validation type authentique
@@ -157,7 +157,7 @@ class TestPhase2AuthenticLLMValidation:
 
         # Test que force_mock=True est ignoré (comportement authentique)
         service = create_llm_service(
-            service_id="test_no_mock", model_id="gpt-4o-mini", force_mock=True
+            service_id="test_no_mock", model_id="gpt-5-mini", force_mock=True
         )
 
         # Même avec force_mock=True, on doit avoir un service authentique
@@ -192,7 +192,7 @@ class TestPhase2AuthenticLLMValidation:
 
         # Création agent Informal
         informal_agent = InformalAnalysisAgent(kernel=kernel)
-        informal_agent.setup_agent_components("gpt-4o-mini-authentic")
+        informal_agent.setup_agent_components("gpt-5-mini-authentic")
 
         # Validation agent configuré - utilisation de l'API réelle
         assert informal_agent is not None
@@ -253,7 +253,7 @@ class TestPhase2AuthenticLLMValidation:
 
         # Test service LLM sans fallback
         service = create_llm_service(
-            service_id="test_no_fallback", model_id="gpt-4o-mini"
+            service_id="test_no_fallback", model_id="gpt-5-mini"
         )
         service_module = service.__class__.__module__
 
@@ -306,7 +306,7 @@ class TestPhase2AuthenticLLMValidation:
 
             # Critère 2: Service LLM authentique
             service = create_llm_service(
-                service_id="phase2_validation", model_id="gpt-4o-mini"
+                service_id="phase2_validation", model_id="gpt-5-mini"
             )
             assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
             success_criteria["llm_service_authentic"] = True

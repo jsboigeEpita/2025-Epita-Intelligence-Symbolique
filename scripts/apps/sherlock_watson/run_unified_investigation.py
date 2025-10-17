@@ -65,7 +65,7 @@ async def run_demo():
         # Exemple (à adapter selon les besoins réels de CluedoExtendedOrchestrator):
         # from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         # api_key = os.getenv("OPENAI_API_KEY")
-        # model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        # model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         # if api_key and model_id:
         #     kernel.add_service(OpenAIChatCompletion(service_id="chat_completion", api_key=api_key, ai_model_id=model_id))
         # else:

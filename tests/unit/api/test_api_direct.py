@@ -223,9 +223,9 @@ def test_api_startup_and_basic_functionality():
                 assert (
                     service_metadata.get("authentic_analysis") is True
                 ), "L'analyse ne semble pas authentique"
-                assert "gpt-4o-mini" in service_metadata.get(
+                assert "gpt-5-mini" in service_metadata.get(
                     "gpt_model", ""
-                ), "Le modèle ne semble pas être gpt-4o-mini"
+                ), "Le modèle ne semble pas être gpt-5-mini"
                 assert (
                     len(analysis_summary) > 10
                 ), f"Résumé d'analyse trop court: {len(analysis_summary)} chars"

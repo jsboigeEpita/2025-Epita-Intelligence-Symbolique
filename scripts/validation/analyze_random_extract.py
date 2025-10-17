@@ -166,7 +166,7 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
         logger.info(f"📝 Longueur du texte: {len(text)} caractères")
 
         # Configuration du modèle depuis .env
-        llm_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        llm_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         logger.info(f"🤖 Modèle configuré: {llm_model}")
 
         # Configuration de l'analyse avec GPT-4o-mini authentique

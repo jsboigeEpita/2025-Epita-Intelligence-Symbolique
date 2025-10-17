@@ -43,7 +43,7 @@ def test_api_connectivity():
             models_response = client_openrouter.models.list()
             print(f"  Connexion à OpenRouter ({openrouter_base_url}) réussie.")
             gpt4o_mini_available_or = any(
-                model.id == "openai/gpt-4o-mini" for model in models_response.data
+                model.id == "openai/gpt-5-mini" for model in models_response.data
             )
             print(
                 f"  GPT-4o-mini disponible via OpenRouter: {'Oui' if gpt4o_mini_available_or else 'Non'}"
@@ -63,7 +63,7 @@ def test_api_connectivity():
         try:
             client_openai_direct = openai.OpenAI(api_key=openai_api_key_direct)
             client_openai_direct.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[{"role": "user", "content": "Bonjour!"}],
                 max_tokens=5,
             )

@@ -239,7 +239,7 @@
     "llm_services": {
       "openai_api": {
         "enabled": true,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-mini",
         "timeout": 30,
         "retry_attempts": 3
       },

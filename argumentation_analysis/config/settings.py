@@ -9,7 +9,7 @@ class OpenAISettings(BaseSettings):
     api_key: Optional[SecretStr] = Field(
         default="sk-dummy-key-for-testing", alias="OPENAI_API_KEY"
     )
-    chat_model_id: str = "gpt-4o-mini"
+    chat_model_id: str = "gpt-5-mini"
     base_url: Optional[HttpUrl] = None
     model_config = SettingsConfigDict(
         env_prefix="OPENAI_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -22,7 +22,7 @@ class AzureOpenAISettings(BaseSettings):
     deployment_name: Optional[str] = Field(
         None, alias="AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"
     )
-    chat_model_id: str = "gpt-4o-mini"
+    chat_model_id: str = "gpt-5-mini"
     model_config = SettingsConfigDict(
         env_prefix="AZURE_OPENAI_",
         env_file=".env",
@@ -78,7 +78,7 @@ class ServiceManagerSettings(BaseSettings):
     results_dir: Path = Path("_temp/service_manager_results")
     data_dir: Path = Path("data")
     default_llm_service_id: str = "openai"
-    default_model_id: str = "gpt-4o-mini"
+    default_model_id: str = "gpt-5-mini"
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix="SERVICE_MANAGER_")
 

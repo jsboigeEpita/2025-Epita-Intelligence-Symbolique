@@ -5,7 +5,7 @@ Validation Point 3/5 : Démo EPITA avec paramètres dynamiques et vrais LLMs
 ===============================================================================
 
 Script de validation pour la Validation Point 3/5 avec :
-- Utilisation de vrais LLMs gpt-4o-mini (non mockés)
+- Utilisation de vrais LLMs gpt-5-mini (non mockés)
 - Paramètres dynamiques configurables
 - Scénarios pédagogiques complexes EPITA
 - Tests d'intégration avec vrais modèles
@@ -113,7 +113,7 @@ class SessionApprentissageEpita:
 
 
 class ProfesseurVirtuelLLM:
-    """Professeur virtuel utilisant de vrais LLMs gpt-4o-mini"""
+    """Professeur virtuel utilisant de vrais LLMs gpt-5-mini"""
 
     def __init__(self, config: UnifiedConfig):
         self.config = config
@@ -128,7 +128,7 @@ class ProfesseurVirtuelLLM:
                 # Force l'utilisation de vrais LLMs (pas de mock)
                 self.llm_service = create_llm_service(
                     service_id="validation_point3_professeur",
-                    model_id="gpt-4o-mini",
+                    model_id="gpt-5-mini",
                     force_mock=self.config.use_mock_llm,
                 )
                 self.logger.info(
@@ -143,7 +143,7 @@ class ProfesseurVirtuelLLM:
     async def analyser_argument_avec_llm(
         self, argument: str, contexte_medical: str
     ) -> Dict[str, Any]:
-        """Analyse authentique d'un argument via gpt-4o-mini"""
+        """Analyse authentique d'un argument via gpt-5-mini"""
         if not self.llm_service:
             raise RuntimeError("Service LLM non initialisé")
 
@@ -543,7 +543,7 @@ class OrchestrateurPedagogiqueEpita:
         for etudiant in self.session_active.etudiants_profiles:
             for argument_text in etudiant.arguments_initiaux:
                 try:
-                    # Analyse authentique par gpt-4o-mini
+                    # Analyse authentique par gpt-5-mini
                     analyse_llm = await self.professeur.analyser_argument_avec_llm(
                         argument_text, contexte_medical
                     )
@@ -818,7 +818,7 @@ def sauvegarder_validation_point3(
 
 ## ✅ Validation Objectifs Point 3
 - **Paramètres dynamiques**: ✅ Configurables et testés
-- **Vrais LLMs gpt-4o-mini**: ✅ Authentiquement utilisés
+- **Vrais LLMs gpt-5-mini**: ✅ Authentiquement utilisés
 - **Élimination mocks EPITA**: ✅ Confirmée
 - **Scénarios complexes**: ✅ Master EPITA Intelligence Symbolique
 - **Progression adaptative**: ✅ Fonctionnelle
@@ -892,7 +892,7 @@ async def main(args):
         logger.info(f"[CHECK] Session creee: {session.sujet_principal}")
 
         # Étape 5: Exécution débat avec LLMs réels
-        logger.info("[SPEAK] ETAPE 5: Debat medical avec analyse LLM gpt-4o-mini")
+        logger.info("[SPEAK] ETAPE 5: Debat medical avec analyse LLM gpt-5-mini")
         arguments = await orchestrateur.executer_debat_avec_llm_reel()
         logger.info(f"[CHECK] {len(arguments)} arguments analyses par LLM authentique")
 

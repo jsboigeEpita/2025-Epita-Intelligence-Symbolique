@@ -187,7 +187,7 @@ class TestAPIFastAPISimple:
 
         # Vérifier que le service GPT-4o-mini est utilisé
         assert data["metadata"]["gpt_model"].startswith(
-            "gpt-4o-mini"
+            "gpt-5-mini"
         ), f"Service incorrect: {data['metadata']['gpt_model']}"
 
         # Vérifier temps de traitement (authentique vs mock)

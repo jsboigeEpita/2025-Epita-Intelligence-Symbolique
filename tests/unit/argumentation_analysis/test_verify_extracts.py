@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -163,12 +163,12 @@ def mock_extract_service():
 
 class TestVerifyExtracts:
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = await self._create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)
@@ -184,14 +184,14 @@ class TestVerifyExtracts:
     ):
         """Test de vérification avec tous les extraits valides."""
         # Configurer le mock du service de récupération
-        # mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "https://example.com/test")
+        # mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-5-mini ("Texte source complet", "https://example.com/test")
         mock_fetch_service.fetch_text.return_value = (
             "Texte source complet",
             "https://example.com/test",
         )
 
         # Configurer le mock du service d'extraction pour simuler des extraits valides
-        # mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini (
+        # mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-5-mini (
         #     "Texte extrait", "✅ Extraction réussie", True, True
         # )
         mock_extract_service.extract_text_with_markers.return_value = (

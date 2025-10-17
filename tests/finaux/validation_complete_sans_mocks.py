@@ -172,7 +172,7 @@ class CompleteAuthenticValidator:
                 service = OpenAIChatCompletion(
                     service_id="validation_real",
                     api_key=api_key,
-                    ai_model_id="gpt-4o-mini",
+                    ai_model_id="gpt-5-mini",
                 )
                 kernel.add_service(service)
                 logger.info("✅ Semantic Kernel avec instance réelle créé")

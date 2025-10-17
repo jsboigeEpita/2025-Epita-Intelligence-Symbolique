@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -99,7 +99,7 @@ class TestUnifiedConfig:
         return AsyncMock()
 
     def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
 
         async def _run():
             try:

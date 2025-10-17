@@ -65,7 +65,7 @@ def run_test():
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel,
             max_turns=10,  # Limiter le nombre de tours pour le test
-            service_id="gpt-4o-mini-authentic",  # Utiliser le service ID correct
+            service_id="gpt-5-mini-authentic",  # Utiliser le service ID correct
         )
         logger.info("✅ Orchestrateur instancié.")
 

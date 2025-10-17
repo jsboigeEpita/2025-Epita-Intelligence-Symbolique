@@ -20,7 +20,7 @@ def authentic_extract_agent():
     """Fixture pour configurer un agent d'extraction avec un vrai kernel LLM."""
     try:
         service_id = "test_llm_service"
-        llm_service = create_llm_service(service_id=service_id, model_id="gpt-4o-mini")
+        llm_service = create_llm_service(service_id=service_id, model_id="gpt-5-mini")
         kernel = Kernel()
         kernel.add_service(llm_service)
         agent = ExtractAgent(kernel=kernel, llm_service_id=service_id)

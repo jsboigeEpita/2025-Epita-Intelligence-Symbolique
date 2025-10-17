@@ -482,7 +482,7 @@ class TestCluedoEnhancedIntegrationValidation:
         enhanced_config_patterns = [
             "enhanced",
             "auto_reveal",
-            "gpt-4o-mini",
+            "gpt-5-mini",
             "oracle_strategy",
         ]
 

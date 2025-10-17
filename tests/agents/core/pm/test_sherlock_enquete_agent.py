@@ -65,7 +65,7 @@ def authentic_kernel():
         return kernel  # Retourne un kernel vide, les tests seront sautés
 
     llm_service = OpenAIChatCompletion(
-        service_id="chat_completion", ai_model_id="gpt-4o-mini", api_key=api_key
+        service_id="chat_completion", ai_model_id="gpt-5-mini", api_key=api_key
     )
     kernel.add_service(llm_service)
     return kernel

@@ -37,7 +37,7 @@ async def test_environment():
         chat_service = OpenAIChatCompletion(
             service_id="test",
             api_key=api_key,
-            ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini"),
+            ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini"),
         )
         kernel.add_service(chat_service)
         print("✅ Kernel Semantic Kernel créé avec succès")

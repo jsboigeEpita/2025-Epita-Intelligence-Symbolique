@@ -243,7 +243,7 @@ def create_app():
                             )
                             logic_llm = create_llm_service(
                                 service_id="logic_service",
-                                model_id="gpt-4o-mini",
+                                model_id="gpt-5-mini",
                                 force_mock=is_integration_test,
                             )
                             logger.info("[DEADLOCK_DEBUG] ... logic_llm_service créé.")
@@ -253,7 +253,7 @@ def create_app():
                             )
                             analysis_llm = create_llm_service(
                                 service_id="analysis_service",
-                                model_id="gpt-4o-mini",
+                                model_id="gpt-5-mini",
                                 force_mock=is_integration_test,
                             )
                             logger.info(

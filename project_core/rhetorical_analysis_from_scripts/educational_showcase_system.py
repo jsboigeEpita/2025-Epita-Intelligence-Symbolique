@@ -848,7 +848,7 @@ class EducationalShowcaseSystem:
             if self.config.enable_real_llm:
                 # Correction de la NameError: 'create_llm_service' is not defined
                 self.llm_service = create_llm_service(
-                    service_id="educational_showcase", model_id="gpt-4o-mini"
+                    service_id="educational_showcase", model_id="gpt-5-mini"
                 )
                 if self.llm_service:
                     service_name = self.llm_service.service_id or "default"

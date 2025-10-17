@@ -73,7 +73,7 @@ class TestCluedoOrchestrationRealIntegration:
 
             llm_service = OpenAIChatCompletion(
                 service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
-                ai_model_id="gpt-4o-mini",
+                ai_model_id="gpt-5-mini",
                 api_key=api_key,
             )
 
@@ -330,7 +330,7 @@ def test_full_real_cluedo_integration():
         # VRAI service LLM
         api_key = os.getenv("OPENAI_API_KEY")
         llm_service = OpenAIChatCompletion(
-            service_id="chat_completion", ai_model_id="gpt-4o-mini", api_key=api_key
+            service_id="chat_completion", ai_model_id="gpt-5-mini", api_key=api_key
         )
         kernel.add_service(llm_service)
 

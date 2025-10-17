@@ -91,14 +91,14 @@ def create_llm_service(
 
     # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
     if not model_id:
-        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         logger.info(
             f"model_id non fourni, utilisation de la valeur de .env: {model_id}"
         )
 
     # Correction automatique pour les modèles obsolètes
     if model_id == "gpt-4-32k":
-        new_model_id = "gpt-4o-mini"
+        new_model_id = "gpt-5-mini"
         logger.warning(
             f"Le modèle '{model_id}' est obsolète ou inaccessible. "
             f"Substitution automatique par '{new_model_id}'. "

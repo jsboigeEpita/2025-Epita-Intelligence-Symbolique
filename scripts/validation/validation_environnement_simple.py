@@ -7,7 +7,7 @@ Validation rapide de l'environnement Intelligence Symbolique :
 - Environnement conda 'projet-is' 
 - Variables .env (OPENAI_API_KEY, etc.)
 - Configuration Java JDK17
-- Test gpt-4o-mini
+- Test gpt-5-mini
 import argumentation_analysis.core.environment
 
 Usage: python scripts/validation_environnement_simple.py
@@ -140,8 +140,8 @@ def test_dotenv():
 
 
 def test_gpt4o():
-    """Test configuration gpt-4o-mini"""
-    log_status("Test 4: Configuration gpt-4o-mini")
+    """Test configuration gpt-5-mini"""
+    log_status("Test 4: Configuration gpt-5-mini")
 
     api_key = os.environ.get("OPENAI_API_KEY")
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
@@ -151,10 +151,10 @@ def test_gpt4o():
         log_status("OPENAI_API_KEY manquante", "ERROR")
         return False
 
-    if model_id != "gpt-4o-mini":
-        log_status(f"Modele configure: {model_id} (attendu: gpt-4o-mini)", "WARN")
+    if model_id != "gpt-5-mini":
+        log_status(f"Modele configure: {model_id} (attendu: gpt-5-mini)", "WARN")
     else:
-        log_status("Modele gpt-4o-mini configure", "OK")
+        log_status("Modele gpt-5-mini configure", "OK")
 
     if base_url:
         log_status(f"Base URL: {base_url}", "OK")
@@ -241,7 +241,7 @@ def main():
         ("Import auto_env", test_auto_env),
         ("Conda environment", test_conda),
         ("Variables .env", test_dotenv),
-        ("Configuration gpt-4o-mini", test_gpt4o),
+        ("Configuration gpt-5-mini", test_gpt4o),
         ("Java JDK17", test_java),
         ("Repertoires", test_directories),
     ]

@@ -1,6 +1,6 @@
 # Fichier adapté pour Oracle Enhanced v2.1.0
 
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -188,7 +188,7 @@ class BehaviorComparator:
         # Mock service
         mock_service = AsyncMock(spec=OpenAIChatCompletion)
         mock_service.service_id = "mock-gpt4o-mini"
-        mock_service.ai_model_id = "gpt-4o-mini"
+        mock_service.ai_model_id = "gpt-5-mini"
 
         # Réponses mock intelligentes
         async def mock_chat_completion(chat_history=None, settings=None):
@@ -231,7 +231,7 @@ class BehaviorComparator:
 
         chat_service = OpenAIChatCompletion(
             service_id="comparison-real-gpt",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
 
@@ -472,12 +472,12 @@ class BehaviorComparator:
             return "balanced_tradeoff"
 
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = await self._create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)

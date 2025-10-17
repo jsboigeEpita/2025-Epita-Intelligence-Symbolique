@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -67,7 +67,7 @@ except ImportError:
 
     async def create_llm_service():
         return create_llm_service(
-            model_id="gpt-4o-mini", service_id="authentic_gpt4o_mini"
+            model_id="gpt-5-mini", service_id="authentic_gpt4o_mini"
         )
 
     class TweetyErrorAnalyzer:
@@ -89,12 +89,12 @@ async def fol_agent_with_kernel():
 
 class TestFOLPipelineIntegration:
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = await self._create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)
@@ -142,7 +142,7 @@ class TestFOLPipelineIntegration:
         """Test d'intégration avec orchestration FOL."""
         # 1. Créer le service LLM
         llm_service = create_llm_service(
-            service_id="test_fol_orchestration", model_id="gpt-4o-mini"
+            service_id="test_fol_orchestration", model_id="gpt-5-mini"
         )
 
         # 2. Créer l'orchestrateur

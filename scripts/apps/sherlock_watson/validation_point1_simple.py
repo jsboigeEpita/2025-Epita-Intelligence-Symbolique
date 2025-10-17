@@ -5,7 +5,7 @@ import argumentation_analysis.core.environment
 """
 VALIDATION POINT 1/5 : DEMOS CLUEDO/EINSTEIN SHERLOCK-WATSON-MORIARTY AVEC VRAIS LLMS
 
-Script simplifié pour tester uniquement Sherlock + Moriarty avec gpt-4o-mini
+Script simplifié pour tester uniquement Sherlock + Moriarty avec gpt-5-mini
 Watson en mode dégradé sans Tweety pour éviter les problèmes Java
 """
 
@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 class SimpleSherlockAgent:
     """Agent Sherlock simplifié utilisant OpenAI directement"""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-5-mini"):
         import openai
 
         self.client = openai.OpenAI(api_key=api_key)
@@ -111,7 +111,7 @@ Analysez ce cas et proposez vos premières déductions logiques."""
 class SimpleMoriartyAgent:
     """Agent Moriarty simplifié utilisant OpenAI directement"""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-5-mini"):
         import openai
 
         self.client = openai.OpenAI(api_key=api_key)
@@ -173,7 +173,7 @@ Donne un indice cryptique qui aide sans révéler directement la solution."""
 class SimpleWatsonAgent:
     """Agent Watson simplifié en mode dégradé (sans Tweety)"""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, api_key: str, model: str = "gpt-5-mini"):
         import openai
 
         self.client = openai.OpenAI(api_key=api_key)
@@ -234,7 +234,7 @@ async def run_cluedo_demo_authentic():
 
     # Vérification de la clé API
     api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 
     if not api_key:
         logger.error("❌ OPENAI_API_KEY non configurée")
@@ -355,7 +355,7 @@ async def run_einstein_demo_authentic():
     logger.info("🧮 DÉBUT DÉMO EINSTEIN AVEC VRAIS LLMS")
 
     api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 
     if not api_key:
         logger.error("❌ OPENAI_API_KEY non configurée")
@@ -446,14 +446,14 @@ def save_validation_traces(cluedo_results: Dict, einstein_results: Dict) -> str:
         "timestamp": datetime.now().isoformat(),
         "status": "SUCCESS",
         "configuration": {
-            "openai_model": os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini"),
+            "openai_model": os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini"),
             "real_llm_confirmed": True,
             "mocks_eliminated": True,
             "tweety_bypassed": "Watson en mode dégradé pour éviter problème Java",
         },
         "demos": {"cluedo": cluedo_results, "einstein": einstein_results},
         "validation_criteria": {
-            "vrais_llms": "✅ gpt-4o-mini utilisé",
+            "vrais_llms": "✅ gpt-5-mini utilisé",
             "agents_authentiques": "✅ Sherlock + Moriarty + Watson(dégradé)",
             "conversations_interactives": "✅ Échanges multi-tours",
             "traces_complètes": "✅ Historiques sauvegardés",
@@ -500,9 +500,9 @@ async def main():
         print(f"📁 Traces sauvegardées: {trace_file}")
         print(f"📁 Logs détaillés: {log_file}")
         print("\n🎭 AGENTS TESTÉS AVEC SUCCÈS:")
-        print("  ✅ Sherlock Holmes (gpt-4o-mini) - Déductions authentiques")
-        print("  ✅ Professeur Moriarty (gpt-4o-mini) - Indices cryptiques")
-        print("  ✅ Dr. Watson (gpt-4o-mini) - Raisonnement logique (mode dégradé)")
+        print("  ✅ Sherlock Holmes (gpt-5-mini) - Déductions authentiques")
+        print("  ✅ Professeur Moriarty (gpt-5-mini) - Indices cryptiques")
+        print("  ✅ Dr. Watson (gpt-5-mini) - Raisonnement logique (mode dégradé)")
         print("\n🎯 SCÉNARIOS VALIDÉS:")
         print("  ✅ Meurtre au Manoir EPITA 2025 (Cluedo complexe)")
         print("  ✅ Paradoxe de l'IA Consciente (Einstein logique)")

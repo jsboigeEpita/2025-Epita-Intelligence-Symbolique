@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -70,11 +70,11 @@ def mock_services_constructors():
         "argumentation_analysis.services.definition_service.DefinitionService"
     ) as MockDefinition:
         # Configurer les mocks pour retourner une instance de MagicMock (ou d'eux-mêmes)
-        MockCrypto  # Mock eliminated - using authentic gpt-4o-mini MagicMock(spec=CryptoService)
-        MockCache  # Mock eliminated - using authentic gpt-4o-mini MagicMock(spec=CacheService)
-        MockExtract  # Mock eliminated - using authentic gpt-4o-mini MagicMock(spec=ExtractService)
-        MockFetch  # Mock eliminated - using authentic gpt-4o-mini MagicMock(spec=FetchService)
-        MockDefinition  # Mock eliminated - using authentic gpt-4o-mini MagicMock(spec=DefinitionService)
+        MockCrypto  # Mock eliminated - using authentic gpt-5-mini MagicMock(spec=CryptoService)
+        MockCache  # Mock eliminated - using authentic gpt-5-mini MagicMock(spec=CacheService)
+        MockExtract  # Mock eliminated - using authentic gpt-5-mini MagicMock(spec=ExtractService)
+        MockFetch  # Mock eliminated - using authentic gpt-5-mini MagicMock(spec=FetchService)
+        MockDefinition  # Mock eliminated - using authentic gpt-5-mini MagicMock(spec=DefinitionService)
 
         yield {
             "CryptoService": MockCrypto,
@@ -120,9 +120,9 @@ def test_initialize_analysis_services_defaults(
         "argumentation_analysis.service_setup.analysis_services.LIBS_DIR",
         "mock/libs/dir",
     ) as mock_libs_dir:  # Mocker LIBS_DIR
-        mock_init_jvm  # Mock eliminated - using authentic gpt-4o-mini True  # Simule succès JVM
-        mock_create_llm  # Mock eliminated - using authentic gpt-4o-mini Magicawait self._create_authentic_gpt4o_mini_instance() # Simule un service LLM créé
-        mock_load_dotenv  # Mock eliminated - using authentic gpt-4o-mini True # Simule chargement .env réussi
+        mock_init_jvm  # Mock eliminated - using authentic gpt-5-mini True  # Simule succès JVM
+        mock_create_llm  # Mock eliminated - using authentic gpt-5-mini Magicawait self._create_authentic_gpt4o_mini_instance() # Simule un service LLM créé
+        mock_load_dotenv  # Mock eliminated - using authentic gpt-5-mini True # Simule chargement .env réussi
 
         sample_config = {"LIBS_DIR_PATH": "mock/libs/dir"}  # Passer une config minimale
         services = initialize_analysis_services(config=sample_config)
@@ -170,7 +170,7 @@ def test_initialize_analysis_services_defaults(
 
 # def test_initialize_core_services_crypto_failure(mock_ui_config, mock_services_constructors, temp_project_root):
 #     """Teste la gestion d'une erreur lors de l'initialisation de CryptoService."""
-#     # mock_services_constructors["CryptoService"]# Mock eliminated - using authentic gpt-4o-mini Exception("Crypto init error") # Ne s'applique plus directement
+#     # mock_services_constructors["CryptoService"]# Mock eliminated - using authentic gpt-5-mini Exception("Crypto init error") # Ne s'applique plus directement
 
 #     # with pytest.raises(Exception, match="Crypto init error"):
 #     #     initialize_analysis_services(config={}) # Adapté
@@ -178,7 +178,7 @@ def test_initialize_analysis_services_defaults(
 
 # def test_initialize_core_services_cache_failure(mock_ui_config, mock_services_constructors, temp_project_root):
 #     """Teste la gestion d'une erreur lors de l'initialisation de CacheService."""
-#     # mock_services_constructors["CacheService"]# Mock eliminated - using authentic gpt-4o-mini Exception("Cache init error") # Ne s'applique plus directement
+#     # mock_services_constructors["CacheService"]# Mock eliminated - using authentic gpt-5-mini Exception("Cache init error") # Ne s'applique plus directement
 
 #     # with pytest.raises(Exception, match="Cache init error"):
 #     #     initialize_analysis_services(config={}) # Adapté

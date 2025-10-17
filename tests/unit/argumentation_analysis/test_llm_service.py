@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -37,7 +37,7 @@ class TestLLMService:
         load_dotenv(dotenv_path=dotenv_path, override=True)
 
         self.api_key = os.environ.get("OPENAI_API_KEY")
-        self.model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        self.model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 
         yield  # C'est ici que le test s'exécute
 
@@ -87,7 +87,7 @@ class TestLLMService:
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible"
     )
     def test_authentic_llm_call(self):
-        """Teste un appel authentique à gpt-4o-mini pour valider la connectivité."""
+        """Teste un appel authentique à gpt-5-mini pour valider la connectivité."""
 
         async def _run_async_test():
             try:

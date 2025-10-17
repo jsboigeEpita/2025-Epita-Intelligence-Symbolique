@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai  # Gardé pour l'instant, pourrait être utilisé par le kernel SK sous-jacent
 from semantic_kernel.contents import (
     ChatHistory,
@@ -161,7 +161,7 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
     async def _make_authentic_llm_call(
         self, kernel: Kernel, prompt: str
     ) -> str:  # Prend kernel en argument
-        """Fait un appel authentique à gpt-4o-mini via le kernel fourni."""
+        """Fait un appel authentique à gpt-5-mini via le kernel fourni."""
         # This test now uses the class-level state manager.
         # This method might need to be adapted if it depends on per-test setup.
         try:

@@ -243,7 +243,7 @@ async def run_extract_repair_pipeline(
 
     try:
         llm_service = create_llm_service(
-            service_id="repair_utils", model_id="gpt-4o-mini"
+            service_id="repair_utils", model_id="gpt-5-mini"
         )
         if not llm_service:
             logger.error("Impossible de créer le service LLM dans le pipeline.")

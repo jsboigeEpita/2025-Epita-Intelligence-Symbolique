@@ -81,7 +81,7 @@ class GPTConfigValidator:
         try:
             kernel = Kernel()
             chat_service = OpenAIChatCompletion(
-                service_id="config-test", ai_model_id="gpt-4o-mini", api_key=api_key
+                service_id="config-test", ai_model_id="gpt-5-mini", api_key=api_key
             )
             kernel.add_service(chat_service)
 
@@ -215,7 +215,7 @@ class TestKernelConfiguration:
         # Configuration du service
         chat_service = OpenAIChatCompletion(
             service_id="test-gpt4o-mini",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
 
@@ -224,7 +224,7 @@ class TestKernelConfiguration:
         # Vérifications
         retrieved_service = kernel.get_service("test-gpt4o-mini")
         assert retrieved_service is not None, "Service non trouvé dans le kernel"
-        assert retrieved_service.ai_model_id == "gpt-4o-mini", "Modèle AI incorrect"
+        assert retrieved_service.ai_model_id == "gpt-5-mini", "Modèle AI incorrect"
         assert retrieved_service.service_id == "test-gpt4o-mini", "ID service incorrect"
 
     def test_multiple_gpt_services_configuration(self):
@@ -233,8 +233,8 @@ class TestKernelConfiguration:
 
         # Services multiples
         services_config = [
-            {"id": "gpt4o-mini-fast", "model": "gpt-4o-mini", "max_tokens": 100},
-            {"id": "gpt4o-mini-detailed", "model": "gpt-4o-mini", "max_tokens": 1000},
+            {"id": "gpt4o-mini-fast", "model": "gpt-5-mini", "max_tokens": 100},
+            {"id": "gpt4o-mini-detailed", "model": "gpt-5-mini", "max_tokens": 1000},
         ]
 
         for config in services_config:
@@ -260,7 +260,7 @@ class TestKernelConfiguration:
 
         chat_service = OpenAIChatCompletion(
             service_id="optimized-gpt4o-mini",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
         kernel.add_service(chat_service)
@@ -378,7 +378,7 @@ class TestConfigurationIntegration:
 
         chat_service = OpenAIChatCompletion(
             service_id="e2e-config-test",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
         kernel.add_service(chat_service)
@@ -430,7 +430,7 @@ class TestConfigurationIntegration:
         kernel1 = Kernel()
         chat_service1 = OpenAIChatCompletion(
             service_id="persistence-test",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
         kernel1.add_service(chat_service1)
@@ -443,7 +443,7 @@ class TestConfigurationIntegration:
         kernel2 = Kernel()
         chat_service2 = OpenAIChatCompletion(
             service_id="persistence-test",
-            ai_model_id="gpt-4o-mini",
+            ai_model_id="gpt-5-mini",
             api_key=OPENAI_API_KEY,
         )
         kernel2.add_service(chat_service2)

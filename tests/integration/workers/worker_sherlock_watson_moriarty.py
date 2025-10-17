@@ -1,4 +1,4 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
+# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -63,7 +63,7 @@ def real_gpt_kernel():
     chat_service = OpenAIChatCompletion(
         service_id="real_openai_gpt4o_mini",
         api_key=OPENAI_API_KEY,
-        ai_model_id="gpt-4o-mini",
+        ai_model_id="gpt-5-mini",
     )
 
     kernel.add_service(chat_service)
@@ -101,12 +101,12 @@ def rate_limiter():
 )
 class TestRealGPTIntegration:
     async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
     async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
+        """Fait un appel authentique à gpt-5-mini."""
         try:
             kernel = await self._create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)

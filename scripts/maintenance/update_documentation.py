@@ -827,7 +827,7 @@ python -c "from argumentation_analysis.agents.core.oracle import get_oracle_vers
 # Fichier .env (à créer)
 OPENAI_API_KEY=your_openai_api_key_here
 GLOBAL_LLM_SERVICE=OpenAI
-OPENAI_CHAT_MODEL_ID=gpt-4o-mini
+OPENAI_CHAT_MODEL_ID=gpt-5-mini
 USE_REAL_JPYPE=true
 JAVA_HOME=D:\\2025-Epita-Intelligence-Symbolique\\libs\\portable_jdk\\jdk-17.0.11+9
 ```
@@ -895,7 +895,7 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GLOBAL_LLM_SERVICE=OpenAI
-      - OPENAI_CHAT_MODEL_ID=gpt-4o-mini
+      - OPENAI_CHAT_MODEL_ID=gpt-5-mini
     volumes:
       - ./logs:/app/logs
       - ./results:/app/results
@@ -1017,7 +1017,7 @@ metadata:
   name: oracle-config
 data:
   global-llm-service: "OpenAI"
-  openai-chat-model-id: "gpt-4o-mini"
+  openai-chat-model-id: "gpt-5-mini"
   use-real-jpype: "true"
 ```
 

@@ -52,7 +52,7 @@ def kernel():
     try:
         k = Kernel()
         chat_service = OpenAIChatCompletion(
-            service_id="gpt-4o-mini", ai_model_id="gpt-4o-mini"
+            service_id="gpt-5-mini", ai_model_id="gpt-5-mini"
         )
         k.add_service(chat_service)
         logger.info("✅ Kernel Semantic Kernel configuré")
