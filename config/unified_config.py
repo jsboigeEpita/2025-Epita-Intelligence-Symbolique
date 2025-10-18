@@ -463,7 +463,7 @@ def load_config_from_env() -> UnifiedConfig:
     if mock_level := os.getenv("UNIFIED_MOCK_LEVEL"):
         config.mock_level = MockLevel(mock_level)
 
-    config.default_model = os.getenv("UNIFIED_DEFAULT_MODEL", "gpt-5-mini")
+    config.default_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
     config.default_provider = os.getenv("UNIFIED_DEFAULT_PROVIDER", "openai")
 
     config.require_real_gpt = (

@@ -18,6 +18,9 @@ import time
 import requests
 import subprocess
 import os
+
+# Configuration modèle LLM depuis .env
+EXPECTED_MODEL = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 import threading
 from pathlib import Path
 from dotenv import load_dotenv
@@ -185,9 +188,9 @@ class TestAPIFastAPISimple:
             len(analysis) > 20
         ), f"Analyse trop courte ({len(analysis)} chars): {analysis}"
 
-        # Vérifier que le service GPT-4o-mini est utilisé
+        # Vérifier que le service LLM configuré (.env) est utilisé
         assert data["metadata"]["gpt_model"].startswith(
-            "gpt-5-mini"
+            EXPECTED_MODEL
         ), f"Service incorrect: {data['metadata']['gpt_model']}"
 
         # Vérifier temps de traitement (authentique vs mock)

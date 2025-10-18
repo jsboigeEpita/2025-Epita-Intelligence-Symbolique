@@ -16,6 +16,9 @@ import pytest
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Configuration modèle LLM depuis .env
+EXPECTED_MODEL = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
 # Vérifier disponibilité OPENAI_API_KEY et fichiers API
 API_ENVIRONMENT_AVAILABLE = True
 API_ENVIRONMENT_ERROR = None
@@ -196,9 +199,9 @@ def test_api_startup_and_basic_functionality():
         print(f"[OK] Service utilise: {service}")
 
         # Verifier authenticite
-        assert "gpt-5-mini" in service, f"Service incorrect: {service}"
+        assert EXPECTED_MODEL in service, f"Service incorrect: {service}"
 
-        print(f"[OK] Analyse authentique GPT-4o-mini confirmee")
+        print(f"[OK] Analyse authentique {EXPECTED_MODEL} confirmee")
         print(f"  - Temps: {processing_time:.2f}s (> 1.0s)")
         print(f"  - Longueur: {len(analysis)} chars")
         print(f"  - Service: {service}")
