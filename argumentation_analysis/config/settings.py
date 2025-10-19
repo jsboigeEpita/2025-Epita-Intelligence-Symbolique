@@ -49,7 +49,7 @@ class NetworkSettings(BaseSettings):
     retry_wait_multiplier: int = 1
     retry_wait_min: int = 2
     retry_wait_max: int = 10
-    default_timeout: float = 15.0
+    default_timeout: float = 90.0  # Increased from 15.0s to 90.0s for gpt-5-mini compatibility (D3.1.1)
     model_config = SettingsConfigDict(env_prefix="NETWORK_")
 
 

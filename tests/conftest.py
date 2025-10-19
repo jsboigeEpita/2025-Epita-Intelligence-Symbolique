@@ -247,7 +247,7 @@ def pytest_collection_finish(session):
     Hook exécuté après la collecte des tests.
     Détecte si des tests E2E sont présents et stocke le résultat dans le cache.
     """
-    is_e2e_session = any("e2e" in item.keywords for item in session.items)
+    is_e2e_session = any(item.get_closest_marker("e2e") is not None for item in session.items)
     session.config.cache.set("is_e2e_session", is_e2e_session)
     if is_e2e_session:
         logger.warning(
