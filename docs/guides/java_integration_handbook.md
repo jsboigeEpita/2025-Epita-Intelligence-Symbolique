@@ -9,6 +9,13 @@ L'intégration de la JVM via JPype est un composant sensible de notre architectu
 L'architecture actuelle repose sur des principes clés pour assurer la résilience :
 *   **Gestion centralisée de la JVM** via le module `argumentation_analysis/core/jvm_setup.py`.
 *   **Isolation des tests** en utilisant un framework de mock (`tests/mocks/jpype_setup.py`) pour la majorité des cas d'utilisation, limitant les tests d'intégration complets aux scénarios essentiels.
+## 2. Troubleshooting des Erreurs Courantes
+
+Pour les erreurs spécifiques et leur résolution, consultez les guides dédiés :
+
+*   **Crash JVM (Access Violation) au Démarrage des Tests :** Causé par une mauvaise détection des sessions E2E.
+    *   **Solution :** [Résolution du Crash JVM dû à la détection E2E](../troubleshooting/jpype_e2e_detection_crash.md)
+
 *   **Modularité des solveurs logiques** grâce à un sélecteur (`FOLHandler` refactorisé) permettant de basculer entre `tweety` (basé sur Java) et `prover9` (exécutable externe) via une variable d'environnement.
 
 Les instabilités sont principalement liées aux interactions avec des bibliothèques externes (surtout natives) et des plugins de l'écosystème de test.
