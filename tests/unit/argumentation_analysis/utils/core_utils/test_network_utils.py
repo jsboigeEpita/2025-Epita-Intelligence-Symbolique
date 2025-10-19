@@ -70,7 +70,7 @@ def test_download_file_success(mock_requests_get, tmp_path):
         result = download_file(url, dest_path, expected_size=expected_file_size)
 
         assert result is True
-        mock_requests_get.assert_called_once_with(url, stream=True, timeout=15.0)
+        mock_requests_get.assert_called_once_with(url, stream=True, timeout=90.0)
         mock_mkdir.assert_called_with(parents=True, exist_ok=True)
         mock_file_open.assert_called_once_with(dest_path, "wb")
         mock_file_open().write.assert_called_once_with(file_content)
