@@ -9,7 +9,7 @@ def test_api_connectivity():
     """
     Vérifie la connectivité aux APIs OpenRouter et OpenAI.
     Ce test utilise les clés API stockées dans les variables d'environnement.
-    
+
     Note: Ce test adapte son comportement selon les clés API disponibles:
     - Teste OpenRouter si OPENROUTER_API_KEY est configurée
     - Teste OpenAI si OPENAI_API_KEY est configurée
