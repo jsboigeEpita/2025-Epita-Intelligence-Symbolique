@@ -614,8 +614,7 @@ def sample_authentic_test_text():
 
 # Marqueurs pytest pour organisation des fixtures authentiques
 pytestmark = [
-    pytest.mark.authentic,  # Marqueur pour fixtures authentiques
+    pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
-    pytest.mark.no_mocks,  # Marqueur sans mocks
     pytest.mark.informal,  # Marqueur spécifique analyse informelle
 ]

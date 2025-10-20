@@ -49,9 +49,8 @@ class TestInformalAnalysisAgentAuthentic:
     - Tests d'analyse argumentative avec taxonomie réelle
     """
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     def test_initialization_and_setup_authentic(self, authentic_informal_agent):
         """
@@ -95,10 +94,8 @@ class TestInformalAnalysisAgentAuthentic:
         print(f"[AUTHENTIC] Test d'initialisation terminé en {execution_time:.2f}s")
 
     @pytest.mark.asyncio
-    @pytest.mark.requires_llm
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     async def test_analyze_fallacies_authentic(
         self, simple_authentic_informal_agent, sample_authentic_test_text
@@ -173,10 +170,8 @@ class TestInformalAnalysisAgentAuthentic:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.requires_llm
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     async def test_identify_arguments_authentic(
         self, simple_authentic_informal_agent, sample_authentic_test_text
@@ -244,10 +239,8 @@ class TestInformalAnalysisAgentAuthentic:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.requires_llm
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     async def test_analyze_argument_authentic(self, simple_authentic_informal_agent):
         """
@@ -305,10 +298,8 @@ class TestInformalAnalysisAgentAuthentic:
         )
 
     @pytest.mark.asyncio
-    @pytest.mark.requires_llm
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     async def test_analyze_text_authentic(
         self, authentic_informal_agent, sample_authentic_test_text
@@ -367,9 +358,8 @@ class TestInformalAnalysisAgentAuthentic:
             f"[AUTHENTIC] Test d'analyse de texte (invoke) terminé en {execution_time:.2f}s"
         )
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     def test_fallacy_detection_local_authentic(
         self, authentic_fallacy_detector, sample_authentic_test_text
@@ -407,9 +397,8 @@ class TestInformalAnalysisAgentAuthentic:
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test de détection locale terminé en {execution_time:.2f}s")
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     def test_rhetorical_analysis_authentic(
         self, authentic_rhetorical_analyzer, sample_authentic_test_text
@@ -446,9 +435,8 @@ class TestInformalAnalysisAgentAuthentic:
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test d'analyse rhétorique terminé en {execution_time:.2f}s")
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     def test_contextual_analysis_authentic(
         self, authentic_contextual_analyzer, sample_authentic_test_text
@@ -488,9 +476,8 @@ class TestInformalAnalysisAgentAuthentic:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     async def test_complete_informal_analysis_workflow_authentic(
         self, authentic_informal_agent, sample_authentic_test_text
@@ -552,9 +539,8 @@ class TestInformalAnalysisAgentAuthentic:
         )
 
     @pytest.mark.performance
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.informal
     def test_local_components_performance_authentic(
         self,
@@ -614,9 +600,8 @@ class TestInformalAnalysisAgentAuthentic:
 
 # Marqueurs pytest pour organisation des tests authentiques
 pytestmark = [
-    pytest.mark.authentic,  # Marqueur pour tests authentiques
+    pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
-    pytest.mark.no_mocks,  # Marqueur sans mocks
     pytest.mark.informal,  # Marqueur spécifique analyse informelle
 ]
 

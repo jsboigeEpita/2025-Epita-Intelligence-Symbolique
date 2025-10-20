@@ -73,9 +73,8 @@ class TestBeliefSetAuthentic:
     Tests authentiques pour la classe abstraite BeliefSet - AUCUN MOCK
     """
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_initialization_authentic(self):
         """Test authentique d'initialisation d'un ensemble de croyances"""
@@ -100,9 +99,8 @@ class TestBeliefSetAuthentic:
             f"[AUTHENTIC] Test d'initialisation BeliefSet terminé en {execution_time:.3f}s"
         )
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_to_dict_authentic(self):
         """Test authentique de conversion en dictionnaire"""
@@ -127,9 +125,8 @@ class TestBeliefSetAuthentic:
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test to_dict terminé en {execution_time:.3f}s")
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_from_dict_propositional_authentic(self):
         """Test authentique de création propositionnelle à partir de dictionnaire"""
@@ -156,9 +153,8 @@ class TestBeliefSetAuthentic:
             f"[AUTHENTIC] Test from_dict propositional terminé en {execution_time:.3f}s"
         )
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_from_dict_first_order_authentic(self):
         """Test authentique de création first-order à partir de dictionnaire"""
@@ -195,9 +191,8 @@ class TestBeliefSetAuthentic:
             f"[AUTHENTIC] Test from_dict first-order terminé en {execution_time:.3f}s"
         )
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_from_dict_modal_authentic(self):
         """Test authentique de création modale à partir de dictionnaire"""
@@ -228,9 +223,8 @@ class TestBeliefSetAuthentic:
         execution_time = time.time() - start_time
         print(f"[AUTHENTIC] Test from_dict modal terminé en {execution_time:.3f}s")
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_from_dict_edge_cases_authentic(self):
         """Test authentique des cas limites de création à partir de dictionnaire"""
@@ -267,9 +261,8 @@ class TestBeliefSetAuthentic:
 class TestPropositionalBeliefSetAuthentic:
     """Tests authentiques pour PropositionalBeliefSet - AUCUN MOCK"""
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     @pytest.mark.propositional
     def test_propositional_logic_type_authentic(self):
@@ -291,9 +284,8 @@ class TestPropositionalBeliefSetAuthentic:
 class TestFirstOrderBeliefSetAuthentic:
     """Tests authentiques pour FirstOrderBeliefSet - AUCUN MOCK"""
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     @pytest.mark.first_order
     def test_first_order_logic_type_authentic(self):
@@ -317,9 +309,8 @@ class TestFirstOrderBeliefSetAuthentic:
 class TestModalBeliefSetAuthentic:
     """Tests authentiques pour ModalBeliefSet - AUCUN MOCK"""
 
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     @pytest.mark.modal
     def test_modal_logic_type_authentic(self):
@@ -346,9 +337,8 @@ class TestBeliefSetIntegrationAuthentic:
     """Tests d'intégration authentiques pour l'écosystème BeliefSet"""
 
     @pytest.mark.integration
-    @pytest.mark.authentic
+    @pytest.mark.llm_integration
     @pytest.mark.phase5
-    @pytest.mark.no_mocks
     @pytest.mark.belief_set
     def test_belief_set_ecosystem_authentic(self):
         """Test authentique de l'écosystème complet BeliefSet"""
@@ -383,9 +373,8 @@ class TestBeliefSetIntegrationAuthentic:
 
 # Marqueurs pytest pour organisation des tests authentiques
 pytestmark = [
-    pytest.mark.authentic,  # Marqueur pour tests authentiques
+    pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
-    pytest.mark.no_mocks,  # Marqueur sans mocks
     pytest.mark.belief_set,  # Marqueur spécifique structures BeliefSet
 ]
 

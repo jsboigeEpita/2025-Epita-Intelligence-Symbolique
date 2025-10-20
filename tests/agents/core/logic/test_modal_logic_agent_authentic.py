@@ -152,7 +152,7 @@ def test_initialization_and_setup_authentic(authentic_agent):
 
 
 @pytest.mark.asyncio
-@pytest.mark.requires_llm
+@pytest.mark.llm_integration
 async def test_text_to_belief_set_authentic_modal(authentic_agent):
     """Test authentique de conversion texte -> belief set modal avec vrai LLM."""
     agent = authentic_agent["agent"]
@@ -188,7 +188,7 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
 
 
 @pytest.mark.asyncio
-@pytest.mark.requires_llm
+@pytest.mark.llm_integration
 async def test_generate_queries_authentic_modal(authentic_agent):
     """Test authentique de génération de requêtes modales avec vrai LLM."""
     agent = authentic_agent["agent"]
@@ -336,8 +336,7 @@ def test_performance_modal_authentic(authentic_agent):
 
 # Configuration des marqueurs pytest pour cette classe
 pytestmark = [
-    pytest.mark.authentic,  # Marqueur pour tests authentiques
+    pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
-    pytest.mark.no_mocks,  # Marqueur sans mocks
     pytest.mark.modal,  # Marqueur spécifique logique modale
 ]

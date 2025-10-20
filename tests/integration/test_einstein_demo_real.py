@@ -126,7 +126,7 @@ def progressive_hints_monitor():
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 @pytest.mark.slow
 class TestEinsteinOracleDemoReal:
     """Tests d'intégration pour Einstein Oracle Demo réel."""
@@ -440,7 +440,7 @@ class TestEinsteinOracleDemoReal:
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 class TestEinsteinPuzzleLogic:
     """Tests de logique du puzzle Einstein."""
 
@@ -557,7 +557,7 @@ class TestEinsteinPuzzleLogic:
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 @pytest.mark.performance
 class TestEinsteinPerformanceMetrics:
     """Tests de performance pour le demo Einstein."""

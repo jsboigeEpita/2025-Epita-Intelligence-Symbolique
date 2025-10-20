@@ -89,7 +89,7 @@ def performance_monitor():
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 @pytest.mark.slow
 class TestCluedoOracleEnhancedReal:
     """Tests d'intégration pour Cluedo Oracle Enhanced réel."""
@@ -386,7 +386,7 @@ class TestCluedoOracleEnhancedReal:
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 class TestCluedoEnhancedIntegrationValidation:
     """Tests de validation de l'intégration Enhanced."""
 
@@ -495,7 +495,7 @@ class TestCluedoEnhancedIntegrationValidation:
 
 
 @pytest.mark.integration
-@pytest.mark.real_gpt
+@pytest.mark.llm_critical
 @pytest.mark.performance
 class TestCluedoEnhancedLatencyMeasurement:
     """Tests de mesure de latence avec GPT-4o-mini."""

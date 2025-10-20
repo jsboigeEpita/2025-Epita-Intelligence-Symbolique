@@ -290,7 +290,7 @@ class TestUnifiedAuthenticComponentsIntegration:
     """Tests d'intégration unifiée des composants authentiques."""
 
     @pytest.mark.integration
-    @pytest.mark.requires_all_authentic
+    @pytest.mark.llm_critical
     def test_full_authentic_pipeline(self):
         """Test du pipeline complet avec tous composants authentiques."""
         # Vérifier disponibilité des composants authentiques

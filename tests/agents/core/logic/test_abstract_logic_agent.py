@@ -112,8 +112,7 @@ class MockLogicAgent(BaseLogicAgent):
         pass
 
 
-@pytest.mark.no_mocks
-@pytest.mark.requires_api_key
+@pytest.mark.llm_light
 # @pytest.mark.usefixtures("jvm_session")  # Désactivé pour le débogage du crash JVM
 class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
     @pytest.fixture(autouse=True)

@@ -108,9 +108,8 @@ def authentic_pl_agent(tweety_bridge_fixture):
     }
 
 
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 def test_initialization_and_setup_authentic(authentic_pl_agent):
     """Test authentique d'initialisation et configuration - AUCUN MOCK."""
@@ -149,10 +148,8 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
 
 
 @pytest.mark.asyncio
-@pytest.mark.requires_llm
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 async def test_text_to_belief_set_authentic(authentic_pl_agent):
     """Test authentique de conversion texte vers ensemble de croyances propositionnelles."""
@@ -187,10 +184,8 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
 
 
 @pytest.mark.asyncio
-@pytest.mark.requires_llm
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 async def test_generate_queries_authentic(authentic_pl_agent):
     """Test authentique de génération de requêtes propositionnelles."""
@@ -221,9 +216,8 @@ async def test_generate_queries_authentic(authentic_pl_agent):
     print(f"[AUTHENTIC] Test de génération terminé en {execution_time:.2f}s")
 
 
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 def test_execute_query_authentic(authentic_pl_agent):
     """Test authentique d'exécution de requêtes propositionnelles."""
@@ -252,9 +246,8 @@ def test_execute_query_authentic(authentic_pl_agent):
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agent):
     """Test authentique du workflow complet de raisonnement propositionnel."""
@@ -304,9 +297,8 @@ async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agen
 
 
 @pytest.mark.performance
-@pytest.mark.authentic
+@pytest.mark.llm_integration
 @pytest.mark.phase5
-@pytest.mark.no_mocks
 @pytest.mark.propositional
 def test_formula_validation_performance_authentic(authentic_pl_agent):
     """Test authentique de performance de validation de formules."""
@@ -346,9 +338,8 @@ def test_formula_validation_performance_authentic(authentic_pl_agent):
 
 # Marqueurs pytest pour organisation des tests authentiques
 pytestmark = [
-    pytest.mark.authentic,  # Marqueur pour tests authentiques
+    pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
-    pytest.mark.no_mocks,  # Marqueur sans mocks
     pytest.mark.propositional,  # Marqueur spécifique logique propositionnelle
 ]
 

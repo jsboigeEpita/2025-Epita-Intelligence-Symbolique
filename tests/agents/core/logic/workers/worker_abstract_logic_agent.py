@@ -90,8 +90,7 @@ class MockLogicAgent(BaseLogicAgent):
         pass
 
 
-@pytest.mark.no_mocks
-@pytest.mark.requires_api_key
+@pytest.mark.llm_light
 class TestAbstractLogicAgent:
     @pytest.fixture(autouse=True)
     async def setup_method(self):
