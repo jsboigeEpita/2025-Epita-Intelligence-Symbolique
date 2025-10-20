@@ -65,7 +65,7 @@ dependencies:
   - conda-lock
   
   # Code Quality & Formatting
-  - black>=23.0.0      # Python code formatter
+  - black=23.11.0      # Python code formatter (version épinglée pour cohérence local/CI)
   - flake8>=6.0.0      # Linting tool
   - isort>=5.12.0      # Import sorter (optionnel mais recommandé)
 
