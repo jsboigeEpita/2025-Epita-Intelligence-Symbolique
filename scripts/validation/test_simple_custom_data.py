@@ -5,7 +5,6 @@ Test simple de validation : Traitement des données custom
 Validation de l'élimination des mocks - ÉPITA Demo
 """
 
-import argumentation_analysis.core.environment
 import sys
 from pathlib import Path
 
@@ -22,7 +21,7 @@ def test_custom_data_processor():
     print("=" * 70)
 
     try:
-        from custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
+        from custom_data_processor import CustomDataProcessor
 
         print("✅ Import CustomDataProcessor : SUCCÈS")
 

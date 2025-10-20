@@ -3,15 +3,12 @@ Script d'analyse de documentation obsolète via liens internes brisés
 Oracle Enhanced v2.1.0 - Maintenance Documentation
 """
 
-import argumentation_analysis.core.environment
-import os
 import re
 import json
 import argparse
 from pathlib import Path
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple
 from datetime import datetime
-import glob
 
 
 class DocumentationLinkAnalyzer:

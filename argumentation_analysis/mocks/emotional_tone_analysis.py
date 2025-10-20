@@ -3,7 +3,7 @@
 
 import logging
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 

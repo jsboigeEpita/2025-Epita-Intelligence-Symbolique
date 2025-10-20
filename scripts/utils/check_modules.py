@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 import os
 
 modules = [

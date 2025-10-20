@@ -2,7 +2,7 @@
 
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Dict, Any
 from semantic_kernel import Kernel
 
 # PURGE PHASE 3A: Utilisation des définitions minimales de cluedo_extended_orchestrator
@@ -13,10 +13,6 @@ from semantic_kernel import Kernel
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent # N'existe pas dans SK 0.9.6b1
 
 # Import des définitions de base depuis l'orchestrateur principal
-from argumentation_analysis.orchestration.cluedo_components.strategies import (
-    CyclicSelectionStrategy,
-)
-from .base import Agent, SelectionStrategy, TerminationStrategy
 
 # Si AgentGroupChat ou ChatCompletionAgent sont réellement utilisés, il faudra les définir ici
 # ou adapter le code pour utiliser des mécanismes d'orchestration plus simples.

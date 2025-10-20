@@ -1,4 +1,3 @@
-import sys
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.core.bootstrap import initialize_project_environment

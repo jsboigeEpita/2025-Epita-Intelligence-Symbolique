@@ -7,11 +7,9 @@ Script de lancement pour l'audit d'authenticité avec préparation de l'environn
 Vérifie les prérequis et configure l'environnement avant le test.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess
-from pathlib import Path
 
 
 def check_prerequisites():

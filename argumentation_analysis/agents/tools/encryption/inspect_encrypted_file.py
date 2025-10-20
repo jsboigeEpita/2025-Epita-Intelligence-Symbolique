@@ -5,7 +5,6 @@
 Script pour inspecter le contenu du fichier encrypté.
 """
 
-import os
 import sys
 import json
 import gzip

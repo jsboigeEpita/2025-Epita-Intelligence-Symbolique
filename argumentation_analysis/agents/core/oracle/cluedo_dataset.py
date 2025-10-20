@@ -5,10 +5,9 @@ Ce module gère les données du jeu Cluedo et les interactions avec l'Oracle.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 
 from .permissions import QueryType, QueryResult, RevealPolicy, ValidationResult
 

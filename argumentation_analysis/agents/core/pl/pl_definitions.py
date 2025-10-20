@@ -1,8 +1,7 @@
 # agents/core/pl/pl_definitions.py
 import logging
 import jpype  # Garder l'import pour isinstance et JException
-from typing import List, Optional, Any, Dict
-import time
+from typing import Optional, Any
 from semantic_kernel.functions import kernel_function
 import semantic_kernel as sk
 

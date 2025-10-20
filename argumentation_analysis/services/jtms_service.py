@@ -6,16 +6,14 @@ avec support de sessions, versioning et synchronisation multi-agents.
 
 import uuid
 import json
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime
-from pathlib import Path
 import sys
 import os
 
 # Ajout du path pour importer le module JTMS existant
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "1.4.1-JTMS"))
-from jtms import JTMS, Belief, Justification
+from jtms import JTMS
 
 
 class JTMSService:

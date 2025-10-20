@@ -5,7 +5,7 @@ Tests unitaires pour le module shared_state.py qui gère l'état partagé d'une 
 
 import unittest
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
@@ -134,7 +134,7 @@ class TestRhetoricalAnalysisState(unittest.TestCase):
 
         # Test avec un belief set inexistant
         with patch("logging.Logger.warning") as mock_warning:
-            log_id2 = self.state.log_query("bs_inexistant", query, raw_result)
+            self.state.log_query("bs_inexistant", query, raw_result)
             mock_warning.assert_called_once()
 
     def test_add_answer(self):

@@ -10,11 +10,9 @@ argumentation_analysis.core.source_management pour la logique métier.
 Refactorisé pour utiliser l'architecture core réutilisable.
 """
 
-import os
-import sys
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # Ajout du répertoire racine du projet au chemin
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -22,8 +20,6 @@ project_root = Path(__file__).resolve().parent.parent.parent
 # Import du composant core refactorisé
 from argumentation_analysis.core.source_management import (
     InteractiveSourceSelector,
-    create_unified_source_manager,
-    UnifiedSourceType,
 )
 
 logger = logging.getLogger("UnifiedSourceSelector")

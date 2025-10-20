@@ -9,11 +9,8 @@ en tenant compte des facteurs contextuels qui peuvent influencer l'interprétati
 et la gravité des sophismes.
 """
 
-import os
-import sys
 import json
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
+from typing import Dict, List, Any
 import pandas as pd
 
 # Importer les services partagés

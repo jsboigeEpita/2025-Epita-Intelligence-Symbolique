@@ -10,14 +10,12 @@ import uuid
 import threading
 import queue
 import logging
-from typing import Dict, Any, Optional, List, Callable, Set
+from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 
 from .channel_interface import (
     Channel,
     ChannelType,
-    ChannelException,
-    ChannelTimeoutException,
 )
 from .message import Message, MessageType, MessagePriority, AgentLevel
 

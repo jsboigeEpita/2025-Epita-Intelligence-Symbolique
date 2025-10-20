@@ -17,13 +17,12 @@ Usage:
 
 import sys
 import os
-import time
 import json
 import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 import traceback
 import argparse
@@ -231,7 +230,7 @@ class ProfesseurVirtuelLLM:
                     response = await self.llm_service.generate_message(
                         prompt, execution_settings
                     )
-                    response_text = str(response)
+                    str(response)
                     self.logger.info("✅ Approche generate_message réussie")
 
                 else:
@@ -241,7 +240,6 @@ class ProfesseurVirtuelLLM:
 
             except Exception as api_error:
                 self.logger.error(f"❌ Échec appel API: {api_error}")
-                response_text = ""
 
             # Si réponse obtenue, on utilise les vrais résultats (pour une démo complète)
             # Pour cette validation, on simule l'analyse JSON
@@ -442,7 +440,7 @@ class OrchestrateurPedagogiqueEpita:
 
         # Paramètres dynamiques configurables
         niveau_classe = parametres.get("niveau_classe", "M1")
-        complexite_sujet = parametres.get("complexite", "avancé")
+        parametres.get("complexite", "avancé")
         nombre_etudiants = parametres.get("nombre_etudiants", 3)
 
         # Profils d'étudiants EPITA spécialisés

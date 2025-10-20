@@ -9,7 +9,7 @@ de Données, etc.).
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -38,7 +38,6 @@ class OracleAgentInterface(ABC):
             Dict[str, Any]: Une réponse structurée, idéalement conforme au modèle
             `StandardOracleResponse`.
         """
-        pass
 
     @abstractmethod
     def get_oracle_statistics(self) -> Dict[str, Any]:
@@ -49,12 +48,10 @@ class OracleAgentInterface(ABC):
             Dict[str, Any]: Un dictionnaire de métriques (ex: nombre de requêtes,
             erreurs, etc.).
         """
-        pass
 
     @abstractmethod
     def reset_oracle_state(self) -> None:
         """Réinitialise l'état interne de l'Oracle."""
-        pass
 
 
 class DatasetManagerInterface(ABC):
@@ -80,7 +77,6 @@ class DatasetManagerInterface(ABC):
         Returns:
             Dict[str, Any]: Le résultat de la requête.
         """
-        pass
 
     @abstractmethod
     def check_permission(self, agent_name: str, query_type: str) -> bool:
@@ -94,7 +90,6 @@ class DatasetManagerInterface(ABC):
         Returns:
             bool: `True` si l'agent a la permission, `False` sinon.
         """
-        pass
 
 
 @dataclass

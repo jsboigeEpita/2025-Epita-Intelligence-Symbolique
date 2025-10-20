@@ -12,14 +12,12 @@ import logging
 import json
 import gzip
 import base64
-from typing import Dict, Any, Optional, List, Callable, Set, Tuple
+from typing import Dict, Any, Optional, List, Callable, Tuple
 from datetime import datetime
 from collections import defaultdict
 
-from .channel_interface import Channel, ChannelType, ChannelException
-from .message import Message, MessageType, MessagePriority, AgentLevel
-
-from argumentation_analysis.paths import DATA_DIR
+from .channel_interface import Channel, ChannelType
+from .message import Message
 
 
 class DataStore:

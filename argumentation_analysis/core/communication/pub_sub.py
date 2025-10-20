@@ -8,8 +8,7 @@ récepteurs et permet une communication one-to-many efficace.
 
 import uuid
 import threading
-import asyncio
-from typing import Dict, Any, Optional, Callable, List, Set
+from typing import Dict, Any, Optional, Callable, List
 from datetime import datetime, timedelta
 
 from .message import Message, MessageType, MessagePriority, AgentLevel

@@ -9,7 +9,7 @@ en générant un feedback BNF spécifique pour guider les agents vers les bonnes
 
 import re
 import logging
-from typing import Dict, List, Optional, Tuple, Any
+from typing import List, Optional
 from dataclasses import dataclass
 
 

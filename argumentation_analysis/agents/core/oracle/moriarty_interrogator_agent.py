@@ -18,7 +18,6 @@ import random
 import uuid
 from dataclasses import replace
 
-import re
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.contents import ChatMessageContent
@@ -408,7 +407,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         )
 
         # Enrichissement de la réponse avec la personnalité de Moriarty
-        original_message = response.message
+        response.message
         if response.authorized and response.data and response.data.can_refute:
             # Cas où Moriarty réfute
             if response.revealed_information:

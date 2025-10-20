@@ -8,7 +8,6 @@ stratégique-tactique pour traduire les objectifs et traiter les rapports.
 
 import time
 import threading
-import asyncio
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
 from argumentation_analysis.core.communication.hierarchical_channel import (
     HierarchicalChannel,
@@ -17,7 +16,6 @@ from argumentation_analysis.core.communication.strategic_adapter import Strategi
 from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentation_analysis.core.communication.message import (
     MessagePriority,
-    MessageType,
 )
 from argumentation_analysis.orchestration.hierarchical.interfaces.strategic_tactical import (
     StrategicTacticalInterface,

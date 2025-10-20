@@ -13,15 +13,12 @@ S'intègre harmonieusement avec l'architecture Semantic Kernel existante.
 """
 
 import time
-import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Union
-from pathlib import Path
+from typing import Dict, Any
 
 # Imports Semantic Kernel et architecture
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentation_analysis.core.llm_service import create_llm_service
 
 logger = logging.getLogger("ConversationOrchestrator")
 
@@ -558,7 +555,7 @@ class ConversationOrchestrator:
                 break
 
             try:
-                result = agent.analyze(text, self.conv_logger, self.state)
+                agent.analyze(text, self.conv_logger, self.state)
 
                 # Snapshot intermédiaire
                 self.state.phase = f"post_{agent.agent_type}"

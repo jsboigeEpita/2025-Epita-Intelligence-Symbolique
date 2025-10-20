@@ -7,13 +7,12 @@ gestionnaire externe (ex: une fixture pytest de session).
 import jpype
 import logging
 import os
-from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 # On importe directement la fonction d'initialisation robuste
 from argumentation_analysis.core.jvm_setup import (
     initialize_jvm as initialize_jvm_robustly,
 )
-from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
+from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 logger = logging.getLogger(__name__)
 

@@ -66,15 +66,11 @@ Utilisation:
 """
 
 import logging
-import time
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, Any, Optional
 
 from argumentation_analysis.pipelines.orchestration.config.enums import (
     OrchestrationMode,
     AnalysisType,
-)
-from argumentation_analysis.pipelines.orchestration.config.base_config import (
-    ExtendedOrchestrationConfig,
 )
 
 logger = logging.getLogger(__name__)

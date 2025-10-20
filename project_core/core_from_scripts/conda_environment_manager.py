@@ -9,15 +9,13 @@ Bien que la configuration applicative se déplace vers `argumentation_analysis.c
 ce module reste essentiel pour le bootstrapping de l'environnement.
 """
 
-import os
 import sys
-import warnings
 import json
 import logging
 import subprocess
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 # Configuration de base du logger pour ce module
 logging.basicConfig(

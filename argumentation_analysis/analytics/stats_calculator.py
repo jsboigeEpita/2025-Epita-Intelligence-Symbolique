@@ -8,7 +8,7 @@ Ce module fournit des fonctions pour calculer des statistiques descriptives
 métriques (par exemple, confiance, richesse contextuelle) pour des ensembles
 de résultats groupés, typiquement par corpus.
 """
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 
 
 def calculate_average_scores(

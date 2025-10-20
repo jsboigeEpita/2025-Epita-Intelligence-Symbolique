@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -8,10 +6,9 @@ Validateur pour le Diagnostic complet de la démo Épita et de ses composants il
 """
 
 import asyncio
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any, Coroutine
+from typing import Dict, Any
 
 # Ajout du répertoire racine au sys.path pour permettre l'import de modules du projet
 current_script_path = Path(__file__).resolve()

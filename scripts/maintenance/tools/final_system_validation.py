@@ -11,8 +11,6 @@ Version: 2.1.0
 Date: 2025-06-07
 """
 
-import argumentation_analysis.core.environment
-import os
 import sys
 import json
 import time
@@ -21,7 +19,7 @@ import traceback
 from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, Tuple, Any
 
 
 class OracleEnhancedValidator:

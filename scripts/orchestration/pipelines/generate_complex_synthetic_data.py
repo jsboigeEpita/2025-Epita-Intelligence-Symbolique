@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 import json
 import random
 import hashlib
@@ -46,7 +45,7 @@ class ComplexSyntheticDataGenerator:
         philosophe = random.choice(self.philosophes)
         sophisme_type = random.choice(list(self.sophismes.keys()))
 
-        base_text = f"La discussion sur {theme}, influencée par {philosophe}, atteint un point critique. "
+        f"La discussion sur {theme}, influencée par {philosophe}, atteint un point critique. "
 
         # 1. Données pour le raisonnement modal
         modal_reasoning = {

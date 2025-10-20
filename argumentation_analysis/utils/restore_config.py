@@ -8,7 +8,6 @@ Ce script permet de reconstituer les fichiers de configuration en clair
 à partir des fichiers chiffrés pour le développement local.
 """
 
-import os
 import sys
 import json
 import logging

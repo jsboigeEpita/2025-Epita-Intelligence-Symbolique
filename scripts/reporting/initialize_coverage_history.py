@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -11,7 +9,6 @@ et une entrée fictive antérieure pour permettre la visualisation de l'évoluti
 """
 
 import os
-import sys
 import json
 import datetime
 

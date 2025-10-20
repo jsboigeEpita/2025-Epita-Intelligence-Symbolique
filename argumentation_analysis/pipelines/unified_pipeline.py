@@ -4,7 +4,7 @@
 # garantit que le programme s'arrête immédiatement si la version est obsolète.
 # =====================================================================================
 try:
-    from argumentation_analysis.utils import version_validator
+    pass
 except ImportError as e:
     import sys
 
@@ -54,14 +54,13 @@ Artefacts produits:
 import asyncio
 import logging
 import warnings
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # Imports du pipeline original
 try:
     from argumentation_analysis.pipelines.unified_text_analysis import (
         run_unified_text_analysis_pipeline,
-        UnifiedAnalysisConfig,
         create_unified_config_from_legacy,
     )
 

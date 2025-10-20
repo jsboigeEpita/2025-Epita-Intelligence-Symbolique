@@ -252,7 +252,6 @@ class FOLLogicAgent:
         """
         self.logger.info(f"Configuration des composants pour {self.name} (mockée)...")
         # Version mockée - ne fait rien de spécial
-        pass
 
 
 # Fonction factory mockée pour la compatibilité

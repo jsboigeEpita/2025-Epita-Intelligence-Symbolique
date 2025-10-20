@@ -1,7 +1,5 @@
 # ui/utils.py
 import requests
-import json
-import gzip
 import hashlib
 import logging
 from pathlib import Path

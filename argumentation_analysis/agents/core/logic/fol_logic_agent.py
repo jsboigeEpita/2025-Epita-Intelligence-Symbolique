@@ -18,7 +18,7 @@ Fonctionnalités :
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
 # Mock éliminé en Phase 2 - utilisation d'objets réels uniquement
@@ -31,12 +31,10 @@ from semantic_kernel import Kernel
 from semantic_kernel.contents import (
     ChatMessageContent as OriginalChatMessageContent,
 )  # Renommer pour éviter conflit
-from pydantic import Field
 
 # Import de la classe Agent de base depuis l'orchestrateur principal
 # et définition locale de ChatCompletionAgent héritant de celle-ci.
 # from semantic_kernel.agents import ChatCompletionAgent
-from semantic_kernel.contents import ChatMessageContent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 
@@ -374,7 +372,6 @@ RÉPONDS EN FORMAT JSON :
     def _validate_fol_formula(self, formula: str) -> bool:
         """Validation basique syntaxe FOL."""
         # Caractères FOL attendus
-        fol_chars = ["∀", "∃", "→", "∧", "∨", "¬", "↔"]
 
         # Vérifications de base
         has_quantifier = any(q in formula for q in ["∀", "∃"])
@@ -840,7 +837,7 @@ async def test_fol_agent_basic():
         "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
     )
 
-    result = await agent.analyze(test_text)
+    await agent.analyze(test_text)
 
 
 if __name__ == "__main__":

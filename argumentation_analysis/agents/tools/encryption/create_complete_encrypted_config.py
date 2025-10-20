@@ -5,7 +5,6 @@
 Script pour créer un fichier encrypté complet qui embarque les sources avec la configuration des extraits.
 """
 
-import os
 import sys
 import json
 import gzip
@@ -24,7 +23,7 @@ if str(parent_dir) not in sys.path:
 # L'import de ui.config (même si obsolète) ou de settings charge la configuration
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
-from argumentation_analysis.ui.utils import reconstruct_url, get_cache_filepath
+from argumentation_analysis.ui.utils import reconstruct_url
 
 # Définir les constantes avec le chemin absolu correct
 EXTRACT_SOURCES_UPDATED_PATH = (
@@ -87,7 +86,7 @@ def create_complete_encrypted_config():
         # Récupérer les fichiers de cache pour chaque source
         for source in extract_sources:
             source_name = source.get("source_name", "Source inconnue")
-            source_type = source.get("source_type", "")
+            source.get("source_type", "")
             schema = source.get("schema", "")
             host_parts = source.get("host_parts", [])
             path = source.get("path", "")

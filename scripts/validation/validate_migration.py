@@ -7,17 +7,13 @@ Date: 08/06/2025
 Ce script vérifie que la migration depuis PowerShell vers Python
 a été effectuée correctement et que tous les composants fonctionnent.
 """
-import argumentation_analysis.core.environment
 
-import os
 import sys
 import json
 import yaml
-import time
-import requests
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Optional
 from datetime import datetime
 
 

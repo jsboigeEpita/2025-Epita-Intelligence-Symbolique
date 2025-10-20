@@ -18,7 +18,7 @@ import asyncio
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 # Import des modules du projet
 import sys

@@ -11,7 +11,6 @@ Version: 2.1.0
 Date: 2025-06-07
 """
 
-import os
 import sys
 import json
 import time
@@ -19,7 +18,7 @@ import subprocess
 import traceback
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, Tuple, Any
 from project_core.utils.shell import run_in_activated_env, ShellCommandError
 
 

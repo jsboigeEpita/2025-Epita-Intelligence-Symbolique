@@ -4,13 +4,12 @@ Script d'intégration du code récupéré - Oracle Enhanced v2.1.0
 Traite l'intégration du code récupéré identifié dans les phases précédentes
 """
 
-import os
 import sys
 import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import subprocess
 
 

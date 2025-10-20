@@ -14,9 +14,7 @@ parties du système d'analyse argumentative.
 
 # Exposer les classes et fonctions importantes
 try:
-    from .extract_agent import ExtractAgent
-    from .extract_definitions import ExtractDefinition, ExtractResult
-    from .prompts import EXTRACT_PROMPT_TEMPLATE
+    pass
 
     __all__ = [
         "ExtractAgent",

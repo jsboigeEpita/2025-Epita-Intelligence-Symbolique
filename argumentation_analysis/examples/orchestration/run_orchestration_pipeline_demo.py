@@ -32,10 +32,8 @@ import asyncio
 import argparse
 import logging
 import time
-import json
 import sys
-from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 # Configuration du logging pour la démonstration
 logging.basicConfig(
@@ -331,7 +329,7 @@ async def demo_orchestration_comparison():
     """Démonstration de la comparaison d'approches d'orchestration."""
     print_header("Démonstration - Comparaison des Approches d'Orchestration")
 
-    text = EXAMPLE_TEXTS["comprehensive"]
+    EXAMPLE_TEXTS["comprehensive"]
     approaches = ["pipeline", "hierarchical", "specialized", "hybrid"]
 
     print(f"📊 Comparaison des approches: {', '.join(approaches)}")

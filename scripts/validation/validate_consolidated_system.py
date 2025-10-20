@@ -26,12 +26,9 @@ Tests d'intégrité des modules essentiels :
 import sys
 import os
 import traceback
-import importlib
-import inspect
-import subprocess
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import List, Optional
 from dataclasses import dataclass
 from enum import Enum
 

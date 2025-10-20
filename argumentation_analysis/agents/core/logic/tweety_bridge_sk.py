@@ -8,7 +8,7 @@ où les erreurs sont retournées comme résultats JSON au lieu d'exceptions.
 
 import logging
 import json
-from typing import Tuple, Optional, Any, Dict, List
+from typing import Any, Dict, List
 
 from .tweety_bridge import TweetyBridge
 

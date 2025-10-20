@@ -29,7 +29,7 @@ def test_imports():
         print("[TOOLS] Test des imports des modules...")
 
         # Test import utilitaires
-        from demo_utils import DemoLogger, Colors, Symbols, charger_config_categories
+        from demo_utils import charger_config_categories
 
         print("[OK] demo_utils importé avec succès")
 
@@ -78,7 +78,7 @@ def test_menu_categories():
     try:
         print("\n[TARGET] Test du menu des catégories...")
 
-        from demo_utils import charger_config_categories, Colors, Symbols
+        from demo_utils import charger_config_categories, Colors
 
         config = charger_config_categories()
         if not config:

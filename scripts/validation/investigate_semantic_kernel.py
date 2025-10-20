@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 """Investigation Semantic Kernel - Version et modules disponibles"""
 
-import argumentation_analysis.core.environment
-import sys
-import os
 
 print("=== SEMANTIC KERNEL INVESTIGATION ===")
 
@@ -44,14 +41,14 @@ try:
     # Test des alternatives
     print("\n=== TEST ALTERNATIVES ===")
     try:
-        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        pass
 
         print("✅ OpenAIChatCompletion disponible")
     except ImportError as e:
         print(f"❌ OpenAIChatCompletion non disponible - {e}")
 
     try:
-        from semantic_kernel.kernel import Kernel
+        pass
 
         print("✅ Kernel disponible")
     except ImportError as e:

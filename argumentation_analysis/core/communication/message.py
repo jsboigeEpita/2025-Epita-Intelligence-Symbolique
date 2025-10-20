@@ -8,7 +8,7 @@ de messages spécifiques et les priorités.
 import uuid
 import enum
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional
 import functools
 
 from argumentation_analysis.paths import DATA_DIR

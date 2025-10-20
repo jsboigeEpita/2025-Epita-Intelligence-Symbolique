@@ -12,11 +12,8 @@ Il vérifie d'abord que les fichiers peuvent être reconstitués à partir des f
 chiffrés avant de les supprimer.
 """
 
-import os
 import sys
-import json
 import logging
-import shutil
 from pathlib import Path
 
 # Configuration du logging

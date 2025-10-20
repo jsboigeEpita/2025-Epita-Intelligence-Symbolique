@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -245,7 +243,7 @@ def main():
 
         # La vérification des missing_packages est retirée.
 
-    except Exception as e:
+    except Exception:
         logger.exception("Une erreur critique est survenue dans le script lanceur.")
         sys.exit(1)
 

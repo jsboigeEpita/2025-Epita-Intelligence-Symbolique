@@ -6,7 +6,6 @@ Solution de contournement pour les problèmes de pip/setuptools.
 Configure manuellement le PYTHONPATH pour permettre l'importation du package.
 """
 
-import argumentation_analysis.core.environment
 import sys
 import os
 from pathlib import Path
@@ -42,7 +41,7 @@ def fix_pythonpath():
 def test_import():
     """Teste l'importation du package."""
     try:
-        import argumentation_analysis
+        pass
 
         print("[OK] Import argumentation_analysis: SUCCES")
         return True

@@ -5,9 +5,7 @@
 Script pour initialiser le cache des textes à partir du fichier encrypté.
 """
 
-import os
 import sys
-import hashlib
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -24,7 +22,6 @@ sys.path.append(str(parent_dir.parent))
 # L'import de settings déclenchera le chargement du .env
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.app import initialize_text_cache
-from argumentation_analysis.ui.utils import get_cache_filepath
 
 if __name__ == "__main__":
     print("\n=== Initialisation du cache des textes ===\n")

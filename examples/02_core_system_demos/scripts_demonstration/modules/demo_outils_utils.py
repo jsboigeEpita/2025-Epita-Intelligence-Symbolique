@@ -6,8 +6,7 @@ Développement & Debug - Mocks, générateurs, métriques
 """
 
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Import des utilitaires communs
 from modules.demo_utils import (
@@ -19,7 +18,6 @@ from modules.demo_utils import (
     executer_tests,
     afficher_stats_tests,
     afficher_menu_module,
-    pause_interactive,
     confirmer_action,
 )
 

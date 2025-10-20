@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -8,16 +6,13 @@ SANS emojis Unicode pour éviter les problèmes d'encodage.
 """
 
 import asyncio
-import os
 import logging
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 from dotenv import load_dotenv
 
 # Import des systèmes de reporting existants
-from argumentation_analysis.reporting.real_time_trace_analyzer import RealToolCall
 from argumentation_analysis.utils.unified_pipeline import UnifiedAnalysisPipeline
 from argumentation_analysis.utils.unified_pipeline import (
     AnalysisConfig,

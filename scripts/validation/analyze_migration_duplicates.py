@@ -18,15 +18,13 @@ Auteur: Roo
 Date: 10/06/2025
 """
 
-import os
 import sys
 import json
 import hashlib
 import re
-import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, asdict
 import difflib
 

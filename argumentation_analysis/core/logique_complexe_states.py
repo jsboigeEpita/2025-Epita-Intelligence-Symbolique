@@ -1,6 +1,5 @@
 import uuid
-import random
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import List, Dict, Any, Set, Tuple
 from .enquete_states import BaseWorkflowState
 
 

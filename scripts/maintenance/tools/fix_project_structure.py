@@ -12,8 +12,6 @@ structurels du projet, notamment :
 4. Vérification des importations
 """
 
-import argumentation_analysis.core.environment
-import os
 import sys
 import subprocess
 import logging

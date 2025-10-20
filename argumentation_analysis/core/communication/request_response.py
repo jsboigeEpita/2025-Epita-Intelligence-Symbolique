@@ -11,7 +11,7 @@ import time
 import threading
 import asyncio
 import logging
-from typing import Dict, Any, Optional, Callable, Tuple, List
+from typing import Dict, Any, Optional, Callable
 from datetime import datetime, timedelta
 
 from .message import Message, MessageType, MessagePriority, AgentLevel
@@ -19,8 +19,6 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 
 class RequestTimeoutError(Exception):
     """Exception levée lorsqu'une requête expire sans recevoir de réponse."""
-
-    pass
 
 
 class RequestResponseProtocol:

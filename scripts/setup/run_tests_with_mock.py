@@ -5,7 +5,6 @@
 Script pour exécuter les tests du projet en utilisant le mock JPype1.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess
@@ -26,7 +25,7 @@ def setup_mock():
 
     try:
         # Importer le mock JPype1
-        from tests.mocks import jpype_mock
+        pass
 
         print("Mock JPype1 importé avec succès")
 

@@ -26,13 +26,12 @@ import asyncio
 import logging
 import argparse
 import subprocess
-import threading
 import socket
 import signal
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 from playwright.async_api import async_playwright, Playwright, Browser
 import aiohttp
@@ -1073,8 +1072,6 @@ class UnifiedWebOrchestrator:
             "[TEST] LANCEMENT DES TESTS PYTEST", f"Tests: {test_paths or 'tous'}"
         )
 
-        import shlex
-
         conda_env_name = os.environ.get(
             "CONDA_ENV_NAME",
             self.config.get("backend", {}).get("conda_env", "projet-is"),
@@ -1312,7 +1309,6 @@ class UnifiedWebOrchestrator:
 
         # Je dois injecter la config dans le cleaner car il en a besoin
         # L'injection de la config se fait maintenant dans le __init__
-        pass
 
         backend_config = self.config.get("backend", {})
         frontend_config = self.config.get("frontend", {})

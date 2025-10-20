@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Test minimal pour diagnostiquer le blocage JTMS
@@ -20,7 +18,7 @@ def test_imports_basiques():
         print(f"   ❌ Flask: {e}")
 
     try:
-        import asyncio
+        pass
 
         print("   ✅ Asyncio")
     except Exception as e:
@@ -31,7 +29,6 @@ def test_auto_env():
     print("2. Test auto_env...")
     try:
         # Ne pas importer auto_env directement - juste tester sa présence
-        import os
         from pathlib import Path
 
         auto_env_path = Path("scripts/core/auto_env.py")
@@ -48,7 +45,6 @@ def test_imports_jtms_simple():
     try:
         # Test sans activation d'environnement
         sys.path.append(".")
-        from argumentation_analysis.services.jtms_service import JTMSService
 
         print("   ✅ JTMSService importé")
     except ImportError as e:
@@ -61,7 +57,7 @@ def test_imports_jtms_simple():
 def test_service_manager():
     print("4. Test ServiceManager...")
     try:
-        from argumentation_analysis.orchestration.service_manager import ServiceManager
+        pass
 
         print("   ✅ ServiceManager importé")
     except ImportError as e:

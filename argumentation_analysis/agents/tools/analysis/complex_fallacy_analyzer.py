@@ -13,11 +13,7 @@ fondamentaux pour identifier des problèmes comme :
 -   Des motifs récurrents dans l'utilisation des sophismes.
 """
 
-import os
-import sys
-import json
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
+from typing import Dict, List, Any
 
 # Importer les services partagés et les dépendances
 from argumentation_analysis.agents.tools.support.shared_services import (

@@ -234,7 +234,6 @@ class TaxonomyLoader:
             logger.info("Utilisation de la version mock de load_taxonomy()")
 
             # Créer un petit échantillon de données mock
-            mock_header = ["PK", "nom_vulgarisé", "text_fr", "category", "subcategory"]
             mock_entries = [
                 {
                     "PK": "1",

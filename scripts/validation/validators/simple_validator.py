@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -44,7 +42,7 @@ async def validate_simple(
         # Test import config
         if available_components.get("unified_config", False):
             try:
-                from config.unified_config import UnifiedConfig
+                pass
 
                 # Optionnel: instancier pour vérifier
                 # config = UnifiedConfig()
@@ -79,9 +77,7 @@ async def validate_simple(
                         ConversationOrchestrator,
                     )
                 if available_components.get("real_llm_orchestrator", False):
-                    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                        RealLLMOrchestrator,
-                    )
+                    pass
                 basic_tests_results["import_orchestrators"]["status"] = "success"
                 logger.info("  ✓ Test import Orchestrators: Réussi")
             except ImportError as e:

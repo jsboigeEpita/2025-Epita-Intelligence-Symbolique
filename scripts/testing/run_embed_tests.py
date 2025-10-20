@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -8,7 +6,6 @@ Script pour exécuter les tests embed_all_sources sans pytest.
 """
 
 import sys
-import os
 from pathlib import Path
 import traceback
 

@@ -7,9 +7,7 @@ qui ne devraient pas être versionnés, tout en préservant les fichiers de conf
 existants.
 """
 
-import argumentation_analysis.core.environment
 import os
-import shutil
 import subprocess
 from pathlib import Path
 import sys

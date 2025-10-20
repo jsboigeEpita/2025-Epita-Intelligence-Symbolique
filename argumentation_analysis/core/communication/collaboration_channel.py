@@ -9,12 +9,12 @@ collaborative de problèmes.
 import uuid
 import threading
 import logging
-from typing import Dict, Any, Optional, List, Callable, Set
+from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 from collections import defaultdict
 
-from .channel_interface import Channel, ChannelType, ChannelException
-from .message import Message, MessageType, MessagePriority, AgentLevel
+from .channel_interface import Channel, ChannelType
+from .message import Message
 
 
 class CollaborationGroup:

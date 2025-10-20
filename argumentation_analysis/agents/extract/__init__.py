@@ -8,14 +8,11 @@ de fonctionner correctement.
 
 try:
     # Utiliser des imports relatifs pour éviter les problèmes d'initialisation circulaire
-    from ..core.extract.extract_agent import *
-    from ..core.extract.extract_definitions import *
-    from ..core.extract.prompts import *
+    pass
 
     # Exposer explicitement la classe ExtractAgent et la fonction setup_extract_agent
     # pour les importations de la forme:
     # from argumentation_analysis.agents.extract import extract_agent
-    from ..core.extract.extract_agent import ExtractAgent
 
     # Créer un alias pour le module extract_agent
     import sys

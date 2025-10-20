@@ -15,7 +15,7 @@ Ce module fournit les briques de base pour l'`ExtractAgent` :
 import re
 import logging
 from pathlib import Path  # De la version stashed
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any
 import json
 
 # Importer PROJECT_ROOT depuis la configuration centrale (de la version stashed)

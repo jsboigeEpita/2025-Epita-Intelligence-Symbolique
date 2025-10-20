@@ -1,21 +1,13 @@
 # Fichier : argumentation_analysis/agents/utils/tracer.py
 
-import json
 import logging
-from typing import List, AsyncIterator, Optional
-from semantic_kernel import Kernel
-from semantic_kernel.agents import Agent, ChatCompletionAgent
+from typing import AsyncIterator
+from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.contents import (
     ChatMessageContent,
-    AuthorRole,
-    StreamingChatMessageContent,
     FunctionCallContent,
     FunctionResultContent,
 )
-from semantic_kernel.connectors.ai.chat_completion_client_base import (
-    ChatCompletionClientBase,
-)
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
 
 class TracedAgent:

@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 import json
 
 input_file_path = "_temp/decrypted_sources_with_vildanden.json"

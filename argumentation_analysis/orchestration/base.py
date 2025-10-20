@@ -18,7 +18,6 @@ class Agent(BaseModel, ABC):
     @abstractmethod
     async def invoke(self, history: List[ChatMessageContent]) -> ChatMessageContent:
         """Méthode principale pour invoquer l'agent."""
-        pass
 
 
 class SelectionStrategy(BaseModel, ABC):
@@ -32,11 +31,9 @@ class SelectionStrategy(BaseModel, ABC):
         self, agents: List[Agent], history: List[ChatMessageContent]
     ) -> Agent:
         """Sélectionne le prochain agent."""
-        pass
 
     def reset(self) -> None:
         """Remet à zéro l'état de la stratégie."""
-        pass
 
 
 class TerminationStrategy(BaseModel, ABC):
@@ -50,8 +47,6 @@ class TerminationStrategy(BaseModel, ABC):
         self, agent: Agent, history: List[ChatMessageContent]
     ) -> bool:
         """Détermine si la conversation doit se terminer."""
-        pass
 
     def reset(self) -> None:
         """Remet à zéro l'état de la stratégie."""
-        pass

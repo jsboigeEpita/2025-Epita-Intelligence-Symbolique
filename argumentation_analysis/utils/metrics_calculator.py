@@ -4,7 +4,7 @@ Utilitaires pour calculer diverses métriques à partir des résultats d'analyse
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any
 
 # import numpy as np # Numpy n'est pas utilisé par les fonctions de MERGE_HEAD
 

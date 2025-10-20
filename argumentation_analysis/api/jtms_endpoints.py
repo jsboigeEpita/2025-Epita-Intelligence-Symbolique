@@ -3,8 +3,8 @@ Endpoints API REST pour l'intégration JTMS
 Expose les fonctionnalités du service JTMS via une API REST complète.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
 import json
 from datetime import datetime
 import asyncio

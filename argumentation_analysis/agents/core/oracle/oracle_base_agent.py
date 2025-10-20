@@ -30,7 +30,7 @@ except ImportError:
 
 from ..abc.agent_bases import BaseAgent
 from .dataset_access_manager import DatasetAccessManager
-from .permissions import QueryType, OracleResponse, PermissionManager
+from .permissions import QueryType, OracleResponse
 from argumentation_analysis.utils.performance_monitoring import monitor_performance
 
 
@@ -357,7 +357,7 @@ class OracleTools:
             else:
                 return f"{agent_to_check} n'a pas les permissions pour {query_type}"
 
-        except ValueError as e:
+        except ValueError:
             self._logger.error(f"Type de requête invalide: {query_type}")
             raise ValueError(f"Type de requête invalide: {query_type}")
         except Exception as e:

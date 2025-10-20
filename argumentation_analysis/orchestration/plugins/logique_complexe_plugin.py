@@ -1,7 +1,7 @@
 # argumentation_analysis/orchestration/plugins/logique_complexe_plugin.py
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict
 from semantic_kernel.functions import kernel_function
 
 from argumentation_analysis.core.logique_complexe_states import EinsteinsRiddleState

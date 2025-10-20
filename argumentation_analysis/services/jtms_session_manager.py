@@ -6,12 +6,9 @@ checkpoints, rollback et synchronisation multi-agents.
 
 import uuid
 import json
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-import pickle
-import os
 
 from .jtms_service import JTMSService
 

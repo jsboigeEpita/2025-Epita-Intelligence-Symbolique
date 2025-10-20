@@ -17,11 +17,8 @@ Fonctionnalités :
 - Rapport détaillé des opérations
 """
 
-import os
 import sys
 import json
-import time
-import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple

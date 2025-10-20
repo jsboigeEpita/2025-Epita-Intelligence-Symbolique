@@ -6,7 +6,6 @@ Phase 5: Validation finale et synchronisation Git
 
 import subprocess
 import sys
-import time
 from pathlib import Path
 from datetime import datetime
 

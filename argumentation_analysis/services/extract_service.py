@@ -8,12 +8,9 @@ la gestion des marqueurs et la recherche de texte similaire.
 import re
 import difflib
 import logging
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any, Tuple, Optional
 
 # Imports absolus pour les tests
-import sys
-import os
-from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 # current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
@@ -22,12 +19,6 @@ from pathlib import Path
 #     sys.path.insert(0, str(parent_dir))
 
 # Correction des imports pour pointer vers le bon emplacement des modèles
-from argumentation_analysis.models.extract_definition import (
-    ExtractResult,
-    Extract,
-    SourceDefinition,
-    ExtractDefinitions,
-)
 
 # Configuration du logging
 logger = logging.getLogger("Services.ExtractService")

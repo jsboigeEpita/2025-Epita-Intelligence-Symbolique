@@ -1,7 +1,6 @@
 # argumentation_analysis/services/web_api/routes/logic_routes.py
 from flask import Blueprint, request, jsonify, current_app
 import logging
-from typing import Optional
 from pydantic import ValidationError
 
 # Import des modèles nécessaires. Les chemins sont relatifs à ce fichier.
@@ -11,9 +10,6 @@ from ..models.request_models import (
     LogicGenerateQueriesRequest,
 )
 from ..models.response_models import (
-    LogicBeliefSetResponse,
-    LogicQueryResponse,
-    LogicGenerateQueriesResponse,
     ErrorResponse,
 )
 

@@ -5,13 +5,12 @@ Script de validation finale - Sprint 3
 Test complet du système après optimisations
 """
 
-import argumentation_analysis.core.environment
 import sys
 import os
 import time
 import asyncio
 import subprocess
-from typing import Dict, List, Any
+from typing import Dict
 from datetime import datetime
 
 

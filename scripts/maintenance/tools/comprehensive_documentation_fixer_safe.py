@@ -7,13 +7,12 @@ Script de Correction Automatique de Documentation - Version Sécurisée
 Oracle Enhanced v2.1.0
 """
 
-import argumentation_analysis.core.environment
 import os
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
-from dataclasses import dataclass, asdict
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 from datetime import datetime
 import logging
 
@@ -224,7 +223,6 @@ class ComprehensiveDocumentationFixer:
             with open(file_obj, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
 
-            original_content = content
             modified = False
 
             # Appliquer les corrections
@@ -281,7 +279,7 @@ class ComprehensiveDocumentationFixer:
         self, all_issues: List[DocumentationIssue], results: List[FixResult]
     ) -> str:
         """Génère un rapport léger sans JSON volumineux."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # Statistiques
         total_issues = len(all_issues)

@@ -3,12 +3,10 @@ Analyseur des résultats de documentation obsolète pour priorisation des correc
 Oracle Enhanced v2.1.0 - Mise à jour Documentation
 """
 
-import argumentation_analysis.core.environment
 import json
 import re
 from pathlib import Path
-from collections import defaultdict, Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class DocumentationUpdatePrioritizer:
@@ -65,7 +63,7 @@ class DocumentationUpdatePrioritizer:
         if filename and "." in filename:
             try:
                 # Nettoyer le nom de fichier pour éviter les erreurs de pattern
-                clean_filename = re.escape(filename)
+                re.escape(filename)
                 # Rechercher le fichier dans tout le projet
                 for file_path in Path(".").rglob("*"):
                     if file_path.is_file() and file_path.name == filename:

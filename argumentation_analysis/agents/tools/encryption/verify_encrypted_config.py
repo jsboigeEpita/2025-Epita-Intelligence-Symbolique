@@ -5,7 +5,6 @@
 Script pour vérifier le fichier de configuration encrypté.
 """
 
-import os
 import sys
 from pathlib import Path
 import logging
@@ -29,7 +28,6 @@ if str(parent_dir) not in sys.path:
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.definition_service import DefinitionService
-from argumentation_analysis.models.extract_definition import ExtractDefinitions
 
 from argumentation_analysis.paths import DATA_DIR
 

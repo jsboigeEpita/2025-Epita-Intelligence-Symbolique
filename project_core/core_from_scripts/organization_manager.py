@@ -2,7 +2,6 @@ import os
 import shutil
 import datetime
 import json
-from argumentation_analysis.core.utils import filesystem_utils
 
 
 class OrganizationManager:

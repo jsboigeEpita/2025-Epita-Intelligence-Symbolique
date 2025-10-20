@@ -1,15 +1,11 @@
 # coding: utf-8
 import os
-import re
-import sys
-import time
 import shutil
 import zipfile
 import logging
 import platform
 import subprocess
 import urllib.request
-import threading
 from pathlib import Path
 
 
@@ -60,7 +56,7 @@ class Prover9Manager:
 
         config = self.PROVER9_CONFIG
         tool_name = config["name"]
-        dir_pattern = config["dir_name_pattern"]
+        config["dir_name_pattern"]
 
         # Le répertoire d'installation final de Prover9
         install_dir = self.tools_base_dir / "prover9"

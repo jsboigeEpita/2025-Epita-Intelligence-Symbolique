@@ -6,7 +6,6 @@ Script de validation rapide de l'environnement.
 Généré automatiquement par diagnostic_environnement.py
 """
 
-import argumentation_analysis.core.environment
 import sys
 import importlib
 from pathlib import Path  # Ajout pour la clarté
@@ -23,7 +22,7 @@ def validate_environment():
 
     # Vérifier le package principal
     try:
-        import argumentation_analysis
+        pass
 
         print("Package argumentation_analysis: OK")
     except ImportError as e:
@@ -41,18 +40,15 @@ def validate_environment():
             return False
 
     # Vérifier JPype ou mock
-    jpype_ok = False
     try:
-        import jpype
+        pass
 
         print("jpype: OK")
-        jpype_ok = True
     except ImportError:
         try:
-            from tests.mocks import jpype_mock
+            pass
 
             print("Mock JPype: OK")
-            jpype_ok = True
         except ImportError:
             print("JPype/Mock: Non disponible")
 

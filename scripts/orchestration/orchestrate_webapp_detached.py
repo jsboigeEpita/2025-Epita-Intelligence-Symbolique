@@ -8,8 +8,6 @@ Démarre backend/frontend en arrière-plan et retourne immédiatement le contrô
 
 import os
 import sys
-import time
-import subprocess
 import logging
 from pathlib import Path
 

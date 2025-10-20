@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Phase 4 - Test de robustesse et gestion d'erreurs

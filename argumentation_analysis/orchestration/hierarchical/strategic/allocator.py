@@ -8,7 +8,6 @@ l'établissement des priorités entre les différentes tâches d'analyse.
 
 from typing import Dict, List, Any, Optional
 import logging
-from datetime import datetime
 
 from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
@@ -324,7 +323,7 @@ class ResourceAllocator:
         self.logger.info("Ajustement de l'allocation des ressources")
 
         # Extraire les informations pertinentes du feedback
-        resource_usage = feedback.get("resource_usage", {})
+        feedback.get("resource_usage", {})
         bottlenecks = feedback.get("bottlenecks", [])
         idle_resources = feedback.get("idle_resources", [])
 
@@ -419,7 +418,7 @@ class ResourceAllocator:
 
         # Extraire les métriques pertinentes
         agent_efficiency = performance_metrics.get("agent_efficiency", {})
-        task_completion_rates = performance_metrics.get("task_completion_rates", {})
+        performance_metrics.get("task_completion_rates", {})
 
         # Calculer les scores d'efficacité pour chaque agent
         efficiency_scores = {}

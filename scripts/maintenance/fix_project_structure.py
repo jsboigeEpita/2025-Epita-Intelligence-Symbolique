@@ -12,7 +12,6 @@ structurels du projet, notamment :
 4. Vérification des importations
 """
 
-import os
 import sys
 import subprocess
 import logging

@@ -14,13 +14,12 @@ Categories:
 - Code précieux récupérable (extensions, modules utiles)
 """
 
-import argumentation_analysis.core.environment
 import json
 import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Set, Tuple
+from typing import Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 

@@ -8,11 +8,11 @@ Module pour la collecte de données brutes et de configuration nécessaires à l
 import yaml
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 # Import des modèles de données depuis le module local
 # On suppose que ReportMetadata, ReportConfiguration, et UnifiedReportTemplate sont définis dans models.py
-from .models import ReportMetadata, ReportConfiguration, UnifiedReportTemplate
+from .models import UnifiedReportTemplate
 
 logger = logging.getLogger(__name__)
 

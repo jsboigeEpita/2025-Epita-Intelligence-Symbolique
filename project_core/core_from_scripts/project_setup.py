@@ -8,14 +8,13 @@ Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
-import os
 from pathlib import Path
 import sys
 import argparse
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any
 import site
 
-from .common_utils import Logger, LogLevel
+from .common_utils import Logger
 from .environment_manager import EnvironmentManager
 from .validation.validation_engine import ValidationEngine
 

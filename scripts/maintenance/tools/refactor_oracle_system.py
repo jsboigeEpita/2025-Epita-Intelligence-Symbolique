@@ -4,12 +4,8 @@ Script de refactorisation du système Sherlock-Watson-Moriarty Oracle Enhanced
 Phase 2: Refactorisation et Structure du Code
 """
 
-import argumentation_analysis.core.environment
 import os
-import re
-import ast
 from pathlib import Path
-from typing import Dict, List, Any
 from datetime import datetime
 
 

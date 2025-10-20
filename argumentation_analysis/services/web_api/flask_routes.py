@@ -10,7 +10,7 @@ from flask import jsonify, request
 # Importer l'objet flask_app depuis le module principal de l'application
 # Il est important que ce fichier ne soit importé dans app.py qu'APRÈS l'initialisation de flask_app
 try:
-    from .app import flask_app, app as fastapi_app
+    from .app import flask_app
 except ImportError:
     # Gérer le cas où ce module est exécuté seul (peu probable dans ce contexte)
     flask_app = None

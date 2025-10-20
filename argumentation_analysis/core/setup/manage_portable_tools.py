@@ -7,7 +7,6 @@ import shutil
 import zipfile
 import logging
 import platform
-import subprocess
 import urllib.request
 import threading
 from pathlib import Path

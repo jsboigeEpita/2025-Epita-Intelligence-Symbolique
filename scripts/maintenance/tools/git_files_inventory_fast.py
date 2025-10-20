@@ -4,7 +4,6 @@ Script d'inventaire rapide des fichiers sous contrôle Git avec recommandations 
 Version accélérée sans tests de fonctionnalité
 """
 
-import argumentation_analysis.core.environment
 import os
 import subprocess
 import json

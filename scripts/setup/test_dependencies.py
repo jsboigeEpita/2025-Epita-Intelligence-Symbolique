@@ -7,10 +7,8 @@ Script pour vérifier que les dépendances sont correctement installées et fonc
 Ce script teste les dépendances problématiques (numpy, pandas, jpype) pour s'assurer
 qu'elles sont correctement installées et fonctionnelles.
 """
-import argumentation_analysis.core.environment
 
 import sys
-import os
 import logging
 
 # Configuration du logging

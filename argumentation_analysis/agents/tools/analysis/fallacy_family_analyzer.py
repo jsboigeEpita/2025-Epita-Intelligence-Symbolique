@@ -7,8 +7,7 @@ intégrant la détection, la classification et la vérification factuelle.
 """
 
 import logging
-import asyncio
-from typing import Dict, List, Any, Optional, Tuple, Set
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime

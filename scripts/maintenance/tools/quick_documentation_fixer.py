@@ -7,11 +7,10 @@ Version optimisée pour éviter les répertoires volumineux
 Oracle Enhanced v2.1.0
 """
 
-import argumentation_analysis.core.environment
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -123,7 +122,6 @@ class QuickDocumentationFixer:
             file_modified = False
 
             for line_num, line in enumerate(lines):
-                original_line = line
                 modified_line = line
 
                 # Rechercher et corriger les liens cassés

@@ -1,6 +1,5 @@
 # scripts/analyze_taxonomy.py
 import sys
-import os
 import csv
 import argparse
 from pathlib import Path

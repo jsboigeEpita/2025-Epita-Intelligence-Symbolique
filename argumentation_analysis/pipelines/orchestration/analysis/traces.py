@@ -12,7 +12,6 @@ récupérer les traces d'exécution et les logs de communication du pipeline.
 import logging
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List, Any
 
 from argumentation_analysis.paths import RESULTS_DIR

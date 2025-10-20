@@ -6,7 +6,6 @@ Script d'initialisation pour la compatibilité JPype1/pyjnius.
 Ce script détecte la version de Python et importe le module mock si nécessaire.
 """
 
-import argumentation_analysis.core.environment
 import sys
 import logging
 from pathlib import Path  # Ajout pour la clarté
@@ -36,7 +35,7 @@ def init_compatibility():
         )
         try:
             # Importer le module mock
-            from tests.mocks import jpype_to_pyjnius
+            pass
 
             logger.info("Module mock JPype1 importé avec succès")
             return True

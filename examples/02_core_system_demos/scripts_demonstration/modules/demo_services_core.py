@@ -6,8 +6,7 @@ Architecture fondamentale du système
 """
 
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Import des utilitaires communs
 from modules.demo_utils import (

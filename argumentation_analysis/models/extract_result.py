@@ -5,7 +5,7 @@ Ce module contient la classe ExtractResult qui représente le résultat d'une op
 d'extraction de texte, avec des informations sur le statut, les marqueurs et le texte extrait.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 class ExtractResult:

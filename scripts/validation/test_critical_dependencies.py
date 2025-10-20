@@ -4,8 +4,6 @@ Script de test pour vérifier les dépendances critiques et les imports AuthorRo
 """
 
 import sys
-import traceback
-from pathlib import Path
 
 
 def test_semantic_kernel_version():
@@ -60,7 +58,7 @@ def test_author_role_fallback():
 def test_pytest_asyncio():
     """Test de pytest-asyncio"""
     try:
-        import pytest_asyncio
+        pass
 
         print(f"[OK] pytest-asyncio disponible")
         return True

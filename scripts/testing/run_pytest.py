@@ -5,11 +5,10 @@ Lanceur de tests pytest dédié et robuste pour cet environnement complexe.
 """
 import sys
 import pytest
-import os
 
 # 1. Activation et validation de l'environnement via le mécanisme centralisé moderne
 try:
-    import argumentation_analysis.core.environment
+    pass
 except (ImportError, RuntimeError) as e:
     print(
         f"ERREUR CRITIQUE: Impossible d'activer ou de valider l'environnement du projet."

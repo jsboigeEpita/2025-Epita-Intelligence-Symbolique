@@ -1,19 +1,14 @@
 # argumentation_analysis/agents/core/pm/sherlock_enquete_agent.py
 import logging
-import asyncio
-from typing import Optional, List, AsyncGenerator, ClassVar, Any, Dict, Union
+from typing import Optional, List, AsyncGenerator, Any, Dict, Union
 from unittest.mock import Mock
 
-import semantic_kernel as sk
 from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import (
-    OpenAIChatCompletion,
     OpenAIPromptExecutionSettings,
 )
-from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
-from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -155,7 +150,6 @@ class SherlockTools:
 
         try:
             import json
-            import random
 
             # Parse des éléments du jeu
             if isinstance(elements, str):

@@ -7,7 +7,7 @@ entre le kernel et l'état partagé d'une analyse rhétorique.
 import unittest
 import json
 import sys
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 # Mock pour semantic_kernel.functions.kernel_function
 sys.modules["semantic_kernel.functions"] = MagicMock()

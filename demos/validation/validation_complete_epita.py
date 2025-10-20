@@ -56,22 +56,18 @@ import json
 import time
 from project_core.utils.shell import run_in_activated_env, ShellCommandError
 import argparse
-import random
 import re
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from enum import Enum
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.factory import AgentFactory
-from config.unified_config import AgentType
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.core.llm_service import create_llm_service
 from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.contents.function_call_content import FunctionCallContent
-from semantic_kernel.contents.function_result_content import FunctionResultContent
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -324,7 +320,7 @@ class ValidationEpitaComplete:
             )
             return False
 
-        taxonomy_navigator = TaxonomyNavigator(taxonomy_data)
+        TaxonomyNavigator(taxonomy_data)
         overall_success = True
 
         for test_name, config in scenarios.items():

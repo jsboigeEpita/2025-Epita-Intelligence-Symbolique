@@ -17,22 +17,18 @@ Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
 
-import os
 import sys
-import time
 import json
 import yaml
 import asyncio
 import logging
 import argparse
 import subprocess
-import threading
 import psutil
-import re
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 from dotenv import load_dotenv
 

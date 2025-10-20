@@ -4,9 +4,7 @@ Tests unitaires pour le module de message du système de communication multi-can
 """
 
 import unittest
-import json
 from datetime import datetime
-from unittest.mock import patch
 
 from argumentation_analysis.core.communication.message import (
     Message,

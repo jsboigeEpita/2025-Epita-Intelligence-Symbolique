@@ -1,7 +1,6 @@
 # project_core/dev_utils/code_validation.py
 import ast
 import tokenize
-import io
 import os  # Ajout de l'import manquant
 import logging
 from typing import Tuple, List, Dict, Any  # Ajout pour des types potentiels futurs

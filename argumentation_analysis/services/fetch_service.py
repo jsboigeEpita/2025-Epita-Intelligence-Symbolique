@@ -7,7 +7,6 @@ avec prise en charge de différentes méthodes (direct, Jina, Tika) et gestion d
 
 import hashlib
 import logging
-import os
 import requests
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union

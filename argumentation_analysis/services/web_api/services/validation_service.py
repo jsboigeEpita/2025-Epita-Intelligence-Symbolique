@@ -8,7 +8,6 @@ Service de validation d'arguments logiques.
 import time
 import logging
 from typing import Dict, List, Any, Optional
-import asyncio
 
 # Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import (

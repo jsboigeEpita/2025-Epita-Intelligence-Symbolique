@@ -8,13 +8,10 @@ Ce script montre comment utiliser les outils d'analyse rhétorique améliorés
 dans le cadre de l'architecture hiérarchique à trois niveaux.
 """
 
-import os
 import sys
-import json
 import logging
 import asyncio
 from pathlib import Path
-from typing import Dict, List, Any, Optional
 
 # Configurer le chemin d'accès aux modules
 current_dir = Path(__file__).parent

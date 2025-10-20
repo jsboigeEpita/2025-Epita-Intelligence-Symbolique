@@ -1,7 +1,7 @@
 # argumentation_analysis/orchestration/plugins/enquete_state_manager_plugin.py
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from semantic_kernel.functions import kernel_function
 

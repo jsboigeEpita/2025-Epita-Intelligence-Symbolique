@@ -12,7 +12,6 @@ actuelle représente la Phase 1 : coordination et rapport.
 """
 
 import asyncio
-import logging
 import time
 from typing import Dict, Any, Optional, Tuple, List
 

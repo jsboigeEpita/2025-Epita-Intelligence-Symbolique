@@ -43,7 +43,6 @@ class BeliefSet(ABC):
         :return: Le type de logique.
         :rtype: str
         """
-        pass
 
     def to_dict(self) -> Dict[str, Any]:
         """

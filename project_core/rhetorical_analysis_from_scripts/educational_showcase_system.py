@@ -32,12 +32,10 @@ import time
 import json
 import os
 import sys
-import gzip
 import argparse
-import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import semantic_kernel as sk
@@ -61,7 +59,6 @@ os.environ["EPITA_PEDAGOGICAL_SYSTEM"] = "true"
 from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import (
     EnhancedContextualFallacyAnalyzer,
@@ -76,32 +73,9 @@ from argumentation_analysis.core.source_management import (
 # Imports qui peuvent échouer sans bloquer l'exécution de base
 try:
     # Imports de l'écosystème refactorisé
-    from argumentation_analysis.pipelines.unified_text_analysis import (
-        UnifiedTextAnalysisPipeline,
-        UnifiedAnalysisConfig,
-    )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-        RealConversationLogger,
-    )
+    pass
 
     # NOTE: L'import de source_management a été déplacé à l'extérieur du bloc try
-    from argumentation_analysis.orchestration.conversation_orchestrator import (
-        ConversationOrchestrator,
-    )
-    from argumentation_analysis.core.report_generation import (
-        UnifiedReportGenerator,
-        ReportConfiguration,
-        ReportMetadata,
-    )
-    from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-    from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from argumentation_analysis.utils.core_utils.crypto_utils import (
-        load_encryption_key,
-        decrypt_data_with_fernet,
-    )
-    from argumentation_analysis.models.extract_definition import ExtractDefinitions
-    from argumentation_analysis.paths import DATA_DIR, LIBS_DIR
     from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
         PropositionalLogicAgent,
     )
@@ -113,14 +87,6 @@ try:
     )
     from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import (
         EnhancedFallacySeverityEvaluator,
-    )
-    from argumentation_analysis.reporting.real_time_trace_analyzer import (
-        RealTimeTraceAnalyzer,
-        global_trace_analyzer,
-        start_conversation_capture,
-        stop_conversation_capture,
-        get_conversation_report,
-        save_conversation_report,
     )
 
     EDUCATIONAL_COMPONENTS_AVAILABLE = True

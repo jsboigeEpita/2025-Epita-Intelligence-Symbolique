@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 import logging
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
 # Ajout du répertoire parent au path
 sys.path.insert(0, str(Path(__file__).parent))

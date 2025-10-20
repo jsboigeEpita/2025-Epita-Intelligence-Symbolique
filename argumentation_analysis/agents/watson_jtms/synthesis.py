@@ -1,9 +1,6 @@
 import logging
-import json
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List
 from datetime import datetime
-from dataclasses import dataclass, field
 
 # Supposons que JTMSAgentBase et d'autres dépendances nécessaires soient accessibles
 # ou seront gérées ultérieurement.

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import semantic_kernel as sk
 from openai import AsyncOpenAI

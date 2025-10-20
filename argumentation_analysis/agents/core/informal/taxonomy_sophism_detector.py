@@ -13,8 +13,7 @@ Ce module implémente un mécanisme unifié de détection de sophismes qui :
 
 import logging
 import pandas as pd
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
+from typing import Dict, List, Any, Optional
 
 # Import de l'InformalAnalysisPlugin pour accéder à la taxonomie
 from .informal_definitions import InformalAnalysisPlugin

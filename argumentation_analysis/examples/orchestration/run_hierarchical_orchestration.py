@@ -11,7 +11,7 @@ import asyncio
 import logging
 import argparse
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import semantic_kernel as sk  # Ajout de l'import pour le Kernel
 
 # L'import de dotenv n'est plus nécessaire, les modules applicatifs
@@ -65,16 +65,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.manager impor
 )
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import (
     OperationalAgentRegistry as AgentRegistry,
-)
-
-from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import (
-    ExtractAgentAdapter,
-)
-from argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter import (
-    InformalAgentAdapter,
-)
-from argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter import (
-    PLAgentAdapter,
 )
 
 

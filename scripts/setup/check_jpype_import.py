@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 import sys
 
 print(f"Python version: {sys.version}")

@@ -64,7 +64,6 @@ class SourceManager:
 
     def cleanup_sensitive_data(self):
         """Méthode obsolète."""
-        pass
 
 
 def create_source_manager(source_type: str, **kwargs) -> SourceManager:

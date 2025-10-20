@@ -50,16 +50,13 @@ Artefacts produits:
         - `execution_time`: Temps total de l'analyse.
 """
 
-import asyncio
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 
 # Imports Semantic Kernel et architecture
 import semantic_kernel as sk
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.paths import LIBS_DIR
@@ -74,9 +71,6 @@ from argumentation_analysis.orchestration.conversation_orchestrator import (
 )
 
 # Imports du pipeline existant
-from argumentation_analysis.pipelines.analysis_pipeline import (
-    run_text_analysis_pipeline,
-)
 
 # Imports des agents et outils
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
@@ -859,7 +853,7 @@ class UnifiedTextAnalysisPipeline:
                                     content,
                                 )
                                 if sophismes_match:
-                                    count = int(sophismes_match.group(1))
+                                    int(sophismes_match.group(1))
                                     sophismes_text = sophismes_match.group(2)
 
                                     # Parser chaque sophisme

@@ -5,15 +5,14 @@ Ce module implémente le composant central qui gère tous les aspects de la comm
 entre les agents à travers différents canaux spécialisés.
 """
 
-import uuid
 import threading
 import logging
 import asyncio
-from typing import Dict, Any, Optional, List, Callable, Union, Set
+from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 
-from .message import Message, MessageType, MessagePriority, AgentLevel
-from .channel_interface import Channel, ChannelType, ChannelException
+from .message import Message, MessageType
+from .channel_interface import Channel, ChannelType
 
 
 class MessageMiddleware:

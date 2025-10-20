@@ -6,8 +6,6 @@ Phase 3: Mise à jour complète de la couverture de tests
 """
 
 try:
-    import os
-    import sys
     from pathlib import Path
     from datetime import datetime
 except ImportError as e:

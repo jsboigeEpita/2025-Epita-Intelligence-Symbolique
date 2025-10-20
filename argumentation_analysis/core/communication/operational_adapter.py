@@ -8,7 +8,7 @@ en messages standardisés compréhensibles par le middleware.
 
 import uuid
 import logging
-from typing import Dict, Any, Optional, List, Callable, Union
+from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 
 from .message import Message, MessageType, MessagePriority, AgentLevel

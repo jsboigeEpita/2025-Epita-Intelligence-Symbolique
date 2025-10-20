@@ -10,9 +10,7 @@ Ce module étend CluedoOracleState avec les fonctionnalités Phase D :
 """
 
 import random
-import re
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 
@@ -312,7 +310,7 @@ class PhaseDExtensions:
         if agent_name not in self.conversational_polish:
             return base_content
 
-        polish_phrases = self.conversational_polish[agent_name]
+        self.conversational_polish[agent_name]
 
         # Ajout d'expressions idiomatiques selon l'agent
         if agent_name == "Watson":

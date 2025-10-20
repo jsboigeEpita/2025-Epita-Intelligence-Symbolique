@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-import os
 import asyncio
 import json
 import re
@@ -27,8 +26,6 @@ except (NameError, FileNotFoundError, RuntimeError) as e:
 import semantic_kernel as sk
 
 import importlib
-from semantic_kernel.contents import ChatHistory
-from argumentation_analysis.agents.utils.taxonomy_utils import Taxonomy
 
 
 class Colors:

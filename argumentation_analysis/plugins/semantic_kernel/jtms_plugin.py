@@ -5,10 +5,7 @@ avec support de sessions et synchronisation multi-agents.
 """
 
 import json
-import asyncio
-from typing import Dict, List, Optional, Any, Annotated
-import sys
-import os
+from typing import Dict, Any, Annotated
 
 # Import du framework Semantic Kernel
 try:

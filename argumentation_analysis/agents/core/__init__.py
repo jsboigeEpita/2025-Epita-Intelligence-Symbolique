@@ -17,7 +17,7 @@ pour un sous-module spécifique.
 
 # Importations des sous-modules
 try:
-    from . import extract
+    pass
 except ImportError as e:
     import logging
 
@@ -26,7 +26,7 @@ except ImportError as e:
     )
 
 try:
-    from . import informal
+    pass
 except ImportError as e:
     import logging
 
@@ -35,7 +35,7 @@ except ImportError as e:
     )
 
 try:
-    from . import logic
+    pass
 except ImportError as e:
     import logging
 
@@ -44,7 +44,7 @@ except ImportError as e:
     )
 
 try:
-    from . import pl
+    pass
 except ImportError as e:
     import logging
 
@@ -53,7 +53,7 @@ except ImportError as e:
     )
 
 try:
-    from . import pm
+    pass
 except ImportError as e:
     import logging
 
@@ -62,7 +62,7 @@ except ImportError as e:
     )
 
 try:
-    from . import synthesis
+    pass
 except ImportError as e:
     import logging
 

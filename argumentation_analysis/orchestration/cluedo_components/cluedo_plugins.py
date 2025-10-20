@@ -1,8 +1,6 @@
 # argumentation_analysis/orchestration/cluedo_components/cluedo_plugins.py
 import logging
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
-from semantic_kernel.kernel import Kernel
-from semantic_kernel.functions import KernelArguments
 
 logger = logging.getLogger(__name__)
 

@@ -4,18 +4,16 @@ Selon les spécifications du RAPPORT_ARCHITECTURE_INTEGRATION_JTMS.md - AXE A
 """
 
 import logging
-import json
 import asyncio
 import time
-from typing import Dict, List, Optional, Any, Tuple, Set
+from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
 
-import semantic_kernel as sk
 from semantic_kernel import Kernel
 
-from .jtms_agent_base import JTMSAgentBase, JTMSSession
+from .jtms_agent_base import JTMSAgentBase
 from .sherlock_jtms_agent import SherlockJTMSAgent
 from .watson_jtms_agent import WatsonJTMSAgent
 
@@ -352,7 +350,7 @@ class JTMSCommunicationHub:
 
             # Sauvegarder état avant déconnexion
             agent = self._connected_agents[agent_name]
-            final_state = agent.export_session_state()
+            agent.export_session_state()
 
             # Nettoyer
             del self._connected_agents[agent_name]
@@ -483,7 +481,7 @@ class JTMSCommunicationHub:
         self, source_agent: str, target_agent: str, source_state: Dict, sync_type: str
     ) -> Dict:
         """Synchronise deux agents spécifiques"""
-        source_agent_obj = self._connected_agents[source_agent]
+        self._connected_agents[source_agent]
         target_agent_obj = self._connected_agents[target_agent]
 
         if sync_type == "incremental":
@@ -777,7 +775,7 @@ class JTMSCommunicationHub:
     async def _handle_belief_update(self, message: AgentMessage) -> None:
         """Gère une mise à jour de croyance"""
         content = message.content
-        belief_data = content.get("belief_data")
+        content.get("belief_data")
 
         # Déclencher synchronisation automatique si activée
         if self._auto_sync_enabled:
@@ -1353,7 +1351,7 @@ async def run_investigation_session(
         )
 
         # Synchronisation après hypothèse
-        sync_result = await hub.sync_beliefs("Sherlock_JTMS", "Watson_JTMS")
+        await hub.sync_beliefs("Sherlock_JTMS", "Watson_JTMS")
 
         # Phase 2: Watson critique l'hypothèse
         phase2_start = datetime.now()

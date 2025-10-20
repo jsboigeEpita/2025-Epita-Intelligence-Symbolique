@@ -5,10 +5,7 @@ Phase 2: Refactorisation et Structure du Code
 """
 
 import os
-import re
-import ast
 from pathlib import Path
-from typing import Dict, List, Any
 from datetime import datetime
 
 

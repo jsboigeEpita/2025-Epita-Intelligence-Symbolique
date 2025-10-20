@@ -3,8 +3,6 @@ import sys
 import importlib.util
 from pathlib import Path
 
-from argumentation_analysis.core.utils import shell_utils
-
 
 class ValidationEngine:
     """

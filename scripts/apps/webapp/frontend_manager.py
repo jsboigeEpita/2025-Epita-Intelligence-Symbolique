@@ -281,9 +281,9 @@ class FrontendManager:
         )
 
         # Regex pour détecter le succès dans les logs de React
-        success_pattern = re.compile(r"compiled successfully", re.IGNORECASE)
+        re.compile(r"compiled successfully", re.IGNORECASE)
 
-        log_path = Path("logs/frontend_dev_server_stdout.log")
+        Path("logs/frontend_dev_server_stdout.log")
 
         while time.time() - start_time < timeout:
             # 1. Vérifier si le processus est toujours en cours - TEMPORAIREMENT DÉSACTIVÉ POUR DIAGNOSTIC
@@ -302,7 +302,7 @@ class FrontendManager:
                                 f"🎉 Serveur de développement accessible via HTTP sur {url_to_check} en {time.time() - start_time:.1f}s."
                             )
                             return True, url_to_check
-            except Exception as e:
+            except Exception:
                 # C'est normal si le serveur n'est pas encore prêt.
                 # Capturer toutes les exceptions (ClientError, ConnectionRefusedError, etc.)
                 # self.logger.debug(f"Sonde HTTP ({url_to_check}) a échoué : {type(e).__name__}. Nouvelle tentative...")

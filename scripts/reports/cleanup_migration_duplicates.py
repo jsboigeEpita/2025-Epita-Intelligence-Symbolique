@@ -9,7 +9,6 @@ Supprime 28 fichiers identifiés comme doublons obsolètes.
 ATTENTION: Ce script crée une sauvegarde avant suppression !
 """
 
-import os
 import shutil
 import json
 from datetime import datetime

@@ -2,7 +2,6 @@
 import pandas as pd
 import json
 import os
-import numpy as np
 
 
 def build_tree(df, parent_id=None):

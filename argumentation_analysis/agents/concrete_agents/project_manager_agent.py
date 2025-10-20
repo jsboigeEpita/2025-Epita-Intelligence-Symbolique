@@ -1,6 +1,6 @@
 # Fichier : argumentation_analysis/agents/concrete_agents/project_manager_agent.py
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments

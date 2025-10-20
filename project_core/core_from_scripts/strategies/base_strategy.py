@@ -1,8 +1,6 @@
 import abc
 import logging
 from typing import Dict, Any, Optional
-from argumentation_analysis.core.utils.shell_utils import run_shell_command
-from pathlib import Path
 
 
 class BaseStrategy(abc.ABC):
@@ -25,7 +23,6 @@ class BaseStrategy(abc.ABC):
     @abc.abstractmethod
     def name(self) -> str:
         """Retourne le nom de la stratégie."""
-        pass
 
     @abc.abstractmethod
     def execute(self, package: str, options: Optional[Dict[str, Any]] = None) -> bool:
@@ -39,4 +36,3 @@ class BaseStrategy(abc.ABC):
         Returns:
             True si l'exécution a réussi, False sinon.
         """
-        pass

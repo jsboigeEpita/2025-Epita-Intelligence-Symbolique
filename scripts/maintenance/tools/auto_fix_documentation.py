@@ -3,7 +3,6 @@ Script de correction automatique des liens de documentation
 Oracle Enhanced v2.1.0 - Auto-correction Documentation (Version Optimisée)
 """
 
-import argumentation_analysis.core.environment
 import json
 import re
 import shutil

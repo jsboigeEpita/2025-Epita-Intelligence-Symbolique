@@ -11,7 +11,6 @@ Fonctionnalités :
 - Traçabilité complète
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import json
@@ -20,7 +19,7 @@ import shutil
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List
 
 
 class CleanupManager:

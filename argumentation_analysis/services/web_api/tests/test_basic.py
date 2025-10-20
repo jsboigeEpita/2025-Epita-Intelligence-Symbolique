@@ -94,19 +94,19 @@ class TestErrorHandling:
     def test_division_by_zero(self):
         """Test de gestion de division par zéro."""
         with pytest.raises(ZeroDivisionError):
-            result = 1 / 0
+            1 / 0
 
     def test_key_error(self):
         """Test de gestion d'erreur de clé."""
         data = {"existing_key": "value"}
 
         with pytest.raises(KeyError):
-            value = data["non_existing_key"]
+            data["non_existing_key"]
 
     def test_type_error(self):
         """Test de gestion d'erreur de type."""
         with pytest.raises(TypeError):
-            result = "string" + 42
+            "string" + 42
 
 
 if __name__ == "__main__":

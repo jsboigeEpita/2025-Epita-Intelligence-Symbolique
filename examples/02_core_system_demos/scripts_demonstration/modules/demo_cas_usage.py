@@ -6,7 +6,6 @@ Applications pratiques - Cluedo Sherlock-Watson - TRAITEMENT RÉEL DES DONNÉES 
 """
 
 import sys
-from pathlib import Path
 from typing import Dict, List, Any
 
 # Import des utilitaires communs

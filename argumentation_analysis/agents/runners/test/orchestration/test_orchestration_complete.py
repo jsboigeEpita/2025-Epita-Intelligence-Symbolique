@@ -17,7 +17,6 @@ Ce script est le "moteur" exécuté par le script parent
 `run_complete_test_and_analysis.py`.
 """
 
-import os
 import sys
 import json
 import asyncio

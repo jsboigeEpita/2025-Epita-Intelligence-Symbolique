@@ -5,7 +5,6 @@
 Script pour vérifier la syntaxe d'un fichier Python.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 from pathlib import Path  # NOUVEAU: Pour ajuster sys.path

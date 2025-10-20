@@ -7,12 +7,8 @@ from argumentation_analysis.core.communication.message import (
     Message,
     MessageType,
     AgentLevel,
-    MessagePriority,
 )
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
-from argumentation_analysis.core.communication.operational_adapter import (
-    OperationalAdapter,
-)
 from argumentation_analysis.core.communication.hierarchical_channel import (
     HierarchicalChannel,
 )

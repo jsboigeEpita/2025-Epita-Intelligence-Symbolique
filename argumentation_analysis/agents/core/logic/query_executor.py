@@ -4,7 +4,7 @@ Exécuteur de requêtes logiques.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import List, Optional, Tuple
 
 from .belief_set import BeliefSet
 from .tweety_bridge import TweetyBridge

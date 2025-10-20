@@ -4,7 +4,6 @@ Script d'inventaire des fichiers sous contrôle Git avec recommandations détail
 Version simplifiée sans emojis
 """
 
-import argumentation_analysis.core.environment
 import os
 import subprocess
 import json

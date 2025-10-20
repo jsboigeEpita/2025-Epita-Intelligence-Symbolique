@@ -4,7 +4,6 @@ Utilities for programmatic code refactoring using Abstract Syntax Trees (AST).
 """
 
 import ast
-from pathlib import Path
 
 
 class ImportUpdater(ast.NodeTransformer):

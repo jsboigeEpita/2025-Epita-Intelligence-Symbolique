@@ -7,9 +7,7 @@ l'`ExtractAgent`.
 """
 
 import logging
-import asyncio
 import time
-import uuid
 from typing import Dict, List, Any, Optional
 
 from argumentation_analysis.core.bootstrap import ProjectContext

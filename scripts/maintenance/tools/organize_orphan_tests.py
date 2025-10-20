@@ -13,12 +13,11 @@ Auteur: Assistant Roo
 Date: 2025-06-07
 """
 
-import os
 import json
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class OrphanTestOrganizer:

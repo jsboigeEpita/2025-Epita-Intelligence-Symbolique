@@ -11,7 +11,6 @@ try:
 
     # In modern semantic-kernel (>= 1.0), event args are in `semantic_kernel.events`.
     # Let's verify we can import them.
-    from semantic_kernel.events import FunctionInvokingEventArgs
 
     print("\nSUCCESS: `semantic_kernel` basic import is working.")
     print(

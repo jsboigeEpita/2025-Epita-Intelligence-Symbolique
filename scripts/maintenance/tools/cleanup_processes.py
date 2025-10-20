@@ -1,8 +1,5 @@
-import argumentation_analysis.core.environment
 import psutil
 import os
-import signal
-import sys
 
 
 def cleanup_processes():

@@ -14,7 +14,6 @@ from typing import List, Dict, Any, Tuple, Optional, Union
 
 # Imports absolus pour les tests
 import sys
-import os
 
 # from pathlib import Path # Redondant, déjà importé plus haut
 
@@ -26,8 +25,6 @@ if str(parent_dir) not in sys.path:
 
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,
-    SourceDefinition,
-    Extract,
 )
 from argumentation_analysis.services.crypto_service import CryptoService
 

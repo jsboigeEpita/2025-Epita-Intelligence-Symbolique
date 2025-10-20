@@ -13,11 +13,9 @@ Ce script permet de:
 6. Créer un rapport de synthèse des résultats d'exécution pour chaque extrait
 """
 
-import os
 import sys
 import json
 import time
-import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime

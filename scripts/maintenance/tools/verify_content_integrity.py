@@ -1,7 +1,4 @@
-import argumentation_analysis.core.environment
-import os
 import json
-import sys
 
 
 def check_markdown_file(file_path):

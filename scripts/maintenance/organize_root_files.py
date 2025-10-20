@@ -13,7 +13,7 @@ from datetime import datetime
 def organize_root_files():
     """Organise les fichiers éparpillés à la racine selon leur type"""
 
-    root_dir = Path(".")
+    Path(".")
 
     # Créer les répertoires de destination s'ils n'existent pas
     destinations = {

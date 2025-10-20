@@ -11,7 +11,6 @@ reconstruire le marqueur complet.
 
 import json
 import logging
-from pathlib import Path
 
 # Configuration du logging
 logging.basicConfig(

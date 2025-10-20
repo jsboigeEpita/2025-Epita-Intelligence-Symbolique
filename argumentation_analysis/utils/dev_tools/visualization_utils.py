@@ -6,12 +6,10 @@ comme les graphiques de couverture de test.
 
 import logging
 import json
-import os
 from pathlib import Path  # Ajout pour le typage
 from typing import Dict, List, Any  # Ajout pour le typage
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 # import pandas as pd # Pas utilisé directement dans les fonctions déplacées ici
 

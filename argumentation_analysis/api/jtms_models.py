@@ -4,8 +4,7 @@ Définit les schémas de requêtes et réponses pour l'intégration JTMS.
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any, Union
-from datetime import datetime
+from typing import List, Dict, Optional, Any
 
 # Modèles de base pour les croyances et justifications
 

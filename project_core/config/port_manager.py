@@ -9,7 +9,7 @@ import socket
 import sys
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 
 class PortManager:

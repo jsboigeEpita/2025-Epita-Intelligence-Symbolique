@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -14,7 +12,6 @@ et les modèles centralisés.
 import os
 import sys
 import asyncio
-import argparse
 import logging
 from pathlib import Path
 

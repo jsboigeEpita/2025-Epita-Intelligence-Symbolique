@@ -32,7 +32,6 @@ class FallacyAgentBase(abc.ABC):
         :param text: The text to analyze.
         :return: A dictionary containing the analysis results.
         """
-        pass
 
 
 class MethodicalAuditorAgent(FallacyAgentBase):

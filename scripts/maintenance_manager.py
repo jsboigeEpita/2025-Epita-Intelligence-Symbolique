@@ -4,7 +4,6 @@ Maintenance Manager CLI
 """
 
 import argparse
-import sys
 import os
 
 

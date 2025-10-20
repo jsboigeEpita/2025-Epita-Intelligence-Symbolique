@@ -8,10 +8,7 @@ Ce script permet de lancer facilement le script de réparation des bornes défec
 depuis la racine du projet, après la réorganisation des fichiers.
 """
 
-import os
-import sys
 import asyncio
-from pathlib import Path
 
 
 async def main():

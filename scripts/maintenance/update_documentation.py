@@ -4,7 +4,6 @@ Script de mise à jour de la documentation Oracle Enhanced
 Phase 4: Mise à jour documentation avec nouvelles références
 """
 
-import os
 import re
 from pathlib import Path
 from datetime import datetime

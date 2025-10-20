@@ -8,23 +8,18 @@ import time
 import logging
 import asyncio
 import inspect
-from typing import Dict, List, Any, Optional
+from typing import List, Any, Optional
 from argumentation_analysis.config.settings import AppSettings
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.exceptions.service_exceptions import ServiceResponseException
-import json
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
     from argumentation_analysis.config.settings import AppSettings
-    from argumentation_analysis.agents.factory import AgentFactory, AgentType
-    from argumentation_analysis.agents.core.informal.informal_agent import (
-        InformalAnalysisAgent,
-    )
+    from argumentation_analysis.agents.factory import AgentType
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
         ComplexFallacyAnalyzer,
     )
@@ -191,7 +186,7 @@ class AnalysisService:
                     if kernel and llm_service_instance:
                         try:
                             # Créer une instance de settings par défaut pour la factory
-                            app_settings = AppSettings()
+                            AppSettings()
                             factory = AgentFactory(
                                 kernel=kernel,
                                 llm_service_id=llm_service_instance.service_id,

@@ -8,10 +8,6 @@ Ce script permet de lancer facilement l'éditeur de marqueurs d'extraits
 depuis la racine du projet, après la réorganisation des fichiers.
 """
 
-import os
-import sys
-from pathlib import Path
-
 
 def main():
     """Fonction principale pour lancer l'éditeur de marqueurs.

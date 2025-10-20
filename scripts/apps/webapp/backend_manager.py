@@ -12,8 +12,6 @@ Date: 07/06/2025
 """
 
 import os
-import sys
-import sys
 import time
 import json
 import asyncio
@@ -25,7 +23,6 @@ from typing import Dict, List, Optional, Any, IO
 from pathlib import Path
 import aiohttp
 
-from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 
 # Correction du chemin pour la racine du projet

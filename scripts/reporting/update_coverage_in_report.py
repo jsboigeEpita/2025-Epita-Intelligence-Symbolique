@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 """
 Script pour ajouter une section sur la couverture des tests mockés au rapport de suivi.
 """
@@ -7,7 +5,6 @@ Script pour ajouter une section sur la couverture des tests mockés au rapport d
 import os
 import sys
 from pathlib import Path
-import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))

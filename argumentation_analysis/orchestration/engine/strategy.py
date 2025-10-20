@@ -11,7 +11,7 @@ import logging
 from config.unified_config import UnifiedConfig
 
 if TYPE_CHECKING:
-    from .config import OrchestrationConfig, OrchestrationMode, AnalysisType
+    from .config import OrchestrationConfig
 
 # Pour éviter une dépendance circulaire à l'exécution si OrchestrationConfig importe des éléments
 # qui pourraient indirectement dépendre de strategy.py à l'avenir.

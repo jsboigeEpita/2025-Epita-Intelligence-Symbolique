@@ -6,7 +6,7 @@ Configuration unifiée pour le moteur d'orchestration.
 """
 
 import dataclasses
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Union
 from enum import Enum
 
 # Définition des Enums pour la configuration de l'orchestration.

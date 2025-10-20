@@ -2,7 +2,6 @@
 Script pour vérifier que toutes les importations fonctionnent correctement.
 """
 
-import argumentation_analysis.core.environment
 import importlib
 import sys
 from pathlib import Path

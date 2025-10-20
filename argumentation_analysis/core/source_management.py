@@ -15,16 +15,12 @@ Intégration harmonieuse avec l'écosystème core existant et les composants ref
 """
 
 import sys
-import json
-import gzip
 import getpass
 import logging
-import tempfile
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple
 from enum import Enum
-from dataclasses import dataclass, field
-from contextlib import contextmanager
+from dataclasses import dataclass
 
 # Imports core existants
 from argumentation_analysis.config.settings import settings
@@ -35,7 +31,6 @@ from argumentation_analysis.core.source_manager import (
 )
 from argumentation_analysis.core.utils.crypto_utils import (
     derive_encryption_key,
-    load_encryption_key,
 )
 from argumentation_analysis.core.io_manager import load_extract_definitions
 from argumentation_analysis.models.extract_definition import ExtractDefinitions

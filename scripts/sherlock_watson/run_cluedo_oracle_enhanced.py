@@ -24,7 +24,6 @@ Fonctionnalités clés :
 import argparse
 import asyncio
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -35,17 +34,13 @@ if str(project_root) not in sys.path:
 
 # Imports pour satisfaire les tests de validation statique
 try:
-    import semantic_kernel
-    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    pass
 except ImportError:
     # Ignoré si SK n'est pas installé, car le vrai kernel est injecté via le contexte
     pass
 
 # Importations des composants principaux
 from argumentation_analysis.core.bootstrap import initialize_project_environment
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
-    CluedoExtendedOrchestrator,
-)
 from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 

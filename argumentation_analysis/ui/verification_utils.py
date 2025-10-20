@@ -2,8 +2,7 @@
 Utilitaires de vérification des définitions d'extraits pour l'interface utilisateur.
 """
 import logging
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 # Importation de la configuration UI et des utilitaires nécessaires
 from . import config as ui_config

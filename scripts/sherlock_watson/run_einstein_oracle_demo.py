@@ -130,7 +130,6 @@ class EinsteinPuzzleOracle:
     def check_solution_attempt(self, proposed_solution: str) -> Dict[str, Any]:
         """Vérifie une tentative de solution"""
         # Recherche de "Allemand" et "poisson" dans la réponse
-        correct_answer = "L'Allemand possède le poisson"
 
         if (
             "allemand" in proposed_solution.lower()
@@ -191,7 +190,7 @@ class EinsteinOracleOrchestrator:
             CluedoDataset,
         )
 
-        dummy_dataset = CluedoDataset(elements)
+        CluedoDataset(elements)
 
         self.dummy_oracle_state = self.CluedoOracleState(
             nom_enquete_cluedo="Puzzle Einstein Oracle Demo",
@@ -472,7 +471,7 @@ async def run_einstein_oracle_demo(integration_test=False):
 
     try:
         # Configuration
-        oracle_state = await orchestrator.setup_einstein_workflow()
+        await orchestrator.setup_einstein_workflow()
 
         # Exécution
         result = await orchestrator.execute_einstein_workflow()

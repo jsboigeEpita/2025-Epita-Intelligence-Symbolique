@@ -13,7 +13,6 @@ class RepositoryManager:
         """
         Initializes the RepositoryManager.
         """
-        pass
 
     def update_gitignore_from_template(
         self, project_root: str, template_path: str

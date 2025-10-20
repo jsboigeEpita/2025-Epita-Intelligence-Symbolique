@@ -1,6 +1,6 @@
 import jpype
 import logging
-from typing import Optional, Tuple
+from typing import Tuple
 
 from .tweety_initializer import TweetyInitializer
 

@@ -4,8 +4,6 @@ Exécution du plan d'organisation des fichiers orphelins
 Basé sur l'analyse réalisée précédemment
 """
 
-import argumentation_analysis.core.environment
-import os
 import shutil
 import json
 from datetime import datetime

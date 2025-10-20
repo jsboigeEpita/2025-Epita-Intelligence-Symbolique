@@ -13,20 +13,16 @@ granulaire (ACL - Access Control List). Il définit :
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from enum import Enum
 
 
 class PermissionDeniedError(Exception):
     """Exception levée lorsqu'une permission est refusée."""
 
-    pass
-
 
 class InvalidQueryError(Exception):
     """Exception levée pour une requête invalide."""
-
-    pass
 
 
 class QueryType(Enum):
@@ -345,8 +341,6 @@ class PermissionManager:
 
 class CluedoIntegrityError(Exception):
     """Exception levée lors de violation des règles d'intégrité du Cluedo."""
-
-    pass
 
 
 def validate_cluedo_method_access(method_name: str, agent_name: str) -> None:

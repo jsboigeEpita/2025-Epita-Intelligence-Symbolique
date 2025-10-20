@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Tuple, Any
 
 from project_core.utils.shell import run_sync, run_in_activated_env, ShellCommandError
 

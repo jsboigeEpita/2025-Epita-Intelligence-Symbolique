@@ -4,7 +4,6 @@ Script de validation : Élimination des mocks et traitement réel des données c
 Démo Épita - Validation post-amélioration
 """
 
-import argumentation_analysis.core.environment
 import sys
 import json
 from datetime import datetime
@@ -21,8 +20,6 @@ sys.path.append(
 
 from agents_logiques_production import (
     ProductionCustomDataProcessor,
-    ProductionLogicalAgent,
-    ProductionAgentOrchestrator,
 )
 from demo_integrations import process_custom_data_integration
 from demo_utils import DemoLogger, Colors, Symbols
@@ -159,7 +156,7 @@ def validate_mock_elimination():
     print(f"\n{Colors.CYAN}{Symbols.GEAR} Test 3: Robustesse Unicode{Colors.ENDC}")
     try:
         processor = ProductionCustomDataProcessor("test_unicode_prod")
-        results_unicode = processor.process_custom_data(datasets["dataset_unicode"])
+        processor.process_custom_data(datasets["dataset_unicode"])
 
         # L'analyseur de production n'a pas de support unicode explicite, on le simule pour le test
         has_unicode = any(ord(c) > 127 for c in datasets["dataset_unicode"])

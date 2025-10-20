@@ -35,8 +35,6 @@ class BasePlugin:
 class PluginDependencyError(Exception):
     """Exception levée lorsque les dépendances d'un plugin ne sont pas satisfaites."""
 
-    pass
-
 
 class OrchestrationService:
     """

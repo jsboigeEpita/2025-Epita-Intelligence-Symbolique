@@ -3,7 +3,6 @@
 Script d'inventaire des fichiers sous contrôle Git avec recommandations détaillées
 """
 
-import argumentation_analysis.core.environment
 import os
 import subprocess
 import json

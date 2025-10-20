@@ -6,10 +6,8 @@ VALIDATION FINALE LOT 2 - PURGE PHASE 3A
 Validation complète de la purge des 5 fichiers du Lot 2
 """
 
-import argumentation_analysis.core.environment
 import os
 import re
-from pathlib import Path
 
 
 def check_file_for_mocks(filepath):

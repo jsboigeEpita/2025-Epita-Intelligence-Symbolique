@@ -14,16 +14,7 @@ Modules et classes clés :
 """
 
 try:
-    from .informal_agent import InformalAnalysisAgent
-    from .informal_definitions import (
-        InformalAnalysisPlugin,
-        INFORMAL_AGENT_INSTRUCTIONS,
-    )
-    from .prompts import (
-        prompt_identify_args_v8,
-        prompt_analyze_fallacies_v1,
-        prompt_justify_fallacy_attribution_v1,
-    )
+    pass
 
     __all__ = [
         "InformalAnalysisAgent",

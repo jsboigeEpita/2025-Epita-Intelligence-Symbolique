@@ -7,7 +7,6 @@ Script amélioré pour vérifier que toutes les dépendances sont correctement i
 Ce script teste toutes les dépendances nécessaires pour le projet, y compris numpy, pandas, jpype,
 cryptography, pytest et leurs plugins.
 """
-import argumentation_analysis.core.environment
 
 import sys
 import os
@@ -378,7 +377,7 @@ def test_project_imports():
         for module_name in project_modules:
             try:
                 logger.info(f"Importation de {module_name}...")
-                module = importlib.import_module(module_name)
+                importlib.import_module(module_name)
                 logger.info(f"Importation de {module_name} réussie.")
             except ImportError as e:
                 logger.error(f"Erreur d'importation de {module_name}: {e}")

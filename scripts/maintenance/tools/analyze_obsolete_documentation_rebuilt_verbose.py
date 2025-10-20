@@ -3,8 +3,6 @@ Script d'analyse de documentation obsolète - Version avec logging verbeux
 Oracle Enhanced v2.1.0 - Reconstruction après crash
 """
 
-import argumentation_analysis.core.environment
-import os
 import re
 import json
 import argparse
@@ -367,7 +365,7 @@ def main():
 
     try:
         results = analyzer.analyze_documentation(quick_scan=quick_mode)
-        report_file = analyzer.generate_report(args.output)
+        analyzer.generate_report(args.output)
 
         return 0 if results["summary"].get("broken_links", 0) == 0 else 1
 

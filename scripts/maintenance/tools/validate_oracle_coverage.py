@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Script de validation de la couverture Oracle Enhanced"""
 
-import argumentation_analysis.core.environment
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_coverage_check():

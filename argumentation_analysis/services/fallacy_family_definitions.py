@@ -6,8 +6,7 @@ Ce module contient les dictionnaires et définitions utilisés par le système
 de classification par familles selon le PRD d'intégration du fact-checking.
 """
 
-from typing import Dict, List, Any, Set
-from enum import Enum
+from typing import Dict, List, Any
 
 from .fallacy_taxonomy_service import FallacyFamily
 

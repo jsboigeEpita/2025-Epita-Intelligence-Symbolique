@@ -6,11 +6,7 @@ dans l'analyse en logique propositionnelle via Tweety/JPype.
 """
 
 try:
-    from .pl_definitions import (
-        PropositionalLogicPlugin,
-        setup_pl_kernel,
-        PL_AGENT_INSTRUCTIONS,
-    )
+    pass
 
     __all__ = ["PropositionalLogicPlugin", "setup_pl_kernel", "PL_AGENT_INSTRUCTIONS"]
 except ImportError as e:

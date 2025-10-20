@@ -5,7 +5,6 @@
 Configuration pytest pour les tests de l'API web.
 """
 
-import os
 import sys
 import pytest
 from pathlib import Path

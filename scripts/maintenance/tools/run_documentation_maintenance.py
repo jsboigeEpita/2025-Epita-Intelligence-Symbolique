@@ -3,14 +3,11 @@ Script d'intégration pour la maintenance de documentation Oracle Enhanced v2.1.
 Coordonne les différents outils de maintenance documentaire
 """
 
-import argumentation_analysis.core.environment
-import os
 import sys
 import argparse
 import subprocess
 from pathlib import Path
 from datetime import datetime
-import json
 
 
 class DocumentationMaintenanceRunner:

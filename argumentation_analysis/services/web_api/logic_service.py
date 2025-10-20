@@ -14,15 +14,12 @@ Ce service gère les opérations liées aux agents logiques, notamment:
 import logging
 import time
 import uuid
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from semantic_kernel import Kernel  # Déjà présent, pas de changement nécessaire
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.abc.agent_bases import (
-    BaseLogicAgent as AbstractLogicAgent,
-)
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
 

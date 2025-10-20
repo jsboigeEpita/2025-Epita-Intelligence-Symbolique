@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -11,15 +9,11 @@ pour différents modules du projet d'analyse argumentative.
 """
 
 import os
-import sys
 import json
 import argparse
-import datetime
-import xml.etree.ElementTree as ET
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 # Définir les couleurs pour les différents modules
 COLORS = {
@@ -282,7 +276,7 @@ def generate_coverage_improvement_chart(history_file, output_dir):
     # Calculer l'amélioration pour la couverture globale
     initial_global = first_entry.get("global", 0)
     current_global = last_entry.get("global", 0)
-    global_improvement = current_global - initial_global
+    current_global - initial_global
 
     # Calculer l'amélioration pour chaque module
     module_improvements = {}

@@ -4,7 +4,7 @@ Gère le cycle de vie complet d'une investigation avec checkpoints et historique
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Set, Tuple
+from typing import Dict, List, Any, Optional, Set
 from datetime import datetime, timedelta
 from enum import Enum
 import json

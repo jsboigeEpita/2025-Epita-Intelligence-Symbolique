@@ -7,7 +7,6 @@ Cette simulation reproduit fidèlement les patterns conversationnels observés
 dans le système Oracle pour identifier les axes d'amélioration.
 """
 
-import argumentation_analysis.core.environment
 import json
 import logging
 from datetime import datetime
@@ -377,7 +376,7 @@ def evaluate_transition_fluidity(conversation_history: List[Dict]) -> float:
     abrupt_transitions = 0
 
     for i in range(1, len(conversation_history)):
-        prev_msg = conversation_history[i - 1]["message"]
+        conversation_history[i - 1]["message"]
         curr_msg = conversation_history[i]["message"]
 
         # Recherche de mots de liaison

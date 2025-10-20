@@ -97,7 +97,7 @@ def reconstruct_argument():
 @app.route("/api/validate", methods=["POST"])
 def validate_argument():
     """Validation d'argument mockée"""
-    data = request.get_json()
+    request.get_json()
 
     logger.info("Validation d'argument demandée")
 
@@ -114,7 +114,7 @@ def validate_argument():
 @app.route("/api/logic-graph", methods=["POST"])
 def generate_logic_graph():
     """Génération de graphe logique mockée"""
-    data = request.get_json()
+    request.get_json()
 
     logger.info("Génération graphe logique demandée")
 

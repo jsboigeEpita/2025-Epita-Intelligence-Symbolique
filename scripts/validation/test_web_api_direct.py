@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Test direct de l'API web pour diagnostiquer pourquoi la détection de sophismes

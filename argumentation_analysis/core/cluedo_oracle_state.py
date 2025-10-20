@@ -6,7 +6,6 @@ Cette classe étend EnqueteCluedoState pour ajouter la gestion du dataset Oracle
 des permissions par agent, et du tracking des interactions 3-agents (Sherlock→Watson→Moriarty).
 """
 
-import uuid
 import random
 import logging
 from datetime import datetime

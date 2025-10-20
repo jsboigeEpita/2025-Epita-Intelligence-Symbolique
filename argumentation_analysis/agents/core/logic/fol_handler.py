@@ -115,9 +115,6 @@ class FOLHandler:
         C'est la nouvelle approche robuste qui contourne les bizarreries du
         parseur de fichier .fologic.
         """
-        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-            BeliefSetBuilderPlugin,
-        )
 
         sorts_data = builder_plugin_data.get("_sorts", {})
         predicates_data = builder_plugin_data.get("_predicates", {})
@@ -300,7 +297,7 @@ class FOLHandler:
             # This method requires a reasoner that can check for consistency.
             # SimpleFolReasoner does not have a direct `isConsistent` method,
             # but we can infer it. A knowledge base is inconsistent if it entails a contradiction (e.g., "$false").
-            FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
+            jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
             # Tweety's representation of contradiction might be different, let's use a common one.
             # A more robust solution would be to use a specific Tweety constant for falsehood.
             contradiction = self.parse_fol_formula("forall X (X = X & not(X=X))")

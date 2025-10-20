@@ -5,18 +5,14 @@ Fournit des utilitaires pour intégrer facilement le plugin JTMS dans un Kernel 
 
 import asyncio
 import json
-from typing import Dict, List, Optional, Any, Union
-import sys
-import os
+from typing import Dict, List, Optional, Any
 
 # Import Semantic Kernel (avec fallback si non disponible)
 try:
-    import semantic_kernel as sk
     from semantic_kernel.kernel import Kernel
     from semantic_kernel.functions import KernelArguments
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from semantic_kernel.prompt_template import PromptTemplateConfig
-    from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
     SK_AVAILABLE = True
 except ImportError:
@@ -35,7 +31,6 @@ except ImportError:
 from argumentation_analysis.services.jtms_service import JTMSService
 from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
 from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import (
-    JTMSSemanticKernelPlugin,
     create_jtms_plugin,
 )
 

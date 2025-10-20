@@ -1,5 +1,4 @@
 import subprocess
-import re
 import logging
 
 # Il est important que jpype soit importé là où ces fonctions sont utilisées,

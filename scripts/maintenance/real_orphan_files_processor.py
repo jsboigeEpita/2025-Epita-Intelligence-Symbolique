@@ -4,9 +4,7 @@ Script pour traiter les vrais fichiers orphelins identifiés par Git
 dans le projet Sherlock Watson.
 """
 
-import os
 import json
-import shutil
 import subprocess
 from pathlib import Path
 from datetime import datetime
@@ -81,7 +79,7 @@ class RealOrphanFilesProcessor:
 
     def get_recommendation(self, file_path, category):
         """Détermine la recommandation pour un fichier"""
-        path_obj = Path(file_path)
+        Path(file_path)
 
         # Règles de recommandation
         if category == "logs":

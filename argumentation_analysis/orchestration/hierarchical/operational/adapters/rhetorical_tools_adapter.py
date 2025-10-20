@@ -8,7 +8,6 @@ cohérence ou la visualisation de structures argumentatives.
 """
 
 import logging
-import asyncio
 import time
 from typing import Dict, List, Any, Optional
 

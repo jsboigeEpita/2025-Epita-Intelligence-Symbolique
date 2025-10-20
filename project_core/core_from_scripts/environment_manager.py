@@ -8,7 +8,7 @@ import platform
 import importlib
 import pkgutil
 from pathlib import Path
-from typing import Optional, List, Union, Dict, Type
+from typing import Optional, List, Dict
 
 # Importation corrigée pour utiliser l'utilitaire central du projet
 from argumentation_analysis.core.utils.shell_utils import run_shell_command

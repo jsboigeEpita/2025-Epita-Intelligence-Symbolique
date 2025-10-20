@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -22,12 +20,10 @@ Auteur: Roo
 Date: 15/05/2025
 """
 
-import os
 import sys
 
 # import json # N'est plus utilisé ici
 import logging
-import argparse
 from pathlib import Path
 from datetime import (
     datetime,

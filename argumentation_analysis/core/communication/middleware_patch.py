@@ -5,7 +5,6 @@ Ce module étend la classe MessageMiddleware pour ajouter des fonctionnalités
 nécessaires aux tests d'interface tactique-opérationnelle.
 """
 
-from typing import Optional
 from .middleware import MessageMiddleware
 from .tactical_adapter import TacticalAdapter
 from .operational_adapter import OperationalAdapter

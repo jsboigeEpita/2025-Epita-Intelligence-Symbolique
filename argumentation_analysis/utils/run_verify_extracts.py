@@ -12,7 +12,6 @@ import os
 import sys
 import argparse
 import logging
-from pathlib import Path
 
 # Ajouter le répertoire parent au chemin d'importation
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))

@@ -13,13 +13,11 @@ Ce module capture :
 """
 
 import time
-import json
 import logging
 import threading
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
-from contextlib import contextmanager
 import functools
 
 logger = logging.getLogger(__name__)
@@ -121,7 +119,7 @@ class EnhancedToolCall:
     def to_enhanced_conversation_format(self) -> str:
         """Conversion en format de conversation amélioré selon spécifications exactes."""
         # Formatage intelligent des arguments (tronqués mais informatifs)
-        args_formatted = self._format_arguments_elegantly()
+        self._format_arguments_elegantly()
 
         # Formatage du résultat condensé mais informatif
         result_formatted = self._format_result_smartly()

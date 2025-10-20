@@ -9,14 +9,13 @@ Traite les fichiers Oracle/Sherlock prioritaires avec erreurs de syntaxe :
 3. scripts/maintenance/recovered/update_test_coverage.py
 """
 
-import os
 import sys
 import json
 import logging
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 
 # Configuration du logging
 logging.basicConfig(

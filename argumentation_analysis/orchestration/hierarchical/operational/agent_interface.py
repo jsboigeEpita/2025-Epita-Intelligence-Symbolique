@@ -5,7 +5,7 @@ Cette interface définit les méthodes que tous les agents opérationnels
 doivent implémenter pour fonctionner dans l'architecture hiérarchique.
 """
 
-from typing import Dict, List, Any, Optional, Union, Callable
+from typing import Dict, List, Any, Optional, Callable
 from abc import ABC, abstractmethod
 import logging
 import asyncio
@@ -205,7 +205,6 @@ class OperationalAgent(ABC):
         Returns:
             Le résultat du traitement de la tâche
         """
-        pass
 
     @abstractmethod
     def get_capabilities(self) -> List[str]:
@@ -218,7 +217,6 @@ class OperationalAgent(ABC):
         Returns:
             Liste des capacités de l'agent
         """
-        pass
 
     @abstractmethod
     def can_process_task(self, task: Dict[str, Any]) -> bool:
@@ -234,7 +232,6 @@ class OperationalAgent(ABC):
         Returns:
             True si l'agent peut traiter la tâche, False sinon
         """
-        pass
 
     def register_task(self, task: Dict[str, Any]) -> str:
         """

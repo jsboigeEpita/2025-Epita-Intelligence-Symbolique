@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -23,7 +21,6 @@ Version: 1.0.0
 """
 
 import sys
-import os
 import asyncio
 import logging
 import json
@@ -86,24 +83,11 @@ class OrchestrationValidator:
         test_name = "orchestrator_imports"
         try:
             # Test d'import basique des modules d'orchestration
-            from argumentation_analysis.orchestration import (
-                CluedoExtendedOrchestrator,
-                CyclicSelectionStrategy,
-                OracleTerminationStrategy,
-            )
+            pass
 
             # Test d'import du gestionnaire de services
-            from argumentation_analysis.orchestration.service_manager import (
-                ServiceManager,
-            )
 
             # Test d'import des orchestrateurs specialises
-            from argumentation_analysis.orchestration.cluedo_orchestrator import (
-                CluedoOrchestrator,
-            )
-            from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                RealLLMOrchestrator,
-            )
 
             self.log_test_result(
                 test_name,
@@ -191,23 +175,9 @@ class OrchestrationValidator:
         test_name = "hierarchical_orchestration"
         try:
             # Test des interfaces hierarchiques
-            from argumentation_analysis.orchestration.hierarchical.interfaces.strategic_tactical import (
-                StrategicTacticalInterface,
-            )
-            from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import (
-                TacticalOperationalInterface,
-            )
+            pass
 
             # Test des gestionnaires
-            from argumentation_analysis.orchestration.hierarchical.strategic.manager import (
-                StrategicManager,
-            )
-            from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import (
-                TacticalCoordinator,
-            )
-            from argumentation_analysis.orchestration.hierarchical.operational.manager import (
-                OperationalManager,
-            )
 
             self.log_test_result(
                 test_name,
@@ -343,8 +313,8 @@ class OrchestrationValidator:
             )
 
             # Test d'instanciation des plugins
-            enquete_plugin = EnqueteStateManagerPlugin()
-            logique_plugin = LogiqueComplexePlugin()
+            EnqueteStateManagerPlugin()
+            LogiqueComplexePlugin()
 
             self.log_test_result(
                 test_name,

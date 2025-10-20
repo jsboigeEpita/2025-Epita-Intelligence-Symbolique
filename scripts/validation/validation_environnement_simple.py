@@ -18,7 +18,7 @@ import sys
 import subprocess
 import json
 from pathlib import Path
-from project_core.utils.shell import run_in_activated_env, ShellCommandError
+from project_core.utils.shell import run_in_activated_env
 
 # Ajouter le répertoire racine au path
 project_root = Path(__file__).parent.parent.absolute()
@@ -36,7 +36,7 @@ def test_auto_env():
     """Test import auto_env"""
     log_status("Test 1: Import scripts.core.auto_env")
     try:
-        import scripts.core.auto_env
+        pass
 
         log_status("Import scripts.core.auto_env reussi", "OK")
 

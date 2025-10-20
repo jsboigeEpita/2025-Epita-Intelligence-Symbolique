@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -9,7 +7,6 @@ Script de validation des tests embed_all_sources - Version simplifiée et robust
 
 import sys
 import os
-import subprocess
 import tempfile
 import traceback
 from pathlib import Path

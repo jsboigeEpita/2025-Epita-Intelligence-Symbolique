@@ -6,7 +6,7 @@ Tests unitaires pour les services de l'API web.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 # Utilisation des imports relatifs
 from ..models.request_models import (
@@ -400,7 +400,6 @@ class TestServiceIntegration:
             from ..services.validation_service import ValidationService
             from ..services.fallacy_service import FallacyService
             from ..services.framework_service import FrameworkService
-            from ..services.logic_service import LogicService
 
             # Créer un mock pour LogicService qui sera partagé
             mock_logic_service = Mock()

@@ -19,26 +19,15 @@ Il contient trois éléments principaux :
     module pour réaliser des tâches d'analyse rhétorique.
 """
 
-import os
-import sys
 import json
 import logging
 import pandas as pd
-import requests
 import semantic_kernel as sk
-from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.functions import kernel_function, KernelArguments
-from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import (
-    OpenAIChatPromptExecutionSettings,
-)
+from semantic_kernel.functions import kernel_function
 from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.functions.kernel_function import KernelFunction
-from semantic_kernel.functions.kernel_function_metadata import KernelFunctionMetadata
-from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterMetadata
 
 # Import de l'utilitaire de lazy loading pour la taxonomie
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
@@ -415,7 +404,6 @@ class InformalAnalysisPlugin:
 
     def _validate_and_enrich_result(self, result: FallacyAnalysisResult):
         self._logger.debug("Validation et enrichissement du résultat de l'analyse...")
-        pass
 
     @kernel_function(
         description="Explore la hiérarchie des sophismes à partir d'un nœud donné (par sa PK en chaîne).",

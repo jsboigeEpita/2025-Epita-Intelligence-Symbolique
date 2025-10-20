@@ -10,7 +10,6 @@ Ce script:
 3. Vérifie que les imports dans les fichiers déplacés sont corrects
 """
 
-import os
 import sys
 import importlib
 import logging

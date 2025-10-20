@@ -4,13 +4,12 @@ Script d'organisation des fichiers orphelins Oracle/Sherlock/Watson/Moriarty
 Identifie, analyse et organise tous les fichiers contenant des références orphelines
 """
 
-import argumentation_analysis.core.environment
 import os
 import re
 import shutil
 import json
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Any
+from typing import Dict, Any
 from datetime import datetime
 
 # Configuration

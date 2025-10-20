@@ -32,26 +32,16 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Auto-activation de l'environnement virtuel si nécessaire
-import project_core.core_from_scripts.environment_manager as environment_manager
 
 # ===== IMPORTS SEMANTIC KERNEL =====
 import semantic_kernel as sk
-from semantic_kernel.connectors.ai.chat_completion_client_base import (
-    ChatCompletionClientBase,
-)
 from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatCompletion,
     AzureChatCompletion,
 )
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.agents import Agent, ChatCompletionAgent
 from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.connectors.ai.function_choice_behavior import (
-    FunctionChoiceBehavior,
-)
 
 # ===== IMPORTS DU PROJET D'ANALYSE D'ARGUMENTATION =====
 
@@ -79,12 +69,10 @@ from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
 
 # --- Reporting et Trace (Fonctionnalités avancées) ---
 from argumentation_analysis.reporting.enhanced_real_time_trace_analyzer import (
-    enhanced_global_trace_analyzer,
     start_enhanced_pm_capture,
     stop_enhanced_pm_capture,
     start_pm_orchestration_phase,
     capture_shared_state,
-    get_enhanced_pm_report,
     save_enhanced_pm_report,
 )
 
@@ -96,8 +84,6 @@ logger = logging.getLogger(__name__)
 
 class AnalysisV2Exception(Exception):
     """Exception de base pour les erreurs dans AnalysisRunnerV2."""
-
-    pass
 
 
 # ===== CLASSE PRINCIPALE DE L'ORCHESTRATEUR =====

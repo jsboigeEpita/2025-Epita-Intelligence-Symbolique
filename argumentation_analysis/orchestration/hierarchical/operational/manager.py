@@ -8,8 +8,7 @@ agents spécialisés.
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional, Union, Callable
-from datetime import datetime
+from typing import Dict, Any, Optional
 import uuid
 import semantic_kernel as sk
 
@@ -20,7 +19,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_registr
     OperationalAgentRegistry,
 )
 from argumentation_analysis.core.bootstrap import ProjectContext
-from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,9 +33,7 @@ from argumentation_analysis.core.communication.message import (
     Message,
     MessageType,
     MessagePriority,
-    AgentLevel,
 )
-from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
 class OperationalManager:

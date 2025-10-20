@@ -108,7 +108,7 @@ class MockEvidenceDetector:
                         re.search(r"\d+", sentence) or "%" in sentence
                     ):  # Contient un chiffre ou %
                         # Vérifier si cette phrase n'est pas déjà couverte
-                        is_covered = False
+                        pass
                         # (Logique de non-doublon omise car dans `if not evidences`)
 
                         potential_evidences.append(

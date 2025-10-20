@@ -18,8 +18,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -250,7 +249,6 @@ class UnifiedAnalysisPipeline:
                 InformalAnalysisAgent,
             )
             import semantic_kernel as sk
-            import os
 
             # Configuration selon le mode d'authenticité
             mock_level = (

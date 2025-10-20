@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 import json
 from datetime import datetime
 import os

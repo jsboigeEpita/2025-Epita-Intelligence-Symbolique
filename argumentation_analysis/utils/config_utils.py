@@ -5,8 +5,6 @@ spécifiques à l'analyse d'argumentation (par exemple, extract_sources.json).
 """
 
 import logging
-import json
-from pathlib import Path
 from typing import (
     List,
     Dict,

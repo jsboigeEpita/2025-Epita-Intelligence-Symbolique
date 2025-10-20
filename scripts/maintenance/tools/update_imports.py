@@ -8,7 +8,6 @@ Ce script recherche les importations problématiques et les remplace par
 les importations correctes, en utilisant le nom complet du package.
 """
 
-import argumentation_analysis.core.environment
 import re
 import sys
 from pathlib import Path

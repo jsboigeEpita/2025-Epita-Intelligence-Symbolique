@@ -4,10 +4,8 @@ Script de finalisation de la refactorisation Oracle Enhanced
 Phase 5: Validation finale et synchronisation Git
 """
 
-import argumentation_analysis.core.environment
 import subprocess
 import sys
-import time
 from pathlib import Path
 from datetime import datetime
 

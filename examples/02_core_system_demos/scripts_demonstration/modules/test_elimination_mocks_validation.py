@@ -5,7 +5,6 @@ Test direct des nouvelles capacités
 """
 
 import sys
-from datetime import datetime
 from .custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
 
 

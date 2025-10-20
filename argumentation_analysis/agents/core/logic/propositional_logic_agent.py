@@ -19,20 +19,15 @@ L'agent s'appuie sur deux piliers :
 import logging
 import re
 import json
-from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
+from typing import Dict, List, Optional, Any, Tuple
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
-from semantic_kernel.connectors.ai.chat_completion_client_base import (
-    ChatCompletionClientBase,
-)
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.chat_history import ChatHistory
-from pydantic import Field, PrivateAttr
+from pydantic import PrivateAttr
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
-from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)

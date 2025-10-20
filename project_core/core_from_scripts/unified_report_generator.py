@@ -17,7 +17,7 @@ import logging
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 
 # Import du nouveau système unifié
 try:
@@ -25,7 +25,6 @@ try:
         UnifiedReportGenerator,
         ReportMetadata,
         ReportConfiguration,
-        generate_quick_report,
         create_component_report_factory,
     )
 except ImportError as e:

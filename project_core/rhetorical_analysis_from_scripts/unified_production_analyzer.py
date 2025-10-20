@@ -43,7 +43,7 @@ import time
 import warnings  # Ajout de warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple
 from pydantic import BaseModel
 from dataclasses import field
 from enum import Enum
@@ -593,7 +593,7 @@ class DependencyValidator:
             and self.config.mock_level == MockLevel.NONE
         ):
             try:
-                import openai
+                pass
 
                 # Vérification clé API
                 if not os.getenv("OPENAI_API_KEY"):

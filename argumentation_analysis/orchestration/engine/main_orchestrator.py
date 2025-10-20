@@ -1281,7 +1281,7 @@ if __name__ == "__main__":
         load_dotenv()
         kernel = sk.Kernel()
         api_key = os.getenv("OPENAI_API_KEY")
-        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4")
+        os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4")
 
         if not api_key:
             raise ValueError("OPENAI_API_KEY doit être défini.")

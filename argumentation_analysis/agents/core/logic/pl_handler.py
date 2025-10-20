@@ -167,7 +167,7 @@ class PLHandler:
             # For simplicity here, assuming parseBeliefSet handles it or we adapt.
 
             # Let's refine this: parse individual formulas and add to a PlBeliefSet
-            formulas = []
+            pass
             # Handle potential empty strings or formulas correctly
             formula_strings = [
                 f.strip()

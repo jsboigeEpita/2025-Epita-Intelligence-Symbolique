@@ -13,14 +13,11 @@ from IPython.display import display, clear_output
 import time
 import random
 import traceback
-import hashlib
 import logging
-from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Optional
 
 # Importer les composants UI depuis les autres modules .py
 from . import config as ui_config
-from .. import utils as ui_utils
 
 # Importations des services de base
 from ..config.settings import settings
@@ -37,9 +34,6 @@ from .cache_utils import load_from_cache
 from .config import (
     ENCRYPTION_KEY,
     CONFIG_FILE,
-    EXTRACT_SOURCES,
-    DEFAULT_EXTRACT_SOURCES,
-    TEMP_DOWNLOAD_DIR,
 )
 
 # Event loop pour Jupyter

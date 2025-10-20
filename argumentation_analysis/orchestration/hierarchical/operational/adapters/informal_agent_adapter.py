@@ -8,13 +8,9 @@ d'arguments informels.
 """
 
 import logging
-import asyncio
 import time
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
-from semantic_kernel.agents.chat_completion.chat_completion_agent import (
-    ChatCompletionAgent,
-)
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
     OperationalAgent,
@@ -22,7 +18,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import (
     OperationalState,
 )
-from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.bootstrap import ProjectContext
 from semantic_kernel.agents.agent import Agent
 

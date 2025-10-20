@@ -7,7 +7,6 @@ Service de détection de sophismes.
 
 import time
 import logging
-from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Imports du moteur d'analyse

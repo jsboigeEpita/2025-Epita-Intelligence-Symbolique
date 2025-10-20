@@ -3,7 +3,6 @@
 Utilitaires pour la réparation et la maintenance des données d'extraits.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple  # Ajout des types nécessaires
@@ -15,7 +14,6 @@ import semantic_kernel as sk
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 # from semantic_kernel.agents import ChatCompletionAgent
 # from semantic_kernel.contents import AuthorRole
-from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,
@@ -130,7 +128,7 @@ async def repair_extract_markers(
         "Initialisation de la réparation des bornes défectueuses (dans repair_utils)..."
     )
 
-    repair_plugin = ExtractRepairPlugin(extract_service)
+    ExtractRepairPlugin(extract_service)
     results: List[Dict[str, Any]] = []
 
     for source_idx, source_info in enumerate(extract_definitions.sources):

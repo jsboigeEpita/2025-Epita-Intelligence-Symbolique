@@ -9,20 +9,14 @@ de la prise de décision de haut niveau.
 from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
-import uuid
 
 from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
 )
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     StrategicAdapter,
     MessagePriority,
-    ChannelType,
-    Message,
-    MessageType,
-    AgentLevel,
 )
 
 

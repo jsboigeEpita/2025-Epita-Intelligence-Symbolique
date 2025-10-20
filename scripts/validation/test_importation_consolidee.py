@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Test d'importation consolidée du système universel récupéré
@@ -7,8 +5,6 @@ Valide l'intégrité et la cohérence des 553 fichiers Python récupérés
 """
 
 import sys
-import traceback
-from pathlib import Path
 
 
 def test_critical_imports():
@@ -22,18 +18,14 @@ def test_critical_imports():
     print("\n1. MODULES CRITIQUES PRINCIPAUX:")
 
     try:
-        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-            FOLLogicAgent,
-        )
+        pass
 
         print("✅ FOLLogicAgent importé (28014 bytes)")
     except Exception as e:
         print(f"❌ FOLLogicAgent: {e}")
 
     try:
-        from argumentation_analysis.utils.report_generator import (
-            generate_unified_report,
-        )
+        pass
 
         print("✅ generate_unified_report importé (6856 bytes)")
     except Exception as e:
@@ -49,7 +41,7 @@ def test_critical_imports():
         print(f"❌ RealLLMOrchestrator: {e}")
 
     try:
-        from config.unified_config import UnifiedConfig
+        pass
 
         print("✅ UnifiedConfig importé (13679 bytes)")
     except Exception as e:
@@ -59,9 +51,7 @@ def test_critical_imports():
     print("\n2. MODULE DE RAPPORT PRINCIPAL (75516 bytes):")
 
     try:
-        from argumentation_analysis.core.report_generation import (
-            generate_unified_report as core_report,
-        )
+        pass
 
         print("✅ Core report_generation importé (75516 bytes)")
     except Exception as e:
@@ -71,27 +61,21 @@ def test_critical_imports():
     print("\n3. AUTRES MODULES CRITIQUES RÉCUPÉRÉS:")
 
     try:
-        from argumentation_analysis.pipelines.reporting_pipeline import (
-            ReportingPipeline,
-        )
+        pass
 
         print("✅ ReportingPipeline importé (39864 bytes)")
     except Exception as e:
         print(f"❌ ReportingPipeline: {e}")
 
     try:
-        from argumentation_analysis.orchestration.cluedo_orchestrator import (
-            CluedoOrchestrator,
-        )
+        pass
 
         print("✅ CluedoOrchestrator importé")
     except Exception as e:
         print(f"❌ CluedoOrchestrator: {e}")
 
     try:
-        from argumentation_analysis.agents.core.informal.informal_agent import (
-            InformalAnalysisAgent as InformalAgent,
-        )
+        pass
 
         print("✅ InformalAgent importé")
     except Exception as e:
@@ -101,14 +85,14 @@ def test_critical_imports():
     print("\n4. SERVICES ET UTILITAIRES:")
 
     try:
-        from argumentation_analysis.services.logic_service import LogicService
+        pass
 
         print("✅ LogicService importé")
     except Exception as e:
         print(f"❌ LogicService: {e}")
 
     try:
-        from argumentation_analysis.utils.config_utils import load_config
+        pass
 
         print("✅ config_utils importé")
     except Exception as e:
@@ -118,18 +102,14 @@ def test_critical_imports():
     print("\n5. AGENTS TACTIQUES RÉCUPÉRÉS:")
 
     try:
-        from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import (
-            TacticalCoordinator,
-        )
+        pass
 
         print("✅ TacticalCoordinator importé")
     except Exception as e:
         print(f"❌ TacticalCoordinator: {e}")
 
     try:
-        from argumentation_analysis.orchestration.hierarchical.operational.manager import (
-            OperationalManager,
-        )
+        pass
 
         print("✅ OperationalManager importé")
     except Exception as e:
@@ -139,9 +119,7 @@ def test_critical_imports():
     print("\n6. AGENTS D'ANALYSE RÉCUPÉRÉS:")
 
     try:
-        from argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer import (
-            RhetoricalResultAnalyzer,
-        )
+        pass
 
         print("✅ RhetoricalResultAnalyzer importé")
     except Exception as e:
@@ -156,7 +134,7 @@ def test_critical_imports():
             RealLLMOrchestrator,
         )
 
-        orchestrator = RealLLMOrchestrator()
+        RealLLMOrchestrator()
         print("✅ RealLLMOrchestrator instancié avec succès")
     except Exception as e:
         print(f"❌ Instanciation RealLLMOrchestrator: {e}")

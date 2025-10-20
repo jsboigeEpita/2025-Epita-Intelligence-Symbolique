@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Phase 4 - Mesure de performance système complet
@@ -7,7 +5,6 @@ Phase 4 - Mesure de performance système complet
 
 import time
 import psutil
-import os
 
 print("=== MESURES PERFORMANCE SYSTÈME ===")
 

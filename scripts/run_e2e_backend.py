@@ -1,6 +1,5 @@
 import uvicorn
 import logging
-import os
 from pathlib import Path
 
 import sys
@@ -35,7 +34,7 @@ def start_server():
             log_level="debug",
         )
         logger.info("Uvicorn server shut down gracefully.")
-    except Exception as e:
+    except Exception:
         logger.critical("Failed to start Uvicorn server.", exc_info=True)
         # Re-raise the exception to allow programmatic control
         raise

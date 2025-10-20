@@ -9,7 +9,7 @@ critiques dans l'application Flask avec gestion d'erreurs robuste.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from datetime import datetime
 from flask import Flask
 

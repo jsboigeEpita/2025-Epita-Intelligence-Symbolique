@@ -41,7 +41,7 @@ import asyncio
 import json
 import logging
 import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from dotenv import load_dotenv
 from semantic_kernel import Kernel

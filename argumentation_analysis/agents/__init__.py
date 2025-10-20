@@ -18,7 +18,7 @@ la maintenance et l'extension des capacités agentiques du système.
 # Importations des sous-modules principaux pour qu'ils soient reconnus
 # dans le package 'agents'.
 try:
-    from . import core
+    pass
 
     # L'import de 'argumentation_analysis.core' était potentiellement une erreur
     # ou une ancienne structure. Si 'core' est un sous-module de 'agents',

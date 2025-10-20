@@ -6,17 +6,10 @@ Illustre tous les aspects du plugin : service centralisé, sessions, API REST et
 import asyncio
 import json
 import sys
-import os
 from datetime import datetime
-from typing import Dict, List, Any
-from pathlib import Path
+from typing import Any
 
 # Import des services JTMS
-from argumentation_analysis.services.jtms_service import JTMSService
-from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
-from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import (
-    create_jtms_plugin,
-)
 from argumentation_analysis.integrations.semantic_kernel_integration import (
     create_minimal_jtms_integration,
 )

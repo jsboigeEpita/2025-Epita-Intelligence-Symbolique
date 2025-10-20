@@ -16,7 +16,6 @@ import argumentation_analysis.core.environment
 Toute la logique fonctionnelle est préservée sans simulation.
 """
 
-import os
 import sys
 import json
 import tarfile
@@ -28,7 +27,7 @@ import gc
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple, Set
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 

@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-import json
 from pathlib import Path
 
 # Définir les chemins des fichiers

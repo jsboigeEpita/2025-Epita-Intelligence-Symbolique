@@ -90,7 +90,7 @@ async def run_and_log_analysis(
 
         logger.info(f"--- Completed: {title} ---")
 
-    except Exception as e:
+    except Exception:
         logger.error(f"--- ERROR during {title} ---", exc_info=True)
 
 

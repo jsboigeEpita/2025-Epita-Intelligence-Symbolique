@@ -5,11 +5,8 @@
 Modèles de données pour les requêtes de l'API.
 """
 
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field, validator, field_validator
-from argumentation_analysis.agents.core.extract.extract_definitions import (
-    ExtractDefinition as Extract,
-)
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
 from argumentation_analysis.models.extract_definition import SourceDefinition
 from typing import List
 

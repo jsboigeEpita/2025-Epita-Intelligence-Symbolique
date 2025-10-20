@@ -93,7 +93,6 @@ def get_oracle_version() -> str:
 
 def get_oracle_info():
     """Retourne les informations du système Oracle"""
-    from typing import Dict, Any
 
     return {
         "version": __version__,

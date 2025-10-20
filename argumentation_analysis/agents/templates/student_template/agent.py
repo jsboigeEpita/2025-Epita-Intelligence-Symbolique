@@ -3,9 +3,9 @@ Template d'agent pour les étudiants.
 Ce fichier contient l'implémentation principale de l'agent.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from .definitions import AgentInput, AgentOutput
-from .prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
+from .prompts import USER_PROMPT_TEMPLATE
 
 
 class StudentAgent:
@@ -41,7 +41,7 @@ class StudentAgent:
         # Implémentez ici la logique de traitement de votre agent
 
         # Exemple simple:
-        prompt = self._prepare_prompt(input_data)
+        self._prepare_prompt(input_data)
         # Utilisez un service LLM pour obtenir une réponse
         # response = await llm_service.generate(prompt)
 

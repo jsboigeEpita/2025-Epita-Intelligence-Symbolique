@@ -1,6 +1,4 @@
-﻿import argumentation_analysis.core.environment
-
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -9,7 +7,6 @@ Vérification rapide de la régression AuthorRole supposée
 
 import sys
 import subprocess
-import time
 
 
 def test_imports_critiques():

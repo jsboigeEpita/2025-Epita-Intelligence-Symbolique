@@ -8,9 +8,7 @@ Ce script sélectionne un texte complexe depuis les sources disponibles,
 extrait son contenu et lance l'orchestration avec tous les agents.
 """
 
-import os
 import sys
-import json
 import asyncio
 import logging
 from pathlib import Path
@@ -30,7 +28,6 @@ logging.basicConfig(
 logger = logging.getLogger("TestOrchestrationScale")
 
 # Importer les fonctions nécessaires
-from argumentation_analysis.ui.utils import load_from_cache
 
 
 async def load_kremlin_speech():
@@ -101,7 +98,6 @@ async def run_orchestration_test():
     from argumentation_analysis.orchestration.analysis_runner import (
         run_analysis_conversation,
     )
-    from argumentation_analysis.paths import LIBS_DIR
 
     logger.info("Lancement de l'orchestration avec tous les agents...")
     start_time = asyncio.get_event_loop().time()

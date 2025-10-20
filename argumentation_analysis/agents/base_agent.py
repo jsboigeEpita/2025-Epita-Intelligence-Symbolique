@@ -28,7 +28,6 @@ class BaseAgent(ABC):
         Méthode d'invocation principale pour l'agent.
         Doit être implémentée par toutes les sous-classes.
         """
-        pass
 
     def get_plugins(self) -> List[KernelPlugin]:
         """

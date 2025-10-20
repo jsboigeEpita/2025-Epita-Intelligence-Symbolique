@@ -15,15 +15,12 @@ pré-définis. Il sert de cadre et de squelette pour une future implémentation
 utilisant une analyse sémantique réelle.
 """
 
-import os
 import sys
 import json
 import logging
-import numpy as np
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime
-from collections import defaultdict
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent

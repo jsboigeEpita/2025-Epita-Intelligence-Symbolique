@@ -16,11 +16,8 @@ NOTE : L'analyse de structure sous-jacente est une **simulation** basée sur des
 heuristiques simples.
 """
 
-import os
-import sys
 import json
 import logging
-import numpy as np
 
 
 # Import paresseux de matplotlib pour éviter les imports circulaires
@@ -38,7 +35,7 @@ def _import_matplotlib():
 plt = None
 cm = None
 import networkx as nx
-from typing import Dict, List, Any, Optional, Tuple, Union, Set
+from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict

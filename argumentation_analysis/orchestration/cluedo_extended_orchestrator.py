@@ -11,8 +11,6 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-import semantic_kernel as sk
-from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
 from argumentation_analysis.orchestration.base import (
     SelectionStrategy,
@@ -67,7 +65,6 @@ from ..orchestration.plugins.enquete_state_manager_plugin import (
 )
 from ..orchestration.group_chat import GroupChatOrchestration
 from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
-from ..agents.core.oracle.cluedo_dataset import CluedoDataset
 from argumentation_analysis.config.settings import AppSettings
 
 # Configuration du logging
@@ -958,7 +955,7 @@ class CluedoExtendedOrchestrator:
             Liste des réactions détectées
         """
         reactions = []
-        content_lower = content.lower()
+        content.lower()
 
         # Pour l'instant, retourne une liste vide - à implémenter si nécessaire
         return reactions

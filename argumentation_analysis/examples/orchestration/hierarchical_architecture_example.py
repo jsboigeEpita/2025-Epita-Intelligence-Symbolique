@@ -5,7 +5,6 @@ Ce script montre comment utiliser les adaptateurs et le gestionnaire opérationn
 pour exécuter des tâches d'analyse dans la nouvelle architecture hiérarchique.
 """
 
-import os
 import sys
 import asyncio
 import logging
@@ -17,9 +16,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import (
     OperationalState,
-)
-from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import (
-    OperationalAgentRegistry,
 )
 from argumentation_analysis.orchestration.hierarchical.operational.manager import (
     OperationalManager,

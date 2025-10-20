@@ -9,11 +9,9 @@ identifiés dans un argument, en tenant compte de différents facteurs comme
 le contexte, l'impact sur la validité de l'argument, et la visibilité du sophisme.
 """
 
-import os
-import sys
 import json
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 # Importer les services partagés
 from argumentation_analysis.agents.tools.support.shared_services import (

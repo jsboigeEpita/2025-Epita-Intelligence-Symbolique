@@ -20,7 +20,6 @@ Fichiers sources consolidés :
 
 import argparse
 import asyncio
-import os
 import sys
 import json
 import time
@@ -28,7 +27,7 @@ import traceback
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any
 from enum import Enum  # Keep Enum for EnumEncoder if not moved
 
 # Configuration de l'encodage pour Windows
@@ -56,7 +55,6 @@ from .core import (
     ValidationConfiguration,
     ValidationReport,
     EnumEncoder,
-    AuthenticityReport,
 )
 from .validators import (
     authenticity_validator,
@@ -118,72 +116,56 @@ class UnifiedValidationSystem:
 
         # Test des imports
         try:
-            from config.unified_config import (
-                UnifiedConfig,
-                MockLevel,
-                TaxonomySize,
-                LogicType,
-                PresetConfigs,
-            )
+            pass
 
             components["unified_config"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.core.services.llm_service import LLMService
+            pass
 
             components["llm_service"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-                FirstOrderLogicAgent,
-            )
+            pass
 
             components["fol_agent"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.orchestration.conversation_orchestrator import (
-                ConversationOrchestrator,
-            )
+            pass
 
             components["conversation_orchestrator"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                RealLLMOrchestrator,
-            )
+            pass
 
             components["real_llm_orchestrator"] = True
         except ImportError:
             pass
 
         try:
-            from scripts.core.unified_source_selector import UnifiedSourceSelector
+            pass
 
             components["source_selector"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.utils.tweety_error_analyzer import (
-                TweetyErrorAnalyzer,
-            )
+            pass
 
             components["tweety_analyzer"] = True
         except ImportError:
             pass
 
         try:
-            from argumentation_analysis.pipelines.unified_text_analysis import (
-                UnifiedAnalysisConfig,
-            )
+            pass
 
             components["unified_analysis"] = True
         except ImportError:

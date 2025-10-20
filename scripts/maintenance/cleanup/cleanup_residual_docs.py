@@ -28,9 +28,7 @@ import argparse
 import logging
 import hashlib
 import datetime
-import time
-from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Optional
 
 # Configuration du logging
 logging.basicConfig(

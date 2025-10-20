@@ -2,20 +2,10 @@
 
 from typing import List, Optional, Type
 from semantic_kernel import Kernel
-from semantic_kernel.functions import KernelFunction
 from semantic_kernel.agents import Agent, ChatCompletionAgent
-from semantic_kernel.connectors.ai.function_choice_behavior import (
-    FunctionChoiceBehavior,
-)
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
-import importlib
 
 # Les imports directs sont conservés là où il n'y a pas de risque de cycle
-from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
-    ComplexFallacyAnalyzer,
-)
 from .plugins.project_management_plugin import ProjectManagementPlugin
-from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from .utils.tracer import TracedAgent
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,

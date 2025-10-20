@@ -13,7 +13,6 @@ Usage:
     python scripts/utils/create_test_encrypted_extracts.py [--passphrase PASSPHRASE]
 """
 
-import os
 import sys
 import json
 import gzip

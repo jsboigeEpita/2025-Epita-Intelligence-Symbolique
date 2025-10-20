@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
-import ast
 from pathlib import Path
-from typing import List, Dict, Any, Union
+from typing import Dict, Any, Union
 
 from argumentation_analysis.core.utils import code_manipulation_utils
 

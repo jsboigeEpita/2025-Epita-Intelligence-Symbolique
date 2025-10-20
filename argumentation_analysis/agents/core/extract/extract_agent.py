@@ -19,19 +19,13 @@ Cette approche hybride permet de combiner la compréhension contextuelle du LLM
 avec la précision et la fiabilité du code natif.
 """
 
-import os
 import re
 import json
 import logging
-import asyncio
-from pathlib import Path
 from typing import (
-    List,
     Dict,
     Any,
-    Tuple,
     Optional,
-    Union,
     Callable,
     ClassVar,
     AsyncGenerator,
@@ -41,7 +35,6 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
-from semantic_kernel.agents import Agent
 from argumentation_analysis.agents.channels.volatile_agent_channel import (
     VolatileAgentChannel,
 )
@@ -52,7 +45,6 @@ from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 # Import des définitions et prompts locaux
 from .extract_definitions import ExtractAgentPlugin, ExtractResult
 from .prompts import (
-    EXTRACT_AGENT_INSTRUCTIONS,
     EXTRACT_FROM_NAME_PROMPT,
     VALIDATE_EXTRACT_PROMPT,
 )

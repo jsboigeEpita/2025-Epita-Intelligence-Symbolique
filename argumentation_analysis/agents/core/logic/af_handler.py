@@ -1,6 +1,6 @@
 import jpype
 import logging
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any
 
 from .tweety_initializer import TweetyInitializer
 

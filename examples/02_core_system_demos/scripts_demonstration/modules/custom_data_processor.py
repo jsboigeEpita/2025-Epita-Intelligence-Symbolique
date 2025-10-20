@@ -7,7 +7,7 @@ Traitement RÉEL des données (pas de mocks)
 import hashlib
 import time
 import re
-from typing import Dict, List, Any
+from typing import Dict, Any
 from datetime import datetime
 
 

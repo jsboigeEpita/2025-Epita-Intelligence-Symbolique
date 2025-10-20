@@ -4,7 +4,7 @@ import sys
 import re
 import subprocess  # Pour CompletedProcess et potentiellement des types
 from pathlib import Path
-from typing import List, Dict, Optional, Union
+from typing import List, Optional, Union
 
 # Imports du projet
 try:

@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -144,7 +142,7 @@ async def _test_config_mapping() -> Dict[str, Any]:
         for i, params in enumerate(configs_params):
             config_name = f"config_{i}"
             try:
-                config = UnifiedConfig(**params)
+                UnifiedConfig(**params)
                 # Ajouter une vérification si possible, par ex. que les valeurs sont bien celles attendues
                 results["mappings"][config_name] = "OK"
                 successful_mappings += 1

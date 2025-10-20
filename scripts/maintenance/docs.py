@@ -9,11 +9,10 @@ du projet d'IA symbolique avec serveur intégré sur localhost:8081.
 
 import os
 import re
-import json
 import threading
 import webbrowser
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Set
+from typing import List, Dict
 from datetime import datetime
 import unicodedata
 import difflib
@@ -25,7 +24,6 @@ try:
         render_template_string,
         request,
         jsonify,
-        send_from_directory,
     )
 
     FLASK_AVAILABLE = True

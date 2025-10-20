@@ -6,7 +6,7 @@ et sélectionner l'agent approprié pour une tâche donnée.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Type, Union
+from typing import Dict, List, Any, Optional, Type
 import asyncio
 import semantic_kernel as sk  # Ajout de l'import
 

@@ -1,6 +1,6 @@
 # core/state_manager_plugin.py
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 import logging
 from semantic_kernel.functions import kernel_function
 

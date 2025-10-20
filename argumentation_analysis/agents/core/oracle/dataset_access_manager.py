@@ -10,20 +10,15 @@ sous-jacent.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from functools import lru_cache
 
 from .permissions import (
     PermissionManager,
     QueryType,
     QueryResult,
     OracleResponse,
-    PermissionDeniedError,
-    InvalidQueryError,
     PermissionRule,
-    CluedoIntegrityError,
-    validate_cluedo_method_access,
 )
 from .cluedo_dataset import CluedoDataset
 

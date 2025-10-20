@@ -3,9 +3,6 @@ Assistant de récupération après crash Git
 Oracle Enhanced v2.1.0 - Récupération documentation
 """
 
-import argumentation_analysis.core.environment
-import os
-import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -190,7 +187,7 @@ def main():
 
     # Évaluer les dégâts
     print("Évaluation des dégâts...")
-    assessment = assistant.assess_damage()
+    assistant.assess_damage()
 
     # Créer documentation minimale
     print("Création documentation minimale...")

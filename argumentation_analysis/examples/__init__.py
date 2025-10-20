@@ -5,7 +5,6 @@ Ce module fournit des exemples de textes et de données pour tester
 et démontrer les fonctionnalités du package d'analyse d'argumentation.
 """
 
-import os
 from pathlib import Path
 
 # Chemin vers le dossier examples à la racine du projet

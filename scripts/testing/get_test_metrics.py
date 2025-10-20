@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Script pour obtenir des métriques rapides des tests sans blocage.
@@ -7,8 +5,6 @@ Script pour obtenir des métriques rapides des tests sans blocage.
 
 import subprocess
 import sys
-import json
-from pathlib import Path
 
 
 def run_quick_test_count():

@@ -8,16 +8,14 @@ Date: 2025-06-07
 Compatibilité: Oracle Enhanced v2.1.0 & Sherlock Watson
 """
 
-import os
 import sys
 import json
 import hashlib
-import shutil
 import subprocess
 import tarfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List
 
 
 class SafeFileDeletion:

@@ -1,19 +1,12 @@
 ﻿# core/llm_service.py
 import logging
 import os
-from pathlib import Path
-from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatCompletion,
     AzureChatCompletion,
 )
-from typing import Union, AsyncGenerator, List
-import httpx
+from typing import Union
 from openai import AsyncOpenAI
-import json
-import asyncio
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Tentative de correction en supprimant l'import qui échoue
 # from semantic_kernel.contents.tool_call_content import ToolCallContent
@@ -21,7 +14,6 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
-from argumentation_analysis.config.settings import settings
 from tests.mocks.llm_service_mocks import MockChatCompletion
 
 # Logger pour ce module

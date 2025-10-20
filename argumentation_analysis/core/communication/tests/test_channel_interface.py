@@ -4,7 +4,6 @@ Tests unitaires pour l'interface de canal du système de communication multi-can
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
 
 from argumentation_analysis.core.communication.channel_interface import (
     Channel,

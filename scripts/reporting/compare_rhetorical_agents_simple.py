@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -14,17 +12,10 @@ Ce script:
 5. Génère un rapport détaillé sur la pertinence des différents agents
 """
 
-import os
 import sys
-import json
 import logging
 import argparse
 from pathlib import Path
-from datetime import datetime
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
 
 # Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
 project_root_path = Path(__file__).resolve().parent.parent.parent

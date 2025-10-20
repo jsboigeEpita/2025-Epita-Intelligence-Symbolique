@@ -22,12 +22,11 @@ import os
 import glob
 import threading
 import asyncio
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Optional
 
 # Importer les handlers de logique spécifiques
 # Pour éviter les dépendances circulaires, on les importe et on les type-hint comme ça
 from .pl_handler import PLHandler as PropositionalLogicHandler
-from .fol_handler import FOLHandler as FirstOrderLogicHandler
 from .modal_handler import ModalHandler
 from .af_handler import AFHandler as ArgumentationFrameworkHandler
 from .tweety_initializer import TweetyInitializer

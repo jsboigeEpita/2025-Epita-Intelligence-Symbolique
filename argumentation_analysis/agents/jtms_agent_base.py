@@ -5,21 +5,18 @@ Selon les spécifications du RAPPORT_ARCHITECTURE_INTEGRATION_JTMS.md - AXE A
 
 import logging
 import json
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Any
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-import semantic_kernel as sk
 from semantic_kernel import Kernel
-from semantic_kernel.functions import kernel_function
-from semantic_kernel.functions import KernelArguments
 
 # Import du système JTMS existant
 import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../1.4.1-JTMS"))
-from jtms import JTMS, Belief, Justification
+from jtms import JTMS, Belief
 
 
 class ExtendedBelief:
@@ -545,12 +542,10 @@ class JTMSAgentBase(ABC):
     @abstractmethod
     async def process_jtms_inference(self, context: str) -> Dict:
         """Méthode abstraite pour traitement spécialisé selon l'agent"""
-        pass
 
     @abstractmethod
     async def validate_reasoning_chain(self, chain: List[Dict]) -> Dict:
         """Méthode abstraite pour validation de chaînes de raisonnement"""
-        pass
 
     # === MÉTHODES UTILITAIRES ===
 

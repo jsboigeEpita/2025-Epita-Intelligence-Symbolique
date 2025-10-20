@@ -1,14 +1,11 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Runner de test alternatif à pytest
 """
 
 import sys
-import os
 import unittest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 # Configuration des mocks globaux
 sys.modules["pytest"] = Mock()

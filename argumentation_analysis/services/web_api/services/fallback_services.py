@@ -6,7 +6,7 @@ Services de fallback simples pour permettre le démarrage de l'API
 même quand certaines dépendances sont manquantes
 """
 
-from typing import Dict, Any, List
+from typing import Any
 from datetime import datetime
 
 

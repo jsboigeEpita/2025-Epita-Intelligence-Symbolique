@@ -5,7 +5,6 @@
 Script principal pour créer, vérifier et archiver le fichier encrypté complet.
 """
 
-import os
 import sys
 import time
 import shutil

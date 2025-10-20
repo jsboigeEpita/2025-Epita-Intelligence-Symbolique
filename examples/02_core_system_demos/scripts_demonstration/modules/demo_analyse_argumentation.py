@@ -6,10 +6,9 @@ d'analyse en fonction des paramètres fournis.
 """
 import asyncio
 import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import OpenAITextCompletion
 from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
-from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
+from modules.demo_utils import DemoLogger, confirmer_action
 from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents import AgentType
 

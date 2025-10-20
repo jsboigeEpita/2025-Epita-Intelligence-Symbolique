@@ -8,7 +8,6 @@ Auteur: Intelligence Symbolique EPITA
 Date: 27/06/2025
 """
 
-import os
 import abc
 from typing import Dict, List, Optional, Any, Type
 from dataclasses import dataclass
@@ -43,7 +42,6 @@ class ValidationRule(abc.ABC):
     @abc.abstractmethod
     def validate(self) -> ValidationResult:
         """Exécute la logique de validation et retourne un résultat."""
-        pass
 
 
 class ValidationEngine:

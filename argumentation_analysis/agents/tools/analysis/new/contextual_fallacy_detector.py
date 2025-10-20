@@ -16,15 +16,10 @@ La détection repose sur :
   suffisamment "grave" pour être signalé dans le contexte donné.
 """
 
-import os
-import sys
 import json
 import logging
-import numpy as np
-from typing import Dict, List, Any, Optional, Tuple, Union
-from pathlib import Path
+from typing import Dict, List, Any, Optional
 from datetime import datetime
-from collections import defaultdict
 
 # Configuration du logging
 logging.basicConfig(

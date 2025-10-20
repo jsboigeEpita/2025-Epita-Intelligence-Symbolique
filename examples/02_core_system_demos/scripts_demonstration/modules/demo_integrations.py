@@ -6,8 +6,7 @@ Python-Java & APIs - Intégration JPype-Tweety - TRAITEMENT RÉEL DES DONNÉES C
 """
 
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Import des utilitaires communs
 from demo_utils import (
@@ -19,7 +18,6 @@ from demo_utils import (
     executer_tests,
     afficher_stats_tests,
     afficher_menu_module,
-    pause_interactive,
     confirmer_action,
 )
 
@@ -27,7 +25,6 @@ from demo_utils import (
 from custom_data_processor import (
     CustomDataProcessor,
     AdaptiveAnalyzer,
-    create_fallback_handler,
 )
 
 

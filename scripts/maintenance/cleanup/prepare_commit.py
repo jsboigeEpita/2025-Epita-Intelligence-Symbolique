@@ -6,8 +6,6 @@ Ce script vérifie l'état actuel du dépôt Git, ajoute les nouveaux fichiers e
 et prépare un message de commit descriptif.
 """
 
-import argumentation_analysis.core.environment
-import os
 import subprocess
 import sys
 

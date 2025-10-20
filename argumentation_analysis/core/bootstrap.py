@@ -3,7 +3,6 @@ import os
 import sys
 from pathlib import Path
 import logging
-from typing import Dict, List, Any
 from argumentation_analysis.adapters.contextual_fallacy_detector_adapter import (
     ContextualFallacyDetectorAdapter,
 )
@@ -41,7 +40,6 @@ except (
     logger.warning(
         "__file__ not defined, sys.path might not be configured correctly by bootstrap.py itself."
     )
-    pass
 
 
 # Imports des services et modules nécessaires (seront dans des try-except)
@@ -64,39 +62,29 @@ ENCRYPTION_KEY_imported = None
 ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, None
 
 try:
-    from argumentation_analysis.core.jvm_setup import (
-        initialize_jvm as initialize_jvm_func,
-    )
+    pass
 except ImportError as e:
     logger.error(
         f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}"
     )
 
 try:
-    from argumentation_analysis.services.crypto_service import (
-        CryptoService as CryptoService_class,
-    )
+    pass
 except ImportError as e:
     logger.error(f"Failed to import CryptoService: {e}")
 
 try:
-    from argumentation_analysis.services.definition_service import (
-        DefinitionService as DefinitionService_class,
-    )
+    pass
 except ImportError as e:
     logger.error(f"Failed to import DefinitionService: {e}")
 
 try:
-    from argumentation_analysis.core.llm_service import (
-        create_llm_service as create_llm_service_func,
-    )
+    pass
 except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
 try:
-    from argumentation_analysis.agents.core.informal.informal_agent import (
-        InformalAnalysisAgent as InformalAgent_class,
-    )
+    pass
 except ImportError as e:
     logger.error(f"Failed to import {e}")
 
@@ -110,11 +98,7 @@ except ImportError as e:
 ENCRYPTION_KEY_imported = None
 
 try:
-    from argumentation_analysis.models.extract_definition import (
-        ExtractDefinitions as ExtractDefinitions_class,
-        SourceDefinition as SourceDefinition_class,
-        Extract as Extract_class,
-    )
+    pass
 except ImportError as e:
     logger.error(f"Failed to import extract models (ExtractDefinitions, etc.): {e}")
 
@@ -304,10 +288,10 @@ def initialize_project_environment(
     )
 
     if env_path_str:
-        actual_env_path = Path(env_path_str)
+        Path(env_path_str)
     else:
         # Ajustement du chemin .env pour être relatif à la racine du projet
-        actual_env_path = current_project_root / ".env"
+        current_project_root / ".env"
         # Ou si vous voulez le garder dans argumentation_analysis:
         # actual_env_path = current_project_root / "argumentation_analysis" / ".env"
 

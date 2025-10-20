@@ -3,19 +3,16 @@ import logging
 from typing import Dict, Any, Optional
 from pydantic import Field
 
-import warnings
 from semantic_kernel import Kernel  # type: ignore
 from semantic_kernel.functions import KernelArguments  # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.agents import Agent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from .pm_definitions import (
     PM_INSTRUCTIONS,
 )  # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
 from .prompts import prompt_define_tasks_v15, prompt_write_conclusion_v7
-from argumentation_analysis.config.settings import AppSettings
 
 
 # Supposons que StateManagerPlugin est importable si nécessaire

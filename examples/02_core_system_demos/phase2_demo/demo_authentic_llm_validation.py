@@ -18,7 +18,6 @@ import asyncio
 import logging
 import time
 import sys
-from typing import Dict, Any
 
 # Configuration encodage UTF-8 pour Windows
 if sys.platform == "win32":
@@ -160,9 +159,7 @@ async def main():
 
     try:
         # Création d'un prompt simple pour test
-        from semantic_kernel.contents import ChatMessageContent
-        from semantic_kernel.contents.chat_message_content import ChatMessageContent
-        from semantic_kernel import Kernel
+        pass
 
         # Utilisation du kernel pour un appel simple
         prompt = "Réponds simplement 'Authentique' si tu es GPT-4o-mini réel."

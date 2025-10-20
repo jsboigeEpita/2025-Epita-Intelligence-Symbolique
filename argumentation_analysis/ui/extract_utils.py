@@ -9,7 +9,6 @@ import re
 import json
 import logging
 import gzip
-import os
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
@@ -18,7 +17,6 @@ from typing import List, Dict, Any, Tuple, Optional, Union
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.models.extract_definition import (
-    ExtractDefinitions,
     SourceDefinition,
 )
 from argumentation_analysis.config.settings import settings

@@ -8,11 +8,10 @@ dans un texte pour alimenter le système de fact-checking.
 
 import logging
 import re
-from typing import Dict, List, Any, Optional, Set, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 import spacy
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

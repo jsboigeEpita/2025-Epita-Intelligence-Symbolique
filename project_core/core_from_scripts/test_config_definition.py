@@ -15,13 +15,12 @@ Date: 09/06/2025
 import os
 import sys
 import argparse
-import subprocess
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
 
-from .common_utils import Logger, LogLevel, save_json_report, format_timestamp
+from .common_utils import Logger, save_json_report
 from .environment_manager import EnvironmentManager
 
 

@@ -4,10 +4,9 @@ Enrichit les croyances basiques avec métadonnées d'investigation et traçabili
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 from enum import Enum
-import json
 
 
 class BeliefType(Enum):

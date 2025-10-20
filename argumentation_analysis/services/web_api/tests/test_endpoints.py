@@ -6,7 +6,6 @@ Tests unitaires pour les endpoints de l'API web.
 """
 
 import json
-import pytest
 from unittest.mock import patch
 
 

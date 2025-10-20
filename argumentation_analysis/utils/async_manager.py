@@ -11,7 +11,6 @@ asynchrones avec gestion robuste des timeouts et des erreurs.
 import asyncio
 import logging
 import functools
-import threading
 import time
 from typing import Any, Callable, Coroutine, Optional, Union, Dict, List
 from concurrent.futures import (

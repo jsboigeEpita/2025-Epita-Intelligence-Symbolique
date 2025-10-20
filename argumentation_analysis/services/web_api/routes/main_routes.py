@@ -1,7 +1,6 @@
 # argumentation_analysis/services/web_api/routes/main_routes.py
 from flask import Blueprint, request, jsonify, current_app
 import logging
-import asyncio
 import jpype
 from pydantic import ValidationError
 
@@ -11,8 +10,6 @@ from ..models.request_models import (
     AnalysisRequest,
     ValidationRequest,
     FallacyRequest,
-    FrameworkRequest,
-    FrameworkAnalysisRequest,
 )
 from ..models.response_models import ErrorResponse
 

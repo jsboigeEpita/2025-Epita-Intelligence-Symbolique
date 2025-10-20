@@ -364,7 +364,7 @@ def run_extract_verification_pipeline(
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_service = CacheService(cache_dir=cache_dir)
 
-        extract_service = ExtractService()
+        ExtractService()
 
         temp_download_dir = base_path / "argumentation_analysis" / "temp_downloads"
         temp_download_dir.mkdir(parents=True, exist_ok=True)

@@ -5,7 +5,6 @@ Validation de l'elimination des mocks
 """
 
 import sys
-from datetime import datetime
 from .custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
 
 

@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -11,7 +9,7 @@ import logging
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 from dotenv import load_dotenv
 
 # Import du pipeline unifié et des utilitaires

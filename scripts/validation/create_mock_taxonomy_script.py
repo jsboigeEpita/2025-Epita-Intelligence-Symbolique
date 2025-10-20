@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 from pathlib import Path
 import pandas as pd  # Ajout de l'import pandas pour DataFrame.to_csv et la gestion des NaN
 from project_core.utils.file_loaders import load_csv_file

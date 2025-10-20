@@ -11,31 +11,21 @@ from datetime import datetime
 class OracleError(Exception):
     """Erreur de base du système Oracle"""
 
-    pass
-
 
 class OraclePermissionError(OracleError):
     """Erreur de permissions Oracle"""
-
-    pass
 
 
 class OracleDatasetError(OracleError):
     """Erreur de dataset Oracle"""
 
-    pass
-
 
 class OracleValidationError(OracleError):
     """Erreur de validation Oracle"""
 
-    pass
-
 
 class CluedoIntegrityError(OracleError):
     """Erreur d'intégrité du jeu Cluedo"""
-
-    pass
 
 
 class OracleErrorHandler:

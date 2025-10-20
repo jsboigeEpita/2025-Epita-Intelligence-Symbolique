@@ -16,16 +16,13 @@ from datetime import datetime
 # Correction des imports pour utiliser des chemins absolus et éviter les ambiguïtés
 from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
     FactClaimExtractor,
-    FactualClaim,
 )
 from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
-    FallacyFamilyAnalyzer,
     get_family_analyzer,
     AnalysisDepth,
     ComprehensiveAnalysisResult,
 )
 from src.core.plugins.interfaces import BasePlugin
-from src.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
 from src.core.plugins.standard.external_verification.plugin import (
     ExternalVerificationPlugin,
 )

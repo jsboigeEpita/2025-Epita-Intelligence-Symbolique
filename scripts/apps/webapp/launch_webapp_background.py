@@ -18,7 +18,6 @@ sys.path.insert(0, str(project_root_path))
 # Cet import est crucial. Il assure que le script s'exécute dans l'environnement
 # Conda et avec les variables (JAVA_HOME, etc.) correctement configurés.
 # Si l'environnement n'est pas bon, il lèvera une exception claire.
-import argumentation_analysis.core.environment
 
 
 """

@@ -13,7 +13,6 @@ import argumentation_analysis.core.environment
 """
 
 import sys
-import os
 import logging
 import subprocess
 import json

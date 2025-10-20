@@ -5,7 +5,6 @@ Définit le Coordinateur de Tâches, le cœur de la couche tactique.
 from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
-import uuid
 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
@@ -13,16 +12,10 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
 from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
 from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
-from argumentation_analysis.core.communication.operational_adapter import (
-    OperationalAdapter,
-)
 from argumentation_analysis.core.communication.message import (
     Message,
-    MessageType,
     MessagePriority,
-    AgentLevel,
 )
-from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
 class TaskCoordinator:

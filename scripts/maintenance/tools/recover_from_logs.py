@@ -53,7 +53,6 @@ class CodeRecovery:
         Collects and sorts all relevant events (code operations, test summaries) from the log content.
         """
         # Regex for capturing tool usage blocks
-        code_block_regex = r"<(?>read_file|write_to_file|apply_diff)>(.*?)</(?>read_file|write_to_file|apply_diff)>"
         # A more specific regex to capture the tool name and content separately
         tool_tag_regex = r"<(?P<tool>read_file|write_to_file|apply_diff)>(?P<xml_content>.*?)</(?P=tool)>"
 

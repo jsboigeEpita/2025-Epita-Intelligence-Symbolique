@@ -7,5 +7,3 @@ class TaxonomyDisplayPlugin:
     Le kernel charge automatiquement les prompts depuis le répertoire de prompts
     correspondant : /prompts/TaxonomyDisplayPlugin/
     """
-
-    pass

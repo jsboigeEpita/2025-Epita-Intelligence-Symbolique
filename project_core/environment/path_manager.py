@@ -9,7 +9,6 @@ N'utilisez plus ce module pour de nouveaux développements.
 """
 
 import os
-import sys
 import warnings
 import logging
 from pathlib import Path
@@ -95,7 +94,7 @@ class PathManager:
             DeprecationWarning,
             stacklevel=2,
         )
-        project_path_str = str(self.project_root.resolve())
+        str(self.project_root.resolve())
         # Assure la compatibilité minimale pour la session en cours
 
     def normalize_and_validate_java_home(

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Script pour vérifier l'architecture Python vs JDK"""
 
-import argumentation_analysis.core.environment
 import platform
 import sys
 import subprocess

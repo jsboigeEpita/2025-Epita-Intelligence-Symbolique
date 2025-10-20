@@ -15,15 +15,12 @@ import logging
 import re
 import json
 import jpype
-from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
+from typing import Dict, List, Optional, Any, Tuple
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 from semantic_kernel.connectors.ai.prompt_execution_settings import (
     PromptExecutionSettings,
 )
@@ -32,7 +29,6 @@ from pydantic import Field
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, ModalBeliefSet
 from .tweety_bridge import TweetyBridge
-from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)

@@ -38,10 +38,6 @@ if (
 
 # Exposer toutes les fonctions des sous-modules pour la compatibilité ascendante
 # et pour que les autres parties du projet puissent continuer à importer depuis file_utils.
-from .file_loaders import *
-from .file_savers import *
-from .markdown_utils import *
-from .path_operations import *
 
 # Les constantes PATH_TYPE_* ont été déplacées dans path_operations.py
 

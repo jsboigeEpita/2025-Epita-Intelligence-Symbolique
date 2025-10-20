@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import asyncio
 import logging
 from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
 from semantic_kernel.contents import ChatMessageContent, AuthorRole

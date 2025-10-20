@@ -5,7 +5,6 @@
 Script pour corriger l'indentation d'un fichier Python.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import argparse

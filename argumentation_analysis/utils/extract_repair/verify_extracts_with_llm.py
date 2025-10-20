@@ -15,9 +15,7 @@ import os
 import re
 import json
 import logging
-import asyncio
-from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any
 
 # Configuration du logging
 logging.basicConfig(

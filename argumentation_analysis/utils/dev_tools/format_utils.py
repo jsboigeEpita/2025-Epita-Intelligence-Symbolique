@@ -1,7 +1,6 @@
 # project_core/dev_utils/format_utils.py
 import logging
 import os
-import sys
 import re
 
 # Configuration du logging pour ce module

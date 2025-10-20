@@ -3,7 +3,6 @@
 Utilitaires pour le traitement de texte dans le cadre de l'analyse d'argumentation.
 """
 
-import re
 import logging
 from typing import List
 

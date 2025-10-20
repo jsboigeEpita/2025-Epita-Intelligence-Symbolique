@@ -3,21 +3,12 @@ Agent Sherlock enrichi avec JTMS pour formulation d'hypothèses et déductions.
 Selon les spécifications du RAPPORT_ARCHITECTURE_INTEGRATION_JTMS.md - AXE A
 """
 
-import logging
-import json
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime
 
-import semantic_kernel as sk
 from semantic_kernel import Kernel
-from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
-from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-from argumentation_analysis.config.settings import AppSettings
-from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
-    SherlockEnqueteAgent,
-)
+from .jtms_agent_base import JTMSAgentBase
 
 
 class HypothesisTracker:

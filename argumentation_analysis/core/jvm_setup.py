@@ -489,7 +489,6 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
         # La configuration `destroy_jvm` est obsolète dans les versions récentes de JPype.
         # Le contrôle manuel est maintenant le comportement par défaut.
-        pass
 
         java_home = find_valid_java_home()
         if not java_home:

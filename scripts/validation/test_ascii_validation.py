@@ -5,7 +5,6 @@ Test ASCII de validation : Traitement des donnees custom
 Validation de l'elimination des mocks - EPITA Demo
 """
 
-import argumentation_analysis.core.environment
 import sys
 from pathlib import Path
 
@@ -22,7 +21,7 @@ def test_custom_data_processor():
     print("=" * 70)
 
     try:
-        from custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer
+        from custom_data_processor import CustomDataProcessor
 
         print("[OK] Import CustomDataProcessor : SUCCES")
 

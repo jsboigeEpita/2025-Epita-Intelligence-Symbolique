@@ -6,8 +6,7 @@ Taux de succès : 99.7%
 """
 
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Import des utilitaires communs
 from modules.demo_utils import (
@@ -241,7 +240,7 @@ def run_demo_interactive() -> bool:
 def run_demo_rapide(**kwargs) -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("tests_validation")
-    config = charger_config_categories()
+    charger_config_categories()
 
     logger.header("[TEST] DÉMONSTRATION RAPIDE - TESTS & VALIDATION")
 

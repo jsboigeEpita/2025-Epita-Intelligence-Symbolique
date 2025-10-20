@@ -4,7 +4,6 @@ Script d'organisation des fichiers éparpillés à la racine du projet
 Sherlock-Watson-Moriarty Oracle Enhanced System
 """
 
-import argumentation_analysis.core.environment
 import os
 import shutil
 from pathlib import Path
@@ -14,7 +13,7 @@ from datetime import datetime
 def organize_root_files():
     """Organise les fichiers éparpillés à la racine selon leur type"""
 
-    root_dir = Path(".")
+    Path(".")
 
     # Créer les répertoires de destination s'ils n'existent pas
     destinations = {

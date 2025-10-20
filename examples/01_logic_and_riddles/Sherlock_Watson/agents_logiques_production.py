@@ -24,7 +24,6 @@ FONCTIONNALITÉS PRODUCTION:
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
 # import scripts.core.auto_env  # Auto-activation environnement intelligent
 # =========================================
-import os
 import sys
 import json
 import logging
@@ -32,7 +31,7 @@ import hashlib
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import argparse
@@ -648,7 +647,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
     # Création agents logiques
     sherlock = orchestrator.create_agent("sherlock", "deductive_reasoning")
     watson = orchestrator.create_agent("watson", "inductive_reasoning")
-    moriarty = orchestrator.create_agent("moriarty", "adversarial_reasoning")
+    orchestrator.create_agent("moriarty", "adversarial_reasoning")
 
     print(f"\n✅ {len(orchestrator.agents)} agents logiques créés")
 

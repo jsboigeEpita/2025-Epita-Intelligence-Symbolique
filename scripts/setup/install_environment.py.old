@@ -8,8 +8,6 @@ Ce script configure automatiquement l'environnement de développement.
 
 import sys
 import subprocess
-import os
-from pathlib import Path
 
 def run_command(cmd):
     """Exécute une commande et affiche le résultat."""

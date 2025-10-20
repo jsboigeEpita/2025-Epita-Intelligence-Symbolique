@@ -29,7 +29,7 @@ except ImportError:
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
     try:
-        import argumentation_analysis.core.environment
+        pass
     except ImportError:
         # Si ça ne marche toujours pas, ignorer l'auto-env pour les tests
         pass
@@ -37,14 +37,12 @@ except ImportError:
 import logging
 import asyncio
 import uuid
-from typing import Dict, List, Any, Optional, Union, Callable, Type
+from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
 import json
-import os
 import inspect
 import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.llm_service import create_llm_service
@@ -125,8 +123,6 @@ except ImportError as e:
 
 class ServiceManagerError(Exception):
     """Exception spécifique au ServiceManager."""
-
-    pass
 
 
 class ServiceManagerState:

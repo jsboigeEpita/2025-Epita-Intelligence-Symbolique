@@ -4,7 +4,7 @@ Définit les protocoles et structures de données pour les échanges entre Sherl
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Union, Callable, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from enum import Enum
 import json

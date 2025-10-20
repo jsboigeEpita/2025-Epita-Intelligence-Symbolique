@@ -11,15 +11,14 @@ current_script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-import project_core.core_from_scripts.environment_manager
 import argparse
 import json
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 import os
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 
 
 class ComplexSyntheticDataGenerator:

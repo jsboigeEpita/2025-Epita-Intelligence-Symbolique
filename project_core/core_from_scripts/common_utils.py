@@ -17,7 +17,7 @@ import os
 import argparse
 import json
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, Optional, Any
 from enum import Enum
 import platform
 

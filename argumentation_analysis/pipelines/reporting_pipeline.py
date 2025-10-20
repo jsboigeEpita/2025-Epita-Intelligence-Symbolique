@@ -10,11 +10,8 @@ complet synthétisant les résultats de diverses analyses rhétoriques.
 
 import os
 import sys
-import io
-import json
 import logging
 import argparse
-import time
 import pandas as pd
 import numpy as np
 
@@ -37,10 +34,8 @@ plt = None
 sns = None
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple, Union
-from tqdm import tqdm
+from typing import Dict, List, Any, Optional
 import markdown  # type: ignore
-import shutil
 
 # Configuration du logging
 logger = logging.getLogger(__name__)  # Utilise le nom du module pour le logger

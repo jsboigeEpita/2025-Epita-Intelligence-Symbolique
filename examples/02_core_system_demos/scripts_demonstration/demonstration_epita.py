@@ -24,7 +24,7 @@ import time
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -43,11 +43,10 @@ import argumentation_analysis.core.environment  # Auto-activation environnement 
 # Vérifier et installer PyYAML si nécessaire
 def ensure_yaml_dependency():
     try:
-        import yaml
+        pass
     except ImportError:
         print("Installation de PyYAML...")
         subprocess.run([sys.executable, "-m", "pip", "install", "PyYAML"], check=True)
-        import yaml
 
 
 ensure_yaml_dependency()
@@ -176,7 +175,7 @@ class EpitaValidator:
                         )
                     else:
                         result = True
-                except Exception as e:
+                except Exception:
                     result = False
 
             output = captured_output.getvalue()
@@ -873,7 +872,7 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
 
 def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
     """Test avec des données custom spécifiques fournies par l'utilisateur."""
-    logger = DemoLogger("custom_data_test")
+    DemoLogger("custom_data_test")
 
     print(
         f"""

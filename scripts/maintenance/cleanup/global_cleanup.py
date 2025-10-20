@@ -17,17 +17,9 @@ Options:
 --force : Exécute le nettoyage sans demander de confirmation
 """
 
-import os
-import sys
-import shutil
-import argparse
-import re
-import json
-import glob
 from pathlib import Path
 from datetime import datetime
 import logging
-import hashlib
 
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()

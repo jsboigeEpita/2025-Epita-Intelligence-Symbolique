@@ -30,18 +30,14 @@ import time
 import asyncio
 import logging
 import argparse
-import tempfile
 import subprocess
-import concurrent.futures
 import requests
-import pytest
 import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
-import traceback
 
 # Configuration du projet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -428,7 +424,6 @@ class ValidationSuite:
             try:
                 from scripts.validation.mock_elimination import (
                     MockDetector,
-                    AuthenticityReport,
                 )
 
                 detector = MockDetector(PROJECT_ROOT)
@@ -709,7 +704,7 @@ class TestOrchestrator:
         try:
             from config.unified_config import UnifiedConfig
 
-            config = UnifiedConfig()
+            UnifiedConfig()
             # Simulation d'initialisation
             await asyncio.sleep(0.05)
 

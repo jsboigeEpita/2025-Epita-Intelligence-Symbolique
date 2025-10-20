@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 """
 Script pour mettre à jour le rapport final des tests avec les informations de couverture des tests mockés.
 """
@@ -7,7 +5,6 @@ Script pour mettre à jour le rapport final des tests avec les informations de c
 import os
 import sys
 from pathlib import Path
-import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))

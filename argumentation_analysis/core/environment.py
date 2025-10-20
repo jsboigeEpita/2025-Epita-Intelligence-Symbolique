@@ -143,9 +143,9 @@ def ensure_env(
         # if not is_env_correct:
         # Tenter d'extraire un nom d'environnement plus précis pour le message d'erreur
         try:
-            current_env_name = Path(current_env_path).name
+            Path(current_env_path).name
         except Exception:
-            current_env_name = "inconnu"
+            pass
 
         pass  # La levée d'exception est maintenant gérée par la nouvelle logique ci-dessus.
 

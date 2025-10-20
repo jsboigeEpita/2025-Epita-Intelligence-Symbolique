@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, List
+from typing import Dict, List
 import semantic_kernel as sk
 from argumentation_analysis.agents.core.extract import ExtractAgent, ExtractResult
 from argumentation_analysis.agents.core.informal import InformalAnalysisAgent

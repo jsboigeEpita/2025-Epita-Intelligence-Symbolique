@@ -4,8 +4,6 @@ Script pour traiter les fichiers orphelins identifiés dans VSCode
 mais non trackés par Git dans le projet Sherlock Watson.
 """
 
-import argumentation_analysis.core.environment
-import os
 import json
 import shutil
 from pathlib import Path

@@ -5,9 +5,6 @@
 Script de test pour évaluer les procédures de récupération après erreur.
 """
 
-import sys
-import os
-import time
 
 # import json # json n'est plus utilisé directement ici
 # from unittest.mock import patch, MagicMock # unittest.mock n'est plus utilisé directement ici

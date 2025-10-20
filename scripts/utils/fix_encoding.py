@@ -5,7 +5,6 @@
 Script pour corriger l'encodage d'un fichier.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import argparse

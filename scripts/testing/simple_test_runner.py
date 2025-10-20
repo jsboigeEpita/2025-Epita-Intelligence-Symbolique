@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -8,7 +6,6 @@ Script simple pour exécuter les tests embed_all_sources.
 """
 
 import sys
-import os
 import subprocess
 from pathlib import Path
 
@@ -26,9 +23,7 @@ def run_single_test():
     try:
         # Importer les modules nécessaires - VRAIES IMPLÉMENTATIONS UNIQUEMENT !
         from argumentation_analysis.ui import file_operations
-        from cryptography.fernet import Fernet
         import tempfile
-        import json
 
         # PLUS AUCUN MOCK ! Test avec vraies implémentations
         print("Configuration des vraies implémentations: [OK] Réussi")

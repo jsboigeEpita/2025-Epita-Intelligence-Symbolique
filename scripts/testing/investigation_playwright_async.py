@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Script Python Asynchrone - Investigation Playwright Textes Variés
@@ -303,7 +301,7 @@ class NonBlockingPlaywrightInvestigator:
 
         try:
             # 1. Vérifier et démarrer les services
-            started_processes = await self.setup_services()
+            await self.setup_services()
 
             # 2. Vérifier l'état des services
             self.results["services"] = await self.check_all_services()

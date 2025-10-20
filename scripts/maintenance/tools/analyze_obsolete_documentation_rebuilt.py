@@ -3,10 +3,7 @@ Script d'analyse de documentation obsolète - Version reconstruite
 Oracle Enhanced v2.1.0 - Reconstruction après crash
 """
 
-import argumentation_analysis.core.environment
-import os
 import re
-import json
 import argparse
 from pathlib import Path
 from typing import List, Dict, Tuple

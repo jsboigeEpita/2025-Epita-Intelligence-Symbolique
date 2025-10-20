@@ -8,7 +8,6 @@
 # Original file location (legacy): argumentation_analysis/agents/core/pl/pl_agent.py
 # New file location (current): argumentation_analysis/agents/logic/propositional_logic_agent.py
 
-import warnings
 import logging
 
 # Configure a specific logger for deprecation warnings to allow fine-grained filtering if needed.

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Script pour vérifier les dépendances de jvm.dll"""
 
-import argumentation_analysis.core.environment
 import subprocess
-import sys
 from pathlib import Path
 
 

@@ -9,7 +9,6 @@ depuis la racine du projet. Il offre plusieurs options pour configurer l'orchest
 et permet d'exécuter l'analyse de manière indépendante.
 """
 
-import os
 import sys
 import asyncio
 import argparse
@@ -216,7 +215,6 @@ async def main():
     elif args.ui:
         # Importer les dépendances nécessaires
         from argumentation_analysis.ui.app import configure_analysis_task
-        from argumentation_analysis.paths import LIBS_DIR
 
         try:
             logging.info("Lancement de l'interface utilisateur...")

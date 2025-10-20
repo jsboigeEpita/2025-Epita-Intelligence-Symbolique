@@ -5,7 +5,6 @@ Script pour lancer l'analyse rhétorique sur un extrait aléatoire du corpus
 en utilisant l'analyseur modulaire existant.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import asyncio
@@ -35,9 +34,6 @@ async def analyze_random_extract():
     """
     try:
         # Import des modules d'analyse
-        from scripts.consolidated.universal_rhetorical_analyzer import (
-            UniversalRhetoricalAnalyzer,
-        )
         from scripts.data_processing.decrypt_extracts import decrypt_and_load_extracts
 
         logger.info("=== Analyse d'un Extrait Aléatoire ===")

@@ -24,16 +24,12 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
 from argumentation_analysis.orchestration.hierarchical.operational.state import (
     OperationalState,
 )
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
+from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     TacticalAdapter,
     OperationalAdapter,
-    ChannelType,
     MessagePriority,
-    Message,
-    MessageType,
-    AgentLevel,
 )
 
 

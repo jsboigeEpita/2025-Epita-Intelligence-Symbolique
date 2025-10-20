@@ -5,10 +5,9 @@ Ce module fournit des fonctionnalités pour collecter, traiter et appliquer les 
 sur les résultats des outils d'analyse rhétorique, permettant ainsi leur amélioration continue.
 """
 
-import os
 import json
 import logging
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
 

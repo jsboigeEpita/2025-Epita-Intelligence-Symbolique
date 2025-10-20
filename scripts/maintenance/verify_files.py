@@ -1,7 +1,3 @@
-import os
-import sys
-
-
 def verify_files():
     """Vérifie l'existence des fichiers réorganisés."""
     files_to_check = [
@@ -18,7 +14,6 @@ def verify_files():
     ]
 
     print("Vérification des fichiers réorganisés:")
-    all_exist = True
 
     # Utiliser la fonction centralisée
     # Convertir les chaînes en objets Path pour la fonction utilitaire

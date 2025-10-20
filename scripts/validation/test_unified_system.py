@@ -1,5 +1,3 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -70,7 +68,7 @@ def test_conversation_orchestrator():
         orchestrator = ConversationOrchestrator(mode="micro")
         text = "L'argumentation logique est essentielle pour un débat constructif."
 
-        report = orchestrator.run_orchestration(text)
+        orchestrator.run_orchestration(text)
 
         print(f"[OK] Orchestrateur conversationnel - Rapport généré")
         print(f"     Mode: {orchestrator.mode}")

@@ -8,7 +8,6 @@ y compris les composants comme CluedoOracle et le dataset_manager.
 
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_coverage_check():

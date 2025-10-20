@@ -4,7 +4,6 @@ Script pour installer les dépendances du projet abs_arg_dung
 dans l'environnement conda projet-is.
 """
 
-import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess
@@ -21,7 +20,6 @@ try:
         sys.path.insert(0, str(project_root))
 
     print("[INSTALL SCRIPT] Import de 'scripts.core.auto_env' pour activation...")
-    import scripts.core.auto_env
 
     print("[INSTALL SCRIPT] Environnement prêt.")
 

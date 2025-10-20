@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from argumentation_analysis.orchestration.operational.direct_executor import (

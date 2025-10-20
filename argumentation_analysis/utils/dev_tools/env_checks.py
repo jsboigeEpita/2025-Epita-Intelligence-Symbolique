@@ -301,7 +301,6 @@ def check_jpype_config() -> bool:
                     f"    Avertissement : Impossible de vérifier l'accès à une classe Java de base : {e}"
                 )
                 # Ne pas marquer jpype_ok à False pour cela, le démarrage de la JVM est le principal.
-                pass
 
     except ImportError:
         logger.error(
@@ -405,7 +404,6 @@ def check_python_dependencies(
 
         for line in valid_lines:
             current_processing_line = line.strip()
-            line_successfully_parsed_or_recovered = False
             try:
                 if (
                     current_processing_line.startswith("-e")
@@ -425,7 +423,6 @@ def check_python_dependencies(
                 line_parts = current_processing_line.split("#")[0].split(";")[0].strip()
                 parsed_req = _parse_requirement(line_parts)
                 parsed_requirements.append(parsed_req)
-                line_successfully_parsed_or_recovered = True
             except ValueError as ve_initial_parse:
                 # Tentative de récupération en extrayant juste le nom du paquet.
                 potential_name = (
@@ -446,7 +443,6 @@ def check_python_dependencies(
                     try:
                         # On réessaye de parser juste avec le nom, ce qui devrait toujours fonctionner.
                         parsed_requirements.append(_parse_requirement(potential_name))
-                        line_successfully_parsed_or_recovered = True
                         # Marquer comme un échec global car la contrainte de version a été perdue.
                         overall_all_ok = False
                     except Exception as ve_heuristic_parse:
@@ -467,7 +463,7 @@ def check_python_dependencies(
             req_name = req.name
             try:
                 installed_version_str = importlib.metadata.version(req_name)
-                installed_version = _parse_version(installed_version_str)
+                _parse_version(installed_version_str)
 
                 if not req.specifier:
                     logger.info(

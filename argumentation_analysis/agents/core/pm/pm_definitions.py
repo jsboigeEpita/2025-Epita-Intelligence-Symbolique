@@ -16,7 +16,6 @@ class ProjectManagerPlugin:
     """Plugin pour fonctions natives spécifiques au Project Manager (si nécessaire)."""
 
     # Ajoutez ici des @kernel_function natives si besoin plus tard
-    pass
 
 
 logger.info("Plugin PM (vide) défini.")

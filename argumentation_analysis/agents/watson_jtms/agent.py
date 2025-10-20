@@ -1,9 +1,8 @@
-from argumentation_analysis.agents.jtms_agent_base import JTMSSession, JTMSAgentBase
+from argumentation_analysis.agents.jtms_agent_base import JTMSAgentBase
 from .consistency import ConsistencyChecker
 from .validation import FormalValidator
 from .critique import CritiqueEngine
 from .synthesis import SynthesisEngine
-from datetime import datetime
 
 
 class WatsonJTMSAgent(JTMSAgentBase):

@@ -29,14 +29,7 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Import des définitions et des prompts
-from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
-from .prompts import (
-    prompt_identify_args_v8,
-    prompt_analyze_fallacies_v1,
-    prompt_justify_fallacy_attribution_v1,
-)
-from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detector
-from argumentation_analysis.config.settings import AppSettings
+from .informal_definitions import INFORMAL_AGENT_INSTRUCTIONS
 
 from argumentation_analysis.agents.core.informal.informal_definitions import (
     setup_informal_kernel,

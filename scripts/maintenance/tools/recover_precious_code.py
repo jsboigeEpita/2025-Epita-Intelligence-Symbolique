@@ -16,10 +16,9 @@ Usage:
 
 import argparse
 import json
-import shutil
 import sys
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import logging
 from datetime import datetime
 

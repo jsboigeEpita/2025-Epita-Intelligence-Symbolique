@@ -16,11 +16,9 @@ Il peut produire :
 - Un rapport HTML complet et autonome intégrant toutes ces visualisations.
 """
 
-import os
 import sys
-import json
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, Any
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules

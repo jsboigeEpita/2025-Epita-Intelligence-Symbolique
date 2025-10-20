@@ -1,10 +1,7 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import requests
-import json
 
 
 def test_fallacy_api(text, test_name):

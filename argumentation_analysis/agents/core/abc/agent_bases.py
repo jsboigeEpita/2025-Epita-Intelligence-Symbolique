@@ -14,7 +14,7 @@ formelle ou d'autres mécanismes.
   la manipulation de croyances et l'exécution de requêtes.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
 import logging
 
 from semantic_kernel import Kernel
@@ -25,7 +25,6 @@ from semantic_kernel import Kernel
 # Cet héritage a été supprimé (voir commit e968f26d).
 # Si des problèmes d'intégration avec des fonctionnalités SK (ex: AgentGroupChat)
 # surviennent, réintroduire l'héritage de ChatCompletionAgent pourrait être une solution.
-from semantic_kernel.contents import ChatHistory
 
 # from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
 # from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread # Commenté, module/classe potentiellement déplacé/supprimé
@@ -126,7 +125,6 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
         Returns:
             Dict[str, Any]: Un dictionnaire décrivant les capacités de l'agent.
         """
-        pass
 
     def get_agent_info(self) -> Dict[str, Any]:
         """
@@ -178,7 +176,6 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
         Returns:
             La réponse de l'agent, dont le format peut varier.
         """
-        pass
 
     @abstractmethod
     async def invoke_single(self, *args, **kwargs):
@@ -193,7 +190,6 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
         Returns:
             La réponse unique résultant de l'invocation.
         """
-        pass
 
     async def invoke(self, *args, **kwargs):
         """
@@ -335,7 +331,6 @@ class BaseLogicAgent(BaseAgent, ABC):
             Tuple[Optional['BeliefSet'], str]: Un tuple contenant l'objet
             `BeliefSet` créé (ou None en cas d'échec) et un message de statut.
         """
-        pass
 
     @abstractmethod
     def generate_queries(
@@ -356,7 +351,6 @@ class BaseLogicAgent(BaseAgent, ABC):
         Returns:
             List[str]: Une liste de requêtes logiques sous forme de chaînes.
         """
-        pass
 
     @abstractmethod
     def execute_query(
@@ -376,7 +370,6 @@ class BaseLogicAgent(BaseAgent, ABC):
             Tuple[Optional[bool], str]: Un tuple avec le résultat (True, False,
             ou None si indéterminé) et un message de statut du solveur.
         """
-        pass
 
     @abstractmethod
     def interpret_results(
@@ -401,7 +394,6 @@ class BaseLogicAgent(BaseAgent, ABC):
         Returns:
             str: Une synthèse en langage naturel des résultats logiques.
         """
-        pass
 
     # @abstractmethod # Remplacé par l'utilisation directe du bridge
     # def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> 'BeliefSet':
@@ -420,7 +412,6 @@ class BaseLogicAgent(BaseAgent, ABC):
         Returns:
             bool: True si la syntaxe de la formule est correcte, False sinon.
         """
-        pass
 
     @abstractmethod
     def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
@@ -436,7 +427,6 @@ class BaseLogicAgent(BaseAgent, ABC):
             Tuple[bool, str]: Un tuple contenant un booléen (True si cohérent)
             et un message de statut du solveur.
         """
-        pass
 
     async def process_task(
         self, task_id: str, task_description: str, state_manager: Any
@@ -622,4 +612,3 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
         """
-        pass

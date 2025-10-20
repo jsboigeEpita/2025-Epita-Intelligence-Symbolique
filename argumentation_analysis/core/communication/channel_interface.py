@@ -7,11 +7,9 @@ doivent implémenter, ainsi que les types de canaux supportés.
 
 import enum
 import abc
-from typing import Dict, Any, Optional, List, Callable, Union
+from typing import Dict, Any, Optional, List, Callable
 import logging  # Ajout pour LocalChannel
-from .message import Message, MessageType, MessagePriority
-
-from argumentation_analysis.paths import DATA_DIR
+from .message import Message
 
 
 logger_channel = logging.getLogger(__name__)  # Logger pour ce module
@@ -65,14 +63,12 @@ class Channel(abc.ABC):
     @abc.abstractmethod
     def send_message(self, message: Message) -> bool:
         """Envoie un message sur le canal."""
-        pass
 
     @abc.abstractmethod
     def receive_message(
         self, recipient_id: str, timeout: Optional[float] = None
     ) -> Optional[Message]:
         """Reçoit un message destiné à un destinataire spécifique."""
-        pass
 
     @abc.abstractmethod
     def subscribe(
@@ -82,24 +78,20 @@ class Channel(abc.ABC):
         filter_criteria: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Abonne un composant pour recevoir des messages."""
-        pass
 
     @abc.abstractmethod
     def unsubscribe(self, subscription_id: str) -> bool:
         """Désabonne un composant."""
-        pass
 
     @abc.abstractmethod
     def get_pending_messages(
         self, recipient_id: str, max_count: Optional[int] = None
     ) -> List[Message]:
         """Récupère les messages en attente pour un destinataire."""
-        pass
 
     @abc.abstractmethod
     def get_channel_info(self) -> Dict[str, Any]:
         """Retourne des informations sur l'état et la configuration du canal."""
-        pass
 
     def matches_filter(self, message: Message, filter_criteria: Dict[str, Any]) -> bool:
         if not filter_criteria:
@@ -274,8 +266,6 @@ class LocalChannel(Channel):
 
 class ChannelException(Exception):
     """Exception de base pour les erreurs liées aux canaux."""
-
-    pass
 
 
 class ChannelFullException(ChannelException):

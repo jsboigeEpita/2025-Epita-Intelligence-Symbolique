@@ -7,7 +7,6 @@ entre les commandes génériques de l'`OperationalManager` et l'API spécifique 
 """
 
 import logging
-import asyncio
 import time
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
@@ -23,7 +22,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.state import 
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
     PropositionalLogicAgent,
 )
-from argumentation_analysis.core.jvm_setup import initialize_jvm
 
 
 class PLAgentAdapter(OperationalAgent):

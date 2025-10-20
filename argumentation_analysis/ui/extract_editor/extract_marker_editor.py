@@ -18,9 +18,7 @@ Fonctionnalités:
 """
 
 # Imports nécessaires
-import json
 import logging
-import os
 import traceback
 import asyncio
 from pathlib import Path
@@ -37,7 +35,6 @@ try:
         extract_text_with_markers,
         find_similar_text,
         highlight_text,
-        search_in_text,
         highlight_search_results,
         load_extract_definitions_safely,
         save_extract_definitions_safely,
@@ -64,7 +61,6 @@ except ImportError as e:
             extract_text_with_markers,
             find_similar_text,
             highlight_text,
-            search_in_text,
             highlight_search_results,
             load_extract_definitions_safely,
             save_extract_definitions_safely,

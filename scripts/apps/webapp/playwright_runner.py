@@ -23,7 +23,6 @@ import json
 # Ajout pour accéder à l'EnvironmentManager et aux utilitaires du projet
 try:
     # Ce chemin est relatif à la structure attendue du projet
-    from project_core.core_from_scripts.environment_manager import EnvironmentManager
     from project_core.core_from_scripts.common_utils import get_project_root
     from project_core.utils.shell import run_in_activated_env_async, ShellCommandError
 except ImportError:
@@ -39,7 +38,6 @@ except ImportError:
     if project_root_path and str(project_root_path) not in sys.path:
         sys.path.insert(0, str(project_root_path))
 
-    from project_core.core_from_scripts.environment_manager import EnvironmentManager
     from project_core.core_from_scripts.common_utils import get_project_root
     from project_core.utils.shell import run_in_activated_env_async, ShellCommandError
 

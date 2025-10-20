@@ -4,11 +4,10 @@ Script de récupération massive de documentation Oracle Enhanced v2.1.0
 Basé sur l'analyse exhaustive qui a détecté 50,135 liens brisés
 """
 
-import argumentation_analysis.core.environment
 import re
 import json
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import logging
