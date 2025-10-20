@@ -100,8 +100,8 @@ class TestPhase2AuthenticLLMValidation:
         """Test 2: Validation création Kernel avec GPT-4o-mini authentique."""
         logger.info("🔍 Test 2: Validation création Kernel GPT-4o-mini authentique")
 
-        # Création du kernel authentique
-        kernel = self.config.get_kernel_with_gpt4o_mini()
+        # Création du kernel authentique avec force_authentic=True
+        kernel = self.config.get_kernel_with_gpt4o_mini(force_authentic=True)
 
         # Validation kernel
         assert kernel is not None
@@ -133,9 +133,9 @@ class TestPhase2AuthenticLLMValidation:
         """Test 3: Validation service LLM direct sans mocks."""
         logger.info("🔍 Test 3: Validation service LLM authentique direct")
 
-        # Création service LLM authentique
+        # Création service LLM authentique avec force_authentic=True
         service = create_llm_service(
-            service_id="test_authentic", model_id="gpt-5-mini", force_mock=False
+            service_id="test_authentic", model_id="gpt-5-mini", force_authentic=True
         )
 
         # Validation type authentique
