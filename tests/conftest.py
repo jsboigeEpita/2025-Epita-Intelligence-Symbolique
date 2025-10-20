@@ -456,12 +456,18 @@ else:
 def check_mock_llm_is_forced(request, monkeypatch):
     """
     Ce "coupe-circuit" est une sécurité pour tous les tests.
+    Désactive les mocks pour les tests LLM réels (real_llm, llm_light, llm_integration, llm_critical).
     """
     from argumentation_analysis.config.settings import settings
 
-    if "real_llm" in request.node.keywords:
+    # Détection des markers LLM réels (anciens + nouveaux harmonisés)
+    llm_markers = {"real_llm", "llm_light", "llm_integration", "llm_critical"}
+    has_llm_marker = any(marker in request.node.keywords for marker in llm_markers)
+
+    if has_llm_marker:
+        marker_found = next(m for m in llm_markers if m in request.node.keywords)
         logger.warning(
-            f"Le test {request.node.name} utilise le marqueur 'real_llm'. Le mock LLM est désactivé."
+            f"Le test {request.node.name} utilise le marqueur '{marker_found}'. Le mock LLM est désactivé."
         )
         monkeypatch.setattr(settings, "MOCK_LLM", False)
         monkeypatch.setattr(settings, "use_mock_llm", False)
