@@ -72,6 +72,7 @@ class TestPhase2AuthenticLLMValidation:
             f"✅ Configuration authentique : mock_level={self.config.mock_level.value}"
         )
 
+    @pytest.mark.llm_light
     def test_unified_config_authentic_strictness(self):
         """Test 1: Validation configuration UnifiedConfig strictement authentique."""
         logger.info("🔍 Test 1: Validation UnifiedConfig authenticité stricte")
@@ -94,6 +95,7 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info("✅ Configuration UnifiedConfig strictement authentique validée")
 
+    @pytest.mark.llm_light
     def test_get_kernel_with_gpt4o_mini_creation(self):
         """Test 2: Validation création Kernel avec GPT-4o-mini authentique."""
         logger.info("🔍 Test 2: Validation création Kernel GPT-4o-mini authentique")
@@ -126,6 +128,7 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info(f"✅ Kernel créé avec service authentique: {service_type_name}")
 
+    @pytest.mark.llm_light
     def test_llm_service_direct_authentic_creation(self):
         """Test 3: Validation service LLM direct sans mocks."""
         logger.info("🔍 Test 3: Validation service LLM authentique direct")
@@ -214,6 +217,7 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info("✅ InformalAgent avec LLM authentique validé")
 
+    @pytest.mark.llm_light
     def test_environment_authentic_configuration(self):
         """Test 8: Validation configuration environnement authentique."""
         logger.info("🔍 Test 8: Validation configuration environnement")
@@ -266,6 +270,7 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info("✅ Absence complète de fallbacks mocks validée")
 
+    @pytest.mark.llm_light
     def test_authentic_performance_monitoring(self):
         """Test 10: Validation monitoring performance authentique."""
         logger.info("🔍 Test 10: Validation monitoring performance")
