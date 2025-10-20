@@ -6,6 +6,7 @@ exclude =
     build,
     dist,
     .roo,
+    .temp,
     node_modules,
     venv,
     .venv,
@@ -17,9 +18,13 @@ exclude =
     migration_output,
     .github,
     logs
+# E203: whitespace before ':' (conflict with black)
+# E501: line too long (handled by max-line-length)
+# W503: line break before binary operator (conflict with black)
 ignore =
-    E203,  # whitespace before ':' (conflict with black)
-    E501,  # line too long (handled by max-line-length)
-    W503,  # line break before binary operator (conflict with black)
+    E203,
+    E501,
+    W503,
+# F401: imported but unused in __init__.py files
 per-file-ignores =
-    __init__.py:F401  # imported but unused
+    __init__.py:F401
