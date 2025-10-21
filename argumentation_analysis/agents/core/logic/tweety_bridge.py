@@ -50,6 +50,7 @@ class TweetyBridge:
     # Handlers pour les différentes logiques. Initialisés avec la logique du pont.
     _pl_handler: Optional[PropositionalLogicHandler] = None
     _af_handler: Optional[ArgumentationFrameworkHandler] = None
+    _fol_handler: Optional[FirstOrderLogicHandler] = None
     _modal_handler: Optional[ModalHandler] = None
 
     # Nouvel attribut pour l'initialiseur
@@ -135,6 +136,48 @@ class TweetyBridge:
     def initializer(self) -> TweetyInitializer:
         """Retourne l'initialiseur Tweety, qui gère le chargement des classes Java."""
         return self._initializer
+    @property
+    def fol_handler(self) -> FirstOrderLogicHandler:
+        """Retourne le handler pour la logique du premier ordre, en l'initialisant si nécessaire."""
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError(
+                "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
+            )
+        if self._fol_handler is None:
+            logger.debug("Chargement paresseux (lazy-loading) du FOLHandler.")
+            self._fol_handler = FirstOrderLogicHandler(self._initializer)
+        return self._fol_handler
+
+    # ============================================================================
+    # Compatibility wrappers for backward compatibility with agents
+    # Added to fix regression from commit f2754578
+    # These methods delegate to the specialized handlers while maintaining
+    # the original API that agents depend on
+    # ============================================================================
+
+    def execute_pl_query(self, belief_set: str, query: str) -> Tuple[bool, str]:
+        """Backward compatibility wrapper for execute_pl_query."""
+        return self.pl_handler.execute_pl_query(belief_set, query)
+
+    def execute_fol_query(self, belief_set: str, query: str) -> Tuple[bool, str]:
+        """Backward compatibility wrapper for execute_fol_query."""
+        return self.fol_handler.execute_fol_query(belief_set, query)
+
+    def execute_modal_query(self, belief_set: str, query: str, logic_type: str = "K") -> Tuple[bool, str]:
+        """Backward compatibility wrapper for execute_modal_query."""
+        return self.modal_handler.execute_modal_query(belief_set, query, logic_type)
+
+    def check_consistency(self, belief_set: str, logic_type: str = "propositional") -> Tuple[bool, str]:
+        """Backward compatibility wrapper for check_consistency."""
+        if logic_type == "propositional":
+            return self.pl_handler.check_consistency(belief_set)
+        elif logic_type == "first_order":
+            return self.fol_handler.check_consistency(belief_set)
+        elif logic_type in ["K", "T", "S4", "S5"]:
+            return self.modal_handler.check_consistency(belief_set, logic_type)
+        else:
+            return False, f"Unknown logic type: {logic_type}"
+
 
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
