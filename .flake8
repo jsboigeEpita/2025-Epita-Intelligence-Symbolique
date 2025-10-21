@@ -37,7 +37,8 @@ ignore =
     E722,  # bare except (à corriger plus tard)
     E741,  # noms de variables ambigus (à corriger plus tard)
     F401,  # imports inutilisés (à nettoyer progressivement ~15k erreurs)
-    F841,  # variables inutilisées (à nettoyer progressivement ~22k erreurs)
+    F841   # variables inutilisées (à nettoyer progressivement ~22k erreurs)
+
 # F401: imported but unused in __init__.py files
 per-file-ignores =
     __init__.py:F401
