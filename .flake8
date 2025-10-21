@@ -18,6 +18,7 @@ exclude =
     migration_output,
     .github,
     logs
+
 # Liste étendue d'erreurs ignorées pour obtenir pipeline vert - D-CI-06 Phase 5d
 # E2xx, E3xx : Erreurs de formatage (gérées par black ou cosmétiques)
 # E7xx : Erreurs de logique (non critiques, à corriger progressivement)
