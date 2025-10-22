@@ -18,10 +18,9 @@ class SemanticArgumentAnalyzer:
         # Correction: Instancier un client AsyncOpenAI pour configurer l'URL de base
         client = AsyncOpenAI(base_url=api_base_url, api_key="EMPTY")
 
-        self.kernel.add_chat_service(
-            "local_vllm_service",
-            OpenAIChatCompletion(ai_model_id=model_name, async_client=client),
-        )
+        # Migration API Semantic Kernel: add_chat_service → add_service
+        service = OpenAIChatCompletion(ai_model_id=model_name, async_client=client)
+        self.kernel.add_service(service)
         self.kernel.import_skill(ToulminPlugin(), skill_name="Toulmin")
 
         self.prompt_template = self.kernel.create_semantic_function(
