@@ -1,0 +1,5329 @@
+{
+  "analysis_date": "2025-10-22T11:37:39.360476Z",
+  "summary": {
+    "total_f821_errors": 368,
+    "excluded_libs": 0,
+    "categories_count": 4,
+    "files_affected": 115,
+    "directories_affected": 1
+  },
+  "by_category": {
+    "unknown": {
+      "count": 64,
+      "percentage": 17.39,
+      "errors": [
+        {
+          "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+          "line": 45,
+          "column": 20,
+          "message": "undefined name 'create_demo_agents'",
+          "undefined_name": "create_demo_agents",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+          "line": 48,
+          "column": 16,
+          "message": "undefined name 'create_demo_agents'",
+          "undefined_name": "create_demo_agents",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+          "line": 60,
+          "column": 9,
+          "message": "undefined name 'run_demo'",
+          "undefined_name": "run_demo",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+          "line": 206,
+          "column": 17,
+          "message": "undefined name 'print_dialogue_summary'",
+          "undefined_name": "print_dialogue_summary",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\2.1.6_multiagent_governance_prototype\\agents\\base_agent.py",
+          "line": 112,
+          "column": 22,
+          "message": "undefined name 'options'",
+          "undefined_name": "options",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\2.1.6_multiagent_governance_prototype\\agents\\base_agent.py",
+          "line": 116,
+          "column": 68,
+          "message": "undefined name 'options'",
+          "undefined_name": "options",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\core\\oracle\\phase_d_extensions.py",
+          "line": 535,
+          "column": 13,
+          "message": "undefined name 'logger_main'",
+          "undefined_name": "logger_main",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\tools\\analysis\\fallacy_family_analyzer.py",
+          "line": 434,
+          "column": 32,
+          "message": "undefined name 'family_contexts'",
+          "undefined_name": "family_contexts",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\core\\environment.py",
+          "line": 146,
+          "column": 18,
+          "message": "undefined name 'current_env_path'",
+          "undefined_name": "current_env_path",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\mocks\\analysis_simulation.py",
+          "line": 148,
+          "column": 22,
+          "message": "undefined name 'datetime'",
+          "undefined_name": "datetime",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 588,
+          "column": 22,
+          "message": "undefined name 'isawaitable'",
+          "undefined_name": "isawaitable",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1121,
+          "column": 16,
+          "message": "undefined name 'history'",
+          "undefined_name": "history",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1122,
+          "column": 28,
+          "message": "undefined name 'history'",
+          "undefined_name": "history",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1127,
+          "column": 20,
+          "message": "undefined name 'reactions'",
+          "undefined_name": "reactions",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1130,
+          "column": 12,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1138,
+          "column": 35,
+          "message": "undefined name 'content_lower'",
+          "undefined_name": "content_lower",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1139,
+          "column": 21,
+          "message": "undefined name 'reactions'",
+          "undefined_name": "reactions",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1141,
+          "column": 43,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1150,
+          "column": 14,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1161,
+          "column": 35,
+          "message": "undefined name 'content_lower'",
+          "undefined_name": "content_lower",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1162,
+          "column": 21,
+          "message": "undefined name 'reactions'",
+          "undefined_name": "reactions",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1164,
+          "column": 43,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1173,
+          "column": 14,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1182,
+          "column": 35,
+          "message": "undefined name 'content_lower'",
+          "undefined_name": "content_lower",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1183,
+          "column": 21,
+          "message": "undefined name 'reactions'",
+          "undefined_name": "reactions",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1185,
+          "column": 43,
+          "message": "undefined name 'agent_name'",
+          "undefined_name": "agent_name",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 1194,
+          "column": 16,
+          "message": "undefined name 'reactions'",
+          "undefined_name": "reactions",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\hierarchical\\operational\\adapters\\rhetorical_tools_adapter.py",
+          "line": 72,
+          "column": 34,
+          "message": "undefined name 'get_fallacy_detector'",
+          "undefined_name": "get_fallacy_detector",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\ui\\app.py",
+          "line": 905,
+          "column": 24,
+          "message": "undefined name 'get_cache_filepath'",
+          "undefined_name": "get_cache_filepath",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\ui\\app.py",
+          "line": 913,
+          "column": 25,
+          "message": "undefined name 'fetch_service'",
+          "undefined_name": "fetch_service",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\ui\\app.py",
+          "line": 915,
+          "column": 25,
+          "message": "undefined name 'fetch_service'",
+          "undefined_name": "fetch_service",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\argumentation_analysis\\ui\\app.py",
+          "line": 918,
+          "column": 25,
+          "message": "undefined name 'fetch_service'",
+          "undefined_name": "fetch_service",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+          "line": 147,
+          "column": 25,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+          "line": 166,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+          "line": 175,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+          "line": 184,
+          "column": 13,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+          "line": 194,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+          "line": 28,
+          "column": 8,
+          "message": "undefined name 'save_json_to_file'",
+          "undefined_name": "save_json_to_file",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+          "line": 38,
+          "column": 31,
+          "message": "undefined name 'filter_list_in_json_data'",
+          "undefined_name": "filter_list_in_json_data",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+          "line": 46,
+          "column": 4,
+          "message": "undefined name 'save_json_to_file'",
+          "undefined_name": "save_json_to_file",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+          "line": 147,
+          "column": 25,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+          "line": 166,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+          "line": 175,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+          "line": 184,
+          "column": 13,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+          "line": 194,
+          "column": 9,
+          "message": "undefined name 'run_shell_command'",
+          "undefined_name": "run_shell_command",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+          "line": 28,
+          "column": 8,
+          "message": "undefined name 'save_json_to_file'",
+          "undefined_name": "save_json_to_file",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+          "line": 38,
+          "column": 31,
+          "message": "undefined name 'filter_list_in_json_data'",
+          "undefined_name": "filter_list_in_json_data",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+          "line": 46,
+          "column": 4,
+          "message": "undefined name 'save_json_to_file'",
+          "undefined_name": "save_json_to_file",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\update_imports.py",
+          "line": 209,
+          "column": 8,
+          "message": "undefined name 'modified_files_count'",
+          "undefined_name": "modified_files_count",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\update_imports.py",
+          "line": 213,
+          "column": 23,
+          "message": "undefined name 'modified_files_details'",
+          "undefined_name": "modified_files_details",
+          "category": "unknown",
+          "confidence": "low",
+          "reason": "Nécessite analyse manuelle"
+        }
+      ]
+    },
+    "missing_imports": {
+      "count": 134,
+      "percentage": 36.41,
+      "errors": [
+        {
+          "file": ".\\2.3.3-generation-contre-argument\\counter_agent\\ui\\web_app.py",
+          "line": 124,
+          "column": 21,
+          "message": "undefined name 'CounterArgumentAgent'",
+          "undefined_name": "CounterArgumentAgent",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'CounterArgumentAgent' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\abs_arg_dung\\agent.py",
+          "line": 389,
+          "column": 28,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\core\\logic\\pl_handler.py",
+          "line": 129,
+          "column": 21,
+          "message": "undefined name 'JString'",
+          "undefined_name": "JString",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'JString' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\core\\synthesis\\synthesis_agent.py",
+          "line": 67,
+          "column": 13,
+          "message": "undefined name 'InformalAgent'",
+          "undefined_name": "InformalAgent",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'InformalAgent' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\runners\\run_complete_test_and_analysis.py",
+          "line": 44,
+          "column": 39,
+          "message": "undefined name 'Optional'",
+          "undefined_name": "Optional",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Optional' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\runners\\run_complete_test_and_analysis.py",
+          "line": 117,
+          "column": 50,
+          "message": "undefined name 'Optional'",
+          "undefined_name": "Optional",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Optional' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\runners\\test\\orchestration\\test_orchestration_scale.py",
+          "line": 79,
+          "column": 52,
+          "message": "undefined name 'LIBS_DIR'",
+          "undefined_name": "LIBS_DIR",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'LIBS_DIR' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\test_scripts\\orchestration\\test_orchestration_scale.py",
+          "line": 79,
+          "column": 52,
+          "message": "undefined name 'LIBS_DIR'",
+          "undefined_name": "LIBS_DIR",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'LIBS_DIR' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\utils\\tracer.py",
+          "line": 53,
+          "column": 41,
+          "message": "undefined name 'ChatHistory'",
+          "undefined_name": "ChatHistory",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'ChatHistory' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\agents\\utils\\tracer.py",
+          "line": 96,
+          "column": 24,
+          "message": "undefined name 'ChatHistory'",
+          "undefined_name": "ChatHistory",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'ChatHistory' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\run_hierarchical_orchestration.py",
+          "line": 370,
+          "column": 46,
+          "message": "undefined name 'RESULTS_DIR'",
+          "undefined_name": "RESULTS_DIR",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'RESULTS_DIR' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\run_hierarchical_orchestration.py",
+          "line": 379,
+          "column": 13,
+          "message": "undefined name 'RESULTS_DIR'",
+          "undefined_name": "RESULTS_DIR",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'RESULTS_DIR' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+          "line": 459,
+          "column": 18,
+          "message": "undefined name 'create_extended_config_from_params'",
+          "undefined_name": "create_extended_config_from_params",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 393,
+          "column": 39,
+          "message": "undefined name 'SherlockEnqueteAgent'",
+          "undefined_name": "SherlockEnqueteAgent",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'SherlockEnqueteAgent' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+          "line": 394,
+          "column": 37,
+          "message": "undefined name 'WatsonLogicAssistant'",
+          "undefined_name": "WatsonLogicAssistant",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'WatsonLogicAssistant' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\post_processors.py",
+          "line": 64,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\processors.py",
+          "line": 60,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\processors.py",
+          "line": 94,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+          "line": 23,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+          "line": 36,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+          "line": 48,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\engine.py",
+          "line": 82,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 80,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 144,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 197,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 250,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 276,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+          "line": 314,
+          "column": 15,
+          "message": "undefined name 'UnifiedOrchestrationPipeline'",
+          "undefined_name": "UnifiedOrchestrationPipeline",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\utils\\extract_repair\\verify_extracts_with_llm.py",
+          "line": 290,
+          "column": 23,
+          "message": "undefined name 'ChatCompletionAgent'",
+          "undefined_name": "ChatCompletionAgent",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'ChatCompletionAgent' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\plugins\\AnalysisToolsPlugin\\logic\\complex_fallacy_analyzer.py",
+          "line": 75,
+          "column": 42,
+          "message": "undefined name 'AbstractFallacyDetector'",
+          "undefined_name": "AbstractFallacyDetector",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'AbstractFallacyDetector' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\check_imports.py",
+          "line": 66,
+          "column": 46,
+          "message": "undefined name 'test_module_import_by_name'",
+          "undefined_name": "test_module_import_by_name",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\check_imports.py",
+          "line": 83,
+          "column": 32,
+          "message": "undefined name 'test_module_import_by_name'",
+          "undefined_name": "test_module_import_by_name",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+          "line": 12,
+          "column": 8,
+          "message": "undefined name 'load_json_from_file'",
+          "undefined_name": "load_json_from_file",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\test_imports.py",
+          "line": 95,
+          "column": 36,
+          "message": "undefined name 'test_module_import_by_name'",
+          "undefined_name": "test_module_import_by_name",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\test_imports_after_reorg.py",
+          "line": 36,
+          "column": 28,
+          "message": "undefined name 'test_module_import_by_path'",
+          "undefined_name": "test_module_import_by_path",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\test_imports_after_reorg.py",
+          "line": 36,
+          "column": 55,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\check_imports.py",
+          "line": 66,
+          "column": 46,
+          "message": "undefined name 'test_module_import_by_name'",
+          "undefined_name": "test_module_import_by_name",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\check_imports.py",
+          "line": 83,
+          "column": 32,
+          "message": "undefined name 'test_module_import_by_name'",
+          "undefined_name": "test_module_import_by_name",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+          "line": 12,
+          "column": 8,
+          "message": "undefined name 'load_json_from_file'",
+          "undefined_name": "load_json_from_file",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\verify_content_integrity.py",
+          "line": 74,
+          "column": 39,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\tools\\verify_files.py",
+          "line": 20,
+          "column": 31,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\verify_content_integrity.py",
+          "line": 74,
+          "column": 39,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\maintenance\\verify_files.py",
+          "line": 20,
+          "column": 31,
+          "message": "undefined name 'Path'",
+          "undefined_name": "Path",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'Path' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+          "line": 106,
+          "column": 22,
+          "message": "undefined name 'map_package_to_module'",
+          "undefined_name": "map_package_to_module",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+          "line": 187,
+          "column": 18,
+          "message": "undefined name 'map_package_to_module'",
+          "undefined_name": "map_package_to_module",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+          "line": 290,
+          "column": 18,
+          "message": "undefined name 'map_package_to_module'",
+          "undefined_name": "map_package_to_module",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\testing\\run_embed_tests.py",
+          "line": 104,
+          "column": 21,
+          "message": "undefined name 'test_embed_script_passphrase_from_env'",
+          "undefined_name": "test_embed_script_passphrase_from_env",
+          "category": "missing_imports",
+          "confidence": "medium",
+          "reason": "Message mentionne import/module"
+        },
+        {
+          "file": ".\\scripts\\testing\\run_embed_tests.py",
+          "line": 156,
+          "column": 56,
+          "message": "undefined name 'MagicMock'",
+          "undefined_name": "MagicMock",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'MagicMock' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\testing\\run_embed_tests.py",
+          "line": 194,
+          "column": 56,
+          "message": "undefined name 'MagicMock'",
+          "undefined_name": "MagicMock",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'MagicMock' commence par majuscule (classe probable)"
+        },
+        {
+          "file": ".\\scripts\\testing\\run_embed_tests.py",
+          "line": 269,
+          "column": 56,
+          "message": "undefined name 'MagicMock'",
+          "undefined_name": "MagicMock",
+          "category": "missing_imports",
+          "confidence": "high",
+          "reason": "'MagicMock' commence par majuscule (classe probable)"
+        }
+      ]
+    },
+    "dead_code": {
+      "count": 169,
+      "percentage": 45.92,
+      "errors": [
+        {
+          "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+          "line": 23,
+          "column": 9,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+          "line": 39,
+          "column": 14,
+          "message": "undefined name 'asyncio'",
+          "undefined_name": "asyncio",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+          "line": 40,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+          "line": 38,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+          "line": 42,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+          "line": 43,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 38,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 42,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 43,
+          "column": 45,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 58,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 62,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+          "line": 62,
+          "column": 37,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+          "line": 44,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+          "line": 48,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+          "line": 48,
+          "column": 44,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 35,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 39,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 39,
+          "column": 41,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 51,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 54,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+          "line": 54,
+          "column": 37,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 47,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 63,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 70,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 76,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 77,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 78,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 79,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 94,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+          "line": 95,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+          "line": 473,
+          "column": 25,
+          "message": "undefined name 'run_unified_orchestration_pipeline'",
+          "undefined_name": "run_unified_orchestration_pipeline",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+          "line": 577,
+          "column": 25,
+          "message": "undefined name 'compare_orchestration_approaches'",
+          "undefined_name": "compare_orchestration_approaches",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\orchestration\\simple_hierarchical_example.py",
+          "line": 39,
+          "column": 11,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 25,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 29,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 30,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 31,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 32,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 35,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 36,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+          "line": 36,
+          "column": 37,
+          "message": "undefined name 'json'",
+          "undefined_name": "json",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 22,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 26,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 27,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 29,
+          "column": 9,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 30,
+          "column": 9,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+          "line": 31,
+          "column": 9,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+          "line": 24,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+          "line": 28,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        },
+        {
+          "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+          "line": 29,
+          "column": 5,
+          "message": "undefined name 'logger'",
+          "undefined_name": "logger",
+          "category": "dead_code",
+          "confidence": "low",
+          "reason": "Dans fichier test/exemple (peut être obsolète)"
+        }
+      ]
+    },
+    "scope_issue": {
+      "count": 1,
+      "percentage": 0.27,
+      "errors": [
+        {
+          "file": ".\\tests\\conftest_gpt_enhanced.py",
+          "line": 250,
+          "column": 31,
+          "message": "undefined name '_create_authentic_gpt4o_mini_instance'",
+          "undefined_name": "_create_authentic_gpt4o_mini_instance",
+          "category": "scope_issue",
+          "confidence": "medium",
+          "reason": "Variable privée/protégée '_create_authentic_gpt4o_mini_instance'"
+        }
+      ]
+    }
+  },
+  "by_directory": {
+    ".": 368
+  },
+  "priority_order": [
+    {
+      "priority": 1,
+      "category": "missing_imports",
+      "count": 134,
+      "difficulty": "facile",
+      "value": "haute",
+      "strategy": "Identifier module source et ajouter import"
+    },
+    {
+      "priority": 3,
+      "category": "dead_code",
+      "count": 169,
+      "difficulty": "moyen",
+      "value": "faible",
+      "strategy": "Commenter ou marquer TODO"
+    },
+    {
+      "priority": 4,
+      "category": "scope_issue",
+      "count": 1,
+      "difficulty": "difficile",
+      "value": "moyenne",
+      "strategy": "Révision manuelle du scope"
+    },
+    {
+      "priority": 6,
+      "category": "unknown",
+      "count": 64,
+      "difficulty": "variable",
+      "value": "variable",
+      "strategy": "Analyse manuelle cas par cas"
+    }
+  ],
+  "top_undefined_names": [
+    {
+      "name": "logger",
+      "count": 85
+    },
+    {
+      "name": "MagicMock",
+      "count": 62
+    },
+    {
+      "name": "patch",
+      "count": 41
+    },
+    {
+      "name": "UnifiedOrchestrationPipeline",
+      "count": 13
+    },
+    {
+      "name": "run_shell_command",
+      "count": 10
+    },
+    {
+      "name": "Mock",
+      "count": 10
+    },
+    {
+      "name": "json",
+      "count": 9
+    },
+    {
+      "name": "Path",
+      "count": 8
+    },
+    {
+      "name": "agent_name",
+      "count": 6
+    },
+    {
+      "name": "e",
+      "count": 6
+    }
+  ],
+  "hotspots": [
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "f821_count": 52
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "f821_count": 25
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "f821_count": 19
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "f821_count": 12
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "f821_count": 12
+    }
+  ],
+  "all_errors": [
+    {
+      "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+      "line": 45,
+      "column": 20,
+      "message": "undefined name 'create_demo_agents'",
+      "undefined_name": "create_demo_agents",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+      "line": 48,
+      "column": 16,
+      "message": "undefined name 'create_demo_agents'",
+      "undefined_name": "create_demo_agents",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+      "line": 60,
+      "column": 9,
+      "message": "undefined name 'run_demo'",
+      "undefined_name": "run_demo",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\1_2_7_argumentation_dialogique\\local_db_arg\\main.py",
+      "line": 206,
+      "column": 17,
+      "message": "undefined name 'print_dialogue_summary'",
+      "undefined_name": "print_dialogue_summary",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\2.1.6_multiagent_governance_prototype\\agents\\base_agent.py",
+      "line": 112,
+      "column": 22,
+      "message": "undefined name 'options'",
+      "undefined_name": "options",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\2.1.6_multiagent_governance_prototype\\agents\\base_agent.py",
+      "line": 116,
+      "column": 68,
+      "message": "undefined name 'options'",
+      "undefined_name": "options",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\2.3.3-generation-contre-argument\\counter_agent\\ui\\web_app.py",
+      "line": 124,
+      "column": 21,
+      "message": "undefined name 'CounterArgumentAgent'",
+      "undefined_name": "CounterArgumentAgent",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'CounterArgumentAgent' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\abs_arg_dung\\agent.py",
+      "line": 389,
+      "column": 28,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\core\\logic\\pl_handler.py",
+      "line": 129,
+      "column": 21,
+      "message": "undefined name 'JString'",
+      "undefined_name": "JString",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'JString' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\core\\oracle\\phase_d_extensions.py",
+      "line": 535,
+      "column": 13,
+      "message": "undefined name 'logger_main'",
+      "undefined_name": "logger_main",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\core\\synthesis\\synthesis_agent.py",
+      "line": 67,
+      "column": 13,
+      "message": "undefined name 'InformalAgent'",
+      "undefined_name": "InformalAgent",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'InformalAgent' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\runners\\run_complete_test_and_analysis.py",
+      "line": 44,
+      "column": 39,
+      "message": "undefined name 'Optional'",
+      "undefined_name": "Optional",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Optional' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\runners\\run_complete_test_and_analysis.py",
+      "line": 117,
+      "column": 50,
+      "message": "undefined name 'Optional'",
+      "undefined_name": "Optional",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Optional' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\runners\\test\\orchestration\\test_orchestration_scale.py",
+      "line": 79,
+      "column": 52,
+      "message": "undefined name 'LIBS_DIR'",
+      "undefined_name": "LIBS_DIR",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'LIBS_DIR' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\test_scripts\\orchestration\\test_orchestration_scale.py",
+      "line": 79,
+      "column": 52,
+      "message": "undefined name 'LIBS_DIR'",
+      "undefined_name": "LIBS_DIR",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'LIBS_DIR' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\tools\\analysis\\fallacy_family_analyzer.py",
+      "line": 434,
+      "column": 32,
+      "message": "undefined name 'family_contexts'",
+      "undefined_name": "family_contexts",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\utils\\tracer.py",
+      "line": 53,
+      "column": 41,
+      "message": "undefined name 'ChatHistory'",
+      "undefined_name": "ChatHistory",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'ChatHistory' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\agents\\utils\\tracer.py",
+      "line": 96,
+      "column": 24,
+      "message": "undefined name 'ChatHistory'",
+      "undefined_name": "ChatHistory",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'ChatHistory' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\core\\environment.py",
+      "line": 146,
+      "column": 18,
+      "message": "undefined name 'current_env_path'",
+      "undefined_name": "current_env_path",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+      "line": 23,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+      "line": 39,
+      "column": 14,
+      "message": "undefined name 'asyncio'",
+      "undefined_name": "asyncio",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\agent_integration\\simple_agent_example.py",
+      "line": 40,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+      "line": 38,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+      "line": 42,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\data_transfer_example.py",
+      "line": 43,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 38,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 42,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 43,
+      "column": 45,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 58,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 62,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\horizontal_communication_example.py",
+      "line": 62,
+      "column": 37,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+      "line": 44,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+      "line": 48,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\negotiation_channel_example.py",
+      "line": 48,
+      "column": 44,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 35,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 39,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 39,
+      "column": 41,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 51,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 54,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\communication\\strategic_tactical_communication.py",
+      "line": 54,
+      "column": 37,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 47,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 63,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 70,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 76,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 77,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 78,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 79,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 94,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\complex_hierarchical_example.py",
+      "line": 95,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\run_hierarchical_orchestration.py",
+      "line": 370,
+      "column": 46,
+      "message": "undefined name 'RESULTS_DIR'",
+      "undefined_name": "RESULTS_DIR",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'RESULTS_DIR' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\run_hierarchical_orchestration.py",
+      "line": 379,
+      "column": 13,
+      "message": "undefined name 'RESULTS_DIR'",
+      "undefined_name": "RESULTS_DIR",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'RESULTS_DIR' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+      "line": 459,
+      "column": 18,
+      "message": "undefined name 'create_extended_config_from_params'",
+      "undefined_name": "create_extended_config_from_params",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+      "line": 473,
+      "column": 25,
+      "message": "undefined name 'run_unified_orchestration_pipeline'",
+      "undefined_name": "run_unified_orchestration_pipeline",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\run_orchestration_pipeline_demo.py",
+      "line": 577,
+      "column": 25,
+      "message": "undefined name 'compare_orchestration_approaches'",
+      "undefined_name": "compare_orchestration_approaches",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\orchestration\\simple_hierarchical_example.py",
+      "line": 39,
+      "column": 11,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 25,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 29,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 30,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 31,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 32,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 35,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 36,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\coherence_evaluator_example.py",
+      "line": 36,
+      "column": 37,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 22,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 26,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 27,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 29,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 30,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\contextual_fallacy_detector_example.py",
+      "line": 31,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 24,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 28,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 29,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 30,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 31,
+      "column": 40,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 33,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 36,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 37,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 38,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 39,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 39,
+      "column": 35,
+      "message": "undefined name 'json'",
+      "undefined_name": "json",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\enhanced_complex_fallacy_analyzer_example.py",
+      "line": 40,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\visualizer_example.py",
+      "line": 41,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\visualizer_example.py",
+      "line": 45,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\visualizer_example.py",
+      "line": 46,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\examples\\rhetorical_tools\\visualizer_example.py",
+      "line": 47,
+      "column": 5,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\mocks\\analysis_simulation.py",
+      "line": 148,
+      "column": 22,
+      "message": "undefined name 'datetime'",
+      "undefined_name": "datetime",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 393,
+      "column": 39,
+      "message": "undefined name 'SherlockEnqueteAgent'",
+      "undefined_name": "SherlockEnqueteAgent",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'SherlockEnqueteAgent' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 394,
+      "column": 37,
+      "message": "undefined name 'WatsonLogicAssistant'",
+      "undefined_name": "WatsonLogicAssistant",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'WatsonLogicAssistant' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 588,
+      "column": 22,
+      "message": "undefined name 'isawaitable'",
+      "undefined_name": "isawaitable",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1121,
+      "column": 16,
+      "message": "undefined name 'history'",
+      "undefined_name": "history",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1122,
+      "column": 28,
+      "message": "undefined name 'history'",
+      "undefined_name": "history",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1127,
+      "column": 20,
+      "message": "undefined name 'reactions'",
+      "undefined_name": "reactions",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1130,
+      "column": 12,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1138,
+      "column": 35,
+      "message": "undefined name 'content_lower'",
+      "undefined_name": "content_lower",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1139,
+      "column": 21,
+      "message": "undefined name 'reactions'",
+      "undefined_name": "reactions",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1141,
+      "column": 43,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1150,
+      "column": 14,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1161,
+      "column": 35,
+      "message": "undefined name 'content_lower'",
+      "undefined_name": "content_lower",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1162,
+      "column": 21,
+      "message": "undefined name 'reactions'",
+      "undefined_name": "reactions",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1164,
+      "column": 43,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1173,
+      "column": 14,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1182,
+      "column": 35,
+      "message": "undefined name 'content_lower'",
+      "undefined_name": "content_lower",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1183,
+      "column": 21,
+      "message": "undefined name 'reactions'",
+      "undefined_name": "reactions",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1185,
+      "column": 43,
+      "message": "undefined name 'agent_name'",
+      "undefined_name": "agent_name",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\cluedo_extended_orchestrator.py",
+      "line": 1194,
+      "column": 16,
+      "message": "undefined name 'reactions'",
+      "undefined_name": "reactions",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\orchestration\\hierarchical\\operational\\adapters\\rhetorical_tools_adapter.py",
+      "line": 72,
+      "column": 34,
+      "message": "undefined name 'get_fallacy_detector'",
+      "undefined_name": "get_fallacy_detector",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\post_processors.py",
+      "line": 64,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\processors.py",
+      "line": 60,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\processors.py",
+      "line": 94,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+      "line": 23,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+      "line": 36,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\analysis\\traces.py",
+      "line": 48,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\engine.py",
+      "line": 82,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 80,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 144,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 197,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 250,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 276,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\pipelines\\orchestration\\execution\\strategies.py",
+      "line": 314,
+      "column": 15,
+      "message": "undefined name 'UnifiedOrchestrationPipeline'",
+      "undefined_name": "UnifiedOrchestrationPipeline",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrationPipeline' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\argumentation_analysis\\ui\\app.py",
+      "line": 905,
+      "column": 24,
+      "message": "undefined name 'get_cache_filepath'",
+      "undefined_name": "get_cache_filepath",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\ui\\app.py",
+      "line": 913,
+      "column": 25,
+      "message": "undefined name 'fetch_service'",
+      "undefined_name": "fetch_service",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\ui\\app.py",
+      "line": 915,
+      "column": 25,
+      "message": "undefined name 'fetch_service'",
+      "undefined_name": "fetch_service",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\ui\\app.py",
+      "line": 918,
+      "column": 25,
+      "message": "undefined name 'fetch_service'",
+      "undefined_name": "fetch_service",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\argumentation_analysis\\utils\\extract_repair\\verify_extracts_with_llm.py",
+      "line": 290,
+      "column": 23,
+      "message": "undefined name 'ChatCompletionAgent'",
+      "undefined_name": "ChatCompletionAgent",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'ChatCompletionAgent' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\plugins\\AnalysisToolsPlugin\\logic\\complex_fallacy_analyzer.py",
+      "line": 75,
+      "column": 42,
+      "message": "undefined name 'AbstractFallacyDetector'",
+      "undefined_name": "AbstractFallacyDetector",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'AbstractFallacyDetector' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\check_imports.py",
+      "line": 66,
+      "column": 46,
+      "message": "undefined name 'test_module_import_by_name'",
+      "undefined_name": "test_module_import_by_name",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\check_imports.py",
+      "line": 83,
+      "column": 32,
+      "message": "undefined name 'test_module_import_by_name'",
+      "undefined_name": "test_module_import_by_name",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+      "line": 147,
+      "column": 25,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+      "line": 166,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+      "line": 175,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+      "line": 184,
+      "column": 13,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\fix_project_structure.py",
+      "line": 194,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+      "line": 12,
+      "column": 8,
+      "message": "undefined name 'load_json_from_file'",
+      "undefined_name": "load_json_from_file",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+      "line": 28,
+      "column": 8,
+      "message": "undefined name 'save_json_to_file'",
+      "undefined_name": "save_json_to_file",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+      "line": 38,
+      "column": 31,
+      "message": "undefined name 'filter_list_in_json_data'",
+      "undefined_name": "filter_list_in_json_data",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\remove_source_from_config.py",
+      "line": 46,
+      "column": 4,
+      "message": "undefined name 'save_json_to_file'",
+      "undefined_name": "save_json_to_file",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\test_imports.py",
+      "line": 95,
+      "column": 36,
+      "message": "undefined name 'test_module_import_by_name'",
+      "undefined_name": "test_module_import_by_name",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\test_imports_after_reorg.py",
+      "line": 36,
+      "column": 28,
+      "message": "undefined name 'test_module_import_by_path'",
+      "undefined_name": "test_module_import_by_path",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\test_imports_after_reorg.py",
+      "line": 36,
+      "column": 55,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\check_imports.py",
+      "line": 66,
+      "column": 46,
+      "message": "undefined name 'test_module_import_by_name'",
+      "undefined_name": "test_module_import_by_name",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\check_imports.py",
+      "line": 83,
+      "column": 32,
+      "message": "undefined name 'test_module_import_by_name'",
+      "undefined_name": "test_module_import_by_name",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+      "line": 147,
+      "column": 25,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+      "line": 166,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+      "line": 175,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+      "line": 184,
+      "column": 13,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\fix_project_structure.py",
+      "line": 194,
+      "column": 9,
+      "message": "undefined name 'run_shell_command'",
+      "undefined_name": "run_shell_command",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+      "line": 12,
+      "column": 8,
+      "message": "undefined name 'load_json_from_file'",
+      "undefined_name": "load_json_from_file",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+      "line": 28,
+      "column": 8,
+      "message": "undefined name 'save_json_to_file'",
+      "undefined_name": "save_json_to_file",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+      "line": 38,
+      "column": 31,
+      "message": "undefined name 'filter_list_in_json_data'",
+      "undefined_name": "filter_list_in_json_data",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\remove_source_from_config.py",
+      "line": 46,
+      "column": 4,
+      "message": "undefined name 'save_json_to_file'",
+      "undefined_name": "save_json_to_file",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\update_imports.py",
+      "line": 209,
+      "column": 8,
+      "message": "undefined name 'modified_files_count'",
+      "undefined_name": "modified_files_count",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\update_imports.py",
+      "line": 213,
+      "column": 23,
+      "message": "undefined name 'modified_files_details'",
+      "undefined_name": "modified_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\update_paths.py",
+      "line": 239,
+      "column": 8,
+      "message": "undefined name 'changed_files_details'",
+      "undefined_name": "changed_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\update_paths.py",
+      "line": 241,
+      "column": 23,
+      "message": "undefined name 'changed_files_details'",
+      "undefined_name": "changed_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\verify_content_integrity.py",
+      "line": 74,
+      "column": 39,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\verify_files.py",
+      "line": 20,
+      "column": 31,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\tools\\verify_files.py",
+      "line": 21,
+      "column": 37,
+      "message": "undefined name 'check_files_existence'",
+      "undefined_name": "check_files_existence",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\update_imports.py",
+      "line": 209,
+      "column": 8,
+      "message": "undefined name 'modified_files_count'",
+      "undefined_name": "modified_files_count",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\update_imports.py",
+      "line": 213,
+      "column": 23,
+      "message": "undefined name 'modified_files_details'",
+      "undefined_name": "modified_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\update_paths.py",
+      "line": 239,
+      "column": 8,
+      "message": "undefined name 'changed_files_details'",
+      "undefined_name": "changed_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\update_paths.py",
+      "line": 241,
+      "column": 23,
+      "message": "undefined name 'changed_files_details'",
+      "undefined_name": "changed_files_details",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\verify_content_integrity.py",
+      "line": 74,
+      "column": 39,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\verify_files.py",
+      "line": 20,
+      "column": 31,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\maintenance\\verify_files.py",
+      "line": 21,
+      "column": 37,
+      "message": "undefined name 'check_files_existence'",
+      "undefined_name": "check_files_existence",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\reporting\\generate_coverage_report.py",
+      "line": 225,
+      "column": 5,
+      "message": "undefined name 'generate_coverage_evolution_text_report'",
+      "undefined_name": "generate_coverage_evolution_text_report",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\reporting\\initialize_coverage_history.py",
+      "line": 89,
+      "column": 12,
+      "message": "undefined name 'create_initial_coverage_history'",
+      "undefined_name": "create_initial_coverage_history",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\reporting\\update_coverage_in_report.py",
+      "line": 123,
+      "column": 8,
+      "message": "undefined name 'update_markdown_section'",
+      "undefined_name": "update_markdown_section",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\reporting\\update_main_report_file.py",
+      "line": 122,
+      "column": 8,
+      "message": "undefined name 'update_markdown_section'",
+      "undefined_name": "update_markdown_section",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+      "line": 106,
+      "column": 22,
+      "message": "undefined name 'map_package_to_module'",
+      "undefined_name": "map_package_to_module",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+      "line": 187,
+      "column": 18,
+      "message": "undefined name 'map_package_to_module'",
+      "undefined_name": "map_package_to_module",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+      "line": 290,
+      "column": 18,
+      "message": "undefined name 'map_package_to_module'",
+      "undefined_name": "map_package_to_module",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\reporting\\visualize_test_coverage.py",
+      "line": 384,
+      "column": 21,
+      "message": "undefined name 'parse_coverage_xml'",
+      "undefined_name": "parse_coverage_xml",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 88,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_success_no_text_initially'",
+      "undefined_name": "test_embed_script_success_no_text_initially",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 92,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_text_already_present'",
+      "undefined_name": "test_embed_script_text_already_present",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 96,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_force_overwrite'",
+      "undefined_name": "test_embed_script_force_overwrite",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 100,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_output_exists_no_force'",
+      "undefined_name": "test_embed_script_output_exists_no_force",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 104,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_passphrase_from_env'",
+      "undefined_name": "test_embed_script_passphrase_from_env",
+      "category": "missing_imports",
+      "confidence": "medium",
+      "reason": "Message mentionne import/module"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 108,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_missing_passphrase'",
+      "undefined_name": "test_embed_script_missing_passphrase",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 112,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_input_file_not_found'",
+      "undefined_name": "test_embed_script_input_file_not_found",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 116,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_incorrect_passphrase'",
+      "undefined_name": "test_embed_script_incorrect_passphrase",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 120,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_source_fetch_error'",
+      "undefined_name": "test_embed_script_source_fetch_error",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 124,
+      "column": 21,
+      "message": "undefined name 'test_embed_script_empty_input_config'",
+      "undefined_name": "test_embed_script_empty_input_config",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 137,
+      "column": 30,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 139,
+      "column": 45,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 142,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 145,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 156,
+      "column": 56,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 183,
+      "column": 30,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 185,
+      "column": 45,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 188,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 191,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 194,
+      "column": 56,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 250,
+      "column": 30,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 252,
+      "column": 45,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 255,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 258,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\scripts\\testing\\run_embed_tests.py",
+      "line": 269,
+      "column": 56,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\utils\\analyze_directory_usage.py",
+      "line": 61,
+      "column": 13,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\utils\\analyze_directory_usage.py",
+      "line": 92,
+      "column": 26,
+      "message": "undefined name 'parse_colon_separated_string_to_regex_dict'",
+      "undefined_name": "parse_colon_separated_string_to_regex_dict",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\scripts\\utils\\inspect_specific_sources.py",
+      "line": 13,
+      "column": 19,
+      "message": "undefined name 'Path'",
+      "undefined_name": "Path",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Path' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\scripts\\utils\\inspect_specific_sources.py",
+      "line": 30,
+      "column": 38,
+      "message": "undefined name 'find_sources_in_config_by_ids'",
+      "undefined_name": "find_sources_in_config_by_ids",
+      "category": "unknown",
+      "confidence": "low",
+      "reason": "Nécessite analyse manuelle"
+    },
+    {
+      "file": ".\\services\\web_api_from_libs\\services\\logic_service.py",
+      "line": 149,
+      "column": 28,
+      "message": "undefined name 'LogicBeliefSet'",
+      "undefined_name": "LogicBeliefSet",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'LogicBeliefSet' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\agents\\core\\logic\\test_examples.py",
+      "line": 42,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\conftest.py",
+      "line": 516,
+      "column": 28,
+      "message": "undefined name 'FOLLogicAgent'",
+      "undefined_name": "FOLLogicAgent",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'FOLLogicAgent' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest.py",
+      "line": 558,
+      "column": 12,
+      "message": "undefined name 'ExtractResult'",
+      "undefined_name": "ExtractResult",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'ExtractResult' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest.py",
+      "line": 567,
+      "column": 12,
+      "message": "undefined name 'ExtractResult'",
+      "undefined_name": "ExtractResult",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'ExtractResult' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest.py",
+      "line": 618,
+      "column": 34,
+      "message": "undefined name 'Page'",
+      "undefined_name": "Page",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Page' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_gpt_enhanced.py",
+      "line": 247,
+      "column": 14,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_gpt_enhanced.py",
+      "line": 250,
+      "column": 31,
+      "message": "undefined name '_create_authentic_gpt4o_mini_instance'",
+      "undefined_name": "_create_authentic_gpt4o_mini_instance",
+      "category": "scope_issue",
+      "confidence": "medium",
+      "reason": "Variable privée/protégée '_create_authentic_gpt4o_mini_instance'"
+    },
+    {
+      "file": ".\\tests\\conftest_gpt_enhanced.py",
+      "line": 253,
+      "column": 20,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_gpt_enhanced.py",
+      "line": 278,
+      "column": 31,
+      "message": "undefined name 'self'",
+      "undefined_name": "self",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\conftest_gpt_enhanced.py",
+      "line": 283,
+      "column": 26,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 23,
+      "column": 18,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 26,
+      "column": 31,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 27,
+      "column": 27,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 28,
+      "column": 30,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 29,
+      "column": 36,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 30,
+      "column": 38,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 38,
+      "column": 25,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 38,
+      "column": 48,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 39,
+      "column": 26,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 40,
+      "column": 25,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 41,
+      "column": 26,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 42,
+      "column": 23,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 43,
+      "column": 27,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 46,
+      "column": 17,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 47,
+      "column": 22,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 48,
+      "column": 29,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 49,
+      "column": 29,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 50,
+      "column": 29,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 51,
+      "column": 22,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 52,
+      "column": 32,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 53,
+      "column": 30,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 56,
+      "column": 28,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 56,
+      "column": 51,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 57,
+      "column": 29,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 60,
+      "column": 26,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 64,
+      "column": 27,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 65,
+      "column": 16,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 66,
+      "column": 30,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 70,
+      "column": 31,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 86,
+      "column": 30,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 111,
+      "column": 26,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 112,
+      "column": 44,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 113,
+      "column": 47,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 116,
+      "column": 50,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 119,
+      "column": 43,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 120,
+      "column": 35,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 126,
+      "column": 24,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 127,
+      "column": 38,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 128,
+      "column": 41,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 129,
+      "column": 30,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 133,
+      "column": 24,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 134,
+      "column": 39,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 135,
+      "column": 42,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 136,
+      "column": 39,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 148,
+      "column": 73,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 149,
+      "column": 78,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 150,
+      "column": 70,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 151,
+      "column": 71,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 152,
+      "column": 73,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 187,
+      "column": 22,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 189,
+      "column": 22,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\conftest_phase3_jpype_killer.py",
+      "line": 217,
+      "column": 40,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\core\\test_enquete_states.py",
+      "line": 44,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\e2e\\runners\\playwright_js_runner.py",
+      "line": 251,
+      "column": 35,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\e2e\\runners\\playwright_js_runner.py",
+      "line": 251,
+      "column": 47,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\e2e\\runners\\playwright_js_runner.py",
+      "line": 252,
+      "column": 35,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\e2e\\runners\\playwright_js_runner.py",
+      "line": 252,
+      "column": 47,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\e2e\\runners\\playwright_js_runner.py",
+      "line": 263,
+      "column": 39,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\fixtures\\agent_fixtures.py",
+      "line": 61,
+      "column": 18,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\fixtures\\agent_fixtures.py",
+      "line": 197,
+      "column": 15,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\fixtures\\agent_fixtures.py",
+      "line": 211,
+      "column": 15,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\fixtures\\agent_fixtures.py",
+      "line": 244,
+      "column": 13,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 108,
+      "column": 14,
+      "message": "undefined name 'asp_syntax'",
+      "undefined_name": "asp_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 109,
+      "column": 9,
+      "message": "undefined name 'pl_syntax'",
+      "undefined_name": "pl_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 110,
+      "column": 9,
+      "message": "undefined name 'pl_syntax'",
+      "undefined_name": "pl_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 111,
+      "column": 16,
+      "message": "undefined name 'asp_syntax'",
+      "undefined_name": "asp_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 112,
+      "column": 16,
+      "message": "undefined name 'asp_syntax'",
+      "undefined_name": "asp_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\jpype_tweety\\workers\\worker_advanced_reasoning.py",
+      "line": 118,
+      "column": 39,
+      "message": "undefined name 'pl_syntax'",
+      "undefined_name": "pl_syntax",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\test_authentic_components.py",
+      "line": 318,
+      "column": 28,
+      "message": "undefined name 'UnifiedOrchestrator'",
+      "undefined_name": "UnifiedOrchestrator",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedOrchestrator' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\test_authentic_components_integration.py",
+      "line": 40,
+      "column": 9,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\test_authentic_components_integration.py",
+      "line": 318,
+      "column": 22,
+      "message": "undefined name 'Kernel'",
+      "undefined_name": "Kernel",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Kernel' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\test_cluedo_extended_workflow_recovered1.py",
+      "line": 70,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\test_cluedo_extended_workflow_recovered1.py",
+      "line": 78,
+      "column": 18,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_pipeline.py",
+      "line": 75,
+      "column": 20,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_pipeline.py",
+      "line": 103,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_tweety.py",
+      "line": 209,
+      "column": 53,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_tweety.py",
+      "line": 210,
+      "column": 53,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_tweety.py",
+      "line": 213,
+      "column": 51,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_tweety.py",
+      "line": 362,
+      "column": 53,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_fol_tweety.py",
+      "line": 369,
+      "column": 35,
+      "message": "undefined name 'FOLAnalysisResult'",
+      "undefined_name": "FOLAnalysisResult",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'FOLAnalysisResult' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_oracle_integration.py",
+      "line": 66,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_sherlock_watson_moriarty.py",
+      "line": 115,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\integration\\workers\\worker_sherlock_watson_moriarty.py",
+      "line": 274,
+      "column": 28,
+      "message": "undefined name 'run_cluedo_oracle_game'",
+      "undefined_name": "run_cluedo_oracle_game",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\mocks\\fact_checking_mocks.py",
+      "line": 851,
+      "column": 58,
+      "message": "undefined name 'e'",
+      "undefined_name": "e",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\orchestration\\tactical\\test_tactical_monitor_advanced.py",
+      "line": 375,
+      "column": 14,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\performance\\test_oracle_performance.py",
+      "line": 196,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\dev_utils\\test_verification_utils.py",
+      "line": 39,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 36,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 38,
+      "column": 24,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 41,
+      "column": 26,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 61,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 63,
+      "column": 22,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 65,
+      "column": 21,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 67,
+      "column": 23,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 69,
+      "column": 21,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 113,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 115,
+      "column": 25,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 117,
+      "column": 27,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\project_core\\service_setup\\test_core_services.py",
+      "line": 119,
+      "column": 28,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\robustness\\test_error_handling.py",
+      "line": 244,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\test_complex_trace_authentic.py",
+      "line": 583,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\agents\\test_fol_logic_agent.py",
+      "line": 66,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\extract\\test_extract_definitions.py",
+      "line": 38,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\extract\\test_extract_definitions.py",
+      "line": 187,
+      "column": 34,
+      "message": "undefined name 'AsyncMock'",
+      "undefined_name": "AsyncMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'AsyncMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_dataset_access_manager.py",
+      "line": 51,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_error_handling.py",
+      "line": 40,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 67,
+      "column": 20,
+      "message": "undefined name 'self'",
+      "undefined_name": "self",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 68,
+      "column": 31,
+      "message": "undefined name 'self'",
+      "undefined_name": "self",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 69,
+      "column": 31,
+      "message": "undefined name 'self'",
+      "undefined_name": "self",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 72,
+      "column": 26,
+      "message": "undefined name 'self'",
+      "undefined_name": "self",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 75,
+      "column": 26,
+      "message": "undefined name 'Mock'",
+      "undefined_name": "Mock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'Mock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\core\\oracle\\test_oracle_enhanced_behavior.py",
+      "line": 93,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\tools\\analysis\\test_complex_fallacy_analyzer.py",
+      "line": 39,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\agents\\tools\\analysis\\test_contextual_fallacy_analyzer.py",
+      "line": 38,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\core\\test_cluedo_oracle_state.py",
+      "line": 59,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 32,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 38,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 44,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 50,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 56,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 62,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 68,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 74,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_embedding_pipeline.py",
+      "line": 82,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_reporting_pipeline.py",
+      "line": 38,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_reporting_pipeline.py",
+      "line": 44,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_reporting_pipeline.py",
+      "line": 50,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\pipelines\\test_reporting_pipeline.py",
+      "line": 56,
+      "column": 10,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_configuration_cli.py",
+      "line": 103,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_crypto_service.py",
+      "line": 127,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_definition_service.py",
+      "line": 152,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_fetch_service.py",
+      "line": 136,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_integration_balanced_strategy.py",
+      "line": 48,
+      "column": 18,
+      "message": "undefined name 'UnifiedConfig'",
+      "undefined_name": "UnifiedConfig",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'UnifiedConfig' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_mock_elimination.py",
+      "line": 96,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_operational_agents_integration.py",
+      "line": 87,
+      "column": 17,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_run_analysis_conversation.py",
+      "line": 47,
+      "column": 57,
+      "message": "undefined name 'test_text'",
+      "undefined_name": "test_text",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_tactical_operational_interface.py",
+      "line": 50,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_trace_analyzer.py",
+      "line": 51,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_tweety_error_analyzer.py",
+      "line": 45,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_utils.py",
+      "line": 41,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\argumentation_analysis\\test_verify_extracts.py",
+      "line": 177,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\authentication\\test_mock_elimination_advanced.py",
+      "line": 68,
+      "column": 17,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\config\\test_unified_config.py",
+      "line": 63,
+      "column": 17,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\integration\\test_unified_config_integration.py",
+      "line": 65,
+      "column": 17,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\test_service_manager_complete.py",
+      "line": 42,
+      "column": 16,
+      "message": "undefined name 'asyncio'",
+      "undefined_name": "asyncio",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\test_service_manager_complete.py",
+      "line": 48,
+      "column": 22,
+      "message": "undefined name 'asyncio'",
+      "undefined_name": "asyncio",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\unit\\test_service_manager_complete.py",
+      "line": 51,
+      "column": 13,
+      "message": "undefined name 'logger'",
+      "undefined_name": "logger",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 247,
+      "column": 18,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 265,
+      "column": 19,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 276,
+      "column": 18,
+      "message": "undefined name 'MagicMock'",
+      "undefined_name": "MagicMock",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'MagicMock' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 289,
+      "column": 21,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 290,
+      "column": 22,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\utils\\common_test_helpers.py",
+      "line": 291,
+      "column": 21,
+      "message": "undefined name 'patch'",
+      "undefined_name": "patch",
+      "category": "dead_code",
+      "confidence": "low",
+      "reason": "Dans fichier test/exemple (peut être obsolète)"
+    },
+    {
+      "file": ".\\tests\\validation_sherlock_watson\\test_group1_simple.py",
+      "line": 138,
+      "column": 24,
+      "message": "undefined name 'QueryTy'",
+      "undefined_name": "QueryTy",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'QueryTy' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\validation_sherlock_watson\\test_phase_b_naturalite_dialogue.py",
+      "line": 415,
+      "column": 20,
+      "message": "undefined name 'TestPhaseB'",
+      "undefined_name": "TestPhaseB",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'TestPhaseB' commence par majuscule (classe probable)"
+    },
+    {
+      "file": ".\\tests\\validation_sherlock_watson\\test_phase_b_simple_fixed.py",
+      "line": 308,
+      "column": 20,
+      "message": "undefined name 'TestPhaseBSimple'",
+      "undefined_name": "TestPhaseBSimple",
+      "category": "missing_imports",
+      "confidence": "high",
+      "reason": "'TestPhaseBSimple' commence par majuscule (classe probable)"
+    }
+  ]
+}
