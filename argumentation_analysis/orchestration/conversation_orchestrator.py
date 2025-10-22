@@ -6,7 +6,7 @@ Conversation Orchestrator - Composant réutilisable pour orchestration conversat
 Composant unifié pour orchestration conversationnelle avec support de 4 modes :
 - micro : Orchestration ultra-légère
 - demo : Démonstration complète avec agents simulés
-- trace : Test du système de traçage conversationnel  
+- trace : Test du système de traçage conversationnel
 - enhanced : Test des composants PM améliorés
 
 S'intègre harmonieusement avec l'architecture Semantic Kernel existante.

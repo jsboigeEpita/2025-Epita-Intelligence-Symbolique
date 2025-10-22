@@ -472,7 +472,7 @@ class OrchestrationValidator:
 
 ### 1. Orchestrateurs Principaux
 - CluedoExtendedOrchestrator [OK]
-- ServiceManager [OK]  
+- ServiceManager [OK]
 - ConversationOrchestrator [OK]
 - GroupChatOrchestrator [OK]
 
@@ -517,10 +517,10 @@ class OrchestrationValidator:
 
 ## Conclusion
 
-L'API Orchestration est **fonctionnelle et validee** pour l'usage en production. 
+L'API Orchestration est **fonctionnelle et validee** pour l'usage en production.
 Tous les composants principaux sont operationnels et l'architecture est solide.
 
-Les problèmes identifies sont mineurs et n'empêchent pas le fonctionnement 
+Les problèmes identifies sont mineurs et n'empêchent pas le fonctionnement
 du système d'orchestration multi-agents.
 
 **Statut global**: [OK] VALIDe POUR PRODUCTION

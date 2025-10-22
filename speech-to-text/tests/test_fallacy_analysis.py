@@ -24,10 +24,10 @@ def test_fallacy_analysis_integration():
 
     # Sample text with multiple fallacies (simulating transcribed speech)
     sample_text = """
-    Everyone knows that climate change is a hoax because my neighbor said so, 
-    and he's a very smart person. Besides, if climate change were real, 
-    then why was it cold last winter? Also, all scientists are just trying 
-    to get research funding, so you can't trust anything they say. 
+    Everyone knows that climate change is a hoax because my neighbor said so,
+    and he's a very smart person. Besides, if climate change were real,
+    then why was it cold last winter? Also, all scientists are just trying
+    to get research funding, so you can't trust anything they say.
     We shouldn't change our lifestyle based on these false claims.
     """
 

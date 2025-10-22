@@ -12,7 +12,7 @@ Tests d'intégration pour le système de configuration unifié.
 
 Ce module teste l'intégration complète du système UnifiedConfig avec :
 - Pipeline d'analyse de texte
-- Interface CLI 
+- Interface CLI
 - Validation de bout en bout
 - Tests de performance et régression
 """

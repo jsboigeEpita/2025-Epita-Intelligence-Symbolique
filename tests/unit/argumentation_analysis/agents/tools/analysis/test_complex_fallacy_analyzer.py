@@ -292,11 +292,11 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
             # Appeler la méthode à tester
             text = """
             Les experts affirment que ce produit est sûr.
-            
+
             Vous devriez avoir peur des conséquences si vous ne l'utilisez pas.
-            
+
             Les scientifiques ont prouvé l'efficacité de ce produit.
-            
+
             Cela devrait vous inquiéter si vous n'agissez pas maintenant.
             """
             result = self.analyzer.identify_fallacy_patterns(text)

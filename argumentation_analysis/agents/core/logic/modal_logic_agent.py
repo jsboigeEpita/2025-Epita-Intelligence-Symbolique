@@ -2,7 +2,7 @@
 """
 Version corrigée de ModalLogicAgent avec mécanisme de retry automatique fonctionnel.
 
-Cette version corrige le problème où le retry automatique de Semantic Kernel 
+Cette version corrige le problème où le retry automatique de Semantic Kernel
 ne se déclenche pas pour les erreurs de syntaxe TweetyProject.
 
 CORRECTIONS APPORTÉES :
@@ -109,7 +109,7 @@ formula ::= constant_declaration | modal_formula
 constant_declaration ::= "constant" IDENTIFIER
 modal_formula ::= atomic_formula | composite_formula
 atomic_formula ::= IDENTIFIER
-composite_formula ::= "!" formula | 
+composite_formula ::= "!" formula |
                      "[](" formula ")" |
                      "<>(" formula ")" |
                      "(" formula ")" |

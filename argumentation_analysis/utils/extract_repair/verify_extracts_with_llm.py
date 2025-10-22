@@ -304,19 +304,19 @@ async def evaluate_extract(
     # Préparation du prompt pour l'agent d'évaluation
     evaluation_prompt = f"""
     Évaluez la qualité de cet extrait de texte.
-    
+
     SOURCE: {source_name}
     EXTRAIT: {extract_name}
     SUJET: {extract_subject}
-    
+
     TEXTE EXTRAIT:
     {extracted_text}
-    
+
     Analysez cet extrait selon les critères suivants:
     1. Cohérence interne: l'extrait a-t-il un sens complet?
     2. Pertinence: l'extrait correspond-il au sujet indiqué?
     3. Intégrité: l'extrait est-il complet ou semble-t-il tronqué?
-    
+
     Répondez au format JSON avec les champs:
     - valid: true/false (l'extrait est-il valide?)
     - coherence: 1-5 (niveau de cohérence interne)
@@ -534,14 +534,14 @@ def generate_report(
     </head>
     <body>
         <h1>Rapport de vérification des extraits avec LLM</h1>
-        
+
         <div class="summary">
             <h2>Résumé</h2>
             <p>Total des extraits vérifiés: <strong>{len(results)}</strong></p>
             <p>Extraits valides: <strong class="valid">{status_counts["valid"]}</strong></p>
             <p>Extraits invalides: <strong class="invalid">{status_counts["invalid"]}</strong></p>
             <p>Erreurs: <strong class="error">{status_counts["error"]}</strong></p>
-            
+
             <div class="scores">
                 <h3>Scores moyens</h3>
                 <p>Cohérence: <strong>{avg_coherence:.2f}/5</strong></p>
@@ -558,7 +558,7 @@ def generate_report(
                 </div>
             </div>
         </div>
-        
+
         <h2>Détails des vérifications</h2>
         <table>
             <tr>

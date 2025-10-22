@@ -7,7 +7,7 @@ Outil intelligent pour analyser les traces Playwright sans surcharger la mémoir
 Extrait seulement les informations critiques nécessaires à l'investigation.
 
 Problème résolu:
-- Fichiers de traces volumineux (227k+ tokens)  
+- Fichiers de traces volumineux (227k+ tokens)
 - Risque de dépassement de la limite de tokens (200k max)
 - Besoin d'analyser les réponses API /analyze sans manipulation lourde
 
@@ -450,9 +450,9 @@ def main():
         epilog="""
 Modes d'analyse disponibles:
   summary         Analyse complète avec résumé (défaut)
-  api-responses   Focus sur les réponses API /analyze  
+  api-responses   Focus sur les réponses API /analyze
   validation      Comparaison avec logs ServiceManager
-  
+
 Exemples:
   python trace_analyzer.py --mode=summary
   python trace_analyzer.py --mode=api-responses --output=api_analysis.json

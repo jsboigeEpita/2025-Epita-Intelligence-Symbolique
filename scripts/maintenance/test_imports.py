@@ -30,11 +30,11 @@ if str(parent_dir) not in sys.path:
 def test_import(module_name, attr_name=None):
     """
     Teste l'importation d'un module ou d'un attribut d'un module.
-    
+
     Args:
         module_name (str): Nom du module à importer
         attr_name (str, optional): Nom de l'attribut à vérifier
-    
+
     Returns:
         bool: True si l'importation a réussi, False sinon
     """
@@ -62,33 +62,33 @@ def main():
         "argumentation_analysis.agents",
         "argumentation_analysis.orchestration",
         "argumentation_analysis.paths",
-        
+
         # Sous-modules
         "argumentation_analysis.core.llm_service",
         "argumentation_analysis.core.jvm_setup",
         "argumentation_analysis.core.shared_state",
-        
+
         # Modules avec redirection
         "argumentation_analysis.agents.core.extract",
         "argumentation_analysis.agents.extract",  # Devrait être redirigé vers agents.core.extract
     ]
-    
+
     # Liste des attributs à tester
     attributes_to_test = [
         # Fonctions et classes exposées
         ("argumentation_analysis.core.llm_service", "create_llm_service"),
         ("argumentation_analysis.core.jvm_setup", "initialize_jvm"),
         ("argumentation_analysis.core.jvm_setup", "download_tweety_jars"),
-        
+
         # Classes et fonctions via redirection
         ("argumentation_analysis.agents.extract", "extract_agent"),
         ("argumentation_analysis.agents.core.extract", "extract_agent"),
     ]
-    
+
     # Tester les modules
     success_count = 0
     total_count = len(modules_to_test) + len(attributes_to_test)
-    
+
     logging.info("=== Test des importations de modules ===")
     for module_name in modules_to_test:
         # Utiliser la nouvelle fonction pour les modules simples
@@ -99,12 +99,12 @@ def main():
         else:
             logging.error(mod_message)
             # failure_count est déjà géré dans la fonction main de ce script
-    
+
     logging.info("\n=== Test des importations d'attributs ===")
     for module_name, attr_name in attributes_to_test:
         if test_import(module_name, attr_name):
             success_count += 1
-    
+
     # Afficher le résultat
     logging.info(f"\nRésultat: {success_count}/{total_count} importations réussies.")
     if success_count == total_count:

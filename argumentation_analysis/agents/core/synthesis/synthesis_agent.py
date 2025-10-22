@@ -625,7 +625,7 @@ class SynthesisAgent(BaseAgent):
 
     def _get_synthesis_system_prompt(self) -> str:
         """Retourne le prompt système pour l'agent de synthèse."""
-        return """Vous êtes un Agent de Synthèse Unifié spécialisé dans l'analyse 
+        return """Vous êtes un Agent de Synthèse Unifié spécialisé dans l'analyse
         et la coordination d'évaluations logiques formelles et informelles de textes argumentatifs.
 
         Votre rôle est de:
@@ -635,7 +635,7 @@ class SynthesisAgent(BaseAgent):
         4. Identifier les contradictions entre analyses formelles et informelles
         5. Fournir des recommandations d'amélioration
 
-        Vous travaillez de manière systématique et objective, en préservant 
+        Vous travaillez de manière systématique et objective, en préservant
         la spécificité de chaque type d'analyse tout en créant une vue d'ensemble cohérente."""
 
     # Méthodes abstraites de BaseAgent

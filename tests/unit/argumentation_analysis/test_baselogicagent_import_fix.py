@@ -4,7 +4,7 @@ Test unitaire pour vérifier que le cycle d'import de BaseLogicAgent a été ré
 
 Ce test valide que :
 1. BaseAgent peut être importé sans erreur
-2. BaseLogicAgent peut être importé sans cycle d'import 
+2. BaseLogicAgent peut être importé sans cycle d'import
 3. ServiceManager peut maintenant importer BaseLogicAgent
 4. Les forward references fonctionnent correctement avec TYPE_CHECKING
 """

@@ -123,7 +123,7 @@ def main():
     if analysis_results:
         print(f"Analyse terminée. Total d'erreurs trouvées : {analysis_results['total_errors']}")
         save_analysis_to_json(analysis_results, OUTPUT_JSON)
-        
+
         print("\nTop 10 des codes d'erreur :")
         for i, (code, data) in enumerate(analysis_results['by_code'].items()):
             if i >= 10:
@@ -135,7 +135,7 @@ def main():
             if i >= 5:
                 break
             print(f"  {directory}: {data['count']} erreurs ({data['percentage']}%)")
-            
+
         print(f"\nNombre de hotspots (fichiers > {HOTSPOT_THRESHOLD} erreurs) : {len(analysis_results['hotspots'])}")
 
 if __name__ == "__main__":

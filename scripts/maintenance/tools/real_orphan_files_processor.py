@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script pour traiter les vrais fichiers orphelins identifiés par Git 
+Script pour traiter les vrais fichiers orphelins identifiés par Git
 dans le projet Sherlock Watson.
 """
 

@@ -77,31 +77,31 @@ from argumentation_analysis.agents.core.oracle.error_handling import (
 
 class TestOracleErrors:
     """Tests pour les classes d'erreurs Oracle"""
-    
+
     def test_oracle_error_base(self):
         """Test de la classe d'erreur de base Oracle"""
         error = OracleError("Test error message")
         assert str(error) == "Test error message"
         assert isinstance(error, Exception)
-        
+
     def test_oracle_permission_error(self):
         """Test de OraclePermissionError"""
         error = OraclePermissionError("Permission denied")
         assert str(error) == "Permission denied"
         assert isinstance(error, OracleError)
-        
+
     def test_oracle_dataset_error(self):
         """Test de OracleDatasetError"""
         error = OracleDatasetError("Dataset error")
         assert str(error) == "Dataset error"
         assert isinstance(error, OracleError)
-        
+
     def test_oracle_validation_error(self):
         """Test de OracleValidationError"""
         error = OracleValidationError("Validation failed")
         assert str(error) == "Validation failed"
         assert isinstance(error, OracleError)
-        
+
     def test_cluedo_integrity_error(self):
         """Test de CluedoIntegrityError"""
         error = CluedoIntegrityError("Integrity violation")
@@ -110,84 +110,84 @@ class TestOracleErrors:
 
 class TestOracleErrorHandler:
     """Tests pour OracleErrorHandler"""
-    
+
     def setup_method(self):
         """Setup pour chaque test"""
         self.mock_logger = Mock(spec=logging.Logger)
         self.handler = OracleErrorHandler(logger=self.mock_logger)
-        
+
     def test_init_default_logger(self):
         """Test initialisation avec logger par défaut"""
         handler = OracleErrorHandler()
         assert handler.logger is not None
         assert handler.error_stats["total_errors"] == 0
-        
+
     def test_init_custom_logger(self):
         """Test initialisation avec logger personnalisé"""
         assert self.handler.logger == self.mock_logger
         assert self.handler.error_stats["total_errors"] == 0
-        
+
     def test_handle_oracle_permission_error(self):
         """Test gestion OraclePermissionError"""
         error = OraclePermissionError("Permission denied")
         result = self.handler.handle_oracle_error(error, "test_context")
-        
+
         assert result["type"] == "OraclePermissionError"
         assert result["message"] == "Permission denied"
         assert result["context"] == "test_context"
         assert "timestamp" in result
-        
+
         assert self.handler.error_stats["total_errors"] == 1
         assert self.handler.error_stats["permission_errors"] == 1
         self.mock_logger.warning.assert_called_once()
-        
+
     def test_handle_oracle_dataset_error(self):
         """Test gestion OracleDatasetError"""
         error = OracleDatasetError("Dataset failed")
         result = self.handler.handle_oracle_error(error, "dataset_context")
-        
+
         assert result["type"] == "OracleDatasetError"
         assert self.handler.error_stats["dataset_errors"] == 1
         self.mock_logger.error.assert_called_once()
-        
+
     def test_handle_oracle_validation_error(self):
         """Test gestion OracleValidationError"""
         error = OracleValidationError("Validation failed")
         result = self.handler.handle_oracle_error(error)
-        
+
         assert result["type"] == "OracleValidationError"
         assert self.handler.error_stats["validation_errors"] == 1
         self.mock_logger.warning.assert_called_once()
-        
+
     def test_handle_cluedo_integrity_error(self):
         """Test gestion CluedoIntegrityError"""
         error = CluedoIntegrityError("Integrity violation")
         result = self.handler.handle_oracle_error(error)
-        
+
         assert result["type"] == "CluedoIntegrityError"
         assert self.handler.error_stats["integrity_errors"] == 1
         self.mock_logger.critical.assert_called_once()
-        
+
     def test_handle_generic_error(self):
         """Test gestion erreur générique"""
         error = ValueError("Generic error")
         result = self.handler.handle_oracle_error(error, "generic_context")
-        
+
         assert result["type"] == "ValueError"
         assert self.handler.error_stats["total_errors"] == 1
         # Autres compteurs restent à 0
         assert self.handler.error_stats["permission_errors"] == 0
         self.mock_logger.error.assert_called_once()
-        
+
     def test_get_error_statistics(self):
         """Test récupération statistiques d'erreurs"""
         # Simuler plusieurs erreurs
         self.handler.handle_oracle_error(OraclePermissionError("test1"))
         self.handler.handle_oracle_error(OracleDatasetError("test2"))
         self.handler.handle_oracle_error(OracleValidationError("test3"))
-        
+
         stats = self.handler.get_error_statistics()
-        
+
         assert stats["total_errors"] == 3
         assert stats["permission_errors"] == 1
         assert stats["dataset_errors"] == 1
@@ -196,42 +196,42 @@ class TestOracleErrorHandler:
 
 class TestOracleErrorDecorator:
     """Tests pour le décorateur oracle_error_handler"""
-    
+
     def test_decorator_sync_function_success(self):
         """Test décorateur sur fonction synchrone réussie"""
         @oracle_error_handler("test_context")
         def test_function(x, y):
             return x + y
-            
+
         result = test_function(2, 3)
         assert result == 5
-        
+
     def test_decorator_sync_function_error(self):
         """Test décorateur sur fonction synchrone avec erreur"""
-        @oracle_error_handler("test_context") 
+        @oracle_error_handler("test_context")
         def test_function():
             raise ValueError("Test error")
-            
+
         with pytest.raises(ValueError, match="Test error"):
             test_function()
-            
+
     @pytest.mark.asyncio
     async def test_decorator_async_function_success(self):
         """Test décorateur sur fonction asynchrone réussie"""
         @oracle_error_handler("async_context")
         async def test_async_function(x, y):
             return x * y
-            
+
         result = await test_async_function(3, 4)
         assert result == 12
-        
+
     @pytest.mark.asyncio
     async def test_decorator_async_function_error(self):
         """Test décorateur sur fonction asynchrone avec erreur"""
         @oracle_error_handler("async_context")
         async def test_async_function():
             raise OracleDatasetError("Async test error")
-            
+
         with pytest.raises(OracleDatasetError, match="Async test error"):
             await test_async_function()
 
@@ -240,14 +240,14 @@ class TestOracleErrorDecorator:
         """Test que le décorateur log correctement les erreurs"""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
-        
+
         @oracle_error_handler("logging_context")
         def test_function():
             raise RuntimeError("Runtime error")
-            
+
         with pytest.raises(RuntimeError):
             test_function()
-            
+
         mock_logger.error.assert_called_once()
 '''
 
@@ -279,77 +279,77 @@ from argumentation_analysis.agents.core.oracle.interfaces import (
 
 class TestOracleAgentInterface:
     """Tests pour OracleAgentInterface"""
-    
+
     def test_oracle_agent_interface_is_abstract(self):
         """Test que OracleAgentInterface est une classe abstraite"""
         assert issubclass(OracleAgentInterface, ABC)
-        
+
         # Tentative d'instanciation directe doit lever TypeError
         with pytest.raises(TypeError):
             OracleAgentInterface()
-            
+
     def test_oracle_agent_interface_methods(self):
         """Test que l'interface définit les bonnes méthodes abstraites"""
         # Création d'une implémentation concrète
         class ConcreteOracleAgent(OracleAgentInterface):
             async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
                 return {"success": True, "data": "test_data"}
-                
+
             def get_oracle_statistics(self) -> Dict[str, Any]:
                 return {"total_requests": 5}
-                
+
             def reset_oracle_state(self) -> None:
                 pass
-                
+
         # L'instanciation doit réussir
         agent = ConcreteOracleAgent()
         assert isinstance(agent, OracleAgentInterface)
-        
+
     def test_incomplete_oracle_agent_interface(self):
         """Test qu'une implémentation incomplète ne peut pas être instanciée"""
         class IncompleteOracleAgent(OracleAgentInterface):
             async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
                 return {"success": True}
             # Manque get_oracle_statistics et reset_oracle_state
-                
+
         with pytest.raises(TypeError):
             IncompleteOracleAgent()
 
 class TestDatasetManagerInterface:
     """Tests pour DatasetManagerInterface"""
-    
+
     def test_dataset_manager_interface_is_abstract(self):
         """Test que DatasetManagerInterface est une classe abstraite"""
         assert issubclass(DatasetManagerInterface, ABC)
-        
+
         with pytest.raises(TypeError):
             DatasetManagerInterface()
-            
+
     def test_dataset_manager_interface_methods(self):
         """Test que l'interface définit les bonnes méthodes abstraites"""
         class ConcreteDatasetManager(DatasetManagerInterface):
             def execute_query(self, agent_name: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
                 return {"result": "query_executed"}
-                
+
             def check_permission(self, agent_name: str, query_type: str) -> bool:
                 return True
-                
+
         manager = ConcreteDatasetManager()
         assert isinstance(manager, DatasetManagerInterface)
-        
+
     def test_incomplete_dataset_manager_interface(self):
         """Test qu'une implémentation incomplète ne peut pas être instanciée"""
         class IncompleteDatasetManager(DatasetManagerInterface):
             def execute_query(self, agent_name: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
                 return {"result": "query_executed"}
             # Manque check_permission
-                
+
         with pytest.raises(TypeError):
             IncompleteDatasetManager()
 
 class TestStandardOracleResponse:
     """Tests pour StandardOracleResponse"""
-    
+
     def test_standard_oracle_response_success(self):
         """Test création StandardOracleResponse avec succès"""
         response = StandardOracleResponse(
@@ -357,13 +357,13 @@ class TestStandardOracleResponse:
             data={"key": "value"},
             message="Operation successful"
         )
-        
+
         assert response.success is True
         assert response.data == {"key": "value"}
         assert response.message == "Operation successful"
         assert response.error_code is None
         assert response.metadata is None
-        
+
     def test_standard_oracle_response_error(self):
         """Test création StandardOracleResponse avec erreur"""
         response = StandardOracleResponse(
@@ -372,13 +372,13 @@ class TestStandardOracleResponse:
             error_code="VALIDATION_ERROR",
             metadata={"error_details": "Invalid input"}
         )
-        
+
         assert response.success is False
         assert response.data is None
         assert response.message == "Operation failed"
         assert response.error_code == "VALIDATION_ERROR"
         assert response.metadata == {"error_details": "Invalid input"}
-        
+
     def test_standard_oracle_response_to_dict(self):
         """Test conversion to_dict"""
         response = StandardOracleResponse(
@@ -388,7 +388,7 @@ class TestStandardOracleResponse:
             error_code=None,
             metadata={"timestamp": "2024-01-01"}
         )
-        
+
         expected_dict = {
             "success": True,
             "data": {"result": 42},
@@ -396,26 +396,26 @@ class TestStandardOracleResponse:
             "error_code": None,
             "metadata": {"timestamp": "2024-01-01"}
         }
-        
+
         assert response.to_dict() == expected_dict
-        
+
     def test_standard_oracle_response_minimal(self):
         """Test création StandardOracleResponse avec paramètres minimaux"""
         response = StandardOracleResponse(success=True)
-        
+
         assert response.success is True
         assert response.data is None
         assert response.message == ""
         assert response.error_code is None
         assert response.metadata is None
-        
+
         dict_result = response.to_dict()
         assert dict_result["success"] is True
         assert dict_result["data"] is None
 
 class TestOracleResponseStatus:
     """Tests pour OracleResponseStatus"""
-    
+
     def test_oracle_response_status_values(self):
         """Test que les valeurs de l'enum sont correctes"""
         assert OracleResponseStatus.SUCCESS.value == "success"
@@ -423,21 +423,21 @@ class TestOracleResponseStatus:
         assert OracleResponseStatus.PERMISSION_DENIED.value == "permission_denied"
         assert OracleResponseStatus.INVALID_QUERY.value == "invalid_query"
         assert OracleResponseStatus.DATASET_ERROR.value == "dataset_error"
-        
+
     def test_oracle_response_status_enum_members(self):
         """Test que l'enum contient les bons membres"""
         expected_members = {
-            "SUCCESS", "ERROR", "PERMISSION_DENIED", 
+            "SUCCESS", "ERROR", "PERMISSION_DENIED",
             "INVALID_QUERY", "DATASET_ERROR"
         }
         actual_members = {member.name for member in OracleResponseStatus}
         assert actual_members == expected_members
-        
+
     def test_oracle_response_status_comparison(self):
         """Test comparaison des valeurs d'enum"""
         assert OracleResponseStatus.SUCCESS == OracleResponseStatus.SUCCESS
         assert OracleResponseStatus.ERROR != OracleResponseStatus.SUCCESS
-        
+
     def test_oracle_response_status_iteration(self):
         """Test itération sur l'enum"""
         statuses = list(OracleResponseStatus)
@@ -447,7 +447,7 @@ class TestOracleResponseStatus:
 
 class TestInterfacesIntegration:
     """Tests d'intégration des interfaces"""
-    
+
     def test_oracle_agent_implementation_with_standard_response(self):
         """Test implémentation Oracle Agent utilisant StandardOracleResponse"""
         class TestOracleAgent(OracleAgentInterface):
@@ -458,15 +458,15 @@ class TestInterfacesIntegration:
                     message="Request processed successfully"
                 )
                 return response.to_dict()
-                
+
             def get_oracle_statistics(self) -> Dict[str, Any]:
                 return {"requests_processed": 1}
-                
+
             def reset_oracle_state(self) -> None:
                 pass
-                
+
         agent = TestOracleAgent()
-        
+
         # Test utilisation
         import asyncio
         async def test_async():
@@ -474,9 +474,9 @@ class TestInterfacesIntegration:
             assert result["success"] is True
             assert result["data"]["agent"] == "Sherlock"
             assert result["data"]["query"] == "validate"
-            
+
         asyncio.run(test_async())
-        
+
     def test_dataset_manager_with_response_status(self):
         """Test Dataset Manager utilisant OracleResponseStatus"""
         class TestDatasetManager(DatasetManagerInterface):
@@ -490,16 +490,16 @@ class TestInterfacesIntegration:
                     "status": OracleResponseStatus.SUCCESS.value,
                     "result": "Query executed"
                 }
-                
+
             def check_permission(self, agent_name: str, query_type: str) -> bool:
                 return agent_name != "unauthorized"
-                
+
         manager = TestDatasetManager()
-        
+
         # Test avec agent autorisé
         result = manager.execute_query("Sherlock", "validate", {})
         assert result["status"] == "success"
-        
+
         # Test avec agent non autorisé
         result = manager.execute_query("unauthorized", "validate", {})
         assert result["status"] == "permission_denied"
@@ -532,34 +532,34 @@ from argumentation_analysis.agents.core.oracle.interfaces import (
 
 class TestNewModulesIntegration:
     """Tests d'intégration entre les nouveaux modules"""
-    
+
     def setup_method(self):
         """Setup pour chaque test"""
         self.error_handler = OracleErrorHandler()
-        
+
     def test_oracle_agent_with_error_handling(self):
         """Test agent Oracle utilisant le gestionnaire d'erreurs"""
-        
+
         class TestOracleAgentWithErrorHandling(OracleAgentInterface):
             def __init__(self, error_handler: OracleErrorHandler):
                 self.error_handler = error_handler
-                
+
             @oracle_error_handler("process_request")
             async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: dict) -> dict:
                 if requesting_agent == "error_agent":
                     raise OraclePermissionError("Access denied for error_agent")
-                    
+
                 response = StandardOracleResponse(
                     success=True,
                     data={"processed": True},
                     message="Request processed successfully"
                 )
                 return response.to_dict()
-                
+
             def get_oracle_statistics(self) -> dict:
                 stats = self.error_handler.get_error_statistics()
                 return {"error_stats": stats}
-                
+
             def reset_oracle_state(self) -> None:
                 self.error_handler.error_stats = {
                     "total_errors": 0,
@@ -568,42 +568,42 @@ class TestNewModulesIntegration:
                     "validation_errors": 0,
                     "integrity_errors": 0
                 }
-                
+
         agent = TestOracleAgentWithErrorHandling(self.error_handler)
-        
+
         # Test requête normale
         async def test_normal_request():
             result = await agent.process_oracle_request("Sherlock", "validate", {})
             assert result["success"] is True
             assert result["data"]["processed"] is True
-            
+
         asyncio.run(test_normal_request())
-        
+
         # Test requête avec erreur
         async def test_error_request():
             with pytest.raises(OraclePermissionError):
                 await agent.process_oracle_request("error_agent", "validate", {})
-                
+
         asyncio.run(test_error_request())
-        
+
         # Vérifier que les statistiques d'erreurs sont mises à jour
         stats = agent.get_oracle_statistics()
         # Note: Les erreurs dans le décorateur sont loggées mais pas comptées ici
         # car le décorateur ne fait que logger, pas appeler error_handler.handle_oracle_error
-        
+
     def test_standard_response_with_error_status(self):
         """Test StandardOracleResponse avec statuts d'erreur"""
-        
+
         # Réponse de succès
         success_response = StandardOracleResponse(
             success=True,
             data={"result": "OK"},
             metadata={"status_code": OracleResponseStatus.SUCCESS.value}
         )
-        
+
         assert success_response.success is True
         assert success_response.metadata["status_code"] == "success"
-        
+
         # Réponse d'erreur de permission
         permission_error_response = StandardOracleResponse(
             success=False,
@@ -611,27 +611,27 @@ class TestNewModulesIntegration:
             error_code="PERMISSION_ERROR",
             metadata={"status_code": OracleResponseStatus.PERMISSION_DENIED.value}
         )
-        
+
         assert permission_error_response.success is False
         assert permission_error_response.metadata["status_code"] == "permission_denied"
-        
+
         # Réponse d'erreur de dataset
         dataset_error_response = StandardOracleResponse(
             success=False,
-            message="Dataset unavailable", 
+            message="Dataset unavailable",
             error_code="DATASET_ERROR",
             metadata={"status_code": OracleResponseStatus.DATASET_ERROR.value}
         )
-        
+
         assert dataset_error_response.success is False
         assert dataset_error_response.metadata["status_code"] == "dataset_error"
-        
+
     def test_error_handler_with_response_conversion(self):
         """Test conversion d'erreurs en StandardOracleResponse"""
-        
+
         def convert_error_to_response(error_info: dict) -> StandardOracleResponse:
             """Convertit une info d'erreur en StandardOracleResponse"""
-            
+
             # Mapping des types d'erreurs vers les statuts
             error_to_status = {
                 "OraclePermissionError": OracleResponseStatus.PERMISSION_DENIED,
@@ -639,9 +639,9 @@ class TestNewModulesIntegration:
                 "OracleValidationError": OracleResponseStatus.INVALID_QUERY,
                 "CluedoIntegrityError": OracleResponseStatus.ERROR
             }
-            
+
             status = error_to_status.get(error_info["type"], OracleResponseStatus.ERROR)
-            
+
             return StandardOracleResponse(
                 success=False,
                 message=error_info["message"],
@@ -652,37 +652,37 @@ class TestNewModulesIntegration:
                     "timestamp": error_info["timestamp"]
                 }
             )
-        
+
         # Test avec OraclePermissionError
         permission_error = OraclePermissionError("Access denied")
         error_info = self.error_handler.handle_oracle_error(permission_error, "test_context")
         response = convert_error_to_response(error_info)
-        
+
         assert response.success is False
         assert response.error_code == "OraclePermissionError"
         assert response.metadata["status_code"] == "permission_denied"
         assert response.metadata["context"] == "test_context"
-        
+
     @patch('logging.getLogger')
     def test_complete_integration_scenario(self, mock_get_logger):
         """Test scenario d'intégration complet"""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
-        
+
         class CompleteOracleAgent(OracleAgentInterface):
             def __init__(self):
                 self.error_handler = OracleErrorHandler()
                 self.request_count = 0
-                
+
             @oracle_error_handler("oracle_processing")
             async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: dict) -> dict:
                 self.request_count += 1
-                
+
                 try:
                     # Simulation de traitement
                     if query_type == "forbidden":
                         raise OraclePermissionError(f"Query type {query_type} not allowed for {requesting_agent}")
-                        
+
                     # Succès
                     response = StandardOracleResponse(
                         success=True,
@@ -690,13 +690,13 @@ class TestNewModulesIntegration:
                         message=f"Query {query_type} processed for {requesting_agent}",
                         metadata={"status_code": OracleResponseStatus.SUCCESS.value}
                     )
-                    
+
                     return response.to_dict()
-                    
+
                 except Exception as e:
                     # Conversion d'erreur en réponse
                     error_info = self.error_handler.handle_oracle_error(e, f"agent={requesting_agent}, query={query_type}")
-                    
+
                     response = StandardOracleResponse(
                         success=False,
                         message=error_info["message"],
@@ -706,15 +706,15 @@ class TestNewModulesIntegration:
                             "error_context": error_info["context"]
                         }
                     )
-                    
+
                     return response.to_dict()
-                    
+
             def get_oracle_statistics(self) -> dict:
                 return {
                     "total_requests": self.request_count,
                     "error_stats": self.error_handler.get_error_statistics()
                 }
-                
+
             def reset_oracle_state(self) -> None:
                 self.request_count = 0
                 self.error_handler.error_stats = {
@@ -724,9 +724,9 @@ class TestNewModulesIntegration:
                     "validation_errors": 0,
                     "integrity_errors": 0
                 }
-        
+
         agent = CompleteOracleAgent()
-        
+
         # Test requête normale
         async def test_integration():
             # Requête réussie
@@ -734,19 +734,19 @@ class TestNewModulesIntegration:
             assert result["success"] is True
             assert result["data"]["request_id"] == 1
             assert result["metadata"]["status_code"] == "success"
-            
-            # Requête interdite 
+
+            # Requête interdite
             result = await agent.process_oracle_request("Watson", "forbidden", {})
             assert result["success"] is False
             assert result["error_code"] == "OraclePermissionError"
             assert result["metadata"]["status_code"] == "permission_denied"
-            
+
             # Vérifier statistiques
             stats = agent.get_oracle_statistics()
             assert stats["total_requests"] == 2
             assert stats["error_stats"]["total_errors"] == 1
             assert stats["error_stats"]["permission_errors"] == 1
-            
+
         asyncio.run(test_integration())
 '''
 
@@ -773,7 +773,7 @@ def oracle_error_handler():
     """Fixture pour OracleErrorHandler"""
     return OracleErrorHandler()
 
-@pytest.fixture  
+@pytest.fixture
 def standard_oracle_response_success():
     """Fixture pour StandardOracleResponse de succès"""
     return StandardOracleResponse(
@@ -820,7 +820,7 @@ def run_coverage_check():
     try:
         # Exécuter les tests Oracle avec couverture
         oracle_tests_path = "tests/unit/argumentation_analysis/agents/core/oracle"
-        
+
         cmd = [
             sys.executable, "-m", "pytest",
             oracle_tests_path,
@@ -829,19 +829,19 @@ def run_coverage_check():
             "--cov-report=html:htmlcov/oracle",
             "-v"
         ]
-        
+
         print("🧪 Exécution tests Oracle avec couverture...")
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             print("✅ Tests Oracle réussis")
             print(result.stdout)
         else:
             print("❌ Échec des tests Oracle")
             print(result.stderr)
-            
+
         return result.returncode == 0
-        
+
     except Exception as e:
         print(f"❌ Erreur lors de l'exécution des tests: {e}")
         return False
@@ -879,7 +879,7 @@ if __name__ == "__main__":
 - **Classes testées**: 5 classes d'erreurs + OracleErrorHandler
 - **Tests créés**: 20+ tests unitaires
 - **Couverture**: 100% du module error_handling.py
-- **Focus**: 
+- **Focus**:
   - Hiérarchie d'erreurs Oracle
   - Gestionnaire d'erreurs centralisé
   - Décorateur oracle_error_handler
@@ -910,7 +910,7 @@ if __name__ == "__main__":
 ```
 tests/unit/argumentation_analysis/agents/core/oracle/
 ├── test_oracle_base_agent.py              # Existant
-├── test_moriarty_interrogator_agent.py    # Existant  
+├── test_moriarty_interrogator_agent.py    # Existant
 ├── test_cluedo_dataset.py                 # Existant
 ├── test_dataset_access_manager.py         # Existant
 ├── test_permissions.py                    # Existant
@@ -952,7 +952,7 @@ tests/unit/argumentation_analysis/agents/core/oracle/
 # Tests error_handling
 pytest tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py -v
 
-# Tests interfaces  
+# Tests interfaces
 pytest tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py -v
 
 # Tests intégration

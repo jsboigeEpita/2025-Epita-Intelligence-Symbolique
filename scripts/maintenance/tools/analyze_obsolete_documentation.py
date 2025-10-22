@@ -174,7 +174,7 @@ class DocumentationLinkAnalyzer:
         report = f"""# Rapport d'Analyse de Documentation Obsolete
 ## Oracle Enhanced v2.1.0
 
-**Date d'analyse :** {results['analysis_timestamp']}  
+**Date d'analyse :** {results['analysis_timestamp']}
 **Racine du projet :** `{results['project_root']}`
 
 ## Resume Executif

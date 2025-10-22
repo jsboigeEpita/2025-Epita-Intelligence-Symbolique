@@ -75,15 +75,15 @@ class ConversationTracker:
 
         report = f"""# 📊 Rapport d'Analyse Complexe Multi-Agents
 
-**Session ID:** `{self.session_id}`  
-**Date:** {self.start_time.strftime('%d/%m/%Y à %H:%M:%S')}  
-**Durée totale:** {total_duration:.2f} secondes  
+**Session ID:** `{self.session_id}`
+**Date:** {self.start_time.strftime('%d/%m/%Y à %H:%M:%S')}
+**Durée totale:** {total_duration:.2f} secondes
 
 ## 📝 Source Analysée
 
-**Titre:** {source_info.get('title', 'N/A')}  
-**Longueur:** {source_info.get('length', 0):,} caractères  
-**Type:** {source_info.get('type', 'N/A')}  
+**Titre:** {source_info.get('title', 'N/A')}
+**Longueur:** {source_info.get('length', 0):,} caractères
+**Type:** {source_info.get('type', 'N/A')}
 
 ### Extrait du texte
 ```
@@ -117,8 +117,8 @@ class ConversationTracker:
         for i, trace in enumerate(self.traces, 1):
             report += f"""### 🔄 Interaction {i}: {trace['agent']} → {trace['action']}
 
-**⏱️ Timestamp:** `{trace['timestamp']}`  
-**⚡ Durée:** {trace['duration_seconds']:.2f}s  
+**⏱️ Timestamp:** `{trace['timestamp']}`
+**⚡ Durée:** {trace['duration_seconds']:.2f}s
 
 **📥 Entrée ({trace['input_length']} caractères):**
 ```
@@ -202,7 +202,7 @@ class ConversationTracker:
         report += f"""
 ---
 
-*Rapport généré automatiquement par l'Orchestrateur d'Analyse Complexe*  
+*Rapport généré automatiquement par l'Orchestrateur d'Analyse Complexe*
 *Session: {self.session_id}*
 """
 

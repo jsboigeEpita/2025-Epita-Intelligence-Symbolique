@@ -61,9 +61,9 @@ async def main():
 
     # The text to be analyzed
     text_to_analyze = """
-    Le projet de loi sur la sécurité est essentiel. Les opposants prétendent qu'il menace nos libertés, 
-    mais nous ne pouvons pas écouter des gens qui sont clairement antipatriotiques. 
-    Soit vous soutenez cette loi pour protéger notre pays, soit vous êtes du côté des criminels. 
+    Le projet de loi sur la sécurité est essentiel. Les opposants prétendent qu'il menace nos libertés,
+    mais nous ne pouvons pas écouter des gens qui sont clairement antipatriotiques.
+    Soit vous soutenez cette loi pour protéger notre pays, soit vous êtes du côté des criminels.
     De plus, un expert respecté en sécurité a confirmé que c'était la seule solution viable.
     """
     print("\n--- Text to Analyze ---")

@@ -11,7 +11,7 @@ après la suppression des fichiers redondants (Phase 2).
 import argumentation_analysis.core.environment
 Fichiers consolidés à valider :
 1. demos/demo_unified_system.py
-2. scripts/maintenance/unified_maintenance.py  
+2. scripts/maintenance/unified_maintenance.py
 3. scripts/validation/unified_validation.py
 4. scripts/unified_utilities.py
 5. docs/UNIFIED_SYSTEM_GUIDE.md
@@ -595,7 +595,7 @@ STATISTIQUES GLOBALES
 =====================
 📊 Total des tests: {total_tests}
 ✅ Succès: {successes}
-⚠️  Avertissements: {warnings} 
+⚠️  Avertissements: {warnings}
 ❌ Erreurs: {errors}
 ⏭️  Ignorés: {skipped}
 

@@ -180,12 +180,12 @@ logger = logging.getLogger(__name__)
 
 try:
     import jnius
-    
+
     # Créer un module jpype qui redirige vers jnius
     class JPypeModule:
         def __init__(self):
             self.jnius = jnius
-            
+
         def __getattr__(self, name):
             if name == 'startJVM':
                 # pyjnius initialise la JVM automatiquement
@@ -216,14 +216,14 @@ try:
                     logger.warning(f"Attribut {name} non trouvé dans jnius")
                     # Retourner une fonction qui ne fait rien
                     return lambda *args, **kwargs: None
-    
+
     # Installer le module mock
     sys.modules['jpype'] = JPypeModule()
     sys.modules['jpype.types'] = JPypeModule()
     sys.modules['jpype.imports'] = JPypeModule()
-    
+
     logger.info("Module mock JPype1 installé avec succès (redirection vers pyjnius)")
-    
+
 except ImportError:
     logger.error("Impossible d'importer jnius. Veuillez installer pyjnius.")
     raise

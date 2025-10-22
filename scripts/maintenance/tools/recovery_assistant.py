@@ -91,7 +91,7 @@ python test_oracle_import.py
 ## Structure
 
 - `argumentation_analysis/` - Code principal Oracle Enhanced
-- `scripts/` - Scripts de maintenance et d'environnement  
+- `scripts/` - Scripts de maintenance et d'environnement
 - `docs/` - Documentation technique
 - `tests/` - Tests et validation
 

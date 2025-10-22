@@ -3,7 +3,7 @@
 """
 Test de vérification de la fonctionnalité Oracle après modification des prompts Phase A
 
-Ce script vérifie que les modifications des prompts n'ont pas cassé la fonctionnalité 
+Ce script vérifie que les modifications des prompts n'ont pas cassé la fonctionnalité
 technique des agents Watson, Moriarty et Sherlock.
 """
 

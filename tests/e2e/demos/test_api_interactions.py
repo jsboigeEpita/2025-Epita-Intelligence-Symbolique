@@ -83,7 +83,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
         (async function() {{
             const textInput = document.getElementById('text-input');
             const results = document.getElementById('results');
-            
+
             try {{
                 const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
@@ -95,15 +95,15 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                         'analysis_type': 'full_analysis'
                     }})
                 }});
-                
+
                 const data = await response.json();
                 console.log('Analyse Response:', data);
-                
+
                 results.innerHTML = '<h3>Résultat d\\'analyse:</h3><pre>' +
                     JSON.stringify(data, null, 2) + '</pre>';
-                    
+
                 window.analysisResult = data;
-                
+
             }} catch (error) {{
                 console.error('Erreur d\\'analyse:', error);
                 results.innerHTML = '<p style="color: red;">Erreur: ' + error.message + '</p>';
@@ -129,7 +129,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
         f"""
         (async function() {{
             const textInput = document.getElementById('text-input');
-            
+
             try {{
                 const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
@@ -141,11 +141,11 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                         'analysis_type': 'fallacy_detection'
                     }})
                 }});
-                
+
                 const data = await response.json();
                 console.log('Fallacy Detection:', data);
                 window.fallacyResult = data;
-                
+
             }} catch (error) {{
                 console.error('Erreur détection sophisme:', error);
                 window.fallacyError = error.message;
@@ -169,7 +169,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
         f"""
         (async function() {{
             const textInput = document.getElementById('text-input');
-            
+
             try {{
                 const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
@@ -183,11 +183,11 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                         'include_conclusions': true
                     }})
                 }});
-                
+
                 const data = await response.json();
                 console.log('Complex Analysis:', data);
                 window.complexResult = data;
-                
+
             }} catch (error) {{
                 console.error('Erreur analyse complexe:', error);
                 window.complexError = error.message;

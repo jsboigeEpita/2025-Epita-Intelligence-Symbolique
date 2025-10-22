@@ -997,8 +997,8 @@ class DocumentationWebServer:
         <!-- Section de recherche -->
         <div class="search-section">
             <div class="search-bar">
-                <input type="text" id="searchInput" class="search-input" 
-                       placeholder="Rechercher dans la documentation..." 
+                <input type="text" id="searchInput" class="search-input"
+                       placeholder="Rechercher dans la documentation..."
                        autocomplete="off">
                 <button id="searchBtn" class="search-btn">
                     <i class="fas fa-search"></i> Rechercher
@@ -1078,7 +1078,7 @@ class DocumentationWebServer:
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') performSearch();
             });
-            
+
             document.getElementById('filtersBtn').addEventListener('click', toggleFilters);
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
             document.getElementById('exportBtn').addEventListener('click', exportResults);
@@ -1147,7 +1147,7 @@ class DocumentationWebServer:
             showLoading();
 
             const filters = getFilters();
-            
+
             try {
                 const response = await fetch('/api/search', {
                     method: 'POST',

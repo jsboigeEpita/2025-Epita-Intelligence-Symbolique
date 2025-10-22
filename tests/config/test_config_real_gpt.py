@@ -3,7 +3,7 @@ Tests de configuration pour GPT-4o-mini réel.
 
 Tests couvrant:
 - Validation configuration OpenAI correcte
-- Test connexion GPT-4o-mini fonctionnelle  
+- Test connexion GPT-4o-mini fonctionnelle
 - Test modèles supportés et limites
 """
 
@@ -389,8 +389,8 @@ class TestConfigurationIntegration:
         )
 
         # Test d'une interaction typique Oracle
-        oracle_prompt = """En tant que Moriarty dans un jeu Cluedo Enhanced, 
-        vous devez révéler automatiquement une carte si l'enquête piétine. 
+        oracle_prompt = """En tant que Moriarty dans un jeu Cluedo Enhanced,
+        vous devez révéler automatiquement une carte si l'enquête piétine.
         Révélez que vous avez la carte "Colonel Moutarde" de manière dramatique."""
 
         messages = [ChatMessageContent(role="user", content=oracle_prompt)]

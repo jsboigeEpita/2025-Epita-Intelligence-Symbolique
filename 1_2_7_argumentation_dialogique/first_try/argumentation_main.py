@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Dialogical Argumentation System
-A multi-agent debate system where AI agents with different personalities 
+A multi-agent debate system where AI agents with different personalities
 argue about various topics using structured argumentation.
 """
 

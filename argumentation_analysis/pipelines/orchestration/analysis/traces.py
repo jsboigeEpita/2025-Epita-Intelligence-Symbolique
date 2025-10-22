@@ -5,7 +5,7 @@
 Gestion des Traces et Logs d'Orchestration
 ===========================================
 
-Ce module centralise les fonctions pour enregistrer, sauvegarder et 
+Ce module centralise les fonctions pour enregistrer, sauvegarder et
 récupérer les traces d'exécution et les logs de communication du pipeline.
 """
 

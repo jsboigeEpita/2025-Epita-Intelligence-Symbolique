@@ -6,7 +6,7 @@ Orchestrateur Unifié d'Application Web Python
 
 Remplace tous les scripts PowerShell redondants d'intégration web :
 - integration_test_with_trace.ps1
-- integration_test_with_trace_robust.ps1  
+- integration_test_with_trace_robust.ps1
 - integration_test_with_trace_fixed.ps1
 - integration_test_trace_working.ps1
 - integration_test_trace_simple_success.ps1
@@ -769,10 +769,10 @@ class UnifiedWebOrchestrator:
 
         content = f"""# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
 
-**Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}  
-**Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}  
-**Backend:** {self.app_info.backend_url or 'Non démarré'}  
-**Frontend:** {self.app_info.frontend_url or 'Non démarré'}  
+**Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+**Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}
+**Backend:** {self.app_info.backend_url or 'Non démarré'}
+**Frontend:** {self.app_info.frontend_url or 'Non démarré'}
 **Durée totale:** {duration:.2f} secondes
 
 ---

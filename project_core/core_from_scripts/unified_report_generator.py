@@ -208,7 +208,7 @@ Exemples d'utilisation:
   python unified_report_generator.py --data analysis_results.json --format markdown
   python unified_report_generator.py --data data.json --format html --template web
   python unified_report_generator.py --data results.json --format console --output-mode console
-  
+
 Modes de compatibilité:
   python unified_report_generator.py --legacy --data results.json  # Utilise l'ancienne interface
         """,

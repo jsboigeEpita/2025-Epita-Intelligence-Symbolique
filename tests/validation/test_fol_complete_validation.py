@@ -8,7 +8,7 @@ Ce script exécute une validation exhaustive selon les critères de la tâche :
 
 MÉTRIQUES DE VALIDATION :
 ✅ 100% des formules FOL générées valides
-✅ 0 erreur de parsing Tweety avec syntaxe FOL  
+✅ 0 erreur de parsing Tweety avec syntaxe FOL
 ✅ >95% compatibilité avec sophismes existants
 ✅ Temps réponse ≤ Modal Logic précédent
 ✅ >90% couverture tests pour FOLLogicAgent

@@ -568,17 +568,17 @@ class CompleteAuthenticValidator:
 
             # Problème Einstein authentique
             einstein_problem = """
-            Il y a 5 maisons de couleurs différentes. 
+            Il y a 5 maisons de couleurs différentes.
             Dans chaque maison vit une personne de nationalité différente.
             Chaque propriétaire boit une boisson différente, fume une marque différente et a un animal différent.
-            
+
             Indices:
             1. L'Anglais vit dans la maison rouge
             2. Le Suédois a un chien
             3. Le Danois boit du thé
             4. La maison verte est à gauche de la maison blanche
             5. Le propriétaire de la maison verte boit du café
-            
+
             Question: Qui a le poisson ?
             """
 

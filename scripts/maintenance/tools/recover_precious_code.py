@@ -441,7 +441,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ## Validation
 
 - ✅ Tests de syntaxe Python
-- ✅ Tests d'intégrité des imports  
+- ✅ Tests d'intégrité des imports
 - ✅ Tests de non-régression
 - ✅ Tests de compatibilité v2.1.0
 

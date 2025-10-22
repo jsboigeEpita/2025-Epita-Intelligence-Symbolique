@@ -169,12 +169,12 @@ def mocked_services():
     sample_text = """
     Ceci est un exemple de texte source.
     Il contient plusieurs paragraphes.
-    
+
     Voici un marqueur de début: DEBUT_EXTRAIT
     Ceci est le contenu de l'extrait.
     Il peut contenir plusieurs lignes.
     Voici un marqueur de fin: FIN_EXTRAIT
-    
+
     Et voici la suite du texte après l'extrait.
     """
     mock_fetch_service.fetch_text.return_value = (

@@ -14,7 +14,7 @@ MISSION PHASE 3:
 - Documentation des flux de données réels
 
 Version: 1.0.0
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
@@ -45,20 +45,20 @@ TEST_DATA = {
     "analysis_type": "fallacy",  # Détection de Sophismes
     "full_debate_text": """
     DÉBAT SUR LA RÉGLEMENTATION DES CRYPTOMONNAIES QUANTIQUES
-    
+
     Arguments Pour la réglementation:
     Les cryptomonnaies quantiques représentent des risques environnementaux considérables
-    car leur minage consume énormément d'énergie. De plus, elles créent une instabilité 
-    économique dangereuse pour les marchés traditionnels. Les défenseurs de ces 
-    technologies sont souvent des spéculateurs sans scrupules qui ne pensent qu'à 
+    car leur minage consume énormément d'énergie. De plus, elles créent une instabilité
+    économique dangereuse pour les marchés traditionnels. Les défenseurs de ces
+    technologies sont souvent des spéculateurs sans scrupules qui ne pensent qu'à
     s'enrichir rapidement.
-    
+
     Arguments Contre la réglementation:
     L'innovation technologique ne doit pas être entravée par une réglementation excessive.
-    Les cryptomonnaies quantiques offrent une liberté financière sans précédent et 
-    permettent de s'affranchir du contrôle des banques centrales. Soit nous embrassons 
+    Les cryptomonnaies quantiques offrent une liberté financière sans précédent et
+    permettent de s'affranchir du contrôle des banques centrales. Soit nous embrassons
     cette révolution, soit nous restons dans l'âge de pierre financier.
-    
+
     Conclusion: Ce débat illustre plusieurs sophismes logiques qu'il convient d'identifier
     pour une argumentation rationnelle.
     """,

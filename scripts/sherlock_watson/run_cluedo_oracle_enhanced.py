@@ -3,7 +3,7 @@
 Script principal pour l'exécution du scénario de jeu Cluedo avec un Oracle "Enhanced".
 
 Ce script intègre un orchestrateur de jeu de Cluedo avancé qui utilise des agents
-basés sur le Semantic Kernel pour simuler une partie entre Sherlock, Watson, et un 
+basés sur le Semantic Kernel pour simuler une partie entre Sherlock, Watson, et un
 maître du jeu (Oracle) incarné par Moriarty.
 
 L'Oracle "Enhanced" est capable de stratégies complexes, comme révéler des

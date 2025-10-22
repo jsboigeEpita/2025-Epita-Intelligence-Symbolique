@@ -12,7 +12,7 @@ Valide le comportement Oracle et l'intégration avec le moteur de jeu RÉELS.
 Tests couverts:
 - État Oracle 100% authentique
 - Validation suggestions automatique RÉELLE
-- Révélations forcées AUTHENTIQUES  
+- Révélations forcées AUTHENTIQUES
 - Moteur de jeu complet SANS SIMULATION
 - Statistiques Oracle VRAIES
 - Intégration Semantic Kernel AUTHENTIQUE

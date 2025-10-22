@@ -10,7 +10,7 @@ Valide le fonctionnement complet sans mocks de la démonstration principale.
 Tests couverts:
 - Configuration environnement authentique
 - Chargement cas Cluedo
-- Investigation complète Sherlock-Watson  
+- Investigation complète Sherlock-Watson
 - Tests agents logiques
 - Validation Oracle
 - Sauvegarde session

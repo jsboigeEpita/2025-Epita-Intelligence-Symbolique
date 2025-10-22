@@ -243,7 +243,7 @@ class DocumentationAnalyzer:
         report = f"""# Rapport d'Analyse de Documentation
 ## Oracle Enhanced v2.1.0 - Reconstruction
 
-**Date d'analyse :** {self.results['analysis_timestamp']}  
+**Date d'analyse :** {self.results['analysis_timestamp']}
 **Racine du projet :** `{self.results['project_root']}`
 
 ## Résumé

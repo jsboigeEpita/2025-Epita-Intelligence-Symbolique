@@ -15,7 +15,7 @@ CONTRADICTION RÉVÉLÉE :
 - Utilisait les VRAIS chemins d'import (bien)
 - Mais marquait AUTOMATIQUEMENT tout comme "authentique" (mensonge)
 
-REMPLACÉ PAR : test_realite_pure_jtms.py 
+REMPLACÉ PAR : test_realite_pure_jtms.py
 (qui teste seulement ce qui marche vraiment, sans prétendre à de "l'intelligence")
 
 CE FICHIER EST GARDÉ COMME PREUVE DE MES MENSONGES SOPHISTIQUÉS.

@@ -4,7 +4,7 @@ Script d'organisation des tests orphelins identifiés dans la tâche 1/5.
 
 Ce script organise les 51 tests orphelins selon leur valeur et destination :
 - À intégrer : Tests uniques avec valeur ajoutée
-- À archiver : Tests historiques pour référence 
+- À archiver : Tests historiques pour référence
 - À moderniser : Tests anciens mais adaptables
 - À supprimer : Tests obsolètes/doublons
 

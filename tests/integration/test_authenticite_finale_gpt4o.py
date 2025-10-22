@@ -185,19 +185,19 @@ class AuthenticAPITester:
 
             unique_question = f"""
             ENQUÊTE AUTHENTIQUE {self.test_id} - PHASE ORCHESTRATEUR
-            
+
             Dans le laboratoire de l'EPITA, le professeur von Neumann a disparu mystérieusement.
-            
+
             Indices trouvés:
             - Équation de Schrödinger incomplète au tableau
             - Chat quantique absent de sa boîte
             - Particule manquante dans l'accélérateur
-            
+
             Suspects:
             - Dr. Heisenberg (expert en principe d'incertitude)
             - Prof. Einstein (opposé à la mécanique quantique)
             - Mme. Curie (spécialiste des radiations)
-            
+
             Sherlock, analysez cette situation. Watson, aidez avec la logique.
             Veuillez inclure l'ID d'enquête '{self.test_id}' dans vos échanges.
             Maximum 3 tours pour cette démonstration d'authenticité.

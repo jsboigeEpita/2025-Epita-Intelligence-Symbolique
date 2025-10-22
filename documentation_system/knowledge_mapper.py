@@ -449,7 +449,7 @@ class KnowledgeMapper:
         </head>
         <body>
             <h1>🧠 Carte des Connaissances - IA Symbolique</h1>
-            
+
             <div class="controls">
                 <button onclick="fitNetwork()">🔍 Ajuster la vue</button>
                 <button onclick="togglePhysics()">⚡ Activer/Désactiver la physique</button>
@@ -462,9 +462,9 @@ class KnowledgeMapper:
                     <option value="orchestration">Orchestration</option>
                 </select>
             </div>
-            
+
             <div id="knowledge-map"></div>
-            
+
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-color" style="background-color: #FF6B6B;"></div>
@@ -487,7 +487,7 @@ class KnowledgeMapper:
                     <span>Orchestration</span>
                 </div>
             </div>
-            
+
             <div class="info-panel" id="info-panel">
                 <h3>ℹ️ Instructions</h3>
                 <ul>
@@ -498,12 +498,12 @@ class KnowledgeMapper:
                     <li><strong>Les flèches</strong> indiquent les dépendances</li>
                 </ul>
             </div>
-            
+
             <script>
                 // Données des nœuds et arêtes
                 const nodes = new vis.DataSet({json.dumps(nodes_data)});
                 const edges = new vis.DataSet({json.dumps(edges_data)});
-                
+
                 // Configuration du réseau
                 const container = document.getElementById('knowledge-map');
                 const data = {{ nodes: nodes, edges: edges }};
@@ -534,10 +534,10 @@ class KnowledgeMapper:
                         tooltipDelay: 200
                     }}
                 }};
-                
+
                 // Créer le réseau
                 const network = new vis.Network(container, data, options);
-                
+
                 // Event listeners
                 network.on("selectNode", function(params) {{
                     if (params.nodes.length > 0) {{
@@ -546,7 +546,7 @@ class KnowledgeMapper:
                         showNodeInfo(nodeData);
                     }}
                 }});
-                
+
                 // Fonctions utilitaires
                 function showNodeInfo(node) {{
                     const infoPanel = document.getElementById('info-panel');
@@ -558,17 +558,17 @@ class KnowledgeMapper:
                         <p><strong>Importance:</strong> ${{(node.importance * 100).toFixed(1)}}%</p>
                     `;
                 }}
-                
+
                 function fitNetwork() {{
                     network.fit();
                 }}
-                
+
                 let physicsEnabled = true;
                 function togglePhysics() {{
                     physicsEnabled = !physicsEnabled;
                     network.setOptions({{physics: {{enabled: physicsEnabled}}}});
                 }}
-                
+
                 function filterByCategory(category) {{
                     if (category === '') {{
                         nodes.forEach(node => {{

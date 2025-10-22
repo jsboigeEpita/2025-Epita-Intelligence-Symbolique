@@ -119,7 +119,7 @@ def  bad_function( a, b ):
 class   BadClass :
   def __init__( self,param1 ):
     self.param1=param1
-    
+
   def  another_method( self, x,y, z ):
         print(x,y,z)
 """

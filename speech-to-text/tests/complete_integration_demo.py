@@ -23,30 +23,30 @@ def simulate_speech_to_text(audio_description: str) -> str:
     # Simulate different types of speeches with fallacies
     sample_speeches = {
         "climate_debate": """
-        Everyone knows that climate change is a hoax because my neighbor said so, 
-        and he's a very smart person. Besides, if climate change were real, 
-        then why was it cold last winter? Also, all scientists are just trying 
-        to get research funding, so you can't trust anything they say. 
+        Everyone knows that climate change is a hoax because my neighbor said so,
+        and he's a very smart person. Besides, if climate change were real,
+        then why was it cold last winter? Also, all scientists are just trying
+        to get research funding, so you can't trust anything they say.
         We shouldn't change our lifestyle based on these false claims.
         """,
         "political_speech": """
-        My opponent is clearly unfit for office because he went to a fancy school, 
-        so he can't understand regular people like us. Everyone in my neighborhood 
-        agrees that we need change. If his policies were any good, then why 
-        is there still unemployment? All politicians are corrupt anyway, 
+        My opponent is clearly unfit for office because he went to a fancy school,
+        so he can't understand regular people like us. Everyone in my neighborhood
+        agrees that we need change. If his policies were any good, then why
+        is there still unemployment? All politicians are corrupt anyway,
         so we might as well vote for someone new.
         """,
         "product_review": """
-        This product is terrible because the company's CEO is young and inexperienced. 
-        Everyone knows that young people don't understand business. My friend tried 
-        a similar product once and it broke, so all products from this category 
+        This product is terrible because the company's CEO is young and inexperienced.
+        Everyone knows that young people don't understand business. My friend tried
+        a similar product once and it broke, so all products from this category
         are unreliable. If this product was good, then why do they need to advertise it?
         """,
         "health_discussion": """
-        You shouldn't trust doctors because they just want to make money from you. 
-        My grandmother lived to 95 without ever going to a doctor, so medical care 
-        is unnecessary. Everyone in my family has good genes, so we don't need 
-        to worry about health issues. These medical studies are all funded by 
+        You shouldn't trust doctors because they just want to make money from you.
+        My grandmother lived to 95 without ever going to a doctor, so medical care
+        is unnecessary. Everyone in my family has good genes, so we don't need
+        to worry about health issues. These medical studies are all funded by
         pharmaceutical companies anyway.
         """,
     }

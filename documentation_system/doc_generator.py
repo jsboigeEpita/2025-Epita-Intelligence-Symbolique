@@ -227,7 +227,7 @@ class DocumentationGenerator:
             padding: 20px;
             background-color: #f8f9fa;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -236,14 +236,14 @@ class DocumentationGenerator:
             margin-bottom: 2rem;
             text-align: center;
         }
-        
+
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             margin: 2rem 0;
         }
-        
+
         .metric-card {
             background: white;
             padding: 1.5rem;
@@ -251,14 +251,14 @@ class DocumentationGenerator:
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
+
         .metric-value {
             font-size: 2rem;
             font-weight: bold;
             color: #667eea;
             display: block;
         }
-        
+
         .category-section {
             background: white;
             margin: 1rem 0;
@@ -266,12 +266,12 @@ class DocumentationGenerator:
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        
+
         .module-list {
             list-style: none;
             padding: 0;
         }
-        
+
         .module-list li {
             padding: 0.5rem;
             margin: 0.25rem 0;
@@ -279,7 +279,7 @@ class DocumentationGenerator:
             border-left: 4px solid #667eea;
             border-radius: 4px;
         }
-        
+
         .code-block {
             background: #f4f4f4;
             border: 1px solid #ddd;
@@ -288,7 +288,7 @@ class DocumentationGenerator:
             overflow-x: auto;
             margin: 1rem 0;
         }
-        
+
         .nav-menu {
             background: white;
             padding: 1rem;
@@ -296,18 +296,18 @@ class DocumentationGenerator:
             margin-bottom: 2rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        
+
         .nav-menu a {
             color: #667eea;
             text-decoration: none;
             margin: 0 1rem;
             font-weight: 500;
         }
-        
+
         .nav-menu a:hover {
             text-decoration: underline;
         }
-        
+
         .step {
             background: white;
             margin: 1rem 0;
@@ -315,7 +315,7 @@ class DocumentationGenerator:
             border-radius: 8px;
             border-left: 4px solid #28a745;
         }
-        
+
         .dependencies {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -537,7 +537,7 @@ class DocumentationGenerator:
                 <p>Documentation technique générée automatiquement</p>
                 <p><small>Généré le {{ generation_date }}</small></p>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="index.html">🏠 Accueil</a>
                 <a href="architecture.html">🏗️ Architecture</a>
@@ -545,7 +545,7 @@ class DocumentationGenerator:
                 <a href="tutorials/">📖 Tutoriels</a>
                 <a href="reference/">📋 Référence</a>
             </nav>
-            
+
             <div class="metrics-grid">
                 <div class="metric-card">
                     <span class="metric-value">{{ metrics.total_modules }}</span>
@@ -564,7 +564,7 @@ class DocumentationGenerator:
                     <div>Points d'Entrée</div>
                 </div>
             </div>
-            
+
             <div class="category-section">
                 <h2>🎯 Démarrage Rapide</h2>
                 <p>Voici les modules recommandés pour commencer :</p>
@@ -579,14 +579,14 @@ class DocumentationGenerator:
                 {% endfor %}
                 </ul>
             </div>
-            
+
             <div class="category-section">
                 <h2>📊 Répartition par Catégories</h2>
                 {% for category, count in categories.items() %}
                 <p><strong>{{ category|title }}</strong>: {{ count }} module(s)</p>
                 {% endfor %}
             </div>
-            
+
             <div class="category-section">
                 <h2>🚀 Prochaines Étapes</h2>
                 <ol>
@@ -614,19 +614,19 @@ class DocumentationGenerator:
                 <h1>📄 {{ module.name }}</h1>
                 <p>{{ module.type|title }} - Catégorie: {{ module.category|title }}</p>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="../index.html">🏠 Accueil</a>
                 <a href="../reference/">📋 Référence</a>
             </nav>
-            
+
             {% if module.docstring %}
             <div class="category-section">
                 <h2>📝 Description</h2>
                 <p>{{ module.docstring }}</p>
             </div>
             {% endif %}
-            
+
             <div class="category-section">
                 <h2>ℹ️ Informations</h2>
                 <ul>
@@ -636,7 +636,7 @@ class DocumentationGenerator:
                     <li><strong>Complexité:</strong> {{ module.complexity_score }}</li>
                 </ul>
             </div>
-            
+
             {% if module.classes %}
             <div class="category-section">
                 <h2>🏗️ Classes</h2>
@@ -647,7 +647,7 @@ class DocumentationGenerator:
                 </ul>
             </div>
             {% endif %}
-            
+
             {% if module.functions %}
             <div class="category-section">
                 <h2>⚙️ Fonctions</h2>
@@ -658,7 +658,7 @@ class DocumentationGenerator:
                 </ul>
             </div>
             {% endif %}
-            
+
             {% if dependencies %}
             <div class="dependencies">
                 <h3>🔗 Dépendances</h3>
@@ -669,7 +669,7 @@ class DocumentationGenerator:
                 </ul>
             </div>
             {% endif %}
-            
+
             {% if examples %}
             <div class="category-section">
                 <h2>💡 Exemples d'utilisation</h2>
@@ -696,12 +696,12 @@ class DocumentationGenerator:
                 <h1>🤖 {{ category_title }}</h1>
                 <p>{{ category_description }}</p>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="../index.html">🏠 Accueil</a>
                 <a href="../guides/">📚 Guides</a>
             </nav>
-            
+
             <div class="category-section">
                 <h2>📋 Modules Disponibles</h2>
                 <ul class="module-list">
@@ -713,7 +713,7 @@ class DocumentationGenerator:
                 {% endfor %}
                 </ul>
             </div>
-            
+
             {% if usage_examples %}
             <div class="category-section">
                 <h2>💻 Exemples d'Utilisation</h2>
@@ -722,7 +722,7 @@ class DocumentationGenerator:
                 {% endfor %}
             </div>
             {% endif %}
-            
+
             {% if best_practices %}
             <div class="category-section">
                 <h2>✅ Bonnes Pratiques</h2>
@@ -751,12 +751,12 @@ class DocumentationGenerator:
                 <h1>📖 {{ title }}</h1>
                 <p>{{ description }}</p>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="../index.html">🏠 Accueil</a>
                 <a href="../tutorials/">📖 Tutoriels</a>
             </nav>
-            
+
             {% for step in steps %}
             <div class="step">
                 <h3>{{ loop.index }}. {{ step.title }}</h3>
@@ -784,12 +784,12 @@ class DocumentationGenerator:
                 <h1>🏗️ Architecture du Système</h1>
                 <p>Vue d'ensemble de l'architecture d'IA symbolique</p>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="index.html">🏠 Accueil</a>
                 <a href="architecture.html">🏗️ Architecture</a>
             </nav>
-            
+
             <div class="category-section">
                 <h2>📊 Vue d'ensemble des Composants</h2>
                 <div class="metrics-grid">
@@ -807,7 +807,7 @@ class DocumentationGenerator:
                     </div>
                 </div>
             </div>
-            
+
             <div class="category-section">
                 <h2>🔄 Flux de Données</h2>
                 <ol>
@@ -816,14 +816,14 @@ class DocumentationGenerator:
                 {% endfor %}
                 </ol>
             </div>
-            
+
             <div class="category-section">
                 <h2>🗂️ Structure du Projet</h2>
                 <div class="code-block">
                 {{ architecture_tree | pprint }}
                 </div>
             </div>
-            
+
             <div class="category-section">
                 <h2>🔗 Graphe de Dépendances</h2>
                 <p>{{ dependency_graph }}</p>

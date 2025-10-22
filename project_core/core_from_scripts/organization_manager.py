@@ -72,7 +72,7 @@ class OrganizationManager:
             # 3. Generate a README.md
             readme_content = f"""# Results Directory organized on {timestamp}
 
-This directory was automatically organized. 
+This directory was automatically organized.
 The original content was archived to: {archive_path}
 
 ## Summary of operations:

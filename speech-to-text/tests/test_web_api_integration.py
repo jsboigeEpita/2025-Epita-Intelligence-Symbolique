@@ -38,10 +38,10 @@ def test_web_api_fallacy_analysis_integration():
 
     # Sample text with multiple fallacies (simulating transcribed speech)
     sample_text = """
-    Everyone knows that climate change is a hoax because my neighbor said so, 
-    and he's a very smart person. Besides, if climate change were real, 
-    then why was it cold last winter? Also, all scientists are just trying 
-    to get research funding, so you can't trust anything they say. 
+    Everyone knows that climate change is a hoax because my neighbor said so,
+    and he's a very smart person. Besides, if climate change were real,
+    then why was it cold last winter? Also, all scientists are just trying
+    to get research funding, so you can't trust anything they say.
     We shouldn't change our lifestyle based on these false claims.
     """
 
@@ -121,9 +121,9 @@ def test_complete_analysis_api():
         )
 
     sample_text = """
-    We should ban all video games because they cause violence. 
-    My cousin played violent games and he got into a fight, 
-    so this proves that games make people aggressive. 
+    We should ban all video games because they cause violence.
+    My cousin played violent games and he got into a fight,
+    so this proves that games make people aggressive.
     Anyone who disagrees is just a gaming addict who can't see the truth.
     """
 

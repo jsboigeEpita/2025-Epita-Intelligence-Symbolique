@@ -4,7 +4,7 @@ Script de nettoyage contrôlé des fichiers obsolètes
 Tâche 4/5 - Nettoyage sécurisé selon le plan d'organisation
 
 Fonctionnalités :
-- Sauvegarde pré-nettoyage 
+- Sauvegarde pré-nettoyage
 - Suppression contrôlée des tests obsolètes
 - Archivage des tests historiques
 - Validation post-nettoyage
@@ -396,7 +396,7 @@ class CleanupManager:
 
 ### Oracle Enhanced v2.1.0
 - [ ] Tests d'intégration Oracle fonctionnels
-- [ ] API Dataset Access Manager opérationnelle  
+- [ ] API Dataset Access Manager opérationnelle
 - [ ] Agent Moriarty Interrogator validé
 - [ ] Workflow Cluedo Extended testé
 

@@ -14,13 +14,13 @@ Usage:
 Exemples:
     # Démonstration complète avec tous les modes
     python run_orchestration_pipeline_demo.py
-    
+
     # Mode spécifique
     python run_orchestration_pipeline_demo.py --mode hierarchical_full --type comprehensive
-    
+
     # Texte personnalisé
     python run_orchestration_pipeline_demo.py --text "Votre texte à analyser"
-    
+
     # Comparaison des approches
     python run_orchestration_pipeline_demo.py --compare
 
@@ -67,28 +67,28 @@ except ImportError as e:
 # Textes d'exemple pour différents types d'analyse
 EXAMPLE_TEXTS = {
     "rhetorical": """
-    L'éducation est fondamentale pour le développement d'une société. Premièrement, elle forme les citoyens 
-    en leur donnant les connaissances nécessaires pour participer activement à la vie démocratique. 
-    Deuxièmement, elle favorise l'innovation et le progrès technologique. Cependant, certains prétendent 
-    que l'éducation traditionnelle est obsolète. Cette affirmation est clairement fausse car elle ignore 
+    L'éducation est fondamentale pour le développement d'une société. Premièrement, elle forme les citoyens
+    en leur donnant les connaissances nécessaires pour participer activement à la vie démocratique.
+    Deuxièmement, elle favorise l'innovation et le progrès technologique. Cependant, certains prétendent
+    que l'éducation traditionnelle est obsolète. Cette affirmation est clairement fausse car elle ignore
     les nombreux bénéfices prouvés de l'enseignement structuré.
     """,
     "logical": """
-    Si tous les hommes sont mortels, et si Socrate est un homme, alors Socrate est mortel. 
-    Cette déduction suit le principe du syllogisme aristotélicien. Or, nous savons que Socrate est effectivement 
-    un homme, donc nous pouvons conclure avec certitude qu'il est mortel. Ce raisonnement illustre parfaitement 
+    Si tous les hommes sont mortels, et si Socrate est un homme, alors Socrate est mortel.
+    Cette déduction suit le principe du syllogisme aristotélicien. Or, nous savons que Socrate est effectivement
+    un homme, donc nous pouvons conclure avec certitude qu'il est mortel. Ce raisonnement illustre parfaitement
     la logique déductive où la conclusion découle nécessairement des prémisses.
     """,
     "investigative": """
-    Le témoin A affirme avoir vu le suspect près de la scène de crime à 21h30. Le témoin B contredit cette version 
-    en déclarant que le suspect était ailleurs à cette heure. L'alibi du suspect semble solide, mais plusieurs 
-    incohérences apparaissent dans son témoignage. De plus, les preuves matérielles suggèrent une présence sur 
+    Le témoin A affirme avoir vu le suspect près de la scène de crime à 21h30. Le témoin B contredit cette version
+    en déclarant que le suspect était ailleurs à cette heure. L'alibi du suspect semble solide, mais plusieurs
+    incohérences apparaissent dans son témoignage. De plus, les preuves matérielles suggèrent une présence sur
     les lieux. Qui dit la vérité ? Quels éléments permettraient de trancher cette contradiction ?
     """,
     "fallacy_focused": """
-    "Tous ceux qui s'opposent à cette mesure sont des extrémistes dangereux. D'ailleurs, même mon voisin, 
-    qui est pourtant quelqu'un de bien, la soutient. Si nous n'agissons pas maintenant, c'est la catastrophe 
-    assurée ! De toute façon, puisque 90% des experts sont d'accord, il n'y a plus rien à débattre. 
+    "Tous ceux qui s'opposent à cette mesure sont des extrémistes dangereux. D'ailleurs, même mon voisin,
+    qui est pourtant quelqu'un de bien, la soutient. Si nous n'agissons pas maintenant, c'est la catastrophe
+    assurée ! De toute façon, puisque 90% des experts sont d'accord, il n'y a plus rien à débattre.
     Soit vous êtes avec nous, soit vous êtes contre la nation."
     """,
     "debate": """
@@ -98,12 +98,12 @@ EXAMPLE_TEXTS = {
     Participant B : "Ces études sont biaisées par l'industrie tech. En réalité, la créativité diminue sans contact humain."
     """,
     "comprehensive": """
-    La question du changement climatique soulève des enjeux complexes qui nécessitent une approche multidisciplinaire. 
-    D'un côté, les données scientifiques convergent vers un consensus sur l'origine anthropique du réchauffement. 
-    Les modèles climatiques, basés sur des décennies d'observations, prévoient des conséquences dramatiques si aucune 
-    action n'est entreprise. D'un autre côté, les solutions proposées font débat. Certains privilégient les technologies 
-    vertes, d'autres la décroissance. Cependant, l'argument selon lequel "nous n'avons pas le choix" constitue une 
-    fausse dichotomie qui ignore les nuances des politiques possibles. Il est donc crucial d'analyser rationnellement 
+    La question du changement climatique soulève des enjeux complexes qui nécessitent une approche multidisciplinaire.
+    D'un côté, les données scientifiques convergent vers un consensus sur l'origine anthropique du réchauffement.
+    Les modèles climatiques, basés sur des décennies d'observations, prévoient des conséquences dramatiques si aucune
+    action n'est entreprise. D'un autre côté, les solutions proposées font débat. Certains privilégient les technologies
+    vertes, d'autres la décroissance. Cependant, l'argument selon lequel "nous n'avons pas le choix" constitue une
+    fausse dichotomie qui ignore les nuances des politiques possibles. Il est donc crucial d'analyser rationnellement
     les options disponibles sans tomber dans l'alarmisme ni le déni.
     """,
 }

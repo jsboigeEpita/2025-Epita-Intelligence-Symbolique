@@ -686,15 +686,15 @@ if __name__ == "__main__":
     # Exemple d'identification de motifs de sophismes
     text = """
     Les experts sont unanimes : ce produit est sûr et efficace.
-    
+
     Si vous n'utilisez pas ce produit, vous risquez de souffrir de problèmes de santé graves.
-    
+
     Des millions de personnes utilisent déjà ce produit avec satisfaction.
-    
+
     Les critiques de ce produit sont motivés par des intérêts financiers et ne sont pas crédibles.
-    
+
     La science a prouvé l'efficacité de ce produit dans de nombreuses études.
-    
+
     Si vous n'agissez pas maintenant, il sera trop tard pour profiter des bienfaits de ce produit.
     """
 

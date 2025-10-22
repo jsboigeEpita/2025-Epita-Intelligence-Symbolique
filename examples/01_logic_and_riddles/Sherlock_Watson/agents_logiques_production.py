@@ -14,7 +14,7 @@ SOURCES AUTHENTIQUES:
 
 FONCTIONNALITÉS PRODUCTION:
 ✅ Logique propositionnelle réelle
-✅ Agents d'argumentation authentiques  
+✅ Agents d'argumentation authentiques
 ✅ Détection sophistiques réelle
 ✅ Communication inter-agents fonctionnelle
 ✅ Raisonnement modal et temporel
@@ -708,7 +708,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
         Si tous les étudiants travaillent, alors ils réussissent.
         Certains étudiants ne réussissent pas.
         Donc, certains étudiants ne travaillent pas.
-        
+
         Attention: Tu dis ça parce que tu es professeur ! (sophistique ad hominem)
         Il faut absolument réussir ce projet.
         """

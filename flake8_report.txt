@@ -23,7 +23,6 @@
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1313:25: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1316:19: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1477:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\first_try\argumentation_main.py:4:73: W291 trailing whitespace
 .\1_2_7_argumentation_dialogique\first_try\argumentation_main.py:400:11: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:45:20: F821 undefined name 'create_demo_agents'
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:48:16: F821 undefined name 'create_demo_agents'
@@ -57,10 +56,7 @@
 .\abs_arg_dung\advanced_tests.py:347:15: F541 f-string is missing placeholders
 .\abs_arg_dung\advanced_tests.py:427:15: F541 f-string is missing placeholders
 .\abs_arg_dung\advanced_tests.py:449:11: F541 f-string is missing placeholders
-.\abs_arg_dung\agent.py:184:9: F811 redefinition of unused 'plt' from line 12
-.\abs_arg_dung\agent.py:185:9: F811 redefinition of unused 'nx' from line 13
-.\abs_arg_dung\agent.py:337:9: F811 redefinition of unused 'nx' from line 13
-.\abs_arg_dung\agent.py:389:28: F821 undefined name 'Path'
+.\abs_arg_dung\agent.py:340:9: E999 IndentationError: unexpected indent
 .\abs_arg_dung\benchmark.py:331:15: F541 f-string is missing placeholders
 .\abs_arg_dung\cli.py:108:11: F541 f-string is missing placeholders
 .\abs_arg_dung\cli.py:137:11: F541 f-string is missing placeholders
@@ -75,16 +71,10 @@
 .\abs_arg_dung\test_agent.py:41:15: F541 f-string is missing placeholders
 .\abs_arg_dung\test_agent.py:74:15: F541 f-string is missing placeholders
 .\abs_arg_dung\test_agent.py:125:15: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\informal\informal_agent.py:251:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\core\informal\informal_agent.py:254:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\core\informal\informal_agent.py:257:1: W293 blank line contains whitespace
 .\argumentation_analysis\agents\core\informal\informal_definitions.py:88:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\informal\taxonomy_sophism_detector.py:8:52: W291 trailing whitespace
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:555:5: F811 redefinition of unused 'setup_agent_components' from line 202
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:705:24: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:844:5: F811 redefinition of unused 'asyncio' from line 20
-.\argumentation_analysis\agents\core\logic\modal_logic_agent.py:5:77: W291 trailing whitespace
-.\argumentation_analysis\agents\core\logic\modal_logic_agent.py:112:36: W291 trailing whitespace
 .\argumentation_analysis\agents\core\logic\modal_logic_agent.py:300:13: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\pl_handler.py:129:21: F821 undefined name 'JString'
 .\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:558:27: F541 f-string is missing placeholders
@@ -94,7 +84,6 @@
 .\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:590:27: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:596:26: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:931:36: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\tweety_bridge_sk.py:318:47: W291 trailing whitespace
 .\argumentation_analysis\agents\core\logic\watson_logic_assistant.py:34:1: F811 redefinition of unused 'TweetyBridge' from line 17
 .\argumentation_analysis\agents\core\oracle\cluedo_dataset.py:170:42: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\oracle\moriarty_interrogator_agent.py:226:24: F541 f-string is missing placeholders
@@ -108,8 +97,6 @@
 .\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:587:47: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:602:42: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:605:43: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:628:82: W291 trailing whitespace
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:638:76: W291 trailing whitespace
 .\argumentation_analysis\agents\initialize_cache.py:32:13: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\initialize_cache.py:34:15: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\jtms_communication_hub.py:1064:5: F811 redefinition of unused 'handle_agent_failure' from line 370
@@ -119,16 +106,9 @@
 .\argumentation_analysis\agents\runners\test\orchestration\test_orchestration_scale.py:44:17: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\runners\test\orchestration\test_orchestration_scale.py:79:52: F821 undefined name 'LIBS_DIR'
 .\argumentation_analysis\agents\sherlock_jtms_agent.py:220:27: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\sherlock_jtms_agent.py:372:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\templates\student_template\prompts.py:7:86: W291 trailing whitespace
 .\argumentation_analysis\agents\test_scripts\orchestration\test_orchestration_scale.py:44:17: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\test_scripts\orchestration\test_orchestration_scale.py:79:52: F821 undefined name 'LIBS_DIR'
 .\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:505:36: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:689:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:691:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:693:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:695:1: W293 blank line contains whitespace
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:697:1: W293 blank line contains whitespace
 .\argumentation_analysis\agents\tools\analysis\fallacy_family_analyzer.py:434:32: F821 undefined name 'family_contexts'
 .\argumentation_analysis\agents\tools\analysis\fallacy_severity_evaluator.py:13:1: F811 redefinition of unused 'json' from line 12
 .\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:40:13: F541 f-string is missing placeholders
@@ -165,7 +145,6 @@
 .\argumentation_analysis\core\jvm_setup.py:400:17: F541 f-string is missing placeholders
 .\argumentation_analysis\core\setup\manage_portable_tools.py:168:21: F541 f-string is missing placeholders
 .\argumentation_analysis\core\setup\prover9_manager.py:280:21: F541 f-string is missing placeholders
-.\argumentation_analysis\core\source_management.py:8:30: W291 trailing whitespace
 .\argumentation_analysis\core\state_manager_plugin.py:55:107: E225 missing whitespace around operator
 .\argumentation_analysis\core\state_manager_plugin.py:287:17: F541 f-string is missing placeholders
 .\argumentation_analysis\core\utils\network_utils.py:181:26: F541 f-string is missing placeholders
@@ -202,9 +181,6 @@
 .\argumentation_analysis\examples\communication\strategic_tactical_communication.py:51:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\communication\strategic_tactical_communication.py:54:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\communication\strategic_tactical_communication.py:54:37: F821 undefined name 'json'
-.\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:40:140: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:41:166: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:42:116: W291 trailing whitespace
 .\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:47:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:63:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:70:5: F821 undefined name 'logger'
@@ -216,28 +192,6 @@
 .\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:95:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\orchestration\run_hierarchical_orchestration.py:370:46: F821 undefined name 'RESULTS_DIR'
 .\argumentation_analysis\examples\orchestration\run_hierarchical_orchestration.py:379:13: F821 undefined name 'RESULTS_DIR'
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:17:1: W293 blank line contains whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:20:1: W293 blank line contains whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:23:1: W293 blank line contains whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:70:108: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:71:100: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:72:105: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:73:105: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:77:91: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:78:113: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:79:112: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:83:115: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:84:111: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:85:111: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:89:106: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:90:109: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:91:100: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:101:119: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:102:114: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:103:118: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:104:121: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:105:115: W291 trailing whitespace
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:106:118: W291 trailing whitespace
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:134:15: F541 f-string is missing placeholders
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:139:15: F541 f-string is missing placeholders
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:144:15: F541 f-string is missing placeholders
@@ -266,8 +220,6 @@
 .\argumentation_analysis\examples\rhetorical_tools\contextual_fallacy_detector_example.py:29:9: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\contextual_fallacy_detector_example.py:30:9: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\contextual_fallacy_detector_example.py:31:9: F821 undefined name 'logger'
-.\argumentation_analysis\examples\rhetorical_tools\enhanced_complex_fallacy_analyzer_example.py:18:93: W291 trailing whitespace
-.\argumentation_analysis\examples\rhetorical_tools\enhanced_complex_fallacy_analyzer_example.py:19:91: W291 trailing whitespace
 .\argumentation_analysis\examples\rhetorical_tools\enhanced_complex_fallacy_analyzer_example.py:24:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\enhanced_complex_fallacy_analyzer_example.py:28:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\enhanced_complex_fallacy_analyzer_example.py:29:5: F821 undefined name 'logger'
@@ -306,7 +258,6 @@
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:1183:21: F821 undefined name 'reactions'
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:1185:43: F821 undefined name 'agent_name'
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:1194:16: F821 undefined name 'reactions'
-.\argumentation_analysis\orchestration\conversation_orchestrator.py:9:53: W291 trailing whitespace
 .\argumentation_analysis\orchestration\engine\main_orchestrator.py:73:1: F811 redefinition of unused 'OrchestrationConfig' from line 64
 .\argumentation_analysis\orchestration\engine\main_orchestrator.py:74:1: F811 redefinition of unused 'OrchestrationStrategy' from line 17
 .\argumentation_analysis\orchestration\engine\main_orchestrator.py:331:13: F541 f-string is missing placeholders
@@ -320,12 +271,9 @@
 .\argumentation_analysis\pipelines\orchestration\analysis\post_processors.py:64:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\processors.py:60:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\processors.py:94:15: F821 undefined name 'UnifiedOrchestrationPipeline'
-.\argumentation_analysis\pipelines\orchestration\analysis\traces.py:8:68: W291 trailing whitespace
 .\argumentation_analysis\pipelines\orchestration\analysis\traces.py:23:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\traces.py:36:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\traces.py:48:15: F821 undefined name 'UnifiedOrchestrationPipeline'
-.\argumentation_analysis\pipelines\orchestration\core\communication.py:7:64: W291 trailing whitespace
-.\argumentation_analysis\pipelines\orchestration\core\service_manager.py:7:65: W291 trailing whitespace
 .\argumentation_analysis\pipelines\orchestration\execution\engine.py:82:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\execution\strategies.py:80:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\execution\strategies.py:144:15: F821 undefined name 'UnifiedOrchestrationPipeline'
@@ -335,7 +283,6 @@
 .\argumentation_analysis\pipelines\orchestration\execution\strategies.py:314:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\plugins\semantic_kernel\jtms_plugin.py:13:5: F811 redefinition of unused 'kernel_function' from line 12
 .\argumentation_analysis\reporting\document_assembler.py:420:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\enhanced_real_time_trace_analyzer.py:10:43: W291 trailing whitespace
 .\argumentation_analysis\reporting\enhanced_real_time_trace_analyzer.py:505:17: F541 f-string is missing placeholders
 .\argumentation_analysis\reporting\enhanced_real_time_trace_analyzer.py:506:17: F541 f-string is missing placeholders
 .\argumentation_analysis\reporting\real_time_trace_analyzer.py:316:29: F541 f-string is missing placeholders
@@ -358,7 +305,6 @@
 .\argumentation_analysis\reporting\trace_analyzer.py:931:17: F541 f-string is missing placeholders
 .\argumentation_analysis\run_orchestration.py:96:13: F541 f-string is missing placeholders
 .\argumentation_analysis\service_setup\analysis_services.py:50:27: F541 f-string is missing placeholders
-.\argumentation_analysis\services\jtms_session_manager.py:3:67: W291 trailing whitespace
 .\argumentation_analysis\services\logic_service.py:522:5: F811 redefinition of unused 'get_service_status' from line 241
 .\argumentation_analysis\services\logic_service.py:596:5: F811 redefinition of unused 'clear_cache' from line 257
 .\argumentation_analysis\services\web_api\flask_routes.py:139:21: F541 f-string is missing placeholders
@@ -381,26 +327,13 @@
 .\argumentation_analysis\ui\utils.py:328:31: F541 f-string is missing placeholders
 .\argumentation_analysis\ui\verification_utils.py:115:50: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\correction_utils.py:131:13: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\dev_tools\code_formatting_utils.py:122:1: W293 blank line contains whitespace
 .\argumentation_analysis\utils\dev_tools\code_validation.py:318:5: F811 redefinition of unused 'os' from line 4
 .\argumentation_analysis\utils\dev_tools\code_validation.py:367:17: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\dev_tools\code_validation.py:372:21: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\dev_tools\encoding_utils.py:315:22: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\dev_tools\reporting_utils.py:78:25: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\extract_repair\marker_repair_logic.py:30:99: W291 trailing whitespace
-.\argumentation_analysis\utils\extract_repair\marker_repair_logic.py:56:84: W291 trailing whitespace
-.\argumentation_analysis\utils\extract_repair\marker_repair_logic.py:268:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\marker_repair_logic.py:277:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\marker_repair_logic.py:284:1: W293 blank line contains whitespace
 .\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:290:23: F821 undefined name 'ChatCompletionAgent'
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:307:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:311:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:314:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:319:1: W293 blank line contains whitespace
 .\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:336:21: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:537:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:544:1: W293 blank line contains whitespace
-.\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:561:1: W293 blank line contains whitespace
 .\argumentation_analysis\utils\report_generator.py:105:35: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\report_generator.py:120:35: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\restore_config.py:67:13: F541 f-string is missing placeholders
@@ -417,10 +350,6 @@
 .\argumentation_analysis\utils\update_encrypted_config.py:88:15: F541 f-string is missing placeholders
 .\argumentation_analysis\webapp\orchestrator.py:317:21: F541 f-string is missing placeholders
 .\argumentation_analysis\webapp\orchestrator.py:1139:17: F541 f-string is missing placeholders
-.\argumentation_analysis\webapp\orchestrator.py:1615:69: W291 trailing whitespace
-.\argumentation_analysis\webapp\orchestrator.py:1616:84: W291 trailing whitespace
-.\argumentation_analysis\webapp\orchestrator.py:1617:58: W291 trailing whitespace
-.\argumentation_analysis\webapp\orchestrator.py:1618:60: W291 trailing whitespace
 .\cleanup_flake8_progressive.py:50:11: F541 f-string is missing placeholders
 .\cleanup_flake8_progressive.py:55:11: F541 f-string is missing placeholders
 .\cleanup_flake8_progressive.py:73:11: F541 f-string is missing placeholders
@@ -438,9 +367,6 @@
 .\config\unified_config.py:538:47: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\config\unified_config.py:542:41: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\config\unified_config.py:546:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\demos\integration\test_parallel_workflow_integration.py:64:104: W291 trailing whitespace
-.\demos\integration\test_parallel_workflow_integration.py:65:84: W291 trailing whitespace
-.\demos\integration\test_parallel_workflow_integration.py:66:97: W291 trailing whitespace
 .\demos\showcases\demo_one_liner_usage.py:50:15: F541 f-string is missing placeholders
 .\demos\showcases\demo_one_liner_usage.py:53:15: F541 f-string is missing placeholders
 .\demos\showcases\demo_one_liner_usage.py:56:19: F541 f-string is missing placeholders
@@ -451,189 +377,21 @@
 .\demos\validation\validation_complete_epita.py:40:9: F541 f-string is missing placeholders
 .\demos\validation\validation_complete_epita.py:45:9: F541 f-string is missing placeholders
 .\demos\validation\validation_complete_epita.py:54:1: F811 redefinition of unused 'os' from line 3
-.\documentation_system\doc_generator.py:230:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:239:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:246:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:254:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:261:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:269:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:274:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:282:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:291:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:299:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:306:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:310:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:318:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:540:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:548:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:567:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:582:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:589:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:617:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:622:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:629:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:639:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:650:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:661:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:672:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:699:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:704:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:716:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:725:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:754:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:759:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:787:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:792:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:810:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:819:1: W293 blank line contains whitespace
-.\documentation_system\doc_generator.py:826:1: W293 blank line contains whitespace
 .\documentation_system\doc_generator.py:846:15: F541 f-string is missing placeholders
 .\documentation_system\doc_generator.py:848:15: F541 f-string is missing placeholders
-.\documentation_system\interactive_guide.py:150:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:159:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:185:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:203:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:228:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:237:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:246:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:252:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:285:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:292:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:300:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:307:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:319:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:331:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:334:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:345:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:356:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:370:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:376:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:397:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:405:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:414:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:420:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:428:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:435:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:447:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:460:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:467:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:474:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:478:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:485:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:495:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:500:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:508:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:515:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:520:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:527:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:534:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:540:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:549:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:554:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:559:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:568:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:574:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:585:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:590:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:598:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:605:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:611:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:620:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:626:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:637:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:642:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:649:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:654:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:658:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:667:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:672:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:677:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:684:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:691:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:700:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:705:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:711:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:719:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:725:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:731:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:735:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:740:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:747:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:752:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:758:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:765:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:772:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:777:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:785:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:790:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:794:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:798:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:806:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:810:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:818:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:829:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:835:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:840:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:844:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:858:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:862:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:872:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:879:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:884:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:889:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:894:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:899:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:901:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:904:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:907:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:910:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:913:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:916:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:920:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:929:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:932:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:937:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:939:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:956:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:959:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:965:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:970:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:976:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:983:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:997:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:1003:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:1008:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:1012:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:1021:1: W293 blank line contains whitespace
-.\documentation_system\interactive_guide.py:1029:1: W293 blank line contains whitespace
 .\documentation_system\interactive_guide.py:1062:9: F811 redefinition of unused 'render_template_string' from line 16
 .\documentation_system\interactive_guide.py:1085:9: F811 redefinition of unused 'jsonify' from line 16
 .\documentation_system\knowledge_mapper.py:64:19: F541 f-string is missing placeholders
 .\documentation_system\knowledge_mapper.py:380:15: F541 f-string is missing placeholders
-.\documentation_system\knowledge_mapper.py:452:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:465:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:467:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:490:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:501:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:506:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:537:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:540:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:549:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:561:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:565:1: W293 blank line contains whitespace
-.\documentation_system\knowledge_mapper.py:571:1: W293 blank line contains whitespace
 .\documentation_system\knowledge_mapper.py:671:15: F541 f-string is missing placeholders
 .\documentation_system\knowledge_mapper.py:676:15: F541 f-string is missing placeholders
 .\documentation_system\knowledge_mapper.py:682:15: F541 f-string is missing placeholders
-.\documentation_system\start_system.py:8:44: W291 trailing whitespace
 .\documentation_system\start_system.py:63:15: F541 f-string is missing placeholders
 .\documentation_system\start_system.py:64:15: F541 f-string is missing placeholders
 .\documentation_system\start_system.py:65:15: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:17:38: W291 trailing whitespace
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:663:23: F541 f-string is missing placeholders
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:674:23: F541 f-string is missing placeholders
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:690:23: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:711:1: W293 blank line contains whitespace
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:716:15: F541 f-string is missing placeholders
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:726:15: F541 f-string is missing placeholders
 .\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:739:15: F541 f-string is missing placeholders
@@ -819,7 +577,6 @@
 .\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:132:11: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\test_architecture.py:186:15: F541 f-string is missing placeholders
 .\interface_web\api\jtms_integration.py:643:5: F811 redefinition of unused 'asyncio' from line 16
-.\interface_web\routes\jtms_routes.py:10:38: W291 trailing whitespace
 .\interface_web\services\jtms_websocket.py:444:5: F811 redefinition of unused 'time' from line 23
 .\plugins\AnalysisToolsPlugin\logic\complex_fallacy_analyzer.py:75:42: F821 undefined name 'AbstractFallacyDetector'
 .\plugins\AnalysisToolsPlugin\logic\rhetorical_result_visualizer.py:459:29: F541 f-string is missing placeholders
@@ -854,56 +611,36 @@
 .\project_core\core_from_scripts\environment_manager.debug.py:26:29: E261 at least two spaces before inline comment
 .\project_core\core_from_scripts\environment_manager.debug.py:39:16: W292 no newline at end of file
 .\project_core\core_from_scripts\environment_manager.py:5:1: F811 redefinition of unused 'sys' from line 2
-.\project_core\core_from_scripts\organization_manager.py:75:44: W291 trailing whitespace
 .\project_core\core_from_scripts\test_config_definition.py:368:34: F541 f-string is missing placeholders
-.\project_core\core_from_scripts\unified_report_generator.py:211:1: W293 blank line contains whitespace
 .\project_core\environment\conda_manager.py:380:17: F541 f-string is missing placeholders
 .\project_core\environment\tool_installer.py:39:9: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:823:57: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:824:35: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:825:51: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:826:51: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:827:29: W291 trailing whitespace
 .\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:924:13: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:947:96: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:949:82: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:954:72: W291 trailing whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:970:1: W293 blank line contains whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:981:1: W293 blank line contains whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:987:1: W293 blank line contains whitespace
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:993:1: W293 blank line contains whitespace
 .\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:627:17: F541 f-string is missing placeholders
 .\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:880:15: F541 f-string is missing placeholders
 .\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:1241:21: F541 f-string is missing placeholders
 .\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:1448:23: F541 f-string is missing placeholders
 .\project_core\rhetorical_analysis_from_scripts\unified_production_analyzer.py:936:5: F811 redefinition of unused 'generate_report' from line 847
 .\reports\cleanup_migration_duplicates.py:88:11: F541 f-string is missing placeholders
-.\scripts\analyze_flake8_errors.py:126:1: W293 blank line contains whitespace
-.\scripts\analyze_flake8_errors.py:138:1: W293 blank line contains whitespace
+.\scripts\add_f821_noqa_tests.py:117:19: F541 f-string is missing placeholders
+.\scripts\add_f821_noqa_tests.py:222:17: W292 no newline at end of file
+.\scripts\analyze_f821_errors.py:87:23: F541 f-string is missing placeholders
+.\scripts\analyze_f821_errors.py:397:17: W292 no newline at end of file
 .\scripts\analyze_flake8_errors.py:141:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\analyze_flake8_errors.py:142:11: W292 no newline at end of file
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:151:1: W293 blank line contains whitespace
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:154:1: W293 blank line contains whitespace
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:161:1: W293 blank line contains whitespace
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:535:101: W291 trailing whitespace
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:536:97: W291 trailing whitespace
 .\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:781:34: F541 f-string is missing placeholders
 .\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:945:15: F541 f-string is missing placeholders
 .\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:949:15: F541 f-string is missing placeholders
-.\scripts\apps\sherlock_watson\run_unified_investigation.py:7:65: W291 trailing whitespace
 .\scripts\apps\webapp\backend_manager.py:62:31: F541 f-string is missing placeholders
 .\scripts\apps\webapp\frontend_manager.py:251:35: F541 f-string is missing placeholders
 .\scripts\apps\webapp\frontend_manager.py:437:35: F541 f-string is missing placeholders
 .\scripts\apps\webapp\launch_webapp_background.py:60:11: F541 f-string is missing placeholders
 .\scripts\apps\webapp\launch_webapp_background.py:93:13: F541 f-string is missing placeholders
 .\scripts\apps\webapp\playwright_runner.py:181:13: F541 f-string is missing placeholders
-.\scripts\apps\webapp\unified_web_orchestrator.py:9:41: W291 trailing whitespace
 .\scripts\apps\webapp\unified_web_orchestrator.py:612:24: F541 f-string is missing placeholders
-.\scripts\apps\webapp\unified_web_orchestrator.py:772:69: W291 trailing whitespace
-.\scripts\apps\webapp\unified_web_orchestrator.py:773:84: W291 trailing whitespace
-.\scripts\apps\webapp\unified_web_orchestrator.py:774:58: W291 trailing whitespace
-.\scripts\apps\webapp\unified_web_orchestrator.py:775:60: W291 trailing whitespace
-.\scripts\maintenance\analyze_oracle_references_detailed.py:10:47: W291 trailing whitespace
+.\scripts\fix_f821_missing_imports.py:242:15: F541 f-string is missing placeholders
+.\scripts\fix_f821_missing_imports.py:341:17: W292 no newline at end of file
+.\scripts\fix_whitespace_errors.py:102:11: F541 f-string is missing placeholders
+.\scripts\fix_whitespace_errors.py:110:11: W292 no newline at end of file
 .\scripts\maintenance\analyze_oracle_references_detailed.py:475:23: F541 f-string is missing placeholders
 .\scripts\maintenance\apply_path_corrections_logged.py:49:15: F541 f-string is missing placeholders
 .\scripts\maintenance\check_imports.py:66:46: F821 undefined name 'test_module_import_by_name'
@@ -918,22 +655,10 @@
 .\scripts\maintenance\cleanup\cleanup_repository.py:165:21: F541 f-string is missing placeholders
 .\scripts\maintenance\cleanup\cleanup_repository.py:168:23: F541 f-string is missing placeholders
 .\scripts\maintenance\cleanup\cleanup_repository.py:170:19: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup_obsolete_files.py:7:27: W291 trailing whitespace
-.\scripts\maintenance\cleanup_obsolete_files.py:399:48: W291 trailing whitespace
 .\scripts\maintenance\cleanup_obsolete_files.py:420:27: F541 f-string is missing placeholders
 .\scripts\maintenance\cleanup_obsolete_files.py:495:15: F541 f-string is missing placeholders
 .\scripts\maintenance\cleanup_obsolete_files.py:521:15: F541 f-string is missing placeholders
-.\scripts\maintenance\docs.py:1000:73: W291 trailing whitespace
-.\scripts\maintenance\docs.py:1001:73: W291 trailing whitespace
-.\scripts\maintenance\docs.py:1081:1: W293 blank line contains whitespace
-.\scripts\maintenance\docs.py:1150:1: W293 blank line contains whitespace
 .\scripts\maintenance\final_system_validation_corrected.py:511:15: F541 f-string is missing placeholders
-.\scripts\maintenance\finalize_refactoring.py:180:1: W293 blank line contains whitespace
-.\scripts\maintenance\finalize_refactoring.py:188:1: W293 blank line contains whitespace
-.\scripts\maintenance\finalize_refactoring.py:192:1: W293 blank line contains whitespace
-.\scripts\maintenance\finalize_refactoring.py:194:1: W293 blank line contains whitespace
-.\scripts\maintenance\finalize_refactoring.py:338:72: W291 trailing whitespace
-.\scripts\maintenance\finalize_refactoring.py:451:49: W291 trailing whitespace
 .\scripts\maintenance\fix_project_structure.py:147:25: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:166:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:175:9: F821 undefined name 'run_shell_command'
@@ -955,57 +680,15 @@
 .\scripts\maintenance\migration\migrate_to_unified.py:246:17: F541 f-string is missing placeholders
 .\scripts\maintenance\organize_orphan_files.py:397:27: F541 f-string is missing placeholders
 .\scripts\maintenance\organize_orphan_files.py:490:19: F541 f-string is missing placeholders
-.\scripts\maintenance\organize_orphan_tests.py:7:48: W291 trailing whitespace
 .\scripts\maintenance\organize_orphan_tests.py:457:15: F541 f-string is missing placeholders
 .\scripts\maintenance\organize_root_files.py:98:17: F541 f-string is missing placeholders
 .\scripts\maintenance\orphan_files_processor.py:255:11: F541 f-string is missing placeholders
 .\scripts\maintenance\orphan_files_processor.py:264:11: F541 f-string is missing placeholders
-.\scripts\maintenance\real_orphan_files_processor.py:3:68: W291 trailing whitespace
 .\scripts\maintenance\real_orphan_files_processor.py:340:11: F541 f-string is missing placeholders
 .\scripts\maintenance\real_orphan_files_processor.py:344:11: F541 f-string is missing placeholders
 .\scripts\maintenance\recover_precious_code.py:138:35: F541 f-string is missing placeholders
 .\scripts\maintenance\recover_precious_code.py:390:27: F541 f-string is missing placeholders
 .\scripts\maintenance\recover_precious_code.py:410:27: F541 f-string is missing placeholders
-.\scripts\maintenance\recover_precious_code.py:443:34: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:71:58: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:80:19: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:83:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:87:24: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:92:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:98:22: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:143:29: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:152:33: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:184:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:190:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:193:39: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:194:36: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:198:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:205:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:261:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:271:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:275:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:282:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:287:52: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:297:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:299:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:316:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:326:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:333:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:359:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:364:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:369:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:377:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:382:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:396:1: W293 blank line contains whitespace
-.\scripts\maintenance\refactor_oracle_system.py:435:23: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:441:68: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:477:40: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:490:19: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:515:23: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:578:34: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:612:55: W291 trailing whitespace
-.\scripts\maintenance\refactor_oracle_system.py:619:61: W291 trailing whitespace
-.\scripts\maintenance\refactor_review_files.py:8:64: W291 trailing whitespace
 .\scripts\maintenance\refactor_review_files.py:546:15: F541 f-string is missing placeholders
 .\scripts\maintenance\refactor_review_files.py:551:15: F541 f-string is missing placeholders
 .\scripts\maintenance\remove_source_from_config.py:12:8: F821 undefined name 'load_json_from_file'
@@ -1014,29 +697,13 @@
 .\scripts\maintenance\remove_source_from_config.py:46:4: F821 undefined name 'save_json_to_file'
 .\scripts\maintenance\safe_file_deletion.py:292:27: F541 f-string is missing placeholders
 .\scripts\maintenance\test_imports.py:25:59: E261 at least two spaces before inline comment
-.\scripts\maintenance\test_imports.py:33:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:37:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:65:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:70:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:75:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:82:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:87:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:91:1: W293 blank line contains whitespace
 .\scripts\maintenance\test_imports.py:95:36: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\test_imports.py:97:38: E261 at least two spaces before inline comment
-.\scripts\maintenance\test_imports.py:102:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports.py:107:1: W293 blank line contains whitespace
 .\scripts\maintenance\test_imports.py:117:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\maintenance\test_imports.py:118:21: W292 no newline at end of file
-.\scripts\maintenance\test_imports_after_reorg.py:11:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports_after_reorg.py:25:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports_after_reorg.py:28:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports_after_reorg.py:34:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports_after_reorg.py:36:28: F821 undefined name 'test_module_import_by_path'
-.\scripts\maintenance\test_imports_after_reorg.py:36:55: F821 undefined name 'Path'
-.\scripts\maintenance\test_imports_after_reorg.py:41:1: W293 blank line contains whitespace
-.\scripts\maintenance\test_imports_after_reorg.py:48:1: E305 expected 2 blank lines after class or function definition, found 1
-.\scripts\maintenance\test_imports_after_reorg.py:49:16: W292 no newline at end of file
+.\scripts\maintenance\test_imports_after_reorg.py:37:28: F821 undefined name 'test_module_import_by_path'
+.\scripts\maintenance\test_imports_after_reorg.py:49:1: E305 expected 2 blank lines after class or function definition, found 1
+.\scripts\maintenance\test_imports_after_reorg.py:50:16: W292 no newline at end of file
 .\scripts\maintenance\test_oracle_enhanced_compatibility.py:212:15: F541 f-string is missing placeholders
 .\scripts\maintenance\test_oracle_enhanced_compatibility.py:253:23: F541 f-string is missing placeholders
 .\scripts\maintenance\test_oracle_enhanced_compatibility.py:256:21: F541 f-string is missing placeholders
@@ -1047,23 +714,17 @@
 .\scripts\maintenance\test_oracle_enhanced_compatibility.py:305:19: F541 f-string is missing placeholders
 .\scripts\maintenance\test_oracle_enhanced_compatibility.py:307:19: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\analyze_documentation_results.py:163:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:177:53: W291 trailing whitespace
 .\scripts\maintenance\tools\analyze_obsolete_documentation.py:204:19: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\analyze_obsolete_documentation.py:223:19: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\analyze_obsolete_documentation.py:294:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\analyze_obsolete_documentation.py:303:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\analyze_obsolete_documentation.py:307:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation_rebuilt.py:246:58: W291 trailing whitespace
 .\scripts\maintenance\tools\analyze_obsolete_documentation_rebuilt.py:319:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation_rebuilt_verbose.py:296:58: W291 trailing whitespace
-.\scripts\maintenance\tools\analyze_oracle_references_detailed.py:10:47: W291 trailing whitespace
 .\scripts\maintenance\tools\analyze_oracle_references_detailed.py:475:23: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\apply_path_corrections_logged.py:49:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\auto_fix_documentation.py:263:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\check_imports.py:66:46: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\tools\check_imports.py:83:32: F821 undefined name 'test_module_import_by_name'
-.\scripts\maintenance\tools\cleanup_obsolete_files.py:7:27: W291 trailing whitespace
-.\scripts\maintenance\tools\cleanup_obsolete_files.py:399:48: W291 trailing whitespace
 .\scripts\maintenance\tools\cleanup_obsolete_files.py:420:27: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\cleanup_obsolete_files.py:495:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\cleanup_obsolete_files.py:521:15: F541 f-string is missing placeholders
@@ -1073,12 +734,6 @@
 .\scripts\maintenance\tools\extract_promising_versions.py:67:21: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\final_system_validation.py:560:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\final_system_validation_corrected.py:511:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\finalize_refactoring.py:180:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\finalize_refactoring.py:188:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\finalize_refactoring.py:192:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\finalize_refactoring.py:194:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\finalize_refactoring.py:338:72: W291 trailing whitespace
-.\scripts\maintenance\tools\finalize_refactoring.py:451:49: W291 trailing whitespace
 .\scripts\maintenance\tools\fix_project_structure.py:147:25: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:166:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:175:9: F821 undefined name 'run_shell_command'
@@ -1112,60 +767,17 @@
 .\scripts\maintenance\tools\git_files_inventory_fast.py:368:29: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\organize_orphan_files.py:397:27: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\organize_orphan_files.py:490:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\organize_orphan_tests.py:7:48: W291 trailing whitespace
 .\scripts\maintenance\tools\organize_orphan_tests.py:458:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\organize_root_files.py:98:17: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\orphan_files_processor.py:255:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\orphan_files_processor.py:264:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\quick_documentation_fixer.py:237:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\real_orphan_files_processor.py:3:68: W291 trailing whitespace
 .\scripts\maintenance\tools\real_orphan_files_processor.py:340:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\real_orphan_files_processor.py:344:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\recover_precious_code.py:139:35: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\recover_precious_code.py:391:27: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\recover_precious_code.py:411:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\recover_precious_code.py:444:34: W291 trailing whitespace
-.\scripts\maintenance\tools\recovery_assistant.py:94:57: W291 trailing whitespace
 .\scripts\maintenance\tools\recovery_assistant.py:200:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\refactor_oracle_system.py:71:58: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:80:19: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:83:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:87:24: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:92:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:98:22: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:143:29: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:152:33: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:184:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:190:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:193:39: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:194:36: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:198:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:205:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:261:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:271:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:275:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:282:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:287:52: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:297:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:299:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:316:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:326:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:333:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:359:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:364:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:369:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:377:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:382:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:396:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:435:23: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:441:68: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:477:40: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:490:19: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:515:23: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:578:34: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:612:55: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_oracle_system.py:619:61: W291 trailing whitespace
-.\scripts\maintenance\tools\refactor_review_files.py:8:64: W291 trailing whitespace
 .\scripts\maintenance\tools\refactor_review_files.py:546:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\refactor_review_files.py:551:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\remove_source_from_config.py:12:8: F821 undefined name 'load_json_from_file'
@@ -1174,388 +786,20 @@
 .\scripts\maintenance\tools\remove_source_from_config.py:46:4: F821 undefined name 'save_json_to_file'
 .\scripts\maintenance\tools\run_documentation_maintenance.py:139:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\safe_file_deletion.py:292:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\unified_maintenance.py:10:57: W291 trailing whitespace
 .\scripts\maintenance\tools\unified_maintenance.py:1179:23: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\update_documentation.py:64:45: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:120:40: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:257:31: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:415:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:418:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:420:66: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:425:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:428:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:435:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:439:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:448:51: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:454:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:455:62: W291 trailing whitespace
-.\scripts\maintenance\tools\update_documentation.py:460:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:464:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:467:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:495:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:502:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:506:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:568:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:572:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1011:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1050:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1054:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1060:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1064:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1074:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1085:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1088:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1107:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1111:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1117:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1121:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1144:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1153:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1179:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1182:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1187:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1193:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1198:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1202:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1207:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1212:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1215:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1219:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1223:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1228:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_documentation.py:1233:1: W293 blank line contains whitespace
 .\scripts\maintenance\tools\update_imports.py:209:8: F821 undefined name 'modified_files_count'
 .\scripts\maintenance\tools\update_imports.py:213:23: F821 undefined name 'modified_files_details'
 .\scripts\maintenance\tools\update_paths.py:239:8: F821 undefined name 'changed_files_details'
 .\scripts\maintenance\tools\update_paths.py:241:23: F821 undefined name 'changed_files_details'
-.\scripts\maintenance\tools\update_test_coverage.py:76:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:82:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:88:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:94:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:100:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:109:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:114:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:120:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:125:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:130:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:135:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:139:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:144:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:148:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:153:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:157:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:162:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:166:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:171:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:177:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:184:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:186:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:195:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:201:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:204:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:207:46: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:210:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:213:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:220:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:223:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:230:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:239:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:243:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:246:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:278:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:282:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:286:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:293:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:296:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:299:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:303:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:310:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:316:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:320:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:323:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:329:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:332:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:335:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:342:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:348:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:356:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:362:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:371:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:377:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:387:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:395:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:397:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:401:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:407:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:414:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:422:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:426:53: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:431:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:436:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:446:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:457:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:460:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:463:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:465:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:473:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:475:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:489:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:492:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:494:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:498:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:531:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:535:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:538:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:542:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:547:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:554:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:558:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:567:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:569:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:575:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:577:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:582:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:584:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:589:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:592:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:599:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:602:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:610:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:613:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:617:43: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:621:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:624:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:627:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:630:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:638:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:640:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:651:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:656:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:661:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:667:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:672:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:676:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:681:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:689:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:691:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:695:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:705:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:707:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:713:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:723:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:725:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:733:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:734:32: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:739:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:745:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:772:16: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:819:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:828:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:831:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:838:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:840:1: W293 blank line contains whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:878:13: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:909:54: W291 trailing whitespace
-.\scripts\maintenance\tools\update_test_coverage.py:951:19: W291 trailing whitespace
-.\scripts\maintenance\tools\verify_content_integrity.py:74:39: F821 undefined name 'Path'
-.\scripts\maintenance\tools\verify_files.py:20:31: F821 undefined name 'Path'
-.\scripts\maintenance\tools\verify_files.py:21:37: F821 undefined name 'check_files_existence'
-.\scripts\maintenance\update_documentation.py:64:45: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:120:40: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:257:31: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:415:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:418:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:420:66: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:425:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:428:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:435:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:439:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:448:51: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:454:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:455:62: W291 trailing whitespace
-.\scripts\maintenance\update_documentation.py:460:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:464:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:467:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:495:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:502:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:506:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:568:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:572:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1011:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1050:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1054:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1060:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1064:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1074:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1085:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1088:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1107:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1111:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1117:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1121:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1144:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1153:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1179:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1182:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1187:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1193:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1198:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1202:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1207:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1212:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1215:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1219:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1223:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1228:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_documentation.py:1233:1: W293 blank line contains whitespace
+.\scripts\maintenance\tools\verify_files.py:22:37: F821 undefined name 'check_files_existence'
 .\scripts\maintenance\update_imports.py:209:8: F821 undefined name 'modified_files_count'
 .\scripts\maintenance\update_imports.py:213:23: F821 undefined name 'modified_files_details'
 .\scripts\maintenance\update_paths.py:239:8: F821 undefined name 'changed_files_details'
 .\scripts\maintenance\update_paths.py:241:23: F821 undefined name 'changed_files_details'
-.\scripts\maintenance\update_test_coverage.py:80:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:86:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:92:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:98:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:104:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:113:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:118:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:124:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:129:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:134:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:139:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:143:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:148:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:152:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:157:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:161:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:166:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:170:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:175:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:181:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:188:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:190:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:199:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:205:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:208:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:211:46: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:214:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:217:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:224:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:227:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:234:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:243:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:247:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:250:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:282:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:286:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:290:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:297:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:300:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:303:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:307:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:314:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:320:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:324:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:327:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:333:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:336:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:339:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:346:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:352:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:360:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:366:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:375:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:381:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:391:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:399:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:401:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:405:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:411:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:418:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:426:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:430:53: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:435:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:440:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:450:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:461:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:464:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:467:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:469:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:477:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:479:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:493:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:496:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:498:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:502:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:535:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:539:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:542:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:546:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:551:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:558:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:562:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:571:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:573:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:579:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:581:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:586:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:588:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:593:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:596:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:603:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:606:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:614:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:617:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:621:43: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:625:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:628:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:631:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:634:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:642:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:644:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:655:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:660:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:665:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:671:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:676:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:680:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:685:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:693:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:695:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:699:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:709:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:711:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:717:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:727:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:729:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:737:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:738:32: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:743:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:749:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:776:16: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:823:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:832:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:835:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:842:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:844:1: W293 blank line contains whitespace
-.\scripts\maintenance\update_test_coverage.py:882:13: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:913:54: W291 trailing whitespace
-.\scripts\maintenance\update_test_coverage.py:955:19: W291 trailing whitespace
-.\scripts\maintenance\verify_content_integrity.py:74:39: F821 undefined name 'Path'
-.\scripts\maintenance\verify_files.py:20:31: F821 undefined name 'Path'
-.\scripts\maintenance\verify_files.py:21:37: F821 undefined name 'check_files_existence'
-.\scripts\orchestration\orchestrate_complex_analysis.py:78:36: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:79:60: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:80:48: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:84:45: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:85:58: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:86:43: W291 trailing whitespace
+.\scripts\maintenance\verify_files.py:22:37: F821 undefined name 'check_files_existence'
 .\scripts\orchestration\orchestrate_complex_analysis.py:112:19: F541 f-string is missing placeholders
-.\scripts\orchestration\orchestrate_complex_analysis.py:120:41: W291 trailing whitespace
-.\scripts\orchestration\orchestrate_complex_analysis.py:121:46: W291 trailing whitespace
 .\scripts\orchestration\orchestrate_complex_analysis.py:137:19: F541 f-string is missing placeholders
 .\scripts\orchestration\orchestrate_complex_analysis.py:191:19: F541 f-string is missing placeholders
-.\scripts\orchestration\orchestrate_complex_analysis.py:205:72: W291 trailing whitespace
 .\scripts\orchestration\orchestrate_webapp_detached.py:20:1: F811 redefinition of unused 'argumentation_analysis' from line 1
 .\scripts\orchestration\orchestrate_with_existing_tools.py:99:19: F541 f-string is missing placeholders
 .\scripts\orchestration\pipelines\generate_complex_synthetic_data.py:55:17: F541 f-string is missing placeholders
@@ -1575,22 +819,6 @@
 .\scripts\reports\cleanup_migration_duplicates.py:116:11: F541 f-string is missing placeholders
 .\scripts\run_experiments.py:80:30: F541 f-string is missing placeholders
 .\scripts\run_experiments.py:102:31: F541 f-string is missing placeholders
-.\scripts\setup\adapt_code_for_pyjnius.py:183:1: W293 blank line contains whitespace
-.\scripts\setup\adapt_code_for_pyjnius.py:188:1: W293 blank line contains whitespace
-.\scripts\setup\adapt_code_for_pyjnius.py:219:1: W293 blank line contains whitespace
-.\scripts\setup\adapt_code_for_pyjnius.py:224:1: W293 blank line contains whitespace
-.\scripts\setup\adapt_code_for_pyjnius.py:226:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:319:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:322:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:326:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:332:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:340:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:343:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:353:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:359:1: W293 blank line contains whitespace
-.\scripts\setup\fix_environment_auto.py:369:1: W293 blank line contains whitespace
-.\scripts\setup\test_all_dependencies.py:319:1: W293 blank line contains whitespace
-.\scripts\sherlock_watson\run_cluedo_oracle_enhanced.py:6:83: W291 trailing whitespace
 .\scripts\sherlock_watson\run_einstein_oracle_demo.py:225:21: F541 f-string is missing placeholders
 .\scripts\sherlock_watson\run_einstein_oracle_demo.py:521:11: F541 f-string is missing placeholders
 .\scripts\sherlock_watson\run_einstein_oracle_demo.py:530:11: F541 f-string is missing placeholders
@@ -1609,33 +837,7 @@
 .\scripts\testing\get_test_metrics.py:117:11: F541 f-string is missing placeholders
 .\scripts\testing\get_test_metrics.py:118:11: F541 f-string is missing placeholders
 .\scripts\testing\get_test_metrics.py:119:11: F541 f-string is missing placeholders
-.\scripts\testing\run_embed_tests.py:25:9: F406 'from tests.scripts.test_embed_all_sources import *' only allowed at module level
-.\scripts\testing\run_embed_tests.py:88:21: F821 undefined name 'test_embed_script_success_no_text_initially'
-.\scripts\testing\run_embed_tests.py:92:21: F821 undefined name 'test_embed_script_text_already_present'
-.\scripts\testing\run_embed_tests.py:96:21: F821 undefined name 'test_embed_script_force_overwrite'
-.\scripts\testing\run_embed_tests.py:100:21: F821 undefined name 'test_embed_script_output_exists_no_force'
-.\scripts\testing\run_embed_tests.py:104:21: F821 undefined name 'test_embed_script_passphrase_from_env'
-.\scripts\testing\run_embed_tests.py:108:21: F821 undefined name 'test_embed_script_missing_passphrase'
-.\scripts\testing\run_embed_tests.py:112:21: F821 undefined name 'test_embed_script_input_file_not_found'
-.\scripts\testing\run_embed_tests.py:116:21: F821 undefined name 'test_embed_script_incorrect_passphrase'
-.\scripts\testing\run_embed_tests.py:120:21: F821 undefined name 'test_embed_script_source_fetch_error'
-.\scripts\testing\run_embed_tests.py:124:21: F821 undefined name 'test_embed_script_empty_input_config'
-.\scripts\testing\run_embed_tests.py:137:30: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:139:45: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:142:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:145:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:156:56: F821 undefined name 'MagicMock'
-.\scripts\testing\run_embed_tests.py:183:30: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:185:45: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:188:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:191:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:194:56: F821 undefined name 'MagicMock'
-.\scripts\testing\run_embed_tests.py:250:30: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:252:45: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:255:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:258:28: F821 undefined name 'patch'
-.\scripts\testing\run_embed_tests.py:269:56: F821 undefined name 'MagicMock'
-.\scripts\testing\run_embed_tests.py:297:19: F541 f-string is missing placeholders
+.\scripts\testing\run_embed_tests.py:71:1: E999 SyntaxError: expected 'except' or 'finally' block
 .\scripts\testing\run_pytest.py:14:9: F541 f-string is missing placeholders
 .\scripts\testing\setup.py:46:57: E713 test for membership should be 'not in'
 .\scripts\testing\simple_test_runner.py:186:11: F541 f-string is missing placeholders
@@ -1643,24 +845,15 @@
 .\scripts\tools\debugging\debug_jvm.py:103:17: F541 f-string is missing placeholders
 .\scripts\utils\analyze_directory_usage.py:61:13: F821 undefined name 'Path'
 .\scripts\utils\analyze_directory_usage.py:92:26: F821 undefined name 'parse_colon_separated_string_to_regex_dict'
-.\scripts\utils\cleanup_redundant_files.py:8:72: W291 trailing whitespace
 .\scripts\utils\cleanup_redundant_files.py:339:15: F541 f-string is missing placeholders
 .\scripts\utils\create_test_encrypted_extracts.py:280:21: F541 f-string is missing placeholders
 .\scripts\utils\inspect_specific_sources.py:13:19: F821 undefined name 'Path'
 .\scripts\utils\inspect_specific_sources.py:30:38: F821 undefined name 'find_sources_in_config_by_ids'
 .\scripts\utils\provision_tools.py:27:21: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:9:39: W291 trailing whitespace
-.\scripts\utils\unified_utilities.py:972:1: W293 blank line contains whitespace
-.\scripts\utils\unified_utilities.py:991:1: W293 blank line contains whitespace
 .\scripts\utils\unified_utilities.py:1130:27: F541 f-string is missing placeholders
 .\scripts\utils\unified_utilities.py:1138:27: F541 f-string is missing placeholders
 .\scripts\utils\unified_utilities.py:1151:31: F541 f-string is missing placeholders
 .\scripts\utils\unified_utilities.py:1157:31: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:1213:1: W293 blank line contains whitespace
-.\scripts\utils\unified_utilities.py:1216:1: W293 blank line contains whitespace
-.\scripts\utils\unified_utilities.py:1219:1: W293 blank line contains whitespace
-.\scripts\utils\unified_utilities.py:1222:1: W293 blank line contains whitespace
-.\scripts\utils\unified_utilities.py:1225:1: W293 blank line contains whitespace
 .\scripts\validation\analyse_trace_simulated.py:712:11: F541 f-string is missing placeholders
 .\scripts\validation\analyse_trace_simulated.py:714:11: F541 f-string is missing placeholders
 .\scripts\validation\analyse_trace_simulated.py:737:11: F541 f-string is missing placeholders
@@ -1670,38 +863,12 @@
 .\scripts\validation\analyse_trace_simulated.py:745:11: F541 f-string is missing placeholders
 .\scripts\validation\analyse_trace_simulated.py:746:11: F541 f-string is missing placeholders
 .\scripts\validation\analyse_trace_simulated.py:748:11: F541 f-string is missing placeholders
-.\scripts\validation\analyze_migration_duplicates.py:548:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:550:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:554:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:557:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:563:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:565:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:567:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:570:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:575:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:580:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:584:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:597:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:606:1: W293 blank line contains whitespace
-.\scripts\validation\analyze_migration_duplicates.py:610:1: W293 blank line contains whitespace
 .\scripts\validation\analyze_migration_duplicates.py:655:11: F541 f-string is missing placeholders
 .\scripts\validation\analyze_migration_duplicates.py:661:11: F541 f-string is missing placeholders
 .\scripts\validation\analyze_random_extract.py:221:21: F541 f-string is missing placeholders
 .\scripts\validation\check_architecture.py:39:19: F541 f-string is missing placeholders
 .\scripts\validation\check_sk_module.py:4:7: F541 f-string is missing placeholders
-.\scripts\validation\main.py:16:41: W291 trailing whitespace
-.\scripts\validation\main.py:516:1: W293 blank line contains whitespace
-.\scripts\validation\main.py:523:1: W293 blank line contains whitespace
-.\scripts\validation\main.py:535:1: W293 blank line contains whitespace
-.\scripts\validation\main.py:547:1: W293 blank line contains whitespace
-.\scripts\validation\orchestration_validation.py:475:22: W291 trailing whitespace
-.\scripts\validation\orchestration_validation.py:520:81: W291 trailing whitespace
-.\scripts\validation\orchestration_validation.py:523:75: W291 trailing whitespace
 .\scripts\validation\orchestration_validation.py:580:11: F541 f-string is missing placeholders
-.\scripts\validation\sprint3_final_validation.py:300:54: W291 trailing whitespace
-.\scripts\validation\sprint3_final_validation.py:301:28: W291 trailing whitespace
-.\scripts\validation\sprint3_final_validation.py:320:44: W291 trailing whitespace
-.\scripts\validation\sprint3_final_validation.py:358:35: W291 trailing whitespace
 .\scripts\validation\sprint3_final_validation.py:415:11: F541 f-string is missing placeholders
 .\scripts\validation\test_critical_dependencies.py:63:15: F541 f-string is missing placeholders
 .\scripts\validation\test_epita_custom_data_processing.py:286:11: F541 f-string is missing placeholders
@@ -1720,8 +887,6 @@
 .\scripts\validation\test_unified_system.py:73:15: F541 f-string is missing placeholders
 .\scripts\validation\test_unified_system.py:96:15: F541 f-string is missing placeholders
 .\scripts\validation\test_validation_environnement.py:85:7: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:14:46: W291 trailing whitespace
-.\scripts\validation\validate_consolidated_system.py:598:31: W291 trailing whitespace
 .\scripts\validation\validate_consolidated_system.py:615:19: F541 f-string is missing placeholders
 .\scripts\validation\validate_consolidated_system.py:622:23: F541 f-string is missing placeholders
 .\scripts\validation\validate_consolidated_system.py:634:19: F541 f-string is missing placeholders
@@ -1736,18 +901,6 @@
 .\scripts\validation\validation_point2_llm_authentique.py:237:23: F541 f-string is missing placeholders
 .\scripts\validation\validation_point2_llm_authentique.py:279:23: F541 f-string is missing placeholders
 .\scripts\validation\validation_point2_llm_authentique.py:358:15: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:146:41: W291 trailing whitespace
-.\scripts\validation\validation_traces_master_fixed.py:151:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:166:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:172:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:176:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:179:39: W291 trailing whitespace
-.\scripts\validation\validation_traces_master_fixed.py:183:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:185:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:191:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:195:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:212:1: W293 blank line contains whitespace
-.\scripts\validation\validation_traces_master_fixed.py:214:1: W293 blank line contains whitespace
 .\scripts\validation\validation_traces_master_fixed.py:420:19: F541 f-string is missing placeholders
 .\scripts\validation\validation_traces_master_fixed.py:427:19: F541 f-string is missing placeholders
 .\scripts\validation\validation_traces_master_fixed.py:461:15: F541 f-string is missing placeholders
@@ -1758,21 +911,6 @@
 .\scripts\verification\run_api_validation.py:79:20: F541 f-string is missing placeholders
 .\scripts\verification\run_api_validation.py:83:20: F541 f-string is missing placeholders
 .\services\web_api\interface-simple\app.py:560:5: F811 redefinition of unused 'asyncio' from line 15
-.\services\web_api\interface-simple\test_fallacy_detection.py:37:64: W291 trailing whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:38:103: W291 trailing whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:39:1: W293 blank line contains whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:40:72: W291 trailing whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:42:1: W293 blank line contains whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:43:77: W291 trailing whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:45:1: W293 blank line contains whitespace
-.\services\web_api\interface-simple\test_fallacy_detection.py:46:69: W291 trailing whitespace
-.\services\web_api\interface-simple\test_integration.py:63:73: W291 trailing whitespace
-.\services\web_api\interface-simple\test_integration.py:64:85: W291 trailing whitespace
-.\services\web_api\start_full_system.py:8:62: W291 trailing whitespace
-.\services\web_api\test_interfaces_integration.py:7:75: W291 trailing whitespace
-.\services\web_api\trace_analyzer.py:10:47: W291 trailing whitespace
-.\services\web_api\trace_analyzer.py:453:54: W291 trailing whitespace
-.\services\web_api\trace_analyzer.py:455:1: W293 blank line contains whitespace
 .\services\web_api_from_libs\__init__.py:18:1: F403 'from .models import *' used; unable to detect undefined names
 .\services\web_api_from_libs\__init__.py:26:1: F405 'app' may be undefined, or defined from star imports: .models
 .\services\web_api_from_libs\__init__.py:26:1: F405 'AnalysisRequest' may be undefined, or defined from star imports: .models
@@ -1795,31 +933,7 @@
 .\services\web_api_from_libs\services\logic_service.py:149:28: F821 undefined name 'LogicBeliefSet'
 .\speech-to-text\config_options.py:67:11: F541 f-string is missing placeholders
 .\speech-to-text\config_options.py:68:11: F541 f-string is missing placeholders
-.\speech-to-text\services\__init__.py:6:52: W291 trailing whitespace
-.\speech-to-text\services\simple_fallacy_detector.py:103:78: W291 trailing whitespace
-.\speech-to-text\services\simple_fallacy_detector.py:104:72: W291 trailing whitespace
-.\speech-to-text\services\simple_fallacy_detector.py:105:75: W291 trailing whitespace
-.\speech-to-text\services\simple_fallacy_detector.py:106:67: W291 trailing whitespace
-.\speech-to-text\services\web_api_fallacy_detector.py:348:78: W291 trailing whitespace
-.\speech-to-text\services\web_api_fallacy_detector.py:349:72: W291 trailing whitespace
-.\speech-to-text\services\web_api_fallacy_detector.py:350:75: W291 trailing whitespace
-.\speech-to-text\services\web_api_fallacy_detector.py:351:67: W291 trailing whitespace
 .\speech-to-text\services\web_api_fallacy_detector.py:377:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:26:82: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:27:76: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:28:79: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:29:71: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:33:83: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:34:83: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:35:76: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:36:73: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:40:87: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:41:84: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:42:80: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:46:83: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:47:83: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:48:79: W291 trailing whitespace
-.\speech-to-text\tests\complete_integration_demo.py:49:78: W291 trailing whitespace
 .\speech-to-text\tests\complete_integration_demo.py:90:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\complete_integration_demo.py:100:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\complete_integration_demo.py:112:19: F541 f-string is missing placeholders
@@ -1828,10 +942,6 @@
 .\speech-to-text\tests\complete_integration_demo.py:160:11: F541 f-string is missing placeholders
 .\speech-to-text\tests\complete_integration_demo.py:172:11: F541 f-string is missing placeholders
 .\speech-to-text\tests\complete_integration_demo.py:179:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_fallacy_analysis.py:16:78: W291 trailing whitespace
-.\speech-to-text\tests\demo_fallacy_analysis.py:17:72: W291 trailing whitespace
-.\speech-to-text\tests\demo_fallacy_analysis.py:18:75: W291 trailing whitespace
-.\speech-to-text\tests\demo_fallacy_analysis.py:19:67: W291 trailing whitespace
 .\speech-to-text\tests\demo_fallacy_analysis.py:42:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\demo_integration.py:37:11: F541 f-string is missing placeholders
 .\speech-to-text\tests\demo_integration.py:45:11: F541 f-string is missing placeholders
@@ -1845,36 +955,17 @@
 .\speech-to-text\tests\demo_integration.py:79:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\demo_integration.py:80:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\demo_integration.py:82:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_web_api_integration.py:33:78: W291 trailing whitespace
-.\speech-to-text\tests\demo_web_api_integration.py:34:72: W291 trailing whitespace
-.\speech-to-text\tests\demo_web_api_integration.py:35:75: W291 trailing whitespace
-.\speech-to-text\tests\demo_web_api_integration.py:36:67: W291 trailing whitespace
 .\speech-to-text\tests\demo_web_api_integration.py:70:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_web_api_integration.py:114:63: W291 trailing whitespace
-.\speech-to-text\tests\demo_web_api_integration.py:115:60: W291 trailing whitespace
-.\speech-to-text\tests\demo_web_api_integration.py:116:54: W291 trailing whitespace
 .\speech-to-text\tests\demo_web_api_integration.py:142:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_fallacy_analysis.py:27:78: W291 trailing whitespace
-.\speech-to-text\tests\test_fallacy_analysis.py:28:72: W291 trailing whitespace
-.\speech-to-text\tests\test_fallacy_analysis.py:29:75: W291 trailing whitespace
-.\speech-to-text\tests\test_fallacy_analysis.py:30:67: W291 trailing whitespace
 .\speech-to-text\tests\test_fallacy_analysis.py:53:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\test_integration.py:42:11: F541 f-string is missing placeholders
 .\speech-to-text\tests\test_integration.py:50:11: F541 f-string is missing placeholders
 .\speech-to-text\tests\test_integration.py:58:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\test_integration.py:64:15: F541 f-string is missing placeholders
 .\speech-to-text\tests\test_integration.py:68:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_web_api_integration.py:41:78: W291 trailing whitespace
-.\speech-to-text\tests\test_web_api_integration.py:42:72: W291 trailing whitespace
-.\speech-to-text\tests\test_web_api_integration.py:43:75: W291 trailing whitespace
-.\speech-to-text\tests\test_web_api_integration.py:44:67: W291 trailing whitespace
 .\speech-to-text\tests\test_web_api_integration.py:81:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_web_api_integration.py:124:63: W291 trailing whitespace
-.\speech-to-text\tests\test_web_api_integration.py:125:60: W291 trailing whitespace
-.\speech-to-text\tests\test_web_api_integration.py:126:54: W291 trailing whitespace
 .\speech-to-text\tests\test_web_api_integration.py:155:15: F541 f-string is missing placeholders
 .\src\core\plugins\standard\external_verification\plugin.py:551:17: F541 f-string is missing placeholders
-.\tests\agents\core\informal\fixtures_authentic.py:606:60: W291 trailing whitespace
 .\tests\agents\core\informal\test_informal_agent_authentic.py:56:55: F811 redefinition of unused 'authentic_informal_agent' from line 20
 .\tests\agents\core\informal\test_informal_agent_authentic.py:104:15: F811 redefinition of unused 'simple_authentic_informal_agent' from line 17
 .\tests\agents\core\informal\test_informal_agent_authentic.py:104:48: F811 redefinition of unused 'sample_authentic_test_text' from line 20
@@ -1907,9 +998,6 @@
 .\tests\comparison\test_mock_vs_real_behavior.py:599:15: F541 f-string is missing placeholders
 .\tests\comparison\test_mock_vs_real_behavior.py:729:19: F541 f-string is missing placeholders
 .\tests\complex_data_generator.py:344:11: F541 f-string is missing placeholders
-.\tests\config\test_config_real_gpt.py:6:43: W291 trailing whitespace
-.\tests\config\test_config_real_gpt.py:392:77: W291 trailing whitespace
-.\tests\config\test_config_real_gpt.py:393:75: W291 trailing whitespace
 .\tests\conftest.py:189:21: F541 f-string is missing placeholders
 .\tests\conftest.py:349:9: F811 redefinition of unused 'nest_asyncio' from line 18
 .\tests\conftest.py:516:28: F821 undefined name 'FOLLogicAgent'
@@ -1921,82 +1009,10 @@
 .\tests\conftest_gpt_enhanced.py:253:20: F821 undefined name 'Mock'
 .\tests\conftest_gpt_enhanced.py:278:31: F821 undefined name 'self'
 .\tests\conftest_gpt_enhanced.py:283:26: F821 undefined name 'Mock'
-.\tests\conftest_phase3_jpype_killer.py:23:18: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:26:31: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:27:27: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:28:30: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:29:36: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:30:38: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:38:25: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:38:48: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:39:26: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:40:25: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:41:26: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:42:23: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:43:27: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:46:17: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:47:22: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:48:29: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:49:29: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:50:29: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:51:22: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:52:32: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:53:30: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:56:28: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:56:51: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:57:29: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:60:26: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:64:27: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:65:16: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:66:30: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:70:31: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:86:30: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:111:26: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:112:44: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:113:47: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:116:50: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:119:43: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:120:35: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:126:24: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:127:38: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:128:41: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:129:30: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:133:24: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:134:39: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:135:42: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:136:39: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:148:73: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:149:78: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:150:70: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:151:71: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:152:73: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:187:22: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:189:22: F821 undefined name 'MagicMock'
-.\tests\conftest_phase3_jpype_killer.py:217:40: F821 undefined name 'MagicMock'
 .\tests\core\test_enquete_states.py:44:13: F821 undefined name 'logger'
 .\tests\e2e\demos\demo_service_manager_validated.py:94:11: F541 f-string is missing placeholders
-.\tests\e2e\demos\test_api_interactions.py:86:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:98:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:101:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:104:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:106:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:132:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:144:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:148:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:172:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:186:1: W293 blank line contains whitespace
-.\tests\e2e\demos\test_api_interactions.py:190:1: W293 blank line contains whitespace
 .\tests\e2e\python\test_integration_workflows.py:9:1: F811 redefinition of unused 'pytest' from line 6
 .\tests\e2e\python\test_integration_workflows.py:154:23: F541 f-string is missing placeholders
-.\tests\e2e\python\test_phase3_web_api_authentic.py:17:38: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:48:1: W293 blank line contains whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:51:88: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:52:80: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:53:82: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:55:1: W293 blank line contains whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:58:83: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:59:87: W291 trailing whitespace
-.\tests\e2e\python\test_phase3_web_api_authentic.py:61:1: W293 blank line contains whitespace
 .\tests\e2e\python\test_phase3_web_api_authentic.py:385:21: F541 f-string is missing placeholders
 .\tests\e2e\python\test_phase3_web_api_authentic.py:566:17: F541 f-string is missing placeholders
 .\tests\e2e\python\test_webapp_api_investigation.py:30:15: F541 f-string is missing placeholders
@@ -2015,9 +1031,6 @@
 .\tests\e2e\runners\playwright_js_runner.py:252:47: F821 undefined name 'e'
 .\tests\e2e\runners\playwright_js_runner.py:263:39: F821 undefined name 'e'
 .\tests\finaux\validation_complete_sans_mocks.py:166:13: F811 redefinition of unused 'OpenAIChatCompletion' from line 37
-.\tests\finaux\validation_complete_sans_mocks.py:571:54: W291 trailing whitespace
-.\tests\finaux\validation_complete_sans_mocks.py:574:1: W293 blank line contains whitespace
-.\tests\finaux\validation_complete_sans_mocks.py:581:1: W293 blank line contains whitespace
 .\tests\finaux\validation_complete_sans_mocks.py:1013:23: F541 f-string is missing placeholders
 .\tests\finaux\validation_complete_sans_mocks.py:1024:15: F541 f-string is missing placeholders
 .\tests\finaux\validation_complete_sans_mocks.py:1043:19: F541 f-string is missing placeholders
@@ -2033,7 +1046,6 @@
 .\tests\fixtures\agent_fixtures.py:244:13: F821 undefined name 'MagicMock'
 .\tests\fixtures\jvm_subprocess_fixture.py:5:1: F811 redefinition of unused 'subprocess' from line 2
 .\tests\fixtures\jvm_subprocess_fixture.py:7:1: F811 redefinition of unused 'subprocess' from line 5
-.\tests\integration\_test_consolidation_demo_epita.py:402:54: W291 trailing whitespace
 .\tests\integration\_test_consolidation_demo_epita.py:416:28: F541 f-string is missing placeholders
 .\tests\integration\_test_consolidation_demo_epita.py:434:36: F541 f-string is missing placeholders
 .\tests\integration\_test_consolidation_demo_epita.py:436:28: F541 f-string is missing placeholders
@@ -2042,8 +1054,6 @@
 .\tests\integration\_test_consolidation_demo_epita.py:490:28: F541 f-string is missing placeholders
 .\tests\integration\_test_consolidation_demo_epita.py:515:28: F541 f-string is missing placeholders
 .\tests\integration\_test_consolidation_demo_epita.py:525:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:541:58: W291 trailing whitespace
-.\tests\integration\_test_consolidation_demo_epita.py:571:41: W291 trailing whitespace
 .\tests\integration\_test_consolidation_demo_epita.py:618:15: F541 f-string is missing placeholders
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:108:14: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:109:9: F821 undefined name 'pl_syntax'
@@ -2052,28 +1062,19 @@
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:112:16: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:118:39: F821 undefined name 'pl_syntax'
 .\tests\integration\jpype_tweety\workers\worker_argumentation_syntax.py:137:17: F541 f-string is missing placeholders
-.\tests\integration\test_agents_logiques_integration.py:12:37: W291 trailing whitespace
 .\tests\integration\test_agents_logiques_integration.py:166:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_agents_logiques_integration.py:168:38: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_agents_logiques_integration.py:229:1: W293 blank line contains whitespace
-.\tests\integration\test_agents_logiques_integration.py:232:1: W293 blank line contains whitespace
-.\tests\integration\test_agents_logiques_integration.py:235:1: W293 blank line contains whitespace
 .\tests\integration\test_agents_logiques_integration.py:261:33: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_agents_logiques_integration.py:303:52: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_agents_logiques_integration.py:304:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_agents_logiques_integration.py:314:27: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_agents_logiques_integration.py:343:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_agents_logiques_integration.py:371:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_authentic_components.py:8:25: W291 trailing whitespace
 .\tests\integration\test_authentic_components.py:318:28: F821 undefined name 'UnifiedOrchestrator'
 .\tests\integration\test_authentic_components_integration.py:40:9: F821 undefined name 'logger'
 .\tests\integration\test_authentic_components_integration.py:318:22: F821 undefined name 'Kernel'
 .\tests\integration\test_authenticite_finale_gpt4o.py:57:21: F541 f-string is missing placeholders
 .\tests\integration\test_authenticite_finale_gpt4o.py:158:21: F541 f-string is missing placeholders
-.\tests\integration\test_authenticite_finale_gpt4o.py:188:1: W293 blank line contains whitespace
-.\tests\integration\test_authenticite_finale_gpt4o.py:190:1: W293 blank line contains whitespace
-.\tests\integration\test_authenticite_finale_gpt4o.py:195:1: W293 blank line contains whitespace
-.\tests\integration\test_authenticite_finale_gpt4o.py:200:1: W293 blank line contains whitespace
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:70:13: F821 undefined name 'logger'
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:78:18: F821 undefined name 'Mock'
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:522:52: E228 missing whitespace around modulo operator
@@ -2082,7 +1083,6 @@
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:598:48: E228 missing whitespace around modulo operator
 .\tests\integration\test_cluedo_oracle_enhanced_real.py:325:19: F541 f-string is missing placeholders
 .\tests\integration\test_cluedo_oracle_enhanced_real.py:551:15: F541 f-string is missing placeholders
-.\tests\integration\test_cluedo_oracle_integration.py:15:35: W291 trailing whitespace
 .\tests\integration\test_cluedo_oracle_integration.py:427:75: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_cluedo_oracle_integration.py:428:77: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_cluedo_oracle_integration.py:446:41: E712 comparison to True should be 'if cond is True:' or 'if cond:'
@@ -2116,13 +1116,11 @@
 .\tests\integration\test_cluedo_oracle_integration.py:717:50: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_cluedo_oracle_integration.py:722:57: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_cluedo_oracle_integration.py:723:63: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_orchestration_integration.py:11:36: W291 trailing whitespace
 .\tests\integration\test_einstein_demo_real.py:640:19: F541 f-string is missing placeholders
 .\tests\integration\test_fol_tweety_integration.py:12:47: F811 redefinition of unused 'run_in_jvm_subprocess' from line 5
 .\tests\integration\test_informal_agent_tool_choice.py:84:11: F541 f-string is missing placeholders
 .\tests\integration\test_logic_api_integration.py:19:46: F811 redefinition of unused 'run_in_jvm_subprocess' from line 12
 .\tests\integration\test_oracle_integration.py:20:43: F811 redefinition of unused 'run_in_jvm_subprocess' from line 13
-.\tests\integration\test_orchestration_agentielle_complete_reel.py:8:45: W291 trailing whitespace
 .\tests\integration\test_orchestration_finale_integration.py:75:54: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_orchestration_finale_integration.py:83:26: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_orchestration_finale_integration.py:96:31: E712 comparison to True should be 'if cond is True:' or 'if cond:'
@@ -2150,7 +1148,6 @@
 .\tests\integration\test_orchestration_finale_integration.py:428:38: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_orchestration_finale_integration.py:437:39: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_orchestration_finale_integration.py:456:58: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:13:41: W291 trailing whitespace
 .\tests\integration\test_sherlock_watson_demo_integration.py:69:40: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_sherlock_watson_demo_integration.py:70:45: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\integration\test_sherlock_watson_demo_integration.py:82:53: E712 comparison to True should be 'if cond is True:' or 'if cond:'
@@ -2182,7 +1179,6 @@
 .\tests\integration\test_trace_intelligence_reelle.py:31:1: F811 redefinition of unused 'Any' from line 15
 .\tests\integration\test_trace_intelligence_reelle.py:32:1: F811 redefinition of unused 'json' from line 16
 .\tests\integration\test_unified_system_integration.py:111:5: F811 redefinition of unused 'UnifiedConfig' from line 5
-.\tests\integration\test_vraie_intelligence_jtms.py:18:41: W291 trailing whitespace
 .\tests\integration\workers\test_worker_fol_tweety.py:21:2: W191 indentation contains tabs
 .\tests\integration\workers\test_worker_fol_tweety.py:21:2: E101 indentation contains mixed spaces and tabs
 .\tests\integration\workers\test_worker_fol_tweety.py:22:2: W191 indentation contains tabs
@@ -2212,7 +1208,6 @@
 .\tests\integration\workers\worker_sherlock_watson_moriarty.py:274:28: F821 undefined name 'run_cluedo_oracle_game'
 .\tests\legacy_root_tests\test_real_vs_mock_system_analysis.py:636:15: F541 f-string is missing placeholders
 .\tests\legacy_root_tests\test_real_vs_mock_system_analysis.py:665:11: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_edge_cases_specialized.py:13:38: W291 trailing whitespace
 .\tests\legacy_root_tests\test_sherlock_watson_edge_cases_specialized.py:425:15: F541 f-string is missing placeholders
 .\tests\legacy_root_tests\test_sherlock_watson_edge_cases_specialized.py:431:15: F541 f-string is missing placeholders
 .\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:858:15: F541 f-string is missing placeholders
@@ -2221,7 +1216,6 @@
 .\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:883:15: F541 f-string is missing placeholders
 .\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:893:15: F541 f-string is missing placeholders
 .\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:906:15: F541 f-string is missing placeholders
-.\tests\migration\test_modal_to_fol_migration.py:15:49: W291 trailing whitespace
 .\tests\migration\test_modal_to_fol_migration.py:43:1: F811 redefinition of unused 'UnifiedConfig' from line 5
 .\tests\mocks\extract_definitions_mock.py:358:44: F541 f-string is missing placeholders
 .\tests\mocks\fact_checking_mocks.py:851:58: F821 undefined name 'e'
@@ -2250,27 +1244,12 @@
 .\tests\orchestration\tactical\test_tactical_monitor.py:12:1: F811 redefinition of unused 'MagicMock' from line 9
 .\tests\orchestration\tactical\test_tactical_monitor_advanced.py:375:14: F821 undefined name 'patch'
 .\tests\performance\test_oracle_performance.py:196:13: F821 undefined name 'logger'
-.\tests\phase2_validation\test_authentic_llm_validation.py:12:54: W291 trailing whitespace
 .\tests\project_core\dev_utils\test_verification_utils.py:39:13: F821 undefined name 'logger'
-.\tests\project_core\service_setup\test_core_services.py:36:10: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:38:24: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:41:26: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:61:10: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:63:22: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:65:21: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:67:23: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:69:21: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:113:10: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:115:25: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:117:27: F821 undefined name 'patch'
-.\tests\project_core\service_setup\test_core_services.py:119:28: F821 undefined name 'patch'
 .\tests\robustness\test_error_handling.py:244:13: F821 undefined name 'logger'
 .\tests\run_orchestration_tests.py:182:19: F541 f-string is missing placeholders
 .\tests\run_unified_config_tests.py:81:11: F541 f-string is missing placeholders
 .\tests\support\portable_octave_installer.py:154:13: F541 f-string is missing placeholders
 .\tests\test_complex_trace_authentic.py:583:13: F821 undefined name 'logger'
-.\tests\test_integration_success_validation.py:288:73: W291 trailing whitespace
-.\tests\test_integration_success_validation.py:289:77: W291 trailing whitespace
 .\tests\unit\agents\test_fol_logic_agent.py:66:13: F821 undefined name 'logger'
 .\tests\unit\agents\test_jtms_agent_base.py:80:48: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\agents\test_jtms_agent_base.py:395:5: F811 redefinition of unused 'asyncio' from line 8
@@ -2295,9 +1274,6 @@
 .\tests\unit\argumentation_analysis\agents\core\oracle\test_oracle_enhanced_behavior.py:75:26: F821 undefined name 'Mock'
 .\tests\unit\argumentation_analysis\agents\core\oracle\test_oracle_enhanced_behavior.py:93:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\agents\tools\analysis\test_complex_fallacy_analyzer.py:39:13: F821 undefined name 'logger'
-.\tests\unit\argumentation_analysis\agents\tools\analysis\test_complex_fallacy_analyzer.py:295:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\agents\tools\analysis\test_complex_fallacy_analyzer.py:297:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\agents\tools\analysis\test_complex_fallacy_analyzer.py:299:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\agents\tools\analysis\test_contextual_fallacy_analyzer.py:38:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\core\test_cluedo_oracle_state.py:59:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\core\test_cluedo_oracle_state.py:270:9: F811 redefinition of unused 'datetime' from line 24
@@ -2318,37 +1294,24 @@
 .\tests\unit\argumentation_analysis\test_analysis_runner.py:18:1: F811 redefinition of unused 'patch' from line 16
 .\tests\unit\argumentation_analysis\test_analysis_runner.py:18:1: F811 redefinition of unused 'MagicMock' from line 16
 .\tests\unit\argumentation_analysis\test_analysis_runner.py:18:1: F811 redefinition of unused 'AsyncMock' from line 16
-.\tests\unit\argumentation_analysis\test_baselogicagent_import_fix.py:7:56: W291 trailing whitespace
 .\tests\unit\argumentation_analysis\test_baselogicagent_import_fix.py:90:5: F811 redefinition of unused 'sys' from line 13
 .\tests\unit\argumentation_analysis\test_configuration_cli.py:103:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_crypto_service.py:127:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_definition_service.py:152:13: F821 undefined name 'logger'
-.\tests\unit\argumentation_analysis\test_extract_service.py:36:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_extract_service.py:41:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_extract_service.py:118:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_extract_service.py:123:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\test_fetch_service.py:136:13: F821 undefined name 'logger'
-.\tests\unit\argumentation_analysis\test_integration.py:172:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_integration.py:177:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\test_integration_balanced_strategy.py:20:1: F811 redefinition of unused 'ChatMessageContent' from line 17
 .\tests\unit\argumentation_analysis\test_integration_balanced_strategy.py:48:18: F821 undefined name 'UnifiedConfig'
 .\tests\unit\argumentation_analysis\test_integration_end_to_end.py:21:1: F811 redefinition of unused 'ChatMessageContent' from line 18
-.\tests\unit\argumentation_analysis\test_integration_example.py:45:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_integration_example.py:50:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_integration_example.py:109:1: W293 blank line contains whitespace
-.\tests\unit\argumentation_analysis\test_integration_example.py:114:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\test_mock_elimination.py:96:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:151:25: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:163:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:175:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:275:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:355:23: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:370:23: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:444:25: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:457:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:486:30: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\argumentation_analysis\test_modal_logic_agent.py:501:30: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:740:1: W293 blank line contains whitespace
 .\tests\unit\argumentation_analysis\test_operational_agents_integration.py:87:17: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_run_analysis_conversation.py:47:57: F821 undefined name 'test_text'
 .\tests\unit\argumentation_analysis\test_source_manager.py:52:38: E712 comparison to True should be 'if cond is True:' or 'if cond:'
@@ -2385,14 +1348,12 @@
 .\tests\unit\authentication\test_mock_elimination_advanced.py:68:17: F821 undefined name 'logger'
 .\tests\unit\config\test_unified_config.py:30:1: F811 redefinition of unused 'UnifiedConfig' from line 5
 .\tests\unit\config\test_unified_config.py:63:17: F821 undefined name 'logger'
-.\tests\unit\integration\test_unified_config_integration.py:15:16: W291 trailing whitespace
 .\tests\unit\integration\test_unified_config_integration.py:34:1: F811 redefinition of unused 'UnifiedConfig' from line 5
 .\tests\unit\integration\test_unified_config_integration.py:65:17: F821 undefined name 'logger'
 .\tests\unit\mocks\legacy_numpy_array_mock.py:238:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:239:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:245:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:1525:1: F811 redefinition of unused 'int8' from line 1423
-.\tests\unit\orchestration\test_hierarchical_managers.py:10:36: W291 trailing whitespace
 .\tests\unit\orchestration\test_unified_orchestrations.py:573:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\orchestration\test_unified_orchestrations.py:574:43: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\scripts\test_jpype_dependency_validator.py:127:15: F541 f-string is missing placeholders
@@ -2406,7 +1367,6 @@
 .\tests\utils\common_test_helpers.py:289:21: F821 undefined name 'patch'
 .\tests\utils\common_test_helpers.py:290:22: F821 undefined name 'patch'
 .\tests\utils\common_test_helpers.py:291:21: F821 undefined name 'patch'
-.\tests\validation\test_fol_complete_validation.py:11:46: W291 trailing whitespace
 .\tests\validation\test_fol_complete_validation.py:766:15: F541 f-string is missing placeholders
 .\tests\validation\test_fol_complete_validation.py:771:15: F541 f-string is missing placeholders
 .\tests\validation\test_fol_complete_validation.py:776:15: F541 f-string is missing placeholders
@@ -2445,7 +1405,6 @@
 .\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:471:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:478:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:489:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:7:50: W291 trailing whitespace
 .\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:235:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:261:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:268:15: F541 f-string is missing placeholders
@@ -2464,4 +1423,3 @@
 .\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:314:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:317:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_c_simple.py:121:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_verification_fonctionnalite_oracle.py:6:86: W291 trailing whitespace

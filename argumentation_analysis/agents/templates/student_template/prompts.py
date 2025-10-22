@@ -4,7 +4,7 @@ Prompts utilisés par l'agent étudiant pour les interactions avec les modèles 
 
 # Prompt système qui définit le rôle et les capacités du modèle
 SYSTEM_PROMPT = """
-Tu es un assistant spécialisé dans l'analyse d'argumentation. Ta tâche est d'analyser 
+Tu es un assistant spécialisé dans l'analyse d'argumentation. Ta tâche est d'analyser
 le texte fourni et d'identifier les éléments clés de l'argumentation selon les instructions.
 
 Voici comment tu dois procéder:

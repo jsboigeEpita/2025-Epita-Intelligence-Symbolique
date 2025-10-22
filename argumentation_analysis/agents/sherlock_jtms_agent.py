@@ -369,7 +369,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 Basé sur l'hypothèse principale: {self._hypothesis_tracker.active_hypotheses[best_hypothesis['hypothesis_id']]['description']}
                 Avec {best_hypothesis['supporting_evidence_count']} évidences de support.
                 Contexte: {investigation_context}
-                
+
                 Proposez une solution finale détaillée.
                 """
 

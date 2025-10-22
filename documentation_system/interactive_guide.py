@@ -147,7 +147,7 @@ class InteractiveDocumentationGuide:
             <span>⚙️ {metrics['orchestration_count']} composants d'orchestration</span>
         </div>
     </div>
-    
+
     <nav class="main-nav">
         <button onclick="showTab('dashboard')" class="nav-btn active" id="dashboard-btn">🏠 Tableau de Bord</button>
         <button onclick="showTab('search')" class="nav-btn" id="search-btn">🔍 Recherche</button>
@@ -156,7 +156,7 @@ class InteractiveDocumentationGuide:
         <a href="knowledge_map.html" class="nav-btn">🗺️ Carte Interactive</a>
         <a href="generated_docs/index.html" class="nav-btn">📄 Documentation</a>
     </nav>
-    
+
     <!-- TABLEAU DE BORD -->
     <div id="dashboard" class="tab-content active">
         <div class="dashboard">
@@ -182,7 +182,7 @@ class InteractiveDocumentationGuide:
                     <div class="metric-desc">Score de complexité moyen</div>
                 </div>
             </div>
-            
+
             <div class="section-grid">
                 <div class="info-section">
                     <h2>🚀 Points d'Entrée Recommandés</h2>
@@ -200,7 +200,7 @@ class InteractiveDocumentationGuide:
         html_content += """
                     </div>
                 </div>
-                
+
                 <div class="info-section">
                     <h2>📊 Répartition par Catégories</h2>
                     <div class="category-stats">"""
@@ -225,7 +225,7 @@ class InteractiveDocumentationGuide:
             </div>
         </div>
     </div>
-    
+
     <!-- RECHERCHE -->
     <div id="search" class="tab-content">
         <div class="search-container">
@@ -234,7 +234,7 @@ class InteractiveDocumentationGuide:
                 <button onclick="performSearch()">🔍 Rechercher</button>
                 <button onclick="clearSearch()">🗑️ Effacer</button>
             </div>
-            
+
             <div class="search-tips">
                 <h3>💡 Conseils de Recherche</h3>
                 <ul>
@@ -243,13 +243,13 @@ class InteractiveDocumentationGuide:
                     <li><strong>Fonctions :</strong> "analyze", "detect", "generate"</li>
                 </ul>
             </div>
-            
+
             <div id="searchResults" class="search-results">
                 <p class="no-results">💡 Tapez votre recherche ci-dessus pour explorer les {metrics['total_modules']} modules du projet.</p>
             </div>
         </div>
     </div>
-    
+
     <!-- CATÉGORIES -->
     <div id="categories" class="tab-content">
         <div class="categories-container">
@@ -282,14 +282,14 @@ class InteractiveDocumentationGuide:
 
         html_content += """
             </div>
-            
+
             <div id="categoryDetails" class="category-details" style="display: none;">
                 <button onclick="hideCategoryDetails()" class="close-btn">✕ Fermer</button>
                 <div id="categoryDetailsContent"></div>
             </div>
         </div>
     </div>
-    
+
     <!-- MODE DÉMO -->
     <div id="demo" class="tab-content">
         <div class="demo-container">
@@ -297,14 +297,14 @@ class InteractiveDocumentationGuide:
                 <h2>🎯 Mode Démonstration</h2>
                 <p>Présentation du Système de Documentation Automatique</p>
             </div>
-            
+
             <div class="demo-highlights">
                 <div class="highlight-card">
                     <h3>🔍 Analyse Automatique</h3>
                     <p><strong>567 modules analysés</strong> en 2.7 secondes</p>
                     <p>Détection intelligente des patterns d'IA symbolique</p>
                 </div>
-                
+
                 <div class="highlight-card">
                     <h3>🤖 Agents Spécialisés</h3>
                     <p><strong>5 catégories détectées :</strong></p>
@@ -316,7 +316,7 @@ class InteractiveDocumentationGuide:
                         <li>⚙️ PM (2 modules)</li>
                     </ul>
                 </div>
-                
+
                 <div class="highlight-card">
                     <h3>📚 Documentation Vivante</h3>
                     <p>Génération automatique de :</p>
@@ -328,10 +328,10 @@ class InteractiveDocumentationGuide:
                     </ul>
                 </div>
             </div>
-            
+
             <div class="demo-scenarios">
                 <h3>🎭 Scénarios de Démonstration</h3>
-                
+
                 <div class="scenario">
                     <h4>👥 Nouveau Développeur</h4>
                     <p>Un développeur rejoint l'équipe et doit comprendre l'architecture complexe :</p>
@@ -342,7 +342,7 @@ class InteractiveDocumentationGuide:
                         <li>Navigue dans la <strong>documentation générée</strong></li>
                     </ol>
                 </div>
-                
+
                 <div class="scenario">
                     <h4>🔍 Recherche de Fonctionnalité</h4>
                     <p>Un développeur cherche des outils d'analyse rhétorique :</p>
@@ -353,7 +353,7 @@ class InteractiveDocumentationGuide:
                         <li>Suit les <strong>dépendances et connexions</strong></li>
                     </ol>
                 </div>
-                
+
                 <div class="scenario">
                     <h4>📊 Présentation d'Architecture</h4>
                     <p>Présentation de l'architecture à l'équipe ou aux stakeholders :</p>
@@ -367,13 +367,13 @@ class InteractiveDocumentationGuide:
             </div>
         </div>
     </div>
-    
+
     <footer class="footer">
         <p>🎓 <strong>Projet EPITA 2025 - IA Symbolique</strong></p>
         <p>📋 Sujet 2.1.4 : Documentation et transfert de connaissances</p>
         <p>🚀 Système de documentation automatique pour architecture complexe</p>
     </footer>
-    
+
     <script src="scripts.js"></script>
 </body>
 </html>"""
@@ -394,7 +394,7 @@ class InteractiveDocumentationGuide:
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
@@ -402,7 +402,7 @@ class InteractiveDocumentationGuide:
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
-        
+
         .header {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -411,13 +411,13 @@ class InteractiveDocumentationGuide:
             text-align: center;
             margin-bottom: 1rem;
         }
-        
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-        
+
         .header-stats {
             display: flex;
             justify-content: center;
@@ -425,14 +425,14 @@ class InteractiveDocumentationGuide:
             margin-top: 1rem;
             flex-wrap: wrap;
         }
-        
+
         .header-stats span {
             background: rgba(255, 255, 255, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-weight: 500;
         }
-        
+
         .main-nav {
             background: rgba(255, 255, 255, 0.9);
             padding: 1rem;
@@ -444,7 +444,7 @@ class InteractiveDocumentationGuide:
             gap: 1rem;
             flex-wrap: wrap;
         }
-        
+
         .nav-btn {
             background: transparent;
             border: 2px solid #667eea;
@@ -457,32 +457,32 @@ class InteractiveDocumentationGuide:
             text-decoration: none;
             display: inline-block;
         }
-        
+
         .nav-btn:hover, .nav-btn.active {
             background: #667eea;
             color: white;
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
-        
+
         .tab-content {
             display: none;
             max-width: 1400px;
             margin: 0 auto;
             padding: 0 2rem;
         }
-        
+
         .tab-content.active {
             display: block;
         }
-        
+
         .metric-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
             margin-bottom: 3rem;
         }
-        
+
         .metric-card {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
@@ -492,12 +492,12 @@ class InteractiveDocumentationGuide:
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .metric-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         }
-        
+
         .metric-value {
             font-size: 3rem;
             font-weight: bold;
@@ -505,39 +505,39 @@ class InteractiveDocumentationGuide:
             display: block;
             margin-bottom: 0.5rem;
         }
-        
+
         .metric-label {
             font-size: 1.1rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 0.3rem;
         }
-        
+
         .metric-desc {
             font-size: 0.9rem;
             color: #666;
         }
-        
+
         .section-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
             margin-bottom: 2rem;
         }
-        
+
         .info-section {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
-        
+
         .info-section h2 {
             color: #667eea;
             margin-bottom: 1.5rem;
             font-size: 1.3rem;
         }
-        
+
         .entry-item {
             padding: 1rem;
             margin: 1rem 0;
@@ -546,17 +546,17 @@ class InteractiveDocumentationGuide:
             border-left: 4px solid #667eea;
             transition: all 0.3s ease;
         }
-        
+
         .entry-item:hover {
             background: #e9ecef;
             transform: translateX(5px);
         }
-        
+
         .entry-item h4 {
             color: #333;
             margin-bottom: 0.5rem;
         }
-        
+
         .badge {
             display: inline-block;
             padding: 0.2rem 0.6rem;
@@ -565,13 +565,13 @@ class InteractiveDocumentationGuide:
             font-weight: 500;
             margin: 0.2rem 0;
         }
-        
+
         .badge-extract { background: #ffe6e6; color: #d63384; }
         .badge-informal { background: #e6f3ff; color: #0d6efd; }
         .badge-logic { background: #e6ffe6; color: #198754; }
         .badge-rhetorical { background: #fff3e6; color: #fd7e14; }
         .badge-general { background: #f0f0f0; color: #6c757d; }
-        
+
         .category-stat {
             display: flex;
             justify-content: space-between;
@@ -582,12 +582,12 @@ class InteractiveDocumentationGuide:
             border-radius: 8px;
             border-left: 4px solid #667eea;
         }
-        
+
         .category-name {
             font-weight: 600;
             color: #333;
         }
-        
+
         .category-count {
             background: #667eea;
             color: white;
@@ -595,20 +595,20 @@ class InteractiveDocumentationGuide:
             border-radius: 15px;
             font-size: 0.9rem;
         }
-        
+
         .search-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
-        
+
         .search-box {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
         }
-        
+
         .search-box input {
             flex: 1;
             padding: 1rem;
@@ -617,13 +617,13 @@ class InteractiveDocumentationGuide:
             font-size: 1rem;
             transition: border-color 0.3s ease;
         }
-        
+
         .search-box input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .search-box button {
             padding: 1rem 2rem;
             background: #667eea;
@@ -634,28 +634,28 @@ class InteractiveDocumentationGuide:
             font-size: 1rem;
             transition: all 0.3s ease;
         }
-        
+
         .search-box button:hover {
             background: #5a6fd8;
             transform: translateY(-2px);
         }
-        
+
         .search-tips {
             background: #f8f9fa;
             padding: 1.5rem;
             border-radius: 10px;
             margin-bottom: 2rem;
         }
-        
+
         .search-tips h3 {
             color: #667eea;
             margin-bottom: 1rem;
         }
-        
+
         .search-results {
             min-height: 300px;
         }
-        
+
         .search-result {
             padding: 1.5rem;
             margin: 1rem 0;
@@ -664,31 +664,31 @@ class InteractiveDocumentationGuide:
             border-left: 4px solid #667eea;
             transition: all 0.3s ease;
         }
-        
+
         .search-result:hover {
             background: #e9ecef;
             transform: translateX(5px);
         }
-        
+
         .search-result h4 {
             color: #667eea;
             margin-bottom: 0.5rem;
         }
-        
+
         .no-results {
             text-align: center;
             color: #6c757d;
             font-style: italic;
             padding: 2rem;
         }
-        
+
         .categories-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin: 2rem 0;
         }
-        
+
         .category-card {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
@@ -697,18 +697,18 @@ class InteractiveDocumentationGuide:
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .category-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         }
-        
+
         .category-card h3 {
             color: #667eea;
             margin-bottom: 1rem;
             font-size: 1.3rem;
         }
-        
+
         .category-meta {
             display: flex;
             justify-content: space-between;
@@ -716,65 +716,65 @@ class InteractiveDocumentationGuide:
             font-size: 0.9rem;
             color: #6c757d;
         }
-        
+
         .module-preview {
             background: #f8f9fa;
             padding: 1rem;
             border-radius: 8px;
         }
-        
+
         .module-preview-item {
             padding: 0.3rem 0;
             border-bottom: 1px solid #e9ecef;
             font-size: 0.9rem;
         }
-        
+
         .module-preview-item:last-child {
             border-bottom: none;
         }
-        
+
         .module-preview-item.more {
             font-style: italic;
             color: #6c757d;
         }
-        
+
         .demo-container {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
-        
+
         .demo-header {
             text-align: center;
             margin-bottom: 3rem;
         }
-        
+
         .demo-header h2 {
             color: #667eea;
             font-size: 2rem;
             margin-bottom: 0.5rem;
         }
-        
+
         .demo-highlights {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin-bottom: 3rem;
         }
-        
+
         .highlight-card {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 2rem;
             border-radius: 15px;
             border-left: 5px solid #667eea;
         }
-        
+
         .highlight-card h3 {
             color: #667eea;
             margin-bottom: 1rem;
         }
-        
+
         .scenario {
             background: #f8f9fa;
             padding: 2rem;
@@ -782,20 +782,20 @@ class InteractiveDocumentationGuide:
             margin: 1.5rem 0;
             border-left: 5px solid #28a745;
         }
-        
+
         .scenario h4 {
             color: #28a745;
             margin-bottom: 1rem;
         }
-        
+
         .scenario ol {
             margin-left: 1.5rem;
         }
-        
+
         .scenario li {
             margin: 0.5rem 0;
         }
-        
+
         .footer {
             background: rgba(255, 255, 255, 0.1);
             color: white;
@@ -803,11 +803,11 @@ class InteractiveDocumentationGuide:
             padding: 2rem;
             margin-top: 3rem;
         }
-        
+
         .footer p {
             margin: 0.3rem 0;
         }
-        
+
         .category-details {
             background: rgba(255, 255, 255, 0.95);
             padding: 2rem;
@@ -815,7 +815,7 @@ class InteractiveDocumentationGuide:
             margin-top: 2rem;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
-        
+
         .close-btn {
             background: #dc3545;
             color: white;
@@ -826,22 +826,22 @@ class InteractiveDocumentationGuide:
             float: right;
             margin-bottom: 1rem;
         }
-        
+
         @media (max-width: 768px) {
             .header-stats {
                 flex-direction: column;
                 gap: 1rem;
             }
-            
+
             .main-nav {
                 flex-direction: column;
                 gap: 0.5rem;
             }
-            
+
             .section-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .search-box {
                 flex-direction: column;
             }
@@ -855,11 +855,11 @@ class InteractiveDocumentationGuide:
         """Génère le JavaScript pour l'interactivité"""
         js_content = """
         // Interface interactive pour la documentation IA Symbolique
-        
+
         // Chargement des données
         let searchData = {};
         let categoriesData = {};
-        
+
         // Charger les données depuis le fichier séparé
         function loadData() {
             const script = document.createElement('script');
@@ -869,55 +869,55 @@ class InteractiveDocumentationGuide:
             };
             document.head.appendChild(script);
         }
-        
+
         // Gestion des onglets
         function showTab(tabName) {
             // Masquer tous les onglets
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Désactiver tous les boutons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             // Afficher l'onglet sélectionné
             document.getElementById(tabName).classList.add('active');
             document.getElementById(tabName + '-btn').classList.add('active');
         }
-        
+
         // Recherche intelligente
         function performSearch() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const resultsDiv = document.getElementById('searchResults');
-            
+
             if (!query) {
                 resultsDiv.innerHTML = '<p class="no-results">💡 Tapez votre recherche ci-dessus pour explorer les modules.</p>';
                 return;
             }
-            
+
             const results = [];
-            
+
             for (const [path, module] of Object.entries(searchData)) {
                 let score = 0;
-                
+
                 // Recherche dans le nom
                 if (module.name.toLowerCase().includes(query)) score += 10;
-                
+
                 // Recherche dans la catégorie
                 if (module.category.toLowerCase().includes(query)) score += 8;
-                
+
                 // Recherche dans le type
                 if (module.type.toLowerCase().includes(query)) score += 6;
-                
+
                 // Recherche dans la docstring
                 if (module.docstring && module.docstring.toLowerCase().includes(query)) score += 5;
-                
+
                 // Recherche par préfixe
                 if (module.name.toLowerCase().startsWith(query)) score += 15;
                 if (module.category.toLowerCase().startsWith(query)) score += 12;
-                
+
                 if (score > 0) {
                     results.push({
                         path: path,
@@ -926,17 +926,17 @@ class InteractiveDocumentationGuide:
                     });
                 }
             }
-            
+
             // Trier par score décroissant
             results.sort((a, b) => b.score - a.score);
-            
+
             if (results.length === 0) {
                 resultsDiv.innerHTML = '<p class="no-results">❌ Aucun résultat trouvé pour "' + query + '"</p>';
                 return;
             }
-            
+
             let html = '<h3>📋 Résultats (' + results.length + '):</h3>';
-            
+
             results.slice(0, 15).forEach(result => {
                 const badgeClass = 'badge-' + result.module.category;
                 html += `
@@ -953,34 +953,34 @@ class InteractiveDocumentationGuide:
                     </div>
                 `;
             });
-            
+
             resultsDiv.innerHTML = html;
         }
-        
+
         // Effacer la recherche
         function clearSearch() {
             document.getElementById('searchInput').value = '';
             document.getElementById('searchResults').innerHTML = '<p class="no-results">💡 Tapez votre recherche ci-dessus pour explorer les modules.</p>';
         }
-        
+
         // Afficher les détails d'une catégorie
         function showCategoryDetails(category) {
             const detailsDiv = document.getElementById('categoryDetails');
             const contentDiv = document.getElementById('categoryDetailsContent');
-            
+
             if (!categoriesData[category]) {
                 contentDiv.innerHTML = '<p>Aucune donnée disponible pour cette catégorie.</p>';
                 detailsDiv.style.display = 'block';
                 return;
             }
-            
+
             const modules = categoriesData[category];
             let html = `
                 <h2>📚 Catégorie: ${category.toUpperCase()}</h2>
                 <p><strong>${modules.length} modules</strong> dans cette catégorie</p>
                 <div class="modules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 2rem;">
             `;
-            
+
             modules.forEach(module => {
                 const badgeClass = 'badge-' + module.type;
                 html += `
@@ -994,22 +994,22 @@ class InteractiveDocumentationGuide:
                     </div>
                 `;
             });
-            
+
             html += '</div>';
             contentDiv.innerHTML = html;
             detailsDiv.style.display = 'block';
             detailsDiv.scrollIntoView({ behavior: 'smooth' });
         }
-        
+
         // Masquer les détails de catégorie
         function hideCategoryDetails() {
             document.getElementById('categoryDetails').style.display = 'none';
         }
-        
+
         // Recherche en temps réel
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
-            
+
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 searchInput.addEventListener('keyup', function(e) {
@@ -1018,7 +1018,7 @@ class InteractiveDocumentationGuide:
                     }
                 });
             }
-            
+
             // Animation des cartes métriques
             const metricCards = document.querySelectorAll('.metric-card');
             metricCards.forEach((card, index) => {
@@ -1026,7 +1026,7 @@ class InteractiveDocumentationGuide:
                     card.style.opacity = '0';
                     card.style.transform = 'translateY(20px)';
                     card.style.transition = 'all 0.6s ease';
-                    
+
                     setTimeout(() => {
                         card.style.opacity = '1';
                         card.style.transform = 'translateY(0)';

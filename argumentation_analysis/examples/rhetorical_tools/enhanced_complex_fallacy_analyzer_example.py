@@ -15,8 +15,8 @@ async def run_complex_fallacy_analysis():
 
     # Texte à analyser (contenant des sophismes complexes)
     text = """
-    Les vaccins causent l'autisme car un médecin l'a dit. De plus, tous les parents vaccinés 
-    ont des enfants en bonne santé, donc le vaccin est efficace. Enfin, les opposants sont 
+    Les vaccins causent l'autisme car un médecin l'a dit. De plus, tous les parents vaccinés
+    ont des enfants en bonne santé, donc le vaccin est efficace. Enfin, les opposants sont
     des criminels qui mettent en danger la société.
     """
 

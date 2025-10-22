@@ -177,7 +177,7 @@ async def test_oracle_quick():
         dataset = CluedoDataset()
         manager = CluedoDatasetManager(dataset)
         print("✅ Initialisation Oracle réussie")
-        
+
         # Test validation suggestion
         agent = MoriartyInterrogatorAgent(
             dataset_manager=manager,
@@ -185,13 +185,13 @@ async def test_oracle_quick():
             llm_service_id="test"
         )
         print("✅ Agent Moriarty créé")
-        
+
         # Test fonctionnel simple (sans LLM)
         stats = agent.get_oracle_statistics()
         print(f"✅ Statistiques Oracle: {len(stats)} métriques")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Erreur test Oracle: {e}")
         return False
@@ -288,7 +288,7 @@ La refactorisation complète du système **Sherlock-Watson-Moriarty Oracle Enhan
 - **Racine nettoyée** avec structure professionnelle
 - **Organisation logique** par type de contenu
 
-#### Phase 2: Refactorisation Code ✅  
+#### Phase 2: Refactorisation Code ✅
 - **2 nouveaux modules** créés (error_handling, interfaces)
 - **Consolidation imports** avec `__init__.py` v2.1.0
 - **Gestion d'erreurs centralisée** avec OracleErrorHandler
@@ -335,7 +335,7 @@ La refactorisation complète du système **Sherlock-Watson-Moriarty Oracle Enhan
 
 📦 Core Oracle (/argumentation_analysis/agents/core/oracle/):
 ├── __init__.py                     # ✅ Exports consolidés v2.1.0
-├── oracle_base_agent.py           # ✅ Agent Oracle de base refactorisé  
+├── oracle_base_agent.py           # ✅ Agent Oracle de base refactorisé
 ├── moriarty_interrogator_agent.py # ✅ Moriarty Oracle authentique
 ├── cluedo_dataset.py              # ✅ Dataset intégrité + révélations
 ├── dataset_access_manager.py      # ✅ Gestionnaire permissions + cache
@@ -448,7 +448,7 @@ La refactorisation complète du système **Sherlock-Watson-Moriarty Oracle Enhan
 La refactorisation **Oracle Enhanced v2.1.0** constitue une **réussite majeure** avec:
 
 - ✅ **Objectifs atteints à 100%** sur les 5 phases
-- ✅ **Qualité code significativement améliorée** 
+- ✅ **Qualité code significativement améliorée**
 - ✅ **Performance système optimisée** (-44% temps démarrage)
 - ✅ **Documentation production-ready** pour toutes audiences
 - ✅ **Architecture extensible** pour évolutions futures

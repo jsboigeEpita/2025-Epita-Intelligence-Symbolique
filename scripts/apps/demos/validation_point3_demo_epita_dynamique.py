@@ -148,17 +148,17 @@ class ProfesseurVirtuelLLM:
 
         prompt = f"""
         Analysez l'argument suivant dans le contexte d'un débat sur l'IA en médecine.
-        
+
         CONTEXTE MÉDICAL: {contexte_medical}
         ARGUMENT À ANALYSER: {argument}
-        
+
         Fournissez une analyse structurée avec :
         1. Détection de sophismes logiques (si présents)
         2. Qualité de l'argumentation (score 0-1)
         3. Forces et faiblesses de l'argument
         4. Recommandations pédagogiques pour l'étudiant
         5. Classification : pro-automatisation, pro-expertise-humaine, ou nuancé
-        
+
         Répondez en JSON structuré.
         """
 
@@ -532,8 +532,8 @@ class OrchestrateurPedagogiqueEpita:
         arguments_complexes = []
 
         contexte_medical = """
-        Contexte: L'intelligence artificielle transforme la médecine avec des systèmes de diagnostic 
-        automatisé de plus en plus sophistiqués. Cette révolution soulève des questions éthiques 
+        Contexte: L'intelligence artificielle transforme la médecine avec des systèmes de diagnostic
+        automatisé de plus en plus sophistiqués. Cette révolution soulève des questions éthiques
         fondamentales sur le rôle des médecins, la responsabilité clinique, et la qualité des soins.
         """
 

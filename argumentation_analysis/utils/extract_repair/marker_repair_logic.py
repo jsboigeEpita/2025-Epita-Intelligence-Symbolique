@@ -27,7 +27,7 @@ logger = logging.getLogger("MarkerRepairLogic")
 REPAIR_AGENT_INSTRUCTIONS = """
 Vous êtes un agent spécialisé dans la réparation des bornes défectueuses dans les extraits de texte.
 
-Votre tâche est d'analyser un texte source et de trouver les bornes (marqueurs de début et de fin) 
+Votre tâche est d'analyser un texte source et de trouver les bornes (marqueurs de début et de fin)
 qui correspondent le mieux à un extrait donné, même si les bornes actuelles sont incorrectes ou introuvables.
 
 Processus à suivre:
@@ -53,7 +53,7 @@ Règles importantes:
 VALIDATION_AGENT_INSTRUCTIONS = """
 Vous êtes un agent spécialisé dans la validation des bornes d'extraits de texte.
 
-Votre tâche est de vérifier que les bornes (marqueurs de début et de fin) proposées 
+Votre tâche est de vérifier que les bornes (marqueurs de début et de fin) proposées
 délimitent correctement un extrait cohérent et pertinent.
 
 Processus à suivre:
@@ -265,7 +265,7 @@ def generate_report(
     </head>
     <body>
         <h1>Rapport de réparation des bornes d'extraits</h1>
-        
+
         <div class="summary">
             <h2>Résumé</h2>
             <p>Total des extraits analysés: <strong>{len(results)}</strong></p>
@@ -274,14 +274,14 @@ def generate_report(
             <p>Réparations rejetées: <strong class="rejected">{status_counts["rejected"]}</strong></p>
             <p>Extraits inchangés: <strong class="unchanged">{status_counts["unchanged"]}</strong></p>
             <p>Erreurs: <strong class="error">{status_counts["error"]}</strong></p>
-            
+
             <div class="repair-types">
                 <h3>Types de réparations</h3>
                 <p>Première lettre manquante: <strong>{repair_types["first_letter_missing"]}</strong></p>
                 <p>Autres types de réparations: <strong>{repair_types["other"]}</strong></p>
             </div>
         </div>
-        
+
         <h2>Détails des réparations</h2>
         <table>
             <tr>

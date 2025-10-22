@@ -399,7 +399,7 @@ class EpitaDemoConsolidator:
 #### Architecture Modulaire v2.1
 - **6 Catégories de Tests** : Tests & Validation, Agents Logiques, Services Core, Intégrations, Cas d'Usage, Outils
 - **Configuration Centralisée** : `configs/demo_categories.yaml`
-- **Modules Spécialisés** : 7 modules dans `modules/` 
+- **Modules Spécialisés** : 7 modules dans `modules/`
 - **Performance Excellente** : 14.47s pour 104 tests (83.3% succès)
 
 #### Modes Disponibles et Testés
@@ -538,7 +538,7 @@ class EpitaDemoConsolidator:
 
 #### Phase 1 : Nettoyage Immédiat
 - [ ] Supprimer ou renommer les scripts redondants
-- [ ] Corriger les imports cassés dans les autres scripts  
+- [ ] Corriger les imports cassés dans les autres scripts
 - [ ] Centraliser toute la documentation vers le README principal
 
 #### Phase 2 : Intégration des Tests
@@ -568,7 +568,7 @@ Le script principal **`examples/scripts_demonstration/demonstration_epita.py`** 
 
 La consolidation autour de `examples/scripts_demonstration/` comme cible est **parfaitement justifiée** :
 - Script principal robuste et bien structuré
-- Architecture extensible et maintenable  
+- Architecture extensible et maintenable
 - Performance excellente validée
 - Documentation complète pour les étudiants EPITA
 

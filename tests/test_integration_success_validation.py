@@ -285,8 +285,8 @@ class TestIntegrationScenarios:
 
         # Test avec un texte contenant plusieurs éléments
         text = """
-        En 2024, selon une étude récente, 85% des entreprises françaises 
-        ont adopté l'intelligence artificielle. Tous les experts s'accordent 
+        En 2024, selon une étude récente, 85% des entreprises françaises
+        ont adopté l'intelligence artificielle. Tous les experts s'accordent
         à dire que cette technologie révolutionnaire transforme le marché.
         Cependant, cette évolution génère de la peur chez certains utilisateurs.
         """

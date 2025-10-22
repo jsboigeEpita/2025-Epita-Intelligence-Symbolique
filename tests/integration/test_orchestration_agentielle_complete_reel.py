@@ -5,7 +5,7 @@ Test des couches d'orchestration complètes avec agents JTMS réels
 
 Architecture testée :
 - SherlockJTMSAgent + WatsonJTMSAgent (agents réels)
-- CluedoExtendedOrchestrator (orchestration)  
+- CluedoExtendedOrchestrator (orchestration)
 - GroupChatOrchestration (service)
 - ServiceManager (coordination)
 """

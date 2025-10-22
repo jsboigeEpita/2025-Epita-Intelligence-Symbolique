@@ -297,8 +297,8 @@ def generate_sprint3_report(results: Dict[str, bool]):
     report_content = f"""# RAPPORT FINAL - SPRINT 3
 ## Optimisation Performances et Tests Fonctionnels
 
-**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}  
-**Statut Global:** {status}  
+**Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+**Statut Global:** {status}
 **Taux de Réussite:** {success_rate:.1f}%
 
 ## 📊 RÉSULTATS DES TESTS
@@ -317,7 +317,7 @@ def generate_sprint3_report(results: Dict[str, bool]):
 
 ### ✅ RÉSOLUS
 - Problème encodage Unicode: RÉSOLU ✅
-- Import circulaire matplotlib: CONTOURNÉ ✅  
+- Import circulaire matplotlib: CONTOURNÉ ✅
 - Interfaces agents harmonisées: VALIDÉ ✅
 - Services Flask intégrés: OPÉRATIONNEL ✅
 
@@ -355,7 +355,7 @@ def generate_sprint3_report(results: Dict[str, bool]):
 **Objectif atteint:** Le système a été significativement stabilisé et optimisé.
 
 - Problèmes critiques Unicode résolus ✅
-- Architecture agents harmonisée ✅  
+- Architecture agents harmonisée ✅
 - Base solide pour production ✅
 - Performance acceptable validée ✅
 

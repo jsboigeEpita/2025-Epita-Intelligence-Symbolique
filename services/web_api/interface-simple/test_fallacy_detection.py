@@ -34,16 +34,16 @@ async def test_fallacy_detection():
 
         # Texte de test contenant plusieurs sophismes
         texte_test = """
-        Si nous laissons les immigrants entrer dans notre pays, 
-        alors bientôt ils vont tous prendre nos emplois et notre économie va s'effondrer complètement. 
-        
-        C'est évident car mon voisin Jean, qui est un ignorant notoire, 
+        Si nous laissons les immigrants entrer dans notre pays,
+        alors bientôt ils vont tous prendre nos emplois et notre économie va s'effondrer complètement.
+
+        C'est évident car mon voisin Jean, qui est un ignorant notoire,
         pense que l'immigration est bénéfique, donc il a forcément tort.
-        
-        Nous devons choisir : soit nous fermons complètement nos frontières, 
+
+        Nous devons choisir : soit nous fermons complètement nos frontières,
         soit nous acceptons que notre civilisation disparaisse à jamais.
-        
-        D'ailleurs, tous les économistes sont payés par les lobbies, 
+
+        D'ailleurs, tous les économistes sont payés par les lobbies,
         donc leurs études sur l'immigration ne valent rien.
         """
 

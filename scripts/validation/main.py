@@ -13,7 +13,7 @@ import argumentation_analysis.core.environment
 
 Fichiers sources consolidés :
 - scripts/validate_authentic_system.py
-- scripts/validate_complete_ecosystem.py  
+- scripts/validate_complete_ecosystem.py
 - scripts/validate_unified_orchestrations.py
 - scripts/validate_unified_orchestrations_simple.py
 """
@@ -513,14 +513,14 @@ class UnifiedValidationSystem:
         <p><strong>Mode:</strong> {report_dict['configuration']['mode']}</p>
         <p><strong>Statut global:</strong> {report_dict['summary'].get('overall_status', 'unknown')}</p>
     </div>
-    
+
     <div class="section">
         <h2>Résumé</h2>
         <p><strong>Composants détectés:</strong> {report_dict['summary'].get('total_components_detected', 0)}/{report_dict['summary'].get('total_components_possible', 0)}</p>
         <p><strong>Taux de succès:</strong> {report_dict['summary'].get('success_rate', 0):.1f}%</p>
         <p><strong>Erreurs:</strong> {report_dict['summary'].get('error_count', 0)}</p>
     </div>
-    
+
     <div class="section">
         <h2>Composants Disponibles</h2>
         <ul>
@@ -532,7 +532,7 @@ class UnifiedValidationSystem:
 
         html_content += """        </ul>
     </div>
-    
+
     <div class="section">
         <h2>Recommandations</h2>
         <ul>
@@ -544,7 +544,7 @@ class UnifiedValidationSystem:
         html_content += (
             """        </ul>
     </div>
-    
+
     <div class="section">
         <h2>Détails Techniques</h2>
         <div class="code">

@@ -1612,10 +1612,10 @@ class UnifiedWebOrchestrator:
 
         content = f"""# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
 
-**Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}  
-**Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}  
-**Backend:** {self.app_info.backend_url or 'Non démarré'}  
-**Frontend:** {self.app_info.frontend_url or 'Non démarré'}  
+**Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+**Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}
+**Backend:** {self.app_info.backend_url or 'Non démarré'}
+**Frontend:** {self.app_info.frontend_url or 'Non démarré'}
 **Durée totale:** {duration:.2f} secondes
 
 ---

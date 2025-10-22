@@ -9,7 +9,7 @@ Valide le traitement authentique des données et l'analyse logique.
 
 Tests couverts:
 - Processeur données custom production
-- Détection sophistiques authentique  
+- Détection sophistiques authentique
 - Analyse logique modale
 - Extraction propositions
 - Traitement anti-mock
@@ -226,13 +226,13 @@ class TestAgentsLogiquesIntegration:
         """Test analyse complète intégrée"""
         complex_content = """
         Analyse logique complète du laboratoire d'IA.
-        
+
         Si P implique Q et nous savons que P est vrai, alors Q est nécessairement vrai.
         Il est possible que cette approche résolve le problème efficacement.
-        
+
         Attention: Tu dis ça parce que tu es nouveau ! (sophistique ad hominem)
         Donc tu penses que toute IA est dangereuse ? (strawman)
-        
+
         Tous les systèmes intelligents peuvent apprendre et s'adapter.
         Il faut absolument valider cette hypothèse avant de continuer.
         Parfois, les algorithmes produisent des résultats inattendus.

@@ -248,13 +248,13 @@ class InformalAnalysisAgent(BaseAgent):
         # async def analyze_rhetoric(self, text: str) -> Dict[str, Any]:
         """
         Analyse la rhétorique d'un texte.
-        
+
         Args:
             text: Texte à analyser
-        
+
         Returns:
             Résultats de l'analyse rhétorique
-        
+
         Raises:
             ValueError: Si l'analyseur rhétorique n'est pas disponible
         """

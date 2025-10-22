@@ -315,7 +315,7 @@ Atom ::= constant_name
 constant_name ::= [a-z][a-z0-9_]*
 
 Negation ::= "!" ModalFormula
-Conjunction ::= ModalFormula "&&" ModalFormula  
+Conjunction ::= ModalFormula "&&" ModalFormula
 Disjunction ::= ModalFormula "||" ModalFormula
 Implication ::= ModalFormula "=>" ModalFormula
 Equivalence ::= ModalFormula "<=>" ModalFormula

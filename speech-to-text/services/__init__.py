@@ -3,7 +3,7 @@ Services package for fallacy detection system.
 
 This package contains all the core business logic and services:
 - FallacyDetectionService: Main service for detecting fallacies
-- WebAPIClient: Client for external API integration  
+- WebAPIClient: Client for external API integration
 - SimpleFallacyDetector: Simple pattern-based detector
 - WebAPIFallacyDetector: Advanced web API detector
 """

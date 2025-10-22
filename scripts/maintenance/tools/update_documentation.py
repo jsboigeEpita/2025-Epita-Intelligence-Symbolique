@@ -61,7 +61,7 @@ class DocumentationUpdater:
 ### Vue d'ensemble
 Le système Oracle Enhanced implémente un véritable système multi-agents avec:
 - **Sherlock Holmes**: Agent d'investigation logique
-- **Dr Watson**: Agent de déduction médicale  
+- **Dr Watson**: Agent de déduction médicale
 - **Professor Moriarty**: Agent Oracle authentique avec révélations automatiques
 
 ### Nouvelles fonctionnalités Oracle Enhanced v2.1.0
@@ -117,7 +117,7 @@ from argumentation_analysis.agents.core.oracle import (
 
 # Initialisation système Oracle
 dataset = CluedoDataset()
-manager = CluedoDatasetManager(dataset) 
+manager = CluedoDatasetManager(dataset)
 oracle = MoriartyInterrogatorAgent(dataset_manager=manager, name="Moriarty")
 
 # Validation suggestion avec Oracle authentique
@@ -254,7 +254,7 @@ Le système Oracle Enhanced dispose maintenant de **148+ tests** couvrant:
 # Tests gestion d'erreurs (20+ tests)
 pytest tests/unit/argumentation_analysis/agents/core/oracle/test_error_handling.py -v
 
-# Tests interfaces (15+ tests)  
+# Tests interfaces (15+ tests)
 pytest tests/unit/argumentation_analysis/agents/core/oracle/test_interfaces.py -v
 
 # Tests intégration (8+ tests)
@@ -412,31 +412,31 @@ from argumentation_analysis.agents.core.oracle import (
 
 class MonNouvelOracleAgent(OracleBaseAgent, OracleAgentInterface):
     """Nouvel agent Oracle avec interfaces standardisées"""
-    
+
     def __init__(self, dataset_manager, **kwargs):
         super().__init__(dataset_manager=dataset_manager, **kwargs)
-        
+
     @oracle_error_handler("process_custom_request")
-    async def process_oracle_request(self, requesting_agent: str, 
+    async def process_oracle_request(self, requesting_agent: str,
                                    query_type: str, query_params: dict) -> dict:
         # Validation métier
         if not self._validate_custom_request(query_params):
             raise OracleValidationError("Paramètres invalides")
-            
+
         # Traitement Oracle spécialisé
         result = await self._process_custom_logic(requesting_agent, query_params)
-        
+
         # Réponse standardisée
         return StandardOracleResponse(
             success=True,
             data=result,
             message=f"Request processed for {requesting_agent}"
         ).to_dict()
-        
+
     def _validate_custom_request(self, params: dict) -> bool:
         """Validation métier spécialisée"""
         return "required_field" in params
-        
+
     async def _process_custom_logic(self, agent: str, params: dict) -> dict:
         """Logique Oracle spécialisée"""
         return {"processed": True, "agent": agent}
@@ -445,26 +445,26 @@ class MonNouvelOracleAgent(OracleBaseAgent, OracleAgentInterface):
 #### 2. Extension Dataset Manager
 ```python
 from argumentation_analysis.agents.core.oracle import (
-    DatasetAccessManager, DatasetManagerInterface, 
+    DatasetAccessManager, DatasetManagerInterface,
     QueryType, OracleDatasetError
 )
 
 class MonDatasetManager(DatasetAccessManager, DatasetManagerInterface):
     """Dataset manager spécialisé avec validation custom"""
-    
-    def execute_query(self, agent_name: str, query_type: str, 
+
+    def execute_query(self, agent_name: str, query_type: str,
                      query_params: dict) -> dict:
         # Validation permissions héritée
         if not self.check_permission(agent_name, query_type):
             raise OraclePermissionError(f"Access denied for {agent_name}")
-            
+
         # Logique spécialisée
         if query_type == "custom_query":
             return self._handle_custom_query(agent_name, query_params)
-            
+
         # Déléguer au parent pour queries standard
         return super().execute_query(agent_name, query_type, query_params)
-        
+
     def _handle_custom_query(self, agent: str, params: dict) -> dict:
         """Gestionnaire query custom"""
         return {"custom_result": f"Processed for {agent}"}
@@ -492,18 +492,18 @@ class TestMonNouvelOracleAgent:
             dataset_manager=self.mock_dataset_manager,
             name="TestOracle"
         )
-        
+
     @pytest.mark.asyncio
     async def test_process_oracle_request_success(self):
         """Test traitement requête Oracle réussie"""
         result = await self.agent.process_oracle_request(
             "Sherlock", "custom_query", {"required_field": "value"}
         )
-        
+
         assert result["success"] is True
         assert result["data"]["processed"] is True
         assert "Sherlock" in result["message"]
-        
+
     @pytest.mark.asyncio
     async def test_process_oracle_request_validation_error(self):
         """Test gestion erreur validation"""
@@ -565,11 +565,11 @@ class DebuggableOracleAgent(OracleBaseAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.error_handler = error_handler
-        
+
     async def process_oracle_request(self, agent, query_type, params):
         oracle_logger.info(f"Processing {query_type} for {agent}")
         oracle_logger.debug(f"Parameters: {params}")
-        
+
         try:
             result = await self._internal_process(agent, query_type, params)
             oracle_logger.info(f"Success: {result}")
@@ -1008,7 +1008,7 @@ metadata:
 type: Opaque
 data:
   openai-api-key: <base64-encoded-key>
-  
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -1047,21 +1047,21 @@ from pathlib import Path
 
 def setup_production_logging():
     """Configuration logging production Oracle Enhanced"""
-    
+
     # Dossier logs
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    
+
     # Configuration root logger
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
+
     # Logger Oracle spécialisé
     oracle_logger = logging.getLogger("oracle")
     oracle_logger.setLevel(logging.DEBUG)
-    
+
     # Handler fichier avec rotation
     file_handler = logging.handlers.RotatingFileHandler(
         log_dir / "oracle_enhanced.log",
@@ -1071,7 +1071,7 @@ def setup_production_logging():
     file_handler.setFormatter(
         logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
-    
+
     # Handler erreurs séparé
     error_handler = logging.handlers.RotatingFileHandler(
         log_dir / "oracle_errors.log",
@@ -1082,10 +1082,10 @@ def setup_production_logging():
     error_handler.setFormatter(
         logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
-    
+
     oracle_logger.addHandler(file_handler)
     oracle_logger.addHandler(error_handler)
-    
+
     return oracle_logger
 ```
 
@@ -1104,21 +1104,21 @@ oracle_errors_total = Counter('oracle_errors_total', 'Oracle errors', ['error_ty
 
 class OracleMetricsCollector:
     """Collecteur métriques Oracle Enhanced"""
-    
+
     def __init__(self, oracle_agent):
         self.oracle_agent = oracle_agent
         self.start_time = time.time()
-        
+
     def record_request(self, agent_name: str, query_type: str, duration: float, success: bool):
         """Enregistre métriques requête Oracle"""
         status = "success" if success else "error"
         oracle_requests_total.labels(agent=agent_name, query_type=query_type, status=status).inc()
         oracle_request_duration.observe(duration)
-        
+
     def record_error(self, error_type: str):
         """Enregistre erreur Oracle"""
         oracle_errors_total.labels(error_type=error_type).inc()
-        
+
     def update_active_agents(self, count: int):
         """Met à jour nombre agents actifs"""
         oracle_active_agents.set(count)
@@ -1141,7 +1141,7 @@ groups:
     annotations:
       summary: "High Oracle error rate detected"
       description: "Oracle error rate is {{ $value }} errors/sec"
-      
+
   - alert: OracleRequestLatency
     expr: histogram_quantile(0.95, oracle_request_duration_seconds) > 2.0
     for: 5m
@@ -1150,7 +1150,7 @@ groups:
     annotations:
       summary: "High Oracle request latency"
       description: "95th percentile latency is {{ $value }}s"
-      
+
   - alert: OracleServiceDown
     expr: up{job="oracle-enhanced"} == 0
     for: 1m
@@ -1176,61 +1176,61 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
-        
+
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        
+
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
         pip install pytest-cov
-        
+
     - name: Run Oracle tests
       run: |
         python scripts/maintenance/validate_oracle_coverage.py
-        
+
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
-        
+
   build:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Build Docker image
       run: |
         docker build -t oracle-enhanced:${{ github.sha }} .
-        
+
     - name: Login to registry
       run: |
         echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        
+
     - name: Push image
       run: |
         docker tag oracle-enhanced:${{ github.sha }} myregistry/oracle-enhanced:${{ github.sha }}
         docker push myregistry/oracle-enhanced:${{ github.sha }}
-        
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - name: Deploy to staging
       run: |

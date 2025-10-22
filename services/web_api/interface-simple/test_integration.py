@@ -60,8 +60,8 @@ async def test_service_manager_integration():
     test_text = """
     Si nous acceptons l'immigration, alors notre pays va s'effondrer économiquement.
     C'est évident car tous les immigrants sont des parasites qui ne travaillent jamais.
-    D'ailleurs, mon voisin qui est contre l'immigration est un imbécile, 
-    donc son opinion ne compte pas. Il faut choisir : soit nous fermons complètement 
+    D'ailleurs, mon voisin qui est contre l'immigration est un imbécile,
+    donc son opinion ne compte pas. Il faut choisir : soit nous fermons complètement
     les frontières, soit nous acceptons que notre civilisation disparaisse.
     """
 

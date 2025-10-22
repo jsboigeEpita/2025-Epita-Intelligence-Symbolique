@@ -10,7 +10,7 @@ OBJECTIFS SPÉCIALISÉS :
 4. Tester scenarios de récupération d'erreurs
 5. Évaluer adaptation aux formats non-standard
 
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 08/06/2025
 """
 

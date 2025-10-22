@@ -143,12 +143,12 @@ class MasterTraceValidator:
 
     def generate_simple_cluedo_case(self) -> str:
         """Génère un cas de Cluedo simple (3-4 indices)."""
-        return """Enquête Cluedo simple: 
+        return """Enquête Cluedo simple:
         - Témoin A: 'J'ai vu Mme Peacock dans la bibliothèque vers 21h00'
         - Témoin B: 'Le chandelier manquait dans le salon après 21h30'
         - Témoin C: 'Professor Plum était dans la cuisine à 21h15'
         - Indice physique: Traces de cire dans la bibliothèque
-        
+
         Question: Qui a commis le meurtre, avec quelle arme et dans quel lieu ?"""
 
     def generate_complex_cluedo_case(self) -> str:
@@ -163,36 +163,36 @@ class MasterTraceValidator:
         - Indice: Traces de cire dans la bibliothèque et le salon
         - Indice: Alibi partiel de Professor Plum en cuisine (20h30-21h00)
         - Indice: Porte de la bibliothèque fermée à clé après 21h30
-        
+
         Question: Résolvez cette enquête en gérant les contradictions."""
 
     def generate_simple_einstein_case(self) -> str:
         """Génère un cas Einstein simple (5 contraintes)."""
         return """Énigme Einstein simple - 5 maisons:
-        
+
         Il y a 5 maisons de couleurs différentes alignées.
         Dans chaque maison vit une personne de nationalité différente.
         Chaque personne boit une boisson différente, fume une marque différente et possède un animal différent.
-        
+
         Contraintes:
         1. L'Anglais vit dans la maison rouge
-        2. Le Suédois possède un chien  
+        2. Le Suédois possède un chien
         3. Le Danois boit du thé
         4. La maison verte est à gauche de la maison blanche
         5. Le propriétaire de la maison verte boit du café
-        
+
         Question: Qui possède le poisson ?
-        
+
         ATTENTION: Cette énigme DOIT être résolue avec la logique formelle TweetyProject par Watson."""
 
     def generate_complex_einstein_case(self) -> str:
         """Génère un cas Einstein complexe (10+ contraintes)."""
         return """Énigme Einstein complexe - 5 maisons:
-        
+
         Il y a 5 maisons de couleurs différentes alignées.
         Dans chaque maison vit une personne de nationalité différente.
         Chaque personne boit une boisson différente, fume une marque différente et possède un animal différent.
-        
+
         Contraintes complexes:
         1. L'Anglais vit dans la maison rouge
         2. Le Suédois possède un chien
@@ -209,9 +209,9 @@ class MasterTraceValidator:
         13. L'Allemand fume des Prince
         14. Le Norvégien vit à côté de la maison bleue
         15. La personne qui fume des Blend a un voisin qui boit de l'eau
-        
+
         Question: Qui possède le poisson ?
-        
+
         ATTENTION: Cette énigme EXIGE l'utilisation intensive de TweetyProject par Watson.
         Minimum OBLIGATOIRE: 10+ clauses logiques + 5+ requêtes TweetyProject."""
 

@@ -37,9 +37,9 @@ async def run_complex_hierarchy():
 
     # Texte à analyser
     text = """
-    La vaccination devrait être obligatoire pour tous les enfants. Les vaccins ont été prouvés sûrs par de nombreuses études scientifiques. 
-    De plus, la vaccination de masse crée une immunité collective qui protège les personnes vulnérables qui ne peuvent pas être vaccinées pour des raisons médicales. 
-    Certains parents s'inquiètent des effets secondaires, mais ces effets sont généralement mineurs et temporaires. 
+    La vaccination devrait être obligatoire pour tous les enfants. Les vaccins ont été prouvés sûrs par de nombreuses études scientifiques.
+    De plus, la vaccination de masse crée une immunité collective qui protège les personnes vulnérables qui ne peuvent pas être vaccinées pour des raisons médicales.
+    Certains parents s'inquiètent des effets secondaires, mais ces effets sont généralement mineurs et temporaires.
     Le risque de complications graves dues aux maladies évitables par la vaccination est bien plus élevé que le risque d'effets secondaires graves des vaccins.
     """
 

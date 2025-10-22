@@ -68,7 +68,7 @@ from .moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTool
 from .cluedo_dataset import CluedoDataset, CluedoSuggestion, ValidationResult, RevelationRecord
 from .dataset_access_manager import DatasetAccessManager, CluedoDatasetManager, QueryCache
 from .permissions import (
-    QueryType, RevealPolicy, PermissionRule, QueryResult, 
+    QueryType, RevealPolicy, PermissionRule, QueryResult,
     OracleResponse, AccessLog, PermissionManager,
     validate_cluedo_method_access, get_default_cluedo_permissions
 )
@@ -77,25 +77,25 @@ from .permissions import (
 __all__ = [
     # Agents Oracle
     "OracleBaseAgent",
-    "OracleTools", 
+    "OracleTools",
     "MoriartyInterrogatorAgent",
     "MoriartyTools",
-    
+
     # Dataset et gestion
     "CluedoDataset",
     "CluedoSuggestion",
-    "ValidationResult", 
+    "ValidationResult",
     "RevelationRecord",
     "DatasetAccessManager",
     "CluedoDatasetManager",
     "QueryCache",
-    
+
     # Permissions et types
     "QueryType",
     "RevealPolicy",
     "PermissionRule",
     "QueryResult",
-    "OracleResponse", 
+    "OracleResponse",
     "AccessLog",
     "PermissionManager",
     "validate_cluedo_method_access",
@@ -140,7 +140,7 @@ Système d'orchestration multi-agents avec Oracle authentique
 
 from .cluedo_extended_orchestrator import (
     CluedoExtendedOrchestrator,
-    CyclicSelectionStrategy, 
+    CyclicSelectionStrategy,
     OracleTerminationStrategy,
     oracle_logging_filter,
     run_cluedo_oracle_game
@@ -149,7 +149,7 @@ from .cluedo_extended_orchestrator import (
 __all__ = [
     "CluedoExtendedOrchestrator",
     "CyclicSelectionStrategy",
-    "OracleTerminationStrategy", 
+    "OracleTerminationStrategy",
     "oracle_logging_filter",
     "run_cluedo_oracle_game"
 ]
@@ -181,28 +181,28 @@ __all__ = [
         """Valide le format d'une suggestion Cluedo"""
         required_keys = {"suspect", "arme", "lieu"}
         return all(key in suggestion and suggestion[key] for key in required_keys)
-        
+
     async def _process_moriarty_revelation(self, suggestion: Dict[str, str], suggesting_agent: str) -> Dict[str, Any]:
         """Traite la révélation de Moriarty pour une suggestion"""
         try:
             if not self.moriarty_agent:
                 return {"error": "Agent Moriarty non disponible"}
-                
+
             # Validation de la suggestion via Oracle
             validation_response = await self.moriarty_agent.validate_suggestion_cluedo(
-                suggestion["suspect"], 
-                suggestion["arme"], 
+                suggestion["suspect"],
+                suggestion["arme"],
                 suggestion["lieu"],
                 suggesting_agent
             )
-            
+
             return {
                 "validation": validation_response,
                 "timestamp": datetime.now().isoformat(),
                 "agent": "Moriarty",
                 "type": "oracle_revelation"
             }
-            
+
         except Exception as e:
             self.logger.error(f"Erreur révélation Moriarty: {e}")
             return {"error": f"Erreur révélation: {str(e)}"}
@@ -258,7 +258,7 @@ class CluedoIntegrityError(OracleError):
 
 class OracleErrorHandler:
     """Gestionnaire d'erreurs centralisé pour Oracle"""
-    
+
     def __init__(self, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger(__name__)
         self.error_stats = {
@@ -268,23 +268,23 @@ class OracleErrorHandler:
             "validation_errors": 0,
             "integrity_errors": 0
         }
-        
+
     def handle_oracle_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
         """Gère une erreur Oracle avec logging et statistiques"""
         self.error_stats["total_errors"] += 1
-        
+
         error_info = {
             "type": type(error).__name__,
             "message": str(error),
             "context": context,
             "timestamp": datetime.now().isoformat()
         }
-        
+
         if isinstance(error, OraclePermissionError):
             self.error_stats["permission_errors"] += 1
             self.logger.warning(f"Erreur permission Oracle: {error} (contexte: {context})")
         elif isinstance(error, OracleDatasetError):
-            self.error_stats["dataset_errors"] += 1  
+            self.error_stats["dataset_errors"] += 1
             self.logger.error(f"Erreur dataset Oracle: {error} (contexte: {context})")
         elif isinstance(error, OracleValidationError):
             self.error_stats["validation_errors"] += 1
@@ -294,9 +294,9 @@ class OracleErrorHandler:
             self.logger.critical(f"Erreur intégrité Cluedo: {error} (contexte: {context})")
         else:
             self.logger.error(f"Erreur Oracle non typée: {error} (contexte: {context})")
-            
+
         return error_info
-        
+
     def get_error_statistics(self) -> Dict[str, Any]:
         """Retourne les statistiques d'erreurs"""
         return self.error_stats.copy()
@@ -313,7 +313,7 @@ def oracle_error_handler(context: str = ""):
                 logger = logging.getLogger(func.__module__)
                 logger.error(f"Erreur dans {func.__name__}: {e} (contexte: {context})")
                 raise
-                
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             try:
@@ -323,14 +323,14 @@ def oracle_error_handler(context: str = ""):
                 logger = logging.getLogger(func.__module__)
                 logger.error(f"Erreur dans {func.__name__}: {e} (contexte: {context})")
                 raise
-                
+
         # Retourne le wrapper approprié selon le type de fonction
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper
-            
+
     return decorator
 '''
 
@@ -356,17 +356,17 @@ from enum import Enum
 
 class OracleAgentInterface(ABC):
     """Interface standard pour tous les agents Oracle"""
-    
+
     @abstractmethod
     async def process_oracle_request(self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
         """Traite une requête Oracle"""
         pass
-        
+
     @abstractmethod
     def get_oracle_statistics(self) -> Dict[str, Any]:
         """Retourne les statistiques Oracle"""
         pass
-        
+
     @abstractmethod
     def reset_oracle_state(self) -> None:
         """Remet à zéro l'état Oracle"""
@@ -374,12 +374,12 @@ class OracleAgentInterface(ABC):
 
 class DatasetManagerInterface(ABC):
     """Interface standard pour les gestionnaires de dataset"""
-    
+
     @abstractmethod
     def execute_query(self, agent_name: str, query_type: str, query_params: Dict[str, Any]) -> Dict[str, Any]:
         """Exécute une requête sur le dataset"""
         pass
-        
+
     @abstractmethod
     def check_permission(self, agent_name: str, query_type: str) -> bool:
         """Vérifie les permissions"""
@@ -393,7 +393,7 @@ class StandardOracleResponse:
     message: str = ""
     error_code: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit en dictionnaire"""
         return {
@@ -432,13 +432,13 @@ class OracleResponseStatus(Enum):
 
 #### 1.1 Agent Oracle de Base (`OracleBaseAgent`)
 - **Responsabilité**: Classe de base pour tous les agents Oracle
-- **Fonctionnalités**: 
+- **Fonctionnalités**:
   - Gestion des requêtes Oracle
   - Système de permissions
   - Logging des interactions
   - Cache des réponses
 
-#### 1.2 Agent Moriarty Interrogateur (`MoriartyInterrogatorAgent`)  
+#### 1.2 Agent Moriarty Interrogateur (`MoriartyInterrogatorAgent`)
 - **Responsabilité**: Agent Oracle spécialisé pour Cluedo
 - **Fonctionnalités**:
   - Validation des suggestions Cluedo
@@ -474,7 +474,7 @@ Permissions → QueryCache → ValidationRules → LoggedResponse
 ```python
 DEFAULT_ORACLE_CONFIG = {
     "max_revelations_per_agent": 3,
-    "revelation_strategy": "strategic", 
+    "revelation_strategy": "strategic",
     "cache_size": 1000,
     "cache_ttl": 300,
     "enable_logging": True
@@ -487,7 +487,7 @@ DEFAULT_ORACLE_CONFIG = {
 
 ```python
 from argumentation_analysis.agents.core.oracle import (
-    CluedoDataset, 
+    CluedoDataset,
     CluedoDatasetManager,
     MoriartyInterrogatorAgent
 )
@@ -512,7 +512,7 @@ oracle_agent = MoriartyInterrogatorAgent(
 # Validation d'une suggestion
 response = await oracle_agent.validate_suggestion_cluedo(
     suspect="Colonel Moutarde",
-    arme="Chandelier", 
+    arme="Chandelier",
     lieu="Bibliothèque",
     suggesting_agent="Sherlock"
 )
@@ -575,7 +575,7 @@ print(response.data)  # Résultat de la validation
 - Logique métier séparée de la logique technique
 - Amélioration de la lisibilité
 
-#### 3. Gestion d'Erreurs Avancée  
+#### 3. Gestion d'Erreurs Avancée
 - Hiérarchie d'erreurs Oracle spécialisées
 - Gestionnaire d'erreurs centralisé
 - Statistiques d'erreurs automatiques
@@ -609,14 +609,14 @@ argumentation_analysis/agents/core/oracle/
 ## Métriques de Qualité
 
 - **Lignes de code refactorisées**: ~2000 lignes
-- **Nouveaux modules**: 2 (error_handling, interfaces) 
+- **Nouveaux modules**: 2 (error_handling, interfaces)
 - **Documentation ajoutée**: 1 guide technique complet
 - **Couverture tests**: 100% maintenue (105/105 tests)
 
 ## Prochaines Étapes
 
 Phase 3: Mise à jour de la couverture de tests pour nouveaux modules
-Phase 4: Mise à jour documentation avec nouvelles références  
+Phase 4: Mise à jour documentation avec nouvelles références
 Phase 5: Commits Git progressifs et validation
 
 ---

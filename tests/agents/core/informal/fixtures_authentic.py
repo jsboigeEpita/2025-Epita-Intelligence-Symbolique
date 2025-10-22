@@ -603,7 +603,7 @@ def sample_authentic_test_text():
     """
     return """
     Les experts affirment que ce produit révolutionnaire va changer votre vie.
-    Ne laissez pas cette opportunité unique vous échapper ! 
+    Ne laissez pas cette opportunité unique vous échapper !
     Vous devez agir maintenant ou vous le regretterez pour toujours.
     Soit vous achetez ce produit, soit vous restez dans votre situation actuelle désespérée.
     Pensez à votre famille qui mérite le meilleur.

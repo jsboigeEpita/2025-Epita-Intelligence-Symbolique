@@ -272,7 +272,7 @@ class TestModalLogicAgent:
         belief_content = """
         constant urgent
         constant action
-        
+
         [](urgent)
         <>(urgent => action)
         """
@@ -737,7 +737,7 @@ def create_test_modal_belief_set() -> ModalBeliefSet:
     content = """
     constant urgent
     constant action
-    
+
     [](urgent)
     <>(urgent => action)
     """

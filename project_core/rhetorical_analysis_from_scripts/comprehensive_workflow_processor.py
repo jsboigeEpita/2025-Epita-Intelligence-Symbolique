@@ -820,11 +820,11 @@ class ResultsAggregator:
         """Génère un rapport Markdown."""
         md_content = f"""# 🚀 Rapport de Workflow Complet
 
-**Date**: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}  
-**Mode**: {self.config.mode.value}  
-**Environnement**: {self.config.environment.value}  
-**Durée**: {results.duration.total_seconds():.2f}s  
-**Statut**: {results.status}  
+**Date**: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+**Mode**: {self.config.mode.value}
+**Environnement**: {self.config.environment.value}
+**Durée**: {results.duration.total_seconds():.2f}s
+**Statut**: {results.status}
 
 ## 📊 Résumé Exécutif
 
@@ -944,14 +944,14 @@ class ResultsAggregator:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rapport Workflow Complet - {timestamp}</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                    color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }}
         .status-success {{ color: #10b981; }}
         .status-error {{ color: #ef4444; }}
         .status-warning {{ color: #f59e0b; }}
-        .metric-card {{ background: #f8fafc; border: 1px solid #e2e8f0; 
+        .metric-card {{ background: #f8fafc; border: 1px solid #e2e8f0;
                        border-radius: 8px; padding: 20px; margin: 10px 0; }}
         .metric-value {{ font-size: 2em; font-weight: bold; }}
         .progress-bar {{ background: #e2e8f0; border-radius: 10px; overflow: hidden; }}
@@ -967,7 +967,7 @@ class ResultsAggregator:
         <p><strong>Mode:</strong> {self.config.mode.value} | <strong>Environnement:</strong> {self.config.environment.value}</p>
         <p><strong>Durée:</strong> {results.duration.total_seconds():.2f}s | <strong>Statut:</strong> <span class="status-{results.status}">{results.status}</span></p>
     </div>
-    
+
     <div class="grid">
         <div class="metric-card">
             <h3>📊 Métriques Globales</h3>
@@ -978,19 +978,19 @@ class ResultsAggregator:
             </div>
             <p>Taux de réussite: {(results.success_count / max(results.total_processed, 1) * 100):.1f}%</p>
         </div>
-        
+
         <div class="metric-card">
             <h3>🔓 Déchiffrement</h3>
             {"✅ Succès" if results.decryption_results.get("status") == "success" else "❌ Échec" if results.decryption_results else "➖ Non demandé"}
             <p>{len(results.decryption_results.get('loaded_files', []))} fichiers chargés</p>
         </div>
-        
+
         <div class="metric-card">
             <h3>🧮 Analyse</h3>
             {"✅ Succès" if results.analysis_results.get("status") == "success" else "❌ Échec" if results.analysis_results else "➖ Non demandé"}
             <p>{len(results.analysis_results.get('analyses', []))} analyses réalisées</p>
         </div>
-        
+
         <div class="metric-card">
             <h3>🔍 Validation</h3>
             {"✅ Système validé" if results.validation_results else "➖ Non demandé"}

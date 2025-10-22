@@ -6,7 +6,7 @@ Système d'Utilitaires Unifiés
 
 Consolide toutes les opérations utilitaires sur le corpus chiffré :
 - Intégration de nouvelles sources au corpus
-- Déchiffrement d'extraits spécifiques  
+- Déchiffrement d'extraits spécifiques
 - Listing sécurisé des métadonnées d'extraits
 - Gestion unifiée du chiffrement/déchiffrement
 - Validation et opérations de maintenance
@@ -969,7 +969,7 @@ class UnifiedUtilityFormatter:
         <h1>Informations sur le Corpus Chiffré</h1>
         <p>Dernière modification: {info.last_modified}</p>
     </div>
-    
+
     <div class="stats">
         <div class="stat-card">
             <h3>{info.total_sources}</h3>
@@ -988,7 +988,7 @@ class UnifiedUtilityFormatter:
             <p>Bytes</p>
         </div>
     </div>
-    
+
     <div class="sources">
         <h2>Détail des Sources</h2>
         <table>
@@ -1210,19 +1210,19 @@ async def main():
 Exemples:
     # Lister les extraits
     python scripts/unified_utilities.py --mode list --detailed
-    
+
     # Extraire un extrait spécifique
     python scripts/unified_utilities.py --mode extract --extract-id "0_1"
-    
+
     # Intégrer une nouvelle source
     python scripts/unified_utilities.py --mode integrate --source-file data/new_source.json
-    
+
     # Informations sur le corpus
     python scripts/unified_utilities.py --mode info --format json
-    
+
     # Validation d'intégrité
     python scripts/unified_utilities.py --mode validate
-    
+
     # Maintenance du corpus
     python scripts/unified_utilities.py --mode maintenance
         """,

@@ -316,7 +316,7 @@ def test_all_dependencies():
         )
     """
     Teste toutes les dépendances.
-    
+
     Returns:
         True si toutes les dépendances sont correctement installées et fonctionnelles, False sinon
     """
