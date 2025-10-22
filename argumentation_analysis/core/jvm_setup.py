@@ -435,14 +435,16 @@ def find_valid_java_home() -> Optional[str]:
 def get_jvm_options() -> List[str]:
     """
     Retourne une liste d'options JVM optimisées.
+    
+    Mission D3.2: Réactivation options mémoire pour stabiliser tests JPype/Tweety
     """
     options = [
-        # f"-Xms{settings.jvm.min_heap_size}", # Temporairement désactivé pour le débogage
-        # f"-Xmx{settings.jvm.max_heap_size}", # Temporairement désactivé pour le débogage
+        f"-Xms{settings.jvm.min_heap_size}",  # Réactivé: nécessaire pour tests Tweety
+        f"-Xmx{settings.jvm.max_heap_size}",  # Réactivé: évite OutOfMemoryError
         "-Dfile.encoding=UTF-8",
         # "-Djava.awt.headless=true" # NOTE: Désactivé car identifié comme cause de crash (voir docs)
     ]
-    logger.info(f"Options JVM de base: {options}")
+    logger.info(f"Options JVM configurées (Mission D3.2): {options}")
     return options
 
 
