@@ -247,7 +247,7 @@ class TestTraceAnalyzer:
             # Tester le chargement
             success = trace_analyzer.load_traces(conv_file, report_file)
 
-            assert success == True
+            assert success is True
             assert trace_analyzer.raw_conversation_data == sample_conversation_log
             assert trace_analyzer.raw_report_data == sample_report_json
             assert trace_analyzer.conversation_log_file == conv_file
@@ -277,7 +277,7 @@ class TestTraceAnalyzer:
             "/nonexistent/path", "/another/nonexistent/path"
         )
 
-        assert success == False
+        assert success is False
         assert trace_analyzer.raw_conversation_data is None
         assert trace_analyzer.raw_report_data is None
 
@@ -312,7 +312,7 @@ class TestTraceAnalyzer:
         with patch("builtins.open", side_effect=Exception("File error")):
             success = trace_analyzer.load_traces()
 
-            assert success == False
+            assert success is False
 
     def test_extract_metadata_from_conversation(
         self, trace_analyzer, sample_conversation_log
@@ -790,7 +790,7 @@ class TestTraceAnalyzerIntegration:
             analyzer = TraceAnalyzer(temp_dir)
             success = analyzer.load_traces(conv_file, report_file)
 
-            assert success == True
+            assert success is True
 
             # Test de toutes les méthodes d'extraction
             metadata = analyzer.extract_metadata()

@@ -77,7 +77,7 @@ class TestJTMSSession:
 
         assert session.session_id == "test_session"
         assert session.owner_agent == "test_agent"
-        assert session.last_consistency_status == True
+        assert session.last_consistency_status is True
         assert len(session.extended_beliefs) == 0
         assert len(session.checkpoints) == 0
 

@@ -523,27 +523,27 @@ def validate_config(config: UnifiedConfig) -> List[str]:
     if config.mock_level == MockLevel.NONE:
         authenticity_checks = [
             (
-                config.use_mock_llm == False,
+                config.use_mock_llm is False,
                 "use_mock_llm devrait être False pour mock_level=NONE",
             ),
             (
-                config.use_authentic_llm == True,
+                config.use_authentic_llm is True,
                 "use_authentic_llm devrait être True pour mock_level=NONE",
             ),
             (
-                config.use_mock_services == False,
+                config.use_mock_services is False,
                 "use_mock_services devrait être False pour mock_level=NONE",
             ),
             (
-                config.use_authentic_services == True,
+                config.use_authentic_services is True,
                 "use_authentic_services devrait être True pour mock_level=NONE",
             ),
             (
-                config.require_real_gpt == True,
+                config.require_real_gpt is True,
                 "require_real_gpt devrait être True pour mock_level=NONE",
             ),
             (
-                config.require_real_tweety == True,
+                config.require_real_tweety is True,
                 "require_real_tweety devrait être True pour mock_level=NONE",
             ),
         ]

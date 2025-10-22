@@ -72,7 +72,7 @@ class TestOrchestrationFinaleIntegration:
         assert engine_instance.kernel is None
         assert engine_instance.agents_registry == {}
         assert engine_instance.active_workflows == {}
-        assert engine_instance.mock_detection_active == True
+        assert engine_instance.mock_detection_active is True
 
         # Vérifications authenticity checks
         auth_checks = engine_instance.authenticity_checks
@@ -80,7 +80,7 @@ class TestOrchestrationFinaleIntegration:
         assert "semantic_kernel_authentic" in auth_checks
         assert "openai_api_real" in auth_checks
         assert "no_mocks_detected" in auth_checks
-        assert all(check == False for check in auth_checks.values())  # Initial state
+        assert all(check is False for check in auth_checks.values())  # Initial state
 
     def test_workflow_result_creation(self):
         """Test création résultat workflow"""
@@ -93,11 +93,11 @@ class TestOrchestrationFinaleIntegration:
         )
 
         assert result.workflow_type == WorkflowType.CLUEDO_SIMPLE
-        assert result.success == True
+        assert result.success is True
         assert result.duration == 1.5
-        assert result.mock_used == False
-        assert result.semantic_kernel_used == False
-        assert result.openai_api_used == False
+        assert result.mock_used is False
+        assert result.semantic_kernel_used is False
+        assert result.openai_api_used is False
         assert result.timestamp is not None
 
     def test_orchestration_session_creation(self):
@@ -112,7 +112,7 @@ class TestOrchestrationFinaleIntegration:
         assert session.global_context == {}
         assert session.total_duration == 0.0
         assert session.success_rate == 0.0
-        assert session.authenticity_validated == True
+        assert session.authenticity_validated is True
 
     def test_session_success_rate_calculation(self):
         """Test calcul taux succès session"""
@@ -144,8 +144,8 @@ class TestOrchestrationFinaleIntegration:
 
             try:
                 result = await engine_instance.initialize_authentic_environment()
-                assert result == False
-                assert engine_instance.authenticity_checks["openai_api_real"] == False
+                assert result is False
+                assert engine_instance.authenticity_checks["openai_api_real"] is False
             finally:
                 if original_key:
                     os.environ["OPENAI_API_KEY"] = original_key
@@ -165,14 +165,14 @@ class TestOrchestrationFinaleIntegration:
                 # Test avec clé simulation
                 os.environ["OPENAI_API_KEY"] = "sk-simulation-invalid"
                 result = await engine_instance.initialize_authentic_environment()
-                assert result == False
-                assert engine_instance.authenticity_checks["openai_api_real"] == False
+                assert result is False
+                assert engine_instance.authenticity_checks["openai_api_real"] is False
 
                 # Test avec clé contenant "mock"
                 os.environ["OPENAI_API_KEY"] = "sk-mock-testing-key"
                 result = await engine_instance.initialize_authentic_environment()
-                assert result == False
-                assert engine_instance.authenticity_checks["openai_api_real"] == False
+                assert result is False
+                assert engine_instance.authenticity_checks["openai_api_real"] is False
 
             finally:
                 if original_key:
@@ -193,11 +193,10 @@ class TestOrchestrationFinaleIntegration:
                 if result:
                     assert engine_instance.kernel is not None
                     assert (
-                        engine_instance.authenticity_checks["openai_api_real"] == True
+                        engine_instance.authenticity_checks["openai_api_real"] is True
                     )
                     assert (
-                        engine_instance.authenticity_checks["semantic_kernel_authentic"]
-                        == True
+                        engine_instance.authenticity_checks["semantic_kernel_authentic"] is True
                     )
                 else:
                     pytest.skip(
@@ -221,7 +220,7 @@ class TestOrchestrationFinaleIntegration:
 
                 assert isinstance(result, WorkflowResult)
                 assert result.workflow_type == WorkflowType.CLUEDO_SIMPLE
-                assert result.mock_used == False
+                assert result.mock_used is False
                 assert result.timestamp is not None
 
             except Exception as e:
@@ -242,7 +241,7 @@ class TestOrchestrationFinaleIntegration:
 
                 assert isinstance(result, WorkflowResult)
                 assert result.workflow_type == WorkflowType.AGENTS_LOGIQUES
-                assert result.mock_used == False
+                assert result.mock_used is False
 
             except Exception as e:
                 pytest.skip(f"Agents logiques workflow error: {e}")
@@ -306,7 +305,7 @@ class TestOrchestrationFinaleIntegration:
 
                 assert isinstance(session_result, OrchestrationSession)
                 assert len(session_result.workflows_executed) <= 2
-                assert session_result.authenticity_validated == True
+                assert session_result.authenticity_validated is True
                 assert session_result.total_duration > 0.0
 
             except Exception as e:
@@ -337,7 +336,7 @@ class TestOrchestrationFinaleIntegration:
         assert 0.0 <= metrics["overall_success_rate"] <= 100.0
         assert 0.0 <= metrics["average_confidence"] <= 1.0
         assert 0.0 <= metrics["convergence_score"] <= 1.0
-        assert metrics["authenticity_compliance"] == True
+        assert metrics["authenticity_compliance"] is True
 
     def test_mock_detection_scan(self, engine_instance):
         """Test scan détection de mocks"""
@@ -348,7 +347,7 @@ class TestOrchestrationFinaleIntegration:
             mock_detected = await engine_instance.scan_for_mocks_in_content(
                 clean_content
             )
-            assert mock_detected == False
+            assert mock_detected is False
 
             # Test scan avec contenu suspect
             suspicious_content = (
@@ -357,7 +356,7 @@ class TestOrchestrationFinaleIntegration:
             mock_detected = await engine_instance.scan_for_mocks_in_content(
                 suspicious_content
             )
-            assert mock_detected == True
+            assert mock_detected is True
 
         asyncio.run(_async_test())
 
@@ -400,7 +399,7 @@ class TestOrchestrationFinaleIntegration:
                     run_complete_final_orchestration(), timeout=20.0
                 )
 
-                assert result == True
+                assert result is True
 
             except asyncio.TimeoutError:
                 pytest.skip("Demo timeout (orchestration took too long)")
@@ -413,9 +412,9 @@ class TestOrchestrationFinaleIntegration:
     def test_anti_mock_compliance(self, engine_instance):
         """Test conformité anti-mock"""
         # Vérifications état initial
-        assert engine_instance.mock_detection_active == True
+        assert engine_instance.mock_detection_active is True
         assert (
-            engine_instance.authenticity_checks["no_mocks_detected"] == False
+            engine_instance.authenticity_checks["no_mocks_detected"] is False
         )  # Initial
 
         # Vérifications flags authentique
@@ -425,7 +424,7 @@ class TestOrchestrationFinaleIntegration:
 
         # Test que l'instance n'utilise pas de mocks
         test_result = WorkflowResult(WorkflowType.CLUEDO_SIMPLE, True, 1.0)
-        assert test_result.mock_used == False
+        assert test_result.mock_used is False
 
     def test_error_recovery_mechanisms(self, engine_instance):
         """Test mécanismes de récupération d'erreurs"""
@@ -434,7 +433,7 @@ class TestOrchestrationFinaleIntegration:
             # Test avec workflow inexistant
             try:
                 result = await engine_instance.execute_workflow("invalid_workflow", {})
-                assert result.success == False
+                assert result.success is False
             except:
                 # Exception attendue pour type invalide
                 pass
@@ -453,7 +452,7 @@ class TestOrchestrationFinaleIntegration:
 
             # L'orchestrateur doit rester opérationnel
             assert engine_instance.session_id is not None
-            assert engine_instance.mock_detection_active == True
+            assert engine_instance.mock_detection_active is True
 
         asyncio.run(_async_test())
 

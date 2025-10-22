@@ -570,8 +570,8 @@ class TestAuthenticOrchestrationIntegration:
 
         assert config.logic_type.value == "fol"
         assert config.mock_level.value == "none"
-        assert config.require_real_gpt == True
-        assert config.require_real_tweety == True
+        assert config.require_real_gpt is True
+        assert config.require_real_tweety is True
 
 
 if __name__ == "__main__":

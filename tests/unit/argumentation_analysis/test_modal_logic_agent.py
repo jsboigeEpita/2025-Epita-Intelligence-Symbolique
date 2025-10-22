@@ -148,7 +148,7 @@ class TestModalLogicAgent:
 
         is_valid, message = modal_agent._validate_modal_kb_json(valid_json)
 
-        assert is_valid == True
+        assert is_valid is True
         assert "réussie" in message
 
     def test_validate_modal_kb_json_invalid_missing_key(self, modal_agent):
@@ -160,7 +160,7 @@ class TestModalLogicAgent:
 
         is_valid, message = modal_agent._validate_modal_kb_json(invalid_json)
 
-        assert is_valid == False
+        assert is_valid is False
         assert "modal_formulas" in message
 
     def test_validate_modal_kb_json_invalid_undeclared_props(self, modal_agent):
@@ -172,7 +172,7 @@ class TestModalLogicAgent:
 
         is_valid, message = modal_agent._validate_modal_kb_json(invalid_json)
 
-        assert is_valid == False
+        assert is_valid is False
         assert "prop2" in message
         assert "non déclarées" in message
 
@@ -352,7 +352,7 @@ class TestModalLogicAgent:
 
         result, message = modal_agent.execute_query(belief_set, query)
 
-        assert result == True
+        assert result is True
         assert "ACCEPTED" in message
 
     def test_execute_query_rejected(self, modal_agent, mock_tweety_bridge):
@@ -367,7 +367,7 @@ class TestModalLogicAgent:
 
         result, message = modal_agent.execute_query(belief_set, query)
 
-        assert result == False
+        assert result is False
         assert "REJECTED" in message
 
     def test_execute_query_error(self, modal_agent, mock_tweety_bridge):
@@ -441,7 +441,7 @@ class TestModalLogicAgent:
         formula = "[](urgent)"
         is_valid = modal_agent.validate_formula(formula)
 
-        assert is_valid == True
+        assert is_valid is True
 
     def test_validate_formula_invalid(self, modal_agent, mock_tweety_bridge):
         """Test la validation d'une formule invalide."""
@@ -454,7 +454,7 @@ class TestModalLogicAgent:
         formula = "invalid_formula"
         is_valid = modal_agent.validate_formula(formula)
 
-        assert is_valid == False
+        assert is_valid is False
 
     def test_validate_formula_fallback(self, modal_agent, mock_tweety_bridge):
         """Test la validation avec fallback si méthode indisponible."""
@@ -483,7 +483,7 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         is_consistent, message = modal_agent.is_consistent(belief_set)
 
-        assert is_consistent == True
+        assert is_consistent is True
         assert "Consistent" in message
 
     @pytest.mark.real_jpype
@@ -498,7 +498,7 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("constant p\n\n[](p)\n!<>(p)")  # Contradictoire
         is_consistent, message = modal_agent.is_consistent(belief_set)
 
-        assert is_consistent == False
+        assert is_consistent is False
         assert "Inconsistent" in message
 
     def test_is_consistent_fallback(self, modal_agent, mock_tweety_bridge):

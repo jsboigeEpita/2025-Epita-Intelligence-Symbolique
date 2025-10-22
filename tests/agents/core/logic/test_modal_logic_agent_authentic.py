@@ -140,7 +140,7 @@ def test_initialization_and_setup_authentic(authentic_agent):
 
     if tweety_available:
         agent.setup_agent_components(llm_service_id)
-        assert agent.tweety_bridge.initializer.is_jvm_ready() == True
+        assert agent.tweety_bridge.initializer.is_jvm_ready() is True
         print("✅ Test authentique TweetyBridge Modal - JVM prête")
     else:
         print("⚠️ TweetyBridge Modal non disponible - test sauté")

@@ -66,8 +66,8 @@ class TestSherlockWatsonDemoIntegration:
         assert demo_instance.oracle_state is None
         assert demo_instance.orchestrator is None
         assert demo_instance.kernel is None
-        assert demo_instance.mock_used == False
-        assert demo_instance.authentic_mode == True
+        assert demo_instance.mock_used is False
+        assert demo_instance.authentic_mode is True
 
     @pytest.mark.requires_openai
     def test_environment_setup(self, demo_instance):
@@ -79,8 +79,8 @@ class TestSherlockWatsonDemoIntegration:
             if result:
                 # Si succès, vérifier que le kernel est configuré
                 assert demo_instance.kernel is not None
-                assert demo_instance.authentic_mode == True
-                assert demo_instance.mock_used == False
+                assert demo_instance.authentic_mode is True
+                assert demo_instance.mock_used is False
             else:
                 # Si échec, c'est probablement dû à la configuration
                 # Le test passe quand même car la validation fonctionne
@@ -103,8 +103,8 @@ class TestSherlockWatsonDemoIntegration:
             assert "solution_secrete" in case_data
 
             # Vérifications authenticité
-            assert case_data.get("authentic", False) == True
-            assert case_data.get("mock_used", True) == False
+            assert case_data.get("authentic", False) is True
+            assert case_data.get("mock_used", True) is False
 
             # Vérifications contenu
             assert len(case_data["personnages"]) >= 3
@@ -130,7 +130,7 @@ class TestSherlockWatsonDemoIntegration:
                 case_data
             )
 
-            assert result == True
+            assert result is True
             assert len(demo_instance.conversation_history) > 0
             assert demo_instance.oracle_state is not None
 
@@ -143,8 +143,8 @@ class TestSherlockWatsonDemoIntegration:
 
             # Vérifications état Oracle
             oracle_state = demo_instance.oracle_state
-            assert oracle_state.get("authentic", False) == True
-            assert oracle_state.get("mock_used", True) == False
+            assert oracle_state.get("authentic", False) is True
+            assert oracle_state.get("mock_used", True) is False
             assert "final_solution" in oracle_state
 
         asyncio.run(_async_test())
@@ -156,9 +156,9 @@ class TestSherlockWatsonDemoIntegration:
             result = await demo_instance.run_authentic_agent_logic_tests()
 
             # Le test doit toujours réussir (avec fallback si nécessaire)
-            assert result == True
-            assert demo_instance.authentic_mode == True
-            assert demo_instance.mock_used == False
+            assert result is True
+            assert demo_instance.authentic_mode is True
+            assert demo_instance.mock_used is False
 
         asyncio.run(_async_test())
 
@@ -169,9 +169,9 @@ class TestSherlockWatsonDemoIntegration:
             result = await demo_instance.run_oracle_validation_100_percent()
 
             # Le test doit toujours réussir (avec fallback si nécessaire)
-            assert result == True
-            assert demo_instance.authentic_mode == True
-            assert demo_instance.mock_used == False
+            assert result is True
+            assert demo_instance.authentic_mode is True
+            assert demo_instance.mock_used is False
 
         asyncio.run(_async_test())
 
@@ -206,15 +206,15 @@ class TestSherlockWatsonDemoIntegration:
                 session_data = json.load(f)
 
             assert session_data["session_id"] == demo_instance.session_id
-            assert session_data["authentic_mode"] == True
-            assert session_data["mock_used"] == False
+            assert session_data["authentic_mode"] is True
+            assert session_data["mock_used"] is False
             assert "conversation_history" in session_data
             assert "oracle_state" in session_data
             assert "validation" in session_data
 
             validation = session_data["validation"]
-            assert validation["zero_mocks"] == True
-            assert validation["production_ready"] == True
+            assert validation["zero_mocks"] is True
+            assert validation["production_ready"] is True
 
         asyncio.run(_async_test())
 
@@ -231,18 +231,18 @@ class TestSherlockWatsonDemoIntegration:
 
                 # Test agents logiques sans API
                 agent_result = await demo_instance.run_authentic_agent_logic_tests()
-                assert agent_result == True
+                assert agent_result is True
 
                 # Test validation Oracle sans API
                 oracle_result = await demo_instance.run_oracle_validation_100_percent()
-                assert oracle_result == True
+                assert oracle_result is True
 
                 # Test sauvegarde
                 await demo_instance.save_authentic_session()
 
                 # Vérifications finales
-                assert demo_instance.authentic_mode == True
-                assert demo_instance.mock_used == False
+                assert demo_instance.authentic_mode is True
+                assert demo_instance.mock_used is False
 
             except Exception as e:
                 # Si erreur API/réseau, le test passe quand même
@@ -254,8 +254,8 @@ class TestSherlockWatsonDemoIntegration:
     def test_anti_mock_compliance(self, demo_instance):
         """Test conformité anti-mock"""
         # Vérifier que l'instance est bien en mode authentique
-        assert demo_instance.authentic_mode == True
-        assert demo_instance.mock_used == False
+        assert demo_instance.authentic_mode is True
+        assert demo_instance.mock_used is False
 
         # Vérifier les flags de validation
         assert hasattr(demo_instance, "mock_used")
@@ -281,7 +281,7 @@ class TestSherlockWatsonDemoIntegration:
                 os.environ["OPENAI_API_KEY"] = "sk-simulation-invalid"
 
                 result = await demo_instance.setup_authentic_environment()
-                assert result == False  # Doit échouer avec clé simulation
+                assert result is False  # Doit échouer avec clé simulation
 
             finally:
                 # Restauration environnement

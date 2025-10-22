@@ -66,9 +66,9 @@ def test_dataset_manager_check_permission():
         dataset_manager.check_permission("Watson", QueryType.ADMIN_COMMAND)
     )
 
-    assert result_authorized == True, "Watson devrait etre autorise pour CARD_INQUIRY"
+    assert result_authorized is True, "Watson devrait etre autorise pour CARD_INQUIRY"
     assert (
-        result_unauthorized == False
+        result_unauthorized is False
     ), "Watson ne devrait pas etre autorise pour ADMIN_COMMAND"
 
     print("SUCCES Test 1: check_permission fonctionne correctement")

@@ -424,8 +424,8 @@ class TestCluedoOracleIntegrationAuthentic:
             )
 
         # Vérifications authenticité
-        assert getattr(oracle_instance_authentic, "authentic_mode", True) == True
-        assert getattr(oracle_instance_authentic, "simulation_used", False) == False
+        assert getattr(oracle_instance_authentic, "authentic_mode", True) is True
+        assert getattr(oracle_instance_authentic, "simulation_used", False) is False
         assert oracle_instance_authentic.suggestions_count == 0
         assert oracle_instance_authentic.oracle_revelations_count == 0
 
@@ -443,11 +443,11 @@ class TestCluedoOracleIntegrationAuthentic:
             "Sherlock",
         )
 
-        assert revelation["can_refute"] == True
+        assert revelation["can_refute"] is True
         assert "Dr. Alice Watson" in revelation["revealed_cards"]
         assert revelation["oracle_type"] == "refutation"
-        assert revelation["authentic"] == True
-        assert revelation["simulation_used"] == False
+        assert revelation["authentic"] is True
+        assert revelation["simulation_used"] is False
         assert "révélation" in revelation["message"].lower()
 
         # Vérification état mis à jour authentiquement
@@ -468,12 +468,12 @@ class TestCluedoOracleIntegrationAuthentic:
             "Watson",
         )
 
-        assert revelation["can_refute"] == False
+        assert revelation["can_refute"] is False
         assert revelation["revealed_cards"] == []
         assert revelation["oracle_type"] == "solution_confirmed"
-        assert revelation.get("solution_found") == True
-        assert revelation["authentic"] == True
-        assert revelation["simulation_used"] == False
+        assert revelation.get("solution_found") is True
+        assert revelation["authentic"] is True
+        assert revelation["simulation_used"] is False
         assert "CORRECTE" in revelation["message"].upper()
 
         logger.info("✅ Validation solution correcte authentique réussie")
@@ -490,12 +490,12 @@ class TestCluedoOracleIntegrationAuthentic:
             "Sherlock",
         )
 
-        assert revelation["can_refute"] == False
+        assert revelation["can_refute"] is False
         assert revelation["revealed_cards"] == []
         assert revelation["oracle_type"] == "neutral"
-        assert revelation.get("solution_found") != True
-        assert revelation["authentic"] == True
-        assert revelation["simulation_used"] == False
+        assert revelation.get("solution_found") is not True
+        assert revelation["authentic"] is True
+        assert revelation["simulation_used"] is False
         assert "silence" in revelation["message"].lower()
 
         logger.info("✅ Validation suggestion neutre authentique réussie")
@@ -515,8 +515,8 @@ class TestCluedoOracleIntegrationAuthentic:
         assert stats["suggestions_processed"] == 2
         assert stats["revelations_made"] == 1  # Une seule révélation (carte Oracle)
         assert stats["revelation_rate"] == 50.0  # 1/2 * 100
-        assert stats["authentic_mode"] == True
-        assert stats["simulation_used"] == False
+        assert stats["authentic_mode"] is True
+        assert stats["simulation_used"] is False
         assert "success_rate" in stats
         assert "tests_passed" in stats
         assert "tests_total" in stats
@@ -537,8 +537,8 @@ class TestCluedoOracleIntegrationAuthentic:
         assert engine.kernel is None
         assert engine.game_state is None
         assert engine.conversation_history == []
-        assert getattr(engine, "authentic_mode", True) == True
-        assert getattr(engine, "simulation_used", False) == False
+        assert getattr(engine, "authentic_mode", True) is True
+        assert getattr(engine, "simulation_used", False) is False
 
         logger.info("✅ Initialisation moteur de jeu authentique validée")
 
@@ -565,7 +565,7 @@ class TestCluedoOracleIntegrationAuthentic:
             else:
                 result = False  # Doit échouer sans clé
 
-            assert result == False  # Doit échouer authentiquement sans clé
+            assert result is False  # Doit échouer authentiquement sans clé
             logger.info("✅ Échec authentique sans clé API validé")
 
         finally:
@@ -591,8 +591,8 @@ class TestCluedoOracleIntegrationAuthentic:
                 result = True
 
             if result:
-                assert getattr(engine, "authentic_mode", True) == True
-                assert getattr(engine, "simulation_used", False) == False
+                assert getattr(engine, "authentic_mode", True) is True
+                assert getattr(engine, "simulation_used", False) is False
                 logger.info("✅ Configuration jeu authentique avec API réussie")
             else:
                 # Configuration peut échouer pour diverses raisons réseau/API
@@ -637,11 +637,11 @@ class TestCluedoOracleIntegrationAuthentic:
 
         assert len(history) > 0
         assert state is not None
-        assert state.get("authentic") == True
-        assert state.get("simulation_used") == False
+        assert state.get("authentic") is True
+        assert state.get("simulation_used") is False
 
         # Vérification authenticité conversation
-        authentic_entries = [h for h in history if h.get("authentic") == True]
+        authentic_entries = [h for h in history if h.get("authentic") is True]
         assert len(authentic_entries) > 0
 
         logger.info("✅ Investigation simplifiée authentique validée")
@@ -674,9 +674,9 @@ class TestCluedoOracleIntegrationAuthentic:
                 test_revelation["authentic"] and not test_revelation["simulation_used"]
             )
 
-        assert result == True
-        assert engine.oracle.authentic_mode == True
-        assert engine.oracle.simulation_used == False
+        assert result is True
+        assert engine.oracle.authentic_mode is True
+        assert engine.oracle.simulation_used is False
 
         logger.info("✅ Validation comportement Oracle authentique réussie")
 
@@ -691,7 +691,7 @@ class TestCluedoOracleIntegrationAuthentic:
                 )
 
                 # Si succès, vérifier que c'est bien authentique
-                assert result == True
+                assert result is True
                 logger.info("✅ Démonstration complète authentique réussie")
             else:
                 # Test fallback authentique
@@ -706,21 +706,21 @@ class TestCluedoOracleIntegrationAuthentic:
     def test_anti_simulation_compliance_authentic(self, oracle_instance_authentic):
         """Test conformité anti-simulation 100% authentique"""
         # Vérifications état Oracle authentique
-        assert getattr(oracle_instance_authentic, "authentic_mode", True) == True
-        assert getattr(oracle_instance_authentic, "simulation_used", False) == False
+        assert getattr(oracle_instance_authentic, "authentic_mode", True) is True
+        assert getattr(oracle_instance_authentic, "simulation_used", False) is False
 
         # Test révélation pour vérifier marqueurs authentiques
         revelation = oracle_instance_authentic.validate_suggestion(
             "Test", "Test", "Test", "TestAgent"
         )
-        assert revelation.get("authentic") == True
-        assert revelation.get("simulation_used") == False
+        assert revelation.get("authentic") is True
+        assert revelation.get("simulation_used") is False
 
         # Vérification historique authentique
         assert len(oracle_instance_authentic.revelations_history) == 1
         history_entry = oracle_instance_authentic.revelations_history[0]
-        assert history_entry["revelation"]["authentic"] == True
-        assert history_entry["revelation"]["simulation_used"] == False
+        assert history_entry["revelation"]["authentic"] is True
+        assert history_entry["revelation"]["simulation_used"] is False
 
         logger.info("✅ Conformité anti-simulation 100% validée")
 

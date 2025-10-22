@@ -49,8 +49,8 @@ class TestSourceConfig:
 
         assert config.source_type == SourceType.SIMPLE
         assert config.passphrase is None
-        assert config.anonymize_logs == True
-        assert config.auto_cleanup == True
+        assert config.anonymize_logs is True
+        assert config.auto_cleanup is True
 
     def test_source_config_init_complex(self):
         """Test l'initialisation pour sources complexes."""
@@ -63,8 +63,8 @@ class TestSourceConfig:
 
         assert config.source_type == SourceType.COMPLEX
         assert config.passphrase == "test_passphrase"
-        assert config.anonymize_logs == False
-        assert config.auto_cleanup == False
+        assert config.anonymize_logs is False
+        assert config.auto_cleanup is False
 
 
 class TestSourceManager:
@@ -449,8 +449,8 @@ class TestCreateSourceManager:
         assert isinstance(manager, SourceManager)
         assert manager.config.source_type == SourceType.SIMPLE
         assert manager.config.passphrase is None
-        assert manager.config.anonymize_logs == True
-        assert manager.config.auto_cleanup == True
+        assert manager.config.anonymize_logs is True
+        assert manager.config.auto_cleanup is True
 
     def test_create_source_manager_complex(self):
         """Test la création d'un manager pour sources complexes."""
@@ -461,8 +461,8 @@ class TestCreateSourceManager:
         assert isinstance(manager, SourceManager)
         assert manager.config.source_type == SourceType.COMPLEX
         assert manager.config.passphrase == "test_pass"
-        assert manager.config.anonymize_logs == False
-        assert manager.config.auto_cleanup == False
+        assert manager.config.anonymize_logs is False
+        assert manager.config.auto_cleanup is False
 
     def test_create_source_manager_case_insensitive(self):
         """Test la création avec casse insensible."""

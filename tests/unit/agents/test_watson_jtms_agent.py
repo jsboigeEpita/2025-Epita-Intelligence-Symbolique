@@ -159,7 +159,7 @@ class TestWatsonJTMSAgentRefactored:
         watson_agent.validator.prove_belief.assert_awaited_once_with(
             "le colonel est coupable"
         )
-        assert result["is_valid"] == True
+        assert result["is_valid"] is True
         assert result["details"] == expected_proof
 
     @pytest.mark.asyncio

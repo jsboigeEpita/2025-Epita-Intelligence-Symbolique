@@ -62,9 +62,9 @@ class TestLogicAnalysisResult:
         assert result.propositional_result == "Valid PL"
         assert result.first_order_result == "Valid FOL"
         assert result.modal_result == "Valid ML"
-        assert result.logical_validity == True
-        assert result.consistency_check == True
-        assert result.satisfiability == True
+        assert result.logical_validity is True
+        assert result.consistency_check is True
+        assert result.satisfiability is True
         assert result.formulas_extracted == formulas
         assert result.queries_executed == queries
         assert result.analysis_timestamp == timestamp
@@ -83,7 +83,7 @@ class TestLogicAnalysisResult:
 
         assert isinstance(result_dict, dict)
         assert result_dict["propositional_result"] == "Test PL"
-        assert result_dict["logical_validity"] == True
+        assert result_dict["logical_validity"] is True
         assert result_dict["formulas_extracted"] == ["p", "q"]
         assert result_dict["processing_time_ms"] == 100.0
         assert "analysis_timestamp" in result_dict
@@ -120,7 +120,7 @@ class TestLogicAnalysisResult:
         # Doit pouvoir être désérialisé
         reconstructed = json.loads(json_str)
         assert reconstructed["propositional_result"] == "Test"
-        assert reconstructed["logical_validity"] == True
+        assert reconstructed["logical_validity"] is True
 
 
 class TestInformalAnalysisResult:
@@ -308,7 +308,7 @@ class TestUnifiedReport:
         assert report.executive_summary == "Comprehensive summary"
         assert report.coherence_assessment == "High coherence"
         assert report.contradictions_identified == contradictions
-        assert report.overall_validity == True
+        assert report.overall_validity is True
         assert report.confidence_level == 0.85
         assert report.recommendations == recommendations
         assert report.logic_informal_alignment == 0.90
@@ -332,7 +332,7 @@ class TestUnifiedReport:
 
         assert isinstance(report_dict, dict)
         assert report_dict["original_text"] == "Test text"
-        assert report_dict["overall_validity"] == True
+        assert report_dict["overall_validity"] is True
         assert report_dict["confidence_level"] == 0.75
         assert report_dict["synthesis_version"] == "1.0.0"
 
@@ -384,7 +384,7 @@ class TestUnifiedReport:
         # Test désérialisation
         parsed = json.loads(json_str)
         assert parsed["original_text"] == "JSON test text"
-        assert parsed["logic_analysis"]["logical_validity"] == True
+        assert parsed["logic_analysis"]["logical_validity"] is True
         assert len(parsed["informal_analysis"]["fallacies_detected"]) == 1
         assert parsed["recommendations"] == ["Test recommendation"]
 
@@ -434,7 +434,7 @@ class TestUnifiedReport:
         assert stats["fallacies_count"] == 2
         assert stats["contradictions_count"] == 1
         assert stats["recommendations_count"] == 2
-        assert stats["overall_validity"] == True
+        assert stats["overall_validity"] is True
         assert stats["confidence_level"] == 0.85
 
     def test_get_summary_statistics_empty(self):
@@ -531,8 +531,8 @@ class TestDataModelsIntegration:
         parsed_report = json.loads(json_str)
 
         # Vérifications après désérialisation
-        assert parsed_report["overall_validity"] == False
-        assert parsed_report["logic_analysis"]["logical_validity"] == True
+        assert parsed_report["overall_validity"] is False
+        assert parsed_report["logic_analysis"]["logical_validity"] is True
         assert (
             parsed_report["informal_analysis"]["fallacies_detected"][0]["type"]
             == "ad_hominem"
@@ -545,7 +545,7 @@ class TestDataModelsIntegration:
         assert stats["fallacies_count"] == 1
         assert stats["contradictions_count"] == 1
         assert stats["recommendations_count"] == 3
-        assert stats["overall_validity"] == False
+        assert stats["overall_validity"] is False
         assert stats["confidence_level"] == 0.70
 
     def test_nested_serialization_deserialization(self):

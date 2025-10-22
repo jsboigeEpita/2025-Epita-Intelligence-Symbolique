@@ -574,7 +574,7 @@ class SynthesisAgent(BaseAgent):
 
         # Contradiction entre validité logique et sophismes
         if (
-            logic_result.logical_validity == True
+            logic_result.logical_validity is True
             and len(informal_result.fallacies_detected) > 0
         ):
             contradictions.append(
@@ -583,8 +583,8 @@ class SynthesisAgent(BaseAgent):
 
         # Contradiction entre cohérence et validité
         if (
-            logic_result.consistency_check == False
-            and logic_result.logical_validity == True
+            logic_result.consistency_check is False
+            and logic_result.logical_validity is True
         ):
             contradictions.append(
                 "Contradiction: argument valide mais ensemble de prémisses incohérent"
@@ -599,10 +599,10 @@ class SynthesisAgent(BaseAgent):
         recommendations = []
 
         # Recommandations basées sur l'analyse logique
-        if logic_result.logical_validity == False:
+        if logic_result.logical_validity is False:
             recommendations.append("Revoir la structure logique de l'argument")
 
-        if logic_result.consistency_check == False:
+        if logic_result.consistency_check is False:
             recommendations.append("Vérifier la cohérence des prémisses")
 
         # Recommandations basées sur l'analyse informelle

@@ -92,11 +92,6 @@
 .\argumentation_analysis\agents\core\pl\pl_agent.py:30:9: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\pm\pm_agent.py:333:5: F811 redefinition of unused 'invoke_single' from line 214
 .\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:67:13: F821 undefined name 'InformalAgent'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:577:43: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:586:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:587:47: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:602:42: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:605:43: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\argumentation_analysis\agents\initialize_cache.py:32:13: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\initialize_cache.py:34:15: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\jtms_communication_hub.py:1064:5: F811 redefinition of unused 'handle_agent_failure' from line 370
@@ -361,12 +356,6 @@
 .\cleanup_flake8_progressive.py:173:11: F541 f-string is missing placeholders
 .\cleanup_flake8_progressive.py:174:11: F541 f-string is missing placeholders
 .\cleanup_flake8_progressive.py:176:9: F541 f-string is missing placeholders
-.\config\unified_config.py:526:37: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\config\unified_config.py:530:42: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\config\unified_config.py:534:42: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\config\unified_config.py:538:47: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\config\unified_config.py:542:41: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\config\unified_config.py:546:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\demos\showcases\demo_one_liner_usage.py:50:15: F541 f-string is missing placeholders
 .\demos\showcases\demo_one_liner_usage.py:53:15: F541 f-string is missing placeholders
 .\demos\showcases\demo_one_liner_usage.py:56:19: F541 f-string is missing placeholders
@@ -637,6 +626,28 @@
 .\scripts\apps\webapp\launch_webapp_background.py:93:13: F541 f-string is missing placeholders
 .\scripts\apps\webapp\playwright_runner.py:181:13: F541 f-string is missing placeholders
 .\scripts\apps\webapp\unified_web_orchestrator.py:612:24: F541 f-string is missing placeholders
+.\scripts\fix_e712_comparisons.py:19:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:23:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:29:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:35:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:41:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:47:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:51:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:61:58: W291 trailing whitespace
+.\scripts\fix_e712_comparisons.py:62:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_e712_comparisons.py:64:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:67:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:73:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:78:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:80:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:84:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:87:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:96:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:97:11: F541 f-string is missing placeholders
+.\scripts\fix_e712_comparisons.py:102:1: W293 blank line contains whitespace
+.\scripts\fix_e712_comparisons.py:104:15: F541 f-string is missing placeholders
+.\scripts\fix_e712_comparisons.py:106:1: E305 expected 2 blank lines after class or function definition, found 1
+.\scripts\fix_e712_comparisons.py:107:11: W292 no newline at end of file
 .\scripts\fix_f821_missing_imports.py:242:15: F541 f-string is missing placeholders
 .\scripts\fix_f821_missing_imports.py:341:17: W292 no newline at end of file
 .\scripts\fix_whitespace_errors.py:102:11: F541 f-string is missing placeholders
@@ -993,7 +1004,6 @@
 .\tests\agents\core\informal\test_informal_definitions.py:96:42: F811 redefinition of unused 'setup_authentic_taxonomy_csv' from line 17
 .\tests\agents\core\logic\test_belief_set_authentic.py:374:20: E721 do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
 .\tests\agents\core\logic\test_examples.py:42:13: F821 undefined name 'logger'
-.\tests\agents\core\logic\test_modal_logic_agent_authentic.py:143:63: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\comparison\test_mock_vs_real_behavior.py:35:5: F811 redefinition of unused 'Kernel' from line 19
 .\tests\comparison\test_mock_vs_real_behavior.py:599:15: F541 f-string is missing placeholders
 .\tests\comparison\test_mock_vs_real_behavior.py:729:19: F541 f-string is missing placeholders
@@ -1062,14 +1072,6 @@
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:112:16: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:118:39: F821 undefined name 'pl_syntax'
 .\tests\integration\jpype_tweety\workers\worker_argumentation_syntax.py:137:17: F541 f-string is missing placeholders
-.\tests\integration\test_agents_logiques_integration.py:166:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_agents_logiques_integration.py:168:38: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_agents_logiques_integration.py:261:33: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_agents_logiques_integration.py:303:52: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_agents_logiques_integration.py:304:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_agents_logiques_integration.py:314:27: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_agents_logiques_integration.py:343:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_agents_logiques_integration.py:371:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_authentic_components.py:318:28: F821 undefined name 'UnifiedOrchestrator'
 .\tests\integration\test_authentic_components_integration.py:40:9: F821 undefined name 'logger'
 .\tests\integration\test_authentic_components_integration.py:318:22: F821 undefined name 'Kernel'
@@ -1083,97 +1085,11 @@
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:598:48: E228 missing whitespace around modulo operator
 .\tests\integration\test_cluedo_oracle_enhanced_real.py:325:19: F541 f-string is missing placeholders
 .\tests\integration\test_cluedo_oracle_enhanced_real.py:551:15: F541 f-string is missing placeholders
-.\tests\integration\test_cluedo_oracle_integration.py:427:75: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:428:77: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:446:41: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:449:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:450:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:471:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:474:49: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:475:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:476:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:493:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:496:49: E712 comparison to True should be 'if cond is not True:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:497:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:498:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:518:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:519:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:540:56: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:541:58: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:568:27: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:594:64: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:595:66: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:640:39: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:641:45: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:644:71: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:677:23: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:678:45: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:679:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:694:31: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:709:75: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:710:77: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:716:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:717:50: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:722:57: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_cluedo_oracle_integration.py:723:63: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_einstein_demo_real.py:640:19: F541 f-string is missing placeholders
 .\tests\integration\test_fol_tweety_integration.py:12:47: F811 redefinition of unused 'run_in_jvm_subprocess' from line 5
 .\tests\integration\test_informal_agent_tool_choice.py:84:11: F541 f-string is missing placeholders
 .\tests\integration\test_logic_api_integration.py:19:46: F811 redefinition of unused 'run_in_jvm_subprocess' from line 12
 .\tests\integration\test_oracle_integration.py:20:43: F811 redefinition of unused 'run_in_jvm_subprocess' from line 13
-.\tests\integration\test_orchestration_finale_integration.py:75:54: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:83:26: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:96:31: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:98:33: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:99:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:100:39: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:115:47: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:147:31: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:148:79: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:168:31: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:169:79: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:174:31: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:175:79: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:196:80: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:200:25: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:224:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:245:41: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:309:62: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:340:51: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:351:34: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:360:34: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:403:31: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:416:54: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_orchestration_finale_integration.py:418:70: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:428:38: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:437:39: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_orchestration_finale_integration.py:456:58: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:69:40: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:70:45: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:82:53: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:83:48: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:106:54: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:107:53: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:133:27: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:146:57: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:147:56: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:159:27: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:160:49: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:161:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:172:27: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:173:49: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:174:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:209:51: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:210:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:216:45: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:217:51: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:234:37: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:238:38: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:244:53: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:245:48: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:257:45: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:258:40: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\integration\test_sherlock_watson_demo_integration.py:284:31: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\integration\test_sherlock_watson_moriarty_real_gpt.py:31:58: F811 redefinition of unused 'run_in_jvm_subprocess' from line 13
 .\tests\integration\test_trace_intelligence_reelle.py:31:1: F811 redefinition of unused 'Dict' from line 15
 .\tests\integration\test_trace_intelligence_reelle.py:31:1: F811 redefinition of unused 'Any' from line 15
@@ -1251,9 +1167,7 @@
 .\tests\support\portable_octave_installer.py:154:13: F541 f-string is missing placeholders
 .\tests\test_complex_trace_authentic.py:583:13: F821 undefined name 'logger'
 .\tests\unit\agents\test_fol_logic_agent.py:66:13: F821 undefined name 'logger'
-.\tests\unit\agents\test_jtms_agent_base.py:80:48: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\agents\test_jtms_agent_base.py:395:5: F811 redefinition of unused 'asyncio' from line 8
-.\tests\unit\agents\test_watson_jtms_agent.py:162:35: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\api\test_api_direct.py:198:23: F541 f-string is missing placeholders
 .\tests\unit\api\test_api_direct_simple.py:169:15: F541 f-string is missing placeholders
 .\tests\unit\api\test_api_endpoints.py:10:35: F811 redefinition of unused 'run_in_jvm_subprocess' from line 1
@@ -1303,43 +1217,10 @@
 .\tests\unit\argumentation_analysis\test_integration_balanced_strategy.py:48:18: F821 undefined name 'UnifiedConfig'
 .\tests\unit\argumentation_analysis\test_integration_end_to_end.py:21:1: F811 redefinition of unused 'ChatMessageContent' from line 18
 .\tests\unit\argumentation_analysis\test_mock_elimination.py:96:13: F821 undefined name 'logger'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:151:25: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:163:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:175:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:355:23: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:370:23: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:444:25: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:457:25: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:486:30: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_modal_logic_agent.py:501:30: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\unit\argumentation_analysis\test_operational_agents_integration.py:87:17: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_run_analysis_conversation.py:47:57: F821 undefined name 'test_text'
-.\tests\unit\argumentation_analysis\test_source_manager.py:52:38: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:53:36: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:66:38: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:67:36: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:452:46: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:453:44: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:464:46: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_source_manager.py:465:44: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:65:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:66:41: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:67:38: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:86:48: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:123:50: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:311:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:335:48: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:387:61: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:437:42: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:534:50: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:535:68: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_synthesis_data_models.py:548:42: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\unit\argumentation_analysis\test_tactical_operational_interface.py:50:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_trace_analyzer.py:51:13: F821 undefined name 'logger'
-.\tests\unit\argumentation_analysis\test_trace_analyzer.py:250:28: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\argumentation_analysis\test_trace_analyzer.py:280:24: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_trace_analyzer.py:315:28: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
-.\tests\unit\argumentation_analysis\test_trace_analyzer.py:793:28: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\argumentation_analysis\test_tweety_error_analyzer.py:45:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_utils.py:41:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\test_verify_extracts.py:177:13: F821 undefined name 'logger'
@@ -1354,8 +1235,6 @@
 .\tests\unit\mocks\legacy_numpy_array_mock.py:239:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:245:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:1525:1: F811 redefinition of unused 'int8' from line 1423
-.\tests\unit\orchestration\test_unified_orchestrations.py:573:40: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\unit\orchestration\test_unified_orchestrations.py:574:43: E712 comparison to True should be 'if cond is True:' or 'if cond:'
 .\tests\unit\scripts\test_jpype_dependency_validator.py:127:15: F541 f-string is missing placeholders
 .\tests\unit\services\test_mcp_server.py:40:13: F811 redefinition of unused 'ValidationResult' from line 32
 .\tests\unit\test_service_manager_complete.py:42:16: F821 undefined name 'asyncio'
@@ -1385,8 +1264,6 @@
 .\tests\validation_sherlock_watson\test_group1_simple.py:138:24: F821 undefined name 'QueryTy'
 .\tests\validation_sherlock_watson\test_group2_corrections_simple.py:14:1: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_group2_corrections_simple.py:14:1: F811 redefinition of unused 'AsyncMock' from line 12
-.\tests\validation_sherlock_watson\test_group2_corrections_simple.py:69:30: E712 comparison to True should be 'if cond is True:' or 'if cond:'
-.\tests\validation_sherlock_watson\test_group2_corrections_simple.py:71:29: E712 comparison to False should be 'if cond is False:' or 'if not cond:'
 .\tests\validation_sherlock_watson\test_group3_final_validation.py:16:1: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_group3_final_validation.py:16:1: F811 redefinition of unused 'AsyncMock' from line 12
 .\tests\validation_sherlock_watson\test_group3_final_validation.py:165:11: F541 f-string is missing placeholders

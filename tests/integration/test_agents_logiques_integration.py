@@ -163,9 +163,9 @@ class TestAgentsLogiquesIntegration:
         assert "mock_used" in analysis
 
         # Vérifications valeurs
-        assert analysis["has_modal_logic"] == True
+        assert analysis["has_modal_logic"] is True
         assert analysis["analysis_type"] == "production_modal"
-        assert analysis["mock_used"] == False
+        assert analysis["mock_used"] is False
         assert 0.0 <= analysis["modal_strength"] <= 1.0
 
         # Vérifications modalités détectées
@@ -258,7 +258,7 @@ class TestAgentsLogiquesIntegration:
         # Vérifications résultat
         assert len(result.content_hash) == 64
         assert 0.0 <= result.argument_strength <= 1.0
-        assert result.mock_used == False
+        assert result.mock_used is False
         assert result.analysis_type == "production_authentic"
         assert len(result.sophistries_detected) >= 2  # Au moins 2 sophistiques
         assert len(result.propositions_found) >= 2  # Au moins 2 propositions
@@ -300,8 +300,8 @@ class TestAgentsLogiquesIntegration:
         assert "avg_characters_per_doc" in performance
         assert "sophistries_rate" in performance
         assert "modal_rate" in performance
-        assert performance["authentic_processing"] == True
-        assert performance["mock_used"] == False
+        assert performance["authentic_processing"] is True
+        assert performance["mock_used"] is False
 
     def test_complete_demo_integration(self):
         """Test démonstration complète agents logiques"""
@@ -311,7 +311,7 @@ class TestAgentsLogiquesIntegration:
                 asyncio.wait_for(run_complete_agents_production_demo(), timeout=15.0)
             )
 
-            assert result == True
+            assert result is True
 
         except asyncio.TimeoutError:
             pytest.skip("Demo timeout (processing took too long)")
@@ -340,7 +340,7 @@ class TestAgentsLogiquesIntegration:
         modal_analysis = processor_instance.analyze_modal_logic(
             "Il est nécessairement vrai que..."
         )
-        assert modal_analysis["mock_used"] == False
+        assert modal_analysis["mock_used"] is False
         assert modal_analysis["analysis_type"] == "production_modal"
 
         # Pas de traces de mock dans les statistiques
@@ -368,7 +368,7 @@ class TestAgentsLogiquesIntegration:
         no_modal = processor_instance.analyze_modal_logic(
             "Simple text without modal logic"
         )
-        assert no_modal["has_modal_logic"] == False
+        assert no_modal["has_modal_logic"] is False
         assert no_modal["modal_strength"] == 0.0
 
 
