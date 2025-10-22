@@ -64,6 +64,7 @@ def run_in_jvm_subprocess():
             env=env,
             text=True,
             encoding="utf-8",
+            errors="replace",  # Gère les caractères non-UTF8 (ex: accents français)
         )
 
         # La sortie (stdout/stderr) s'affichera directement dans la console pytest.
