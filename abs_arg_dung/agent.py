@@ -335,6 +335,7 @@ class DungAgent:
 
         # Vérifier s'il y a des cycles
         import networkx as nx
+from pathlib import Path
 
         G = nx.DiGraph()
         G.add_nodes_from([arg.getName() for arg in nodes])

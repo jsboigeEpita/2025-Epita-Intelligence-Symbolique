@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 
 def check_markdown_file(file_path):

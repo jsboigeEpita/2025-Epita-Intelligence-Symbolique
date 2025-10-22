@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import importlib.util
+from pathlib import Path
 
 def test_module_import(module_path):
     """Teste l'importation d'un module Python."""

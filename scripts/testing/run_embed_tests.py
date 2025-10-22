@@ -68,6 +68,7 @@ def run_tests():
                 filename: str, data: list, passphrase_override=None
             ):
                 from argumentation_analysis.ui import file_operations
+from unittest.mock import MagicMock
 
                 input_file = tmp_path / filename
                 should_embed = any("full_text" in item for item in data)

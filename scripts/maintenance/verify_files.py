@@ -1,3 +1,4 @@
+from pathlib import Path
 def verify_files():
     """Vérifie l'existence des fichiers réorganisés."""
     files_to_check = [
