@@ -33,12 +33,12 @@ def mock_ui_config():
     """Mock les constantes de argumentation_analysis.ui.config."""
     # Les constantes sont maintenant dans argumentation_analysis.ui.config
     # et se nomment ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
-    with patch(
+    with patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.ui.config.ENCRYPTION_KEY", "test_default_key"
-    ) as mock_enc_key, patch(
+    ) as mock_enc_key, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.ui.config.CONFIG_FILE",
         Path("config/default_config.enc"),
-    ) as mock_conf_file, patch(
+    ) as mock_conf_file, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.ui.config.CONFIG_FILE_JSON",
         Path("config/default_config.json"),
     ) as mock_conf_json:
@@ -58,15 +58,15 @@ def mock_services_constructors():
     # Ces services ne sont plus initialisés par la fonction testée.
     # Cette fixture n'est plus directement utilisée par test_initialize_analysis_services_defaults.
     # Elle est conservée au cas où elle serait utile pour d'autres tests ou si la logique d'init change.
-    with patch(
+    with patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.services.crypto_service.CryptoService"
-    ) as MockCrypto, patch(
+    ) as MockCrypto, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.services.cache_service.CacheService"
-    ) as MockCache, patch(
+    ) as MockCache, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.services.extract_service.ExtractService"
-    ) as MockExtract, patch(
+    ) as MockExtract, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.services.fetch_service.FetchService"
-    ) as MockFetch, patch(
+    ) as MockFetch, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.services.definition_service.DefinitionService"
     ) as MockDefinition:
         # Configurer les mocks pour retourner une instance de MagicMock (ou d'eux-mêmes)
@@ -110,13 +110,13 @@ def test_initialize_analysis_services_defaults(
     # Les mocks pour les services individuels ne sont plus directement applicables de la même manière.
     # Nous allons mocker les dépendances de initialize_analysis_services : initialize_jvm et create_llm_service
 
-    with patch(
+    with patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.service_setup.analysis_services.initialize_jvm"
-    ) as mock_init_jvm, patch(
+    ) as mock_init_jvm, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.service_setup.analysis_services.create_llm_service"
-    ) as mock_create_llm, patch(
+    ) as mock_create_llm, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.service_setup.analysis_services.load_dotenv"
-    ) as mock_load_dotenv, patch(
+    ) as mock_load_dotenv, patch(  # noqa: F821 - unittest.mock import dynamique
         "argumentation_analysis.service_setup.analysis_services.LIBS_DIR",
         "mock/libs/dir",
     ) as mock_libs_dir:  # Mocker LIBS_DIR

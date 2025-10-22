@@ -20,14 +20,14 @@ import os
 def create_jpype_killer_mock():
     """Crée un mock JPype complet qui remplace toute fonctionnalité JVM"""
 
-    jpype_mock = MagicMock()
+    jpype_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
     # Attributs de base
-    jpype_mock.isJVMStarted = MagicMock(return_value=False)
-    jpype_mock.startJVM = MagicMock()
-    jpype_mock.shutdownJVM = MagicMock()
-    jpype_mock.attachThreadToJVM = MagicMock()
-    jpype_mock.detachThreadFromJVM = MagicMock()
+    jpype_mock.isJVMStarted = MagicMock(return_value=False)  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.startJVM = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.shutdownJVM = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.attachThreadToJVM = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.detachThreadFromJVM = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
     # Exceptions
     jpype_mock.JException = Exception
@@ -35,39 +35,39 @@ def create_jpype_killer_mock():
     jpype_mock.JVMNotRunning = RuntimeError("Mock JVM not running")
 
     # Classes Java mockées
-    jpype_mock.JClass = MagicMock(return_value=MagicMock())
-    jpype_mock.JObject = MagicMock()
-    jpype_mock.JArray = MagicMock(return_value=[])
-    jpype_mock.JString = MagicMock(return_value="mock_string")
-    jpype_mock.JInt = MagicMock(return_value=0)
-    jpype_mock.JBoolean = MagicMock(return_value=True)
+    jpype_mock.JClass = MagicMock(return_value=MagicMock())  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JObject = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JArray = MagicMock(return_value=[])  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JString = MagicMock(return_value="mock_string")  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JInt = MagicMock(return_value=0)  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JBoolean = MagicMock(return_value=True)  # noqa: F821 - unittest.mock import dynamique
 
     # Package java.* mockés
-    java_mock = MagicMock()
-    java_mock.lang = MagicMock()
-    java_mock.lang.String = MagicMock(return_value="mock_java_string")
-    java_mock.lang.Object = MagicMock()
-    java_mock.lang.System = MagicMock()
-    java_mock.util = MagicMock()
-    java_mock.util.ArrayList = MagicMock(return_value=[])
-    java_mock.util.HashMap = MagicMock(return_value={})
+    java_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    java_mock.lang = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    java_mock.lang.String = MagicMock(return_value="mock_java_string")  # noqa: F821 - unittest.mock import dynamique
+    java_mock.lang.Object = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    java_mock.lang.System = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    java_mock.util = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    java_mock.util.ArrayList = MagicMock(return_value=[])  # noqa: F821 - unittest.mock import dynamique
+    java_mock.util.HashMap = MagicMock(return_value={})  # noqa: F821 - unittest.mock import dynamique
 
     jpype_mock.java = java_mock
-    jpype_mock.JavaClass = MagicMock(return_value=MagicMock())
-    jpype_mock.JavaObject = MagicMock()
+    jpype_mock.JavaClass = MagicMock(return_value=MagicMock())  # noqa: F821 - unittest.mock import dynamique
+    jpype_mock.JavaObject = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
     # CRITIQUE: Mock jpype.imports pour conftest.py racine
-    jpype_imports_mock = MagicMock()
+    jpype_imports_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
     jpype_mock.imports = jpype_imports_mock
 
     # Spécifique à Tweety
-    jpype_mock.JPackage = MagicMock()
-    org_mock = MagicMock()
-    org_mock.tweetyproject = MagicMock()
+    jpype_mock.JPackage = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    org_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    org_mock.tweetyproject = MagicMock()  # noqa: F821 - unittest.mock import dynamique
     jpype_mock.org = org_mock
 
     # Fonction getClassPath pour les tests
-    jpype_mock.getClassPath = MagicMock(return_value="mock_classpath")
+    jpype_mock.getClassPath = MagicMock(return_value="mock_classpath")  # noqa: F821 - unittest.mock import dynamique
 
     return jpype_mock
 
@@ -83,7 +83,7 @@ JPYPE_KILLER_MOCK = create_jpype_killer_mock()
 sys.modules["jpype"] = JPYPE_KILLER_MOCK
 sys.modules["jpype1"] = JPYPE_KILLER_MOCK
 sys.modules["jpype._jpype"] = JPYPE_KILLER_MOCK
-sys.modules["jpype.types"] = MagicMock()
+sys.modules["jpype.types"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 sys.modules[
     "jpype.imports"
 ] = JPYPE_KILLER_MOCK.imports  # CRITIQUE pour conftest.py racine
@@ -108,32 +108,32 @@ def create_tweety_ecosystem_mock():
     """Crée l'écosystème Tweety complet mockué"""
 
     # TweetyBridge mock complet
-    tweety_bridge_mock = MagicMock()
-    tweety_bridge_mock.initialize_tweety = MagicMock(return_value=True)
-    tweety_bridge_mock.check_formula_syntax = MagicMock(
+    tweety_bridge_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    tweety_bridge_mock.initialize_tweety = MagicMock(return_value=True)  # noqa: F821 - unittest.mock import dynamique
+    tweety_bridge_mock.check_formula_syntax = MagicMock(  # noqa: F821 - unittest.mock import dynamique
         return_value=(True, "Valid syntax")
     )
-    tweety_bridge_mock.check_belief_set_syntax = MagicMock(
+    tweety_bridge_mock.check_belief_set_syntax = MagicMock(  # noqa: F821 - unittest.mock import dynamique
         return_value=(True, "Valid belief set")
     )
-    tweety_bridge_mock.query_belief_set = MagicMock(return_value="Mock query result")
-    tweety_bridge_mock.clean_up = MagicMock()
+    tweety_bridge_mock.query_belief_set = MagicMock(return_value="Mock query result")  # noqa: F821 - unittest.mock import dynamique
+    tweety_bridge_mock.clean_up = MagicMock()  # noqa: F821 - unittest.mock import dynamique
     tweety_bridge_mock.is_initialized = True
 
     # Handlers mockés
     handlers = {}
     for handler_name in ["PLHandler", "FOLHandler", "ModalHandler"]:
-        handler_mock = MagicMock()
-        handler_mock.parse_formula = MagicMock(return_value="Mock formula")
-        handler_mock.parse_belief_set = MagicMock(return_value="Mock belief set")
-        handler_mock.query = MagicMock(return_value="Mock query result")
+        handler_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+        handler_mock.parse_formula = MagicMock(return_value="Mock formula")  # noqa: F821 - unittest.mock import dynamique
+        handler_mock.parse_belief_set = MagicMock(return_value="Mock belief set")  # noqa: F821 - unittest.mock import dynamique
+        handler_mock.query = MagicMock(return_value="Mock query result")  # noqa: F821 - unittest.mock import dynamique
         handlers[handler_name] = handler_mock
 
     # TweetyInitializer mock
-    tweety_init_mock = MagicMock()
-    tweety_init_mock.initialize_jvm = MagicMock(return_value=True)
-    tweety_init_mock.setup_tweety_libs = MagicMock(return_value=True)
-    tweety_init_mock.is_jvm_started = MagicMock(return_value=False)
+    tweety_init_mock = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+    tweety_init_mock.initialize_jvm = MagicMock(return_value=True)  # noqa: F821 - unittest.mock import dynamique
+    tweety_init_mock.setup_tweety_libs = MagicMock(return_value=True)  # noqa: F821 - unittest.mock import dynamique
+    tweety_init_mock.is_jvm_started = MagicMock(return_value=False)  # noqa: F821 - unittest.mock import dynamique
 
     return {
         "bridge": tweety_bridge_mock,
@@ -145,11 +145,11 @@ def create_tweety_ecosystem_mock():
 TWEETY_MOCKS = create_tweety_ecosystem_mock()
 
 # Injecter les mocks Tweety dans sys.modules
-sys.modules["argumentation_analysis.agents.core.logic.tweety_bridge"] = MagicMock()
-sys.modules["argumentation_analysis.agents.core.logic.tweety_initializer"] = MagicMock()
-sys.modules["argumentation_analysis.agents.core.logic.pl_handler"] = MagicMock()
-sys.modules["argumentation_analysis.agents.core.logic.fol_handler"] = MagicMock()
-sys.modules["argumentation_analysis.agents.core.logic.modal_handler"] = MagicMock()
+sys.modules["argumentation_analysis.agents.core.logic.tweety_bridge"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+sys.modules["argumentation_analysis.agents.core.logic.tweety_initializer"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+sys.modules["argumentation_analysis.agents.core.logic.pl_handler"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+sys.modules["argumentation_analysis.agents.core.logic.fol_handler"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
+sys.modules["argumentation_analysis.agents.core.logic.modal_handler"] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
 # ============================================================================
 # HOOK D'IMPORT CUSTOM
@@ -184,9 +184,9 @@ class JPypeKillerLoader:
         if "jpype" in fullname:
             module = JPYPE_KILLER_MOCK
         elif "tweety" in fullname:
-            module = MagicMock()
+            module = MagicMock()  # noqa: F821 - unittest.mock import dynamique
         else:
-            module = MagicMock()
+            module = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
         sys.modules[fullname] = module
         return module
@@ -214,7 +214,7 @@ def apply_jpype_killer_globally():
         if "jpype" in module_name:
             sys.modules[module_name] = JPYPE_KILLER_MOCK
         else:
-            sys.modules[module_name] = MagicMock()
+            sys.modules[module_name] = MagicMock()  # noqa: F821 - unittest.mock import dynamique
 
 
 # Appliquer immédiatement
