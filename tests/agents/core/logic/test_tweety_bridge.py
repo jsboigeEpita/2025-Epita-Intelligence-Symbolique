@@ -47,11 +47,11 @@ class TestTweetyBridge(unittest.TestCase):
 
             # Patcher les classes Handler pour injecter des mocks
             self.pl_handler_patcher = patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.PLHandler",
+                "argumentation_analysis.agents.core.logic.tweety_bridge.PropositionalLogicHandler",
                 autospec=True,
             )
             self.fol_handler_patcher = patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.FOLHandler",
+                "argumentation_analysis.agents.core.logic.tweety_bridge.FirstOrderLogicHandler",
                 autospec=True,
             )
             self.mock_pl_handler_class = self.pl_handler_patcher.start()
