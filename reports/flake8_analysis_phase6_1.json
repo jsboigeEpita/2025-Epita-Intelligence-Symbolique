@@ -1,0 +1,190 @@
+{
+  "baseline_date": "2025-10-22T01:32:49.419091Z",
+  "total_errors": 2467,
+  "by_code": {
+    "F541": {
+      "count": 806,
+      "percentage": 32.67
+    },
+    "W293": {
+      "count": 684,
+      "percentage": 27.73
+    },
+    "F821": {
+      "count": 368,
+      "percentage": 14.92
+    },
+    "W291": {
+      "count": 269,
+      "percentage": 10.9
+    },
+    "E712": {
+      "count": 145,
+      "percentage": 5.88
+    },
+    "F811": {
+      "count": 125,
+      "percentage": 5.07
+    },
+    "F405": {
+      "count": 28,
+      "percentage": 1.13
+    },
+    "E228": {
+      "count": 9,
+      "percentage": 0.36
+    },
+    "F403": {
+      "count": 7,
+      "percentage": 0.28
+    },
+    "W292": {
+      "count": 4,
+      "percentage": 0.16
+    },
+    "E731": {
+      "count": 4,
+      "percentage": 0.16
+    },
+    "E261": {
+      "count": 3,
+      "percentage": 0.12
+    },
+    "E305": {
+      "count": 3,
+      "percentage": 0.12
+    },
+    "W191": {
+      "count": 3,
+      "percentage": 0.12
+    },
+    "E101": {
+      "count": 3,
+      "percentage": 0.12
+    },
+    "E721": {
+      "count": 2,
+      "percentage": 0.08
+    },
+    "E711": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "E225": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "F406": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "E713": {
+      "count": 1,
+      "percentage": 0.04
+    }
+  },
+  "by_directory": {
+    "scripts": {
+      "count": 879,
+      "percentage": 35.63
+    },
+    "tests": {
+      "count": 591,
+      "percentage": 23.96
+    },
+    "argumentation_analysis": {
+      "count": 346,
+      "percentage": 14.03
+    },
+    "examples": {
+      "count": 189,
+      "percentage": 7.66
+    },
+    "documentation_system": {
+      "count": 178,
+      "percentage": 7.22
+    },
+    "speech-to-text": {
+      "count": 80,
+      "percentage": 3.24
+    },
+    "project_core": {
+      "count": 50,
+      "percentage": 2.03
+    },
+    "services": {
+      "count": 36,
+      "percentage": 1.46
+    },
+    "1_2_7_argumentation_dialogique": {
+      "count": 35,
+      "percentage": 1.42
+    },
+    "abs_arg_dung": {
+      "count": 29,
+      "percentage": 1.18
+    },
+    "demos": {
+      "count": 13,
+      "percentage": 0.53
+    },
+    "root": {
+      "count": 11,
+      "percentage": 0.45
+    },
+    "2.3.3-generation-contre-argument": {
+      "count": 7,
+      "percentage": 0.28
+    },
+    "config": {
+      "count": 6,
+      "percentage": 0.24
+    },
+    "plugins": {
+      "count": 6,
+      "percentage": 0.24
+    },
+    "interface_web": {
+      "count": 3,
+      "percentage": 0.12
+    },
+    "2.1.6_multiagent_governance_prototype": {
+      "count": 2,
+      "percentage": 0.08
+    },
+    "2.3.2-detection-sophismes": {
+      "count": 2,
+      "percentage": 0.08
+    },
+    "1.4.1-JTMS": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "Arg_Semantic_Index": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "reports": {
+      "count": 1,
+      "percentage": 0.04
+    },
+    "src": {
+      "count": 1,
+      "percentage": 0.04
+    }
+  },
+  "hotspots": [
+    {
+      "file": ".\\scripts\\maintenance\\tools\\update_test_coverage.py",
+      "errors": 129
+    },
+    {
+      "file": ".\\scripts\\maintenance\\update_test_coverage.py",
+      "errors": 129
+    },
+    {
+      "file": ".\\documentation_system\\interactive_guide.py",
+      "errors": 119
+    }
+  ]
+}

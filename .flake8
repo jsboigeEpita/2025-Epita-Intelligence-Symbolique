@@ -17,6 +17,7 @@ exclude =
     *.egg-info,
     migration_output,
     .github,
+    libs/portable_octave,
     logs
 
 ignore = E203,E501,W503,E302,E226,E231,E265,E402,E701,E722,E741,F401,F841
