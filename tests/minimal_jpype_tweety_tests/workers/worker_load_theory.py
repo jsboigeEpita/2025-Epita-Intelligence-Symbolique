@@ -31,7 +31,7 @@ def main():
         assert jpype.isJVMStarted(), "La JVM n'a pas pu être démarrée."
         print("Worker: JVM démarrée.")
 
-        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
 
         # Le chemin du fichier de théorie est relatif au worker
         theory_file_path = os.path.join(

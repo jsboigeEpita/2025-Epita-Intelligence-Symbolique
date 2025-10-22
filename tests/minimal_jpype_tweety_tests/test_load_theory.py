@@ -50,8 +50,8 @@ def test_load_theory(jvm_session):
             jpype.isJVMStarted()
         ), "La JVM devrait être démarrée par la fixture jvm_session"
 
-        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
-        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
 
         print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
 

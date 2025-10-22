@@ -52,15 +52,15 @@ def test_reasoner_query(jvm_session):
             jpype.isJVMStarted()
         ), "La JVM devrait être démarrée par la fixture jvm_session"
 
-        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
-        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
-        # PropositionalSignature = jpype.JClass("net.sf.tweety.logics.pl.syntax.PropositionalSignature") # Remplacé par PlSignature
-        PlSignature = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlSignature")
-        Proposition = jpype.JClass("net.sf.tweety.logics.pl.syntax.Proposition")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        # PropositionalSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PropositionalSignature") # Remplacé par PlSignature
+        PlSignature = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+        Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
         SimplePlReasoner = jpype.JClass(
-            "net.sf.tweety.logics.pl.reasoner.SimplePlReasoner"
+            "org.tweetyproject.logics.pl.reasoner.SimplePlReasoner"
         )
-        Predicate = jpype.JClass("net.sf.tweety.logics.commons.syntax.Predicate")
+        Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
 
         print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
 

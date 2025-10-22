@@ -27,10 +27,10 @@ def main():
         assert jpype.isJVMStarted(), "La JVM n'a pas pu être démarrée."
         print("Worker: JVM démarrée.")
 
-        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
-        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         SimplePlReasoner = jpype.JClass(
-            "net.sf.tweety.logics.pl.reasoner.SimplePlReasoner"
+            "org.tweetyproject.logics.pl.reasoner.SimplePlReasoner"
         )
 
         parser = PlParser()
