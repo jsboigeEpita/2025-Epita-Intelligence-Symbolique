@@ -13,6 +13,8 @@ formelle ou d'autres mécanismes.
   des systèmes de raisonnement logique formel, ajoutant des abstractions pour
   la manipulation de croyances et l'exécution de requêtes.
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
@@ -258,9 +260,12 @@ class BaseLogicAgent(BaseAgent, ABC):
         syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
     """
 
-    _tweety_bridge: "TweetyBridge"
-    _logic_type_name: str
-    _syntax_bnf: Optional[str]
+    # Annotations de type supprimées au niveau de la classe pour éviter l'évaluation
+    # par Pydantic lors de la construction. Les types sont documentés dans les docstrings
+    # et les properties.
+    # _tweety_bridge: TweetyBridge
+    # _logic_type_name: str
+    # _syntax_bnf: Optional[str]
     # _parser: Any  # Ces éléments seront gérés par TweetyBridge
     # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
