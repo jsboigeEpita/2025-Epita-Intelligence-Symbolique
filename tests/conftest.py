@@ -251,6 +251,9 @@ def pytest_collection_finish(session):
     session.config.cache.set("is_e2e_session", is_e2e_session)
     if is_e2e_session:
         logger.warning(
+            "Session de test E2E détectée. L'initialisation globale de la JVM sera sautée."
+        )
+
 
 @pytest.fixture
 def mock_chat_completion_service():
@@ -301,9 +304,6 @@ def mock_kernel_with_llm(mock_chat_completion_service):
     kernel = Kernel()
     kernel.add_service(mock_chat_completion_service)
     return kernel
-
-            "Session de test E2E détectée. L'initialisation globale de la JVM sera sautée."
-        )
 
 
 def pytest_sessionstart(session):

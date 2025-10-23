@@ -115,8 +115,11 @@ class MockLogicAgent(BaseLogicAgent):
 # @pytest.mark.usefixtures("jvm_session")  # Désactivé pour le débogage du crash JVM
 class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
     @pytest.fixture(autouse=True)
-    async def setup_method(self):
-        """Fixture pytest pour l'initialisation avant chaque test."""
+    async def setup_method(self, mock_kernel_with_llm):
+        """Fixture pytest pour l'initialisation avant chaque test.
+        
+        Utilise mock_kernel_with_llm fixture Pydantic-compatible (Mission D3.2 Phase B).
+        """
         logger.info("Setting up test case for pytest in TestAbstractLogicAgent...")
         self.state_manager = OrchestrationServiceManager()
 
@@ -125,7 +128,9 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
         self.config.use_authentic_llm = True
         self.config.use_mock_llm = False
 
-        self.kernel = Kernel()  # Utiliser un Kernel mocké pour les tests unitaires
+        # ✅ Utiliser fixture Pydantic-compatible au lieu de Mock() simple
+        self.kernel = mock_kernel_with_llm
+        
         self.agent = MockLogicAgent(self.kernel, "TestAgent")
 
         self.initial_snapshot_data = {
