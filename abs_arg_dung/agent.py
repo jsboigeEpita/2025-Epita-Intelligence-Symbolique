@@ -1,6 +1,7 @@
 import os
 import glob
 import random
+from pathlib import Path
 
 # --- CONFIGURATION AVEC JPYPE ---
 # Ce fichier ne doit PAS démarrer la JVM. Il suppose qu'elle est déjà démarrée
@@ -334,9 +335,6 @@ class DungAgent:
         attacks = list(self.af.getAttacks())
 
         # Vérifier s'il y a des cycles
-        import networkx as nx
-from pathlib import Path
-
         G = nx.DiGraph()
         G.add_nodes_from([arg.getName() for arg in nodes])
         G.add_edges_from(

@@ -8,6 +8,9 @@ Script pour exécuter les tests embed_all_sources sans pytest.
 import sys
 from pathlib import Path
 import traceback
+import tempfile
+from unittest.mock import MagicMock
+from argumentation_analysis.ui import file_operations
 
 # Ajouter le répertoire racine au path
 PROJECT_ROOT = (
@@ -15,18 +18,16 @@ PROJECT_ROOT = (
 )  # MODIFIÉ: Remonter à la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Importer le module de test
+from tests.scripts.test_embed_all_sources import *  # noqa: F403,F401
+
 
 def run_tests():
     """Exécute les tests embed_all_sources."""
     print("=== Exécution des tests embed_all_sources ===")
 
     try:
-        # Importer le module de test
-        from tests.scripts.test_embed_all_sources import *
-
         # Créer un répertoire temporaire pour les tests
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
 
@@ -67,9 +68,6 @@ def run_tests():
             def create_encrypted_config_file_func(
                 filename: str, data: list, passphrase_override=None
             ):
-                from argumentation_analysis.ui import file_operations
-from unittest.mock import MagicMock
-
                 input_file = tmp_path / filename
                 should_embed = any("full_text" in item for item in data)
 
