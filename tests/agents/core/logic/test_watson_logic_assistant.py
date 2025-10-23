@@ -52,6 +52,7 @@ def mock_tweety_bridge() -> MagicMock:
     return mock_bridge
 
 
+@pytest.mark.llm_integration
 def test_watson_logic_assistant_instanciation(
     agent_factory: AgentFactory, mock_tweety_bridge: MagicMock
 ) -> None:
@@ -72,6 +73,7 @@ def test_watson_logic_assistant_instanciation(
     assert agent.logger.name.endswith(f".{TEST_AGENT_NAME}")
 
 
+@pytest.mark.llm_integration
 def test_watson_logic_assistant_instanciation_with_custom_prompt(
     agent_factory: AgentFactory, mock_tweety_bridge: MagicMock
 ) -> None:
@@ -92,6 +94,7 @@ def test_watson_logic_assistant_instanciation_with_custom_prompt(
     assert agent.system_prompt == custom_prompt
 
 
+@pytest.mark.llm_integration
 def test_watson_logic_assistant_default_name_and_prompt(
     agent_factory: AgentFactory, mock_tweety_bridge: MagicMock
 ) -> None:
@@ -110,6 +113,7 @@ def test_watson_logic_assistant_default_name_and_prompt(
 
 
 @pytest.mark.asyncio
+@pytest.mark.llm_integration
 async def test_get_agent_belief_set_content(
     agent_factory: AgentFactory, mock_tweety_bridge: MagicMock
 ) -> None:
