@@ -127,8 +127,8 @@ class TestAbstractLogicAgent:
     async def test_initialization(self):
         """Test de l'initialisation de l'agent."""
         assert self.agent.name == "TestAgent"
-        assert self.agent._kernel is not None
-        assert isinstance(self.agent._kernel, Kernel)
+        assert self.agent.kernel is not None
+        assert isinstance(self.agent.kernel, Kernel)
 
     async def test_process_task_unknown_task(self):
         """Test du traitement d'une tâche inconnue."""

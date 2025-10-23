@@ -128,11 +128,11 @@ async def test_get_agent_belief_set_content(
     expected_content_value_attr = "Contenu de l'ensemble de croyances (via value)"
     mock_invoke_result_value_attr = MagicMock()
     mock_invoke_result_value_attr.value = expected_content_value_attr
-    agent._kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
+    agent.kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
 
     content = await agent.get_agent_belief_set_content(belief_set_id)
 
-    agent._kernel.invoke.assert_called_once_with(
+    agent.kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
         arguments=KernelArguments(belief_set_id=belief_set_id),
@@ -140,15 +140,15 @@ async def test_get_agent_belief_set_content(
     assert content == expected_content_value_attr
 
     # Réinitialiser le mock pour le cas suivant
-    agent._kernel.invoke.reset_mock()
+    agent.kernel.invoke.reset_mock()
 
     # Cas 2: invoke retourne directement la valeur
     expected_content_direct = "Contenu de l'ensemble de croyances (direct)"
-    agent._kernel.invoke = AsyncMock(return_value=expected_content_direct)
+    agent.kernel.invoke = AsyncMock(return_value=expected_content_direct)
 
     content_direct = await agent.get_agent_belief_set_content(belief_set_id)
 
-    agent._kernel.invoke.assert_called_once_with(
+    agent.kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
         arguments=KernelArguments(belief_set_id=belief_set_id),
@@ -156,14 +156,14 @@ async def test_get_agent_belief_set_content(
     assert content_direct == expected_content_direct
 
     # Réinitialiser le mock pour le cas None
-    agent._kernel.invoke.reset_mock()
+    agent.kernel.invoke.reset_mock()
 
     # Cas 3: invoke retourne None (simulant un belief set non trouvé ou vide)
-    agent._kernel.invoke = AsyncMock(return_value=None)
+    agent.kernel.invoke = AsyncMock(return_value=None)
 
     content_none = await agent.get_agent_belief_set_content(belief_set_id)
 
-    agent._kernel.invoke.assert_called_once_with(
+    agent.kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
         arguments=KernelArguments(belief_set_id=belief_set_id),
@@ -171,10 +171,10 @@ async def test_get_agent_belief_set_content(
     assert content_none is None
 
     # Réinitialiser le mock pour le cas d'erreur
-    agent._kernel.invoke.reset_mock()
+    agent.kernel.invoke.reset_mock()
 
     # Cas 4: Gestion d'erreur si invoke échoue
-    agent._kernel.invoke = AsyncMock(
+    agent.kernel.invoke = AsyncMock(
         side_effect=Exception("Test error on get_belief_set_content")
     )
 
@@ -182,7 +182,7 @@ async def test_get_agent_belief_set_content(
     with patch.object(agent.logger, "error") as mock_logger_error:
         error_content = await agent.get_agent_belief_set_content(belief_set_id)
 
-        agent._kernel.invoke.assert_called_once_with(
+        agent.kernel.invoke.assert_called_once_with(
             plugin_name="EnqueteStatePlugin",
             function_name="get_belief_set_content",
             arguments=KernelArguments(belief_set_id=belief_set_id),

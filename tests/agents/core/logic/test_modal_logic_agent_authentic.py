@@ -134,7 +134,7 @@ def test_initialization_and_setup_authentic(authentic_agent):
     llm_service_id = authentic_agent["llm_service_id"]
 
     assert agent.name == agent_name
-    assert agent._kernel == kernel
+    assert agent.kernel == kernel
     assert agent.logic_type == "Modal"
     assert agent.instructions == SYSTEM_PROMPT_MODAL
 
