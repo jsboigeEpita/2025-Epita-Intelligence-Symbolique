@@ -248,7 +248,7 @@ class FrontendManager:
             stdout, stderr = process.communicate(timeout=180)  # 3 min max
 
             if process.returncode != 0:
-                self.logger.error(f"--- ERREUR NPM INSTALL ---")
+                self.logger.error("--- ERREUR NPM INSTALL ---")
                 self.logger.error(f"Code de retour: {process.returncode}")
                 self.logger.error(f"STDOUT:\n{stdout}")
                 self.logger.error(f"STDERR:\n{stderr}")
@@ -434,7 +434,7 @@ class FrontendManager:
             )  # 5 minutes max pour le build
 
             if process.returncode != 0:
-                self.logger.error(f"--- ERREUR NPM BUILD ---")
+                self.logger.error("--- ERREUR NPM BUILD ---")
                 self.logger.error(f"Code de retour: {process.returncode}")
                 self.logger.error(f"STDOUT:\n{stdout}")
                 self.logger.error(f"STDERR:\n{stderr}")

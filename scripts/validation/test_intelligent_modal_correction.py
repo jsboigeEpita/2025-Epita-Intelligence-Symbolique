@@ -45,22 +45,22 @@ class ModalCorrectionTester:
             {
                 "type": "syntax_error",
                 "message": 'syntax error at token "rule"',
-                "expected_bnf": ["rule ::= head ':-' body '.'"],
+                "expected_bn": ["rule ::= head ':-' body '.'"],
             },
             {
                 "type": "atom_error",
                 "message": 'atom "undefined_predicate" not defined',
-                "expected_bnf": ["atom ::= predicate '(' terms ')'"],
+                "expected_bn": ["atom ::= predicate '(' terms ')'"],
             },
             {
                 "type": "variable_error",
                 "message": "singleton variable X in rule",
-                "expected_bnf": ["variable ::= uppercase_identifier"],
+                "expected_bn": ["variable ::= uppercase_identifier"],
             },
             {
                 "type": "constraint_error",
                 "message": "integrity constraint violated",
-                "expected_bnf": ["constraint ::= ':-' body '.'"],
+                "expected_bn": ["constraint ::= ':-' body '.'"],
             },
         ]
 
@@ -159,17 +159,17 @@ class ModalCorrectionTester:
                     # Vérifier si une règle attendue est présente
                     expected_found = any(
                         expected in rule
-                        for expected in test_case["expected_bnf"]
+                        for expected in test_case["expected_bn"]
                         for rule in generated_rules
                     )
 
                     if expected_found:
                         print(f"    ✅ Règle attendue trouvée")
                     else:
-                        print(f"    ⚠️  Règle attendue non trouvée")
+                        print("    ⚠️  Règle attendue non trouvée")
 
                 else:
-                    print(f"    ❌ Aucune règle BNF générée")
+                    print("    ❌ Aucune règle BNF générée")
                     results["failed_generations"] += 1
                     status = "failed"
 
@@ -333,7 +333,7 @@ class ModalCorrectionTester:
         Returns:
             Rapport formaté
         """
-        report = f"""
+        report = """
 RAPPORT DE TEST - SYSTÈME DE CORRECTION INTELLIGENTE DES ERREURS MODALES
 ========================================================================
 Généré le: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -373,7 +373,7 @@ intelligente des erreurs modales avec feedback BNF constructif.
                     )
 
         # Recommandations
-        report += f"\nRECOMMANDATIONS\n"
+        report += "\nRECOMMANDATIONS\n"
         report += "===============\n"
 
         overall_success = all(
@@ -395,7 +395,7 @@ intelligente des erreurs modales avec feedback BNF constructif.
             report += "⚠️  Certains composants nécessitent des améliorations.\n"
             report += "🔧 Vérifier la configuration et les patterns d'erreur.\n"
 
-        report += f"\n📋 PROCHAINES ÉTAPES\n"
+        report += "\n📋 PROCHAINES ÉTAPES\n"
         report += "====================\n"
         report += "1. Intégrer le système dans le pipeline principal\n"
         report += "2. Tester avec des erreurs réelles de production\n"
@@ -474,7 +474,7 @@ async def main():
             else 0
         )
 
-        print(f"\n🏁 RÉSULTAT GLOBAL")
+        print("\n🏁 RÉSULTAT GLOBAL")
         print("=" * 50)
         print(f"📊 Catégories de test réussies: {success_count}/{total_test_categories}")
         print(f"📈 Taux de succès global: {success_rate:.1f}%")

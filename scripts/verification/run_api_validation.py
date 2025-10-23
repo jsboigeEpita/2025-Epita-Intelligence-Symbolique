@@ -76,11 +76,11 @@ class ReportGenerator:
         if len(body_str) > 1000:
             body_str = body_str[:1000] + "\n... (tronqué)\n"
 
-        content += f"- **Réponse Obtenue :**\n"
+        content += "- **Réponse Obtenue :**\n"
         content += f"  - **Status:** {response_status}\n"
         content += f"  - **Body:**\n    ```json\n{body_str}\n    ```\n"
         content += f"- **Résultat :** `{result_status}`\n"
-        content += f"- **Corrections Apportées :** Aucune (phase de collecte).\n\n"
+        content += "- **Corrections Apportées :** Aucune (phase de collecte).\n\n"
 
         with self.report_file.open("a", encoding="utf-8") as f:
             f.write(content)

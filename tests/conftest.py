@@ -186,7 +186,7 @@ def pytest_configure(config):
 
             if "OPENAI_API_KEY" not in os.environ:
                 print(
-                    f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables."
+                    "[WARNING] OPENAI_API_KEY was not found in the loaded .env variables."
                 )
             else:
                 print("[INFO] OPENAI_API_KEY successfully loaded.")

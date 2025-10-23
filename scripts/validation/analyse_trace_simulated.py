@@ -502,7 +502,7 @@ def identify_priority_improvements(
             {
                 "domaine": "Naturalité du dialogue",
                 "score_actuel": metrics.naturalite_score,
-                "probleme_principal": "Langage trop technique et répétitif",
+                "probleme_principal": "Langage trop technique et répétiti",
                 "solutions_prioritaires": [
                     "Réduire la verbosité des messages agents",
                     "Ajouter de la variété dans les expressions",
@@ -541,7 +541,7 @@ def identify_priority_improvements(
                     "Varier le style des révélations Moriarty",
                     "Ajouter du mystère et de la stratégie",
                     "Implémenter des révélations indirectes",
-                    "Créer plus de suspense narratif",
+                    "Créer plus de suspense narrati",
                 ],
                 "priorite": "MOYENNE",
             }
@@ -609,7 +609,7 @@ def generate_optimization_roadmap(
     return {
         "phase_1_personnalites_urgente": {
             "duree_estimee": "3-4 jours",
-            "objectif": "Transformer les agents en personnages distincts et attachants",
+            "objecti": "Transformer les agents en personnages distincts et attachants",
             "actions_concretes": [
                 "Réécrire le prompt Watson: de 'j'attends vos instructions' à analyse proactive",
                 "Enrichir Moriarty: ajouter mystère, ironie, révélations théâtrales",
@@ -621,7 +621,7 @@ def generate_optimization_roadmap(
         },
         "phase_2_naturalite_elevee": {
             "duree_estimee": "2-3 jours",
-            "objectif": "Rendre les dialogues plus naturels et engageants",
+            "objecti": "Rendre les dialogues plus naturels et engageants",
             "actions_concretes": [
                 "Réduire longueur moyenne des messages de 150 à 80 mots",
                 "Remplacer jargon technique par langage conversationnel",
@@ -633,7 +633,7 @@ def generate_optimization_roadmap(
         },
         "phase_3_fluidite_moyenne": {
             "duree_estimee": "2 jours",
-            "objectif": "Améliorer la continuité et les transitions",
+            "objecti": "Améliorer la continuité et les transitions",
             "actions_concretes": [
                 "Ajouter système de mémoire contextuelle (3 derniers messages)",
                 "Forcer références explicites au tour précédent",
@@ -645,7 +645,7 @@ def generate_optimization_roadmap(
         },
         "phase_4_polish_final": {
             "duree_estimee": "3 jours",
-            "objectif": "Peaufinage et validation de la trace idéale",
+            "objecti": "Peaufinage et validation de la trace idéale",
             "actions_concretes": [
                 "Optimiser dosage et timing des révélations Moriarty",
                 "Ajouter éléments de suspense et retournements",
@@ -709,9 +709,9 @@ def main():
     print("=" * 80)
 
     print(f"\n[TARGET] SCORE GLOBAL ACTUEL: {metrics.moyenne_globale():.1f}/10")
-    print(f"[GRAPH_UP] OBJECTIF TRACE IDÉALE: 8.0/10")
+    print("[GRAPH_UP] OBJECTIF TRACE IDÉALE: 8.0/10")
 
-    print(f"\n[BAR_CHART] DÉTAIL DES SCORES:")
+    print("\n[BAR_CHART] DÉTAIL DES SCORES:")
     print(
         f"  • Naturalité dialogue: {metrics.naturalite_score:.1f}/10 {'[X] FAIBLE' if metrics.naturalite_score < 6 else '[V] OK'}"
     )
@@ -734,18 +734,18 @@ def main():
         f"  • Satisfaction résolution: {metrics.satisfaction_resolution_score:.1f}/10 {'[X] FAIBLE' if metrics.satisfaction_resolution_score < 6 else '[V] OK'}"
     )
 
-    print(f"\n[ALERT] PROBLÈMES CRITIQUES IDENTIFIÉS:")
+    print("\n[ALERT] PROBLÈMES CRITIQUES IDENTIFIÉS:")
     critical_issues = [imp for imp in improvements if imp.get("priorite") == "CRITIQUE"]
     for i, issue in enumerate(critical_issues, 1):
         print(f"  {i}. {issue['domaine']}: {issue['probleme_principal']}")
 
-    print(f"\n[CLIPBOARD] PLAN D'OPTIMISATION (TOTAL: 10-12 JOURS):")
-    print(f"  Phase 1 (CRITIQUE): Personnalités distinctes - 3-4 jours")
-    print(f"  Phase 2 (ÉLEVÉE): Naturalité dialogue - 2-3 jours")
-    print(f"  Phase 3 (MOYENNE): Fluidité transitions - 2 jours")
-    print(f"  Phase 4 (FINAL): Polish et validation - 3 jours")
+    print("\n[CLIPBOARD] PLAN D'OPTIMISATION (TOTAL: 10-12 JOURS):")
+    print("  Phase 1 (CRITIQUE): Personnalités distinctes - 3-4 jours")
+    print("  Phase 2 (ÉLEVÉE): Naturalité dialogue - 2-3 jours")
+    print("  Phase 3 (MOYENNE): Fluidité transitions - 2 jours")
+    print("  Phase 4 (FINAL): Polish et validation - 3 jours")
 
-    print(f"\n[GRAPH_UP] IMPACT ATTENDU TOTAL: +6-7 points -> Score cible 8.0+/10")
+    print("\n[GRAPH_UP] IMPACT ATTENDU TOTAL: +6-7 points -> Score cible 8.0+/10")
 
     print(
         f"\n[PAGE] Rapport complet sauvegardé: analyse_trace_complete_{timestamp}.json"

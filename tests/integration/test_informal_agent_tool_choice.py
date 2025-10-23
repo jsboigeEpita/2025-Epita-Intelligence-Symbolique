@@ -81,4 +81,4 @@ def test_informal_agent_forced_tool_choice(tmp_path):
         expected_trace in trace_content
     ), f"La trace de l'appel à l'outil '{expected_trace}' n'a pas été trouvée dans le log."
 
-    print(f"\n[SUCCESS] La trace de l'appel à l'outil a été trouvée dans le log.")
+    print("\n[SUCCESS] La trace de l'appel à l'outil a été trouvée dans le log.")

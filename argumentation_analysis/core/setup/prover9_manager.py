@@ -225,7 +225,7 @@ class Prover9Manager:
             original_executable_path.rename(original_renamed_path)
 
         # 2. Créer le script wrapper
-        wrapper_content = f"""@echo off
+        wrapper_content = """@echo off
 rem Wrapper pour prover9.exe pour gérer le cas sans arguments qui cause un deadlock.
 set "PROVER9_CMD={original_renamed_path.name}"
 set "PROVER9_DIR={original_renamed_path.parent.resolve()}"
@@ -277,7 +277,7 @@ def _unzip_file(zip_path, dest_dir, logger):
     try:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(dest_dir)
-        logger.info(f"Archive décompressée avec succès.")
+        logger.info("Archive décompressée avec succès.")
         return True
     except Exception as e:
         logger.error(f"Erreur lors de la décompression: {e}")

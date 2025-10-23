@@ -47,12 +47,12 @@ def clean_directory_with_autoflake(directory):
     print(f"{'='*60}")
 
     # Compter les erreurs avant
-    print(f"\n🔍 Analyse flake8 AVANT nettoyage...")
+    print("\n🔍 Analyse flake8 AVANT nettoyage...")
     errors_before = count_flake8_errors(directory)
     print(f"   Erreurs détectées : {errors_before}")
 
     # Dry-run autoflake pour voir ce qui serait modifié
-    print(f"\n🧪 Simulation autoflake (dry-run)...")
+    print("\n🧪 Simulation autoflake (dry-run)...")
     dry_run_cmd = f"python -m autoflake --remove-all-unused-imports --remove-unused-variables --recursive --check {directory}"
     dry_run_result = run_command(dry_run_cmd)
 
@@ -70,14 +70,14 @@ def clean_directory_with_autoflake(directory):
         }
 
     # Application réelle
-    print(f"\n✨ Application du nettoyage autoflake...")
+    print("\n✨ Application du nettoyage autoflake...")
     clean_cmd = f"python -m autoflake --remove-all-unused-imports --remove-unused-variables --recursive --in-place {directory}"
     clean_result = run_command(clean_cmd)
 
-    print(f"   ✅ Nettoyage terminé")
+    print("   ✅ Nettoyage terminé")
 
     # Compter les erreurs après
-    print(f"\n🔍 Analyse flake8 APRÈS nettoyage...")
+    print("\n🔍 Analyse flake8 APRÈS nettoyage...")
     errors_after = count_flake8_errors(directory)
     print(f"   Erreurs détectées : {errors_after}")
 
@@ -87,7 +87,7 @@ def clean_directory_with_autoflake(directory):
         print(f"   📉 Réduction : -{reduction} erreurs (-{percentage:.1f}%)")
     else:
         print(
-            f"   ⚠️  Pas de réduction d'erreurs (peut-être des erreurs non-F401/F841)"
+            "   ⚠️  Pas de réduction d'erreurs (peut-être des erreurs non-F401/F841)"
         )
 
     return {
@@ -153,7 +153,7 @@ def main():
             print(f"⏭️  {result['directory']:30s} | Pas de modifications nécessaires")
 
     print(f"\n{'='*60}")
-    print(f"📈 STATISTIQUES GLOBALES")
+    print("📈 STATISTIQUES GLOBALES")
     print(f"{'='*60}")
     print(f"   Erreurs initiales     : {total_errors_initial:,}")
 
@@ -169,11 +169,11 @@ def main():
 
     print(f"   Fichiers modifiés     : {total_files_modified}")
 
-    print(f"\n💾 Prochaines étapes recommandées :")
-    print(f"   1. Vérifier les modifications : git diff")
-    print(f"   2. Exécuter black : python -m black --check .")
+    print("\n💾 Prochaines étapes recommandées :")
+    print("   1. Vérifier les modifications : git diff")
+    print("   2. Exécuter black : python -m black --check .")
     print(
-        f"   3. Commit intermédiaire : git add . && git commit -m 'refactor: remove unused imports (F401, F841) - D-CI-06 Phase 5c'"
+        "   3. Commit intermédiaire : git add . && git commit -m 'refactor: remove unused imports (F401, F841) - D-CI-06 Phase 5c'"
     )
 
     return 0

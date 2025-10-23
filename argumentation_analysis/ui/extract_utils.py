@@ -303,7 +303,7 @@ def save_extract_definitions_safely(
                 )
                 logger.info(f"Définitions chiffrées sauvegardées dans {config_path}")
 
-                return True, f"Définitions sauvegardées avec succès"
+                return True, "Définitions sauvegardées avec succès"
             except Exception as e:
                 logger.error(f"Erreur lors du chiffrement: {e}")
                 if fallback_json_file:

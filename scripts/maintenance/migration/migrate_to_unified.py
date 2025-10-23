@@ -219,7 +219,7 @@ def show_quick_start():
             "description": "Test rapide avec données de démonstration",
         },
         {
-            "titre": "Mode interactif",
+            "titre": "Mode interacti",
             "commande": "python scripts/main/analyze_text.py --interactive",
             "description": "Interface guidée pour sélection de sources",
         },
@@ -243,7 +243,7 @@ def create_migration_summary():
     with open(summary_file, "w", encoding="utf-8") as f:
         f.write("# 📋 RÉSUMÉ MIGRATION ENHANCED PM ORCHESTRATION v2.0\n\n")
         f.write(f"**Date de migration**: {Path().cwd()}\n")
-        f.write(f"**Script de migration**: scripts/migrate_to_unified.py\n\n")
+        f.write("**Script de migration**: scripts/migrate_to_unified.py\n\n")
 
         f.write("## ✅ Actions effectuées\n\n")
         f.write("- [x] Vérification environnement\n")

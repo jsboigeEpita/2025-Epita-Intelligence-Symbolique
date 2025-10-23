@@ -33,7 +33,7 @@ class PhaseBSimpleValidator:
     def __init__(self):
         self.rapport = {
             "phase": "B",
-            "objectif": "Naturalite conversationnelle",
+            "objecti": "Naturalite conversationnelle",
             "timestamp": datetime.now().isoformat(),
             "metriques": {},
             "comparaison": {},
@@ -224,7 +224,7 @@ class PhaseBSimpleValidator:
         self, resultats: Dict[str, NaturaliteMetrics]
     ) -> Dict[str, bool]:
         """Valide l'atteinte des objectifs Phase B"""
-        print(f"\nVALIDATION OBJECTIFS PHASE B")
+        print("\nVALIDATION OBJECTIFS PHASE B")
         print("=" * 50)
 
         # Calculs globaux
@@ -298,7 +298,7 @@ class PhaseBSimpleValidator:
             json.dump(rapport_data, f, indent=2, ensure_ascii=False)
 
         print(f"\nRapport sauvegarde: {filename}")
-        print(f"TEST PHASE B TERMINE")
+        print("TEST PHASE B TERMINE")
 
         return resultats, validation, filename
 
@@ -310,11 +310,11 @@ def main():
 
     # Resume final
     if all(validation.values()):
-        print(f"\nPHASE B REUSSIE ! Naturalite conversationnelle optimisee")
-        print(f"Prochaine etape: Continuez vers les phases suivantes")
+        print("\nPHASE B REUSSIE ! Naturalite conversationnelle optimisee")
+        print("Prochaine etape: Continuez vers les phases suivantes")
         return 0
     else:
-        print(f"\nPHASE B A PEAUFINER. Ajustements recommandes.")
+        print("\nPHASE B A PEAUFINER. Ajustements recommandes.")
         return 1
 
 

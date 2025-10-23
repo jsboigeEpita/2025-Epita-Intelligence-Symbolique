@@ -412,7 +412,7 @@ if __name__ == "__main__":
         for var, value in manager.get_environment_variables().items():
             print(f"{var}={value}")
 
-        print(f"\n=== URLs (basées sur les ports disponibles) ===")
+        print("\n=== URLs (basées sur les ports disponibles) ===")
         print(f"Backend: {manager.get_url('backend')}")
         print(f"Frontend: {manager.get_url('frontend')}")
         print(f"API: {manager.get_api_base_url()}")

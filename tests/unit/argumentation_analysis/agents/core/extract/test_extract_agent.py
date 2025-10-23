@@ -69,10 +69,10 @@ async def test_extract_from_name_json_error(
     # On vérifie que la logique de parsing d'erreur est bien déclenchée
     assert result.status == "error"
     assert "Réponse non-JSON de l'agent LLM." in result.message
-    print(f"\n--- Test de réponse non-JSON réussi ---")
+    print("\n--- Test de réponse non-JSON réussi ---")
     print(f"  Statut reçu: {result.status}")
     print(f"  Message: {result.message}")
-    print(f"------------------------------------")
+    print("------------------------------------")
 
 
 @pytest.fixture

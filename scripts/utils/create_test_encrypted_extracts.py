@@ -277,7 +277,7 @@ def main():
 
     if success:
         logger.info("Fichier de test créé avec succès !")
-        logger.info(f"Vous pouvez maintenant tester avec:")
+        logger.info("Vous pouvez maintenant tester avec:")
         logger.info(
             f"python scripts/utils/list_encrypted_extracts.py --passphrase '{args.passphrase}'"
         )

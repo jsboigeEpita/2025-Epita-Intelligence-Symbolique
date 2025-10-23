@@ -312,7 +312,7 @@ if __name__ == "__main__":
             f"Test check_project_python_files_encoding : OK. Fichier non-UTF-8 détecté comme prévu: {non_utf8[0]}"
         )
     else:
-        logger.error(f"Test check_project_python_files_encoding : ÉCHEC.")
+        logger.error("Test check_project_python_files_encoding : ÉCHEC.")
         logger.error(f"  Attendu: ['{expected_bad_file}']")
         logger.error(f"  Obtenu : {non_utf8}")
 

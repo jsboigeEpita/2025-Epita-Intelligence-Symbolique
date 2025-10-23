@@ -156,7 +156,7 @@ class GitFilesInventoryFast:
             if file_path.startswith("test_"):
                 return (
                     "move",
-                    f"Fichier de test orphelin - déplacer vers tests/validation_sherlock_watson/",
+                    "Fichier de test orphelin - déplacer vers tests/validation_sherlock_watson/",
                 )
             elif file_path.endswith(".md"):
                 return "move", "Fichier de documentation - déplacer vers docs/"
@@ -260,26 +260,26 @@ class GitFilesInventoryFast:
         stats = self.calculate_statistics()
 
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(f"# Rapport d'Analyse des Fichiers Git\n\n")
+            f.write("# Rapport d'Analyse des Fichiers Git\n\n")
             f.write(
                 f"**Date de génération:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
             )
-            f.write(f"**Projet:** Intelligence Symbolique - Sherlock Watson\n")
+            f.write("**Projet:** Intelligence Symbolique - Sherlock Watson\n")
             f.write(f"**Total de fichiers analysés:** {len(self.files_analysis)}\n\n")
-            f.write(f"## 📊 Statistiques Générales\n\n")
-            f.write(f"### Par Statut\n")
+            f.write("## 📊 Statistiques Générales\n\n")
+            f.write("### Par Statut\n")
             for status, count in stats["by_status"].items():
                 f.write(f"- **{status}:** {count} fichiers\n")
 
-            f.write(f"\n### Par Catégorie\n")
+            f.write("\n### Par Catégorie\n")
             for category, count in stats["by_category"].items():
                 f.write(f"- **{category}:** {count} fichiers\n")
 
-            f.write(f"\n### Par Recommandation\n")
+            f.write("\n### Par Recommandation\n")
             for recommendation, count in stats["by_recommendation"].items():
                 f.write(f"- **{recommendation}:** {count} fichiers\n")
 
-            f.write(f"\n## 🔍 Analyse Détaillée par Catégorie\n\n")
+            f.write("\n## 🔍 Analyse Détaillée par Catégorie\n\n")
 
             by_category = defaultdict(list)
             for analysis in self.files_analysis:
@@ -295,9 +295,9 @@ class GitFilesInventoryFast:
                     f.write(f"- Modifié: {file_analysis.modified}\n")
                     f.write(f"- **Recommandation: `{file_analysis.recommendation}`**\n")
                     f.write(f"- Raison: {file_analysis.reason}\n")
-                    f.write(f"\n")
+                    f.write("\n")
 
-                f.write(f"\n")
+                f.write("\n")
 
         print(f"📄 Rapport détaillé généré: {report_path}")
 
@@ -327,9 +327,9 @@ class GitFilesInventoryFast:
             by_recommendation[analysis.recommendation].append(analysis)
 
         with open(plan_path, "w", encoding="utf-8") as f:
-            f.write(f"# Plan d'Actions - Nettoyage Git\n\n")
+            f.write("# Plan d'Actions - Nettoyage Git\n\n")
             f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            f.write(f"## 🎯 Actions Prioritaires\n\n")
+            f.write("## 🎯 Actions Prioritaires\n\n")
 
             priority_order = [
                 "delete",
@@ -365,7 +365,7 @@ class GitFilesInventoryFast:
                     for file_analysis in files:
                         f.write(f"- `{file_analysis.path}` - {file_analysis.reason}\n")
 
-                    f.write(f"\n")
+                    f.write("\n")
 
         print(f"📋 Plan d'actions généré: {plan_path}")
 

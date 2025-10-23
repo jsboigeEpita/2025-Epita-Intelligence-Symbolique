@@ -64,5 +64,5 @@ if __name__ == "__main__":
     print("   • Falls back to pattern matching")
     print("   • Good for testing architecture")
 
-    print(f"\n💡 Recommendation: Use Option 1 for production")
-    print(f"   Call: configure_service_for_pattern_matching_only()")
+    print("\n💡 Recommendation: Use Option 1 for production")
+    print("   Call: configure_service_for_pattern_matching_only()")

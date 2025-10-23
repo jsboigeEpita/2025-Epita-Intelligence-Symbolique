@@ -928,7 +928,7 @@ class TraceAnalyzer:
                 f"**Généré le:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             )
             report.append(
-                f"**Analyseur:** TraceAnalyzer v2.0 - Format Conversation Agentielle"
+                "**Analyseur:** TraceAnalyzer v2.0 - Format Conversation Agentielle"
             )
             report.append("")
 
@@ -1086,7 +1086,7 @@ class TraceAnalyzer:
                 f"- **Complexité de l'orchestration:** {len(orchestration.sequence_order)} étapes"
             )
             report.append(
-                f"- **Exhaustivité de l'analyse:** "
+                "- **Exhaustivité de l'analyse:** "
                 f"Formelle ({len(query_results.logic_types_used)} types) + "
                 f"Informelle ({len(informal_exploration.fallacy_detection)} détections)"
             )

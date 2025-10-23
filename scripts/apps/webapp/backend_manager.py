@@ -59,7 +59,7 @@ class BackendManager:
         # Forcer l'utilisation d'un chemin absolu pour la robustesse
         # Forcer l'utilisation d'un chemin absolu pour la robustesse et pointer vers le bon script
         # Forcer l'utilisation du script d'activation à la racine du projet, comme demandé par l'audit
-        self.env_activation = f'powershell -Command ". ./activate_project_env.ps1"'
+        self.env_activation = 'powershell -Command ". ./activate_project_env.ps1"'
 
         # État runtime
         self.process: Optional[subprocess.Popen] = None

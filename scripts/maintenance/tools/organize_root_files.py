@@ -95,7 +95,7 @@ def organize_root_files():
         f"docs/rapports/organisation_root_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     )
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write(f"# Rapport d'Organisation des Fichiers Racine\n\n")
+        f.write("# Rapport d'Organisation des Fichiers Racine\n\n")
         f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write(f"**Fichiers déplacés:** {len(moved_files)}\n\n")
         f.write("## Fichiers Déplacés\n\n")

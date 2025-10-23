@@ -100,7 +100,7 @@ def test_jvm_startup(jvm_dll_path):
 
 def set_java_environment(portable_jdk_path):
     """Définit les variables d'environnement Java"""
-    logger.info(f"\n=== CONFIGURATION ENVIRONNEMENT JAVA ===")
+    logger.info("\n=== CONFIGURATION ENVIRONNEMENT JAVA ===")
 
     # Set JAVA_HOME
     java_home = str(portable_jdk_path)

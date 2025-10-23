@@ -87,7 +87,7 @@ def process_audio_pipeline(audio_description: str, show_steps: bool = True):
 
     # Step 2: Fallacy Analysis
     if show_steps:
-        print(f"\n🔄 Step 2: Fallacy Analysis")
+        print("\n🔄 Step 2: Fallacy Analysis")
         print("Analyzing transcribed text for logical fallacies...")
         time.sleep(1)  # Simulate processing time
 
@@ -97,7 +97,7 @@ def process_audio_pipeline(audio_description: str, show_steps: bool = True):
         print("✅ Fallacy analysis completed!")
 
         # Summary
-        print(f"\n📊 ANALYSIS SUMMARY")
+        print("\n📊 ANALYSIS SUMMARY")
         print("-" * 40)
         print(
             f"Total fallacies detected: {analysis_result['summary']['total_fallacies']}"
@@ -109,13 +109,13 @@ def process_audio_pipeline(audio_description: str, show_steps: bool = True):
 
         # Detected fallacies
         if analysis_result["fallacies_detected"]:
-            print(f"\n🚨 DETECTED FALLACIES:")
+            print("\n🚨 DETECTED FALLACIES:")
             for i, fallacy in enumerate(analysis_result["fallacies_detected"], 1):
                 print(f"  {i}. {fallacy['type']}: '{fallacy['text_span']}'")
 
         # Recommendations
         if analysis_result["recommendations"]:
-            print(f"\n💡 RECOMMENDATIONS:")
+            print("\n💡 RECOMMENDATIONS:")
             for i, rec in enumerate(analysis_result["recommendations"], 1):
                 print(f"  {i}. {rec}")
 
@@ -144,7 +144,7 @@ def main():
     results = []
 
     for audio_type, description in test_cases:
-        print(f"\n" + "=" * 80)
+        print("\n" + "=" * 80)
         print(f"🎵 PROCESSING: {description}")
         print("=" * 80)
 
@@ -157,7 +157,7 @@ def main():
         time.sleep(0.5)  # Brief pause between tests
 
     # Overall summary
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("📈 OVERALL PIPELINE SUMMARY")
     print("=" * 80)
 
@@ -169,14 +169,14 @@ def main():
     print(f"✅ Successful pipeline runs: {successful_runs}/{len(results)}")
     print(f"🚨 Total fallacies detected across all tests: {total_fallacies}")
 
-    print(f"\n📋 DETAILED RESULTS:")
+    print("\n📋 DETAILED RESULTS:")
     for result in results:
         analysis = result["result"]["fallacy_analysis"]
         print(
             f"  • {result['description']}: {analysis['summary']['total_fallacies']} fallacies ({analysis['summary']['overall_quality']} quality)"
         )
 
-    print(f"\n🎉 INTEGRATION DEMONSTRATION COMPLETE!")
+    print("\n🎉 INTEGRATION DEMONSTRATION COMPLETE!")
     print("The speech-to-text + fallacy analysis pipeline is working successfully!")
 
 

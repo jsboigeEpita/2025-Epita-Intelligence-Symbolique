@@ -148,10 +148,10 @@ class ValidationPoint2:
 
                     # Vérifier la structure de réponse
                     if "results" in result and "metadata" in result:
-                        print(f"[OK] Structure de réponse valide")
+                        print("[OK] Structure de réponse valide")
                         success_count += 1
                     else:
-                        print(f"[ATTENTION] Structure de réponse incomplète")
+                        print("[ATTENTION] Structure de réponse incomplète")
                 else:
                     print(f"[ERREUR] Status: {response.status_code}")
 
@@ -234,7 +234,7 @@ class ValidationPoint2:
 
             if test_response.status_code == 200:
                 result = test_response.json()
-                print(f"[OK] Génération synthétique réussie")
+                print("[OK] Génération synthétique réussie")
                 print(
                     f"[INFO] Durée: {result.get('metadata', {}).get('duration', 'N/A')}s"
                 )
@@ -276,7 +276,7 @@ class ValidationPoint2:
                 self.results["e2e_tests"] = True
                 return True
             else:
-                print(f"[ATTENTION] Tests Playwright partiels")
+                print("[ATTENTION] Tests Playwright partiels")
                 print(f"Stdout: {result.stdout[-200:]}")
                 return False
 
@@ -355,7 +355,7 @@ class ValidationPoint2:
         with open("rapport_validation_point2.json", "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        print(f"\n[INFO] Rapport sauvegardé: rapport_validation_point2.json")
+        print("\n[INFO] Rapport sauvegardé: rapport_validation_point2.json")
         return success_rate >= 0.6
 
     def get_recommendations(self):

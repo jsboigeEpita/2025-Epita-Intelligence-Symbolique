@@ -85,7 +85,7 @@ def main():
     with open(backup_dir / "cleanup_report.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\n📊 Nettoyage terminé:")
+    print("\n📊 Nettoyage terminé:")
     print(f"  - {len(deleted_files)} fichiers supprimés")
     print(f"  - {len(errors)} erreurs")
     print(f"  - Sauvegarde: {backup_dir}")

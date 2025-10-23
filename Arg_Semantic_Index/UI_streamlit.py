@@ -46,7 +46,7 @@ with tab1:
             if not top_excerpts:
                 st.warning("Aucun extrait pertinent trouvé.")
             else:
-                st.success(f"Top 5 extraits les plus pertinents :")
+                st.success("Top 5 extraits les plus pertinents :")
                 for i, ex in enumerate(top_excerpts, start=1):
                     st.markdown(f"### Extrait {i}")
                     st.markdown(

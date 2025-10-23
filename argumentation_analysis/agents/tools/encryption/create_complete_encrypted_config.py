@@ -59,7 +59,7 @@ def create_complete_encrypted_config():
     # Vérifier si la clé de chiffrement est disponible
     if not ENCRYPTION_KEY:
         print(
-            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
+            "❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
         )
         return False
 
@@ -108,7 +108,7 @@ def create_complete_encrypted_config():
                 print(
                     f"⚠️ Avertissement: Fichier de cache '{cache_filepath.name}' non trouvé pour la source '{source_name}'."
                 )
-                print(f"   Cette source sera incluse sans son contenu.")
+                print("   Cette source sera incluse sans son contenu.")
                 continue
 
             # Lire le contenu du fichier de cache
@@ -125,7 +125,7 @@ def create_complete_encrypted_config():
                 print(
                     f"⚠️ Avertissement: Erreur lors de la lecture du fichier de cache '{cache_filepath.name}': {e}"
                 )
-                print(f"   Cette source sera incluse sans son contenu.")
+                print("   Cette source sera incluse sans son contenu.")
 
         # Convertir le dictionnaire en JSON
         json_data = json.dumps(complete_config, indent=2, ensure_ascii=False).encode(
@@ -141,7 +141,7 @@ def create_complete_encrypted_config():
         # Chiffrer les données
         encrypted_data = encrypt_data(compressed_data, ENCRYPTION_KEY)
         if not encrypted_data:
-            print(f"❌ Erreur: Échec du chiffrement des données.")
+            print("❌ Erreur: Échec du chiffrement des données.")
             return False
 
         # Sauvegarder les données chiffrées dans le fichier
@@ -166,9 +166,9 @@ def main():
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
         print(
-            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+            "⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
         )
-        print(f"   Veuillez la définir avant d'exécuter ce script.")
+        print("   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
 
     # Créer le fichier encrypté complet

@@ -151,7 +151,7 @@ class IntegrationWorkflowHelpers:
                 tab = self.page.locator(selector).first
                 # Utiliser expect pour une attente robuste
                 expect(tab).to_be_visible(timeout=2000)
-                print(f"  [NAV-OK] Onglet trouvé et visible. Clic.")
+                print("  [NAV-OK] Onglet trouvé et visible. Clic.")
                 tab.click()
                 tab_found = True
                 break

@@ -54,7 +54,7 @@ class DocumentationMaintenanceRunner:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = self.logs_dir / f"documentation_maintenance_report_{timestamp}.md"
 
-        report = f"""# Rapport de Maintenance Documentation Oracle Enhanced v2.1.0
+        report = """# Rapport de Maintenance Documentation Oracle Enhanced v2.1.0
 
 **Date :** {datetime.now().isoformat()}
 **Racine projet :** `{self.project_root}`
@@ -77,7 +77,7 @@ Détails dans les logs de sortie ci-dessous.
 Erreurs détectées - voir section diagnostic.
 """
 
-        report += f"""
+        report += """
 
 ## Logs d'Exécution
 
@@ -136,7 +136,7 @@ Erreurs détectées - voir section diagnostic.
             if isinstance(r, dict) and "success" in r
         )
 
-        print(f"\n[MAINTENANCE] Maintenance terminée")
+        print("\n[MAINTENANCE] Maintenance terminée")
         print(f"   Statut global: {'SUCCESS' if total_success else 'ERREURS'}")
         print(f"   Rapport: {report_file}")
 

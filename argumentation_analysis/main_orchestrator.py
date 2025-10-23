@@ -137,7 +137,7 @@ async def main():
             f"Échec critique de la création du service LLM: {e}", exc_info=True
         )
         print(
-            f"ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env et les logs."
+            "ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env et les logs."
         )
         # raise  # Décommenter pour arrêter si LLM indispensable
 

@@ -328,7 +328,7 @@ class MainOrchestrator:
         Cette méthode remplace la simulation par un appel réel au pipeline opérationnel.
         """
         logger.info(
-            f"Délégation de l'exécution opérationnelle au DirectOperationalExecutor..."
+            "Délégation de l'exécution opérationnelle au DirectOperationalExecutor..."
         )
 
         if not self.direct_operational_executor:
@@ -918,7 +918,7 @@ class MainOrchestrator:
             logger.info("No specialized orchestrators available at all.")
             return None
 
-        compatible_orchestrators.sort(key=lambda x: x[1].get("priority", float("inf")))
+        compatible_orchestrators.sort(key=lambda x: x[1].get("priority", float("in")))
 
         selected_name, selected_data = compatible_orchestrators[0]
         logger.debug(
@@ -1154,8 +1154,8 @@ class MainOrchestrator:
         )
 
         logger.warning(
-            f"Activation de la stratégie de repli (FALLBACK). "
-            f"Aucune stratégie applicable n'a pu être déterminée ou une erreur majeure s'est produite. "
+            "Activation de la stratégie de repli (FALLBACK). "
+            "Aucune stratégie applicable n'a pu être déterminée ou une erreur majeure s'est produite. "
             f"Extrait de l'entrée : '{input_snippet}'"
         )
 

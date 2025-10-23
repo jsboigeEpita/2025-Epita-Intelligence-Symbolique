@@ -46,7 +46,7 @@ def generate_markdown_performance_report(
         f"\n*Date de génération: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n"
     )
 
-    report_content.append("## 1. Résumé Exécutif")
+    report_content.append("## 1. Résumé Exécuti")
     report_content.append(
         "Ce rapport détaille et compare les performances de différents agents (ou configurations d'agents) d'analyse rhétorique. L'évaluation se base sur plusieurs critères incluant la détection de sophismes, la richesse contextuelle, la pertinence des évaluations de cohérence, le temps d'exécution, et la complexité des résultats générés."
     )
@@ -102,7 +102,7 @@ def generate_markdown_performance_report(
             best_fallacy_detector = max(
                 metrics.items(), key=lambda item: item[1].get("fallacy_count", -1.0)
             )[0]
-            report_content.append(f"\n### Détection de Sophismes")
+            report_content.append("\n### Détection de Sophismes")
             report_content.append(
                 f"- **Meilleure détection (nombre moyen) :** {best_fallacy_detector} ({metrics.get(best_fallacy_detector, {}).get('fallacy_count', 0.0):.2f})"
             )
@@ -117,7 +117,7 @@ def generate_markdown_performance_report(
                 metrics.items(),
                 key=lambda item: item[1].get("contextual_richness", -1.0),
             )[0]
-            report_content.append(f"\n### Richesse Contextuelle")
+            report_content.append("\n### Richesse Contextuelle")
             report_content.append(
                 f"- **Analyse la plus riche (score moyen) :** {richest_context_agent} ({metrics.get(richest_context_agent, {}).get('contextual_richness', 0.0):.2f})"
             )

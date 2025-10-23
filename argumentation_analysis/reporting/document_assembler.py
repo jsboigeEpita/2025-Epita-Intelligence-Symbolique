@@ -114,7 +114,7 @@ class UnifiedReportTemplate:
 
         # Résumé exécutif
         if "summary" in data:
-            lines.append("## 📋 Résumé exécutif")
+            lines.append("## 📋 Résumé exécuti")
             summary = data["summary"]
             lines.append(
                 f"- **Sophistication rhétorique**: {summary.get('rhetorical_sophistication', 'N/A')}"
@@ -392,7 +392,7 @@ class UnifiedReportTemplate:
                         f"### Sophisme {i}: {fallacy.get('type', 'Type inconnu')}"
                     )
                     lines.append(
-                        f"- **Fragment**: \"{fallacy.get('text_fragment', 'N/A')}\""
+                        "- **Fragment**: \"{fallacy.get('text_fragment', 'N/A')}\""
                     )
                     lines.append(
                         f"- **Explication**: {fallacy.get('explanation', 'N/A')}"
@@ -417,7 +417,7 @@ class UnifiedReportTemplate:
                         lines.append(f"- **Confiance**: {display_confidence:.1%}")
                     else:
                         lines.append(
-                            f"- **Confiance**: Non calculée (système en debug)"
+                            "- **Confiance**: Non calculée (système en debug)"
                         )
                     lines.append("")
 
@@ -686,7 +686,7 @@ class UnifiedReportTemplate:
                     f"            <div class='fallacy severity-{severity}'><h3>{fallacy.get('type', 'Type inconnu')}</h3>"
                 )
                 html_lines.append(
-                    f"                <p><strong>Fragment:</strong> \"{fallacy.get('text_fragment', 'N/A')}\"</p>"
+                    "                <p><strong>Fragment:</strong> \"{fallacy.get('text_fragment', 'N/A')}\"</p>"
                 )
                 html_lines.append(
                     f"                <p><strong>Explication:</strong> {fallacy.get('explanation', 'N/A')}</p>"

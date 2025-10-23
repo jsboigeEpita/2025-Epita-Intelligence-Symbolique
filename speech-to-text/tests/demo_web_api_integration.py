@@ -67,7 +67,7 @@ def main():
         print(json.dumps(analysis_result, indent=2, ensure_ascii=False))
 
         if analysis_result["status"] == "success":
-            print(f"\n✅ Analysis completed successfully!")
+            print("\n✅ Analysis completed successfully!")
             print(f"📊 Found {analysis_result['summary']['total_fallacies']} fallacies")
             print(f"📈 Overall quality: {analysis_result['summary']['overall_quality']}")
             print(f"🌐 API version: {analysis_result['summary']['api_version']}")
@@ -139,7 +139,7 @@ def test_complete_analysis():
         )
 
         if analysis_result["status"] == "success":
-            print(f"\n✅ Complete analysis successful!")
+            print("\n✅ Complete analysis successful!")
             print(f"📊 Fallacies: {analysis_result['summary']['total_fallacies']}")
 
             if "structure_score" in analysis_result["summary"]:

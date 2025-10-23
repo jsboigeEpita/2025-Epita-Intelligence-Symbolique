@@ -183,7 +183,7 @@ def main():
         print("\n[SUCCESS] ARCHITECTURE MODULAIRE : SUCCÈS COMPLET !")
         print("[READY] Le système de démonstration est prêt à être utilisé !")
     else:
-        print(f"\n[WARNING]  Certains tests ont échoué. Révision nécessaire.")
+        print("\n[WARNING]  Certains tests ont échoué. Révision nécessaire.")
 
     return tests_reussis == total_tests
 

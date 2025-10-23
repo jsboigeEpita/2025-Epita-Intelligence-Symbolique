@@ -188,7 +188,7 @@ class DocumentationAutoFixer:
         """Génère un rapport pour révision manuelle"""
         report_file = "logs/manual_review_needed.md"
 
-        report = f"""# 📋 Corrections de Documentation - Révision Manuelle Requise
+        report = """# 📋 Corrections de Documentation - Révision Manuelle Requise
 ## Oracle Enhanced v2.1.0
 
 Les liens suivants nécessitent une révision manuelle car ils ne peuvent pas être corrigés automatiquement.
@@ -200,7 +200,7 @@ Les liens suivants nécessitent une révision manuelle car ils ne peuvent pas ê
         for i, link_data in enumerate(
             remaining_links[:50], 1
         ):  # Limiter à 50 pour lisibilité
-            report += f"""### {i}. ❌ `{link_data['link']}`
+            report += """### {i}. ❌ `{link_data['link']}`
 - **Fichier :** `{link_data['source_file']}` (ligne {link_data.get('line_number', 'N/A')})
 - **Problème :** Lien brisé nécessitant révision manuelle
 - **Chemin cible :** `{link_data.get('target_path', 'N/A')}`
@@ -260,7 +260,7 @@ def main():
     print(f"📄 Rapport révision manuelle: {manual_report}")
 
     # Résumé final
-    print(f"\n🎯 RÉSUMÉ:")
+    print("\n🎯 RÉSUMÉ:")
     print(f"   📊 Liens prioritaires traités: {len(priority_links)}")
     print(f"   🤖 Corrections automatiques: {len(simple_corrections)}")
     print(f"   👁️ Révision manuelle requise: {len(remaining_links)}")

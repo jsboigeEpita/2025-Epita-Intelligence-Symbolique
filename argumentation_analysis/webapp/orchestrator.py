@@ -314,7 +314,7 @@ class MinimalBackendManager:
                 )
             else:
                 self.logger.error(
-                    f"[BACKEND] Le health check a échoué. Le serveur ne semble pas répondre correctement."
+                    "[BACKEND] Le health check a échoué. Le serveur ne semble pas répondre correctement."
                 )
                 await self.stop()
                 return {
@@ -925,7 +925,7 @@ class UnifiedWebOrchestrator:
         if not self.enable_trace:
             return
 
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        timestamp = datetime.now().strftime("%H:%M:%S.%")[:-3]
         entry = TraceEntry(timestamp, action, details, result, screenshot, status)
         self.trace_log.append(entry)
 
@@ -1136,7 +1136,7 @@ class UnifiedWebOrchestrator:
         except subprocess.CalledProcessError as e:
             # Cette exception a déjà été tracée, on la relance pour que le pipeline échoue.
             self.logger.error(
-                f"L'exécution des tests a échoué. Voir les logs pour la sortie de pytest."
+                "L'exécution des tests a échoué. Voir les logs pour la sortie de pytest."
             )
             raise e
         except Exception as e:
@@ -1610,7 +1610,7 @@ class UnifiedWebOrchestrator:
         success_count = sum(1 for entry in self.trace_log if entry.status == "success")
         error_count = len(self.trace_log) - success_count
 
-        content = f"""# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
+        content = """# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
 
 **Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
 **Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}
@@ -1626,7 +1626,7 @@ class UnifiedWebOrchestrator:
 
         for entry in self.trace_log:
             status_emoji = "✅" if entry.status == "success" else "❌"
-            content += f"""
+            content += """
 ### {status_emoji} {entry.timestamp} - {entry.action}
 """
             if entry.details:
@@ -1636,7 +1636,7 @@ class UnifiedWebOrchestrator:
             if entry.screenshot:
                 content += f"**Screenshot:** {entry.screenshot}\n"
 
-        content += f"""
+        content += """
 
 
 ---

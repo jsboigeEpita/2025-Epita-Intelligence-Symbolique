@@ -54,7 +54,7 @@ class AuthenticAPITester:
 
     def test_openai_api_direct(self) -> Dict[str, Any]:
         """Teste directement l'API OpenAI pour prouver l'authenticité."""
-        logger.info(f"[API] Test direct OpenAI avec GPT-4o-mini")
+        logger.info("[API] Test direct OpenAI avec GPT-4o-mini")
 
         api_key = os.getenv("OPENAI_API_KEY", "")
 
@@ -155,7 +155,7 @@ class AuthenticAPITester:
 
     def test_orchestrateur_avec_api_reelle(self) -> Dict[str, Any]:
         """Teste l'orchestrateur Cluedo avec API réelle."""
-        logger.info(f"[ORCHESTRATEUR] Test avec API réelle")
+        logger.info("[ORCHESTRATEUR] Test avec API réelle")
 
         try:
             from argumentation_analysis.orchestration.cluedo_orchestrator import (
@@ -183,7 +183,7 @@ class AuthenticAPITester:
             )
             kernel.add_service(service)
 
-            unique_question = f"""
+            unique_question = """
             ENQUÊTE AUTHENTIQUE {self.test_id} - PHASE ORCHESTRATEUR
 
             Dans le laboratoire de l'EPITA, le professeur von Neumann a disparu mystérieusement.

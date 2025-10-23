@@ -239,7 +239,7 @@ def fix_file_imports(file_path: str, errors: List[Dict], dry_run: bool = False) 
             needed_imports[undefined_name] = IMPORT_FIXES[undefined_name]
 
     if not needed_imports:
-        print(f"  ⚠️  Aucun import automatique disponible")
+        print("  ⚠️  Aucun import automatique disponible")
         return 0
 
     # Appliquer les corrections
@@ -329,7 +329,7 @@ def main():
     else:
         print("\n✅ Corrections appliquées avec succès!")
         print("\n📋 Prochaines étapes:")
-        print("  1. Vérifier les modifications: git diff")
+        print("  1. Vérifier les modifications: git dif")
         print("  2. Tester: pytest tests/ -v --tb=short -x")
         print("  3. Vérifier F821: flake8 --select=F821 --count")
         print("  4. Commit: git add . && git commit -m 'fix(linting): Add missing imports - Phase 1A Batch 1'")

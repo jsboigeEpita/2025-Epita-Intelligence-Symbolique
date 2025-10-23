@@ -45,7 +45,7 @@ async def _run_analysis(
     Initialise le kernel, la factory, crée l'agent et lance l'analyse.
     """
     try:
-        logger.info(f"Initialisation du Kernel et de la Factory...")
+        logger.info("Initialisation du Kernel et de la Factory...")
         kernel, agent_factory, _ = _create_kernel_and_factory()
 
         logger.info(f"Création de l'agent via la factory avec le type : '{agent_type}'")

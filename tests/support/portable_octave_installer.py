@@ -151,7 +151,7 @@ def ensure_portable_octave(project_root_dir: pathlib.Path) -> Optional[pathlib.P
 
     if not extracted_octave_base or not extracted_octave_base.is_dir():
         logger.error(
-            f"Échec de l'extraction d'Octave ou répertoire de base non trouvé."
+            "Échec de l'extraction d'Octave ou répertoire de base non trouvé."
         )
         return None
 

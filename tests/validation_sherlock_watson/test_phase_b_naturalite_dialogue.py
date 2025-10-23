@@ -43,7 +43,7 @@ class PhaseBValidator:
     def __init__(self):
         self.rapport = {
             "phase": "B",
-            "objectif": "Naturalité conversationnelle",
+            "objecti": "Naturalité conversationnelle",
             "timestamp": datetime.now().isoformat(),
             "metriques": {},
             "comparaison": {},
@@ -232,7 +232,7 @@ class PhaseBValidator:
 
     def generer_comparaison_avant_apres(self, resultats: Dict[str, NaturaliteMetrics]):
         """Génère la comparaison avant/après Phase B"""
-        print(f"\nCOMPARAISON AVANT/APRES PHASE B")
+        print("\nCOMPARAISON AVANT/APRES PHASE B")
         print("=" * 50)
 
         # Données "avant" simulées (Phase A)
@@ -258,28 +258,28 @@ class PhaseBValidator:
         ) / len(resultats)
 
         # Affichage comparaison
-        print(f"Longueur moyenne:")
+        print("Longueur moyenne:")
         print(f"   AVANT: {avant_phase_b['longueur_moyenne']} caractères")
         print(f"   APRÈS: {longueur_apres:.1f} caractères")
         print(
             f"   AMÉLIORATION: {((avant_phase_b['longueur_moyenne'] - longueur_apres) / avant_phase_b['longueur_moyenne'] * 100):.1f}%"
         )
 
-        print(f"\nScore naturalite:")
+        print("\nScore naturalite:")
         print(f"   AVANT: {avant_phase_b['score_naturalite']}/10")
         print(f"   APRÈS: {naturalite_apres:.2f}/10")
         print(
             f"   AMÉLIORATION: +{(naturalite_apres - avant_phase_b['score_naturalite']):.2f} points"
         )
 
-        print(f"\nExpressions techniques:")
+        print("\nExpressions techniques:")
         print(f"   AVANT: {avant_phase_b['expressions_techniques']}")
         print(f"   APRÈS: {techniques_apres:.1f}")
         print(
             f"   RÉDUCTION: {((avant_phase_b['expressions_techniques'] - techniques_apres) / avant_phase_b['expressions_techniques'] * 100):.1f}%"
         )
 
-        print(f"\nRepetitions mecaniques:")
+        print("\nRepetitions mecaniques:")
         print(f"   AVANT: {avant_phase_b['repetitions_mecaniques']}")
         print(f"   APRÈS: {mecaniques_apres:.1f}")
         reduction_mecaniques = (
@@ -303,7 +303,7 @@ class PhaseBValidator:
         self, resultats: Dict[str, NaturaliteMetrics]
     ) -> Dict[str, bool]:
         """Valide l'atteinte des objectifs Phase B"""
-        print(f"\nVALIDATION OBJECTIFS PHASE B")
+        print("\nVALIDATION OBJECTIFS PHASE B")
         print("=" * 50)
 
         # Calculs globaux
@@ -406,7 +406,7 @@ class PhaseBValidator:
         # Rapport final
         rapport_file = self.generer_rapport_phase_b(resultats, comparaison, validation)
 
-        print(f"\nTEST PHASE B TERMINE")
+        print("\nTEST PHASE B TERMINE")
         return resultats, validation, rapport_file
 
 
@@ -417,10 +417,10 @@ def main():
 
     # Résumé final
     if all(validation.values()):
-        print(f"\nPHASE B REUSSIE ! Naturalite conversationnelle optimisee")
-        print(f"Prochaine etape: Continuez vers les phases suivantes")
+        print("\nPHASE B REUSSIE ! Naturalite conversationnelle optimisee")
+        print("Prochaine etape: Continuez vers les phases suivantes")
     else:
-        print(f"\nPHASE B A PEAUFINER. Ajustements recommandes.")
+        print("\nPHASE B A PEAUFINER. Ajustements recommandes.")
 
     return 0
 

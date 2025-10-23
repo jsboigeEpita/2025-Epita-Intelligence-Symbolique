@@ -53,7 +53,7 @@ def configure_complete_reasoner_mock(
 
     # Simplification: Ne plus calculer d'extensions.
     mock_logger.info(
-        f"[CONFIGURE CompleteReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés."
+        "[CONFIGURE CompleteReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés."
     )
 
 
@@ -74,7 +74,7 @@ def configure_stable_reasoner_mock(
 
     # Simplification: Ne plus calculer d'extensions.
     mock_logger.info(
-        f"[CONFIGURE StableReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés."
+        "[CONFIGURE StableReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés."
     )
 
 
@@ -124,7 +124,7 @@ def configure_grounded_reasoner_mock(
         empty_model.iterator = MagicMock(return_value=iter([]))
         reasoner_instance_mock.getModel.return_value = empty_model
         mock_logger.debug(
-            f"[CONFIGURE GroundedReasoner] getModel() configuré pour retourner un mock d'ensemble vide/simple."
+            "[CONFIGURE GroundedReasoner] getModel() configuré pour retourner un mock d'ensemble vide/simple."
         )
 
 

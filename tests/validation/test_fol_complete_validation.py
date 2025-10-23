@@ -763,17 +763,17 @@ def main():
         print(f"\n🕐 Temps total: {report['total_validation_time']:.2f}s")
         print(f"🎯 Succès global: {'✅ OUI' if report['overall_success'] else '❌ NON'}")
 
-        print(f"\n📊 Résultats validation:")
+        print("\n📊 Résultats validation:")
         for validation, success in report["validation_results"].items():
             status = "✅" if success else "❌"
             print(f"  {status} {validation}")
 
-        print(f"\n📏 Conformité critères:")
+        print("\n📏 Conformité critères:")
         for criterion, met in report["criteria_compliance"].items():
             status = "✅" if met else "❌"
             print(f"  {status} {criterion}")
 
-        print(f"\n📈 Métriques clés:")
+        print("\n📈 Métriques clés:")
         metrics = report["metrics"]
         print(
             f"  • Syntaxe FOL valide: {metrics.get('fol_syntax_validity_rate', 0):.1%}"
@@ -787,7 +787,7 @@ def main():
         print(f"  • Temps analyse moyen: {metrics.get('avg_analysis_time', 0):.2f}s")
         print(f"  • Confiance moyenne: {metrics.get('avg_confidence', 0):.2f}")
 
-        print(f"\n💡 Recommandations:")
+        print("\n💡 Recommandations:")
         for rec in report["recommendations"]:
             print(f"  • {rec}")
 

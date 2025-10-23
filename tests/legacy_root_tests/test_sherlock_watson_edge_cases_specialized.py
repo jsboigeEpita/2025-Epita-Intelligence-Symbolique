@@ -422,13 +422,13 @@ class SpecializedEdgeCaseTester:
         }
 
         # Affichage des résultats
-        print(f"\n=== RÉSULTATS TESTS EDGE CASES SPÉCIALISÉS ===")
+        print("\n=== RÉSULTATS TESTS EDGE CASES SPÉCIALISÉS ===")
         print(f"Tests exécutés: {total_tests}")
         print(f"Récupérations réussies: {successful_recoveries}/{total_tests}")
         print(f"Score de robustesse: {robustness_score:.1f}/100")
         print(f"Taux d'erreur: {error_rate*100:.1f}%")
 
-        print(f"\n=== PERFORMANCE PAR AGENT ===")
+        print("\n=== PERFORMANCE PAR AGENT ===")
         for agent, stats in agent_stats.items():
             print(
                 f"{agent}: Récupération {stats['recovery_rate']*100:.1f}%, Temps moyen {stats['avg_processing_time']:.2f}s"

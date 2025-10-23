@@ -113,13 +113,13 @@ if __name__ == "__main__":
         else:  # Erreur de déchiffrement (encrypted n'est pas None)
             final_decrypted_str = "N/A (erreur de déchiffrement)"
 
-    print(f"\n--- Résumé du Test ---")
+    print("\n--- Résumé du Test ---")
     print(f"Chaîne originale        : {original}")
     if encrypted:
         print(
             f"Données chiffrées (b64) : {base64.b64encode(encrypted).decode('utf-8') if isinstance(encrypted, bytes) else 'N/A (non byte)'}"
         )
     else:
-        print(f"Données chiffrées (b64) : N/A (erreur de chiffrement ou non byte)")
+        print("Données chiffrées (b64) : N/A (erreur de chiffrement ou non byte)")
     print(f"Chaîne déchiffrée       : {final_decrypted_str}")
     print(f"Statut du cycle         : {'Succès' if success else 'Échec'}")

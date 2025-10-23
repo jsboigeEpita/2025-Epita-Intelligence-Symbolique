@@ -637,7 +637,7 @@ class TestEinsteinPerformanceMetrics:
             ), f"Temps d'exécution trop lent: {avg_execution_time}s"
             assert avg_hints >= 1, f"Pas assez d'indices générés: {avg_hints}"
 
-            print(f"\n=== PERFORMANCE EINSTEIN DEMO ===")
+            print("\n=== PERFORMANCE EINSTEIN DEMO ===")
             print(f"Temps moyen: {avg_execution_time:.2f}s")
             print(f"Indices moyens: {avg_hints:.1f}")
             print(

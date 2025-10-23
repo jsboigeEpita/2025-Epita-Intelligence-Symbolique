@@ -557,7 +557,7 @@ def create_marker_editor_ui():
         if 0 <= position_in_visible < len(html_text):
             html_text = (
                 html_text[:position_in_visible]
-                + f"<span style='background-color: #FF5733; color: white;'>⬇</span>"
+                + "<span style='background-color: #FF5733; color: white;'>⬇</span>"
                 + html_text[position_in_visible:]
             )
 
@@ -594,7 +594,7 @@ def create_marker_editor_ui():
         with preview_output:
             clear_output(wait=True)
             if extracted_text:
-                print(f"Aperçu (prévisualisation en temps réel):")
+                print("Aperçu (prévisualisation en temps réel):")
                 print(f"Statut: {status}")
                 print(f"Extrait ({len(extracted_text)} caractères):")
                 print(f"{extracted_text[:500]}...")

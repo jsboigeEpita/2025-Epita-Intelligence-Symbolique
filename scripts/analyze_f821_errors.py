@@ -84,7 +84,7 @@ def categorize_f821_error(file_path, line_num, error_msg, line_content=None):
         return {
             "category": "missing_imports",
             "confidence": "medium",
-            "reason": f"Message mentionne import/module"
+            "reason": "Message mentionne import/module"
         }
 
     # Nom commence par majuscule = probablement une classe à importer

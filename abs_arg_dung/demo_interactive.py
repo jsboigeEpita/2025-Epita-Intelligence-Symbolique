@@ -38,7 +38,7 @@ def demo_basic_usage():
     arguments = {
         "sante": "Être végétarien est bon pour la santé",
         "environnement": "L'élevage nuit à l'environnement",
-        "plaisir": "La viande procure du plaisir gustatif",
+        "plaisir": "La viande procure du plaisir gustati",
         "tradition": "Manger de la viande est traditionnel",
         "nutrition": "La viande apporte des nutriments essentiels",
     }
@@ -111,7 +111,7 @@ def demo_enhanced_agent():
     enh_grounded = enhanced_agent.get_grounded_extension()
     print(f"Extension fondée: {enh_grounded}")
 
-    print(f"\n🎯 Résultat:")
+    print("\n🎯 Résultat:")
     if std_grounded != enh_grounded:
         print("✅ L'agent amélioré corrige le comportement!")
         print(f"  Standard: {std_grounded} (conservateur)")
@@ -218,7 +218,7 @@ def demo_import_export():
     # Export vers différents formats
     formats = {
         "json": "demo_framework.json",
-        "tgf": "demo_framework.tgf",
+        "tg": "demo_framework.tg",
         "dot": "demo_framework.dot",
     }
 
@@ -226,7 +226,7 @@ def demo_import_export():
     for fmt, filename in formats.items():
         if fmt == "json":
             FrameworkIO.export_to_json(agent, filename)
-        elif fmt == "tgf":
+        elif fmt == "tg":
             FrameworkIO.export_to_tgf(agent, filename)
         elif fmt == "dot":
             FrameworkIO.export_to_dot(agent, filename)
@@ -236,13 +236,13 @@ def demo_import_export():
             print(f"  ✅ {fmt.upper()}: {filename} ({size} bytes)")
 
     # Test import
-    print(f"\n📥 Test d'import depuis JSON:")
+    print("\n📥 Test d'import depuis JSON:")
     imported_agent = FrameworkIO.import_from_json("demo_framework.json")
     imported_grounded = imported_agent.get_grounded_extension()
     print(f"Extension fondée importée: {imported_grounded}")
 
     # Export rapport d'analyse
-    print(f"\n📋 Export rapport d'analyse:")
+    print("\n📋 Export rapport d'analyse:")
     FrameworkIO.export_analysis_report(agent, "demo_analysis.json")
     print("Rapport complet exporté!")
 
@@ -326,8 +326,8 @@ def main_demo():
     print("✅ Visualisation graphique")
     print("✅ Documentation professionnelle")
 
-    print(f"\n🚀 Le projet est maintenant prêt pour évaluation!")
-    print(f"📁 Tous les fichiers sont dans: /home/wassim/repos/mon_agent_dung")
+    print("\n🚀 Le projet est maintenant prêt pour évaluation!")
+    print("📁 Tous les fichiers sont dans: /home/wassim/repos/mon_agent_dung")
 
 
 if __name__ == "__main__":

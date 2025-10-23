@@ -560,7 +560,7 @@ def main():
 
         # Afficher résumé
         stats = report["statistics"]
-        logger.info(f"📈 Résumé validation:")
+        logger.info("📈 Résumé validation:")
         logger.info(f"   - Total opérations: {stats['total_operations']}")
         logger.info(
             f"   - Mocks: {stats['mock_operations']} ({stats['mock_percentage']:.1f}%)"

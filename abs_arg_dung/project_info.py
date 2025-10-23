@@ -41,7 +41,7 @@ PROJECT_METADATA = {
     ],
     "supported_formats": {
         "json": "JavaScript Object Notation - Primary format",
-        "tgf": "Trivial Graph Format - For Gephi/yEd",
+        "tg": "Trivial Graph Format - For Gephi/yEd",
         "dot": "GraphViz DOT - Professional rendering",
         "analysis": "JSON analysis reports",
     },
@@ -62,15 +62,15 @@ def print_project_info():
     for semantic in PROJECT_METADATA["supported_semantics"]:
         print(f"  ✓ {semantic}")
 
-    print(f"\nFormats d'import/export:")
+    print("\nFormats d'import/export:")
     for fmt, desc in PROJECT_METADATA["supported_formats"].items():
         print(f"  ✓ {fmt.upper()}: {desc}")
 
-    print(f"\nFonctionnalités principales:")
+    print("\nFonctionnalités principales:")
     for feature in PROJECT_METADATA["features"]:
         print(f"  ✓ {feature}")
 
-    print(f"\nDépendances:")
+    print("\nDépendances:")
     for dep in PROJECT_METADATA["dependencies"]:
         print(f"  • {dep}")
 
@@ -89,7 +89,7 @@ def generate_project_summary():
     """Génère un résumé du projet pour documentation"""
     stats = get_project_stats()
 
-    summary = f"""
+    summary = """
 # Résumé du Projet
 
 **{PROJECT_METADATA['name']}** v{PROJECT_METADATA['version']}

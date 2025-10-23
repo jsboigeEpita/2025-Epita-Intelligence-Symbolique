@@ -313,9 +313,9 @@ class RealTimeTraceAnalyzer:
         # 1. Métadonnées de l'analyse
         report_lines.append("## 1. Métadonnées de l'analyse")
         report_lines.append("-" * 30)
-        report_lines.append(f"- **Type d'analyse:** Unified Rhetorical Analysis")
-        report_lines.append(f"- **Source:** Complex Corpus")
-        report_lines.append(f"- **Logique:** Modal Logic")
+        report_lines.append("- **Type d'analyse:** Unified Rhetorical Analysis")
+        report_lines.append("- **Source:** Complex Corpus")
+        report_lines.append("- **Logique:** Modal Logic")
         report_lines.append(f"- **Timestamp:** {datetime.now().isoformat()}")
         report_lines.append("")
 
@@ -333,12 +333,12 @@ class RealTimeTraceAnalyzer:
         # 3. Synthèse des résultats
         report_lines.append("## 3. Synthèse des résultats")
         report_lines.append("-" * 25)
-        report_lines.append(f"- **Conversation complète:** ✅ Capturée intégralement")
+        report_lines.append("- **Conversation complète:** ✅ Capturée intégralement")
         report_lines.append(
-            f"- **Appels d'outils:** ✅ Tous formatés selon spécifications"
+            "- **Appels d'outils:** ✅ Tous formatés selon spécifications"
         )
-        report_lines.append(f"- **Séquencement chronologique:** ✅ Respecté")
-        report_lines.append(f"- **Hiérarchie agents/sous-agents:** ✅ Préservée")
+        report_lines.append("- **Séquencement chronologique:** ✅ Respecté")
+        report_lines.append("- **Hiérarchie agents/sous-agents:** ✅ Préservée")
 
         # Répartition par agents
         tool_counts = {}

@@ -64,7 +64,7 @@ def restore_config_files():
     if not ENCRYPTION_KEY:
         logger.error("La clé de chiffrement n'est pas disponible.")
         logger.error(
-            f"Assurez-vous que la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie."
+            "Assurez-vous que la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie."
         )
         return False
 

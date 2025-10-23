@@ -87,9 +87,9 @@ def main():
     print(f"Vérification du fichier .env à: {env_path}")
 
     if env_path.exists():
-        print(f"Fichier .env trouvé.")
+        print("Fichier .env trouvé.")
         if not env_example_path.exists():
-            print(f"Création du fichier exemple .env.example...")
+            print("Création du fichier exemple .env.example...")
             try:
                 with open(env_example_path, "w") as f:
                     f.write(
@@ -109,7 +109,7 @@ OPENAI_CHAT_MODEL_ID="gpt-4o-mini"
 TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
 """
                     )
-                print(f"Fichier .env.example créé avec succès.")
+                print("Fichier .env.example créé avec succès.")
             except Exception as e:
                 print(f"Erreur lors de la création du fichier .env.example: {e}")
     else:
@@ -138,9 +138,9 @@ TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
             if not any(config_path.iterdir()):
                 print(f"Suppression du dossier vide {config_path}...")
                 config_path.rmdir()
-                print(f"Dossier config supprimé avec succès.")
+                print("Dossier config supprimé avec succès.")
             else:
-                print(f"Le dossier config n'est pas vide, conservation.")
+                print("Le dossier config n'est pas vide, conservation.")
         except Exception as e:
             print(f"Erreur lors de la suppression du dossier config: {e}")
     else:
@@ -151,7 +151,7 @@ TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
     print(f"Vérification du fichier .env à: {env_path}")
 
     if env_path.exists():
-        print(f"Fichier .env trouvé.")
+        print("Fichier .env trouvé.")
 
         # Vérification que .env est bien ignoré par Git en utilisant git status
         rel_path = os.path.relpath(env_path, base_path)
@@ -160,14 +160,14 @@ TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
 
         if check_success:
             if check_output.strip() and not check_output.strip().startswith("??"):
-                print(f"ATTENTION: Le fichier .env est suivi par Git!")
+                print("ATTENTION: Le fichier .env est suivi par Git!")
                 print(
-                    f"Vérifiez que la règle '.env' est bien présente dans votre fichier .gitignore."
+                    "Vérifiez que la règle '.env' est bien présente dans votre fichier .gitignore."
                 )
             else:
-                print(f"Le fichier .env est correctement ignoré par Git.")
+                print("Le fichier .env est correctement ignoré par Git.")
         else:
-            print(f"Impossible de vérifier si le fichier .env est ignoré par Git.")
+            print("Impossible de vérifier si le fichier .env est ignoré par Git.")
     else:
         print(f"Fichier .env non trouvé à {env_path}")
 

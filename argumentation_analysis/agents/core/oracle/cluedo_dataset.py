@@ -167,7 +167,7 @@ class CluedoDataset:
         self._all_weapons = set(self._elements_jeu["armes"])
         self._all_rooms = set(self._elements_jeu["lieux"])
 
-        self._logger = logging.getLogger(f"CluedoDataset")
+        self._logger = logging.getLogger("CluedoDataset")
         self._logger.info(
             f"CluedoDataset initialisé avec {len(self.moriarty_cards)} cartes Moriarty"
         )

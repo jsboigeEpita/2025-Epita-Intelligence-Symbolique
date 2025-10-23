@@ -193,7 +193,7 @@ class ArgumentationBenchmark:
             except Exception as e:
                 data_point = {
                     "size": size,
-                    "time": float("inf"),
+                    "time": float("in"),
                     "error": str(e),
                     "success": False,
                 }
@@ -328,7 +328,7 @@ if __name__ == "__main__":
         # Générer le rapport final
         results = benchmark.generate_report()
 
-        print(f"\n✅ Benchmark terminé avec succès!")
+        print("\n✅ Benchmark terminé avec succès!")
         print(f"📊 {len(results)} métriques collectées")
 
     except KeyboardInterrupt:

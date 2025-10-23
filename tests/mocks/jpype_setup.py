@@ -21,7 +21,7 @@ if not logger.handlers:
 
 # --- Détermination de la disponibilité du vrai JPype via variable d'environnement ---
 # Cette variable est utilisée par les décorateurs skipif dans les fichiers de test.
-logger.info(f"jpype_setup.py: Évaluation de _REAL_JPYPE_AVAILABLE...")
+logger.info("jpype_setup.py: Évaluation de _REAL_JPYPE_AVAILABLE...")
 logger.info(
     f"jpype_setup.py: Valeur brute de os.environ.get('USE_REAL_JPYPE', 'false'): '{os.environ.get('USE_REAL_JPYPE', 'false')}'"
 )

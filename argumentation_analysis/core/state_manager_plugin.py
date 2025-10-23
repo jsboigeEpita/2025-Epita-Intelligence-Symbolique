@@ -284,7 +284,7 @@ class StateManagerPlugin:
         try:
             self._state.set_conclusion(conclusion)
             self._logger.info(
-                f" -> Conclusion finale enregistrée avec succès via l'état."
+                " -> Conclusion finale enregistrée avec succès via l'état."
             )
             return "OK: Conclusion finale enregistrée."
         except Exception as e:

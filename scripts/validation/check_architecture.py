@@ -36,7 +36,7 @@ def check_jdk_architecture():
             result = subprocess.run(
                 [str(java_exe), "-version"], capture_output=True, text=True, timeout=10
             )
-            print(f"Java version output:")
+            print("Java version output:")
             print(result.stderr)  # java -version écrit sur stderr
 
             # Détecter l'architecture dans la sortie

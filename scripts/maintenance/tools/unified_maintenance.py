@@ -101,7 +101,7 @@ class UnifiedMaintenanceSystem:
         # Vérification que nous sommes dans le bon répertoire
         if not (self.project_root / "argumentation_analysis").exists():
             raise RuntimeError(
-                f"ERREUR: Ce script doit être exécuté depuis la racine du projet "
+                "ERREUR: Ce script doit être exécuté depuis la racine du projet "
                 f"(doit contenir argumentation_analysis/). Répertoire actuel: {self.project_root}"
             )
 
@@ -1176,7 +1176,7 @@ if __name__ == "__main__":
             results = await run_maintenance(args.mode, args.project_root, **kwargs)
 
             if results["status"] == "SUCCESS":
-                print(f"\n✅ Maintenance terminée avec succès!")
+                print("\n✅ Maintenance terminée avec succès!")
                 exit_code = 0
             else:
                 print(

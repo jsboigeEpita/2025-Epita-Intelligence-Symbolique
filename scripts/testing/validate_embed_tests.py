@@ -463,7 +463,7 @@ def main():
             print(f"Traceback: {traceback.format_exc()}")
             failed_tests += 1
 
-    print(f"\n=== RESULTATS FINAUX ===")
+    print("\n=== RESULTATS FINAUX ===")
     print(f"Tests reussis: {passed_tests}/{len(tests)}")
     print(f"Tests echoues: {failed_tests}/{len(tests)}")
 

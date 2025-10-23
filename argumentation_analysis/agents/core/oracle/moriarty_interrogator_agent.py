@@ -223,7 +223,7 @@ class MoriartyTools(OracleTools):
             # Parse de la suggestion
             elements = [elem.strip() for elem in suggestion.split(",")]
             if len(elements) != 3:
-                return f"Format de suggestion invalide. Attendu: 'suspect,arme,lieu'"
+                return "Format de suggestion invalide. Attendu: 'suspect,arme,lieu'"
 
             # SIMULATION LÉGITIME: Basée sur les révélations précédentes connues uniquement
             cartes_moriarty = set(self.cluedo_dataset.get_moriarty_cards())
@@ -551,7 +551,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         self.reset_oracle_state()
         self.cards_revealed_by_agent.clear()
         self.suggestion_history.clear()
-        self._logger.info(f"État de jeu Moriarty remis à zéro")
+        self._logger.info("État de jeu Moriarty remis à zéro")
 
     async def invoke(
         self, input: Union[str, List[ChatMessageContent]], **kwargs

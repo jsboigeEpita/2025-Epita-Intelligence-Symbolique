@@ -28,7 +28,7 @@ def run_test_group(name, command):
                 print(line.strip())
 
     except subprocess.TimeoutExpired:
-        print(f"TIMEOUT après 60s")
+        print("TIMEOUT après 60s")
     except Exception as e:
         print(f"ERREUR: {e}")
 

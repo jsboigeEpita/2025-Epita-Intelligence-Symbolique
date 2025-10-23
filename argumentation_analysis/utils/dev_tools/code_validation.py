@@ -364,12 +364,12 @@ if __name__ == "__main__":
             f"Test analyze_directory_references : ÉCHEC (comptes de base). Résultats: {analysis_results}"
         )
 
-    logger.info(f"Résultats détaillés de l'analyse des références de répertoires:")
+    logger.info("Résultats détaillés de l'analyse des références de répertoires:")
     for pattern_name, data in analysis_results.items():
         logger.info(f"  Motif '{pattern_name}':")
         logger.info(f"    Comptes: {data['count']}")
         logger.info(f"    Fichiers: {list(data['files'].keys())}")
-        logger.info(f"    Exemples (max 5):")
+        logger.info("    Exemples (max 5):")
         for ex in data["examples"]:
             logger.info(f"      {ex['file']}:{ex['line']} - {ex['content']}")
 

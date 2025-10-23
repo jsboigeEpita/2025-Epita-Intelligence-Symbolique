@@ -112,7 +112,7 @@ def verify_extract_definitions(
                 if start_marker:  # texte_brut_source est déjà vérifié non None
                     actual_start_marker_log = start_marker
                     if is_target_extract:
-                        verification_logger.info(f"  AVANT RECHERCHE start_marker:")
+                        verification_logger.info("  AVANT RECHERCHE start_marker:")
                         verification_logger.info(
                             f"    actual_start_marker: '{actual_start_marker_log}'"
                         )

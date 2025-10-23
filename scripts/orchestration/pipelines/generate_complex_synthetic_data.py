@@ -52,8 +52,8 @@ class ComplexSyntheticDataGenerator:
             "contexte": f"Analyse modale de la {theme}.",
             "contraintes_modales": [
                 f"Il est nécessaire que toute intelligence artificielle respecte les principes de {philosophe}.",
-                f"Il est possible qu'un système de surveillance devienne totalitaire.",
-                f"Il est impossible de prouver le libre arbitre de manière purement empirique.",
+                "Il est possible qu'un système de surveillance devienne totalitaire.",
+                "Il est impossible de prouver le libre arbitre de manière purement empirique.",
             ],
         }
 

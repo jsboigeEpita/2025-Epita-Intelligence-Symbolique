@@ -322,7 +322,7 @@ class TestCluedoOracleEnhancedReal:
             ), "Appels API trop lents"
 
             # Log des métriques pour analyse
-            print(f"\n=== MÉTRIQUES PERFORMANCE ENHANCED ===")
+            print("\n=== MÉTRIQUES PERFORMANCE ENHANCED ===")
             for key, value in performance_metrics.items():
                 print(f"{key}: {value}")
 
@@ -548,7 +548,7 @@ class TestCluedoEnhancedLatencyMeasurement:
         assert max_latency < 30.0, f"Latence max trop élevée: {max_latency}s"
         assert min_latency > 0.5, f"Latence suspicieusement basse: {min_latency}s"
 
-        print(f"\n=== LATENCES OPENAI GPT-4O-MINI ===")
+        print("\n=== LATENCES OPENAI GPT-4O-MINI ===")
         print(f"Moyenne: {avg_latency:.2f}s")
         print(f"Min: {min_latency:.2f}s")
         print(f"Max: {max_latency:.2f}s")

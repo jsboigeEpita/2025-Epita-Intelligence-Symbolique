@@ -297,7 +297,7 @@ class UnifiedWebOrchestrator:
         if not self.enable_trace:
             return
 
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        timestamp = datetime.now().strftime("%H:%M:%S.%")[:-3]
         entry = TraceEntry(timestamp, action, details, result, screenshot, status)
         self.trace_log.append(entry)
 
@@ -609,7 +609,7 @@ class UnifiedWebOrchestrator:
 
     def _lock_port(self, service: str, port: int):
         """Utilise PortManager pour verrouiller le port dans .port_lock."""
-        self.add_trace(f"[LOCK] VERROUILLAGE PORT", f"Service: {service}, Port: {port}")
+        self.add_trace("[LOCK] VERROUILLAGE PORT", f"Service: {service}, Port: {port}")
         try:
             # On utilise une instance fraîche pour éviter les conflits d'état
             pm = PortManager()
@@ -767,7 +767,7 @@ class UnifiedWebOrchestrator:
         success_count = sum(1 for entry in self.trace_log if entry.status == "success")
         error_count = len(self.trace_log) - success_count
 
-        content = f"""# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
+        content = """# 🎯 TRACE D'EXÉCUTION - ORCHESTRATEUR WEB UNIFIÉ
 
 **Date d'exécution:** {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
 **Mode:** {'Interface Cachée (Headless)' if self.headless else 'Interface Visible'}
@@ -783,7 +783,7 @@ class UnifiedWebOrchestrator:
 
         for entry in self.trace_log:
             status_emoji = "✅" if entry.status == "success" else "❌"
-            content += f"""
+            content += """
 ### {status_emoji} {entry.timestamp} - {entry.action}
 """
             if entry.details:
@@ -793,7 +793,7 @@ class UnifiedWebOrchestrator:
             if entry.screenshot:
                 content += f"**Screenshot:** {entry.screenshot}\n"
 
-        content += f"""
+        content += """
 
 ---
 

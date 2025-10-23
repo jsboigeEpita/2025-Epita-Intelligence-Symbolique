@@ -44,7 +44,7 @@ async def test_unified_pipeline():
         )
         result = await pipeline.analyze_text_unified(text)
 
-        print(f"[OK] Pipeline unifié - Analyse terminée")
+        print("[OK] Pipeline unifié - Analyse terminée")
         print(
             f"     Modes: {', '.join(result['metadata']['analysis_config']['analysis_modes'])}"
         )
@@ -70,7 +70,7 @@ def test_conversation_orchestrator():
 
         orchestrator.run_orchestration(text)
 
-        print(f"[OK] Orchestrateur conversationnel - Rapport généré")
+        print("[OK] Orchestrateur conversationnel - Rapport généré")
         print(f"     Mode: {orchestrator.mode}")
         print(f"     Agents: {len(orchestrator.agents)}")
         print(f"     Messages: {len(orchestrator.conv_logger.messages)}")
@@ -93,7 +93,7 @@ async def test_real_llm_orchestrator():
         text = "La rhétorique aristotélicienne distingue ethos, pathos et logos."
         result = await orchestrator.orchestrate_analysis(text)
 
-        print(f"[OK] Orchestrateur LLM réel - Analyse terminée")
+        print("[OK] Orchestrateur LLM réel - Analyse terminée")
         print(f"     Temps: {result['processing_time_ms']:.1f}ms")
         print(
             f"     Messages: {len(result.get('conversation_log', {}).get('messages', []))}"

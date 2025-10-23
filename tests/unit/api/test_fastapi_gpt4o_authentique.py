@@ -140,7 +140,7 @@ class TestAPIFastAPIAuthentique:
         """Test 2: Vérification du démarrage effectif du serveur API."""
         if not self.api_started:
             pytest.fail(
-                f"L'API n'a pas pu démarrer. Consultez les logs pour les erreurs."
+                "L'API n'a pas pu démarrer. Consultez les logs pour les erreurs."
             )
         assert self.api_started is True
 

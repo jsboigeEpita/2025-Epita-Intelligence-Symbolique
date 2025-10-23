@@ -375,7 +375,7 @@ class EpitaDemoConsolidator:
         )
         total_modes = len(test_principal.get("modes_testes", {}))
 
-        rapport_contenu = f"""# [SUCCES] RAPPORT DE CONSOLIDATION DÉMO EPITA
+        rapport_contenu = """# [SUCCES] RAPPORT DE CONSOLIDATION DÉMO EPITA
 ## Analyse Complète et Recommandations - {datetime.now().strftime("%d/%m/%Y %H:%M")}
 
 ---
@@ -413,7 +413,7 @@ class EpitaDemoConsolidator:
             if data.get("tests_info"):
                 rapport_contenu += f"  - {data['tests_info']}\n"
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ---
 
@@ -424,16 +424,16 @@ class EpitaDemoConsolidator:
 
         for i, script in enumerate(scripts_epita, 1):
             status_icon = "[OK]" if script.get("existe", False) else "[ERREUR]"
-            rapport_contenu += f"""
+            rapport_contenu += """
 #### {i}. {script['path']}
 - **Type** : {script['type']}
 - **Statut** : {status_icon} {script.get('statut', 'INCONNU')}
 - **Description** : {script['description']}
 """
             if not script.get("existe", False):
-                rapport_contenu += f"- **[WARNING] Problème** : Fichier introuvable\n"
+                rapport_contenu += "- **[WARNING] Problème** : Fichier introuvable\n"
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ### Redondances Détectées
 """
@@ -451,13 +451,13 @@ class EpitaDemoConsolidator:
             else:
                 icon = "⚪"
 
-            rapport_contenu += f"""
+            rapport_contenu += """
 #### {icon} {redondance['script_redondant']}
 - **Niveau** : {niveau}
 - **Recommandation** : {recommandation}
 """
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ---
 
@@ -473,7 +473,7 @@ class EpitaDemoConsolidator:
                 status = "[OK]" if data.get("existe", False) else "[ERREUR]"
                 rapport_contenu += f"- **{element}** : {status}\n"
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ### Validation Configurations
 """
@@ -487,7 +487,7 @@ class EpitaDemoConsolidator:
                     f"  - Catégories configurées : {config_principale['categories']}\n"
                 )
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ---
 
@@ -512,7 +512,7 @@ class EpitaDemoConsolidator:
                 f"   - `{script['script_redondant']}` → {script['recommandation']}\n"
             )
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 3. **INTÉGRER** les tests de validation complémentaires :
 """
@@ -522,7 +522,7 @@ class EpitaDemoConsolidator:
         for script in scripts_a_integrer:
             rapport_contenu += f"   - `{script['script_redondant']}` → Intégrer dans les tests principaux\n"
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 4. **CORRIGER** les références cassées :
 """
@@ -532,7 +532,7 @@ class EpitaDemoConsolidator:
         for ref in refs_cassees:
             rapport_contenu += f"   - `{ref['script_redondant']}` → Supprimer les imports et références\n"
 
-        rapport_contenu += f"""
+        rapport_contenu += """
 
 ### [DEBUT] Plan de Consolidation
 
@@ -615,7 +615,7 @@ La consolidation autour de `examples/scripts_demonstration/` comme cible est **p
             scripts_epita, test_principal, redondances, tests_integration
         )
 
-        print(f"\n[SUCCES] CONSOLIDATION TERMINÉE")
+        print("\n[SUCCES] CONSOLIDATION TERMINÉE")
         print(f"[RAPPORT] Rapport généré : {rapport_path}")
 
         return {

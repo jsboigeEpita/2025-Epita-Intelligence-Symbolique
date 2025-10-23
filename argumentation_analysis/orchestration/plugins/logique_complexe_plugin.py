@@ -38,7 +38,7 @@ class LogiqueComplexePlugin:
                 "boissons": self._state.boissons,
                 "métiers": self._state.metiers,
             },
-            "objectif": "Déterminer qui possède le poisson (et toutes les autres correspondances)",
+            "objecti": "Déterminer qui possède le poisson (et toutes les autres correspondances)",
             "complexité": "15 contraintes interdépendantes nécessitant une logique formelle",
         }
 
@@ -69,7 +69,7 @@ class LogiqueComplexePlugin:
         self._logger.info(f"Formulation d'une clause logique: {clause}")
 
         if len(clause.strip()) < 10:
-            return f"Erreur: Clause trop courte. Une clause TweetyProject doit être détaillée (minimum 10 caractères)."
+            return "Erreur: Clause trop courte. Une clause TweetyProject doit être détaillée (minimum 10 caractères)."
 
         ajoutee = self._state.ajouter_clause_logique(clause, "Watson")
 

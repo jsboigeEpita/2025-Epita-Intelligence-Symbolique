@@ -61,7 +61,7 @@ class KnowledgeMapper:
         try:
             with open(self.analysis_file, "r", encoding="utf-8") as f:
                 self.analysis_data = json.load(f)
-            print(f" Analyse chargée pour le mapping des connaissances")
+            print(" Analyse chargée pour le mapping des connaissances")
         except Exception as e:
             print(f" Erreur lors du chargement: {e}")
             raise
@@ -377,7 +377,7 @@ class KnowledgeMapper:
 
     def export_interactive_map(self, output_file: str = "knowledge_map.html"):
         """Exporte une carte interactive en HTML"""
-        print(f" Génération de la carte interactive...")
+        print(" Génération de la carte interactive...")
 
         # Préparer les données pour la visualisation
         nodes_data = []
@@ -431,7 +431,7 @@ class KnowledgeMapper:
         self, nodes_data: List[Dict], edges_data: List[Dict]
     ) -> str:
         """Génère le HTML pour la carte interactive"""
-        return f"""
+        return """
         <!DOCTYPE html>
         <html>
         <head>
@@ -668,18 +668,18 @@ def main():
         # Exporter le résumé
         summary_file = mapper.export_knowledge_summary()
 
-        print(f"\n Mapping des connaissances terminé !")
+        print("\n Mapping des connaissances terminé !")
         print(f" Carte interactive: {interactive_map}")
         print(f" Résumé: {summary_file}")
 
         # Afficher quelques statistiques
-        print(f"\n STATISTIQUES")
+        print("\n STATISTIQUES")
         print(f" Nœuds de connaissance: {len(mapper.knowledge_nodes)}")
         print(f" Connexions: {mapper.knowledge_graph.number_of_edges()}")
         print(f" Domaines: {len(mapper.domain_clusters)}")
 
         # Afficher les parcours
-        print(f"\n PARCOURS D'APPRENTISSAGE")
+        print("\n PARCOURS D'APPRENTISSAGE")
         for path_name, path in learning_paths.items():
             print(f"• {path_name}: {len(path)} étapes")
 

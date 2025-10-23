@@ -134,7 +134,7 @@ def _test_stable_reasoner_simple_example(dung_classes):
     extensions = reasoner.getModels(dt)
     assert extensions.size() == 1
     # Simplified check
-    logger.info(f"Extension stable simple calculée.")
+    logger.info("Extension stable simple calculée.")
 
 
 def test_argumentation_syntax_logic():

@@ -75,7 +75,7 @@ def generate_coverage_evolution_text_report(
     )  # Compatibilité avec ancien format
     current_global = last_entry.get("global_line_rate", last_entry.get("global", 0.0))
     global_improvement = current_global - initial_global
-    report_lines.append(f"## Couverture Globale (Lignes)")
+    report_lines.append("## Couverture Globale (Lignes)")
     report_lines.append(f"- Couverture initiale : {initial_global:.2f}%")
     report_lines.append(f"- Couverture actuelle  : {current_global:.2f}%")
     report_lines.append(f"- Amélioration        : {global_improvement:+.2f}%")

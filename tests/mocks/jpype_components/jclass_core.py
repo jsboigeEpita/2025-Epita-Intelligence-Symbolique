@@ -59,7 +59,7 @@ class MockJClassCore:
 
             def mock_get_system_class_loader():
                 mock_logger.info(
-                    f"[MOCK] java.lang.ClassLoader.getSystemClassLoader() CALLED"
+                    "[MOCK] java.lang.ClassLoader.getSystemClassLoader() CALLED"
                 )
                 # Retourne une nouvelle instance de MockJClassCore pour simuler un ClassLoader
                 # Si jclass_provider est disponible, l'utiliser serait mieux pour la cohérence.
@@ -71,7 +71,7 @@ class MockJClassCore:
                 "getSystemClassLoader"
             ] = mock_get_system_class_loader
             mock_logger.debug(
-                f"Méthode statique 'getSystemClassLoader' configurée pour java.lang.ClassLoader."
+                "Méthode statique 'getSystemClassLoader' configurée pour java.lang.ClassLoader."
             )
 
         # Logique pour java.lang.System.getProperty("java.class.path")
@@ -95,7 +95,7 @@ class MockJClassCore:
 
             self._static_attributes["getProperty"] = mock_get_property
             mock_logger.debug(
-                f"Méthode statique 'getProperty' configurée pour java.lang.System."
+                "Méthode statique 'getProperty' configurée pour java.lang.System."
             )
 
         # Logique pour org.tweetyproject.logics.ml.syntax.ModalLogic (K, S4, S5, etc.)
@@ -292,7 +292,7 @@ class MockJClassCore:
                 tweety_agents.configure_tweety_agent_class(instance_mock)
             else:
                 mock_logger.warning(
-                    f"JClass provider non disponible pour org.tweetyproject.agents, configuration limitée."
+                    "JClass provider non disponible pour org.tweetyproject.agents, configuration limitée."
                 )
 
         mock_logger.info(f"Instance mockée de '{self.class_name}' créée et retournée.")

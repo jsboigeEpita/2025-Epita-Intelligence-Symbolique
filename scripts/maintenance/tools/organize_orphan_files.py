@@ -189,7 +189,7 @@ class OrphanFileAnalyzer:
             "function ",
             "import ",
             "from ",
-            "async def",
+            "async de",
             "@",
             '"""',
             "# TODO",
@@ -394,7 +394,7 @@ class OrphanFileAnalyzer:
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(phase_d_source), str(target))
-                    print(f"[MOVED] phase_d_extensions.py -> oracle/")
+                    print("[MOVED] phase_d_extensions.py -> oracle/")
                     results["actions_completed"].append(
                         {
                             "action": "move",
@@ -441,7 +441,7 @@ class OrphanFileAnalyzer:
 
     def generate_report(self) -> str:
         """Génère un rapport complet de l'analyse"""
-        report = f"""
+        report = """
 # Rapport d'Analyse des Fichiers Orphelins Oracle/Sherlock/Watson/Moriarty
 Généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -456,7 +456,7 @@ Généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
         phase_d_analysis = self.analyze_phase_d_extensions()
         if phase_d_analysis.get("has_valuable_code"):
-            report += f"""
+            report += """
 ### [OK] Code Precieux Detecte
 - **Classes trouvées**: {', '.join(phase_d_analysis.get('classes_found', []))}
 - **Fonctions trouvées**: {len(phase_d_analysis.get('functions_found', []))} fonctions
@@ -467,7 +467,7 @@ Généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             for rec in phase_d_analysis.get("integration_recommendations", []):
                 report += f"- **{rec['action']}**: {rec['target']} - {rec['reason']}\n"
 
-        report += f"""
+        report += """
 
 ## Plan d'Organisation
 - **Fichiers à déplacer**: {self.organization_plan.get('summary', {}).get('files_to_move', 0)}
@@ -487,7 +487,7 @@ Généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         for deletion in self.organization_plan.get("deletions", []):
             report += f"- Supprimer `{deletion['file']}` ({deletion['size']} bytes) - {deletion['reason']}\n"
 
-        report += f"""
+        report += """
 
 ## Conclusion
 Le fichier **phase_d_extensions.py** contient du code précieux pour les extensions Oracle Enhanced Phase D.

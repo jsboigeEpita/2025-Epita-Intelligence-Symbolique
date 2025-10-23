@@ -396,7 +396,7 @@ def main():
     recovery = ComprehensiveDocumentationRecovery(project_root)
     recovery.process_documentation()
 
-    print(f"\n🎯 RÉCUPÉRATION MASSIVE TERMINÉE")
+    print("\n🎯 RÉCUPÉRATION MASSIVE TERMINÉE")
     print(f"✅ Corrections appliquées: {recovery.stats['fixes_applied']}")
     print(f"❌ Corrections échouées: {recovery.stats['fixes_failed']}")
     print(f"📁 Fichiers traités: {recovery.stats['files_processed']}")

@@ -134,12 +134,12 @@ def _configure_Dialogue(jclass_instance: "MockJClassCore"):
                 "org.tweetyproject.agents.dialogues.DialogueResult"
             )
             tweety_agents_logger.debug(
-                f"[Dialogue.run] Exécution simulée, retour d'un mock DialogueResult."
+                "[Dialogue.run] Exécution simulée, retour d'un mock DialogueResult."
             )
             return dialogue_result_mock
 
         instance_mock.run = MagicMock(side_effect=dialogue_run)
-        tweety_agents_logger.debug(f"[MOCK Dialogue] Méthode run configurée.")
+        tweety_agents_logger.debug("[MOCK Dialogue] Méthode run configurée.")
 
         return instance_mock
 

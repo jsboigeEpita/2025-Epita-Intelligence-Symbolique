@@ -454,7 +454,7 @@ def main():
 
         # Organiser les tests (mode simulation par défaut)
         simulate_only = True  # Mode simulation automatique
-        print(f"\n[SIM] Mode simulation activé - aucun fichier ne sera déplacé")
+        print("\n[SIM] Mode simulation activé - aucun fichier ne sera déplacé")
 
         if not simulate_only:
             print("\n[MOVE] Organisation des tests...")

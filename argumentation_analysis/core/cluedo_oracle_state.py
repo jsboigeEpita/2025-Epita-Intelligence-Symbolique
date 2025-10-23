@@ -272,7 +272,7 @@ class CluedoOracleState(EnqueteCluedoState):
         if len(available_cards) == 0:
             distribution = {"Moriarty": [], "AutresJoueurs": []}
             self._logger.info(
-                f"Distribution des cartes: Cas minimal - Moriarty (0), Autres (0)"
+                "Distribution des cartes: Cas minimal - Moriarty (0), Autres (0)"
             )
             return distribution
 

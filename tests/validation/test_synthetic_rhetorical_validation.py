@@ -525,7 +525,7 @@ def main():
 
         # Afficher résumé
         stats = report["statistics"]
-        logger.info(f"📈 Résumé validation:")
+        logger.info("📈 Résumé validation:")
         logger.info(f"   - Total opérations: {stats['total_operations']}")
         logger.info(
             f"   - Mocks: {stats['mock_operations']} ({stats['mock_percentage']:.1f}%)"
@@ -537,7 +537,7 @@ def main():
         print("\n" + "=" * 80)
         print("🎯 VALIDATION SYSTÈME D'ANALYSE RHÉTORIQUE UNIFIÉ - DONNÉES SYNTHÉTIQUES")
         print("=" * 80)
-        print(f"✅ Validation terminée avec succès")
+        print("✅ Validation terminée avec succès")
         print(f"📊 Rapport détaillé: {report_file}")
         print(f"🔍 {stats['total_operations']} opérations testées")
         print(

@@ -73,7 +73,7 @@ class RecoveryAssistant:
         # README.md de base si manquant
         readme_path = self.project_root / "README.md"
         if not readme_path.exists():
-            readme_content = f"""# Oracle Enhanced v2.1.0
+            readme_content = """# Oracle Enhanced v2.1.0
 ## Intelligence Symbolique - EPITA 2025
 
 Système d'orchestration d'agents conversationnels Sherlock-Watson-Moriarty avec Oracle Enhanced.
@@ -141,7 +141,7 @@ python scripts/maintenance/analyze_obsolete_documentation.py --quick-scan
 
         assessment = self.assess_damage()
 
-        report_content = f"""# Rapport de Récupération Oracle Enhanced v2.1.0
+        report_content = """# Rapport de Récupération Oracle Enhanced v2.1.0
 
 **Date:** {datetime.now().isoformat()}
 
@@ -197,7 +197,7 @@ def main():
     print("Génération rapport de récupération...")
     report_path = assistant.generate_recovery_report()
 
-    print(f"Récupération initiale terminée")
+    print("Récupération initiale terminée")
     print(f"Rapport: {report_path}")
 
     return 0

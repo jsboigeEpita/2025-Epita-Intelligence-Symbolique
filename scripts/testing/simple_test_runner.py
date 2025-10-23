@@ -183,7 +183,7 @@ def main():
     # Test 2: Exécution du script
     test2_success = run_script_test()
 
-    print(f"\n=== RESULTATS FINAUX ===")
+    print("\n=== RESULTATS FINAUX ===")
     print(
         f"Test logique de chiffrement: {'[OK] REUSSI' if test1_success else '[ERREUR] ECHEC'}"
     )

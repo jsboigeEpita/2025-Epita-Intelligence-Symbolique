@@ -46,7 +46,7 @@ for source in data:
             f"INFO: -> Chemin modifié. Ancien: {ancien_path}, Nouveau: {source['path']}"
         )
     else:
-        print(f"INFO: -> Aucun chemin modifié pour cette source.")
+        print("INFO: -> Aucun chemin modifié pour cette source.")
 
     modified_data.append(source)
 

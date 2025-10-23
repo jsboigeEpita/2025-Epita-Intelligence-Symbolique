@@ -1010,7 +1010,7 @@ class CompleteAuthenticValidator:
 
             if result.simulation_detected:
                 self.global_stats["simulations_detected"] += 1
-                print(f"   ⚠️ SIMULATION DÉTECTÉE - NON CONFORME")
+                print("   ⚠️ SIMULATION DÉTECTÉE - NON CONFORME")
 
         total_duration = time.time() - start_suite_time
         self.global_stats["total_duration"] = total_duration
@@ -1021,7 +1021,7 @@ class CompleteAuthenticValidator:
             / max(1, self.global_stats["tests_executed"])
         ) * 100
 
-        print(f"\n📊 RAPPORT FINAL VALIDATION 100% AUTHENTIQUE:")
+        print("\n📊 RAPPORT FINAL VALIDATION 100% AUTHENTIQUE:")
         print(f"   • Tests exécutés: {self.global_stats['tests_executed']}")
         print(f"   • Tests réussis: {self.global_stats['tests_passed']}")
         print(f"   • Tests échoués: {self.global_stats['tests_failed']}")
@@ -1040,22 +1040,22 @@ class CompleteAuthenticValidator:
         )
 
         if validation_success:
-            print(f"\n🎉 VALIDATION 100% AUTHENTIQUE RÉUSSIE !")
-            print(f"   ✅ ZÉRO simulation détectée")
+            print("\n🎉 VALIDATION 100% AUTHENTIQUE RÉUSSIE !")
+            print("   ✅ ZÉRO simulation détectée")
             print(
                 f"   ✅ {self.global_stats['real_api_calls']} appels API réels confirmés"
             )
-            print(f"   ✅ Tous composants 100% authentiques")
-            print(f"   ✅ PRÊT POUR PRODUCTION")
+            print("   ✅ Tous composants 100% authentiques")
+            print("   ✅ PRÊT POUR PRODUCTION")
         else:
-            print(f"\n❌ VALIDATION AUTHENTIQUE INCOMPLÈTE")
-            print(f"   ⚠️ Corrections authentiques requises")
+            print("\n❌ VALIDATION AUTHENTIQUE INCOMPLÈTE")
+            print("   ⚠️ Corrections authentiques requises")
             if self.global_stats["simulations_detected"] > 0:
                 print(
                     f"   🚫 {self.global_stats['simulations_detected']} simulations à éliminer"
                 )
             if self.global_stats["real_api_calls"] == 0:
-                print(f"   🚫 Aucun appel API réel détecté")
+                print("   🚫 Aucun appel API réel détecté")
 
         # Sauvegarde résultats authentiques
         await self._save_authentic_validation_results()

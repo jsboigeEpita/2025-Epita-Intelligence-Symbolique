@@ -111,7 +111,7 @@ def test_workflow_simple():
         pertinence_score = analyze_relevance(conversation_history, agent_counts)
         progression_score = analyze_progression(solution_analysis, oracle_stats)
 
-        print(f"\nScores de qualité (sur 10):")
+        print("\nScores de qualité (sur 10):")
         print(f"  Naturalité: {naturalite_score:.1f}")
         print(f"  Pertinence: {pertinence_score:.1f}")
         print(f"  Progression: {progression_score:.1f}")
@@ -120,7 +120,7 @@ def test_workflow_simple():
         )
 
         # Points d'amélioration identifiés
-        print(f"\nPoints d'amélioration identifiés:")
+        print("\nPoints d'amélioration identifiés:")
         improvements = identify_improvements(
             naturalite_score, pertinence_score, progression_score
         )

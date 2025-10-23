@@ -121,10 +121,10 @@ def run_rich_demo():
     total_moves = (
         summary1["total_moves"] + summary2["total_moves"] + summary3["total_moves"]
     )
-    print(f"Total dialogues: 3")
+    print("Total dialogues: 3")
     print(f"Total échanges: {total_moves}")
     print(f"Moyenne par dialogue: {total_moves/3:.1f}")
-    print(f"Domaines couverts: Science, Économie, Politique, Technologie, Activisme")
+    print("Domaines couverts: Science, Économie, Politique, Technologie, Activisme")
     print(
         f"Arguments utilisés: {sum(len(agent.kb.get_all_arguments()) for agent in agents)}"
     )

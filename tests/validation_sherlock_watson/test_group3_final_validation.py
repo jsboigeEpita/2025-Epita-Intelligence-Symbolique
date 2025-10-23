@@ -162,7 +162,7 @@ def test_all_group3_fixes():
     passed = sum(results)
     total = len(results)
 
-    print(f"\n=== RÉSUMÉ VALIDATION GROUPE 3 ===")
+    print("\n=== RÉSUMÉ VALIDATION GROUPE 3 ===")
     print(f"Tests passés: {passed}/{total}")
 
     assert passed == total, f"{total - passed} tests du groupe 3 ont échoué."

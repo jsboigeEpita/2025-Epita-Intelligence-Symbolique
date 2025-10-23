@@ -184,7 +184,7 @@ class TestCommunicationIntegration(unittest.TestCase):
             else:
                 # Si un message n'est pas reçu dans le délai, le test échouera à l'assertion de longueur
                 logger.warning(
-                    f"Agent 2 n'a pas reçu un message attendu dans le délai imparti."
+                    "Agent 2 n'a pas reçu un message attendu dans le délai imparti."
                 )
                 break
 

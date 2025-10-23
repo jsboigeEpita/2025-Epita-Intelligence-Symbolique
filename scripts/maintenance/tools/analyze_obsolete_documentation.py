@@ -70,7 +70,7 @@ class DocumentationLinkAnalyzer:
         return True
 
     def resolve_link_path(self, link: str, from_file: Path) -> Path:
-        """Résout le chemin absolu d'un lien relatif"""
+        """Résout le chemin absolu d'un lien relati"""
         if link.startswith("/"):
             # Lien absolu depuis la racine du projet
             return self.project_root / link.lstrip("/")
@@ -171,7 +171,7 @@ class DocumentationLinkAnalyzer:
 
         Path(output_file).parent.mkdir(parents=True, exist_ok=True)
 
-        report = f"""# Rapport d'Analyse de Documentation Obsolete
+        report = """# Rapport d'Analyse de Documentation Obsolete
 ## Oracle Enhanced v2.1.0
 
 **Date d'analyse :** {results['analysis_timestamp']}
@@ -190,7 +190,7 @@ class DocumentationLinkAnalyzer:
 
         if results["broken_links"]:
             for broken_link in results["broken_links"]:
-                report += f"""### [ERREUR] `{broken_link['link']}`
+                report += """### [ERREUR] `{broken_link['link']}`
 - **Fichier source :** `{broken_link['source_file']}` (ligne {broken_link['line_number']})
 - **Chemin cible :** `{broken_link['target_path']}`
 - **Probleme :** Fichier/dossier n'existe pas
@@ -201,7 +201,7 @@ class DocumentationLinkAnalyzer:
                 "[OK] **Aucun lien brise detecte !** La documentation est a jour.\n\n"
             )
 
-        report += f"""## Analyse par Fichier
+        report += """## Analyse par Fichier
 
 """
 
@@ -209,7 +209,7 @@ class DocumentationLinkAnalyzer:
             broken_in_file = [l for l in file_data["links"] if not l["exists"]]
             status = "[ERREUR]" if broken_in_file else "[OK]"
 
-            report += f"""### {status} `{file_path}`
+            report += """### {status} `{file_path}`
 - **Liens trouvés :** {file_data['links_found']}
 - **Liens brisés :** {len(broken_in_file)}
 
@@ -220,7 +220,7 @@ class DocumentationLinkAnalyzer:
                     report += f"  - [ERREUR] `{broken['link']}` (ligne {broken['line_number']})\n"
                 report += "\n"
 
-        report += f"""## Recommandations de Correction
+        report += """## Recommandations de Correction
 
 ### Actions Prioritaires
 1. **Corriger les liens brisés** identifiés ci-dessus
@@ -291,7 +291,7 @@ def main():
         output_file = analyzer.generate_report(results, args.output)
 
     # Affichage résumé console
-    print(f"\n[RESUME]:")
+    print("\n[RESUME]:")
     print(f"   Fichiers analyses: {results['total_doc_files']}")
     print(f"   Liens totaux: {results['summary']['total_links']}")
     print(f"   Liens brises: {results['summary']['broken_links']}")
@@ -300,11 +300,11 @@ def main():
     )
 
     if results["summary"]["broken_links"] > 0:
-        print(f"\n[ATTENTION] Documentation obsolete detectee!")
+        print("\n[ATTENTION] Documentation obsolete detectee!")
         print(f"   Consulter le rapport: {output_file}")
         return 1
     else:
-        print(f"\n[OK] Documentation a jour!")
+        print("\n[OK] Documentation a jour!")
         return 0
 
 

@@ -170,7 +170,7 @@ class DialogueSystemCLI:
         """Liste les dialogues actifs"""
         active = self.system.get_active_dialogues()
         if not active:
-            print("Aucun dialogue actif")
+            print("Aucun dialogue acti")
             return
 
         for dialogue_id, info in active.items():
@@ -197,13 +197,13 @@ class DialogueSystemCLI:
         print(f"Participants: {summary['participants']}")
         print(f"Total mouvements: {summary['total_moves']}")
 
-        print(f"\n--- Échanges ---")
+        print("\n--- Échanges ---")
         for i, move in enumerate(summary["moves"], 1):
             print(
                 f"{i:2d}. {move['speaker']:15s}: {move['act']:10s} - {move['content']}"
             )
 
-        print(f"\n--- Statistiques ---")
+        print("\n--- Statistiques ---")
         if "agent1_summary" in summary and summary["agent1_summary"]:
             agent1_stats = summary["agent1_summary"].get("move_distribution", {})
             print(f"Agent 1 ({summary['participants'][0]}): {agent1_stats}")

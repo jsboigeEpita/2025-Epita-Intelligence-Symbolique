@@ -502,8 +502,8 @@ class EnhancedRealTimeTraceAnalyzer:
                 f"- **Project Manager actif**: {'✅' if self.orchestration_metadata.get('pm_active') else '❌'}",
                 f"- **Coordination multi-tours**: {'✅' if self.orchestration_metadata.get('multi_turn_coordination') else '❌'}",
                 f"- **Gestion d'état partagé**: {'✅' if self.orchestration_metadata.get('state_management_enabled') else '❌'}",
-                f"- **Type d'orchestration**: Unified Rhetorical Analysis avec PM",
-                f"- **Stratégie de coordination**: Balanced Participation avec State Management",
+                "- **Type d'orchestration**: Unified Rhetorical Analysis avec PM",
+                "- **Stratégie de coordination**: Balanced Participation avec State Management",
                 "",
             ]
         )

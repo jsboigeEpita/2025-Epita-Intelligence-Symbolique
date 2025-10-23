@@ -136,7 +136,7 @@ class PreciousCodeRecoverer:
                         break
 
             if docstring_end > 0:
-                adaptation_note = f"""
+                adaptation_note = """
 Fichier récupéré et adapté pour Oracle Enhanced v2.1.0
 
 Adaptations Oracle Enhanced v2.1.0 :
@@ -288,7 +288,7 @@ Adaptations Oracle Enhanced v2.1.0 :
             # Création d'un README dans chaque répertoire
             readme_path = Path(recovery_dir) / "README.md"
             if not readme_path.exists():
-                readme_content = f"""# Code Récupéré - Oracle Enhanced v2.1.0
+                readme_content = """# Code Récupéré - Oracle Enhanced v2.1.0
 
 Ce répertoire contient du code précieux récupéré et adapté pour Oracle Enhanced v2.1.0.
 
@@ -367,7 +367,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             priority_stats[priority] = priority_stats.get(priority, 0) + 1
 
         # Génération du rapport
-        report_content = f"""# Rapport de Récupération du Code Précieux
+        report_content = """# Rapport de Récupération du Code Précieux
 
 **TÂCHE 2/5** - Récupération du code précieux identifié dans l'analyse
 **Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -388,7 +388,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             count = priority_stats[priority]
             report_content += f"- **Priorité {priority}/10**: {count} fichier(s)\n"
 
-        report_content += f"""
+        report_content += """
 
 ## Détail des Fichiers Récupérés
 
@@ -408,7 +408,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
             report_content += f"| `{file_info['source']}` | `{file_info['recovery']}` | {file_info['priority']}/10 | {file_info['lines']} | {adaptations} |\n"
 
-        report_content += f"""
+        report_content += """
 
 ## Adaptations Oracle Enhanced v2.1.0
 
@@ -430,7 +430,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     report_content += f"- {adapt}\n"
                 report_content += "\n"
 
-        report_content += f"""
+        report_content += """
 
 ## Structure de Récupération
 

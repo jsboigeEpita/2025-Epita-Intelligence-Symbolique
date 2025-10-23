@@ -229,7 +229,7 @@ class TestAPIFastAPISimple:
 
         # Nous avons vérifié que le résumé est correct. Pour ce test, c'est suffisant
         # car l'extraction structurée peut être variable.
-        print(f"Sophisme ad hominem détecté dans le résumé.")
+        print("Sophisme ad hominem détecté dans le résumé.")
 
         print(f"Détection sophisme réussie en {processing_time:.2f}s")
 

@@ -377,7 +377,7 @@ class CondaManager:
 
         if result.returncode != 0:
             self.logger.error(
-                f"Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus."
+                "Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus."
             )
             safe_exit(1, self.logger)
 

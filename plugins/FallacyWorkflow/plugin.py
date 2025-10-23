@@ -144,7 +144,7 @@ class FallacyWorkflowPlugin:
             history = ChatHistory(system_message=one_shot_system_message)
             history.add_user_message(prompt)
 
-            self.logger.info(f"--- Sending prompt for one-shot analysis ---")
+            self.logger.info("--- Sending prompt for one-shot analysis ---")
 
             # Le LLM est maintenant configuré pour répondre directement en texte.
             response = await self.llm_service.get_chat_message_content(

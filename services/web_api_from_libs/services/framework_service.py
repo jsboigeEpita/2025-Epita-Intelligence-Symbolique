@@ -51,7 +51,7 @@ class FrameworkService:
         try:
             # Construction du graphe d'arguments
             self.logger.debug(
-                f"[FrameworkService] Construction des nœuds d'arguments..."
+                "[FrameworkService] Construction des nœuds d'arguments..."
             )
             argument_nodes = self._build_argument_nodes(request.arguments)
             self.logger.debug(
@@ -68,7 +68,7 @@ class FrameworkService:
 
             # Construction des relations de support
             self.logger.debug(
-                f"[FrameworkService] Construction des relations de support..."
+                "[FrameworkService] Construction des relations de support..."
             )
             support_relations = self._build_support_relations(request.arguments)
             self.logger.debug(
@@ -90,21 +90,21 @@ class FrameworkService:
 
                 # Mise à jour du statut des arguments
                 self._update_argument_status(argument_nodes, extensions)
-                self.logger.debug(f"[FrameworkService] Statut des arguments mis à jour")
+                self.logger.debug("[FrameworkService] Statut des arguments mis à jour")
 
             # Génération de la visualisation si demandée
             visualization = None
             if request.options and request.options.include_visualization:
                 self.logger.debug(
-                    f"[FrameworkService] Génération de la visualisation..."
+                    "[FrameworkService] Génération de la visualisation..."
                 )
                 visualization = self._generate_visualization(
                     argument_nodes, attack_relations, support_relations
                 )
-                self.logger.debug(f"[FrameworkService] Visualisation générée")
+                self.logger.debug("[FrameworkService] Visualisation générée")
 
             # Calcul des statistiques
-            self.logger.debug(f"[FrameworkService] Calcul des statistiques...")
+            self.logger.debug("[FrameworkService] Calcul des statistiques...")
             stats = self._calculate_statistics(
                 argument_nodes, attack_relations, support_relations, extensions
             )

@@ -52,10 +52,10 @@ def test_final_validation():
         if is_real and not is_mock:
             validation_metrics["real_processing_count"] += 1
             validation_metrics["tests_passed"] += 1
-            print(f"   [SUCCES] Traitement REEL confirme")
+            print("   [SUCCES] Traitement REEL confirme")
         else:
             validation_metrics["mock_usage_count"] += 1
-            print(f"   [ECHEC] Mock detecte!")
+            print("   [ECHEC] Mock detecte!")
 
         # Comptage des elements
         markers_count = len(results["markers_found"])
@@ -88,7 +88,7 @@ def test_final_validation():
     ) * 100
 
     # Rapport final
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("RAPPORT FINAL DE VALIDATION")
     print("=" * 80)
     print(f"Tests executes: {validation_metrics['total_tests']}")
@@ -104,7 +104,7 @@ def test_final_validation():
 
     # Statistiques processeur
     stats = processor.get_processing_stats()
-    print(f"\nSTATISTIQUES PROCESSEUR:")
+    print("\nSTATISTIQUES PROCESSEUR:")
     print(f"   Donnees traitees: {stats['total_processed']}")
     print(f"   Marqueurs totaux: {stats['total_markers']}")
     print(f"   Hash uniques: {stats['unique_hashes']}")
@@ -113,7 +113,7 @@ def test_final_validation():
     print(f"   Simulations: {stats['mock_usage']['simulation_processing']}")
 
     # Comparaison avec objectifs initiaux
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("COMPARAISON AVEC OBJECTIFS INITIAUX")
     print("=" * 80)
     print("AVANT (metriques initiales):")
@@ -129,7 +129,7 @@ def test_final_validation():
     )
 
     # Verdict
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     if real_processing_rate >= 80 and mock_elimination_rate >= 90:
         print("VERDICT: MISSION ACCOMPLIE!")
         print("L'elimination des mocks est confirmee avec succes.")

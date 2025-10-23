@@ -355,7 +355,7 @@ def setup_extract_definitions_mock():
                                 item["extracts"] = []
                             result_definitions.append(item)
                         else:
-                            logger.warning(f"Élément invalide ignoré: champs manquants")
+                            logger.warning("Élément invalide ignoré: champs manquants")
 
                 if result_definitions:
                     logger.info(

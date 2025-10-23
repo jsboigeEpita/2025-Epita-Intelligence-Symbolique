@@ -74,7 +74,7 @@ def verify_encrypted_config():
         logger.error(f"❌ Erreur lors du chargement des définitions: {error_message}")
         return False
 
-    logger.info(f"[OK] Définitions chargées avec succès.")
+    logger.info("[OK] Définitions chargées avec succès.")
     logger.info(f"   - {len(extract_definitions.sources)} sources trouvées.")
 
     # Afficher les détails des sources
@@ -101,12 +101,12 @@ def verify_encrypted_config():
     )
 
     if not is_valid:
-        logger.error(f"❌ Les définitions ne sont pas valides:")
+        logger.error("❌ Les définitions ne sont pas valides:")
         for error in validation_errors:
             logger.error(f"   - {error}")
         return False
 
-    logger.info(f"[OK] Les définitions sont valides.")
+    logger.info("[OK] Les définitions sont valides.")
 
     return True
 

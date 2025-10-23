@@ -55,7 +55,7 @@ def main():
     convert_parser.add_argument("output", help="Fichier de sortie")
     convert_parser.add_argument(
         "--format",
-        choices=["json", "tgf", "dot"],
+        choices=["json", "tg", "dot"],
         default="json",
         help="Format de sortie",
     )
@@ -105,7 +105,7 @@ def create_interactive_framework(use_enhanced=False):
         return
 
     # Ajouter des attaques
-    print(f"\n--- Ajout des attaques ---")
+    print("\n--- Ajout des attaques ---")
     print(f"Arguments disponibles: {list(agent._arguments.keys())}")
     while True:
         attack = input("Attaque (format: source target, ou 'stop'): ").strip()
@@ -134,7 +134,7 @@ def create_interactive_framework(use_enhanced=False):
 
 def generate_random_framework(args):
     """Génère un framework aléatoire"""
-    print(f"=== GÉNÉRATION FRAMEWORK ALÉATOIRE ===")
+    print("=== GÉNÉRATION FRAMEWORK ALÉATOIRE ===")
     print(f"Taille: {args.size}, Probabilité: {args.prob}")
     if args.seed:
         print(f"Graine: {args.seed}")
@@ -213,7 +213,7 @@ def convert_framework(args):
 
         if args.format == "json":
             FrameworkIO.export_to_json(agent, args.output)
-        elif args.format == "tgf":
+        elif args.format == "tg":
             FrameworkIO.export_to_tgf(agent, args.output)
         elif args.format == "dot":
             FrameworkIO.export_to_dot(agent, args.output)

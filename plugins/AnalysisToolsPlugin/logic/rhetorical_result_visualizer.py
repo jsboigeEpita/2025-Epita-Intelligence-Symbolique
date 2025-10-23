@@ -148,11 +148,11 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
 
         # Dessiner les étiquettes
         labels = {node: attrs.get("label", node) for node, attrs in G.nodes(data=True)}
-        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_family="sans-serif")
+        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_family="sans-seri")
 
         # Ajouter un titre
         plt.title("Réseau d'Arguments et de Sophismes")
-        plt.axis("off")
+        plt.axis("of")
 
         # Sauvegarder l'image
         plt.tight_layout()
@@ -456,14 +456,14 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         # Ajouter les visualisations avancées
         for name, path in image_paths.items():
             if path and not path.startswith("Aucun"):
-                html.append(f"    <div class='visualization'>")
+                html.append("    <div class='visualization'>")
                 html.append(f"        <h2>{name.replace('_', ' ').title()}</h2>")
-                html.append(f"        <div class='image-container'>")
+                html.append("        <div class='image-container'>")
                 html.append(
                     f"            <img src='{os.path.basename(path)}' alt='{name}'>"
                 )
-                html.append(f"        </div>")
-                html.append(f"    </div>")
+                html.append("        </div>")
+                html.append("    </div>")
 
         # Ajouter les visualisations Mermaid
         html.append("    <div class='visualization'>")

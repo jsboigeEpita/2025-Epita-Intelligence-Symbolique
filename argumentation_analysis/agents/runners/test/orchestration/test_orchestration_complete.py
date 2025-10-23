@@ -56,7 +56,7 @@ async def load_kremlin_speech():
     cache_id = "4cf2d4853745719f6504a54610237738ad016de4f64176c3e8f5218f8fd2c01b"
     cache_path = Path(root_dir) / "text_cache" / f"{cache_id}.txt"
 
-    logger.info(f"Chargement direct du discours du Kremlin depuis le cache...")
+    logger.info("Chargement direct du discours du Kremlin depuis le cache...")
 
     try:
         with open(cache_path, "r", encoding="utf-8") as f:
@@ -289,7 +289,7 @@ async def generate_analysis_report(trace_path: str, duration: float):
         json.dump(report, f, indent=2, ensure_ascii=False)
 
     # Créer une version markdown du rapport pour une meilleure lisibilité
-    md_report = f"""# {report['titre']}
+    md_report = """# {report['titre']}
 
 ## Informations Générales
 - **Date d'exécution:** {datetime.fromisoformat(report['date']).strftime('%d/%m/%Y %H:%M:%S')}

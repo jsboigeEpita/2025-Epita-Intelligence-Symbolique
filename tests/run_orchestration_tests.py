@@ -179,7 +179,7 @@ def main():
     if success:
         print("TOUS LES TESTS ONT REUSSI!")
         if args.html_report:
-            print(f"Rapport HTML genere: tests/reports/orchestration_test_report.html")
+            print("Rapport HTML genere: tests/reports/orchestration_test_report.html")
         if args.coverage:
             print("Rapport de couverture genere")
     else:

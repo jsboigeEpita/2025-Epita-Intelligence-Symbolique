@@ -946,7 +946,7 @@ class UnifiedUtilityFormatter:
     @staticmethod
     def _format_corpus_info_html(info: CorpusInfo) -> str:
         """Formate les informations du corpus en HTML."""
-        html = f"""
+        html = """
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -996,7 +996,7 @@ class UnifiedUtilityFormatter:
 """
 
         for source in info.sources_summary:
-            html += f"""
+            html += """
             <tr>
                 <td>{source['index']}</td>
                 <td>{source['name']}</td>
@@ -1127,7 +1127,7 @@ class UnifiedUtilityFormatter:
             output.append("=" * 80)
 
             # Informations sur la source
-            output.append(f"\nSOURCE:")
+            output.append("\nSOURCE:")
             output.append(f"- Index: {extract_info.source_info['source_index']}")
             output.append(f"- Nom: {extract_info.source_info['source_name']}")
             output.append(f"- Type: {extract_info.source_info['source_type']}")
@@ -1135,7 +1135,7 @@ class UnifiedUtilityFormatter:
             output.append(f"- Chemin: {extract_info.source_info['path']}")
 
             # Informations sur l'extrait
-            output.append(f"\nEXTRAIT:")
+            output.append("\nEXTRAIT:")
             output.append(f"- ID: {extract_info.extract_info['extract_id']}")
             output.append(f"- Nom: {extract_info.extract_info['extract_name']}")
             output.append(
@@ -1148,13 +1148,13 @@ class UnifiedUtilityFormatter:
 
             # Métadonnées additionnelles
             if extract_info.metadata:
-                output.append(f"\nMÉTADONNÉES:")
+                output.append("\nMÉTADONNÉES:")
                 for key, value in extract_info.metadata.items():
                     output.append(f"- {key}: {value}")
 
             # Contenu textuel si demandé
             if show_content and extract_info.content:
-                output.append(f"\nCONTENU TEXTUEL:")
+                output.append("\nCONTENU TEXTUEL:")
                 output.append("-" * 60)
                 output.append(extract_info.content)
                 output.append("-" * 60)

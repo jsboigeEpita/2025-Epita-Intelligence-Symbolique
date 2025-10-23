@@ -36,7 +36,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         preferred = self.agent.get_preferred_extensions()
         stable = self.agent.get_stable_extensions()
 
-        print(f"\nDEBUG Complex Layered:")
+        print("\nDEBUG Complex Layered:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Stable: {stable}")
@@ -67,7 +67,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         grounded = self.agent.get_grounded_extension()
         preferred = self.agent.get_preferred_extensions()
 
-        print(f"\nDEBUG Reinstatement:")
+        print("\nDEBUG Reinstatement:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
 
@@ -100,7 +100,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         grounded = self.agent.get_grounded_extension()
         preferred = self.agent.get_preferred_extensions()
 
-        print(f"\nDEBUG Floating Arguments:")
+        print("\nDEBUG Floating Arguments:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
 
@@ -133,7 +133,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         preferred = self.agent.get_preferred_extensions()
         complete = self.agent.get_complete_extensions()
 
-        print(f"\nDEBUG Complex Self-Attacks:")
+        print("\nDEBUG Complex Self-Attacks:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Complete: {complete}")
@@ -170,7 +170,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         grounded = self.agent.get_grounded_extension()
         preferred = self.agent.get_preferred_extensions()
 
-        print(f"\nDEBUG Symmetric Conflicts:")
+        print("\nDEBUG Symmetric Conflicts:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
 
@@ -208,7 +208,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         stable = self.agent.get_stable_extensions()
         admissible = self.agent.get_admissible_sets()
 
-        print(f"\nDEBUG Complete Graph:")
+        print("\nDEBUG Complete Graph:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Stable: {stable}")
@@ -249,7 +249,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         end_time = time.time()
         computation_time = end_time - start_time
 
-        print(f"\nDEBUG Performance Stress:")
+        print("\nDEBUG Performance Stress:")
         print(f"Temps de calcul: {computation_time:.4f}s")
         print(f"Grounded size: {len(grounded)}")
         print(f"Preferred count: {len(preferred)}")
@@ -278,7 +278,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         complete = self.agent.get_complete_extensions()
         admissible = self.agent.get_admissible_sets()
 
-        print(f"\nDEBUG Semantic Inclusions:")
+        print("\nDEBUG Semantic Inclusions:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Stable: {stable}")
@@ -344,7 +344,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
         preferred = self.agent.get_preferred_extensions()
         stable = self.agent.get_stable_extensions()
 
-        print(f"\nDEBUG Cardinality Bounds:")
+        print("\nDEBUG Cardinality Bounds:")
         print(f"Preferred: {preferred}")
         print(f"Stable: {stable}")
 
@@ -424,7 +424,7 @@ class AdvancedDungAgentTests(unittest.TestCase):
             agent3.add_attack(spokes[i], spokes[(i + 1) % 4])
         patterns_results["wheel"] = agent3.get_grounded_extension()
 
-        print(f"\nDEBUG Argumentation Patterns:")
+        print("\nDEBUG Argumentation Patterns:")
         for pattern, result in patterns_results.items():
             print(f"{pattern}: {result}")
 
@@ -446,7 +446,7 @@ if __name__ == "__main__":
 
     # Statistiques finales
     print(f"\n{'='*60}")
-    print(f"RÉSULTATS DES TESTS AVANCÉS")
+    print("RÉSULTATS DES TESTS AVANCÉS")
     print(f"{'='*60}")
     print(f"Tests exécutés: {result.testsRun}")
     print(f"Échecs: {len(result.failures)}")

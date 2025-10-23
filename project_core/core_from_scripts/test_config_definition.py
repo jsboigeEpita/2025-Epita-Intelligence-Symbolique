@@ -365,7 +365,7 @@ class TestRunner:
 
             # Recherche du rapport JSON généré
             if generate_report and result.returncode == 0:
-                report_pattern = f"rapport_validation_sherlock_watson_synthetic_*.json"
+                report_pattern = "rapport_validation_sherlock_watson_synthetic_*.json"
                 report_files = list(Path(self.project_root).glob(report_pattern))
 
                 if report_files:

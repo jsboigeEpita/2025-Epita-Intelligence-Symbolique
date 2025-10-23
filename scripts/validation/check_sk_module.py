@@ -1,7 +1,7 @@
 import sys
 import semantic_kernel
 
-print(f"--- Semantic Kernel Diagnostic Script ---")
+print("--- Semantic Kernel Diagnostic Script ---")
 print(f"Python version: {sys.version}")
 print(f"Python executable: {sys.executable}")
 

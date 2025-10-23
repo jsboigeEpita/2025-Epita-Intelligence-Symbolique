@@ -34,7 +34,7 @@ def test_fallacy_detection_service():
     Soit on arrête toute l'industrie, soit la planète va mourir.
     """
 
-    print(f"\n📝 Testing with sample text:")
+    print("\n📝 Testing with sample text:")
     print(sample_text.strip())
 
     # Detect fallacies
@@ -42,7 +42,7 @@ def test_fallacy_detection_service():
     result = service.detect_fallacies(sample_text)
     end_time = time.time()
 
-    print(f"\n📊 Results:")
+    print("\n📊 Results:")
     print(f"Status: {result['status']}")
     print(f"Total fallacies: {result['summary']['total_fallacies']}")
     print(f"Processing time: {end_time - start_time:.2f}s")
@@ -50,17 +50,17 @@ def test_fallacy_detection_service():
     print(f"Overall quality: {result['summary']['overall_quality']}")
 
     if result["fallacies_detected"]:
-        print(f"\n🚨 Detected Fallacies:")
+        print("\n🚨 Detected Fallacies:")
         for i, fallacy in enumerate(result["fallacies_detected"], 1):
             print(f"  {i}. {fallacy['name']} (confidence: {fallacy['confidence']:.2f})")
             print(f"     {fallacy['description']}")
 
     if result["recommendations"]:
-        print(f"\n💡 Recommendations:")
+        print("\n💡 Recommendations:")
         for i, rec in enumerate(result["recommendations"], 1):
             print(f"  {i}. {rec}")
 
-    print(f"\n✅ Service test completed!")
+    print("\n✅ Service test completed!")
     return result["status"] == "success"
 
 
@@ -72,14 +72,14 @@ def main():
     success = test_fallacy_detection_service()
 
     if success:
-        print(f"\n🎉 All tests passed!")
-        print(f"✅ The fallacy detection system is ready for frontend integration")
-        print(f"\n📚 Usage:")
-        print(f"   • Start API: python api/fallacy_api.py")
-        print(f"   • Health check: GET http://localhost:5001/api/health")
-        print(f"   • Detect fallacies: POST http://localhost:5001/api/fallacies")
+        print("\n🎉 All tests passed!")
+        print("✅ The fallacy detection system is ready for frontend integration")
+        print("\n📚 Usage:")
+        print("   • Start API: python api/fallacy_api.py")
+        print("   • Health check: GET http://localhost:5001/api/health")
+        print("   • Detect fallacies: POST http://localhost:5001/api/fallacies")
     else:
-        print(f"\n❌ Tests failed!")
+        print("\n❌ Tests failed!")
         return 1
 
     return 0

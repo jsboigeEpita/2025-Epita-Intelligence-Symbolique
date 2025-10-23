@@ -337,11 +337,11 @@ def main():
 
     # Statistiques
     plan = reports["plan"]
-    print(f"\n=== Statistiques ===")
+    print("\n=== Statistiques ===")
     for action, count in plan["metadata"]["summary"].items():
         print(f"{action.upper()}: {count} fichiers")
 
-    print(f"\n✓ Analyse terminée. Consultez les rapports pour les détails.")
+    print("\n✓ Analyse terminée. Consultez les rapports pour les détails.")
 
 
 if __name__ == "__main__":

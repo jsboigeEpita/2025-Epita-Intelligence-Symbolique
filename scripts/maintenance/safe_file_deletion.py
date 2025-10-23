@@ -258,7 +258,7 @@ class SafeFileDeletion:
         """Génère le rapport de validation post-suppression"""
         report_path = self.logs_dir / f"post_deletion_integrity_report_{timestamp}.md"
 
-        report_content = f"""# Rapport de validation post-suppression
+        report_content = """# Rapport de validation post-suppression
 
 **TÂCHE 2/6: Suppression sécurisée des fichiers obsolètes**
 
@@ -289,7 +289,7 @@ class SafeFileDeletion:
         for log_entry in self.deletion_log:
             report_content += f"| `{log_entry['file_path']}` | {log_entry['file_size']} bytes | `{log_entry['md5_checksum'][:8]}...` | [SUCCESS] Supprime |\n"
 
-        report_content += f"""
+        report_content += """
 ## Recommandations post-suppression
 
 1. **Archive de sauvegarde créée** - restauration possible si nécessaire

@@ -70,7 +70,7 @@ class SimpleTracker:
 
         total_duration = (datetime.now() - self.start_time).total_seconds()
 
-        report = f"""
+        report = """
 RAPPORT D'ANALYSE COMPLEXE MULTI-AGENTS
 ======================================
 
@@ -96,7 +96,7 @@ AGENTS UTILISÉS
                 f"- {agent}: {len(agent_traces)} interactions, {total_time:.2f}s\n"
             )
 
-        report += f"""
+        report += """
 RESULTATS
 ---------
 """
@@ -113,7 +113,7 @@ RESULTATS
             else:
                 report += "Aucun sophisme détecté\n"
 
-        report += f"""
+        report += """
 Authenticité: {'OUI' if fallacies_result.get('authentic') else 'NON'}
 Modèle: {fallacies_result.get('model_used', 'N/A')}
 Confiance: {fallacies_result.get('confidence', 0):.2f}

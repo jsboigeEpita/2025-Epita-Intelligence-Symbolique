@@ -62,7 +62,7 @@ def build_frontend():
 
     if not frontend_dir.exists():
         logger.error(
-            f"Le répertoire du frontend n'a pas été trouvé à l'emplacement attendu."
+            "Le répertoire du frontend n'a pas été trouvé à l'emplacement attendu."
         )
         return False
 
@@ -160,7 +160,7 @@ def run_pytest_tests():
             logger.error(
                 f"Pytest a terminé en ÉCHEC avec le code de retour {process.returncode}."
             )
-            logger.error(f"Consultez les logs pour plus de détails:")
+            logger.error("Consultez les logs pour plus de détails:")
             logger.error(f"  - Sortie standard: {pytest_stdout_log}")
             logger.error(f"  - Sortie d'erreur: {pytest_stderr_log}")
             return False

@@ -660,7 +660,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
             print(f"\n\n--- SCENARIO {i+1}: {scenario.get('name', 'Sans nom')} ---")
 
             if "custom_data_test" in scenario:
-                print(f"\n🔍 TEST TRAITEMENT DONNÉES CUSTOM:")
+                print("\n🔍 TEST TRAITEMENT DONNÉES CUSTOM:")
                 analysis = orchestrator.agents[
                     scenario["custom_data_test"]["agent"]
                 ].process_argument(scenario["custom_data_test"]["data"])
@@ -671,7 +671,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
                 print(f"   • Mock utilisé: ❌ {analysis['mock_used']}")
 
             if "dialogue_test" in scenario:
-                print(f"\n💬 TEST COMMUNICATION INTER-AGENTS:")
+                print("\n💬 TEST COMMUNICATION INTER-AGENTS:")
                 dialogue = orchestrator.agents[
                     scenario["dialogue_test"]["sender"]
                 ].communicate_with_agent(
@@ -687,7 +687,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
                 )
 
             if "debate_test" in scenario:
-                print(f"\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE:")
+                print("\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE:")
                 debate = orchestrator.orchestrate_logical_debate(
                     scenario["debate_test"]["topic"], scenario["debate_test"]["agents"]
                 )
@@ -713,7 +713,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
         Il faut absolument réussir ce projet.
         """
 
-        print(f"\n🔍 TEST TRAITEMENT DONNÉES CUSTOM (DÉFAUT):")
+        print("\n🔍 TEST TRAITEMENT DONNÉES CUSTOM (DÉFAUT):")
         analysis = sherlock.process_argument(custom_test_data)
 
         print(f"   • Agent: {analysis['agent_id']}")
@@ -723,7 +723,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
         print(f"   • Mock utilisé: ❌ {analysis['mock_used']}")
 
         # Test communication inter-agents
-        print(f"\n💬 TEST COMMUNICATION INTER-AGENTS (DÉFAUT):")
+        print("\n💬 TEST COMMUNICATION INTER-AGENTS (DÉFAUT):")
         dialogue = sherlock.communicate_with_agent(
             watson,
             "Watson, analysez cette déduction logique: Si P implique Q et non-Q, alors non-P",
@@ -736,7 +736,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
         print(f"   • Réponse qualité: {dialogue['response']['argument_quality']}")
 
         # Test orchestration débat logique
-        print(f"\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE (DÉFAUT):")
+        print("\n🎯 TEST ORCHESTRATION DÉBAT LOGIQUE (DÉFAUT):")
         debate = orchestrator.orchestrate_logical_debate(
             "L'intelligence artificielle peut-elle vraiment raisonner ?",
             ["sherlock", "watson", "moriarty"],
@@ -751,7 +751,7 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
     # Statistiques finales
     stats = orchestrator.get_orchestration_statistics()
 
-    print(f"\n📊 STATISTIQUES PRODUCTION:")
+    print("\n📊 STATISTIQUES PRODUCTION:")
     print(f"   • Agents créés: {stats['agents_count']}")
     print(f"   • Orchestrations: {stats['orchestrations_completed']}")
     print(f"   • Interactions totales: {stats['global_stats']['total_interactions']}")
@@ -759,13 +759,13 @@ async def run_production_agents_demo(scenario_file: Optional[str] = None) -> boo
     print(f"   • Mock utilisé: ❌ {stats['mock_used']}")
 
     # Validation finale
-    print(f"\n✅ VALIDATION PHASE 2 AGENTS LOGIQUES:")
-    print(f"   • ZÉRO mock utilisé")
-    print(f"   • Traitement données custom authentique")
-    print(f"   • Communication inter-agents fonctionnelle")
-    print(f"   • Détection sophistiques réelle")
-    print(f"   • Orchestration débats opérationnelle")
-    print(f"   • Prêt pour production")
+    print("\n✅ VALIDATION PHASE 2 AGENTS LOGIQUES:")
+    print("   • ZÉRO mock utilisé")
+    print("   • Traitement données custom authentique")
+    print("   • Communication inter-agents fonctionnelle")
+    print("   • Détection sophistiques réelle")
+    print("   • Orchestration débats opérationnelle")
+    print("   • Prêt pour production")
 
     return True
 

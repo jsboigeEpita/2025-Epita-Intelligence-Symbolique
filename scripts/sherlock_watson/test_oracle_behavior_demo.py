@@ -26,9 +26,9 @@ async def run_demo():
     ]
     analysis_result = await agent.analyze_clues(clues)
     if isinstance(analysis_result, dict) and "error" in analysis_result:
-        print(f"---AGENT_ERROR_START---")
+        print("---AGENT_ERROR_START---")
         print(f"L'agent a retourné une erreur contrôlée: {analysis_result['error']}")
-        print(f"---AGENT_ERROR_END---")
+        print("---AGENT_ERROR_END---")
     else:
         print(f"Résultat de l'analyse des indices: {analysis_result}")
     print("--- Fin de la démo de l'oracle ---")

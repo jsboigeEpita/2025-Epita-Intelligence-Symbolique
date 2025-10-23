@@ -446,7 +446,7 @@ class MigrationDuplicateAnalyzer:
     def generate_report(self, report: AnalysisReport) -> str:
         """Génère un rapport markdown détaillé."""
 
-        md_content = f"""# Rapport d'Analyse des Doublons de Migration
+        md_content = """# Rapport d'Analyse des Doublons de Migration
 
 **Généré le** : {report.timestamp}
 
@@ -491,7 +491,7 @@ class MigrationDuplicateAnalyzer:
                     else f"SIMILAIRE ({dup.content_similarity:.1%})"
                 )
 
-                md_content += f"""#### `{dup.filename}`
+                md_content += """#### `{dup.filename}`
 
 - **Statut** : {status}
 - **Taille** : scripts={dup.scripts_file.size}B, archived={dup.archived_file.size}B (diff: {dup.size_difference:+d}B)
@@ -523,7 +523,7 @@ class MigrationDuplicateAnalyzer:
             d.filename for d in report.duplicates if d.recommendation == "SUPPRIMER"
         ]
 
-        script_content = f'''#!/usr/bin/env python3
+        script_content = '''#!/usr/bin/env python3
 """
 Script de Nettoyage Sécurisé - Doublons de Migration
 ===================================================
@@ -608,7 +608,7 @@ def main():
     with open(backup_dir / "cleanup_report.json", 'w') as f:
         json.dump(report, f, indent=2)
 
-    print(f"\\n📊 Nettoyage terminé:")
+    print("\\n📊 Nettoyage terminé:")
     print(f"  - {{len(deleted_files)}} fichiers supprimés")
     print(f"  - {{len(errors)}} erreurs")
     print(f"  - Sauvegarde: {{backup_dir}}")
@@ -652,13 +652,13 @@ def main():
     with open(json_file, "w", encoding="utf-8") as f:
         json.dump(asdict(report), f, indent=2, ensure_ascii=False)
 
-    print(f"\n🎉 Analyse terminée !")
+    print("\n🎉 Analyse terminée !")
     print(f"📄 Rapport détaillé : {report_file}")
     print(f"🛠️ Script de nettoyage : {cleanup_file}")
     print(f"📊 Données JSON : {json_file}")
 
     # Résumé rapide
-    print(f"\n📊 Résumé:")
+    print("\n📊 Résumé:")
     print(f"  - {report.exact_duplicates} doublons exacts")
     print(f"  - {report.modified_duplicates} doublons modifiés")
     print(f"  - {report.recommendations['SUPPRIMER']} fichiers à supprimer")

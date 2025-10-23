@@ -202,7 +202,7 @@ class ReviewFileRefactorer:
                 "Considérer la simplification du code (complexité élevée)"
             )
 
-        if "async def" in content and "await" not in content:
+        if "async de" in content and "await" not in content:
             recommendations.append("Vérifier la cohérence des fonctions async")
 
         return recommendations
@@ -268,7 +268,7 @@ class ReviewFileRefactorer:
             # Imports manquants
             ("from typing import", "from typing import Dict, List, Optional, Any"),
             # Indentation
-            ("    async def", "async def"),
+            ("    async de", "async de"),
             # Parenthèses manquantes
             ("print ", "print("),
         ]
@@ -543,12 +543,12 @@ def main():
         refactorer = ReviewFileRefactorer()
         report = refactorer.run_refactoring()
 
-        print(f"\n[OK] Refactorisation terminee!")
+        print("\n[OK] Refactorisation terminee!")
         print(
             f"[OK] {report['summary']['successful_refactoring']} fichiers refactorises avec succes"
         )
         print(f"[ERREUR] {report['summary']['failed_refactoring']} echecs")
-        print(f"[INFO] Rapports sauvegardes dans logs/")
+        print("[INFO] Rapports sauvegardes dans logs/")
 
         return 0
 

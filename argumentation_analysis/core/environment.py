@@ -69,7 +69,7 @@ def ensure_env(
                     )
             else:
                 if not silent:
-                    print(f"[auto_env] INFO: Aucun fichier .env trouvé ou déjà chargé.")
+                    print("[auto_env] INFO: Aucun fichier .env trouvé ou déjà chargé.")
         except ImportError as e:
             if not silent:
                 print(
@@ -123,21 +123,21 @@ def ensure_env(
             current_env_name_for_error = "inconnu"
 
         error_message = (
-            f"ERREUR CRITIQUE : MAUVAIS ENVIRONNEMENT CONDA ACTIF.\n"
-            f"  La variable d'environnement 'CONDA_DEFAULT_ENV' est incorrecte.\n"
+            "ERREUR CRITIQUE : MAUVAIS ENVIRONNEMENT CONDA ACTIF.\n"
+            "  La variable d'environnement 'CONDA_DEFAULT_ENV' est incorrecte.\n"
             f"  Environnement attendu   : '{env_name}'\n"
             f"  Environnement détecté (CONDA_DEFAULT_ENV) : '{active_conda_env or 'NON DÉFINIE'}'\n"
             f"  Interpréteur actuel (peut être trompeur) : '{current_env_name_for_error}' ({sys.prefix})\n\n"
-            f"  SOLUTION IMPÉRATIVE :\n"
+            "  SOLUTION IMPÉRATIVE :\n"
             f"  1. Activez l'environnement : `conda activate {env_name}`\n"
-            f"  2. Lancez votre commande.\n"
-            f'  OU utilisez le script wrapper : `powershell -File .\\activate_project_env.ps1 -CommandToRun "..."`\n'
+            "  2. Lancez votre commande.\n"
+            '  OU utilisez le script wrapper : `powershell -File .\\activate_project_env.ps1 -CommandToRun "..."`\n'
         )
         raise RuntimeError(error_message)
 
         # Ancien code conservé comme référence, mais la vérification principale est au-dessus.
         # current_env_path = sys.prefix
-        # is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
+        # is_env_correct = "envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
         # if not is_env_correct and env_name == 'projet-is-roo':
         #     is_env_correct = "envs\\projet-is" in current_env_path or "envs/projet-is" in current_env_path
         # if not is_env_correct:
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             print("[OK] Test reussi - Environnement operationnel")
     except RuntimeError as e:
         print(
-            f"\n[ERREUR] Test échoué comme attendu en dehors de l'environnement wrapper."
+            "\n[ERREUR] Test échoué comme attendu en dehors de l'environnement wrapper."
         )
         print(e)
         success = False

@@ -222,7 +222,7 @@ class EinsteinOracleOrchestrator:
         )
 
         logger.info("✅ Workflow Einstein configuré")
-        logger.info(f"🎯 Solution secrète: L'Allemand possède le poisson (maison 4)")
+        logger.info("🎯 Solution secrète: L'Allemand possède le poisson (maison 4)")
 
         return self.dummy_oracle_state
 
@@ -518,7 +518,7 @@ def display_einstein_results(result: Dict[str, Any]):
     oracle_perf = result.get("oracle_performance", {})
     demo_success = result.get("demo_success", {})
 
-    print(f"\n📊 MÉTRIQUES PUZZLE:")
+    print("\n📊 MÉTRIQUES PUZZLE:")
     print(f"   Rounds total: {puzzle_metrics.get('total_rounds', 0)}")
     print(
         f"   Indices révélés: {puzzle_metrics.get('indices_revealed', 0)}/{puzzle_metrics.get('total_indices', 0)}"
@@ -527,16 +527,16 @@ def display_einstein_results(result: Dict[str, Any]):
         f"   Solution trouvée: {'✅' if puzzle_metrics.get('solution_found') else '❌'}"
     )
 
-    print(f"\n🎯 SOLUTION EINSTEIN:")
+    print("\n🎯 SOLUTION EINSTEIN:")
     print(f"   Réponse correcte: {solution_info.get('correct_answer', 'N/A')}")
     print(f"   Position: {solution_info.get('position', 'N/A')}")
 
-    print(f"\n🎭 PERFORMANCE ORACLE:")
+    print("\n🎭 PERFORMANCE ORACLE:")
     print(f"   Méthode: {oracle_perf.get('revelation_method', 'N/A')}")
     print(f"   Rôle Oracle: {oracle_perf.get('oracle_role', 'N/A')}")
     print(f"   Indices donnés: {len(oracle_perf.get('indices_progression', []))}")
 
-    print(f"\n🎉 SUCCÈS DÉMO:")
+    print("\n🎉 SUCCÈS DÉMO:")
     print(f"   Puzzle complété: {'✅' if demo_success.get('puzzle_completed') else '❌'}")
     print(f"   Moriarty Oracle: {demo_success.get('moriarty_as_oracle', 'N/A')}")
     print(f"   Déduction agents: {demo_success.get('agents_deduction', 'N/A')}")
@@ -582,7 +582,7 @@ async def main():
     try:
         result = await run_einstein_oracle_demo(integration_test=args.integration_test)
         if not args.integration_test:
-            print(f"\n🎉 Démo Einstein terminée avec succès!")
+            print("\n🎉 Démo Einstein terminée avec succès!")
 
     except Exception as e:
         logger.error(f"❌ Erreur critique: {e}", exc_info=True)

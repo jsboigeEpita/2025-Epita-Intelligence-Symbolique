@@ -336,7 +336,7 @@ def main():
     success = cleanup.run(dry_run)
 
     if success:
-        print(f"\n[SUCCES] Nettoyage termine avec succes!")
+        print("\n[SUCCES] Nettoyage termine avec succes!")
         print(f"[LOG] Log detaille: {cleanup.log_file}")
         if not dry_run:
             print(f"[BACKUP] Liste de sauvegarde: {cleanup.backup_list}")

@@ -78,7 +78,7 @@ def test_web_api_fallacy_analysis_integration():
             analysis_result["status"] == "success"
         ), f"Analysis failed: {analysis_result.get('error', 'Unknown error')}"
 
-        print(f"\n✅ Analysis completed successfully!")
+        print("\n✅ Analysis completed successfully!")
         print(f"📊 Found {analysis_result['summary']['total_fallacies']} fallacies")
         print(f"📈 Overall quality: {analysis_result['summary']['overall_quality']}")
         print(f"🌐 API version: {analysis_result['summary']['api_version']}")
@@ -152,7 +152,7 @@ def test_complete_analysis_api():
             analysis_result["status"] == "success"
         ), f"Complete analysis failed: {analysis_result.get('error', 'Unknown error')}"
 
-        print(f"\n✅ Complete analysis successful!")
+        print("\n✅ Complete analysis successful!")
         print(f"📊 Fallacies: {analysis_result['summary']['total_fallacies']}")
 
         if "structure_score" in analysis_result["summary"]:

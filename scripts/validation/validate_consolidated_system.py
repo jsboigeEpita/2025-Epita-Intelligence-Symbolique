@@ -583,7 +583,7 @@ class ConsolidatedSystemValidator:
         success_rate = (successes / total_tests * 100) if total_tests > 0 else 0
 
         # Génération du rapport
-        report = f"""
+        report = """
 RAPPORT DE VALIDATION SYSTÈME CONSOLIDÉ - PHASE 3
 ================================================
 
@@ -612,14 +612,14 @@ RÉSULTATS DÉTAILLÉS
                 report += f"   Temps: {result.execution_time:.3f}s\n"
 
         # Recommandations
-        report += f"\n\nRECOMMANDATIONS\n===============\n"
+        report += "\n\nRECOMMANDATIONS\n===============\n"
 
         if errors == 0 and warnings == 0:
             report += "🎉 EXCELLENT! Tous les tests passent avec succès.\n"
             report += "✅ Le système consolidé est entièrement opérationnel.\n"
             report += "🚀 Vous pouvez procéder en toute confiance.\n"
         elif errors == 0:
-            report += f"✅ BIEN! Aucune erreur critique détectée.\n"
+            report += "✅ BIEN! Aucune erreur critique détectée.\n"
             report += (
                 f"⚠️  {warnings} avertissement(s) à examiner mais non bloquant(s).\n"
             )
@@ -631,7 +631,7 @@ RÉSULTATS DÉTAILLÉS
             report += "🔧 Corrections requises avant utilisation en production.\n"
             report += "📋 Vérifiez les détails des erreurs ci-dessus.\n"
 
-        report += f"\n\nFICHIERS CONSOLIDÉS VALIDÉS\n==========================\n"
+        report += "\n\nFICHIERS CONSOLIDÉS VALIDÉS\n==========================\n"
         for file_path, description in self.consolidated_files.items():
             status = (
                 "✅"
@@ -644,7 +644,7 @@ RÉSULTATS DÉTAILLÉS
             )
             report += f"{status} {file_path}: {description}\n"
 
-        report += f"\n\nMODULES ESSENTIELS VALIDÉS\n=========================\n"
+        report += "\n\nMODULES ESSENTIELS VALIDÉS\n=========================\n"
         for module_name in self.essential_modules:
             status = (
                 "✅"
@@ -657,7 +657,7 @@ RÉSULTATS DÉTAILLÉS
             )
             report += f"{status} {module_name}\n"
 
-        report += f"""
+        report += """
 
 PROCHAINES ÉTAPES RECOMMANDÉES
 ==============================
@@ -734,7 +734,7 @@ def main():
         validator = ConsolidatedSystemValidator()
         report_file = validator.run_full_validation()
 
-        print(f"\n[SUCCESS] Validation terminee avec succes!")
+        print("\n[SUCCESS] Validation terminee avec succes!")
         print(f"[RAPPORT] Rapport disponible: {report_file}")
 
         return 0

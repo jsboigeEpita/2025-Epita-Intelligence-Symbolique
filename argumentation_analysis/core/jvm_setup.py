@@ -395,9 +395,9 @@ def find_valid_java_home() -> Optional[str]:
         jdk_url, jdk_zip_target_path, description=f"JDK {JDK_VERSION}+{JDK_BUILD}"
     )
     if not downloaded_ok or not jdk_zip_target_path.exists():
-        logger.error(f"Échec du téléchargement du JDK portable.")
+        logger.error("Échec du téléchargement du JDK portable.")
         return None
-    logger.info(f"Décompression du JDK portable...")
+    logger.info("Décompression du JDK portable...")
     try:
         unzip_file(jdk_zip_target_path, portable_jdk_install_dir)
         final_jdk_path = None

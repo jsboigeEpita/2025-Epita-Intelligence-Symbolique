@@ -60,9 +60,9 @@ class DocumentationSystemStarter:
         return True
 
     def _skip_interface_step(self):
-        print(f"    knowledge_map.html")
-        print(f"    generated_docs/index.html")
-        print(f"    project_analysis.json")
+        print("    knowledge_map.html")
+        print("    generated_docs/index.html")
+        print("    project_analysis.json")
         return True
 
     def check_dependencies(self) -> bool:
@@ -196,7 +196,7 @@ class DocumentationSystemStarter:
                 return True
 
             elif mode == "server" or mode == "auto":
-                print(" Mode serveur Flask interactif")
+                print(" Mode serveur Flask interacti")
                 print(" L'interface s'ouvrira sur http://localhost:5000")
                 print(" Appuyez sur Ctrl+C pour arrêter\n")
 

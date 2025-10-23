@@ -573,7 +573,7 @@ if __name__ == "__main__":
     print(
         f"Kernel: {'Oui' if initialized_context.kernel else 'Non'} (Type: {type(initialized_context.kernel).__name__ if initialized_context.kernel else 'N/A'})"
     )
-    print(f"Configuration chargée (.env):")
+    print("Configuration chargée (.env):")
     for key, value in initialized_context.config.items():
         display_value = value
         if (

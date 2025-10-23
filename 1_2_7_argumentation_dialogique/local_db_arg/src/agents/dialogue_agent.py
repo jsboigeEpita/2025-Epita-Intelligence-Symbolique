@@ -184,7 +184,7 @@ class DialogueAgent:
                 )
             else:
                 return self._create_move(
-                    SpeechAct.QUESTION, f"Que savez-vous sur ce sujet?"
+                    SpeechAct.QUESTION, "Que savez-vous sur ce sujet?"
                 )
 
         elif move.act == SpeechAct.CLAIM:

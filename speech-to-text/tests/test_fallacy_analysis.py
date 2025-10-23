@@ -50,7 +50,7 @@ def test_fallacy_analysis_integration():
         print("\n📋 Fallacy Analysis Results:")
         print(json.dumps(analysis_result, indent=2, ensure_ascii=False))
 
-        print(f"\n✅ Analysis completed successfully!")
+        print("\n✅ Analysis completed successfully!")
         print(f"📊 Found {analysis_result['summary']['total_fallacies']} fallacies")
         print(f"📈 Overall quality: {analysis_result['summary']['overall_quality']}")
 

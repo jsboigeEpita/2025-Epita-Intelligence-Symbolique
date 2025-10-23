@@ -114,12 +114,12 @@ def main():
             print()
         else:
             print(f"{i}. {filepath}")
-            print(f"   Status: FICHIER INTROUVABLE")
+            print("   Status: FICHIER INTROUVABLE")
             all_clean = False
             print()
 
     print("=" * 50)
-    print(f"RESULTAT FINAL LOT 2:")
+    print("RESULTAT FINAL LOT 2:")
     print(f"   Fichiers traités: {clean_files}/{total_files}")
     print(f"   Taux de purge: {(clean_files/total_files)*100:.1f}%")
 

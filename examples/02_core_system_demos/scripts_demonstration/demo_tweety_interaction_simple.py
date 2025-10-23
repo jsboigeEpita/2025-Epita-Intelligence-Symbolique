@@ -67,7 +67,7 @@ def find_portable_jdk_jvm():
             f"ERREUR: Impossible de trouver la JVM dans {project_root / 'portable_jdk' / jdk_dir_name}"
         )
         print("Vérifiez le nom du dossier JDK et la structure des fichiers.")
-        print(f"Tentatives de chemins :")
+        print("Tentatives de chemins :")
         print(f"  Windows: {jvm_path_windows} (existe: {jvm_path_windows.exists()})")
         print(f"  Linux:   {jvm_path_linux} (existe: {jvm_path_linux.exists()})")
         print(f"  macOS:   {jvm_path_macos} (existe: {jvm_path_macos.exists()})")
@@ -206,7 +206,7 @@ def main():
     try:
         # La méthode parseFormula attend un JString
         parsed_formula = parser.parseFormula(JString(formula_string))
-        print(f"INFO: Formule parsée avec succès.")
+        print("INFO: Formule parsée avec succès.")
     except Exception as e:
         print(f"ERREUR: Échec du parsing de la formule '{formula_string}' : {e}")
         # import traceback

@@ -659,7 +659,7 @@ def configure_analysis_task() -> Optional[str]:
                             # Essayer d'abord avec le marqueur tel quel
                             found_start = texte_brut_source.index(start_marker_final)
                             start_index = found_start + len(start_marker_final)
-                            app_logger.info(f"   -> Début trouvé.")
+                            app_logger.info("   -> Début trouvé.")
                         except ValueError:
                             # Si échec et template disponible, essayer avec le template
                             if template_start:
@@ -682,11 +682,11 @@ def configure_analysis_task() -> Optional[str]:
                                     )
                                 except ValueError:
                                     app_logger.warning(
-                                        f"   ⚠️ Marqueur début non trouvé même avec template."
+                                        "   ⚠️ Marqueur début non trouvé même avec template."
                                     )
                                     start_index = 0
                             else:
-                                app_logger.warning(f"   ⚠️ Marqueur début non trouvé.")
+                                app_logger.warning("   ⚠️ Marqueur début non trouvé.")
                                 start_index = 0
 
                     if end_marker_final:
@@ -695,10 +695,10 @@ def configure_analysis_task() -> Optional[str]:
                                 end_marker_final, start_index
                             )
                             end_index = found_end
-                            app_logger.info(f"   -> Fin trouvée.")
+                            app_logger.info("   -> Fin trouvée.")
                         except ValueError:
                             app_logger.warning(
-                                f"   ⚠️ Marqueur fin non trouvé (après début)."
+                                "   ⚠️ Marqueur fin non trouvé (après début)."
                             )
                             end_index = len(texte_brut_source)
                     if start_index < end_index:

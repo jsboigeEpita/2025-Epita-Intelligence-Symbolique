@@ -99,7 +99,7 @@ def main():
             total_w291 += w291
             print(f"  ✅ {filepath}: W293={w293}, W291={w291}")
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"  Files modified: {files_modified}")
     print(f"  W293 fixed: {total_w293}")
     print(f"  W291 fixed: {total_w291}")

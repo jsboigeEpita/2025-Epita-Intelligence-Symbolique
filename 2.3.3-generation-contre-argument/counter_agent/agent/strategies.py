@@ -372,21 +372,21 @@ class RhetoricalStrategies:
     ) -> str:
         """Génère un contre-argument par défaut si la stratégie échoue."""
         if counter_type == CounterArgumentType.DIRECT_REFUTATION:
-            return f"Cette conclusion est incorrecte car elle ne tient pas compte de facteurs importants."
+            return "Cette conclusion est incorrecte car elle ne tient pas compte de facteurs importants."
 
         elif counter_type == CounterArgumentType.COUNTER_EXAMPLE:
-            return f"Il existe des cas qui contredisent cet argument, par exemple quand les circonstances sont différentes."
+            return "Il existe des cas qui contredisent cet argument, par exemple quand les circonstances sont différentes."
 
         elif counter_type == CounterArgumentType.PREMISE_CHALLENGE:
             return f"La prémisse '{argument.premises[0] if argument.premises else 'principale'}' n'est pas suffisamment étayée."
 
         elif counter_type == CounterArgumentType.ALTERNATIVE_EXPLANATION:
-            return f"Une explication alternative plus plausible serait que d'autres facteurs sont en jeu."
+            return "Une explication alternative plus plausible serait que d'autres facteurs sont en jeu."
 
         elif counter_type == CounterArgumentType.REDUCTIO_AD_ABSURDUM:
-            return f"Cette logique mène à des conclusions absurdes si on la pousse à son terme."
+            return "Cette logique mène à des conclusions absurdes si on la pousse à son terme."
 
-        return f"Cet argument présente plusieurs failles qui remettent en question sa validité."
+        return "Cet argument présente plusieurs failles qui remettent en question sa validité."
 
     def _generate_absurd_consequence(self, argument: Argument) -> str:
         """Génère une conséquence absurde pour la réduction à l'absurde."""

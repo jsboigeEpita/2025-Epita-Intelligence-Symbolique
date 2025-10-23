@@ -106,7 +106,7 @@ async def main():
     print(f"   ✅ Performance: {'< 3s' if kernel_time < 3 else '>= 3s'}")
 
     # Liste des services du kernel
-    print(f"   📋 Services:")
+    print("   📋 Services:")
     for service_id, service in services.items():
         service_type = type(service).__name__
         print(f"      - {service_id}: {service_type}")
@@ -137,7 +137,7 @@ async def main():
     try:
         # Tentative création config avec mocks (doit échouer)
         config_mock = UnifiedConfig(mock_level=MockLevel.PARTIAL)
-        print(f"   ❌ Config Mock Acceptée: ERREUR!")
+        print("   ❌ Config Mock Acceptée: ERREUR!")
     except ValueError as e:
         print(f"   ✅ Config Mock Rejetée: {str(e)[:50]}...")
 
@@ -169,11 +169,11 @@ async def main():
         print(f"   ✅ Prompt Test: {prompt[:30]}...")
         print(f"   ✅ Service Prêt: {service is not None}")
         print(f"   ✅ Kernel Prêt: {kernel is not None}")
-        print(f"   ℹ️  Appel réel nécessiterait invoke() async")
+        print("   ℹ️  Appel réel nécessiterait invoke() async")
 
     except Exception as e:
         logger.warning(f"Test appel LLM: {e}")
-        print(f"   ⚠️  Test Setup: Configuration validée, appel nécessiterait invoke()")
+        print("   ⚠️  Test Setup: Configuration validée, appel nécessiterait invoke()")
 
     # === 7. Métriques Finales ===
     print("\n📊 7. MÉTRIQUES PHASE 2")
@@ -192,7 +192,7 @@ async def main():
     }
 
     print(f"   📈 Performance Totale: {total_time:.3f}s")
-    print(f"   📋 Validation Metrics:")
+    print("   📋 Validation Metrics:")
 
     success_count = 0
     for metric, status in metrics.items():
@@ -204,17 +204,17 @@ async def main():
     success_rate = (success_count / len(metrics)) * 100
 
     # === 8. Résultat Final ===
-    print(f"\n🏆 RÉSULTAT PHASE 2")
+    print("\n🏆 RÉSULTAT PHASE 2")
     print("=" * 20)
     print(f"   🎯 Critères Validés: {success_count}/{len(metrics)}")
     print(f"   📊 Taux Succès: {success_rate:.1f}%")
     print(f"   ⚡ Performance: {total_time:.3f}s")
 
     if success_rate == 100:
-        print(f"   🎉 PHASE 2 VALIDATION COMPLÈTE - AUTHENTICITÉ 100%")
+        print("   🎉 PHASE 2 VALIDATION COMPLÈTE - AUTHENTICITÉ 100%")
         logger.info("🎉 Phase 2 - Authenticité LLM complètement validée!")
     else:
-        print(f"   ⚠️  Phase 2 - Validation partielle")
+        print("   ⚠️  Phase 2 - Validation partielle")
         logger.warning("Phase 2 - Validation incomplète")
 
     print("\n" + "=" * 64)

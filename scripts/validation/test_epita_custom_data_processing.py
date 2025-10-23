@@ -283,11 +283,11 @@ def main():
 
     print(f"\n{status_color}{Symbols.FIRE} {status_text} {Symbols.FIRE}{Colors.ENDC}")
     print(f"\n{Colors.CYAN}Améliorations réalisées :{Colors.ENDC}")
-    print(f"  ✅ Processeur de données custom créé")
-    print(f"  ✅ Mocks éliminés dans les modules prioritaires")
-    print(f"  ✅ Traitement adaptatif implémenté")
-    print(f"  ✅ Traçabilité des marqueurs custom ajoutée")
-    print(f"  ✅ Mécanismes de fallback créés")
+    print("  ✅ Processeur de données custom créé")
+    print("  ✅ Mocks éliminés dans les modules prioritaires")
+    print("  ✅ Traitement adaptatif implémenté")
+    print("  ✅ Traçabilité des marqueurs custom ajoutée")
+    print("  ✅ Mécanismes de fallback créés")
 
     return overall_success
 

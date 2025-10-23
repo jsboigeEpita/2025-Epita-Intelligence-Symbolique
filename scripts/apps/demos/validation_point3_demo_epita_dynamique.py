@@ -146,7 +146,7 @@ class ProfesseurVirtuelLLM:
         if not self.llm_service:
             raise RuntimeError("Service LLM non initialisé")
 
-        prompt = f"""
+        prompt = """
         Analysez l'argument suivant dans le contexte d'un débat sur l'IA en médecine.
 
         CONTEXTE MÉDICAL: {contexte_medical}
@@ -778,8 +778,8 @@ def sauvegarder_validation_point3(
         )
 
     # 3. Rapport de validation Point 3
-    rapport_file = reports_dir / f"validation_point3_demo_epita.md"
-    rapport_content = f"""# 🎓 Validation Point 3/5 : Démo EPITA avec paramètres dynamiques et vrais LLMs
+    rapport_file = reports_dir / "validation_point3_demo_epita.md"
+    rapport_content = """# 🎓 Validation Point 3/5 : Démo EPITA avec paramètres dynamiques et vrais LLMs
 
 ## 📊 Résumé Exécution
 - **Timestamp**: {timestamp}
@@ -942,11 +942,11 @@ async def main(args):
             f"[TROPHY] Etudiants en progression: {metriques['progression_adaptive']['etudiants_progressant']}"
         )
 
-        print(f"\n[FOLDER] Fichiers generes:")
+        print("\n[FOLDER] Fichiers generes:")
         for type_fichier, chemin in fichiers.items():
             print(f"   • {type_fichier}: {chemin}")
 
-        print(f"\n[CHECK] Validation Point 3/5 : Tous les objectifs atteints")
+        print("\n[CHECK] Validation Point 3/5 : Tous les objectifs atteints")
         return fichiers["rapport_file"]
 
     except Exception as e:

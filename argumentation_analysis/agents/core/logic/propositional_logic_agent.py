@@ -555,7 +555,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.debug("[text_to_belief_set] Étape 3: Terminé.")
 
         belief_set_content = "\n".join(valid_formulas)
-        self.logger.debug(f"--- DÉBUT VÉRIFICATION CONSISTANCE ---")
+        self.logger.debug("--- DÉBUT VÉRIFICATION CONSISTANCE ---")
         self.logger.debug(f"Contenu envoyé à Tweety:\n{belief_set_content}")
 
         is_consistent = False
@@ -575,25 +575,25 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)
             )
             self.logger.error(
-                f"############################################################"
+                "############################################################"
             )
-            self.logger.error(f"EXCEPTION CATASTROPHIQUE DANS PL_CHECK_CONSISTENCY")
+            self.logger.error("EXCEPTION CATASTROPHIQUE DANS PL_CHECK_CONSISTENCY")
             self.logger.error(f"TYPE: {type(e).__name__}")
             self.logger.error(f"MESSAGE: {e}")
             self.logger.error(f"TRACEBACK:\n{tb_str}")
             self.logger.error(
-                f"############################################################"
+                "############################################################"
             )
             # Propage l'erreur pour qu'elle soit visible dans les logs du serveur
             raise
 
-        self.logger.debug(f"--- FIN VÉRIFICATION CONSISTANCE ---")
+        self.logger.debug("--- FIN VÉRIFICATION CONSISTANCE ---")
 
         if not is_consistent:
             self.logger.error(
                 f"Ensemble de croyances final invalide: Incohérent\nContenu:\n{belief_set_content}"
             )
-            return None, f"Ensemble de croyances invalide: Incohérent"
+            return None, "Ensemble de croyances invalide: Incohérent"
 
         belief_set = PropositionalBeliefSet(
             belief_set_content, propositions=list(declared_propositions)
@@ -960,7 +960,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                     indent=2,
                 )
             else:
-                response_content = f'{{"error": "Impossible d\'exécuter la requête car le belief set n\'a pas pu être créé.", "details": "{message}"}}'
+                response_content = '{{"error": "Impossible d\'exécuter la requête car le belief set n\'a pas pu être créé.", "details": "{message}"}}'
 
         else:
             self.logger.warning(

@@ -60,7 +60,7 @@ def test_pytest_asyncio():
     try:
         pass
 
-        print(f"[OK] pytest-asyncio disponible")
+        print("[OK] pytest-asyncio disponible")
         return True
     except Exception as e:
         print(f"[ERREUR] Erreur pytest-asyncio: {e}")

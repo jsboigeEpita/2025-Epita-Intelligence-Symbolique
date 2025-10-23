@@ -123,7 +123,7 @@ class EnqueteStateManagerPlugin:
         name="get_designated_next_agent",
     )
     def get_designated_next_agent(self) -> str:
-        self._logger.info(f"Appel get_designated_next_agent")
+        self._logger.info("Appel get_designated_next_agent")
         try:
             agent_name = self._state.get_designated_next_agent()
             return json.dumps({"next_agent": agent_name})
@@ -276,7 +276,7 @@ class EnqueteStateManagerPlugin:
         name="list_belief_sets",
     )
     def list_belief_sets(self) -> str:
-        self._logger.info(f"Appel list_belief_sets")
+        self._logger.info("Appel list_belief_sets")
         if not isinstance(self._state, EnquetePoliciereState):
             return json.dumps(
                 {

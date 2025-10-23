@@ -655,7 +655,7 @@ class TestFOLRealWorldIntegration:
         is_consistent, _ = await agent.is_consistent(belief_set)
         assert is_consistent is True, "Le belief set complexe devrait être consistant."
 
-        logger.info(f"✅ Analyse complexe terminée avec succès.")
+        logger.info("✅ Analyse complexe terminée avec succès.")
 
     @pytest.mark.asyncio
     async def test_fol_multilingual_support(self, fol_agent_with_kernel, jvm_session):
@@ -740,7 +740,7 @@ def check_tweety_availability():
 @pytest_asyncio.fixture(scope="module")
 async def fol_agent_with_kernel(jvm_session):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
-    logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
+    logger.info("--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
     if not jvm_session:
         pytest.skip("Skipping test: jvm_session fixture failed to initialize.")
 

@@ -64,7 +64,7 @@ class PromisingVersionExtractor:
                     f"Erreur lors du traitement de {log_file_path}: {e}", exc_info=True
                 )
 
-        logger.info(f"--- Fin du traitement ---")
+        logger.info("--- Fin du traitement ---")
         if total_snapshots > 0:
             logger.info(
                 f"🎉 Total de {total_snapshots} snapshot(s) prometteur(s) extrait(s) dans {self.output_base_dir.resolve()}"
@@ -163,7 +163,7 @@ class PromisingVersionExtractor:
                         f"  ! Contenu non trouvé pour write_to_file dans {snapshot_name}."
                     )
 
-            elif tool == "apply_diff":
+            elif tool == "apply_dif":
                 diff_match = re.search(r"<diff>(.*?)</diff>", content_xml, re.DOTALL)
                 if diff_match:
                     diff_content = diff_match.group(1).strip()

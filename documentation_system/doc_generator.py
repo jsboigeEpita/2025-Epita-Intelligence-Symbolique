@@ -843,9 +843,9 @@ def main():
         generator = DocumentationGenerator()
         output_dir = generator.generate_complete_documentation()
 
-        print(f"\n Documentation générée avec succès !")
+        print("\n Documentation générée avec succès !")
         print(f" Consultez: {output_dir}/index.html")
-        print(f" Ouvrez dans votre navigateur pour voir le résultat")
+        print(" Ouvrez dans votre navigateur pour voir le résultat")
 
     except Exception as e:
         print(f"❌ Erreur: {e}")

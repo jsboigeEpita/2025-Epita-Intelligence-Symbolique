@@ -102,7 +102,7 @@ class ArgumentationAgent:
     def _create_prompt(self, topic: str, context: str, argument_type: str) -> str:
         """Create a prompt for GPT based on agent personality and argument type"""
 
-        base_prompt = f"""You are {self.name}, an AI agent with the following personality: {self.personality}
+        base_prompt = """You are {self.name}, an AI agent with the following personality: {self.personality}
 
 You are debating the topic: "{topic}"
 Your position: {self.position.upper()}
@@ -397,7 +397,7 @@ async def main():
     # Create and run the argumentation system
     system = ArgumentationSystem()
 
-    print(f"\n🚀 Initializing debate...")
+    print("\n🚀 Initializing debate...")
     await system.start_debate(topic, num_agents, max_turns)
 
 

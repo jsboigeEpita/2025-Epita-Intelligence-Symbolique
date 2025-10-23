@@ -376,7 +376,7 @@ class CleanupManager:
             elif list((self.project_root / "tests" / "unit").rglob(file_name)):
                 protected_found += 1
 
-        report_content = f"""# Rapport de validation post-nettoyage
+        report_content = """# Rapport de validation post-nettoyage
 *Généré le {datetime.now().isoformat()}*
 
 ## Résumé du nettoyage
@@ -417,7 +417,7 @@ class CleanupManager:
                 f"- ... et {len(remaining_orphans) - 10} autres fichiers\n"
             )
 
-        report_content += f"""
+        report_content += """
 ## Erreurs et avertissements
 
 """
@@ -428,7 +428,7 @@ class CleanupManager:
         if not self.log_data["errors"]:
             report_content += "Aucune erreur détectée [OK]\n"
 
-        report_content += f"""
+        report_content += """
 ## Recommandations
 
 1. **Vérifier les tests critiques** après nettoyage
@@ -492,7 +492,7 @@ def main():
         archived_sim = cleanup.archive_historical_files(dry_run=True)
         cleaned_sim = cleanup.clean_empty_directories(dry_run=True)
 
-        print(f"\nRésumé simulation :")
+        print("\nRésumé simulation :")
         print(f"- Fichiers à supprimer : {deleted_sim}")
         print(f"- Fichiers à archiver : {archived_sim}")
         print(f"- Répertoires à nettoyer : {cleaned_sim}")
@@ -518,7 +518,7 @@ def main():
         cleanup.save_execution_log()
         report_path = cleanup.generate_validation_report()
 
-        print(f"\n[SUCCESS] NETTOYAGE TERMINÉ AVEC SUCCÈS !")
+        print("\n[SUCCESS] NETTOYAGE TERMINÉ AVEC SUCCÈS !")
         print(f"- Fichiers supprimés : {deleted_real}")
         print(f"- Fichiers archivés : {archived_real}")
         print(f"- Répertoires nettoyés : {cleaned_real}")

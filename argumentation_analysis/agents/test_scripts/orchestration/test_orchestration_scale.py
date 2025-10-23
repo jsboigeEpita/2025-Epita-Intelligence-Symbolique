@@ -41,7 +41,7 @@ async def load_kremlin_speech():
     cache_id = "4cf2d4853745719f6504a54610237738ad016de4f64176c3e8f5218f8fd2c01b"
     cache_path = Path(f"../text_cache/{cache_id}.txt")
 
-    logger.info(f"Chargement direct du discours du Kremlin depuis le cache...")
+    logger.info("Chargement direct du discours du Kremlin depuis le cache...")
 
     try:
         with open(cache_path, "r", encoding="utf-8") as f:

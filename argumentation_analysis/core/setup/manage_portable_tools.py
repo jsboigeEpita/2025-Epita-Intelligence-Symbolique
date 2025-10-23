@@ -165,7 +165,7 @@ def _unzip_file(zip_path, dest_dir, logger_instance=None):
     try:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(dest_dir)
-        logger.info(f"Archive décompressée avec succès.")
+        logger.info("Archive décompressée avec succès.")
         return True
     except zipfile.BadZipFile:
         logger.error("Le fichier téléchargé n'est pas une archive ZIP valide.")

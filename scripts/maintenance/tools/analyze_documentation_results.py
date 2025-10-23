@@ -160,7 +160,7 @@ def main():
     with open("logs/documentation_correction_plan.json", "w", encoding="utf-8") as f:
         json.dump(correction_plan, f, indent=2, ensure_ascii=False)
 
-    print(f"📊 Plan de correction généré:")
+    print("📊 Plan de correction généré:")
     print(f"   🔗 Total liens brisés: {correction_plan['summary']['total_broken']}")
     print(f"   🏆 Documents prioritaires: {correction_plan['summary']['priority_docs']}")
     print(

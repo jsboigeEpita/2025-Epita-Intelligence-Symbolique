@@ -70,7 +70,7 @@ class JTMSCompleteDemo:
 
         # Associer l'instance à la session
         await self.session_manager.add_jtms_instance_to_session(session_id, instance_id)
-        print(f"✅ Instance associée à la session")
+        print("✅ Instance associée à la session")
 
         # Créer des croyances
         self.print_subheader("Création de croyances")
@@ -165,7 +165,7 @@ class JTMSCompleteDemo:
         self.sk_plugin.configure_auto_creation(auto_session=True, auto_instance=True)
 
         # Tester chaque fonction SK
-        self.print_subheader("Fonction create_belief")
+        self.print_subheader("Fonction create_belie")
 
         result1 = await self.sk_plugin.create_belief(
             belief_name="température_élevée",
@@ -202,7 +202,7 @@ class JTMSCompleteDemo:
         print(f"✅ Interrogation: {result3_data['total_beliefs']} croyances trouvées")
         print(f"📝 Résumé: {result3_data['natural_language_summary']}")
 
-        self.print_subheader("Fonction explain_belief")
+        self.print_subheader("Fonction explain_belie")
 
         result4 = await self.sk_plugin.explain_belief(
             belief_name="température_élevée",
@@ -414,7 +414,7 @@ class JTMSCompleteDemo:
         # Analyser l'état final partagé
         final_state = await self.jtms_service.get_jtms_state(shared_instance)
 
-        print(f"\n📊 État final partagé:")
+        print("\n📊 État final partagé:")
         print(f"  - Croyances totales: {final_state['statistics']['total_beliefs']}")
         print(f"  - Croyances valides: {final_state['statistics']['valid_beliefs']}")
         print(
@@ -589,7 +589,7 @@ class JTMSCompleteDemo:
         sherlock_final = await self.jtms_service.get_jtms_state(sherlock_instance)
         watson_final = await self.jtms_service.get_jtms_state(watson_instance)
 
-        print(f"📊 État final Sherlock:")
+        print("📊 État final Sherlock:")
         print(f"  - Croyances: {sherlock_final['statistics']['total_beliefs']}")
         print(
             f"  - Justifications: {sherlock_final['statistics']['total_justifications']}"
@@ -598,7 +598,7 @@ class JTMSCompleteDemo:
             f"  - Croyances validées: {sherlock_final['statistics']['valid_beliefs']}"
         )
 
-        print(f"📊 État final Watson:")
+        print("📊 État final Watson:")
         print(f"  - Croyances: {watson_final['statistics']['total_beliefs']}")
         print(
             f"  - Justifications: {watson_final['statistics']['total_justifications']}"
@@ -636,7 +636,7 @@ class JTMSCompleteDemo:
             self.print_header("RÉSUMÉ FINAL DES DÉMONSTRATIONS")
 
             print("✅ Toutes les démonstrations completées avec succès!")
-            print(f"\n📊 Statistiques globales:")
+            print("\n📊 Statistiques globales:")
 
             total_sessions = sum(
                 1
@@ -646,8 +646,8 @@ class JTMSCompleteDemo:
 
             print(f"  - Démonstrations exécutées: {len(self.demo_results)}")
             print(f"  - Sessions créées: ~{total_sessions}")
-            print(f"  - Fonctions SK testées: 5/5")
-            print(f"  - Intégrations testées: Agents, API, Sessions, Multi-agents")
+            print("  - Fonctions SK testées: 5/5")
+            print("  - Intégrations testées: Agents, API, Sessions, Multi-agents")
 
             # Détail par démonstration
             for demo_name, results in self.demo_results.items():
@@ -677,12 +677,12 @@ async def main():
     success = await demo.run_all_demos()
 
     if success:
-        print(f"\n🎉 DÉMONSTRATIONS TERMINÉES AVEC SUCCÈS!")
+        print("\n🎉 DÉMONSTRATIONS TERMINÉES AVEC SUCCÈS!")
         print(
             "   Le système JTMS intégré avec Semantic Kernel est pleinement fonctionnel."
         )
     else:
-        print(f"\n💥 ÉCHEC DES DÉMONSTRATIONS!")
+        print("\n💥 ÉCHEC DES DÉMONSTRATIONS!")
         print("   Vérifiez les erreurs ci-dessus.")
 
     return success

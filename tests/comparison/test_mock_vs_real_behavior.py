@@ -469,7 +469,7 @@ class BehaviorComparator:
         elif comparison["cost_difference"] > 0.01:
             return "cost_consideration_needed"
         else:
-            return "balanced_tradeoff"
+            return "balanced_tradeof"
 
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
@@ -576,10 +576,10 @@ class TestMockVsRealComparison:
                     ), "Similarité de contenu hors limites"
                     assert (
                         comparison["mock_quality_score"] >= 0
-                    ), "Score qualité mock négatif"
+                    ), "Score qualité mock négati"
                     assert (
                         comparison["real_quality_score"] >= 0
-                    ), "Score qualité réel négatif"
+                    ), "Score qualité réel négati"
 
         # Analyse globale seulement si les tests de comparaison ont été effectués
         if REAL_GPT_AVAILABLE:
@@ -596,7 +596,7 @@ class TestMockVsRealComparison:
             1 for c in comparison_results if c["mock_faster"]
         ) / len(comparison_results)
 
-        print(f"\n=== RÉSULTATS COMPARAISON MOCK VS RÉEL ===")
+        print("\n=== RÉSULTATS COMPARAISON MOCK VS RÉEL ===")
         print(f"Similarité moyenne: {avg_similarity:.3f}")
         print(f"Avantage qualité réel: {avg_quality_advantage:.3f}")
         print(f"Avantage vitesse mock: {mock_speed_advantage:.1%}")
@@ -726,7 +726,7 @@ class TestMockVsRealComparison:
                 / tradeoff_analysis["scenarios_tested"]
             )
 
-            print(f"\n=== ANALYSE PERFORMANCE VS QUALITÉ ===")
+            print("\n=== ANALYSE PERFORMANCE VS QUALITÉ ===")
             print(f"Taux avantage vitesse mock: {mock_speed_rate:.1%}")
             print(f"Taux avantage qualité réel: {real_quality_rate:.1%}")
 
@@ -748,7 +748,7 @@ class TestMockVsRealComparison:
             ), f"Mocks pas assez rapides: {mock_speed_rate:.1%}"
 
             if real_quality_rate > 0.5:
-                print("✅ GPT réel montre un avantage qualité significatif")
+                print("✅ GPT réel montre un avantage qualité significati")
             else:
                 print("ℹ️ Mocks compétitifs en qualité")
 

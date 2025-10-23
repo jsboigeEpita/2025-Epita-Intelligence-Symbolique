@@ -212,7 +212,7 @@ class TestRealGPTIntegration:
 
         # Watson hérite de ChatCompletionAgent, nous pouvons lui envoyer des messages
         # (Simulation d'analyse logique)
-        analysis_result = f"Analyse de Watson: Colonel Moutarde est présent dans la liste des suspects, le Poignard est une arme plausible, le Salon est un lieu accessible."
+        analysis_result = "Analyse de Watson: Colonel Moutarde est présent dans la liste des suspects, le Poignard est une arme plausible, le Salon est un lieu accessible."
 
         assert analysis_result is not None
         assert len(analysis_result) > 50

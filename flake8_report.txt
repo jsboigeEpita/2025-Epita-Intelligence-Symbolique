@@ -1,160 +1,43 @@
 .\1.4.1-JTMS\jtms.py:14:58: E711 comparison to None should be 'if cond is None:'
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:25:1: F811 redefinition of unused 'defaultdict' from line 19
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:25:1: F811 redefinition of unused 'Counter' from line 19
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:686:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:708:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:724:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:739:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:753:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:782:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:815:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:845:15: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:981:13: F811 redefinition of unused 'plt' from line 22
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:982:13: F811 redefinition of unused 'nx' from line 23
 .\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1049:13: F811 redefinition of unused 'plt' from line 22
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1180:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1181:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1186:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1228:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1235:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1249:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1257:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1278:19: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1313:25: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1316:19: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\enhanced_argumentation_main.py:1477:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\first_try\argumentation_main.py:400:11: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:45:20: F821 undefined name 'create_demo_agents'
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:48:16: F821 undefined name 'create_demo_agents'
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:60:9: F821 undefined name 'run_demo'
-.\1_2_7_argumentation_dialogique\local_db_arg\main.py:124:11: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\local_db_arg\main.py:127:11: F541 f-string is missing placeholders
 .\1_2_7_argumentation_dialogique\local_db_arg\main.py:206:17: F821 undefined name 'print_dialogue_summary'
-.\1_2_7_argumentation_dialogique\local_db_arg\src\agents\dialogue_agent.py:187:41: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\local_db_arg\src\interfaces\cli.py:200:15: F541 f-string is missing placeholders
-.\1_2_7_argumentation_dialogique\local_db_arg\src\interfaces\cli.py:206:15: F541 f-string is missing placeholders
 .\2.1.6_multiagent_governance_prototype\agents\base_agent.py:112:22: F821 undefined name 'options'
 .\2.1.6_multiagent_governance_prototype\agents\base_agent.py:116:68: F821 undefined name 'options'
 .\2.3.2-detection-sophismes\fallacy_pipeline.py:139:1: F811 redefinition of unused 'Matcher' from line 12
 .\2.3.2-detection-sophismes\fallacy_pipeline.py:140:1: F811 redefinition of unused 'fallacy_rules' from line 13
-.\2.3.3-generation-contre-argument\counter_agent\agent\strategies.py:375:20: F541 f-string is missing placeholders
-.\2.3.3-generation-contre-argument\counter_agent\agent\strategies.py:378:20: F541 f-string is missing placeholders
-.\2.3.3-generation-contre-argument\counter_agent\agent\strategies.py:384:20: F541 f-string is missing placeholders
-.\2.3.3-generation-contre-argument\counter_agent\agent\strategies.py:387:20: F541 f-string is missing placeholders
-.\2.3.3-generation-contre-argument\counter_agent\agent\strategies.py:389:16: F541 f-string is missing placeholders
 .\2.3.3-generation-contre-argument\counter_agent\logic\tweety_bridge.py:15:1: F403 'from jpype.types import *' used; unable to detect undefined names
 .\2.3.3-generation-contre-argument\counter_agent\ui\web_app.py:124:21: F821 undefined name 'CounterArgumentAgent'
-.\Arg_Semantic_Index\UI_streamlit.py:49:28: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:39:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:70:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:103:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:136:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:173:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:211:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:252:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:281:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:347:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:427:15: F541 f-string is missing placeholders
-.\abs_arg_dung\advanced_tests.py:449:11: F541 f-string is missing placeholders
 .\abs_arg_dung\agent.py:340:9: E999 IndentationError: unexpected indent
-.\abs_arg_dung\benchmark.py:331:15: F541 f-string is missing placeholders
-.\abs_arg_dung\cli.py:108:11: F541 f-string is missing placeholders
-.\abs_arg_dung\cli.py:137:11: F541 f-string is missing placeholders
-.\abs_arg_dung\demo_interactive.py:114:11: F541 f-string is missing placeholders
-.\abs_arg_dung\demo_interactive.py:239:11: F541 f-string is missing placeholders
-.\abs_arg_dung\demo_interactive.py:245:11: F541 f-string is missing placeholders
-.\abs_arg_dung\demo_interactive.py:329:11: F541 f-string is missing placeholders
-.\abs_arg_dung\demo_interactive.py:330:11: F541 f-string is missing placeholders
-.\abs_arg_dung\project_info.py:65:11: F541 f-string is missing placeholders
-.\abs_arg_dung\project_info.py:69:11: F541 f-string is missing placeholders
-.\abs_arg_dung\project_info.py:73:11: F541 f-string is missing placeholders
-.\abs_arg_dung\test_agent.py:41:15: F541 f-string is missing placeholders
-.\abs_arg_dung\test_agent.py:74:15: F541 f-string is missing placeholders
-.\abs_arg_dung\test_agent.py:125:15: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\informal\informal_definitions.py:88:13: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:555:5: F811 redefinition of unused 'setup_agent_components' from line 202
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:705:24: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:844:5: F811 redefinition of unused 'asyncio' from line 20
-.\argumentation_analysis\agents\core\logic\modal_logic_agent.py:300:13: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\pl_handler.py:129:21: F821 undefined name 'JString'
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:558:27: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:578:17: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:580:31: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:585:17: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:590:27: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:596:26: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\propositional_logic_agent.py:931:36: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\watson_logic_assistant.py:34:1: F811 redefinition of unused 'TweetyBridge' from line 17
-.\argumentation_analysis\agents\core\oracle\cluedo_dataset.py:170:42: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\oracle\moriarty_interrogator_agent.py:226:24: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\core\oracle\moriarty_interrogator_agent.py:554:27: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\oracle\phase_d_extensions.py:535:13: F821 undefined name 'logger_main'
-.\argumentation_analysis\agents\core\pl\pl_agent.py:30:9: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\pm\pm_agent.py:333:5: F811 redefinition of unused 'invoke_single' from line 214
 .\argumentation_analysis\agents\core\synthesis\synthesis_agent.py:67:13: F821 undefined name 'InformalAgent'
-.\argumentation_analysis\agents\initialize_cache.py:32:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\initialize_cache.py:34:15: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\jtms_communication_hub.py:1064:5: F811 redefinition of unused 'handle_agent_failure' from line 370
 .\argumentation_analysis\agents\runners\run_complete_test_and_analysis.py:44:39: F821 undefined name 'Optional'
 .\argumentation_analysis\agents\runners\run_complete_test_and_analysis.py:117:50: F821 undefined name 'Optional'
-.\argumentation_analysis\agents\runners\test\orchestration\test_orchestration_complete.py:59:17: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\runners\test\orchestration\test_orchestration_scale.py:44:17: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\runners\test\orchestration\test_orchestration_scale.py:79:52: F821 undefined name 'LIBS_DIR'
-.\argumentation_analysis\agents\sherlock_jtms_agent.py:220:27: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\test_scripts\orchestration\test_orchestration_scale.py:44:17: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\test_scripts\orchestration\test_orchestration_scale.py:79:52: F821 undefined name 'LIBS_DIR'
-.\argumentation_analysis\agents\tools\analysis\complex_fallacy_analyzer.py:505:36: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\tools\analysis\fallacy_family_analyzer.py:434:32: F821 undefined name 'family_contexts'
 .\argumentation_analysis\agents\tools\analysis\fallacy_severity_evaluator.py:13:1: F811 redefinition of unused 'json' from line 12
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:40:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:42:15: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:107:23: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:126:11: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:179:23: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_and_archive_encrypted_config.py:186:11: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:62:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:111:23: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:128:23: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:144:19: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:169:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\create_complete_encrypted_config.py:171:15: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:44:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:64:19: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:80:19: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:89:19: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:107:35: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:128:13: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\inspect_encrypted_file.py:130:15: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\verify_encrypted_config.py:77:17: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\verify_encrypted_config.py:104:22: F541 f-string is missing placeholders
-.\argumentation_analysis\agents\tools\encryption\verify_encrypted_config.py:109:17: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\utils\tracer.py:53:41: F821 undefined name 'ChatHistory'
 .\argumentation_analysis\agents\utils\tracer.py:96:24: F821 undefined name 'ChatHistory'
-.\argumentation_analysis\core\bootstrap.py:576:11: F541 f-string is missing placeholders
-.\argumentation_analysis\core\cluedo_oracle_state.py:275:17: F541 f-string is missing placeholders
-.\argumentation_analysis\core\communication\tests\test_communication_integration.py:187:21: F541 f-string is missing placeholders
-.\argumentation_analysis\core\environment.py:72:27: F541 f-string is missing placeholders
 .\argumentation_analysis\core\environment.py:146:18: F821 undefined name 'current_env_path'
-.\argumentation_analysis\core\environment.py:204:13: F541 f-string is missing placeholders
-.\argumentation_analysis\core\jvm_setup.py:398:22: F541 f-string is missing placeholders
-.\argumentation_analysis\core\jvm_setup.py:400:17: F541 f-string is missing placeholders
-.\argumentation_analysis\core\setup\manage_portable_tools.py:168:21: F541 f-string is missing placeholders
-.\argumentation_analysis\core\setup\prover9_manager.py:280:21: F541 f-string is missing placeholders
 .\argumentation_analysis\core\state_manager_plugin.py:55:107: E225 missing whitespace around operator
-.\argumentation_analysis\core\state_manager_plugin.py:287:17: F541 f-string is missing placeholders
 .\argumentation_analysis\core\utils\network_utils.py:181:26: F541 f-string is missing placeholders
 .\argumentation_analysis\core\utils\network_utils.py:194:34: F541 f-string is missing placeholders
 .\argumentation_analysis\core\utils\network_utils.py:198:26: F541 f-string is missing placeholders
-.\argumentation_analysis\core\utils\reporting_utils.py:152:37: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:73:15: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:417:15: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:592:15: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:601:15: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:639:19: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:649:19: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:650:19: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:680:15: F541 f-string is missing placeholders
-.\argumentation_analysis\demos\jtms\run_demo.py:685:15: F541 f-string is missing placeholders
 .\argumentation_analysis\examples\agent_integration\simple_agent_example.py:23:9: F821 undefined name 'logger'
 .\argumentation_analysis\examples\agent_integration\simple_agent_example.py:39:14: F821 undefined name 'asyncio'
 .\argumentation_analysis\examples\agent_integration\simple_agent_example.py:40:5: F821 undefined name 'logger'
@@ -187,16 +70,6 @@
 .\argumentation_analysis\examples\orchestration\complex_hierarchical_example.py:95:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\orchestration\run_hierarchical_orchestration.py:370:46: F821 undefined name 'RESULTS_DIR'
 .\argumentation_analysis\examples\orchestration\run_hierarchical_orchestration.py:379:13: F821 undefined name 'RESULTS_DIR'
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:134:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:139:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:144:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:151:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:158:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:168:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:178:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:320:19: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:365:15: F541 f-string is missing placeholders
-.\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:377:19: F541 f-string is missing placeholders
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:459:18: F821 undefined name 'create_extended_config_from_params'
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:473:25: F821 undefined name 'run_unified_orchestration_pipeline'
 .\argumentation_analysis\examples\orchestration\run_orchestration_pipeline_demo.py:577:25: F821 undefined name 'compare_orchestration_approaches'
@@ -231,7 +104,6 @@
 .\argumentation_analysis\examples\rhetorical_tools\visualizer_example.py:45:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\visualizer_example.py:46:5: F821 undefined name 'logger'
 .\argumentation_analysis\examples\rhetorical_tools\visualizer_example.py:47:5: F821 undefined name 'logger'
-.\argumentation_analysis\main_orchestrator.py:140:13: F541 f-string is missing placeholders
 .\argumentation_analysis\mocks\analysis_simulation.py:148:22: F821 undefined name 'datetime'
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:393:39: F821 undefined name 'SherlockEnqueteAgent'
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:394:37: F821 undefined name 'WatsonLogicAssistant'
@@ -255,14 +127,8 @@
 .\argumentation_analysis\orchestration\cluedo_extended_orchestrator.py:1194:16: F821 undefined name 'reactions'
 .\argumentation_analysis\orchestration\engine\main_orchestrator.py:73:1: F811 redefinition of unused 'OrchestrationConfig' from line 64
 .\argumentation_analysis\orchestration\engine\main_orchestrator.py:74:1: F811 redefinition of unused 'OrchestrationStrategy' from line 17
-.\argumentation_analysis\orchestration\engine\main_orchestrator.py:331:13: F541 f-string is missing placeholders
-.\argumentation_analysis\orchestration\fact_checking_orchestrator.py:256:30: F541 f-string is missing placeholders
 .\argumentation_analysis\orchestration\group_chat.py:596:5: F811 redefinition of unused 'cleanup_session' from line 246
 .\argumentation_analysis\orchestration\hierarchical\operational\adapters\rhetorical_tools_adapter.py:72:34: F821 undefined name 'get_fallacy_detector'
-.\argumentation_analysis\orchestration\plugins\enquete_state_manager_plugin.py:126:27: F541 f-string is missing placeholders
-.\argumentation_analysis\orchestration\plugins\enquete_state_manager_plugin.py:279:27: F541 f-string is missing placeholders
-.\argumentation_analysis\orchestration\plugins\logique_complexe_plugin.py:72:20: F541 f-string is missing placeholders
-.\argumentation_analysis\orchestration\service_manager.py:438:21: F541 f-string is missing placeholders
 .\argumentation_analysis\pipelines\orchestration\analysis\post_processors.py:64:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\processors.py:60:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\analysis\processors.py:94:15: F821 undefined name 'UnifiedOrchestrationPipeline'
@@ -277,61 +143,17 @@
 .\argumentation_analysis\pipelines\orchestration\execution\strategies.py:276:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\pipelines\orchestration\execution\strategies.py:314:15: F821 undefined name 'UnifiedOrchestrationPipeline'
 .\argumentation_analysis\plugins\semantic_kernel\jtms_plugin.py:13:5: F811 redefinition of unused 'kernel_function' from line 12
-.\argumentation_analysis\reporting\document_assembler.py:420:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\enhanced_real_time_trace_analyzer.py:505:17: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\enhanced_real_time_trace_analyzer.py:506:17: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:316:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:317:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:318:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:336:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:338:13: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:340:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\real_time_trace_analyzer.py:341:29: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\section_formatter.py:478:33: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\section_formatter.py:702:13: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\section_formatter.py:706:13: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:221:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:228:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:233:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:286:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:332:15: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:333:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\summary_generator.py:340:16: F541 f-string is missing placeholders
-.\argumentation_analysis\reporting\trace_analyzer.py:931:17: F541 f-string is missing placeholders
-.\argumentation_analysis\run_orchestration.py:96:13: F541 f-string is missing placeholders
-.\argumentation_analysis\service_setup\analysis_services.py:50:27: F541 f-string is missing placeholders
 .\argumentation_analysis\services\logic_service.py:522:5: F811 redefinition of unused 'get_service_status' from line 241
 .\argumentation_analysis\services\logic_service.py:596:5: F811 redefinition of unused 'clear_cache' from line 257
-.\argumentation_analysis\services\web_api\flask_routes.py:139:21: F541 f-string is missing placeholders
 .\argumentation_analysis\services\web_api\models\request_models.py:11:1: F811 redefinition of unused 'List' from line 8
 .\argumentation_analysis\services\web_api\services\analysis_service.py:21:5: F811 redefinition of unused 'AppSettings' from line 12
-.\argumentation_analysis\services\web_api\services\fallacy_service.py:506:19: F541 f-string is missing placeholders
-.\argumentation_analysis\services\web_api\services\logic_service.py:99:26: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\app.py:662:45: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\app.py:685:41: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\app.py:689:52: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\app.py:698:45: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\app.py:701:33: F541 f-string is missing placeholders
 .\argumentation_analysis\ui\app.py:905:24: F821 undefined name 'get_cache_filepath'
 .\argumentation_analysis\ui\app.py:913:25: F821 undefined name 'fetch_service'
 .\argumentation_analysis\ui\app.py:915:25: F821 undefined name 'fetch_service'
 .\argumentation_analysis\ui\app.py:918:25: F821 undefined name 'fetch_service'
-.\argumentation_analysis\ui\extract_editor\extract_marker_editor.py:560:19: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\extract_editor\extract_marker_editor.py:597:23: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\extract_utils.py:306:30: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\utils.py:328:31: F541 f-string is missing placeholders
-.\argumentation_analysis\ui\verification_utils.py:115:50: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\correction_utils.py:131:13: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\dev_tools\code_validation.py:318:5: F811 redefinition of unused 'os' from line 4
-.\argumentation_analysis\utils\dev_tools\code_validation.py:367:17: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\dev_tools\code_validation.py:372:21: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\dev_tools\encoding_utils.py:315:22: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\dev_tools\reporting_utils.py:78:25: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:290:23: F821 undefined name 'ChatCompletionAgent'
 .\argumentation_analysis\utils\extract_repair\verify_extracts_with_llm.py:336:21: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\report_generator.py:105:35: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\report_generator.py:120:35: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\restore_config.py:67:13: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\tweety_error_analyzer.py:337:13: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\tweety_error_analyzer.py:338:13: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\tweety_error_analyzer.py:340:13: F541 f-string is missing placeholders
@@ -341,74 +163,11 @@
 .\argumentation_analysis\utils\tweety_error_analyzer.py:357:17: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\tweety_error_analyzer.py:359:17: F541 f-string is missing placeholders
 .\argumentation_analysis\utils\tweety_error_analyzer.py:361:17: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\update_encrypted_config.py:46:13: F541 f-string is missing placeholders
-.\argumentation_analysis\utils\update_encrypted_config.py:88:15: F541 f-string is missing placeholders
-.\argumentation_analysis\webapp\orchestrator.py:317:21: F541 f-string is missing placeholders
-.\argumentation_analysis\webapp\orchestrator.py:1139:17: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:50:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:55:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:73:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:77:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:80:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:90:13: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:156:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:172:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:173:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:174:11: F541 f-string is missing placeholders
-.\cleanup_flake8_progressive.py:176:9: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:50:15: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:53:15: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:56:19: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:58:19: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:64:11: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:66:11: F541 f-string is missing placeholders
-.\demos\showcases\demo_one_liner_usage.py:68:11: F541 f-string is missing placeholders
-.\demos\validation\validation_complete_epita.py:40:9: F541 f-string is missing placeholders
-.\demos\validation\validation_complete_epita.py:45:9: F541 f-string is missing placeholders
 .\demos\validation\validation_complete_epita.py:54:1: F811 redefinition of unused 'os' from line 3
-.\documentation_system\doc_generator.py:846:15: F541 f-string is missing placeholders
-.\documentation_system\doc_generator.py:848:15: F541 f-string is missing placeholders
 .\documentation_system\interactive_guide.py:1062:9: F811 redefinition of unused 'render_template_string' from line 16
 .\documentation_system\interactive_guide.py:1085:9: F811 redefinition of unused 'jsonify' from line 16
-.\documentation_system\knowledge_mapper.py:64:19: F541 f-string is missing placeholders
-.\documentation_system\knowledge_mapper.py:380:15: F541 f-string is missing placeholders
-.\documentation_system\knowledge_mapper.py:671:15: F541 f-string is missing placeholders
-.\documentation_system\knowledge_mapper.py:676:15: F541 f-string is missing placeholders
-.\documentation_system\knowledge_mapper.py:682:15: F541 f-string is missing placeholders
-.\documentation_system\start_system.py:63:15: F541 f-string is missing placeholders
-.\documentation_system\start_system.py:64:15: F541 f-string is missing placeholders
-.\documentation_system\start_system.py:65:15: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:663:23: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:674:23: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:690:23: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:716:15: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:726:15: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:739:15: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:754:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:762:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:763:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:764:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:765:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:766:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:767:11: F541 f-string is missing placeholders
-.\examples\01_logic_and_riddles\Sherlock_Watson\agents_logiques_production.py:768:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:109:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:140:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:172:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:176:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:195:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:207:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:214:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\phase2_demo\demo_authentic_llm_validation.py:217:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\demo_tweety_interaction_simple.py:70:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\demo_tweety_interaction_simple.py:209:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\demonstration_epita.py:649:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\demonstration_epita.py:656:25: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\generate_complex_synthetic_data.py:387:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\generate_complex_synthetic_data.py:388:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\generate_complex_synthetic_data.py:418:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\generate_complex_synthetic_data.py:429:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\demo_analyse_argumentation.py:48:21: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_cas_usage.py:222:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_cas_usage.py:223:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_cas_usage.py:224:15: F541 f-string is missing placeholders
@@ -553,27 +312,9 @@
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_tests_validation.py:115:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_tests_validation.py:116:15: F541 f-string is missing placeholders
 .\examples\02_core_system_demos\scripts_demonstration\modules\demo_tests_validation.py:117:15: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_elimination_mocks_validation.py:55:19: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_elimination_mocks_validation.py:58:19: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_elimination_mocks_validation.py:95:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_elimination_mocks_validation.py:110:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_elimination_mocks_validation.py:120:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:55:19: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:58:19: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:91:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:107:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:116:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\modules\test_final_validation_ascii.py:132:11: F541 f-string is missing placeholders
-.\examples\02_core_system_demos\scripts_demonstration\test_architecture.py:186:15: F541 f-string is missing placeholders
 .\interface_web\api\jtms_integration.py:643:5: F811 redefinition of unused 'asyncio' from line 16
 .\interface_web\services\jtms_websocket.py:444:5: F811 redefinition of unused 'time' from line 23
 .\plugins\AnalysisToolsPlugin\logic\complex_fallacy_analyzer.py:75:42: F821 undefined name 'AbstractFallacyDetector'
-.\plugins\AnalysisToolsPlugin\logic\rhetorical_result_visualizer.py:459:29: F541 f-string is missing placeholders
-.\plugins\AnalysisToolsPlugin\logic\rhetorical_result_visualizer.py:461:29: F541 f-string is missing placeholders
-.\plugins\AnalysisToolsPlugin\logic\rhetorical_result_visualizer.py:465:29: F541 f-string is missing placeholders
-.\plugins\AnalysisToolsPlugin\logic\rhetorical_result_visualizer.py:466:29: F541 f-string is missing placeholders
-.\plugins\FallacyWorkflow\plugin.py:147:30: F541 f-string is missing placeholders
-.\project_core\config\port_manager.py:415:15: F541 f-string is missing placeholders
 .\project_core\core_from_scripts\__init__.py:22:1: F403 'from .common_utils import *' used; unable to detect undefined names
 .\project_core\core_from_scripts\__init__.py:23:1: F403 'from .environment_manager import *' used; unable to detect undefined names
 .\project_core\core_from_scripts\__init__.py:24:1: F403 'from .test_config_definition import *' used; unable to detect undefined names
@@ -600,32 +341,11 @@
 .\project_core\core_from_scripts\environment_manager.debug.py:26:29: E261 at least two spaces before inline comment
 .\project_core\core_from_scripts\environment_manager.debug.py:39:16: W292 no newline at end of file
 .\project_core\core_from_scripts\environment_manager.py:5:1: F811 redefinition of unused 'sys' from line 2
-.\project_core\core_from_scripts\test_config_definition.py:368:34: F541 f-string is missing placeholders
-.\project_core\environment\conda_manager.py:380:17: F541 f-string is missing placeholders
-.\project_core\environment\tool_installer.py:39:9: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\comprehensive_workflow_processor.py:924:13: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:627:17: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:880:15: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:1241:21: F541 f-string is missing placeholders
-.\project_core\rhetorical_analysis_from_scripts\educational_showcase_system.py:1448:23: F541 f-string is missing placeholders
 .\project_core\rhetorical_analysis_from_scripts\unified_production_analyzer.py:936:5: F811 redefinition of unused 'generate_report' from line 847
-.\reports\cleanup_migration_duplicates.py:88:11: F541 f-string is missing placeholders
-.\scripts\add_f821_noqa_tests.py:117:19: F541 f-string is missing placeholders
 .\scripts\add_f821_noqa_tests.py:222:17: W292 no newline at end of file
-.\scripts\analyze_f821_errors.py:87:23: F541 f-string is missing placeholders
 .\scripts\analyze_f821_errors.py:397:17: W292 no newline at end of file
 .\scripts\analyze_flake8_errors.py:141:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\analyze_flake8_errors.py:142:11: W292 no newline at end of file
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:781:34: F541 f-string is missing placeholders
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:945:15: F541 f-string is missing placeholders
-.\scripts\apps\demos\validation_point3_demo_epita_dynamique.py:949:15: F541 f-string is missing placeholders
-.\scripts\apps\webapp\backend_manager.py:62:31: F541 f-string is missing placeholders
-.\scripts\apps\webapp\frontend_manager.py:251:35: F541 f-string is missing placeholders
-.\scripts\apps\webapp\frontend_manager.py:437:35: F541 f-string is missing placeholders
-.\scripts\apps\webapp\launch_webapp_background.py:60:11: F541 f-string is missing placeholders
-.\scripts\apps\webapp\launch_webapp_background.py:93:13: F541 f-string is missing placeholders
-.\scripts\apps\webapp\playwright_runner.py:181:13: F541 f-string is missing placeholders
-.\scripts\apps\webapp\unified_web_orchestrator.py:612:24: F541 f-string is missing placeholders
 .\scripts\fix_e712_comparisons.py:19:1: W293 blank line contains whitespace
 .\scripts\fix_e712_comparisons.py:23:1: W293 blank line contains whitespace
 .\scripts\fix_e712_comparisons.py:29:1: W293 blank line contains whitespace
@@ -643,70 +363,80 @@
 .\scripts\fix_e712_comparisons.py:84:1: W293 blank line contains whitespace
 .\scripts\fix_e712_comparisons.py:87:1: W293 blank line contains whitespace
 .\scripts\fix_e712_comparisons.py:96:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:97:11: F541 f-string is missing placeholders
 .\scripts\fix_e712_comparisons.py:102:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:104:15: F541 f-string is missing placeholders
 .\scripts\fix_e712_comparisons.py:106:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\fix_e712_comparisons.py:107:11: W292 no newline at end of file
-.\scripts\fix_f821_missing_imports.py:242:15: F541 f-string is missing placeholders
+.\scripts\fix_f541_empty_fstrings.py:31:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:35:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:38:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:43:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:52:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:54:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:57:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:63:19: F541 f-string is missing placeholders
+.\scripts\fix_f541_empty_fstrings.py:65:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:72:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:74:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:83:58: W291 trailing whitespace
+.\scripts\fix_f541_empty_fstrings.py:84:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_empty_fstrings.py:86:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_empty_fstrings.py:88:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_empty_fstrings.py:90:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:93:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:99:44: W291 trailing whitespace
+.\scripts\fix_f541_empty_fstrings.py:100:20: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_empty_fstrings.py:101:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:103:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:107:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:113:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:119:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:121:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:129:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:130:11: F541 f-string is missing placeholders
+.\scripts\fix_f541_empty_fstrings.py:134:1: W293 blank line contains whitespace
+.\scripts\fix_f541_empty_fstrings.py:136:15: F541 f-string is missing placeholders
+.\scripts\fix_f541_empty_fstrings.py:138:1: E305 expected 2 blank lines after class or function definition, found 1
+.\scripts\fix_f541_empty_fstrings.py:139:11: W292 no newline at end of file
+.\scripts\fix_f541_targeted.py:36:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:39:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:42:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:47:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:53:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:55:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:58:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:65:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:72:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:74:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:82:58: W291 trailing whitespace
+.\scripts\fix_f541_targeted.py:83:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_targeted.py:85:24: E128 continuation line under-indented for visual indent
+.\scripts\fix_f541_targeted.py:87:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:90:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:94:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:96:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:101:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:104:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:111:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:113:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:120:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:121:11: F541 f-string is missing placeholders
+.\scripts\fix_f541_targeted.py:126:1: W293 blank line contains whitespace
+.\scripts\fix_f541_targeted.py:128:15: F541 f-string is missing placeholders
+.\scripts\fix_f541_targeted.py:130:1: E305 expected 2 blank lines after class or function definition, found 1
+.\scripts\fix_f541_targeted.py:131:11: W292 no newline at end of file
 .\scripts\fix_f821_missing_imports.py:341:17: W292 no newline at end of file
-.\scripts\fix_whitespace_errors.py:102:11: F541 f-string is missing placeholders
 .\scripts\fix_whitespace_errors.py:110:11: W292 no newline at end of file
-.\scripts\maintenance\analyze_oracle_references_detailed.py:475:23: F541 f-string is missing placeholders
-.\scripts\maintenance\apply_path_corrections_logged.py:49:15: F541 f-string is missing placeholders
 .\scripts\maintenance\check_imports.py:66:46: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\check_imports.py:83:32: F821 undefined name 'test_module_import_by_name'
-.\scripts\maintenance\cleanup\cleanup_repository.py:90:15: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:92:19: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:112:23: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:141:23: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:143:23: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:154:15: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:163:23: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:165:21: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:168:23: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup\cleanup_repository.py:170:19: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup_obsolete_files.py:420:27: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup_obsolete_files.py:495:15: F541 f-string is missing placeholders
-.\scripts\maintenance\cleanup_obsolete_files.py:521:15: F541 f-string is missing placeholders
-.\scripts\maintenance\final_system_validation_corrected.py:511:15: F541 f-string is missing placeholders
 .\scripts\maintenance\fix_project_structure.py:147:25: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:166:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:175:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:184:13: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\fix_project_structure.py:194:9: F821 undefined name 'run_shell_command'
-.\scripts\maintenance\git_files_inventory_fast.py:159:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:263:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:267:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:269:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:270:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:274:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:278:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:282:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:298:29: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:300:25: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:330:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:332:21: F541 f-string is missing placeholders
-.\scripts\maintenance\git_files_inventory_fast.py:368:29: F541 f-string is missing placeholders
-.\scripts\maintenance\migration\migrate_to_unified.py:246:17: F541 f-string is missing placeholders
-.\scripts\maintenance\organize_orphan_files.py:397:27: F541 f-string is missing placeholders
-.\scripts\maintenance\organize_orphan_files.py:490:19: F541 f-string is missing placeholders
-.\scripts\maintenance\organize_orphan_tests.py:457:15: F541 f-string is missing placeholders
-.\scripts\maintenance\organize_root_files.py:98:17: F541 f-string is missing placeholders
-.\scripts\maintenance\orphan_files_processor.py:255:11: F541 f-string is missing placeholders
-.\scripts\maintenance\orphan_files_processor.py:264:11: F541 f-string is missing placeholders
-.\scripts\maintenance\real_orphan_files_processor.py:340:11: F541 f-string is missing placeholders
-.\scripts\maintenance\real_orphan_files_processor.py:344:11: F541 f-string is missing placeholders
-.\scripts\maintenance\recover_precious_code.py:138:35: F541 f-string is missing placeholders
-.\scripts\maintenance\recover_precious_code.py:390:27: F541 f-string is missing placeholders
-.\scripts\maintenance\recover_precious_code.py:410:27: F541 f-string is missing placeholders
-.\scripts\maintenance\refactor_review_files.py:546:15: F541 f-string is missing placeholders
-.\scripts\maintenance\refactor_review_files.py:551:15: F541 f-string is missing placeholders
 .\scripts\maintenance\remove_source_from_config.py:12:8: F821 undefined name 'load_json_from_file'
 .\scripts\maintenance\remove_source_from_config.py:28:8: F821 undefined name 'save_json_to_file'
 .\scripts\maintenance\remove_source_from_config.py:38:31: F821 undefined name 'filter_list_in_json_data'
 .\scripts\maintenance\remove_source_from_config.py:46:4: F821 undefined name 'save_json_to_file'
-.\scripts\maintenance\safe_file_deletion.py:292:27: F541 f-string is missing placeholders
 .\scripts\maintenance\test_imports.py:25:59: E261 at least two spaces before inline comment
 .\scripts\maintenance\test_imports.py:95:36: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\test_imports.py:97:38: E261 at least two spaces before inline comment
@@ -715,89 +445,17 @@
 .\scripts\maintenance\test_imports_after_reorg.py:37:28: F821 undefined name 'test_module_import_by_path'
 .\scripts\maintenance\test_imports_after_reorg.py:49:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\maintenance\test_imports_after_reorg.py:50:16: W292 no newline at end of file
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:212:15: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:253:23: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:256:21: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:259:23: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:291:15: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:300:19: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:302:17: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:305:19: F541 f-string is missing placeholders
-.\scripts\maintenance\test_oracle_enhanced_compatibility.py:307:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_documentation_results.py:163:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:204:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:223:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:294:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:303:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation.py:307:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_obsolete_documentation_rebuilt.py:319:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\analyze_oracle_references_detailed.py:475:23: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\apply_path_corrections_logged.py:49:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\auto_fix_documentation.py:263:11: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\check_imports.py:66:46: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\tools\check_imports.py:83:32: F821 undefined name 'test_module_import_by_name'
-.\scripts\maintenance\tools\cleanup_obsolete_files.py:420:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\cleanup_obsolete_files.py:495:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\cleanup_obsolete_files.py:521:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\comprehensive_documentation_fixer_safe.py:319:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\comprehensive_documentation_fixer_safe.py:401:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\comprehensive_documentation_recovery.py:399:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\extract_promising_versions.py:67:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\final_system_validation.py:560:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\final_system_validation_corrected.py:511:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\fix_project_structure.py:147:25: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:166:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:175:9: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:184:13: F821 undefined name 'run_shell_command'
 .\scripts\maintenance\tools\fix_project_structure.py:194:9: F821 undefined name 'run_shell_command'
-.\scripts\maintenance\tools\git_files_inventory.py:194:25: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:324:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:328:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:330:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:331:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:335:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:339:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:343:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:362:29: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:364:25: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:394:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:396:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory.py:432:29: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:159:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:263:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:267:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:269:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:270:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:274:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:278:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:282:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:298:29: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:300:25: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:330:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:332:21: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\git_files_inventory_fast.py:368:29: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\organize_orphan_files.py:397:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\organize_orphan_files.py:490:19: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\organize_orphan_tests.py:458:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\organize_root_files.py:98:17: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\orphan_files_processor.py:255:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\orphan_files_processor.py:264:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\quick_documentation_fixer.py:237:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\real_orphan_files_processor.py:340:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\real_orphan_files_processor.py:344:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\recover_precious_code.py:139:35: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\recover_precious_code.py:391:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\recover_precious_code.py:411:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\recovery_assistant.py:200:11: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\refactor_review_files.py:546:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\refactor_review_files.py:551:15: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\remove_source_from_config.py:12:8: F821 undefined name 'load_json_from_file'
 .\scripts\maintenance\tools\remove_source_from_config.py:28:8: F821 undefined name 'save_json_to_file'
 .\scripts\maintenance\tools\remove_source_from_config.py:38:31: F821 undefined name 'filter_list_in_json_data'
 .\scripts\maintenance\tools\remove_source_from_config.py:46:4: F821 undefined name 'save_json_to_file'
-.\scripts\maintenance\tools\run_documentation_maintenance.py:139:15: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\safe_file_deletion.py:292:27: F541 f-string is missing placeholders
-.\scripts\maintenance\tools\unified_maintenance.py:1179:23: F541 f-string is missing placeholders
 .\scripts\maintenance\tools\update_imports.py:209:8: F821 undefined name 'modified_files_count'
 .\scripts\maintenance\tools\update_imports.py:213:23: F821 undefined name 'modified_files_details'
 .\scripts\maintenance\tools\update_paths.py:239:8: F821 undefined name 'changed_files_details'
@@ -808,17 +466,8 @@
 .\scripts\maintenance\update_paths.py:239:8: F821 undefined name 'changed_files_details'
 .\scripts\maintenance\update_paths.py:241:23: F821 undefined name 'changed_files_details'
 .\scripts\maintenance\verify_files.py:22:37: F821 undefined name 'check_files_existence'
-.\scripts\orchestration\orchestrate_complex_analysis.py:112:19: F541 f-string is missing placeholders
-.\scripts\orchestration\orchestrate_complex_analysis.py:137:19: F541 f-string is missing placeholders
-.\scripts\orchestration\orchestrate_complex_analysis.py:191:19: F541 f-string is missing placeholders
 .\scripts\orchestration\orchestrate_webapp_detached.py:20:1: F811 redefinition of unused 'argumentation_analysis' from line 1
-.\scripts\orchestration\orchestrate_with_existing_tools.py:99:19: F541 f-string is missing placeholders
-.\scripts\orchestration\pipelines\generate_complex_synthetic_data.py:55:17: F541 f-string is missing placeholders
-.\scripts\orchestration\pipelines\generate_complex_synthetic_data.py:56:17: F541 f-string is missing placeholders
 .\scripts\orchestration\pipelines\run_web_e2e_pipeline.py:27:1: F811 redefinition of unused 'initialize_project_environment' from line 20
-.\scripts\orchestration\pipelines\run_web_e2e_pipeline.py:65:13: F541 f-string is missing placeholders
-.\scripts\orchestration\pipelines\run_web_e2e_pipeline.py:163:26: F541 f-string is missing placeholders
-.\scripts\orchestration\select_extract.py:59:19: F541 f-string is missing placeholders
 .\scripts\reporting\generate_coverage_report.py:225:5: F821 undefined name 'generate_coverage_evolution_text_report'
 .\scripts\reporting\initialize_coverage_history.py:89:12: F821 undefined name 'create_initial_coverage_history'
 .\scripts\reporting\update_coverage_in_report.py:123:8: F821 undefined name 'update_markdown_section'
@@ -827,100 +476,19 @@
 .\scripts\reporting\visualize_test_coverage.py:187:18: F821 undefined name 'map_package_to_module'
 .\scripts\reporting\visualize_test_coverage.py:290:18: F821 undefined name 'map_package_to_module'
 .\scripts\reporting\visualize_test_coverage.py:384:21: F821 undefined name 'parse_coverage_xml'
-.\scripts\reports\cleanup_migration_duplicates.py:116:11: F541 f-string is missing placeholders
-.\scripts\run_experiments.py:80:30: F541 f-string is missing placeholders
-.\scripts\run_experiments.py:102:31: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:225:21: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:521:11: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:530:11: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:534:11: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:539:11: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\run_einstein_oracle_demo.py:585:19: F541 f-string is missing placeholders
 .\scripts\sherlock_watson\run_einstein_oracle_demo.py:592:13: F811 redefinition of unused 'shutdown_jvm' from line 573
 .\scripts\sherlock_watson\test_oracle_behavior_demo.py:3:1: F811 redefinition of unused 'initialize_project_environment' from line 1
-.\scripts\sherlock_watson\test_oracle_behavior_demo.py:29:15: F541 f-string is missing placeholders
-.\scripts\sherlock_watson\test_oracle_behavior_demo.py:31:15: F541 f-string is missing placeholders
 .\scripts\sherlock_watson\test_oracle_behavior_simple.py:4:1: F811 redefinition of unused 'initialize_project_environment' from line 2
-.\scripts\testing\debug_test_crypto_cycle.py:116:11: F541 f-string is missing placeholders
-.\scripts\testing\debug_test_crypto_cycle.py:123:15: F541 f-string is missing placeholders
-.\scripts\testing\get_test_metrics.py:115:11: F541 f-string is missing placeholders
-.\scripts\testing\get_test_metrics.py:116:11: F541 f-string is missing placeholders
-.\scripts\testing\get_test_metrics.py:117:11: F541 f-string is missing placeholders
-.\scripts\testing\get_test_metrics.py:118:11: F541 f-string is missing placeholders
-.\scripts\testing\get_test_metrics.py:119:11: F541 f-string is missing placeholders
 .\scripts\testing\run_embed_tests.py:71:1: E999 SyntaxError: expected 'except' or 'finally' block
-.\scripts\testing\run_pytest.py:14:9: F541 f-string is missing placeholders
 .\scripts\testing\setup.py:46:57: E713 test for membership should be 'not in'
-.\scripts\testing\simple_test_runner.py:186:11: F541 f-string is missing placeholders
-.\scripts\testing\validate_embed_tests.py:466:11: F541 f-string is missing placeholders
-.\scripts\tools\debugging\debug_jvm.py:103:17: F541 f-string is missing placeholders
 .\scripts\utils\analyze_directory_usage.py:61:13: F821 undefined name 'Path'
 .\scripts\utils\analyze_directory_usage.py:92:26: F821 undefined name 'parse_colon_separated_string_to_regex_dict'
-.\scripts\utils\cleanup_redundant_files.py:339:15: F541 f-string is missing placeholders
-.\scripts\utils\create_test_encrypted_extracts.py:280:21: F541 f-string is missing placeholders
 .\scripts\utils\inspect_specific_sources.py:13:19: F821 undefined name 'Path'
 .\scripts\utils\inspect_specific_sources.py:30:38: F821 undefined name 'find_sources_in_config_by_ids'
-.\scripts\utils\provision_tools.py:27:21: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:1130:27: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:1138:27: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:1151:31: F541 f-string is missing placeholders
-.\scripts\utils\unified_utilities.py:1157:31: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:712:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:714:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:737:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:742:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:743:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:744:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:745:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:746:11: F541 f-string is missing placeholders
-.\scripts\validation\analyse_trace_simulated.py:748:11: F541 f-string is missing placeholders
-.\scripts\validation\analyze_migration_duplicates.py:655:11: F541 f-string is missing placeholders
-.\scripts\validation\analyze_migration_duplicates.py:661:11: F541 f-string is missing placeholders
-.\scripts\validation\analyze_random_extract.py:221:21: F541 f-string is missing placeholders
-.\scripts\validation\check_architecture.py:39:19: F541 f-string is missing placeholders
-.\scripts\validation\check_sk_module.py:4:7: F541 f-string is missing placeholders
-.\scripts\validation\orchestration_validation.py:580:11: F541 f-string is missing placeholders
-.\scripts\validation\sprint3_final_validation.py:415:11: F541 f-string is missing placeholders
-.\scripts\validation\test_critical_dependencies.py:63:15: F541 f-string is missing placeholders
-.\scripts\validation\test_epita_custom_data_processing.py:286:11: F541 f-string is missing placeholders
-.\scripts\validation\test_epita_custom_data_processing.py:287:11: F541 f-string is missing placeholders
-.\scripts\validation\test_epita_custom_data_processing.py:288:11: F541 f-string is missing placeholders
-.\scripts\validation\test_epita_custom_data_processing.py:289:11: F541 f-string is missing placeholders
-.\scripts\validation\test_epita_custom_data_processing.py:290:11: F541 f-string is missing placeholders
 .\scripts\validation\test_importation_consolidee.py:133:9: F811 redefinition of unused 'RealLLMOrchestrator' from line 35
 .\scripts\validation\test_intelligent_modal_correction.py:167:31: F541 f-string is missing placeholders
-.\scripts\validation\test_intelligent_modal_correction.py:169:31: F541 f-string is missing placeholders
-.\scripts\validation\test_intelligent_modal_correction.py:172:27: F541 f-string is missing placeholders
-.\scripts\validation\test_intelligent_modal_correction.py:376:19: F541 f-string is missing placeholders
-.\scripts\validation\test_intelligent_modal_correction.py:398:19: F541 f-string is missing placeholders
-.\scripts\validation\test_intelligent_modal_correction.py:477:15: F541 f-string is missing placeholders
-.\scripts\validation\test_unified_system.py:47:15: F541 f-string is missing placeholders
-.\scripts\validation\test_unified_system.py:73:15: F541 f-string is missing placeholders
-.\scripts\validation\test_unified_system.py:96:15: F541 f-string is missing placeholders
-.\scripts\validation\test_validation_environnement.py:85:7: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:615:19: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:622:23: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:634:19: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:647:19: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:660:19: F541 f-string is missing placeholders
-.\scripts\validation\validate_consolidated_system.py:737:15: F541 f-string is missing placeholders
-.\scripts\validation\validate_lot2_purge.py:117:19: F541 f-string is missing placeholders
-.\scripts\validation\validate_lot2_purge.py:122:11: F541 f-string is missing placeholders
 .\scripts\validation\validation_environnement_simple.py:7:34: W291 trailing whitespace
-.\scripts\validation\validation_point2_llm_authentique.py:151:31: F541 f-string is missing placeholders
-.\scripts\validation\validation_point2_llm_authentique.py:154:31: F541 f-string is missing placeholders
-.\scripts\validation\validation_point2_llm_authentique.py:237:23: F541 f-string is missing placeholders
-.\scripts\validation\validation_point2_llm_authentique.py:279:23: F541 f-string is missing placeholders
-.\scripts\validation\validation_point2_llm_authentique.py:358:15: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:420:19: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:427:19: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:461:15: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:472:15: F541 f-string is missing placeholders
-.\scripts\validation\validation_traces_master_fixed.py:478:13: F541 f-string is missing placeholders
 .\scripts\validation\validators\simple_validator.py:105:17: F811 redefinition of unused 'ConversationOrchestrator' from line 76
-.\scripts\validation\validators\simple_validator.py:126:25: F541 f-string is missing placeholders
-.\scripts\verification\run_api_validation.py:79:20: F541 f-string is missing placeholders
-.\scripts\verification\run_api_validation.py:83:20: F541 f-string is missing placeholders
 .\services\web_api\interface-simple\app.py:560:5: F811 redefinition of unused 'asyncio' from line 15
 .\services\web_api_from_libs\__init__.py:18:1: F403 'from .models import *' used; unable to detect undefined names
 .\services\web_api_from_libs\__init__.py:26:1: F405 'app' may be undefined, or defined from star imports: .models
@@ -934,49 +502,7 @@
 .\services\web_api_from_libs\__init__.py:26:1: F405 'FrameworkResponse' may be undefined, or defined from star imports: .models
 .\services\web_api_from_libs\__init__.py:26:1: F405 'ErrorResponse' may be undefined, or defined from star imports: .models
 .\services\web_api_from_libs\app.py:17:1: F811 redefinition of unused 'sys' from line 12
-.\services\web_api_from_libs\services\analysis_service.py:110:26: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:54:17: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:71:17: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:93:35: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:99:21: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:104:35: F541 f-string is missing placeholders
-.\services\web_api_from_libs\services\framework_service.py:107:31: F541 f-string is missing placeholders
 .\services\web_api_from_libs\services\logic_service.py:149:28: F821 undefined name 'LogicBeliefSet'
-.\speech-to-text\config_options.py:67:11: F541 f-string is missing placeholders
-.\speech-to-text\config_options.py:68:11: F541 f-string is missing placeholders
-.\speech-to-text\services\web_api_fallacy_detector.py:377:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:90:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:100:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:112:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:118:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:147:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:160:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:172:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\complete_integration_demo.py:179:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_fallacy_analysis.py:42:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:37:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:45:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:53:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:59:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:63:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:75:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:76:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:77:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:78:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:79:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:80:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_integration.py:82:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_web_api_integration.py:70:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\demo_web_api_integration.py:142:19: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_fallacy_analysis.py:53:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_integration.py:42:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_integration.py:50:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_integration.py:58:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_integration.py:64:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_integration.py:68:11: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_web_api_integration.py:81:15: F541 f-string is missing placeholders
-.\speech-to-text\tests\test_web_api_integration.py:155:15: F541 f-string is missing placeholders
-.\src\core\plugins\standard\external_verification\plugin.py:551:17: F541 f-string is missing placeholders
 .\tests\agents\core\informal\test_informal_agent_authentic.py:56:55: F811 redefinition of unused 'authentic_informal_agent' from line 20
 .\tests\agents\core\informal\test_informal_agent_authentic.py:104:15: F811 redefinition of unused 'simple_authentic_informal_agent' from line 17
 .\tests\agents\core\informal\test_informal_agent_authentic.py:104:48: F811 redefinition of unused 'sample_authentic_test_text' from line 20
@@ -1005,10 +531,6 @@
 .\tests\agents\core\logic\test_belief_set_authentic.py:374:20: E721 do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
 .\tests\agents\core\logic\test_examples.py:42:13: F821 undefined name 'logger'
 .\tests\comparison\test_mock_vs_real_behavior.py:35:5: F811 redefinition of unused 'Kernel' from line 19
-.\tests\comparison\test_mock_vs_real_behavior.py:599:15: F541 f-string is missing placeholders
-.\tests\comparison\test_mock_vs_real_behavior.py:729:19: F541 f-string is missing placeholders
-.\tests\complex_data_generator.py:344:11: F541 f-string is missing placeholders
-.\tests\conftest.py:189:21: F541 f-string is missing placeholders
 .\tests\conftest.py:349:9: F811 redefinition of unused 'nest_asyncio' from line 18
 .\tests\conftest.py:516:28: F821 undefined name 'FOLLogicAgent'
 .\tests\conftest.py:558:12: F821 undefined name 'ExtractResult'
@@ -1020,74 +542,35 @@
 .\tests\conftest_gpt_enhanced.py:278:31: F821 undefined name 'self'
 .\tests\conftest_gpt_enhanced.py:283:26: F821 undefined name 'Mock'
 .\tests\core\test_enquete_states.py:44:13: F821 undefined name 'logger'
-.\tests\e2e\demos\demo_service_manager_validated.py:94:11: F541 f-string is missing placeholders
 .\tests\e2e\python\test_integration_workflows.py:9:1: F811 redefinition of unused 'pytest' from line 6
-.\tests\e2e\python\test_integration_workflows.py:154:23: F541 f-string is missing placeholders
-.\tests\e2e\python\test_phase3_web_api_authentic.py:385:21: F541 f-string is missing placeholders
-.\tests\e2e\python\test_phase3_web_api_authentic.py:566:17: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:30:15: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:37:15: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:57:19: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:63:23: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:99:19: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:105:23: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:137:19: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:145:23: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:181:19: F541 f-string is missing placeholders
-.\tests\e2e\python\test_webapp_api_investigation.py:188:23: F541 f-string is missing placeholders
 .\tests\e2e\runners\playwright_js_runner.py:251:35: F821 undefined name 'e'
 .\tests\e2e\runners\playwright_js_runner.py:251:47: F821 undefined name 'e'
 .\tests\e2e\runners\playwright_js_runner.py:252:35: F821 undefined name 'e'
 .\tests\e2e\runners\playwright_js_runner.py:252:47: F821 undefined name 'e'
 .\tests\e2e\runners\playwright_js_runner.py:263:39: F821 undefined name 'e'
 .\tests\finaux\validation_complete_sans_mocks.py:166:13: F811 redefinition of unused 'OpenAIChatCompletion' from line 37
-.\tests\finaux\validation_complete_sans_mocks.py:1013:23: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1024:15: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1043:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1044:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1048:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1049:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1051:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1052:19: F541 f-string is missing placeholders
-.\tests\finaux\validation_complete_sans_mocks.py:1058:23: F541 f-string is missing placeholders
 .\tests\fixtures\agent_fixtures.py:61:18: F821 undefined name 'MagicMock'
 .\tests\fixtures\agent_fixtures.py:197:15: F821 undefined name 'MagicMock'
 .\tests\fixtures\agent_fixtures.py:211:15: F821 undefined name 'MagicMock'
 .\tests\fixtures\agent_fixtures.py:244:13: F821 undefined name 'MagicMock'
 .\tests\fixtures\jvm_subprocess_fixture.py:5:1: F811 redefinition of unused 'subprocess' from line 2
 .\tests\fixtures\jvm_subprocess_fixture.py:7:1: F811 redefinition of unused 'subprocess' from line 5
-.\tests\integration\_test_consolidation_demo_epita.py:416:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:434:36: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:436:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:460:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:476:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:490:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:515:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:525:28: F541 f-string is missing placeholders
-.\tests\integration\_test_consolidation_demo_epita.py:618:15: F541 f-string is missing placeholders
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:108:14: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:109:9: F821 undefined name 'pl_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:110:9: F821 undefined name 'pl_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:111:16: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:112:16: F821 undefined name 'asp_syntax'
 .\tests\integration\jpype_tweety\workers\worker_advanced_reasoning.py:118:39: F821 undefined name 'pl_syntax'
-.\tests\integration\jpype_tweety\workers\worker_argumentation_syntax.py:137:17: F541 f-string is missing placeholders
 .\tests\integration\test_authentic_components.py:318:28: F821 undefined name 'UnifiedOrchestrator'
 .\tests\integration\test_authentic_components_integration.py:40:9: F821 undefined name 'logger'
 .\tests\integration\test_authentic_components_integration.py:318:22: F821 undefined name 'Kernel'
-.\tests\integration\test_authenticite_finale_gpt4o.py:57:21: F541 f-string is missing placeholders
-.\tests\integration\test_authenticite_finale_gpt4o.py:158:21: F541 f-string is missing placeholders
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:70:13: F821 undefined name 'logger'
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:78:18: F821 undefined name 'Mock'
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:522:52: E228 missing whitespace around modulo operator
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:539:52: E228 missing whitespace around modulo operator
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:540:48: E228 missing whitespace around modulo operator
 .\tests\integration\test_cluedo_extended_workflow_recovered1.py:598:48: E228 missing whitespace around modulo operator
-.\tests\integration\test_cluedo_oracle_enhanced_real.py:325:19: F541 f-string is missing placeholders
-.\tests\integration\test_cluedo_oracle_enhanced_real.py:551:15: F541 f-string is missing placeholders
-.\tests\integration\test_einstein_demo_real.py:640:19: F541 f-string is missing placeholders
 .\tests\integration\test_fol_tweety_integration.py:12:47: F811 redefinition of unused 'run_in_jvm_subprocess' from line 5
-.\tests\integration\test_informal_agent_tool_choice.py:84:11: F541 f-string is missing placeholders
 .\tests\integration\test_logic_api_integration.py:19:46: F811 redefinition of unused 'run_in_jvm_subprocess' from line 12
 .\tests\integration\test_oracle_integration.py:20:43: F811 redefinition of unused 'run_in_jvm_subprocess' from line 13
 .\tests\integration\test_sherlock_watson_moriarty_real_gpt.py:31:58: F811 redefinition of unused 'run_in_jvm_subprocess' from line 13
@@ -1101,8 +584,6 @@
 .\tests\integration\workers\test_worker_fol_tweety.py:22:2: E101 indentation contains mixed spaces and tabs
 .\tests\integration\workers\test_worker_fol_tweety.py:23:2: W191 indentation contains tabs
 .\tests\integration\workers\test_worker_fol_tweety.py:23:2: E101 indentation contains mixed spaces and tabs
-.\tests\integration\workers\test_worker_fol_tweety.py:658:21: F541 f-string is missing placeholders
-.\tests\integration\workers\test_worker_fol_tweety.py:743:17: F541 f-string is missing placeholders
 .\tests\integration\workers\worker_cluedo_extended_workflow.py:572:52: E228 missing whitespace around modulo operator
 .\tests\integration\workers\worker_cluedo_extended_workflow.py:589:52: E228 missing whitespace around modulo operator
 .\tests\integration\workers\worker_cluedo_extended_workflow.py:590:48: E228 missing whitespace around modulo operator
@@ -1115,40 +596,14 @@
 .\tests\integration\workers\worker_fol_tweety.py:213:51: F821 undefined name 'Mock'
 .\tests\integration\workers\worker_fol_tweety.py:362:53: F821 undefined name 'Mock'
 .\tests\integration\workers\worker_fol_tweety.py:369:35: F821 undefined name 'FOLAnalysisResult'
-.\tests\integration\workers\worker_fol_tweety.py:478:21: F541 f-string is missing placeholders
 .\tests\integration\workers\worker_oracle_integration.py:66:13: F821 undefined name 'logger'
 .\tests\integration\workers\worker_oracle_integration.py:399:53: E228 missing whitespace around modulo operator
 .\tests\integration\workers\worker_sherlock_watson_moriarty.py:25:1: F811 redefinition of unused 'ChatHistory' from line 3
 .\tests\integration\workers\worker_sherlock_watson_moriarty.py:115:13: F821 undefined name 'logger'
-.\tests\integration\workers\worker_sherlock_watson_moriarty.py:215:27: F541 f-string is missing placeholders
 .\tests\integration\workers\worker_sherlock_watson_moriarty.py:274:28: F821 undefined name 'run_cluedo_oracle_game'
-.\tests\legacy_root_tests\test_real_vs_mock_system_analysis.py:636:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_real_vs_mock_system_analysis.py:665:11: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_edge_cases_specialized.py:425:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_edge_cases_specialized.py:431:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:858:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:869:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:876:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:883:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:893:15: F541 f-string is missing placeholders
-.\tests\legacy_root_tests\test_sherlock_watson_synthetic_validation.py:906:15: F541 f-string is missing placeholders
 .\tests\migration\test_modal_to_fol_migration.py:43:1: F811 redefinition of unused 'UnifiedConfig' from line 5
-.\tests\mocks\extract_definitions_mock.py:358:44: F541 f-string is missing placeholders
 .\tests\mocks\fact_checking_mocks.py:851:58: F821 undefined name 'e'
-.\tests\mocks\jpype_components\imports.py:44:13: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\imports.py:51:22: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\imports.py:57:22: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\jclass_core.py:62:21: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\jclass_core.py:74:17: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\jclass_core.py:98:17: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\jclass_core.py:295:21: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\tweety_agents.py:137:17: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\tweety_agents.py:142:36: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\tweety_reasoners.py:56:9: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\tweety_reasoners.py:77:9: F541 f-string is missing placeholders
-.\tests\mocks\jpype_components\tweety_reasoners.py:127:13: F541 f-string is missing placeholders
 .\tests\mocks\jpype_components\types.py:295:12: E721 do not compare types, for exact checks use `is` / `is not`, for instance checks use `isinstance()`
-.\tests\mocks\jpype_setup.py:24:13: F541 f-string is missing placeholders
 .\tests\mocks\jpype_to_pyjnius.py:144:1: F811 redefinition of unused 'JClass' from line 45
 .\tests\mocks\jpype_to_pyjnius.py:145:1: F811 redefinition of unused 'isJVMStarted' from line 45
 .\tests\mocks\jpype_to_pyjnius.py:146:1: F811 redefinition of unused 'startJVM' from line 45
@@ -1162,20 +617,12 @@
 .\tests\performance\test_oracle_performance.py:196:13: F821 undefined name 'logger'
 .\tests\project_core\dev_utils\test_verification_utils.py:39:13: F821 undefined name 'logger'
 .\tests\robustness\test_error_handling.py:244:13: F821 undefined name 'logger'
-.\tests\run_orchestration_tests.py:182:19: F541 f-string is missing placeholders
 .\tests\run_unified_config_tests.py:81:11: F541 f-string is missing placeholders
-.\tests\support\portable_octave_installer.py:154:13: F541 f-string is missing placeholders
 .\tests\test_complex_trace_authentic.py:583:13: F821 undefined name 'logger'
 .\tests\unit\agents\test_fol_logic_agent.py:66:13: F821 undefined name 'logger'
 .\tests\unit\agents\test_jtms_agent_base.py:395:5: F811 redefinition of unused 'asyncio' from line 8
-.\tests\unit\api\test_api_direct.py:198:23: F541 f-string is missing placeholders
-.\tests\unit\api\test_api_direct_simple.py:169:15: F541 f-string is missing placeholders
 .\tests\unit\api\test_api_endpoints.py:10:35: F811 redefinition of unused 'run_in_jvm_subprocess' from line 1
 .\tests\unit\api\test_dung_service.py:10:34: F811 redefinition of unused 'run_in_jvm_subprocess' from line 1
-.\tests\unit\api\test_fastapi_gpt4o_authentique.py:143:17: F541 f-string is missing placeholders
-.\tests\unit\api\test_fastapi_simple.py:232:15: F541 f-string is missing placeholders
-.\tests\unit\argumentation_analysis\agents\core\extract\test_extract_agent.py:72:11: F541 f-string is missing placeholders
-.\tests\unit\argumentation_analysis\agents\core\extract\test_extract_agent.py:75:11: F541 f-string is missing placeholders
 .\tests\unit\argumentation_analysis\agents\core\extract\test_extract_definitions.py:38:13: F821 undefined name 'logger'
 .\tests\unit\argumentation_analysis\agents\core\extract\test_extract_definitions.py:187:34: F821 undefined name 'AsyncMock'
 .\tests\unit\argumentation_analysis\agents\core\oracle\test_dataset_access_manager.py:51:13: F821 undefined name 'logger'
@@ -1235,7 +682,6 @@
 .\tests\unit\mocks\legacy_numpy_array_mock.py:239:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:245:1: E731 do not assign a lambda expression, use a def
 .\tests\unit\mocks\legacy_numpy_array_mock.py:1525:1: F811 redefinition of unused 'int8' from line 1423
-.\tests\unit\scripts\test_jpype_dependency_validator.py:127:15: F541 f-string is missing placeholders
 .\tests\unit\services\test_mcp_server.py:40:13: F811 redefinition of unused 'ValidationResult' from line 32
 .\tests\unit\test_service_manager_complete.py:42:16: F821 undefined name 'asyncio'
 .\tests\unit\test_service_manager_complete.py:48:22: F821 undefined name 'asyncio'
@@ -1246,19 +692,8 @@
 .\tests\utils\common_test_helpers.py:289:21: F821 undefined name 'patch'
 .\tests\utils\common_test_helpers.py:290:22: F821 undefined name 'patch'
 .\tests\utils\common_test_helpers.py:291:21: F821 undefined name 'patch'
-.\tests\validation\test_fol_complete_validation.py:766:15: F541 f-string is missing placeholders
-.\tests\validation\test_fol_complete_validation.py:771:15: F541 f-string is missing placeholders
-.\tests\validation\test_fol_complete_validation.py:776:15: F541 f-string is missing placeholders
-.\tests\validation\test_fol_complete_validation.py:790:15: F541 f-string is missing placeholders
-.\tests\validation\test_scripts_execution.py:426:15: F541 f-string is missing placeholders
-.\tests\validation\test_synthetic_rhetorical_validation.py:528:21: F541 f-string is missing placeholders
-.\tests\validation\test_synthetic_rhetorical_validation.py:540:15: F541 f-string is missing placeholders
-.\tests\validation\test_synthetic_rhetorical_validation_fixed.py:563:21: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_analyse_simple.py:13:1: F811 redefinition of unused 'pytest' from line 1
 .\tests\validation_sherlock_watson\test_analyse_simple.py:52:9: F811 redefinition of unused 'run_cluedo_oracle_game' from line 19
-.\tests\validation_sherlock_watson\test_analyse_simple.py:114:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_analyse_simple.py:123:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_diagnostic.py:31:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_group1_simple.py:33:1: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_group1_simple.py:33:1: F811 redefinition of unused 'AsyncMock' from line 12
 .\tests\validation_sherlock_watson\test_group1_simple.py:138:24: F821 undefined name 'QueryTy'
@@ -1266,7 +701,6 @@
 .\tests\validation_sherlock_watson\test_group2_corrections_simple.py:14:1: F811 redefinition of unused 'AsyncMock' from line 12
 .\tests\validation_sherlock_watson\test_group3_final_validation.py:16:1: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_group3_final_validation.py:16:1: F811 redefinition of unused 'AsyncMock' from line 12
-.\tests\validation_sherlock_watson\test_group3_final_validation.py:165:11: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:39:5: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:39:5: F811 redefinition of unused 'AsyncMock' from line 12
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:79:5: F811 redefinition of unused 'Mock' from line 12
@@ -1275,28 +709,5 @@
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:117:5: F811 redefinition of unused 'AsyncMock' from line 12
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:158:5: F811 redefinition of unused 'Mock' from line 12
 .\tests\validation_sherlock_watson\test_groupe2_validation_simple.py:158:5: F811 redefinition of unused 'AsyncMock' from line 12
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:236:13: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:237:13: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:239:13: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:283:13: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:471:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:478:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_a_personnalites_distinctes.py:489:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:235:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:261:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:268:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:275:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:282:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:306:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:409:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:415:20: F821 undefined name 'TestPhaseB'
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:420:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:421:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_naturalite_dialogue.py:423:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:227:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:301:15: F541 f-string is missing placeholders
 .\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:308:20: F821 undefined name 'TestPhaseBSimple'
-.\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:313:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:314:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_b_simple_fixed.py:317:15: F541 f-string is missing placeholders
-.\tests\validation_sherlock_watson\test_phase_c_simple.py:121:15: F541 f-string is missing placeholders

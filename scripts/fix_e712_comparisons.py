@@ -94,14 +94,14 @@ def main():
             symbol = "  📝" if args.dry_run else "  ✅"
             print(f"{symbol} {filepath}: True={true_fixes}, False={false_fixes}")
     
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"  Files {'would be modified' if args.dry_run else 'modified'}: {files_modified}")
     print(f"  ' is True' → 'is True': {total_true}")
     print(f"  ' is False' → 'is False': {total_false}")
     print(f"  Total fixed: {total_true + total_false}")
     
     if args.dry_run:
-        print(f"\n💡 Run without --dry-run to apply changes")
+        print("\n💡 Run without --dry-run to apply changes")
 
 if __name__ == '__main__':
     main()

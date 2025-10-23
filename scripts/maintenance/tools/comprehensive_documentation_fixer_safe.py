@@ -287,7 +287,7 @@ class ComprehensiveDocumentationFixer:
         files_analyzed = len(set(issue.file_path for issue in all_issues))
         files_fixed = len(set(r.file_path for r in results if r.applied))
 
-        report = f"""# 📋 Rapport de Corrections Automatiques
+        report = """# 📋 Rapport de Corrections Automatiques
 ## Oracle Enhanced v2.1.0 - Version Sécurisée
 
 **Date d'analyse :** {datetime.now().isoformat()}
@@ -306,7 +306,7 @@ class ComprehensiveDocumentationFixer:
         # Afficher les premières corrections
         for i, result in enumerate(results[:50] if results else []):
             if result.applied:
-                report += f"""### {result.file_path} (ligne {result.line_number})
+                report += """### {result.file_path} (ligne {result.line_number})
 - **Avant :** `{result.original_text}`
 - **Après :** `{result.corrected_text}`
 - **Confiance :** {result.confidence:.2f}
@@ -316,7 +316,7 @@ class ComprehensiveDocumentationFixer:
         if len(results) > 50:
             report += f"... et {len(results)-50} autres corrections\n\n"
 
-        report += f"""## 💡 Recommandations
+        report += """## 💡 Recommandations
 
 1. **Validation manuelle** : Vérifier les corrections appliquées
 2. **Tests** : Exécuter les tests pour valider les liens
@@ -398,7 +398,7 @@ def main():
         fixer = ComprehensiveDocumentationFixer()
         results = fixer.run_comprehensive_fix()
 
-        print(f"🎯 CORRECTIONS TERMINÉES")
+        print("🎯 CORRECTIONS TERMINÉES")
         print(
             f"📊 {results['fixes_applied']} corrections appliquées sur {results['issues_found']} problèmes"
         )

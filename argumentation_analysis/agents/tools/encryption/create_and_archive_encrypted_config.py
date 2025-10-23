@@ -37,9 +37,9 @@ def main():
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
         print(
-            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+            "⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
         )
-        print(f"   Veuillez la définir avant d'exécuter ce script.")
+        print("   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
 
     # Étape 1: Créer le fichier encrypté complet
@@ -104,7 +104,7 @@ def main():
                     pass
             try:
                 original_cache_dir.rename(temp_cache_dir)
-                print(f"[OK] Répertoire de cache original restauré.")
+                print("[OK] Répertoire de cache original restauré.")
             except Exception as e:
                 print(
                     f"⚠️ Erreur lors de la restauration du répertoire de cache original: {e}"
@@ -123,7 +123,7 @@ def main():
     )
     print(f"   - Tous les fichiers de cache dans '{temp_cache_dir}'")
     print(f"   - Le répertoire de cache original '{original_cache_dir}' s'il existe")
-    print(f"   - Le fichier DATA_DIR / 'extract_sources.json' s'il existe")
+    print("   - Le fichier DATA_DIR / 'extract_sources.json' s'il existe")
 
     confirmation = input(
         "\nSouhaitez-vous nettoyer les fichiers non nécessaires? (o/n): "
@@ -176,14 +176,14 @@ def main():
                     pass
             try:
                 original_cache_dir.rename(temp_cache_dir)
-                print(f"[OK] Répertoire de cache original restauré.")
+                print("[OK] Répertoire de cache original restauré.")
             except Exception as e:
                 print(
                     f"⚠️ Erreur lors de la restauration du répertoire de cache original: {e}"
                 )
 
     print("\n=== Processus terminé ===\n")
-    print(f"Le fichier encrypté complet a été créé et vérifié avec succès:")
+    print("Le fichier encrypté complet a été créé et vérifié avec succès:")
     print(f"   - Fichier: '{CONFIG_FILE_ENC}'")
     print(f"   - Taille: {CONFIG_FILE_ENC.stat().st_size} octets.")
     print(

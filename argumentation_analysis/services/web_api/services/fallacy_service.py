@@ -190,7 +190,7 @@ class FallacyService:
                     "préconisent.*retour à",
                     "souhaitent.*retour à",
                     "veulent.*âge de pierre",
-                    "veulent.*primitif",
+                    "veulent.*primiti",
                     "veulent.*abolir",
                     "veulent.*détruire",
                     "veulent.*éliminer.*tout",
@@ -503,7 +503,7 @@ class FallacyService:
         try:
             # CORRECTION: Utiliser uniquement self.fallacy_patterns
             patterns_source = self.fallacy_patterns
-            print(f"[DEBUG] Source utilisée: self.fallacy_patterns")
+            print("[DEBUG] Source utilisée: self.fallacy_patterns")
 
             for fallacy_type, fallacy_info in patterns_source.items():
                 print(f"[DEBUG] Test sophisme: {fallacy_type}")

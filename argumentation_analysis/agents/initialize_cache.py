@@ -29,9 +29,9 @@ if __name__ == "__main__":
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
         print(
-            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+            "⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
         )
-        print(f"   Veuillez la définir avant d'exécuter ce script.")
+        print("   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
 
     # Initialiser le cache des textes

@@ -218,7 +218,7 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
 
         # Afficher le résumé de session
         session_summary = pipeline.get_session_summary()
-        logger.info(f"\n📈 === RÉSUMÉ SESSION ===")
+        logger.info("\n📈 === RÉSUMÉ SESSION ===")
         logger.info(f"🆔 Session ID: {session_summary['session_id']}")
         logger.info(f"📊 Taux de succès: {session_summary['success_rate']:.2%}")
         logger.info(f"⏱️ Temps moyen: {session_summary['average_execution_time']:.2f}s")

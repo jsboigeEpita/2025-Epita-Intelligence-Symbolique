@@ -65,7 +65,7 @@ def _load_complex_fallacy_config() -> Dict[str, Any]:
                 "detection_pattern": "contradiction",
                 "severity_modifier": 0.3,
             },
-            "Cercle argumentatif": {
+            "Cercle argumentati": {
                 "description": "Série d'arguments qui forment un cercle logique",
                 "detection_pattern": "circular",
                 "severity_modifier": 0.3,
@@ -251,8 +251,8 @@ class ComplexFallacyAnalyzer:
         for circle in circles:
             structural_fallacies.append(
                 {
-                    "structural_fallacy_type": "Cercle argumentatif",
-                    "description": self.structural_fallacies["Cercle argumentatif"][
+                    "structural_fallacy_type": "Cercle argumentati",
+                    "description": self.structural_fallacies["Cercle argumentati"][
                         "description"
                     ],
                     "involved_arguments": circle["involved_arguments"],
@@ -502,7 +502,7 @@ class ComplexFallacyAnalyzer:
                     "fallacy_types": pattern["fallacy_sequence"],
                     "severity": 0.8,
                     "severity_level": "Élevé",
-                    "explanation": f"Ce motif d'escalade de sophismes augmente progressivement l'intensité de l'argumentation fallacieuse, rendant la manipulation plus difficile à détecter.",
+                    "explanation": "Ce motif d'escalade de sophismes augmente progressivement l'intensité de l'argumentation fallacieuse, rendant la manipulation plus difficile à détecter.",
                 }
             )
 

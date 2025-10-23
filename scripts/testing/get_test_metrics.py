@@ -112,11 +112,11 @@ def main():
         print(f"Taux de succes (echantillon): {success_rate:.1f}%")
 
     # Estimation globale basée sur les corrections
-    print(f"\nESTIMATION GLOBALE (basee sur les corrections):")
-    print(f"Tests passants estimes: ~280-290")
-    print(f"Tests echouants estimes: ~20-30")
-    print(f"Taux de succes estime: ~90-92%")
-    print(f"Amelioration depuis l'etat initial: +9-10%")
+    print("\nESTIMATION GLOBALE (basee sur les corrections):")
+    print("Tests passants estimes: ~280-290")
+    print("Tests echouants estimes: ~20-30")
+    print("Taux de succes estime: ~90-92%")
+    print("Amelioration depuis l'etat initial: +9-10%")
 
 
 if __name__ == "__main__":

@@ -93,7 +93,7 @@ async def setup_environment() -> Any:
     except Exception as e:
         logging.critical(f"❌ Échec de la création du service LLM: {e}", exc_info=True)
         print(
-            f"❌ ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env."
+            "❌ ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env."
         )
         return None
 
@@ -150,7 +150,7 @@ async def main():
     # Groupe mutuellement exclusif pour les sources de texte
     text_source = parser.add_mutually_exclusive_group(required=True)
     text_source.add_argument(
-        "--file", "-f", type=str, help="Chemin vers un fichier texte à analyser"
+        "--file", "-", type=str, help="Chemin vers un fichier texte à analyser"
     )
     text_source.add_argument(
         "--text", "-t", type=str, help="Texte à analyser (directement en argument)"

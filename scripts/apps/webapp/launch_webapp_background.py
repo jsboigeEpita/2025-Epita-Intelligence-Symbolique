@@ -57,7 +57,7 @@ def launch_backend_detached():
 
     # os.environ est déjà correctement configuré par le wrapper activate_project_env.ps1
 
-    print(f"[LAUNCH] Lancement du backend détaché...")
+    print("[LAUNCH] Lancement du backend détaché...")
     print(f"[DIR] Répertoire de travail: {project_root}")
     print(f"[PYTHON] Exécutable Python: {python_exe}")
     print(f"[URL] URL prevue: http://127.0.0.1:{port}/api/health")
@@ -90,7 +90,7 @@ def launch_backend_detached():
 
         print(f"[SUCCESS] Backend lance en arriere-plan (PID: {process.pid})")
         print(
-            f"[WAIT] Attendre 10-15s puis tester: curl http://localhost:5003/api/health"
+            "[WAIT] Attendre 10-15s puis tester: curl http://localhost:5003/api/health"
         )
         return True, process.pid
 

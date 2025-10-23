@@ -209,7 +209,7 @@ class OracleEnhancedCompatibilityTester:
 
     def run_intensive_tests(self):
         """Lance tous les tests intensifs"""
-        print(f"🧪 Démarrage des tests intensifs Oracle Enhanced v2.1.0")
+        print("🧪 Démarrage des tests intensifs Oracle Enhanced v2.1.0")
         print(f"📅 Timestamp: {datetime.now().isoformat()}")
         print(f"📁 Répertoire: {self.base_path.resolve()}")
         print(f"🎯 Fichiers à tester: {len(self.refactored_files)}")
@@ -250,13 +250,13 @@ class OracleEnhancedCompatibilityTester:
             )
 
             if score >= 80:
-                print(f"  🎉 COMPATIBLE Oracle Enhanced v2.1.0")
+                print("  🎉 COMPATIBLE Oracle Enhanced v2.1.0")
             elif score >= 60:
                 print(
-                    f"  ⚠️  PARTIELLEMENT COMPATIBLE - Corrections mineures nécessaires"
+                    "  ⚠️  PARTIELLEMENT COMPATIBLE - Corrections mineures nécessaires"
                 )
             else:
-                print(f"  🚨 INCOMPATIBLE - Refactorisation requise")
+                print("  🚨 INCOMPATIBLE - Refactorisation requise")
 
             self.test_results.extend(file_results)
 
@@ -288,7 +288,7 @@ class OracleEnhancedCompatibilityTester:
             if result["success"]:
                 test_types[test_type]["success"] += 1
 
-        print(f"\n📋 Détail par type de test:")
+        print("\n📋 Détail par type de test:")
         for test_type, stats in test_types.items():
             score = (stats["success"] / stats["total"]) * 100
             print(
@@ -297,14 +297,14 @@ class OracleEnhancedCompatibilityTester:
 
         # Validation finale
         if overall_score >= 90:
-            print(f"\n🎉 VALIDATION RÉUSSIE - Oracle Enhanced v2.1.0 COMPATIBLE")
+            print("\n🎉 VALIDATION RÉUSSIE - Oracle Enhanced v2.1.0 COMPATIBLE")
             print(
-                f"   Les scripts Oracle/Sherlock refactorisés fonctionnent correctement"
+                "   Les scripts Oracle/Sherlock refactorisés fonctionnent correctement"
             )
         elif overall_score >= 75:
-            print(f"\n⚠️  VALIDATION PARTIELLE - Corrections mineures recommandées")
+            print("\n⚠️  VALIDATION PARTIELLE - Corrections mineures recommandées")
         else:
-            print(f"\n🚨 VALIDATION ÉCHOUÉE - Refactorisation supplémentaire requise")
+            print("\n🚨 VALIDATION ÉCHOUÉE - Refactorisation supplémentaire requise")
 
         # Sauvegarde du rapport
         report_path = (

@@ -417,14 +417,14 @@ class MasterTraceValidator:
 
         try:
             # ÉTAPE 1: Validation Cluedo
-            print(f"\n📋 ÉTAPE 1/2: VALIDATION CLUEDO")
+            print("\n📋 ÉTAPE 1/2: VALIDATION CLUEDO")
             print(f"{'='*50}")
 
             cluedo_results = await self.run_cluedo_validation()
             all_results["cluedo_results"] = cluedo_results
 
             # ÉTAPE 2: Validation Einstein
-            print(f"\n🧩 ÉTAPE 2/2: VALIDATION EINSTEIN")
+            print("\n🧩 ÉTAPE 2/2: VALIDATION EINSTEIN")
             print(f"{'='*50}")
 
             einstein_results = await self.run_einstein_validation()
@@ -458,7 +458,7 @@ class MasterTraceValidator:
         """Affiche le résumé final de la validation."""
 
         print(f"\n{'='*80}")
-        print(f"🎉 VALIDATION COMPLÈTE TERMINÉE")
+        print("🎉 VALIDATION COMPLÈTE TERMINÉE")
         print(f"{'='*80}")
 
         metadata = all_results["metadata"]
@@ -469,13 +469,13 @@ class MasterTraceValidator:
         print(f"🧪 Tests Cluedo: {len(cluedo_results) if cluedo_results else 0}")
         print(f"🧪 Tests Einstein: {len(einstein_results) if einstein_results else 0}")
 
-        print(f"\n📁 TRACES GÉNÉRÉES:")
+        print("\n📁 TRACES GÉNÉRÉES:")
         print(f"   - Cluedo: {self.cluedo_dir}/")
         print(f"   - Einstein: {self.einstein_dir}/")
         print(f"   - Rapport global: global_validation_report_{self.timestamp}.json")
 
         print(
-            f"\n✅ Validation des démos Sherlock, Watson et Moriarty terminée avec succès!"
+            "\n✅ Validation des démos Sherlock, Watson et Moriarty terminée avec succès!"
         )
 
 

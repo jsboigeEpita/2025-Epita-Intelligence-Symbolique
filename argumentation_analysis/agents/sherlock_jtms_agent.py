@@ -217,7 +217,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
         self._deduction_style = "intuitive_logical"
         self._max_concurrent_hypotheses = 5
 
-        self._logger.info(f"SherlockJTMSAgent initialisé avec JTMS intégré")
+        self._logger.info("SherlockJTMSAgent initialisé avec JTMS intégré")
 
     # === MÉTHODES SPÉCIALISÉES SHERLOCK ===
 
@@ -365,7 +365,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 best_hypothesis = hypothesis_evaluations[0]
 
                 # Générer solution détaillée via Sherlock de base
-                solution_prompt = f"""
+                solution_prompt = """
                 Basé sur l'hypothèse principale: {self._hypothesis_tracker.active_hypotheses[best_hypothesis['hypothesis_id']]['description']}
                 Avec {best_hypothesis['supporting_evidence_count']} évidences de support.
                 Contexte: {investigation_context}
@@ -542,7 +542,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
             for belief_name in unjustified_beliefs[:3]:  # Limiter à 3
                 leads.append(
                     {
-                        "type": "justify_belief",
+                        "type": "justify_belie",
                         "belief_name": belief_name,
                         "suggestion": f"Trouver justification pour {belief_name}",
                         "priority": "high",

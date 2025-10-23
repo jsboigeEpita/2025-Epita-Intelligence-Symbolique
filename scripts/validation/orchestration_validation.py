@@ -429,7 +429,7 @@ class OrchestrationValidator:
 
         with open(report_file, "w", encoding="utf-8") as f:
             f.write(
-                f"""# Rapport de Validation - API Orchestration
+                """# Rapport de Validation - API Orchestration
 
 ## Informations Generales
 
@@ -577,7 +577,7 @@ async def main():
     results = await validator.run_all_tests()
 
     print("\n" + "=" * 60)
-    print(f"RESULTATS FINAUX")
+    print("RESULTATS FINAUX")
     print("=" * 60)
     print(
         f"Tests reussis: {results['metrics']['successful_tests']}/{results['metrics']['total_tests']}"

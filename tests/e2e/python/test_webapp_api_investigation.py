@@ -27,14 +27,14 @@ class TestWebAppAPIInvestigation:
         assert response.status_code == 200
 
         health_data = response.json()
-        print(f"\n[HEALTH] État de santé de l'API:")
+        print("\n[HEALTH] État de santé de l'API:")
         print(f"   Status: {health_data.get('status')}")
         print(f"   Message: {health_data.get('message')}")
         print(f"   Version: {health_data.get('version')}")
         print(f"   Timestamp: {health_data.get('timestamp')}")
 
         services = health_data.get("services", {})
-        print(f"   Services disponibles:")
+        print("   Services disponibles:")
         for service, status in services.items():
             icon = "[OK]" if status else "[ERROR]"
             print(f"     {icon} {service}: {'OK' if status else 'Indisponible'}")
@@ -54,13 +54,13 @@ class TestWebAppAPIInvestigation:
             response = requests.post(
                 f"{base_url}/api/analyze", json=payload, timeout=30
             )
-            print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
+            print("\n[ANALYZE] Test de l'endpoint /api/analyze:")
             print(f"   Status Code: {response.status_code}")
             print(f"   Texte analysé: {test_text[:50]}...")
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"   [OK] Analyse réussie")
+                print("   [OK] Analyse réussie")
                 print(
                     f"   Résultat complet: {json.dumps(result, indent=2, ensure_ascii=False)}"
                 )
@@ -96,13 +96,13 @@ class TestWebAppAPIInvestigation:
             response = requests.post(
                 f"{base_url}/api/fallacies", json=payload, timeout=30
             )
-            print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
+            print("\n[WARNING]  Test de l'endpoint /api/fallacies:")
             print(f"   Status Code: {response.status_code}")
             print(f"   Texte analysé: {test_text}")
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"   [OK] Détection réussie")
+                print("   [OK] Détection réussie")
                 fallacies = result.get("fallacies", [])
                 print(f"   Sophismes détectés: {len(fallacies)}")
                 for fallacy in fallacies[:2]:  # Afficher les 2 premiers
@@ -134,7 +134,7 @@ class TestWebAppAPIInvestigation:
             response = requests.post(
                 f"{base_url}/api/validate", json=payload, timeout=30
             )
-            print(f"\n[OK] Test de l'endpoint /api/validate:")
+            print("\n[OK] Test de l'endpoint /api/validate:")
             print(f"   Status Code: {response.status_code}")
             print(
                 f"   Argument testé: {payload['premises']} -> {payload['conclusion']}"
@@ -142,7 +142,7 @@ class TestWebAppAPIInvestigation:
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"   [OK] Validation réussie")
+                print("   [OK] Validation réussie")
                 print(f"   Valide: {result.get('valid', False)}")
                 print(f"   Confiance: {result.get('confidence', 0):.2f}")
             else:
@@ -178,14 +178,14 @@ class TestWebAppAPIInvestigation:
             response = requests.post(
                 f"{base_url}/api/framework", json=payload, timeout=30
             )
-            print(f"\n[FRAMEWORK]  Test de l'endpoint /api/framework:")
+            print("\n[FRAMEWORK]  Test de l'endpoint /api/framework:")
             print(f"   Status Code: {response.status_code}")
             print(f"   Arguments: {len(payload['arguments'])}")
             print(f"   Attaques: {len(payload['attacks'])}")
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"   [OK] Framework construit")
+                print("   [OK] Framework construit")
                 extensions = result.get("extensions", {})
                 if isinstance(extensions, dict):
                     print(f"   Extensions calculées: {list(extensions.keys())}")

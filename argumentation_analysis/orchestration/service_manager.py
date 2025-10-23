@@ -435,7 +435,7 @@ class OrchestrationServiceManager:
                 # L'orchestrateur a besoin du kernel pour instancier ses propres agents.
                 self.llm_orchestrator = RealLLMOrchestrator(kernel=self.kernel)
                 self.logger.info(
-                    f"RealLLMOrchestrator initialisé avec le kernel principal."
+                    "RealLLMOrchestrator initialisé avec le kernel principal."
                 )
 
             if FactCheckingOrchestrator:
@@ -775,7 +775,7 @@ class OrchestrationServiceManager:
                 }
 
             # Prompt pour l'analyse tactique
-            tactical_prompt = f"""Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
+            tactical_prompt = """Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
 
 TEXTE À ANALYSER:
 {text}
@@ -866,7 +866,7 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
                 }
 
             # Prompt pour l'analyse opérationnelle détaillée
-            operational_prompt = f"""Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
+            operational_prompt = """Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
 
 TEXTE À ANALYSER:
 {text}

@@ -123,7 +123,7 @@ async def validate_simple(
                         "details"
                     ] = f"Résultat invalide ou vide (type: {type(result)})"
                     logger.error(
-                        f"  ✗ Test basic_orchestration (ConversationOrchestrator micro): Résultat invalide ou vide."
+                        "  ✗ Test basic_orchestration (ConversationOrchestrator micro): Résultat invalide ou vide."
                     )
             except ImportError as e:
                 basic_tests_results["basic_orchestration_conversation_micro"][

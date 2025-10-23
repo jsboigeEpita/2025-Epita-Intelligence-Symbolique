@@ -233,10 +233,10 @@ class CluedoPersonalityTestRunner:
         """Simule une réponse Watson proactive selon nouveau prompt"""
         responses = [
             f"J'observe que la suggestion '{scenario['sherlock_input']}' présente des implications logiques intéressantes. L'analyse révèle trois vecteurs d'investigation distincts qui méritent notre attention immédiate.",
-            f"Logiquement, cette combinaison nous amène à reconsidérer nos hypothèses précédentes. Je remarque une corrélation potentielle avec les indices déjà collectés qui suggère une piste prometteuse.",
-            f"Cette déduction m'amène à identifier un pattern significatif dans la distribution des probabilités. Mon analyse suggère que nous devrions explorer davantage les connexions temporelles.",
+            "Logiquement, cette combinaison nous amène à reconsidérer nos hypothèses précédentes. Je remarque une corrélation potentielle avec les indices déjà collectés qui suggère une piste prometteuse.",
+            "Cette déduction m'amène à identifier un pattern significatif dans la distribution des probabilités. Mon analyse suggère que nous devrions explorer davantage les connexions temporelles.",
             f"Il apparaît clairement que les éléments {scenario['sherlock_input'].split(',')[0]} et {scenario['sherlock_input'].split(',')[1]} forment une constellation logique cohérente. Je détecte une convergence notable vers une solution spécifique.",
-            f"L'analyse révèle des implications déductives profondes dans cette suggestion. Je pressens qu'une validation croisée avec nos observations antérieures pourrait confirmer ou infirmer cette hypothèse de manière définitive.",
+            "L'analyse révèle des implications déductives profondes dans cette suggestion. Je pressens qu'une validation croisée avec nos observations antérieures pourrait confirmer ou infirmer cette hypothèse de manière définitive.",
         ]
 
         # Sélection basée sur le contexte
@@ -280,7 +280,7 @@ class CluedoPersonalityTestRunner:
             f"Je pressens que cette première exploration '{scenario['sherlock_input']}' révélera des éléments cruciaux de notre mystère. L'évidence suggère clairement que nous devons procéder méthodiquement pour dévoiler la vérité qui se cache dans les ombres du Manoir Tudor.",
             f"Concentrons-nous sur l'essentiel : la logique nous mène inexorablement vers une conclusion. Mes déductions révèlent que {scenario['sherlock_input']} constitue une hypothèse fondamentale qu'il nous faut tester avec la rigueur qui caractérise notre méthode.",
             f"Il est évident que cette apparente contradiction cache une vérité plus profonde. Je conclus avec certitude que l'analyse de '{scenario['sherlock_input']}' nous apportera la clarté nécessaire pour percer ce mystère. La solution approche, n'en doutez pas.",
-            f"L'évidence suggère clairement que nous touchons au cœur du mystère. Je pressens que cette suggestion critique nous permettra de rassembler les dernières pièces du puzzle. La logique nous guide inexorablement vers le dénouement.",
+            "L'évidence suggère clairement que nous touchons au cœur du mystère. Je pressens que cette suggestion critique nous permettra de rassembler les dernières pièces du puzzle. La logique nous guide inexorablement vers le dénouement.",
             f"Mes déductions révèlent que nous approchons du moment décisif. Je pressens avec une certitude absolue que '{scenario['sherlock_input']}' constitue la clé finale de notre enquête. Concentrons-nous sur cette ultime vérification avant l'accusation triomphale.",
         ]
 
@@ -468,14 +468,14 @@ class CluedoPersonalityTestRunner:
             f"   Objectif: 6.0/10 - {'[ATTEINT]' if distinctiveness_success else '[NON ATTEINT]'}"
         )
 
-        print(f"\n>> WATSON (Proactivite):")
+        print("\n>> WATSON (Proactivite):")
         print(f"   • Score proactivite: {results['Watson'].proactivity_score:.1f}/10")
         print(
             f"   • Questions passives: {results['Watson'].passive_questions_ratio*100:.1f}% (objectif: <20%)"
         )
         print(f"   • Resultat: {'[SUCCES]' if watson_proactive_success else '[ECHEC]'}")
 
-        print(f"\n>> MORIARTY (Theatralite):")
+        print("\n>> MORIARTY (Theatralite):")
         print(
             f"   • Score theatralite: {results['Moriarty'].theatricality_score:.1f}/10"
         )
@@ -486,7 +486,7 @@ class CluedoPersonalityTestRunner:
             f"   • Resultat: {'[SUCCES]' if moriarty_theatrical_success else '[ECHEC]'}"
         )
 
-        print(f"\n>> SHERLOCK (Leadership):")
+        print("\n>> SHERLOCK (Leadership):")
         print(f"   • Score leadership: {results['Sherlock'].leadership_score:.1f}/10")
         print(
             f"   • Assertions confiantes: {results['Sherlock'].confident_assertions_ratio*100:.1f}%"

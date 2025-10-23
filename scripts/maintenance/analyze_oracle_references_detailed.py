@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 class FileCategory(Enum):
     """Catégories de classification des fichiers Oracle"""
 
-    CODE_ACTIF = "code_actif"
+    CODE_ACTIF = "code_acti"
     TESTS_ORPHELINS = "tests_orphelins"
     SCRIPTS_TEMPORAIRES = "scripts_temporaires"
     DOCUMENTATION_OBSOLETE = "documentation_obsolete"
@@ -472,7 +472,7 @@ def main():
         results = analyzer.run_detailed_analysis()
 
         # Sauvegarde des résultats
-        output_file = f"logs/oracle_files_categorization_detailed.json"
+        output_file = "logs/oracle_files_categorization_detailed.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 

@@ -37,12 +37,12 @@ try:
 
 except (NameError, FileNotFoundError, RuntimeError) as e:
     print(
-        f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.",
+        "ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.",
         file=sys.stderr,
     )
     print(f"Détails: {e}", file=sys.stderr)
     print(
-        f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.",
+        "Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.",
         file=sys.stderr,
     )
     sys.exit(1)

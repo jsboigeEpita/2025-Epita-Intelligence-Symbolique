@@ -818,7 +818,7 @@ class ResultsAggregator:
         self, results: WorkflowResults, timestamp: str
     ) -> Path:
         """Génère un rapport Markdown."""
-        md_content = f"""# 🚀 Rapport de Workflow Complet
+        md_content = """# 🚀 Rapport de Workflow Complet
 
 **Date**: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 **Mode**: {self.config.mode.value}
@@ -921,7 +921,7 @@ class ResultsAggregator:
                 md_content += f"- {error}\n"
 
         md_content += (
-            f"\n---\n\n_Rapport généré par Comprehensive Workflow Processor v3.0.0_\n"
+            "\n---\n\n_Rapport généré par Comprehensive Workflow Processor v3.0.0_\n"
         )
 
         file_path = (
@@ -937,7 +937,7 @@ class ResultsAggregator:
         self, results: WorkflowResults, timestamp: str
     ) -> Path:
         """Génère un rapport HTML avec style."""
-        html_content = f"""<!DOCTYPE html>
+        html_content = """<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1307,7 +1307,7 @@ Environnements: development, testing, production
 
     parser.add_argument(
         "--format",
-        "-f",
+        "-",
         action="append",
         choices=[fmt.value for fmt in ReportFormat],
         help="Format(s) de rapport (peut être utilisé plusieurs fois)",

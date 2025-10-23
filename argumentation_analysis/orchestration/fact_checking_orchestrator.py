@@ -253,7 +253,7 @@ class FactCheckingOrchestrator:
         start_time = datetime.now()
 
         try:
-            self.logger.info(f"Analyse des familles de sophismes uniquement")
+            self.logger.info("Analyse des familles de sophismes uniquement")
 
             # Détection et classification par famille
             classified_fallacies = await self.taxonomy_plugin.detect_and_classify(text)

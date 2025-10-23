@@ -128,7 +128,7 @@ def prepare_manual_correction_data(
 
     if output_debug_file_path:
         debug_report_lines = [
-            f"--- Informations pour Correction Manuelle ---",
+            "--- Informations pour Correction Manuelle ---",
             f"Source ID         : {target_source_id}",
             f"Nom de la Source  : {source_name}",
             f"Nom de l'Extrait  : {target_extract_name}",

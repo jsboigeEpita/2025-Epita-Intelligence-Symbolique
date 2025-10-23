@@ -218,19 +218,19 @@ def generate_markdown_summary_for_analysis(
     metrics = analysis_result["analyses"]["metrics"]
 
     content = f"# Analyse rhétorique: {extract_name}\n\n"
-    content += f"## Informations générales\n\n"
+    content += "## Informations générales\n\n"
     content += f"- **Source**: {source_name}\n"
     content += f"- **Extrait**: {extract_name}\n"
     content += f"- **Agent d'analyse**: {agent_name}\n"
     content += (
         f"- **Date d'analyse**: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n\n"
     )
-    content += f"## Résumé de l'analyse\n\n"
+    content += "## Résumé de l'analyse\n\n"
     content += f"L'analyse rhétorique de cet extrait a identifié **{fallacy_count} sophismes** sur un total de **{argument_count} arguments**. "
     content += f"La cohérence argumentative globale est évaluée comme **{coherence_evaluation['overall_coherence']['level']}** "
     content += f"(score: {coherence_evaluation['overall_coherence']['score']}).\n\n"
     content += f"## Extrait analysé\n\n```\n{extract_text}\n```\n\n"
-    content += f"## Sophismes détectés\n\n"
+    content += "## Sophismes détectés\n\n"
 
     fallacy_results = analysis_result["analyses"]["fallacy_detection"][
         "argument_results"
@@ -265,7 +265,7 @@ def generate_markdown_summary_for_analysis(
         else ("Modérée" if v < 0.5 else "Forte") + " présence de sophismes",
         "persuasiveness_score": lambda v: "Peu"
         if v < 0.4
-        else ("Modérément" if v < 0.7 else "Très") + " persuasif",
+        else ("Modérément" if v < 0.7 else "Très") + " persuasi",
         "clarity_score": lambda v: "Peu"
         if v < 0.4
         else ("Modérément" if v < 0.7 else "Très") + " clair",
@@ -283,7 +283,7 @@ def generate_markdown_summary_for_analysis(
     for rec in analysis_result["analyses"]["recommendations"]:
         content += f"- {rec}\n"
 
-    content += f"\n## Analyses détaillées (liens fictifs)\n\n"
+    content += "\n## Analyses détaillées (liens fictifs)\n\n"
     content += f"- [Analyse JSON complète](../rhetorical_analyses_{analysis_result['timestamp']}.json)\n"  # Placeholder
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -329,15 +329,15 @@ def generate_global_summary_report(
         )
         sources_set.add(source_name)
 
-    content = f"# Rapport de synthèse global des analyses rhétoriques\n\n"
-    content += f"## Informations générales\n\n"
+    content = "# Rapport de synthèse global des analyses rhétoriques\n\n"
+    content += "## Informations générales\n\n"
     content += (
         f"- **Date de génération**: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n"
     )
     content += f"- **Nombre d'agents**: {len(analyses_by_agent)}\n"
     content += f"- **Nombre de sources**: {len(sources_set)}\n"
     content += f"- **Nombre total d'analyses**: {len(all_analyses)}\n\n"
-    content += f"## Comparaison des agents\n\n"
+    content += "## Comparaison des agents\n\n"
     content += "| Agent | Analyses | Sophismes | Cohérence Moy. | Forces (extrait) | Faiblesses (extrait) |\n"
     content += "|-------|----------|-----------|----------------|------------------|----------------------|\n"
 

@@ -107,7 +107,7 @@ class AnalysisService:
         )
         is_healthy = self.is_initialized and (has_informal or has_analyzers)
 
-        self.logger.info(f"=== HEALTH CHECK ===")
+        self.logger.info("=== HEALTH CHECK ===")
         self.logger.info(f"is_initialized: {self.is_initialized}")
         self.logger.info(f"has_informal_agent: {has_informal}")
         self.logger.info(f"has_analyzers: {has_analyzers}")

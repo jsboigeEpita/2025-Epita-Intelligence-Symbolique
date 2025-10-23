@@ -73,7 +73,7 @@ class ConversationTracker:
 
         total_duration = (datetime.now() - self.start_time).total_seconds()
 
-        report = f"""# 📊 Rapport d'Analyse Complexe Multi-Agents
+        report = """# 📊 Rapport d'Analyse Complexe Multi-Agents
 
 **Session ID:** `{self.session_id}`
 **Date:** {self.start_time.strftime('%d/%m/%Y à %H:%M:%S')}
@@ -99,7 +99,7 @@ class ConversationTracker:
             agent_traces = [t for t in self.traces if t["agent"] == agent]
             report += f"- **{agent}** ({len(agent_traces)} interactions)\n"
 
-        report += f"""
+        report += """
 ## 🔧 Outils Utilisés
 
 {len(self.tools_called)} types d'outils ont été appelés :
@@ -109,13 +109,13 @@ class ConversationTracker:
             tool_uses = [t for t in self.traces if t["action"] == tool]
             report += f"- **{tool}** ({len(tool_uses)} appels)\n"
 
-        report += f"""
+        report += """
 ## 📖 Trace Conversationnelle Détaillée
 
 """
 
         for i, trace in enumerate(self.traces, 1):
-            report += f"""### 🔄 Interaction {i}: {trace['agent']} → {trace['action']}
+            report += """### 🔄 Interaction {i}: {trace['agent']} → {trace['action']}
 
 **⏱️ Timestamp:** `{trace['timestamp']}`
 **⚡ Durée:** {trace['duration_seconds']:.2f}s
@@ -134,7 +134,7 @@ class ConversationTracker:
 
 """
 
-        report += f"""## 🎯 Résultats Finaux
+        report += """## 🎯 Résultats Finaux
 
 ### Mode Fallacies
 """
@@ -165,7 +165,7 @@ class ConversationTracker:
             report += "**Aucun sophisme valide détecté ou le format de la réponse est incorrect.**\n"
 
         # Le reste des métadonnées (authenticité, etc.) peut être affiché après
-        report += f"""
+        report += """
 **Authenticité:** {'✅ Analyse LLM authentique' if fallacies_data.get('authentic') else '❌ Fallback utilisé'}
 **Modèle:** {fallacies_data.get('model_used', 'N/A')}
 **Confiance:** {fallacies_data.get('confidence', 0):.2f}
@@ -188,7 +188,7 @@ class ConversationTracker:
             total_time = sum(t["duration_seconds"] for t in agent_traces)
             report += f"- **{agent}:** {len(agent_traces)} interactions, {total_time:.2f}s total\n"
 
-        report += f"""
+        report += """
 ### Répartition par Outil
 """
 
@@ -199,7 +199,7 @@ class ConversationTracker:
                 f"- **{tool}:** {len(tool_traces)} appels, {total_time:.2f}s total\n"
             )
 
-        report += f"""
+        report += """
 ---
 
 *Rapport généré automatiquement par l'Orchestrateur d'Analyse Complexe*

@@ -423,7 +423,7 @@ class TestScriptsExecution:
         assert total_time < 180, f"Exécution parallèle trop lente: {total_time}s"
 
         # Log des résultats
-        print(f"\n=== RÉSULTATS VALIDATION SCRIPTS ===")
+        print("\n=== RÉSULTATS VALIDATION SCRIPTS ===")
         print(f"Succès: {len(successful_scripts)}")
         print(f"Échecs: {len(failed_scripts)}")
         print(f"Temps total: {total_time:.2f}s")

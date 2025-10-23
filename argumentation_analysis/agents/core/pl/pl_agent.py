@@ -29,9 +29,9 @@ try:
     DEPRECATION_MESSAGE = (
         "IMPORT REDIRECTION (Compatibility Mode): The module 'argumentation_analysis.agents.core.pl.pl_agent' "
         "is deprecated and will be removed in a future version. "
-        f"Please update your imports to use the new location: "
+        "Please update your imports to use the new location: "
         "'argumentation_analysis.agents.core.logic.propositional_logic_agent'. "
-        f"The alias 'PLAgent' is also deprecated; please use 'PropositionalLogicAgent' directly."
+        "The alias 'PLAgent' is also deprecated; please use 'PropositionalLogicAgent' directly."
     )
 
     # Issue a warning to alert the user that they are using an outdated import path.

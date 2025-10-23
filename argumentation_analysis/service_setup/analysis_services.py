@@ -47,7 +47,7 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
         )
 
         if libs_dir_path is None or not libs_dir_path.exists():
-            logging.error(f"enable_jvm=True mais settings.libs_dir n'est pas configuré")
+            logging.error("enable_jvm=True mais settings.libs_dir n'est pas configuré")
             services["jvm_ready"] = False
         else:
             logging.info(f"Initialisation de la JVM avec LIBS_DIR: {libs_dir_path}...")

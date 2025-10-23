@@ -252,7 +252,7 @@ def main():
     plan = reports["plan"]
     results = processor.execute_move_plan(plan, dry_run=True)
 
-    print(f"\n=== Simulation de Déplacement ===")
+    print("\n=== Simulation de Déplacement ===")
     print(f"Déplacements réussis: {len(results['successful_moves'])}")
     print(f"Déplacements échoués: {len(results['failed_moves'])}")
 
@@ -261,7 +261,7 @@ def main():
         for failure in results["failed_moves"]:
             print(f"  - {failure['source']}: {failure['error']}")
 
-    print(f"\n✓ Analyse terminée. Consultez les rapports pour les détails.")
+    print("\n✓ Analyse terminée. Consultez les rapports pour les détails.")
 
 
 if __name__ == "__main__":

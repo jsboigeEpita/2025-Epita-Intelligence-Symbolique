@@ -37,7 +37,7 @@ class TestJPypeDependencyValidator:
             pytest.fail(f"Impossible d'importer jpype: {e}")
 
     def test_jpype_import_alternative(self):
-        """Test 2: Vérifier l'import jpype alternatif"""
+        """Test 2: Vérifier l'import jpype alternati"""
         try:
             import jpype
 
@@ -124,7 +124,7 @@ class TestJPypeDependencyValidator:
             print(f"   - {pkg.project_name} {pkg.version} ({pkg.location})")
 
         # Vérifier l'environnement Python
-        print(f"\n🐍 Environnement Python:")
+        print("\n🐍 Environnement Python:")
         print(f"   - Exécutable: {sys.executable}")
         print(f"   - Version: {sys.version}")
         print(f"   - Préfixe: {sys.prefix}")

@@ -91,7 +91,7 @@ def demo_service_manager():
     print(f"Plateforme: {platform.system()} {platform.release()}")
     print(f"Architecture: {platform.machine()}")
     print(f"Python: {platform.python_version()}")
-    print(f"Processus gérés par psutil: OUI")
+    print("Processus gérés par psutil: OUI")
 
     # Test de nettoyage
     print("\n6. NETTOYAGE")

@@ -195,7 +195,7 @@ def test_api_startup_and_basic_functionality():
                 assert (
                     processing_time > 1.0
                 ), f"Temps trop rapide ({processing_time:.2f}s), possible mock"
-                print(f"✓ Analyse authentique GPT-4o-mini confirmée")
+                print("✓ Analyse authentique GPT-4o-mini confirmée")
                 print(f"  - Temps: {processing_time:.2f}s (> 1.0s)")
                 print(f"  - Longueur: {len(analysis_summary)} chars")
         else:

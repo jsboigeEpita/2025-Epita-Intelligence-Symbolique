@@ -149,7 +149,7 @@ class SystemAnalyzer:
                 "def simulate_",
                 "def mock_",
                 "def fake_",
-                'return f"',
+                'return "',
                 'return "',
                 "placeholder",
                 # Patterns de simulation simple
@@ -299,7 +299,7 @@ class SystemAnalyzer:
         ]
 
         # Indicateurs de fonctions simples
-        simple_patterns = ['return f"', 'return "', "print(", "pass"]
+        simple_patterns = ['return "', 'return "', "print(", "pass"]
 
         complex_count = sum(
             1 for pattern in complex_patterns if pattern in content.lower()
@@ -633,7 +633,7 @@ class SystemAnalyzer:
         }
 
         # Affichage du résumé
-        print(f"\n=== RÉSULTATS D'ANALYSE ===")
+        print("\n=== RÉSULTATS D'ANALYSE ===")
         print(f"Classification: {system_classification}")
         print(
             f"Composants réels: {real_components}/{total_components} ({real_percentage:.1f}%)"
@@ -662,7 +662,7 @@ def main():
     with open(report_filename, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
 
-    print(f"\n=== RAPPORT DÉTAILLÉ ===")
+    print("\n=== RAPPORT DÉTAILLÉ ===")
     print(f"Rapport complet sauvegardé: {report_filename}")
 
     # Évaluation finale

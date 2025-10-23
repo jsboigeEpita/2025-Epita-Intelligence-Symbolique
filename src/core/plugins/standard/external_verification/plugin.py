@@ -548,7 +548,7 @@ class ExternalVerificationPlugin(BasePlugin):
                 VerificationStatus.DISPUTED,
                 1.0 - abs(support_ratio - contradiction_ratio),
                 "Disputée",
-                f"Sources contradictoires.",
+                "Sources contradictoires.",
             )
         else:
             return (

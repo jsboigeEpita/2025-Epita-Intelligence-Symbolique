@@ -85,7 +85,7 @@ class InformalAnalysisPlugin:
         self.kernel = kernel
         self._logger = logging.getLogger("InformalAnalysisPlugin")
         self._logger.info(
-            f"Initialisation du plugin d'analyse des sophismes (hybride)..."
+            "Initialisation du plugin d'analyse des sophismes (hybride)..."
         )
 
         self.DEFAULT_TAXONOMY_PATH = (

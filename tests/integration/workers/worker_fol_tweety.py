@@ -475,7 +475,7 @@ class TestFOLRealWorldIntegration:
             "forall" in formulas_text or "exists" in formulas_text
         )  # Quantificateurs présents
 
-        logger.info(f"✅ Analyse complexe terminée")
+        logger.info("✅ Analyse complexe terminée")
         logger.info(f"Taille du BeliefSet généré: {len(formulas_text)}")
 
     @pytest.mark.asyncio

@@ -56,7 +56,7 @@ def main():
     elif args.random:
         if all_extracts:
             selected = random.choice(all_extracts)
-            print(f"🎲 Sélection aléatoire:")
+            print("🎲 Sélection aléatoire:")
             print(f"   Source: {selected['source']}")
             print(f"   Extrait: {selected['extract']}")
     elif args.index is not None:

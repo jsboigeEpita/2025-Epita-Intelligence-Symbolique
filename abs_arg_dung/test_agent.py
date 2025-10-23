@@ -38,7 +38,7 @@ class TestDungAgent(unittest.TestCase):
         preferred = self.agent.get_preferred_extensions()
         complete = self.agent.get_complete_extensions()
 
-        print(f"\nDEBUG Self-Attack:")
+        print("\nDEBUG Self-Attack:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Complete: {complete}")
@@ -71,7 +71,7 @@ class TestDungAgent(unittest.TestCase):
         preferred = self.agent.get_preferred_extensions()
         stable = self.agent.get_stable_extensions()
 
-        print(f"\nDEBUG Cycle:")
+        print("\nDEBUG Cycle:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
         print(f"Stable: {stable}")
@@ -122,7 +122,7 @@ class TestDungAgent(unittest.TestCase):
         grounded = self.agent.get_grounded_extension()
         preferred = self.agent.get_preferred_extensions()
 
-        print(f"\nDEBUG Mutual Attack:")
+        print("\nDEBUG Mutual Attack:")
         print(f"Grounded: {grounded}")
         print(f"Preferred: {preferred}")
 

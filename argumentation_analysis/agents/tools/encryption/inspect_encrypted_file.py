@@ -41,7 +41,7 @@ def inspect_encrypted_file():
     # Vérifier si la clé de chiffrement est disponible
     if not ENCRYPTION_KEY:
         print(
-            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
+            "❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
         )
         return False
 
@@ -61,7 +61,7 @@ def inspect_encrypted_file():
         # Déchiffrer les données
         decrypted_compressed_data = decrypt_data(encrypted_data, ENCRYPTION_KEY)
         if not decrypted_compressed_data:
-            print(f"❌ Erreur: Échec du déchiffrement des données.")
+            print("❌ Erreur: Échec du déchiffrement des données.")
             return False
 
         # Décompresser les données
@@ -77,7 +77,7 @@ def inspect_encrypted_file():
         print(f"[OK] Type de données: {type(data)}")
 
         if isinstance(data, dict):
-            print(f"[OK] Structure du dictionnaire:")
+            print("[OK] Structure du dictionnaire:")
             for key, value in data.items():
                 if isinstance(value, dict):
                     print(f"   - {key}: dictionnaire avec {len(value)} éléments")
@@ -86,7 +86,7 @@ def inspect_encrypted_file():
                 else:
                     print(f"   - {key}: {type(value)}")
         elif isinstance(data, list):
-            print(f"[OK] Structure de la liste:")
+            print("[OK] Structure de la liste:")
             print(f"   - Liste avec {len(data)} éléments")
             if data:
                 print(f"   - Premier élément: {type(data[0])}")
@@ -104,7 +104,7 @@ def inspect_encrypted_file():
                         # Afficher les détails du premier extrait s'il existe
                         if extracts:
                             first_extract = extracts[0]
-                            print(f"     - Premier extrait:")
+                            print("     - Premier extrait:")
                             for key, value in first_extract.items():
                                 if isinstance(value, str) and len(value) > 50:
                                     print(f"       - {key}: {value[:50]}...")
@@ -125,9 +125,9 @@ def main():
     # Vérifier si la passphrase est définie dans la configuration
     if not settings.passphrase:
         print(
-            f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
+            "⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration."
         )
-        print(f"   Veuillez la définir avant d'exécuter ce script.")
+        print("   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
 
     # Inspecter le fichier encrypté

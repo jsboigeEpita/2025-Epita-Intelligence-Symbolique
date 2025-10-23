@@ -47,25 +47,25 @@ def main():
             EnvironmentManager,
         )
 
-        print(f"\n[OK] Import EnvironmentManager réussi")
+        print("\n[OK] Import EnvironmentManager réussi")
 
         manager = EnvironmentManager()
-        print(f"[OK] Instanciation EnvironmentManager réussie")
+        print("[OK] Instanciation EnvironmentManager réussie")
 
         if manager.check_conda_available():
-            print(f"[OK] Conda disponible")
+            print("[OK] Conda disponible")
         else:
-            print(f"[WARN] Conda non disponible")
+            print("[WARN] Conda non disponible")
 
     except ImportError as e:
         print(f"\n[ERROR] Erreur d'import : {e}")
 
     # Simulation d'une tâche que ferait un agent AI
-    print(f"\n[TASK] Simulation tâche agent AI...")
+    print("\n[TASK] Simulation tâche agent AI...")
     print(f"[TASK] Timestamp : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"[TASK] Tâche exécutée avec succès dans l'environnement projet !")
+    print("[TASK] Tâche exécutée avec succès dans l'environnement projet !")
 
-    print(f"\n[SUCCESS] Démonstration terminée avec succès")
+    print("\n[SUCCESS] Démonstration terminée avec succès")
     print("=" * 60)
 
 

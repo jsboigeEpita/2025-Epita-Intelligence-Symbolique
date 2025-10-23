@@ -199,7 +199,7 @@ class QuickDocumentationFixer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_path = f"logs/quick_documentation_fixes_{timestamp}.md"
 
-        report_content = f"""# Rapport de Corrections Rapides - {timestamp}
+        report_content = """# Rapport de Corrections Rapides - {timestamp}
 
 ## Résumé
 - **Fichiers analysés**: {len(markdown_files)}
@@ -211,7 +211,7 @@ class QuickDocumentationFixer:
 """
 
         for result in applied_fixes:
-            report_content += f"""### {result.file_path} (ligne {result.line_number})
+            report_content += """### {result.file_path} (ligne {result.line_number})
 - **Original**: `{result.original_text}`
 - **Corrigé**: `{result.corrected_text}`
 
@@ -234,7 +234,7 @@ def main():
         fixer = QuickDocumentationFixer()
         results = fixer.run_quick_fix()
 
-        print(f"🎯 CORRECTIONS RAPIDES TERMINÉES")
+        print("🎯 CORRECTIONS RAPIDES TERMINÉES")
         print(f"📊 {results['fixes_applied']} corrections appliquées")
         print(f"📁 {results['files_analyzed']} fichiers analysés")
         print(f"📄 Rapport: {results['report_path']}")

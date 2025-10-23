@@ -43,7 +43,7 @@ def update_encrypted_config():
     # Vérifier si la clé de chiffrement est disponible
     if not encryption_key:
         print(
-            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
+            "❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
         )
         return False
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         print(
             f"⚠️ La variable d'environnement '{passphrase_var_name}' n'est pas définie dans votre .env ou configuration."
         )
-        print(f"   Veuillez la définir avant d'exécuter ce script.")
+        print("   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
 
     # Mettre à jour le fichier chiffré

@@ -384,8 +384,8 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"[GENERATION] DONNEES SYNTHETIQUES COMPLEXES")
-    print(f"=" * 60)
+    print("[GENERATION] DONNEES SYNTHETIQUES COMPLEXES")
+    print("=" * 60)
     print(f"Complexite: {args.complexity}")
     print(f"Type: {args.scenarios}")
     print(f"Nombre: {args.count}")
@@ -415,7 +415,7 @@ def main():
     # Sauvegarde
     results = generator.save_datasets(scenarios, args.output_dir)
 
-    print(f"[SUCCESS] GENERATION TERMINEE")
+    print("[SUCCESS] GENERATION TERMINEE")
     print(f"Dataset global: {results['global_dataset']}")
     print(f"Repertoire: {results['output_directory']}")
     print(f"Rapport: {results['report']}")
@@ -426,7 +426,7 @@ def main():
     total_contradictions = sum(len(s["contradictions"]) for s in scenarios)
     avg_coherence = sum(s["global_coherence_score"] for s in scenarios) / len(scenarios)
 
-    print(f"[METRICS] STATISTIQUES DETAILLEES:")
+    print("[METRICS] STATISTIQUES DETAILLEES:")
     print(f"   Total arguments: {total_args}")
     print(f"   Total contradictions: {total_contradictions}")
     print(f"   Coherence moyenne: {avg_coherence:.3f}")

@@ -114,7 +114,7 @@ def add_noqa_to_file(file_path: str, errors: List[Dict], dry_run: bool = False) 
         elif modified_count > 0 and dry_run:
             print(f"  [DRY-RUN] {modified_count} lignes à modifier")
         else:
-            print(f"  ℹ️  Aucune modification nécessaire")
+            print("  ℹ️  Aucune modification nécessaire")
 
         return modified_count
 
@@ -211,7 +211,7 @@ def main():
     else:
         print("\n✅ Modifications appliquées!")
         print("\n📋 Prochaines étapes:")
-        print("  1. Vérifier: git diff")
+        print("  1. Vérifier: git dif")
         print("  2. Compter F821: python -m flake8 --select=F821 --count")
         print("  3. Tests: pytest tests/ -v --tb=short -x")
 

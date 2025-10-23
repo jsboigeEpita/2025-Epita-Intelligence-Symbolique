@@ -77,7 +77,7 @@ def run_experiments():
 
                 logging.info(f"--- STDOUT de {agent}/{taxonomy_name} ---")
                 logging.info(output)
-                logging.info(f"--- Fin STDOUT ---")
+                logging.info("--- Fin STDOUT ---")
 
                 # La gestion d'erreur est maintenant centralisée, on capture ShellCommandError
                 # L'ancien 'if process.returncode != 0:' est géré par check_errors=True
@@ -99,7 +99,7 @@ def run_experiments():
                 )
                 logging.error(f"--- STDERR de {agent}/{taxonomy_name} ---")
                 logging.error(e.stderr)
-                logging.error(f"--- Fin STDERR ---")
+                logging.error("--- Fin STDERR ---")
                 results[agent][taxonomy_name] = "Erreur"
             except FileNotFoundError:
                 logging.error(

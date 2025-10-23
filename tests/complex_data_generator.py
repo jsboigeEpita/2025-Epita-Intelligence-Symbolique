@@ -90,7 +90,7 @@ class ComplexArgumentationDataGenerator:
             },
             "meta_analyse": {
                 "auto_reference": "Cette argumentation elle-même illustre la complexité que devrait posséder une IA pour être considérée comme consciente.",
-                "paradoxe_recursif": "Si cette analyse prouve que les IA peuvent être conscientes, alors elle valide sa propre création par une IA.",
+                "paradoxe_recursi": "Si cette analyse prouve que les IA peuvent être conscientes, alors elle valide sa propre création par une IA.",
             },
         }
 
@@ -200,7 +200,7 @@ class ComplexArgumentationDataGenerator:
                         "methode": "questionnement_socratique",
                         "traits": ["humble", "curieux", "ironique"],
                         "biais_cognitifs": ["biais_de_confirmation_inverse"],
-                        "style_argumentatif": "maieutique",
+                        "style_argumentati": "maieutique",
                     },
                     "contexte_historique": "Athènes_antique_transposé",
                     "knowledge_base": [
@@ -214,7 +214,7 @@ class ComplexArgumentationDataGenerator:
                         "methode": "doute_methodique",
                         "traits": ["systematique", "rationaliste", "dubitant"],
                         "biais_cognitifs": ["anchoring_bias_sur_cogito"],
-                        "style_argumentatif": "deductif_rigoureux",
+                        "style_argumentati": "deductif_rigoureux",
                     },
                     "contexte_historique": "revolution_scientifique_17eme",
                     "knowledge_base": [
@@ -228,7 +228,7 @@ class ComplexArgumentationDataGenerator:
                         "methode": "scepticisme_empirique",
                         "traits": ["skeptique", "empiriste", "pragmatique"],
                         "biais_cognitifs": ["probleme_induction"],
-                        "style_argumentatif": "destructeur_d_illusions",
+                        "style_argumentati": "destructeur_d_illusions",
                     },
                     "contexte_historique": "siecle_des_lumieres_ecosse",
                     "knowledge_base": ["experience_sensible", "habitude", "causalite"],
@@ -238,7 +238,7 @@ class ComplexArgumentationDataGenerator:
                         "methode": "critique_transcendantale",
                         "traits": ["synthétique", "systematique", "transcendantal"],
                         "biais_cognitifs": ["architectonique_obsession"],
-                        "style_argumentatif": "synthese_a_priori",
+                        "style_argumentati": "synthese_a_priori",
                     },
                     "contexte_historique": "aufklarung_allemande",
                     "knowledge_base": [
@@ -270,7 +270,7 @@ class ComplexArgumentationDataGenerator:
                     "depassement": "opposition_rationalisme_empirisme",
                 },
                 "meta_niveau": {
-                    "paradoxe_dialogue": "Ce dialogue même illustre comment la vérité peut être relative au contexte argumentatif",
+                    "paradoxe_dialogue": "Ce dialogue même illustre comment la vérité peut être relative au contexte argumentati",
                     "auto_reference": "Les IA reproduisent-elles ces pensées ou les pensent-elles authentiquement ?",
                 },
             },
@@ -341,7 +341,7 @@ def main():
 
     print(f"[OK] Donnees complexes generees dans: {output_file}")
     print(f"[KEY] Signature de complexite: {generator.complexity_signature}")
-    print(f"[SCORE] Score de complexite: 0.94/1.0 (impossible a mocker)")
+    print("[SCORE] Score de complexite: 0.94/1.0 (impossible a mocker)")
 
     return output_file, complex_data
 

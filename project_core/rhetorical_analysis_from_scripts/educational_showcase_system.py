@@ -624,7 +624,7 @@ class EducationalProjectManager:
 
             self.conversation_logger.log_agent_message(
                 "AgentSynthese",
-                f"Synthèse terminée ! J'ai intégré les analyses rhétoriques et logiques. Le rapport final révèle des insights précieux sur la structure argumentative.",
+                "Synthèse terminée ! J'ai intégré les analyses rhétoriques et logiques. Le rapport final révèle des insights précieux sur la structure argumentative.",
                 "synthese",
             )
 
@@ -665,7 +665,7 @@ class EducationalProjectManager:
             "ProjectManager",
             f"Excellente collaboration ! L'analyse est terminée en {total_duration:.1f} secondes. "
             f"{successful_agents}/{len(self.agents)} agents ont réussi leur mission. "
-            f"Vous avez maintenant une compréhension complète de ce texte argumentatif !",
+            "Vous avez maintenant une compréhension complète de ce texte argumentatif !",
             "finalisation",
         )
 
@@ -877,7 +877,7 @@ class EducationalShowcaseSystem:
         print("-" * 60)
 
         # Exécution de l'analyse orchestrée
-        print(f"\nDebut de l'analyse collaborative...")
+        print("\nDebut de l'analyse collaborative...")
 
         results = await self.project_manager.orchestrate_educational_analysis(
             text_content
@@ -1238,7 +1238,7 @@ class EducationalShowcaseSystem:
                 default=str,
             )
 
-        logger.info(f"Session éducative sauvegardée:")
+        logger.info("Session éducative sauvegardée:")
         logger.info(f"  - Rapport Principal: {report_file}")
         logger.info(f"  - Données JSON: {data_file}")
         logger.info(f"  - Conversations JSON: {conversations_file}")
@@ -1445,7 +1445,7 @@ Exemples d'utilisation:
                     results, args.output_file
                 )
 
-                print(f"\n[SUCCES] Session educative terminee avec succes !")
+                print("\n[SUCCES] Session educative terminee avec succes !")
                 print(f"   [RAPPORT] Rapport genere: {report_file}")
                 print(
                     f"   [METRIQUES] Efficacite: {results['session_metrics']['educational_effectiveness']:.0%}"
@@ -1454,7 +1454,7 @@ Exemples d'utilisation:
                     f"   [DUREE] Duree: {results['session_metrics']['total_duration_seconds']:.1f}s"
                 )
             else:
-                print("[FAIL] Echec de l'initialisation du systeme educatif")
+                print("[FAIL] Echec de l'initialisation du systeme educati")
                 sys.exit(1)
 
         print(f"[INFO] Lancement session educative {args.level} - Mode {args.mode}")

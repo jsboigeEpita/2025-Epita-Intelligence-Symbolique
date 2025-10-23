@@ -149,7 +149,7 @@ def generate_specific_rhetorical_markdown_report(
             report_content_parts.append("Aucun sophisme détecté pour ce texte.\n")
 
         categories = analysis.get("categories", {})
-        report_content_parts.append(f"\n### Catégorisation des Sophismes\n")
+        report_content_parts.append("\n### Catégorisation des Sophismes\n")
         if categories:
             has_content = False
             for category, types in categories.items():

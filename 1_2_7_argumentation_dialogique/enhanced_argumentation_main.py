@@ -527,7 +527,7 @@ class EnhancedArgumentationAgent:
             DebatePhase.CLOSING: "Summarize your position and make a final persuasive appeal.",
         }
 
-        prompt = f"""You are {self.name}, an AI agent with this personality: {self.personality}
+        prompt = """You are {self.name}, an AI agent with this personality: {self.personality}
 
 DEBATE TOPIC: "{topic}"
 YOUR POSITION: {self.position.upper()}
@@ -683,7 +683,7 @@ class EnhancedDebateModerator:
             performance_metrics={agent.name: {} for agent in agents},
         )
 
-        print(f"\n🎭 ENHANCED DEBATE SYSTEM")
+        print("\n🎭 ENHANCED DEBATE SYSTEM")
         print(f"📋 Topic: {topic}")
         print(
             f"👥 Participants: {', '.join([f'{agent.name} ({agent.position})' for agent in agents])}"
@@ -705,7 +705,7 @@ class EnhancedDebateModerator:
         self, debate_state: DebateState, agents: List[EnhancedArgumentationAgent]
     ):
         """Opening statements phase"""
-        print(f"\n🎬 OPENING PHASE")
+        print("\n🎬 OPENING PHASE")
         print("-" * 40)
 
         debate_state.phase = DebatePhase.OPENING
@@ -721,7 +721,7 @@ class EnhancedDebateModerator:
         self, debate_state: DebateState, agents: List[EnhancedArgumentationAgent]
     ):
         """Main arguments phase"""
-        print(f"\n💪 MAIN ARGUMENTS PHASE")
+        print("\n💪 MAIN ARGUMENTS PHASE")
         print("-" * 40)
 
         debate_state.phase = DebatePhase.MAIN_ARGUMENTS
@@ -736,7 +736,7 @@ class EnhancedDebateModerator:
         self, debate_state: DebateState, agents: List[EnhancedArgumentationAgent]
     ):
         """Rebuttals phase"""
-        print(f"\n⚔️ REBUTTALS PHASE")
+        print("\n⚔️ REBUTTALS PHASE")
         print("-" * 40)
 
         debate_state.phase = DebatePhase.REBUTTALS
@@ -750,7 +750,7 @@ class EnhancedDebateModerator:
         self, debate_state: DebateState, agents: List[EnhancedArgumentationAgent]
     ):
         """Closing statements phase"""
-        print(f"\n🎯 CLOSING PHASE")
+        print("\n🎯 CLOSING PHASE")
         print("-" * 40)
 
         debate_state.phase = DebatePhase.CLOSING
@@ -779,7 +779,7 @@ class EnhancedDebateModerator:
 
         # Display argument with analysis
         print(f"📝 {argument.content}")
-        print(f"📊 Analysis:")
+        print("📊 Analysis:")
         print(f"   • Persuasiveness: {argument.metrics.persuasiveness:.2f}")
         print(f"   • Evidence Quality: {argument.metrics.evidence_quality:.2f}")
         print(f"   • Logic Score: {argument.metrics.logical_coherence:.2f}")
@@ -812,7 +812,7 @@ class EnhancedDebateModerator:
         self, debate_state: DebateState, agents: List[EnhancedArgumentationAgent]
     ):
         """Comprehensive debate conclusion with multiple winner criteria"""
-        print(f"\n🏁 DEBATE CONCLUSION")
+        print("\n🏁 DEBATE CONCLUSION")
         print("=" * 80)
 
         debate_state.phase = DebatePhase.CONCLUDED
@@ -842,7 +842,7 @@ class EnhancedDebateModerator:
         print(f"🧠 MOST LOGICAL: {winners['most_logical']}")
         print(f"📚 BEST EVIDENCE: {winners['best_evidence']}")
 
-        print(f"\n📈 FINAL SCORES:")
+        print("\n📈 FINAL SCORES:")
         for agent_name in debate_state.agents:
             print(f"   {agent_name}:")
             print(f"     Overall Score: {final_scores['overall'][agent_name]:.2f}")
@@ -1177,13 +1177,13 @@ class EnhancedArgumentationSystem:
         if not self._validate_setup():
             return None
 
-        print(f"🚀 INITIALIZING ENHANCED DEBATE SYSTEM")
-        print(f"📊 Features: Advanced Analysis, Real-time Scoring, Visualization")
+        print("🚀 INITIALIZING ENHANCED DEBATE SYSTEM")
+        print("📊 Features: Advanced Analysis, Real-time Scoring, Visualization")
 
         # Create enhanced agents
         agents = self.create_enhanced_agents(topic, num_agents)
 
-        print(f"\n👥 AGENT PROFILES:")
+        print("\n👥 AGENT PROFILES:")
         for agent in agents:
             personality_data = self.agent_personalities[agent.name]
             print(f"   {agent.name} ({agent.position}):")
@@ -1225,14 +1225,14 @@ class EnhancedArgumentationSystem:
         self, debate_state: DebateState, create_visualizations: bool = True
     ):
         """Comprehensive post-debate analysis"""
-        print(f"\n🔍 POST-DEBATE ANALYSIS")
+        print("\n🔍 POST-DEBATE ANALYSIS")
         print("-" * 50)
 
         # Argument quality distribution
         all_persuasiveness = [
             arg.metrics.persuasiveness for arg in debate_state.arguments
         ]
-        print(f"📈 Argument Quality Distribution:")
+        print("📈 Argument Quality Distribution:")
         print(
             f"   Average Persuasiveness: {sum(all_persuasiveness)/len(all_persuasiveness):.2f}"
         )
@@ -1246,7 +1246,7 @@ class EnhancedArgumentationSystem:
         for arg in debate_state.arguments:
             phase_stats[arg.phase.value].append(arg.metrics.persuasiveness)
 
-        print(f"\n📊 Phase Analysis:")
+        print("\n📊 Phase Analysis:")
         for phase, scores in phase_stats.items():
             if scores:
                 print(
@@ -1254,7 +1254,7 @@ class EnhancedArgumentationSystem:
                 )
 
         # Agent evolution tracking
-        print(f"\n🎯 Agent Performance Evolution:")
+        print("\n🎯 Agent Performance Evolution:")
         for agent_name in debate_state.agents:
             agent_args = [
                 arg for arg in debate_state.arguments if arg.agent_name == agent_name
@@ -1275,7 +1275,7 @@ class EnhancedArgumentationSystem:
 
         # Create visualizations
         if create_visualizations:
-            print(f"\n🎨 Generating Visualizations...")
+            print("\n🎨 Generating Visualizations...")
             network_file = self.visualizer.create_argument_network(debate_state)
             performance_file = self.visualizer.create_performance_chart(debate_state)
             print(f"   Network diagram: {network_file}")
@@ -1310,10 +1310,10 @@ class EnhancedArgumentationSystem:
             summary_filename = f"debate_summary_{timestamp}.txt"
             with open(summary_filename, "w") as f:
                 f.write(debate_state.debate_summary)
-                f.write(f"\n\nGenerated by Enhanced Dialogical Argumentation System")
+                f.write("\n\nGenerated by Enhanced Dialogical Argumentation System")
                 f.write(f"\nTimestamp: {datetime.now()}")
 
-            print(f"💾 Results saved:")
+            print("💾 Results saved:")
             print(f"   Full data: {main_filename}")
             print(f"   Summary: {summary_filename}")
 
@@ -1474,7 +1474,7 @@ async def main():
     )
 
     if debate_state:
-        print(f"\n📊 SYSTEM STATISTICS:")
+        print("\n📊 SYSTEM STATISTICS:")
         stats = system.get_debate_statistics()
         for key, value in stats.items():
             if isinstance(value, dict):

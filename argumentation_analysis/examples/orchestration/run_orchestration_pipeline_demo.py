@@ -131,31 +131,31 @@ def print_results_summary(results: Dict[str, Any], title: str = "Résultats d'An
     # Résultats hiérarchiques
     if "strategic_analysis" in results and results["strategic_analysis"]:
         strategic = results["strategic_analysis"]
-        print(f"\n🎯 Analyse Stratégique:")
+        print("\n🎯 Analyse Stratégique:")
         print(f"   • Objectifs définis: {len(strategic.get('objectives', []))}")
 
     if "tactical_coordination" in results and results["tactical_coordination"]:
         tactical = results["tactical_coordination"]
-        print(f"⚔️ Coordination Tactique:")
+        print("⚔️ Coordination Tactique:")
         print(f"   • Tâches créées: {tactical.get('tasks_created', 0)}")
 
     if "operational_results" in results and results["operational_results"]:
         operational = results["operational_results"]
-        print(f"⚙️ Exécution Opérationnelle:")
+        print("⚙️ Exécution Opérationnelle:")
         print(f"   • Tâches exécutées: {operational.get('tasks_executed', 0)}")
 
     # Orchestration spécialisée
     if "specialized_orchestration" in results and results["specialized_orchestration"]:
         specialized = results["specialized_orchestration"]
         orchestrator = specialized.get("orchestrator_used", "N/A")
-        print(f"🚀 Orchestration Spécialisée:")
+        print("🚀 Orchestration Spécialisée:")
         print(f"   • Orchestrateur: {orchestrator}")
         print(f"   • Statut: {specialized.get('results', {}).get('status', 'N/A')}")
 
     # Coordination hiérarchique
     if "hierarchical_coordination" in results and results["hierarchical_coordination"]:
         coord = results["hierarchical_coordination"]
-        print(f"🏗️ Coordination Hiérarchique:")
+        print("🏗️ Coordination Hiérarchique:")
         print(f"   • Score global: {coord.get('overall_score', 0):.2%}")
         print(f"   • Alignement stratégique: {coord.get('strategic_alignment', 0):.2%}")
         print(f"   • Efficacité tactique: {coord.get('tactical_efficiency', 0):.2%}")
@@ -165,7 +165,7 @@ def print_results_summary(results: Dict[str, Any], title: str = "Résultats d'An
     if "informal_analysis" in results and results["informal_analysis"]:
         informal = results["informal_analysis"]
         fallacies = informal.get("fallacies", [])
-        print(f"🔍 Analyse Informelle:")
+        print("🔍 Analyse Informelle:")
         print(f"   • Sophismes détectés: {len(fallacies)}")
         if fallacies:
             avg_confidence = sum(f.get("confidence", 0) for f in fallacies) / len(
@@ -175,7 +175,7 @@ def print_results_summary(results: Dict[str, Any], title: str = "Résultats d'An
 
     if "formal_analysis" in results and results["formal_analysis"]:
         formal = results["formal_analysis"]
-        print(f"🧮 Analyse Formelle:")
+        print("🧮 Analyse Formelle:")
         print(f"   • Statut: {formal.get('status', 'N/A')}")
         if formal.get("consistency_check") is not None:
             consistency = (
@@ -317,7 +317,7 @@ async def demo_api_compatibility():
             # Comparaison simple
             new_time = results.get("execution_time", 0)
             old_time = original_results.get("execution_time", 0)
-            print(f"\n⚡ Comparaison des performances:")
+            print("\n⚡ Comparaison des performances:")
             print(f"   • Nouveau pipeline: {new_time:.2f}s")
             print(f"   • Pipeline original: {old_time:.2f}s")
 
@@ -362,7 +362,7 @@ async def demo_custom_analysis():
 
         # Affichage des détails de configuration
         metadata = results.get("metadata", {})
-        print(f"\n⚙️ Configuration utilisée:")
+        print("\n⚙️ Configuration utilisée:")
         print(f"   • Mode d'orchestration: {metadata.get('orchestration_mode')}")
         print(f"   • Type d'analyse: {metadata.get('analysis_type')}")
 
@@ -374,7 +374,7 @@ async def demo_custom_analysis():
         ]
 
         if strategic_events or specialized_events:
-            print(f"\n📋 Activité d'orchestration:")
+            print("\n📋 Activité d'orchestration:")
             print(f"   • Événements stratégiques: {len(strategic_events)}")
             print(f"   • Événements spécialisés: {len(specialized_events)}")
 

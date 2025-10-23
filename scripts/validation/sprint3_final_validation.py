@@ -249,7 +249,7 @@ def run_integration_tests():
             if os.path.exists(test_file):
                 print(f"  [INFO] Test: {test_file}")
 
-                cmd = f"""powershell -c "$env:PYTHONIOENCODING='utf-8'; $env:PYTHONLEGACYWINDOWSSTDIO='1'; conda run -n epita_symbolic_ai_sherlock pytest {test_file} -v --tb=short -x --maxfail=1" """
+                cmd = """powershell -c "$env:PYTHONIOENCODING='utf-8'; $env:PYTHONLEGACYWINDOWSSTDIO='1'; conda run -n epita_symbolic_ai_sherlock pytest {test_file} -v --tb=short -x --maxfail=1" """
 
                 result = subprocess.run(
                     cmd, shell=True, capture_output=True, text=True, timeout=60
@@ -294,7 +294,7 @@ def generate_sprint3_report(results: Dict[str, bool]):
         "SUCCÈS" if success_rate >= 80 else "PARTIEL" if success_rate >= 60 else "ÉCHEC"
     )
 
-    report_content = f"""# RAPPORT FINAL - SPRINT 3
+    report_content = """# RAPPORT FINAL - SPRINT 3
 ## Optimisation Performances et Tests Fonctionnels
 
 **Date:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
@@ -311,7 +311,7 @@ def generate_sprint3_report(results: Dict[str, bool]):
             f"- {status_icon} {test_name}: {'RÉUSSI' if result else 'ÉCHEC'}\n"
         )
 
-    report_content += f"""
+    report_content += """
 
 ## 🎯 OBJECTIFS SPRINT 3
 
@@ -412,7 +412,7 @@ async def main():
     success_rate = (passed_tests / total_tests) * 100
 
     print(f"\n{'='*50}")
-    print(f"SPRINT 3 - RÉSULTATS FINALS")
+    print("SPRINT 3 - RÉSULTATS FINALS")
     print(f"{'='*50}")
     print(f"Tests réussis: {passed_tests}/{total_tests}")
     print(f"Taux de succès: {success_rate:.1f}%")

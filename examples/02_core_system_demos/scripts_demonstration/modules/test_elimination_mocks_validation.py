@@ -52,10 +52,10 @@ def test_elimination_mocks():
         # Mise à jour des métriques
         if is_real_processing and not is_mock_used:
             validation_metrics["real_processing_count"] += 1
-            print(f"   [OK] Traitement REEL confirme")
+            print("   [OK] Traitement REEL confirme")
         else:
             validation_metrics["mock_usage_count"] += 1
-            print(f"   [ERREUR] Mock detecte!")
+            print("   [ERREUR] Mock detecte!")
 
         validation_metrics["markers_detected_total"] += len(results["markers_found"])
         validation_metrics["sophistries_detected_total"] += len(
@@ -92,7 +92,7 @@ def test_elimination_mocks():
         / validation_metrics["total_tests"]
     ) * 100
 
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print("RESULTATS DE VALIDATION")
     print("=" * 80)
     print(f"Taux de traitement REEL: {real_processing_rate:.1f}%")
@@ -107,7 +107,7 @@ def test_elimination_mocks():
 
     # Statistiques globales du processeur
     processor_stats = processor.get_processing_stats()
-    print(f"\nSTATISTIQUES PROCESSEUR:")
+    print("\nSTATISTIQUES PROCESSEUR:")
     print(f"   • Données traitées: {processor_stats['total_processed']}")
     print(f"   • Marqueurs totaux: {processor_stats['total_markers']}")
     print(f"   • Hash uniques: {processor_stats['unique_hashes']}")
@@ -117,7 +117,7 @@ def test_elimination_mocks():
     )
 
     # Verdict final
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     if real_processing_rate >= 80 and mock_elimination_rate >= 90:
         print("VALIDATION REUSSIE - Elimination des mocks confirmee!")
         success = True

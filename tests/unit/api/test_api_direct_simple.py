@@ -166,7 +166,7 @@ def test_api_startup_and_basic_functionality():
         # Verifier authenticite
         assert "gpt-4o-mini" in service, f"Service incorrect: {service}"
 
-        print(f"[OK] Analyse authentique GPT-4o-mini confirmee")
+        print("[OK] Analyse authentique GPT-4o-mini confirmee")
         print(f"  - Temps: {processing_time:.2f}s (> 1.0s)")
         print(f"  - Longueur: {len(analysis)} chars")
         print(f"  - Service: {service}")

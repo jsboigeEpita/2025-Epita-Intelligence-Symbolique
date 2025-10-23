@@ -36,7 +36,7 @@ def ensure_tools_are_installed(
     libs_dir = project_root_path / "libs"
 
     local_logger.info(
-        f"--- Début de la vérification/installation des outils portables ---"
+        "--- Début de la vérification/installation des outils portables ---"
     )
     local_logger.info(f"Les outils seront installés dans le répertoire : {libs_dir}")
 

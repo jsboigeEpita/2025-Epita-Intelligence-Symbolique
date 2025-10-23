@@ -261,7 +261,7 @@ class Phase3WebAPITester:
             logger.info(f"📝 Test exemple: {example_type}")
 
             # Clic sur le bouton d'exemple
-            example_selector = f"button[onclick=\"loadExample('{example_type}')\"]"
+            example_selector = "button[onclick=\"loadExample('{example_type}')\"]"
             await page.click(example_selector)
 
             # Vérification que le texte a changé
@@ -382,7 +382,7 @@ class Phase3WebAPITester:
         # 1. Log des interactions Web/API
         web_api_log = LOGS_DIR / f"web_api_phase3_{timestamp}.log"
         with open(web_api_log, "w", encoding="utf-8") as f:
-            f.write(f"Phase 3 - Interactions Web/API Authentiques\n")
+            f.write("Phase 3 - Interactions Web/API Authentiques\n")
             f.write(f"Session: {self.session_id}\n")
             f.write(f"Début: {self.start_time.isoformat()}\n")
             f.write(f"Fin: {datetime.now().isoformat()}\n\n")
@@ -422,7 +422,7 @@ class Phase3WebAPITester:
         """Crée le rapport détaillé de l'interface Web."""
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(
-                f"""# Rapport Interface Web Phase 3
+                """# Rapport Interface Web Phase 3
 ## Session: {self.session_id}
 ## Date: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 
@@ -454,7 +454,7 @@ class Phase3WebAPITester:
                 f.write(f"- {screenshot}\n")
 
             f.write(
-                f"""
+                """
 ### Élimination des Mocks
 - ✅ Aucun MockWebAPI détecté
 - ✅ Aucun FakeHTTPResponse utilisé
@@ -480,7 +480,7 @@ class Phase3WebAPITester:
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(
-                f"""# Rapport de Terminaison Phase 3
+                """# Rapport de Terminaison Phase 3
 ## Interface Web/API avec Orchestration Playwright Authentique
 
 ### Informations de Session
@@ -563,7 +563,7 @@ async def main():
     tester = Phase3WebAPITester()
     termination_report = await tester.run_phase3_tests()
 
-    logger.info(f"✅ Phase 3 terminée avec succès!")
+    logger.info("✅ Phase 3 terminée avec succès!")
     logger.info(f"📄 Rapport final: {termination_report}")
 
     return termination_report

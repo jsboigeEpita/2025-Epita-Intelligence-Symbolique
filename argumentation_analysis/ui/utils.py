@@ -325,7 +325,7 @@ def fetch_with_tika(
         return texte_brut
     except requests.exceptions.Timeout:
         utils_logger.error(f"   -> ❌ Timeout Tika ({timeout_tika}s).")
-        raise ConnectionError(f"Timeout Tika")
+        raise ConnectionError("Timeout Tika")
     except requests.exceptions.RequestException as e:
         utils_logger.error(f"Erreur Tika: {e}")
         raise ConnectionError(f"Erreur Tika: {e}") from e

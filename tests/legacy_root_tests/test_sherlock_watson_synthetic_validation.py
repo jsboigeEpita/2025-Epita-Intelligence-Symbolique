@@ -855,7 +855,7 @@ def main():
         validation_report = validator.run_validation_tests()
 
         # Affichage des résultats principaux
-        print(f"\n=== RÉSULTATS DE VALIDATION ===")
+        print("\n=== RÉSULTATS DE VALIDATION ===")
         print(
             f"Tests exécutés: {validation_report['validation_summary']['total_tests_executed']}"
         )
@@ -866,21 +866,21 @@ def main():
             f"Score global système: {validation_report['validation_summary']['global_system_score']:.1f}/100"
         )
 
-        print(f"\n=== ANALYSE RAISONNEMENT MOCK VS RÉEL ===")
+        print("\n=== ANALYSE RAISONNEMENT MOCK VS RÉEL ===")
         reasoning = validation_report["reasoning_analysis"]["mock_vs_real_detection"]
         print(f"Raisonnement réel: {reasoning['real']['percentage']:.1f}%")
         print(f"Mocks détectés: {reasoning['mock']['percentage']:.1f}%")
         print(f"Hybride: {reasoning['hybrid']['percentage']:.1f}%")
         print(f"Indéterminé: {reasoning['unknown']['percentage']:.1f}%")
 
-        print(f"\n=== PERFORMANCE PAR AGENT ===")
+        print("\n=== PERFORMANCE PAR AGENT ===")
         for agent, stats in validation_report["agent_performance"].items():
             print(f"{agent}:")
             print(f"  • Cohérence logique: {stats['avg_coherence']:.2f}")
             print(f"  • Qualité réponses: {stats['avg_quality']:.2f}")
             print(f"  • Temps traitement: {stats['avg_processing_time']:.2f}s")
 
-        print(f"\n=== ROBUSTESSE EDGE CASES ===")
+        print("\n=== ROBUSTESSE EDGE CASES ===")
         robustness = validation_report["robustness_evaluation"]
         print(f"Score robustesse: {robustness['robustness_score']:.1f}/100")
         print(
@@ -890,7 +890,7 @@ def main():
             f"Gestion données incomplètes: {'✓' if robustness['handles_incomplete_data'] else '✗'}"
         )
 
-        print(f"\n=== RECOMMANDATIONS ===")
+        print("\n=== RECOMMANDATIONS ===")
         for i, rec in enumerate(validation_report["recommendations"], 1):
             print(f"{i}. {rec}")
 
@@ -903,7 +903,7 @@ def main():
         with open(report_filename, "w", encoding="utf-8") as f:
             json.dump(validation_report, f, indent=2, ensure_ascii=False)
 
-        print(f"\n=== RAPPORT DÉTAILLÉ ===")
+        print("\n=== RAPPORT DÉTAILLÉ ===")
         print(f"Rapport complet sauvegardé: {report_filename}")
 
         # Évaluation finale

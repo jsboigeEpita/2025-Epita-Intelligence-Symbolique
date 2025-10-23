@@ -82,7 +82,7 @@ modules_pct = (modules_score / len(critical_modules)) * 100
 
 overall_score = (structure_pct + files_pct + modules_pct) / 3
 
-print(f"\n📊 SCORES VALIDATION:")
+print("\n📊 SCORES VALIDATION:")
 print(f"Structure: {structure_pct:.1f}% ({structure_score}/{total_dirs})")
 print(f"Fichiers: {files_pct:.1f}% ({files_score}/{total_files})")
 print(f"Modules: {modules_pct:.1f}% ({modules_score}/{len(critical_modules)})")

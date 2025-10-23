@@ -178,7 +178,7 @@ class PlaywrightRunner:
         """Construit la commande pour exécuter les tests via Pytest."""
 
         self.logger.info(
-            f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'."
+            "Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'."
         )
 
         cmd = [

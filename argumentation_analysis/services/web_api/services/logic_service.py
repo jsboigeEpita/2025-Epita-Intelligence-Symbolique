@@ -96,7 +96,7 @@ class LogicService:
         Returns:
             Une réponse contenant l'ensemble de croyances créé
         """
-        self.logger.info(f"--- ENTERING LogicService.text_to_belief_set ---")
+        self.logger.info("--- ENTERING LogicService.text_to_belief_set ---")
         self.logger.debug(f"Request details: {request}")
         self.logger.info(
             f"Conversion de texte en ensemble de croyances de type '{request.logic_type}'"

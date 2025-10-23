@@ -557,7 +557,7 @@ class OracleEnhancedValidator:
         execution_time = time.time() - start_time
         self.results["execution_time"] = execution_time
 
-        print(f"\n[FIN] === VALIDATION TERMINÉE ===")
+        print("\n[FIN] === VALIDATION TERMINÉE ===")
         print(f"[DUREE] Temps d'exécution: {execution_time:.2f}s")
         print(f"[SCORE] Score global: {self.results['overall_score']:.1%}")
         print(f"[STATUT] Statut: {self.results['status']}")

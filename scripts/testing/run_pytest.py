@@ -11,7 +11,7 @@ try:
     pass
 except (ImportError, RuntimeError) as e:
     print(
-        f"ERREUR CRITIQUE: Impossible d'activer ou de valider l'environnement du projet."
+        "ERREUR CRITIQUE: Impossible d'activer ou de valider l'environnement du projet."
     )
     print(f"Erreur: {e}")
     sys.exit(1)

@@ -240,7 +240,7 @@ class DocumentationAnalyzer:
 
         summary = self.results.get("summary", {})
 
-        report = f"""# Rapport d'Analyse de Documentation
+        report = """# Rapport d'Analyse de Documentation
 ## Oracle Enhanced v2.1.0 - Reconstruction
 
 **Date d'analyse :** {self.results['analysis_timestamp']}
@@ -262,7 +262,7 @@ class DocumentationAnalyzer:
 
         if broken_links:
             for i, broken_link in enumerate(broken_links, 1):
-                report += f"""### {i}. {broken_link['link']}
+                report += """### {i}. {broken_link['link']}
 - **Fichier :** `{broken_link['source_file']}` (ligne {broken_link['line_number']})
 
 """
@@ -316,7 +316,7 @@ def main():
 
         # Résumé console
         summary = results.get("summary", {})
-        print(f"\nRÉSULTATS:")
+        print("\nRÉSULTATS:")
         print(f"   Fichiers: {results['files_analyzed']}")
         print(f"   Liens totaux: {summary.get('total_links', 0)}")
         print(f"   Liens brisés: {summary.get('broken_links', 0)}")

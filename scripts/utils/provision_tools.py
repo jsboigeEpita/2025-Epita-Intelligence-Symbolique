@@ -24,7 +24,7 @@ def provision():
         tools_dir = project_root / "argumentation_analysis" / "libs"
         tools_dir.mkdir(exist_ok=True)
 
-        logger.info(f"--- Starting Portable Tools Provisioning ---")
+        logger.info("--- Starting Portable Tools Provisioning ---")
         logger.info(f"Target tools directory: {tools_dir}")
 
         setup_tools(

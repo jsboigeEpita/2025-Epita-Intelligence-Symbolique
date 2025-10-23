@@ -118,7 +118,7 @@ def test_phase_c_simple():
         # Test 6: Métriques de fluidité
         print("\nTest 6: Metriques de fluidite")
         fluidity_metrics = oracle_state.get_fluidity_metrics()
-        print(f"[OK] Metriques calculees:")
+        print("[OK] Metriques calculees:")
         print(f"   - Messages totaux: {fluidity_metrics['total_messages']}")
         print(f"   - Taux references: {fluidity_metrics['contextual_reference_rate']}%")
         print(f"   - Taux reactions: {fluidity_metrics['emotional_reaction_rate']}%")

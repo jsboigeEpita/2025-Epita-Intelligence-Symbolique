@@ -136,7 +136,7 @@ def manage_config():
     if request.method == "POST":
         # Simuler une mise à jour de config
         APP_STATE["config"]["model"] = "new_model"
-        logger.info(f"Configuration updated (simulated).")
+        logger.info("Configuration updated (simulated).")
     return jsonify(APP_STATE["config"])
 
 
