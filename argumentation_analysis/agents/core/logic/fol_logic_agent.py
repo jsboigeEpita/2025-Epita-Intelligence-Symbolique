@@ -20,6 +20,7 @@ import logging
 import asyncio
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
+from pydantic import PrivateAttr
 
 # Mock éliminé en Phase 2 - utilisation d'objets réels uniquement
 
@@ -112,6 +113,11 @@ class FOLLogicAgent(BaseLogicAgent):
     Conçu comme alternative fiable à ModalLogicAgent pour éviter
     les échecs fréquents tout en maintenant une analyse formelle authentique.
     """
+    
+    # Attributs privés Pydantic V2 pour éviter ValidationError
+    _analysis_cache: Dict[str, "FOLAnalysisResult"] = PrivateAttr(default_factory=dict)
+    _conversion_prompt: str = PrivateAttr(default="")
+    _analysis_prompt: str = PrivateAttr(default="")
 
     def __init__(
         self,
@@ -136,13 +142,12 @@ class FOLLogicAgent(BaseLogicAgent):
             llm_service_id=service_id,
         )
 
-        # Configuration spécifique FOL
-        self.analysis_cache: Dict[str, FOLAnalysisResult] = {}
+        # Configuration spécifique FOL - Utilisation de PrivateAttr pour Pydantic V2
         self._tweety_bridge = tweety_bridge
 
-        # Prompts spécialisés FOL
-        self.conversion_prompt = self._create_fol_conversion_prompt()
-        self.analysis_prompt = self._create_fol_analysis_prompt()
+        # Prompts spécialisés FOL - Utilisation de PrivateAttr
+        self._conversion_prompt = self._create_fol_conversion_prompt()
+        self._analysis_prompt = self._create_fol_analysis_prompt()
 
         logger.info(f"Agent {agent_name} initialisé avec logique FOL")
 
@@ -226,23 +231,23 @@ RÉPONDS EN FORMAT JSON :
 
     async def _register_fol_semantic_functions(self):
         """Enregistre les fonctions sémantiques spécifiques FOL."""
-        if not self._kernel:
+        if not self.kernel:
             logger.warning("⚠️ Pas de kernel - fonctions sémantiques non enregistrées")
             return
 
         # Fonction de conversion texte → FOL
-        conversion_function = self._kernel.create_function_from_prompt(
+        conversion_function = self.kernel.create_function_from_prompt(
             function_name="convert_to_fol",
             plugin_name="fol_logic",
-            prompt=self.conversion_prompt,
+            prompt=self._conversion_prompt,
             description="Convertit du texte naturel en formules FOL",
         )
 
         # Fonction d'analyse FOL
-        analysis_function = self._kernel.create_function_from_prompt(
+        analysis_function = self.kernel.create_function_from_prompt(
             function_name="analyze_fol",
             plugin_name="fol_logic",
-            prompt=self.analysis_prompt,
+            prompt=self._analysis_prompt,
             description="Analyse la cohérence et les inférences FOL",
         )
 
@@ -266,9 +271,9 @@ RÉPONDS EN FORMAT JSON :
         try:
             # 1. Vérification du cache
             cache_key = self._generate_cache_key(text, context)
-            if cache_key in self.analysis_cache:
+            if cache_key in self._analysis_cache:
                 logger.info("📋 Résultat FOL trouvé en cache")
-                return self.analysis_cache[cache_key]
+                return self._analysis_cache[cache_key]
 
             # 2. Conversion texte → formules FOL
             logger.info("🔄 Conversion texte vers formules FOL...")
@@ -283,7 +288,7 @@ RÉPONDS EN FORMAT JSON :
             final_result = await self._enrich_analysis(analysis_result, text, context)
 
             # 5. Mise en cache
-            self.analysis_cache[cache_key] = final_result
+            self._analysis_cache[cache_key] = final_result
 
             logger.info(
                 f"✅ Analyse FOL terminée - Confiance: {final_result.confidence_score:.2f}"
@@ -310,14 +315,14 @@ RÉPONDS EN FORMAT JSON :
             List[str]: Liste des formules FOL
         """
         try:
-            if self._kernel and self._kernel.services:
+            if self.kernel and self.kernel.services:
                 # Utilisation du LLM pour conversion intelligente
                 conversion_args = {
                     "text": text,
                     "context": str(context) if context else "Aucun contexte",
                 }
 
-                result = await self._kernel.invoke(
+                result = await self.kernel.invoke(
                     function_name="convert_to_fol",
                     plugin_name="fol_logic",
                     arguments=conversion_args,
@@ -467,7 +472,7 @@ RÉPONDS EN FORMAT JSON :
                 result.confidence_score = max(0.1, result.confidence_score - 0.2)
 
             # Analyse LLM complémentaire si disponible
-            if self._kernel and self._kernel.services:
+            if self.kernel and self.kernel.services:
                 enhanced_analysis = await self._llm_enhanced_analysis(
                     result, original_text
                 )
@@ -499,7 +504,7 @@ RÉPONDS EN FORMAT JSON :
                 "context": original_text,
             }
 
-            llm_result = await self._kernel.invoke(
+            llm_result = await self.kernel.invoke(
                 function_name="analyze_fol",
                 plugin_name="fol_logic",
                 arguments=analysis_args,
@@ -772,7 +777,7 @@ RÉPONDS EN FORMAT JSON :
         Returns:
             Dict[str, Any]: Résumé statistique
         """
-        total_analyses = len(self.analysis_cache)
+        total_analyses = len(self._analysis_cache)
         if total_analyses == 0:
             return {
                 "total_analyses": 0,
@@ -782,11 +787,11 @@ RÉPONDS EN FORMAT JSON :
             }
 
         avg_confidence = (
-            sum(r.confidence_score for r in self.analysis_cache.values())
+            sum(r.confidence_score for r in self._analysis_cache.values())
             / total_analyses
         )
         consistent_count = sum(
-            1 for r in self.analysis_cache.values() if r.consistency_check
+            1 for r in self._analysis_cache.values() if r.consistency_check
         )
 
         return {
