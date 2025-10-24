@@ -80,9 +80,9 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Fix F541 errors from flake8 report')
     parser.add_argument('--dry-run', action='store_true', 
-                       help='Preview changes without modifying files')
+                        help='Preview changes without modifying files')
     parser.add_argument('--report', default='flake8_report.txt',
-                       help='Path to flake8 report')
+                        help='Path to flake8 report')
     args = parser.parse_args()
 
     print(f"🔍 Extraction des fichiers avec F541 depuis {args.report}...")

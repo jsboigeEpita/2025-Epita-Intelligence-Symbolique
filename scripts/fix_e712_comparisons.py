@@ -59,7 +59,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Fix E712 comparison errors')
     parser.add_argument('--dry-run', action='store_true', 
-                       help='Show what would be changed without modifying files')
+                        help='Show what would be changed without modifying files')
     args = parser.parse_args()
 
     root = Path('.')

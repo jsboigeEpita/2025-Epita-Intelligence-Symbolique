@@ -81,11 +81,11 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Fix F541 empty f-string errors')
     parser.add_argument('--dry-run', action='store_true', 
-                       help='Preview changes without modifying files')
+                        help='Preview changes without modifying files')
     parser.add_argument('--batch-size', type=int, default=20,
-                       help='Number of files to process per batch')
+                        help='Number of files to process per batch')
     parser.add_argument('--interactive', action='store_true',
-                       help='Ask confirmation for each batch')
+                        help='Ask confirmation for each batch')
     args = parser.parse_args()
 
     root = Path('.')
@@ -97,7 +97,7 @@ def main():
                 '.benchmarks', '*.egg-info', 'migration_output', '.github',
                 'libs/portable_octave', 'logs']
     python_files = [f for f in python_files 
-                   if not any(excl in str(f) for excl in excludes)]
+                    if not any(excl in str(f) for excl in excludes)]
 
     print(f"🔍 {'DRY RUN' if args.dry_run else 'FIXING'}: {len(python_files)} fichiers Python...")
 
