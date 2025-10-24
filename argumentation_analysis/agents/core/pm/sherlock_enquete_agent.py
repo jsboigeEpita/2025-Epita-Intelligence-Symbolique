@@ -46,7 +46,7 @@ class SherlockTools:
     """
 
     def __init__(self, kernel: Kernel):
-        self._kernel = kernel
+        self.kernel = kernel
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @kernel_function(
@@ -222,7 +222,7 @@ class SherlockEnqueteAgent(BaseAgent):
     """
 
     _service_id: str
-    logger: Optional[logging.Logger] = Field(None, exclude=True)
+    _logger: Optional[logging.Logger] = Field(None, exclude=True)
 
     def __init__(
         self,
@@ -246,7 +246,7 @@ class SherlockEnqueteAgent(BaseAgent):
         )
         self.kernel = kernel
         self.instructions = system_prompt or SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
-        self.logger = logging.getLogger(agent_name)
+        self._logger = logging.getLogger(agent_name)
         self._service_id = service_id
 
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
