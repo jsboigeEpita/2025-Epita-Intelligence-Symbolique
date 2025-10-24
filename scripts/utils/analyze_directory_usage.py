@@ -20,6 +20,7 @@ if project_root_dir not in sys.path:
     sys.path.insert(0, project_root_dir)
 
 try:
+    from pathlib import Path
     from argumentation_analysis.utils.dev_tools.code_validation import (
         analyze_directory_references,
     )

@@ -40,6 +40,7 @@ try:
         CluedoExtendedOrchestrator,
     )
     from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+    from unittest.mock import Mock
     from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
         MoriartyInterrogatorAgent,
     )

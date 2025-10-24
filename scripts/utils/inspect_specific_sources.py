@@ -1,5 +1,6 @@
 import argumentation_analysis.core.environment
 import json
+from pathlib import Path
 
 input_config_path = "_temp/config_paths_corrected_v3.json"
 ids_to_inspect = [
