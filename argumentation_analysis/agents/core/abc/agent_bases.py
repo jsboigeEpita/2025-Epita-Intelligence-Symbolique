@@ -22,6 +22,7 @@ import logging
 from semantic_kernel import Kernel
 from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from pydantic import PrivateAttr
 
 # Note historique : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
 # puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
@@ -72,7 +73,7 @@ class BaseAgent(ChatCompletionAgent, ABC):
             pour cet agent via `setup_agent_components`.
     """
 
-    _logger: logging.Logger
+    agent_logger: logging.Logger = PrivateAttr()
     _llm_service_id: Optional[str]
 
     def __init__(
@@ -122,13 +123,17 @@ class BaseAgent(ChatCompletionAgent, ABC):
         
         # Propriétés spécifiques à BaseAgent (backward compatibility)
         self.id = agent_name  # Alias pour compatibilité avec ancien code
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = llm_service_id
+    
+    def model_post_init(self, __context) -> None:
+        """Initialisation post-construction Pydantic V2."""
+        super().model_post_init(__context)
+        self.agent_logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
 
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""
-        return self._logger
+        return self.agent_logger
 
     @property
     def system_prompt(self) -> Optional[str]:
