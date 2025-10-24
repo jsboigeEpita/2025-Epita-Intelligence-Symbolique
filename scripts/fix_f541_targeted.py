@@ -33,45 +33,45 @@ def fix_f541_in_file(filepath: Path, dry_run: bool = True) -> tuple:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             original_content = f.read()
-        
+
         # Pattern : f-strings (f"..." ou f'...')
         pattern = r'f(["\'])([^\1]*?)\1'
-        
+
         fixes_count = 0
         modified_content = original_content
-        
+
         def replacer(match):
             nonlocal fixes_count
             quote = match.group(1)
             content = match.group(2)
-            
+
             if has_fstring_placeholder(content):
                 return match.group(0)
             else:
                 fixes_count += 1
                 return f'{quote}{content}{quote}'
-        
+
         modified_content = re.sub(pattern, replacer, original_content)
-        
+
         if fixes_count == 0:
             return (0, True, "no_changes")
-        
+
         # VALIDATION AST CRITIQUE
         try:
             ast.parse(modified_content)
         except SyntaxError as e:
             print(f"❌ {filepath}: AST validation failed - {e}", file=sys.stderr)
             return (0, False, "ast_error")
-        
+
         if not dry_run:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(modified_content)
             print(f"✅ {filepath}: {fixes_count} f-strings corrigés")
         else:
             print(f"📝 {filepath}: {fixes_count} f-strings à corriger")
-        
+
         return (fixes_count, True, "success")
-        
+
     except Exception as e:
         print(f"❌ Error processing {filepath}: {e}", file=sys.stderr)
         return (0, False, "exception")
@@ -84,46 +84,46 @@ def main():
     parser.add_argument('--report', default='flake8_report.txt',
                        help='Path to flake8 report')
     args = parser.parse_args()
-    
+
     print(f"🔍 Extraction des fichiers avec F541 depuis {args.report}...")
     f541_files = extract_f541_files(args.report)
-    
+
     if not f541_files:
         print("❌ Aucun fichier avec F541 trouvé dans le rapport")
         return
-    
+
     print(f"📋 {len(f541_files)} fichiers avec erreurs F541 détectés")
-    
+
     total_fixes = 0
     files_fixed = 0
     files_failed = 0
     files_skipped = 0
-    
+
     mode = "DRY RUN" if args.dry_run else "FIXING"
     print(f"\n🔧 {mode}: Traitement des fichiers...")
-    
+
     for file_path in sorted(f541_files):
         filepath = Path(file_path)
         if not filepath.exists():
             print(f"⚠️ {filepath}: Fichier introuvable", file=sys.stderr)
             files_skipped += 1
             continue
-        
+
         fixes, success, status = fix_f541_in_file(filepath, args.dry_run)
-        
+
         if status == "success":
             files_fixed += 1
             total_fixes += fixes
         elif status == "ast_error" or status == "exception":
             files_failed += 1
         # no_changes ne compte pas comme échec
-    
+
     print(f"\n📊 Summary:")
     print(f"  Fichiers {'à modifier' if args.dry_run else 'modifiés'}: {files_fixed}")
     print(f"  F541 {'détectés' if args.dry_run else 'corrigés'}: {total_fixes}")
     print(f"  Échecs: {files_failed}")
     print(f"  Ignorés (introuvables): {files_skipped}")
-    
+
     if args.dry_run:
         print(f"\n💡 Exécuter sans --dry-run pour appliquer les corrections")
 
