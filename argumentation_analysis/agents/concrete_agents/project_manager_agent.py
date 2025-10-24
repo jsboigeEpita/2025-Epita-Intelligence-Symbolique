@@ -83,7 +83,7 @@ class ProjectManagerAgent(BaseAgent):
             Any: Le plan généré par le plugin.
         """
         arguments = KernelArguments(input=topic, tool_choice="required")
-        return await self._kernel.invoke_prompt(
+        return await self.kernel.invoke_prompt(
             function_name="create_project_plan",
             plugin_name="ProjectMgmtPlugin",
             arguments=arguments,

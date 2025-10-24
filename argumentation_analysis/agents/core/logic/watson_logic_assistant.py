@@ -508,7 +508,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             # Invocation via le kernel pour la robustesse et la compatibilité
             arguments = KernelArguments(chat_history=full_history)
 
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
+            response = await self.kernel.invoke(chat_function, arguments=arguments)
 
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")

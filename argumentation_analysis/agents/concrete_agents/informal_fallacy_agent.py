@@ -53,28 +53,28 @@ class InformalFallacyAgent(BaseAgent):
     ):
         """Ajoute les plugins au kernel en fonction de la configuration."""
         try:
-            llm_service = self._kernel.get_service()
+            llm_service = self.kernel.get_service()
         except Exception:
-            llm_service = next(iter(self._kernel.services.values()), None)
+            llm_service = next(iter(self.kernel.services.values()), None)
 
         if not llm_service:
             raise ValueError("LLM service not found in the kernel.")
 
         if config_name in ["simple", "full"]:
-            self._kernel.add_plugin(
+            self.kernel.add_plugin(
                 IdentificationPlugin(), plugin_name="FallacyIdentificationPlugin"
             )
         if config_name in ["explore_only", "workflow_only", "full"]:
-            self._kernel.add_plugin(
+            self.kernel.add_plugin(
                 TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin"
             )
         if config_name in ["workflow_only", "full"]:
             try:
                 module = importlib.import_module("plugins.FallacyWorkflow.plugin")
                 FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
-                self._kernel.add_plugin(
+                self.kernel.add_plugin(
                     FallacyWorkflowPlugin(
-                        master_kernel=self._kernel,
+                        master_kernel=self.kernel,
                         llm_service=llm_service,
                         taxonomy_file_path=taxonomy_file_path,
                     ),
@@ -131,7 +131,7 @@ class InformalFallacyAgent(BaseAgent):
             tool_choice="auto" if auto_invoke_kernel_functions else "none"
         )
 
-        return await self._kernel.invoke_prompt(
+        return await self.kernel.invoke_prompt(
             prompt=final_prompt,
             arguments=arguments,
             settings=execution_settings,  # ceci devrait être passé comme settings ou dans les arguments

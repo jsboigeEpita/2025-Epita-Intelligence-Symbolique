@@ -181,7 +181,7 @@ class ModalLogicAgent(BaseLogicAgent):
         if self._llm_service_id:
             try:
                 default_settings = (
-                    self._kernel.get_prompt_execution_settings_from_service_id(
+                    self.kernel.get_prompt_execution_settings_from_service_id(
                         self._llm_service_id
                     )
                 )
@@ -223,7 +223,7 @@ class ModalLogicAgent(BaseLogicAgent):
                     f"Ajout fonction {self.name}.{func_name} avec retry automatique activé"
                 )
 
-                self._kernel.add_function(
+                self.kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -236,8 +236,8 @@ class ModalLogicAgent(BaseLogicAgent):
                 )
 
                 if (
-                    self.name in self._kernel.plugins
-                    and func_name in self._kernel.plugins[self.name]
+                    self.name in self.kernel.plugins
+                    and func_name in self.kernel.plugins[self.name]
                 ):
                     self.logger.info(
                         f"(OK) Fonction {self.name}.{func_name} correctement enregistrée."
@@ -488,9 +488,9 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             # Plus de boucle de retry manuelle - SK s'en charge avec max_auto_invoke_attempts
 
             # Appel de la fonction sémantique pour générer l'ensemble de croyances modales
-            result = await self._kernel.plugins[self.name][
+            result = await self.kernel.plugins[self.name][
                 "TextToModalBeliefSet"
-            ].invoke(self._kernel, input=text)
+            ].invoke(self.kernel, input=text)
 
             # Extraire et parser le JSON
             response_content = result.value if hasattr(result, "value") else str(result)
@@ -603,9 +603,9 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             # Étape 2: Générer les idées de requêtes avec le LLM (SK gère le retry)
             args = {"input": text, "belief_set": belief_set.content}
 
-            result = await self._kernel.plugins[self.name][
+            result = await self.kernel.plugins[self.name][
                 "GenerateModalQueryIdeas"
-            ].invoke(self._kernel, **args)
+            ].invoke(self.kernel, **args)
             response_text = result.value if hasattr(result, "value") else str(result)
 
             # Extraire le bloc JSON de la réponse
@@ -743,10 +743,10 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             ]
             results_str = "\n".join(results_text_list)
 
-            result = await self._kernel.plugins[self.name][
+            result = await self.kernel.plugins[self.name][
                 "InterpretModalResult"
             ].invoke(
-                self._kernel,
+                self.kernel,
                 input=text,
                 belief_set=belief_set.content,
                 queries=queries_str,
