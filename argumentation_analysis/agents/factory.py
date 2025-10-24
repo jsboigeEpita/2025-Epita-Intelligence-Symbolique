@@ -127,6 +127,7 @@ class AgentFactory:
         agent_name: str = "Watson",
         trace_log_path: Optional[str] = None,
         constants: Optional[List[str]] = None,
+        system_prompt: Optional[str] = None,
     ) -> Agent:
         return self._create_agent(
             agent_class=WatsonLogicAssistant,
@@ -134,6 +135,7 @@ class AgentFactory:
             service_id=self.llm_service_id,
             trace_log_path=trace_log_path,
             constants=constants,
+            system_prompt=system_prompt,
         )
 
     def _create_agent(
