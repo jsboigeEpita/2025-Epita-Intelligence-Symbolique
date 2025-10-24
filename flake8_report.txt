@@ -14,7 +14,7 @@
 .\2.3.2-detection-sophismes\fallacy_pipeline.py:140:1: F811 redefinition of unused 'fallacy_rules' from line 13
 .\2.3.3-generation-contre-argument\counter_agent\logic\tweety_bridge.py:15:1: F403 'from jpype.types import *' used; unable to detect undefined names
 .\2.3.3-generation-contre-argument\counter_agent\ui\web_app.py:124:21: F821 undefined name 'CounterArgumentAgent'
-.\abs_arg_dung\agent.py:340:9: E999 IndentationError: unexpected indent
+.\abs_arg_dung\agent.py:185:9: F811 redefinition of unused 'plt' from line 13
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:555:5: F811 redefinition of unused 'setup_agent_components' from line 202
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:705:24: F541 f-string is missing placeholders
 .\argumentation_analysis\agents\core\logic\fol_logic_agent.py:844:5: F811 redefinition of unused 'asyncio' from line 20
@@ -346,86 +346,22 @@
 .\scripts\analyze_f821_errors.py:397:17: W292 no newline at end of file
 .\scripts\analyze_flake8_errors.py:141:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\analyze_flake8_errors.py:142:11: W292 no newline at end of file
-.\scripts\fix_e712_comparisons.py:19:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:23:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:29:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:35:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:41:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:47:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:51:1: W293 blank line contains whitespace
+.\scripts\analyze_phase1e_targets.py:246:16: W292 no newline at end of file
+.\scripts\fix_e128_indentation.py:44:28: E713 test for membership should be 'not in'
+.\scripts\fix_e128_indentation.py:212:21: W292 no newline at end of file
 .\scripts\fix_e712_comparisons.py:61:58: W291 trailing whitespace
-.\scripts\fix_e712_comparisons.py:62:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_e712_comparisons.py:64:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:67:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:73:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:78:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:80:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:84:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:87:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:96:1: W293 blank line contains whitespace
-.\scripts\fix_e712_comparisons.py:102:1: W293 blank line contains whitespace
 .\scripts\fix_e712_comparisons.py:106:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\fix_e712_comparisons.py:107:11: W292 no newline at end of file
-.\scripts\fix_f541_empty_fstrings.py:31:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:35:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:38:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:43:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:52:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:54:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:57:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:63:19: F541 f-string is missing placeholders
-.\scripts\fix_f541_empty_fstrings.py:65:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:72:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:74:1: W293 blank line contains whitespace
 .\scripts\fix_f541_empty_fstrings.py:83:58: W291 trailing whitespace
-.\scripts\fix_f541_empty_fstrings.py:84:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_empty_fstrings.py:86:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_empty_fstrings.py:88:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_empty_fstrings.py:90:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:93:1: W293 blank line contains whitespace
 .\scripts\fix_f541_empty_fstrings.py:99:44: W291 trailing whitespace
-.\scripts\fix_f541_empty_fstrings.py:100:20: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_empty_fstrings.py:101:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:103:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:107:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:113:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:119:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:121:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:129:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:130:11: F541 f-string is missing placeholders
-.\scripts\fix_f541_empty_fstrings.py:134:1: W293 blank line contains whitespace
-.\scripts\fix_f541_empty_fstrings.py:136:15: F541 f-string is missing placeholders
 .\scripts\fix_f541_empty_fstrings.py:138:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\fix_f541_empty_fstrings.py:139:11: W292 no newline at end of file
-.\scripts\fix_f541_targeted.py:36:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:39:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:42:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:47:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:53:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:55:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:58:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:65:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:72:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:74:1: W293 blank line contains whitespace
 .\scripts\fix_f541_targeted.py:82:58: W291 trailing whitespace
-.\scripts\fix_f541_targeted.py:83:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_targeted.py:85:24: E128 continuation line under-indented for visual indent
-.\scripts\fix_f541_targeted.py:87:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:90:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:94:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:96:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:101:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:104:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:111:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:113:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:120:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:121:11: F541 f-string is missing placeholders
-.\scripts\fix_f541_targeted.py:126:1: W293 blank line contains whitespace
-.\scripts\fix_f541_targeted.py:128:15: F541 f-string is missing placeholders
 .\scripts\fix_f541_targeted.py:130:1: E305 expected 2 blank lines after class or function definition, found 1
 .\scripts\fix_f541_targeted.py:131:11: W292 no newline at end of file
 .\scripts\fix_f821_missing_imports.py:341:17: W292 no newline at end of file
 .\scripts\fix_whitespace_errors.py:110:11: W292 no newline at end of file
+.\scripts\fix_whitespace_errors_targeted.py:160:21: W292 no newline at end of file
 .\scripts\maintenance\check_imports.py:66:46: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\check_imports.py:83:32: F821 undefined name 'test_module_import_by_name'
 .\scripts\maintenance\fix_project_structure.py:147:25: F821 undefined name 'run_shell_command'
@@ -479,14 +415,34 @@
 .\scripts\sherlock_watson\run_einstein_oracle_demo.py:592:13: F811 redefinition of unused 'shutdown_jvm' from line 573
 .\scripts\sherlock_watson\test_oracle_behavior_demo.py:3:1: F811 redefinition of unused 'initialize_project_environment' from line 1
 .\scripts\sherlock_watson\test_oracle_behavior_simple.py:4:1: F811 redefinition of unused 'initialize_project_environment' from line 2
-.\scripts\testing\run_embed_tests.py:71:1: E999 SyntaxError: expected 'except' or 'finally' block
+.\scripts\testing\run_embed_tests.py:87:21: F405 'test_embed_script_success_no_text_initially' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:91:21: F405 'test_embed_script_text_already_present' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:95:21: F405 'test_embed_script_force_overwrite' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:99:21: F405 'test_embed_script_output_exists_no_force' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:103:21: F405 'test_embed_script_passphrase_from_env' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:107:21: F405 'test_embed_script_missing_passphrase' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:111:21: F405 'test_embed_script_input_file_not_found' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:115:21: F405 'test_embed_script_incorrect_passphrase' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:119:21: F405 'test_embed_script_source_fetch_error' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:123:21: F405 'test_embed_script_empty_input_config' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:136:30: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:138:45: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:141:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:144:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:182:30: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:184:45: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:187:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:190:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:249:30: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:251:45: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:254:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
+.\scripts\testing\run_embed_tests.py:257:28: F405 'patch' may be undefined, or defined from star imports: tests.scripts.test_embed_all_sources
 .\scripts\testing\setup.py:46:57: E713 test for membership should be 'not in'
 .\scripts\utils\analyze_directory_usage.py:61:13: F821 undefined name 'Path'
 .\scripts\utils\analyze_directory_usage.py:92:26: F821 undefined name 'parse_colon_separated_string_to_regex_dict'
 .\scripts\utils\inspect_specific_sources.py:13:19: F821 undefined name 'Path'
 .\scripts\utils\inspect_specific_sources.py:30:38: F821 undefined name 'find_sources_in_config_by_ids'
 .\scripts\validation\test_importation_consolidee.py:133:9: F811 redefinition of unused 'RealLLMOrchestrator' from line 35
-.\scripts\validation\test_intelligent_modal_correction.py:167:31: F541 f-string is missing placeholders
 .\scripts\validation\validation_environnement_simple.py:7:34: W291 trailing whitespace
 .\scripts\validation\validators\simple_validator.py:105:17: F811 redefinition of unused 'ConversationOrchestrator' from line 76
 .\services\web_api\interface-simple\app.py:560:5: F811 redefinition of unused 'asyncio' from line 15
