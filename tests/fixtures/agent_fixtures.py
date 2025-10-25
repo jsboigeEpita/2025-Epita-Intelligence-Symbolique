@@ -53,6 +53,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.adapters.info
     InformalAgentAdapter,
 )
 from argumentation_analysis.orchestration.message_middleware import MessageMiddleware
+from unittest.mock import MagicMock
 
 
 @pytest.fixture
