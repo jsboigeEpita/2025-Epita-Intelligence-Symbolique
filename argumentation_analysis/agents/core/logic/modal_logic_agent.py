@@ -27,7 +27,7 @@ from semantic_kernel.prompt_template.prompt_template_config import PromptTemplat
 from semantic_kernel.connectors.ai.prompt_execution_settings import (
     PromptExecutionSettings,
 )
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, ModalBeliefSet
@@ -144,6 +144,11 @@ class ModalLogicAgent(BaseLogicAgent):
     # Attributs requis par Pydantic V2
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
+
+    # Attributs privés pour backward compatibility
+    _analysis_cache: Dict[str, Any] = PrivateAttr(default_factory=dict)
+    _conversion_prompt: str = PrivateAttr(default="")
+    _analysis_prompt: str = PrivateAttr(default="")
 
     def __init__(
         self,
@@ -896,3 +901,20 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         )
         # L'argument est valide si l'ensemble est INCOHÉRENT.
         return not is_consistent
+
+    # ==================== PROPERTIES BACKWARD COMPATIBILITY ====================
+
+    @property
+    def analysis_cache(self) -> Dict[str, Any]:
+        """Expose _analysis_cache for backward compatibility."""
+        return self._analysis_cache
+
+    @property
+    def conversion_prompt(self) -> str:
+        """Expose _conversion_prompt for backward compatibility."""
+        return self._conversion_prompt
+
+    @property
+    def analysis_prompt(self) -> str:
+        """Expose _analysis_prompt for backward compatibility."""
+        return self._analysis_prompt
