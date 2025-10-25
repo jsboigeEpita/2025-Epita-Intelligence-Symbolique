@@ -73,7 +73,7 @@ class BaseAgent(ChatCompletionAgent, ABC):
             pour cet agent via `setup_agent_components`.
     """
 
-    agent_logger: logging.Logger = PrivateAttr()
+    _agent_logger: logging.Logger = PrivateAttr()
     _llm_service_id: Optional[str]
 
     def __init__(
@@ -128,12 +128,12 @@ class BaseAgent(ChatCompletionAgent, ABC):
     def model_post_init(self, __context) -> None:
         """Initialisation post-construction Pydantic V2."""
         super().model_post_init(__context)
-        self.agent_logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
+        self._agent_logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
 
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""
-        return self.agent_logger
+        return self._agent_logger
 
     @property
     def system_prompt(self) -> Optional[str]:
