@@ -13,18 +13,22 @@ formelle ou d'autres mécanismes.
   des systèmes de raisonnement logique formel, ajoutant des abstractions pour
   la manipulation de croyances et l'exécution de requêtes.
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from pydantic import PrivateAttr
 
-# from semantic_kernel.agents import Agent  # Supprimé car le module n'existe plus
-# Note pour le futur : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
+# Note historique : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
 # puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
-# Cet héritage a été supprimé (voir commit e968f26d).
-# Si des problèmes d'intégration avec des fonctionnalités SK (ex: AgentGroupChat)
-# surviennent, réintroduire l'héritage de ChatCompletionAgent pourrait être une solution.
+# Cet héritage avait été supprimé (voir commit e968f26d) mais a été RÉINTRODUIT
+# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).
+# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.
 from semantic_kernel.contents import ChatHistory
 
 # from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
@@ -42,7 +46,7 @@ if TYPE_CHECKING:
     # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
 
-class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
+class BaseAgent(ChatCompletionAgent, ABC):
     """
     Classe de base abstraite (ABC) pour tous les agents du système.
 
@@ -69,7 +73,7 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
             pour cet agent via `setup_agent_components`.
     """
 
-    _logger: logging.Logger
+    _agent_logger: logging.Logger = PrivateAttr()
     _llm_service_id: Optional[str]
 
     def __init__(
@@ -81,7 +85,7 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
         **kwargs,
     ):
         """
-        Initialise une instance de BaseAgent.
+        Initialise une instance de BaseAgent avec héritage ChatCompletionAgent.
 
         Args:
             kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
@@ -89,24 +93,47 @@ class BaseAgent(ABC):  # Suppression de l'héritage de sk.Agent (voir note ci-de
             system_prompt (Optional[str]): Le prompt système qui guide le
                 comportement de l'agent.
             description (Optional[str]): Une description concise du rôle de l'agent.
+            **kwargs: Arguments optionnels dont llm_service_id.
         """
-        self._kernel = kernel
-        self.id = agent_name
-        self.name = agent_name
-        self.instructions = system_prompt
-        self.description = (
-            description
-            if description
-            else (system_prompt if system_prompt else f"Agent {agent_name}")
+        # Récupération du service LLM depuis le kernel
+        llm_service_id = kwargs.get("llm_service_id", "default")
+        try:
+            llm_service = kernel.get_service(llm_service_id)
+        except Exception as e:
+            # Fallback: utiliser le premier service disponible
+            services = kernel.services
+            if services:
+                llm_service = list(services.values())[0]
+                logging.getLogger(f"agent.{self.__class__.__name__}").warning(
+                    f"Service '{llm_service_id}' not found, using fallback: {llm_service.service_id}. Error: {e}"
+                )
+            else:
+                raise ValueError(
+                    f"No LLM service found in kernel for id '{llm_service_id}'. Error: {e}"
+                )
+        
+        # Appel du constructeur parent ChatCompletionAgent
+        super().__init__(
+            kernel=kernel,
+            service=llm_service,
+            name=agent_name,
+            instructions=system_prompt or "",
+            description=description or (system_prompt if system_prompt else f"Agent {agent_name}")
         )
-
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
-        self._llm_service_id = kwargs.get("llm_service_id")
+        
+        # Propriétés spécifiques à BaseAgent (backward compatibility)
+        self.id = agent_name  # Alias pour compatibilité avec ancien code
+        self._llm_service_id = llm_service_id
+    
+    def model_post_init(self, __context) -> None:
+        """Initialisation post-construction Pydantic V2."""
+        super().model_post_init(__context)
+        self._agent_logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
 
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""
-        return self._logger
+        return self._agent_logger
 
     @property
     def system_prompt(self) -> Optional[str]:
@@ -238,9 +265,12 @@ class BaseLogicAgent(BaseAgent, ABC):
         syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
     """
 
-    _tweety_bridge: "TweetyBridge"
-    _logic_type_name: str
-    _syntax_bnf: Optional[str]
+    # Annotations de type supprimées au niveau de la classe pour éviter l'évaluation
+    # par Pydantic lors de la construction. Les types sont documentés dans les docstrings
+    # et les properties.
+    # _tweety_bridge: TweetyBridge
+    # _logic_type_name: str
+    # _syntax_bnf: Optional[str]
     # _parser: Any  # Ces éléments seront gérés par TweetyBridge
     # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 

@@ -328,7 +328,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         if self._llm_service_id:
             try:
                 prompt_execution_settings = (
-                    self._kernel.get_prompt_execution_settings_from_service_id(
+                    self.kernel.get_prompt_execution_settings_from_service_id(
                         self._llm_service_id
                     )
                 )
@@ -363,7 +363,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
         for func_name, prompt, description in semantic_functions:
             try:
-                self._kernel.add_function(
+                self.kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -518,7 +518,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             "[text_to_belief_set] Étape 1: Invocation du LLM pour TextToPLDefs..."
         )
         defs_json, error_msg = await self._invoke_llm_for_json(
-            self._kernel,
+            self.kernel,
             self.name,
             "TextToPLDefs",
             {"input": text},
@@ -535,7 +535,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             "[text_to_belief_set] Étape 2: Invocation du LLM pour TextToPLFormulas..."
         )
         formulas_json, error_msg = await self._invoke_llm_for_json(
-            self._kernel,
+            self.kernel,
             self.name,
             "TextToPLFormulas",
             {"input": text, "definitions": json.dumps(defs_json, indent=2)},
@@ -652,7 +652,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             )
 
             arguments = KernelArguments(input=text, belief_set=belief_set_for_prompt)
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="GeneratePLQueryIdeas",
                 arguments=arguments,
@@ -808,7 +808,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 tweety_result=results_messages_str,
             )
 
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="InterpretPLResults",
                 arguments=arguments,

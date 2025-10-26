@@ -97,7 +97,6 @@ class InformalAnalysisAgent(BaseAgent):
         super().__init__(
             kernel=kernel, agent_name=agent_name, system_prompt=instructions
         )
-        self._kernel = kernel
         self._instructions = instructions
         self._taxonomy_file_path = taxonomy_file_path
         logging.getLogger(__name__).info(

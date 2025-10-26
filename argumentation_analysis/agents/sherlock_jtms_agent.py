@@ -238,7 +238,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
 
         try:
             # Générer hypothèse via l'agent Sherlock de base
-            base_hypothesis = await self._kernel.invoke_prompt(
+            base_hypothesis = await self.kernel.invoke_prompt(
                 prompt=f"Formulez une hypothèse pour cette situation: {context}",
                 arguments=KernelArguments(),
             )
@@ -382,7 +382,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 Proposez une solution finale détaillée.
                 """
 
-                detailed_solution = await self._kernel.invoke_prompt(
+                detailed_solution = await self.kernel.invoke_prompt(
                     prompt=solution_prompt, arguments=KernelArguments()
                 )
 

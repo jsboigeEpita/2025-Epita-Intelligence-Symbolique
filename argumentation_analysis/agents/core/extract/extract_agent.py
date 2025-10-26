@@ -123,11 +123,11 @@ class ExtractAgent(BaseAgent):
 
         super().__init__(kernel=kernel, agent_name=agent_name)
         self.logger = logging.getLogger(agent_name)
-        self._kernel = kernel
+        self.kernel = kernel
         self._llm_service_id = llm_service_id
         self.llm_service = None
         if llm_service_id:
-            self.llm_service = self._kernel.get_service(llm_service_id)
+            self.llm_service = self.kernel.get_service(llm_service_id)
 
         self._find_similar_text_func = find_similar_text_func or find_similar_text
         self._extract_text_func = extract_text_func or extract_text_with_markers
@@ -149,7 +149,7 @@ class ExtractAgent(BaseAgent):
             f"Enregistrement des fonctions sémantiques pour {self.name} avec le service LLM ID: {llm_service_id}"
         )
 
-        execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(
+        execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(
             llm_service_id
         )
 
@@ -177,7 +177,7 @@ class ExtractAgent(BaseAgent):
             ],
             execution_settings=execution_settings,
         )
-        self._kernel.add_function(
+        self.kernel.add_function(
             self.EXTRACT_SEMANTIC_FUNCTION_NAME,
             extract_prompt_template_config,
             plugin_name=self.name,
@@ -230,7 +230,7 @@ class ExtractAgent(BaseAgent):
             ],
             execution_settings=execution_settings,
         )
-        self._kernel.add_function(
+        self.kernel.add_function(
             self.VALIDATE_SEMANTIC_FUNCTION_NAME,
             validate_prompt_template_config,
             plugin_name=self.name,
@@ -319,7 +319,7 @@ class ExtractAgent(BaseAgent):
             extract_context=source_text,
         )
         try:
-            response = await self._kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
                 arguments=arguments,

@@ -100,7 +100,6 @@ class TestLogicAgentFactory:
 
             self.mock_first_order_agent_class.assert_called_once_with(
                 kernel=self.kernel,
-                tweety_bridge=unittest.mock.ANY,
                 agent_name="First_orderAgent",
             )
             # La méthode setup_agent_components a été intégrée au constructeur.

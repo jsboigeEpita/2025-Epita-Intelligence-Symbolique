@@ -1,8 +1,8 @@
 # 🧭 Guide de Navigation - Documentation du Projet
 
-**Dernière mise à jour** : 2025-10-13  
-**Version** : 2.0 (Post Phase D1)  
-**Statut** : ✅ Structure optimisée (-74% fichiers racine)
+**Dernière mise à jour** : 2025-10-24
+**Version** : 2.1 (Post Mission D3)
+**Statut** : ✅ Structure optimisée (-74% fichiers racine) + Missions documentées
 
 ---
 
@@ -245,10 +245,33 @@ docs/
 
 ## 📊 Rapports et Analyses
 
+### 🎯 Missions et Rapports de Projet
+
+#### Mission D3 - Stabilisation Suite Tests Pytest (15-24 oct 2025)
+
+**Documentation complète** : [`missions/phase_d3/`](missions/phase_d3/)
+
+**Synthèse** :
+- **Durée** : 8 jours (3 phases)
+- **Objectif** : Baseline stable suite tests pytest
+- **Résultat** : 1,810/2,218 tests PASSED (81.6%)
+- **Documentation** : 9 rapports, ~5,360 lignes
+- **Coût** : $73.33 API OpenAI
+
+**Rapports clés** :
+- [`00_RAPPORT_FINAL_MISSION_D3.3.md`](missions/phase_d3/00_RAPPORT_FINAL_MISSION_D3.3.md) - Rapport final clôture
+- [`01_ANALYSE_BASELINE_D3.3.md`](missions/phase_d3/01_ANALYSE_BASELINE_D3.3.md) - Analyse baseline complète
+- [`07_GROUNDING_POST_MISSION_D3_COMPLETE.md`](missions/phase_d3/07_GROUNDING_POST_MISSION_D3_COMPLETE.md) - Synthèse complète
+
+**Point d'entrée** : [`missions/phase_d3/README.md`](missions/phase_d3/README.md) ⭐⭐⭐⭐⭐
+
+---
+
 ### Rapports Récents (2025)
 
 | Date | Type | Document | Importance |
 |------|------|----------|------------|
+| **2025-10-24** | Mission D3.3 | [`missions/phase_d3/00_RAPPORT_FINAL_MISSION_D3.3.md`](missions/phase_d3/00_RAPPORT_FINAL_MISSION_D3.3.md) | 🔴 Critique |
 | **2025-10-13** | Nettoyage | [`maintenance/METHODOLOGIE_SDDD_PHASE_D1.md`](maintenance/METHODOLOGIE_SDDD_PHASE_D1.md) | 🔴 Critique |
 | **2025-10-03** | Enrichissement | [`maintenance/README_enrichment_report_2025-10-03.md`](maintenance/README_enrichment_report_2025-10-03.md) | 🟡 Important |
 | **2025-09-28** | État projet | [`reports/2025-09-28_grounding_etat_projet.md`](reports/2025-09-28_grounding_etat_projet.md) | 🟢 Référence |

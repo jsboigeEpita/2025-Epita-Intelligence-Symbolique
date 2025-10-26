@@ -46,15 +46,15 @@ class SherlockTools:
     """
 
     def __init__(self, kernel: Kernel):
-        self._kernel = kernel
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self.kernel = kernel
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @kernel_function(
         name="get_case_description",
         description="Récupère la description de l'affaire en cours.",
     )
     async def get_current_case_description(self) -> str:
-        self._logger.info("Récupération de la description de l'affaire en cours.")
+        self.logger.info("Récupération de la description de l'affaire en cours.")
         try:
             result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin", function_name="get_case_description"
@@ -63,7 +63,7 @@ class SherlockTools:
                 return str(result.value)
             return str(result)
         except Exception as e:
-            self._logger.error(
+            self.logger.error(
                 f"Erreur lors de la récupération de la description de l'affaire: {e}"
             )
             return f"Erreur: Impossible de récupérer la description de l'affaire: {e}"
@@ -73,7 +73,7 @@ class SherlockTools:
         description="Ajoute une nouvelle hypothèse à l'état de l'enquête.",
     )
     async def add_new_hypothesis(self, text: str, confidence_score: float) -> str:
-        self._logger.info(
+        self.logger.info(
             f"Ajout d'une nouvelle hypothèse: '{text}' avec confiance {confidence_score}"
         )
         try:
@@ -85,7 +85,7 @@ class SherlockTools:
             )
             return f"Hypothèse '{text}' ajoutée avec succès."
         except Exception as e:
-            self._logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
+            self.logger.error(f"Erreur lors de l'ajout de l'hypothèse: {e}")
             return f"Erreur lors de l'ajout de l'hypothèse: {e}"
 
     @kernel_function(
@@ -95,7 +95,7 @@ class SherlockTools:
     async def propose_final_solution(self, solution: Any) -> str:
         import json
 
-        self._logger.info(
+        self.logger.info(
             f"Tentative de proposition de la solution finale: {solution} (type: {type(solution)})"
         )
 
@@ -103,18 +103,18 @@ class SherlockTools:
         if isinstance(solution, str):
             try:
                 parsed_solution = json.loads(solution)
-                self._logger.info(
+                self.logger.info(
                     f"La solution était une chaîne, parsée en dictionnaire: {parsed_solution}"
                 )
             except json.JSONDecodeError:
                 error_msg = f"Erreur: la solution fournie est une chaîne de caractères mal formatée: {solution}"
-                self._logger.error(error_msg)
+                self.logger.error(error_msg)
                 return error_msg
         elif isinstance(solution, dict):
             parsed_solution = solution
         else:
             error_msg = f"Erreur: type de solution non supporté ({type(solution)}). Un dictionnaire ou une chaîne JSON est attendu."
-            self._logger.error(error_msg)
+            self.logger.error(error_msg)
             return error_msg
 
         if not parsed_solution:
@@ -127,10 +127,10 @@ class SherlockTools:
                 solution=parsed_solution,
             )
             success_msg = f"Solution finale proposée avec succès: {parsed_solution}"
-            self._logger.info(success_msg)
+            self.logger.info(success_msg)
             return success_msg
         except Exception as e:
-            self._logger.error(
+            self.logger.error(
                 f"Erreur lors de l'invocation de la fonction du kernel 'propose_final_solution': {e}",
                 exc_info=True,
             )
@@ -151,7 +151,7 @@ class SherlockTools:
         Returns:
             Déduction immédiate avec suspect/arme/lieu identifiés
         """
-        self._logger.info(f"Déduction instantanée demandée avec éléments: {elements}")
+        self.logger.info(f"Déduction instantanée demandée avec éléments: {elements}")
 
         try:
             import json
@@ -203,11 +203,11 @@ class SherlockTools:
                 "time_to_solution": "instantané",
             }
 
-            self._logger.info(f"Déduction instantanée produite: {deduction}")
+            self.logger.info(f"Déduction instantanée produite: {deduction}")
             return json.dumps(deduction, ensure_ascii=False)
 
         except Exception as e:
-            self._logger.error(f"Erreur lors de la déduction instantanée: {e}")
+            self.logger.error(f"Erreur lors de la déduction instantanée: {e}")
             return f"Erreur déduction: {e}"
 
 
@@ -222,8 +222,6 @@ class SherlockEnqueteAgent(BaseAgent):
     """
 
     _service_id: str
-    logger: Optional[logging.Logger] = Field(None, exclude=True)
-
     def __init__(
         self,
         kernel: Kernel,

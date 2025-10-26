@@ -120,7 +120,7 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
     llm_service_configured = authentic_pl_agent["llm_service_configured"]
 
     assert agent.name == authentic_pl_agent["agent_name"]
-    assert agent._kernel == authentic_pl_agent["kernel"]
+    assert agent.kernel == authentic_pl_agent["kernel"]
     assert agent.logic_type == "PL"
     assert agent.system_prompt == PL_AGENT_INSTRUCTIONS
 
@@ -135,7 +135,7 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
         print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
 
     if llm_service_configured:
-        settings = agent._kernel.get_prompt_execution_settings_from_service_id(
+        settings = agent.kernel.get_prompt_execution_settings_from_service_id(
             authentic_pl_agent["llm_service_id"]
         )
         assert settings is not None
