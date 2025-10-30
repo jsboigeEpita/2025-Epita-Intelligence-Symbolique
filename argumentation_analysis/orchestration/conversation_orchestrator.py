@@ -15,6 +15,7 @@ S'intègre harmonieusement avec l'architecture Semantic Kernel existante.
 import time
 import json
 import logging
+import warnings
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
@@ -187,7 +188,7 @@ class AnalysisState:
             "consistency_score": round(self.consistency_score, 2),
             "phase": self.phase,
             "completed": self.completed,
-            "processing_time": round(self.processing_time, 3),
+            "processing_time": round(self.processing_time,3),
         }
 
     def to_rhetorical_state(self) -> "RhetoricalAnalysisState":
@@ -596,10 +597,8 @@ class ConversationOrchestrator:
         self.state.completed = True
         self.state.processing_time = time.time() - start_time
         self.conv_logger.log_state_snapshot("final", self.state.to_dict())
-
         self.logger.info(f"Orchestration terminée en {self.state.processing_time:.3f}s")
 
-        
         warnings.warn(
             "`ConversationOrchestrator` is deprecated and will be removed in a future version. "
             "Please use `analysis_runner` for new implementations. "

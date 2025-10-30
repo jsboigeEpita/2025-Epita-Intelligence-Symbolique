@@ -7,7 +7,7 @@ Ce module contient les classes de base abstraites (ABC) qui définissent les con
 - `BaseLogicAgent` : Une spécialisation pour les agents qui interagissent avec des systèmes de raisonnement logique formel, ajoutant des abstractions pour la manipulation de croyances et l'exécution de requêtes.  
 
 # Note historique : 
- BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,      
+# BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,      
 # puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent. 
 # Cet héritage avait été supprimé (voir commit e9668f26d) mais a été RÉINTRODUIT 
 # pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).    
@@ -19,22 +19,9 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging      
 
 from semantic_kernel import Kernel      
-from semantic_kernel.agents.chat_completion import ChatCompletionAgent        
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClienttBase      
-from pydantic import PrivateAttr        
-
-# Note historique : 
-# from semantic_kernel.agents import Agent      
-# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent. 
-# Cet héritage avait été supprimé (voir commit e9668f26d) mais a été RÉINTRODUIT 
-# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).    
-# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.  
 from semantic_kernel.contents import ChatHistory  
 
-# from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé      
-# from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgent # Commenté, module/classe potentiellement déplacé/supprimé    
-
-# Imports passifs pour éviter le cycle d'import - uniquement pour le typage    
+# Import paresseux pour éviter le cycle d'import - uniquement pour le typage    
 if TYPE_CHECKING:   
     from argumentation_analysis.agents.core.logic.belief_set import BeliefSet   
     from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge       
@@ -57,15 +44,26 @@ if TYPE_CHECKING:
 # ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté    
 
 
-class BaseAgent(ChatCompletionAgent, ABC):        
+class BaseAgent(ABC):
     """Classe de base abstraite (ABC) pour tous les agents du système.
-    Cette classe établit un contrat que tous les agents doivent suivre. Elle définit l'interface commune pour l'initialisation, la configuration,
-    la description des capacités et le cycle d'invocation. Chaque agent doit être associé à un `Kernel` de Semantic Kernel.
+
+    Cette classe établit un contrat que tous les agents doivent suivre. Elle
+    définit l'interface commune pour l'initialisation, la configuration,
+    la description des capacités et le cycle d'invocation. Chaque agent
+    doit être associé à un `Kernel` de Semantic Kernel.
 
     Le contrat impose aux classes dérivées d'implémenter des méthodes clés pour la configuration n (`setup_agent_components`) et t l'exécution        
     de leur logique métier (`invoke_single`).     
 
-    Attributes:        
+    Note on Semantic Kernel Agent Inheritance:
+        Cette classe n'hérite plus directement de `semantic_kernel.agents.Agent`
+        (ou de ses successeurs comme `ChatCompletionAgent`) pour découpler
+        notre architecture de l'implémentation spécifique de SK, qui a beaucoup
+        évolué. Si une intégration future avec des composants comme
+        `AgentGroupChat` s'avère difficile, il pourrait être nécessaire de
+        réintroduire un héritage ciblé.
+
+    Attributes:
         kernel (Kernel): Le kernel Semantic Kernel utilisé par l'agent.
         id (str): L'identifiant unique de l'agent.
         name (str): Le nom de l'agent, alias de `id`.       
@@ -74,6 +72,8 @@ class BaseAgent(ChatCompletionAgent, ABC):
         description (Optional[str]): Une description textuelle du rôle et       
           des capacités de l'agent.   
         logger (logging.Logger): Une instance de logger pour l'agent.   
+        llm_service_id (Optional[str]): L'ID du service LLM configuré
+            pour cet agent via `setup_agent_components`.
 
     Note: Le typage est partiellement appliqué pour éviter les dépendances circulaires.    
     # Les types sont documentés dans les docstrings et les properties.      
@@ -85,726 +85,417 @@ class BaseAgent(ChatCompletionAgent, ABC):
     # Ces éléments seront gérés par TweetyBridge        
     """     
 
-    def __init__(        
-        self,       
-        kernel: "Kernel",     
-        agent_name: str,      
-        logic_type_name: str, 
-        system_prompt: Optional[str] = None,      
-        **kwargs,   
-    ):        
-        """        
-        Initialise une instance de BaseAgent.
+    _logger: logging.Logger
+    _llm_service_id: Optional[str]
 
-        Args:            
-          kernel (Kernel): Le kernel Semantic Kernel à utiliser.    
-          agent_name (str): Le nom de l'agent.  
-          logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL"). 
-          system_prompt (Optional[str]): Le prompt système optionnel.
-        """        
-        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=system_prompt, **kwargs)        
-        self._logic_type_name = logic_type_name        
-        self._tweety_bridge = None  # Initialisation explicite à None        
-        self._syntax_bnf = None  # Pourrait être chargé par le bridge ou la sous-classe        
-        self._parser = None  # Ces éléments seront gérés par TweetyBridge        
-        self._solver = None  # Ces éléments seront gérés par TweetyBridge        
+    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
+        """Initialise une instance de BaseAgent.
 
-    @property        
-    def logic_type(self) -> str:        
-        """        
-        Retourne le nom du type de logique géré par l'agent.
+        Args:
+            kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
+            agent_name (str): Le nom unique de l'agent.
+            system_prompt (Optional[str], optional): Le prompt système qui guide
+                le comportement de l'agent. Defaults to None.
+            description (Optional[str], optional): Une description concise du
+                rôle de l'agent. Defaults to None.
+        """
+        self._kernel = kernel
+        self.id = agent_name
+        self.name = agent_name
+        self.instructions = system_prompt
+        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        
+        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
+        self._llm_service_id = None  # Sera défini par setup_agent_components
 
-        :return: Le nom du type de logique (ex: "PPL", "FOL").
-        :rtype: str 
-        """        
-        return self._logic_type_name        
+    @property
+    def logger(self) -> logging.Logger:
+        """Retourne le logger de l'agent."""
+        return self._logger
 
-    @property        
-    def tweety_bridge(self) -> "TweetyBridge":        
-        """        
-        Retourne l'instance de `TweetyBridge` associée à cet agent.
+    @property
+    def system_prompt(self) -> Optional[str]:
+        """Retourne le prompt système de l'agent (alias pour self.instructions)."""
+        return self.instructions
 
-        L'instance de `TweetyBridge` est typiquement initialisée lors de l'appel        
-        à `setup_agent_components` par la classe concrète.  
+    @abstractmethod
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        """
+        Décrit les capacités spécifiques et la configuration de l'agent.
 
-        :return: L'instance de `TweetyBridge`.    
-        :rtype: TweetyBridge  
-        :raises RuntimeError: Si `TweetyBridge` n'a pas été initialisé.
-        """        
-        if not hasattr(self, "_tweety_bridge") or self._tweety_bridge is None:  
-          
-          # Cela suppose que setup_agent_components a été appelé et a initialisé le bridge.        
-          
-          # Une meilleure approche pourrait être d'injecter TweetyBridge au constructeur        
-          # ou d'avoir une méthode dédiée pour son initialisation si elle est complexe.        
-          
-          raise RuntimeError(          
-            "TweetyBridge not initialized. Call setup_agent_components or ensure it's injected."          
-          )        
-        return self._tweety_bridge        
+        Cette méthode doit être implémentée par les classes dérivées pour
+        retourner un dictionnaire structuré qui détaille leurs fonctionnalités,
+        les plugins utilisés, ou toute autre information pertinente sur leur
+        configuration.
 
-    @abstractmethod        
-    def setup_agent_components(self, llm_service_id: Optional[str] = None) -> None:        
-        """        
-        Configure les composants spécifiques de l'agent, comme les fonctions sémantiques.
+        Returns:
+            Dict[str, Any]: Un dictionnaire décrivant les capacités de l'agent.
+        """
+        pass
 
-        Cette méthode peut être surchargée par les classes filles pour des configurations        
-        plus complexes. Par défaut, elle s'assure que l'ID du service LLM est défini.     
+    @abstractmethod
+    def setup_agent_components(self, llm_service_id: str) -> None:
+        """
+        Configure les composants internes de l'agent.
 
-        Args:            
-          llm_service_id (Optional[str]): L'ID du service LLM à utiliser.        
-        """        
-        if llm_service_id:            
-            self._llm_service_id = llm_service_id            
-            self.logger.info(            
-              f"Composants de l'agent configurés pour utiliser le service LLM: {llm_service_id}"            
-            )        
-        else:            
-            self.logger.info(            
-              "Aucun service LLM spécifique fourni pour la configuration des composants."            
-            )        
+        Cette méthode abstraite doit être implémentée pour effectuer toute
+        l'initialisation nécessaire après la création de l'agent. Cela inclut
+        typiquement:
+        - L'enregistrement de fonctions sémantiques ou natives dans le kernel.
+        - L'initialisation de clients ou de services externes.
+        - Le stockage de l'ID du service LLM pour les appels futurs.
 
-    @abstractmethod        
-    def text_to_belief_set(        
-        self, text: str, context: Optional[Dict[str, Any]] = None        
-    ) -> Tuple[Optional["BeliefSet"], str]:        
-        """        
-        Convertit un texte en langage naturel en un ensemble de croyances formelles.      
+        Args:
+            llm_service_id (str): L'identifiant du service LLM à utiliser pour
+                les opérations de l'agent.
+        """
+        self._llm_service_id = llm_service_id
+        pass
 
-        Args:            
-          text (str): Le texte à convertir.     
-          context (Optional[Dict[str, Any]]): Contexte additionnel pour        
-            guider la conversion.   
+    def get_agent_info(self) -> Dict[str, Any]:
+        """
+        Retourne un dictionnaire d'informations sur l'agent.
 
-        Returns:            
-          Tuple[Optional['BeliefSet'], str]: Un tuple contenant l'objet        
-          `BeliefSet` créé (ou None en cas d'échec) et un message de statut.  
-        """        
-        pass        
+        Inclut le nom, la classe, le prompt système, l'ID du service LLM
+        et les capacités de l'agent.
+        
+        Returns:
+            Dict[str, Any]: Un dictionnaire contenant les informations de l'agent.
+        """
+        return {
+            "name": self.name,
+            "class": self.__class__.__name__,
+            "system_prompt": self.system_prompt,
+            "llm_service_id": self._llm_service_id,
+            "capabilities": self.get_agent_capabilities()
+        }
 
-    @abstractmethod        
-    def generate_queries(        
-        self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None        
-    ) -> List[str]:        
-        """        
-        Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.        
+    @abstractmethod
+    async def get_response(self, *args, **kwargs) -> Any:
+        """Point d'entrée principal pour l'exécution d'une tâche par l'agent.
+        
+        Cette méthode est destinée à être un wrapper de haut niveau autour
+        de la logique d'invocation (`invoke` ou `invoke_single`). Les classes filles
+        doivent l'implémenter pour définir comment l'agent répond à une sollicitation.
+        Les arguments `*args` et `**kwargs` sont directement transmis à `invoke_single`.
 
-        Args:            
-          text (str): Le texte source pour inspirer les requêtes.   
-          belief_set ("BeliefSet"): L'ensemble de croyances sur lequel        
-            les requêtes seront basées. 
-          context (Optional[Dict[str, Any]]): Contexte additionnel pour        
-            guider la conversion.   
+        Returns:
+            Any: La réponse de l'agent, au format défini par l'implémentation
+            de `invoke_single`.
+        """
+        pass
 
-        Returns:            
-          List[str]: Une liste de requêtes logiques sous forme de chaînes.    
-        """        
-        pass        
+    @abstractmethod
+    async def invoke_single(self, *args, **kwargs) -> Any:
+        """Exécute la logique principale de l'agent et retourne une réponse unique.
 
-    @abstractmethod        
-    def execute_query(        
-        self, belief_set: "BeliefSet", query: str        
-    ) -> Tuple[Optional[bool], str]:        
-        """        
-        Exécute une requête logique sur un ensemble de croyances.     
+        C'est ici que le cœur du travail de l'agent doit être implémenté.
+        La méthode doit retourner une seule réponse et ne pas utiliser de streaming.
+        Le framework d'invocation se chargera de la transformer en stream si
+        nécessaire via la méthode `invoke`.
 
-        Args:            
-          belief_set ("BeliefSet"): La base de connaissances sur laquelle la requête est exécutée.   
-          query (str): La requête logique à exécuter.     
+        Returns:
+            Any: La réponse unique résultant de l'invocation. Le type exact
+            dépend de la nature de l'agent.
+        """
+        pass
 
-        Returns:            
-          Tuple[Optional[bool], str]: Un tuple avec le résultat (True, False, ou None si indéterminé) et un message de statut du solveur.    
-        """        
-        pass        
+    async def invoke(self, *args, **kwargs):
+        """
+        Méthode d'invocation principale compatible avec le streaming attendu par le framework SK.
+        Elle transforme la réponse unique de `invoke_single` en un flux.
+        """
+        result = await self.invoke_single(*args, **kwargs)
+        yield result
 
-    @abstractmethod        
-    def interpret_results(        
-        self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None        
-    ) -> str:        
-        """        
-        Interprète les résultats des requêtes logiques en langage naturel.      
-
-        Args:            
-          text (str): Le texte source original. 
-          belief_set ("BeliefSet"): L'ensemble de croyances utilisé.  
-          queries (List[str]): La liste des requêtes qui ont été exécutées.   
-          results (List[Tuple[Optional[bool], str]]): La liste des résultats        
-            correspondant aux requêtes.       
-          context (Optional[Dict[str, Any]]): Contexte additionnel.   
-
-        Returns:            
-          str: Une synthèse en langage naturel des résultats logiques.        
-        """        
-        pass        
-
-    # @abstractmethod # Remplacé par l'utilisation directe du bridge  
-    # def validate_formula(self, formula: str) -> bool:        
-    #     """        
-    #     Valide la syntaxe d'une formule logique.  
-
-    #     Args:            
-    #       formula (str): La formule à valider.  
-
-    #     Returns:            
-    #       bool: True si la syntaxe de la formule est correcte, False sinon.   
-    #     """        
-    #     pass        
-
-    # @abstractmethod # Remplacé par l'utilisation directe du bridge  
-    # def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:        
-    #     """        
-    #     Vérifie si un ensemble de croyances est logiquement cohérent. 
-
-    #     Args:            
-    #       belief_set ("BeliefSet"): L'ensemble de croyances à vérifier.
-
-    #     Returns:            
-    #       Tuple[bool, str]: Un tuple contenant un booléen (True si cohérent) et un message de statut du solveur.   
-    #     """        
-    #     pass        
-
-    async def process_task(        
-        self, task_id: str, task_description: str, state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Traite une tâche assignée à l'agent logique.        
-        Migré depuis AbstractLogicAgent pour unifier l'architecture.        
-        """        
-        self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")        
-        state = state_manager.get_current_state_snapshot(summarize=False)        
-        if "Traduire" in task_description and "Belief Set" in task_description:            
-            return await self._handle_translation_task(            
-              task_id, task_description, state, state_manager            
-            )        
-        elif "Exécuter" in task_description and "Requêtes" in task_description:            
-            return await self._handle_query_task(            
-              task_id, task_description, state, state_manager            
-            )        
-        else:            
-            error_msg = f"Type de tâche non reconnu: {task_description}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-    async def _handle_translation_task(        
-        self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Génère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.        
-        """        
-        raw_text = self._extract_source_text(task_description, state)        
-        if not raw_text:            
-            error_msg = "Impossible de trouver le texte source pour la traduction"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        belief_set, status_msg = await self.text_to_belief_set(raw_text)        
-        if not belief_set:            
-            error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        bs_id = state_manager.add_belief_set(            
-          logic_type=belief_set.logic_type, content=belief_set.content            
-        )        
-        answer_text = (            
-          f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"            
-        )        
-        state_manager.add_answer(            
-          task_id=task_id,                
-          author_agent=self.name,                
-          answer_text=answer_text,                
-          source_ids=[bs_id],            
-        )        
-        return {"status": "success", "message": answer_text, "belief_set_id": bs_id}        
-
-    async def _handle_query_task(        
-        self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Génère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.        
-        """        
-        belief_set_id = self._extract_belief_set_id(task_description)        
-        if not belief_set_id:            
-            error_msg = "Impossible de trouver l'ID de l'ensemble de croyances dans la description de la tâche"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        belief_sets = state.get("belief_sets", {})        
-        if belief_set_id not in belief_sets:            
-            error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        belief_set_data = belief_sets[belief_set_id]        
-        belief_set = self._create_belief_set_from_data(belief_set_data)        
-        raw_text = self._extract_source_text(task_description, state)        
-        queries = await self.generate_queries(raw_text, belief_set)        
-        if not queries:            
-            error_msg = "Aucune requête n'a pu être générée"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        formatted_results = []        
-        log_ids = []        
-        raw_results = []        
-        for query in queries:            
-            result, result_str = self.execute_query(belief_set, query)            
-            raw_results.append((result, result_str))        
-            formatted_results.append(result_str)        
-            log_id = state_manager.log_query_result(            
-              belief_set_id=belief_set_id, query=query, raw_result=result_str            
-            )        
-            log_ids.append(log_id)        
-
-        interpretation = self.interpret_results(            
-          raw_text, belief_set, queries, raw_results            
-        )        
-        state_manager.add_answer(            
-          task_id=task_id,                
-          author_agent=self.name,                
-          answer_text=interpretation,                
-          source_ids=[belief_set_id] + log_ids,            
-        )        
-        return {            
-          "status": "successs",                
-          "message": interpretation,                
-          "queries": queries,                
-          "results": formatted_results,                
-          "log_ids": log_ids,            
-        }        
-
-    def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:        
-        """        
-        Extrait le texte source pertinent pour une tâche.        
-        """        
-        raw_text = state.get("raw_text", "")        
-        if not raw_text and "texte:" in task_description.lower():            
-            parts = task_description.split("texte:", 1)            
-            if len(parts) > 1:                
-              raw_text = parts[1].strip()        
-        return raw_text        
-
-    def _extract_belief_set_id(self, task_description: str) -> Optional[str]:        
-        """        
-        Extrait un ID d'ensemble de croyances à partir de la description d'une tâche.        
-        """        
-        if "belief_set_id:" in task_description.lower():            
-            parts = task_description.split("belief_set_id:", 1)            
-            if len(parts) > 1:                
-              bs_id_part = parts[1].strip()                
-              bs_id = bs_id_part.split()[0].strip()                
-              return bs_id        
-        return None        
-
-    @abstractmethod        
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":        
-        """        
-        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.        
-        """        
-        pass        
+    async def invoke_stream(self, *args, **kwargs):
+        """
+        Implémentation de l'interface de streaming de SK.
+        Cette méthode délègue à `invoke`, qui retourne maintenant un générateur asynchrone.
+        """
+        async for Elt in self.invoke(*args, **kwargs):
+            yield Elt
 
 
-class BaseLogicAgent(BaseAgent, ABC):        
-    """Classe de base abstraite pour les agents basés sur la logique formelle.
+class BaseLogicAgent(BaseAgent, ABC):
+    """
+    Spécialisation de `BaseAgent` pour les agents qui raisonnent en logique formelle.
 
-    Cette classe étend BaseAgent avec des fonctionnalités spécifiques pour les agents
-    qui interagissent avec des systèmes de raisonnement logique formel, ajoutant des abstractions
-    pour la manipulation de croyances et l'exécution de requêtes.
+    Cette classe de base abstraite étend `BaseAgent` en introduisant des concepts
+    et des contrats spécifiques aux agents logiques. Elle standardise l'interaction
+    avec un moteur logique (via `TweetyBridge`) et définit un pipeline de traitement
+    typique pour les tâches logiques :
+    1. Conversion de texte en un ensemble de croyances (`text_to_belief_set`).
+    2. Génération de requêtes pertinentes (`generate_queries`).
+    3. Exécution de ces requêtes (`execute_query`).
+    4. Interprétation des résultats (`interpret_results`).
 
     Attributes:
-        _tweety_bridge (TweetyBridge): Le pont vers le système de raisonnement Tweety.
-        _logic_type_name (str): Le nom du type de logique géré par l'agent.
-        _syntax_bnf (Optional[str]): La syntaxe BNF pour le parser.
-        _parser (Any): Le parser pour le langage logique.
-        _solver (Any): Le solveur pour le langage logique.
-    """     
+        tweety_bridge (TweetyBridge): Le pont vers la bibliothèque logique Tweety.
+        logic_type_name (str): Le nom de la logique formelle utilisée (ex: "PL", "FOL").
+        syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
+    """
+    _tweety_bridge: "TweetyBridge"
+    _logic_type_name: str
+    _syntax_bnf: Optional[str]
+    # _parser: Any  # Ces éléments seront gérés par TweetyBridge
+    # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
-    def __init__(        
-        self,       
-        kernel: "Kernel",     
-        agent_name: str,      
-        logic_type_name: str, 
-        system_prompt: Optional[str] = None,      
-        **kwargs,   
-    ):        
-        """        
+    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None):
+        """
         Initialise une instance de BaseLogicAgent.
 
-        Args:            
-          kernel (Kernel): Le kernel Semantic Kernel à utiliser.    
-          agent_name (str): Le nom de l'agent.  
-          logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL"). 
-          system_prompt (Optional[str]): Le prompt système optionnel.
-        """        
-        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=system_prompt, **kwargs)        
-        self._logic_type_name = logic_type_name        
-        self._tweety_bridge = None  # Initialisation explicite à None        
-        self._syntax_bnf = None  # Pourrait être chargé par le bridge ou la sous-classe        
-        self._parser = None  # Ces éléments seront gérés par TweetyBridge        
-        self._solver = None  # Ces éléments seront gérés par TweetyBridge        
+        Args:
+            kernel (Kernel): Le kernel Semantic Kernel à utiliser.
+            agent_name (str): Le nom de l'agent.
+            logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL").
+            system_prompt (Optional[str]): Le prompt système optionnel.
+        """
+        super().__init__(kernel, agent_name, system_prompt)
+        self._logic_type_name = logic_type_name
+        # L'instance de TweetyBridge devrait être passée ou créée ici.
+        # Pour l'instant, on suppose qu'elle sera initialisée dans setup_agent_components
+        # ou passée d'une manière ou d'une autre.
+        # self._tweety_bridge = TweetyBridge() # Exemple
+        self._syntax_bnf = None # Pourrait être chargé par le bridge ou la sous-classe
 
-    @property        
-    def logic_type(self) -> str:        
-        """        
-        Retourne le nom du type de logique géré par l'agent.
+    @property
+    def logic_type(self) -> str:
+        """Retourne le nom du type de logique géré par l'agent.
 
-        :return: Le nom du type de logique (ex: "PPL", "FOL").
-        :rtype: str 
-        """        
-        return self._logic_type_name        
+        Returns:
+            str: Le nom du type de logique (ex: "PL", "FOL").
+        """
+        return self._logic_type_name
 
-    @property        
-    def tweety_bridge(self) -> "TweetyBridge":        
-        """        
+    @property
+    def tweety_bridge(self) -> "TweetyBridge":
+        """
         Retourne l'instance de `TweetyBridge` associée à cet agent.
 
-        L'instance de `TweetyBridge` est typiquement initialisée lors de l'appel        
-        à `setup_agent_components` par la classe concrète.  
+        L'instance de `TweetyBridge` est typiquement initialisée lors de l'appel
+        à `setup_agent_components` par la classe concrète.
 
-        :return: L'instance de `TweetyBridge`.    
-        :rtype: TweetyBridge  
-        :raises RuntimeError: Si `TweetyBridge` n'a pas été initialisé.
-        """        
-        if not hasattr(self, "_tweety_bridge") or self._tweety_bridge is None:  
-          
-          # Cela suppose que setup_agent_components a été appelé et a initialisé le bridge.        
-          
-          # Une meilleure approche pourrait être d'injecter TweetyBridge au constructeur        
-          # ou d'avoir une méthode dédiée pour son initialisation si elle est complexe.        
-          
-          raise RuntimeError(          
-            "TweetyBridge not initialized. Call setup_agent_components or ensure it's injected."          
-          )        
-        return self._tweety_bridge        
+        Raises:
+            RuntimeError: Si `TweetyBridge` n'a pas été initialisé avant son accès.
+        Returns:
+            TweetyBridge: L'instance de `TweetyBridge` configurée pour cet agent.
+        """
+        if not hasattr(self, '_tweety_bridge') or self._tweety_bridge is None:
+            # Cela suppose que setup_agent_components a été appelé et a initialisé le bridge.
+            # Une meilleure approche pourrait être d'injecter TweetyBridge au constructeur
+            # ou d'avoir une méthode dédiée pour son initialisation si elle est complexe.
+            raise RuntimeError("TweetyBridge not initialized. Call setup_agent_components or ensure it's injected.")
+        return self._tweety_bridge
 
-    @abstractmethod        
-    def setup_agent_components(self, llm_service_id: Optional[str] = None) -> None:        
-        """        
-        Configure les composants spécifiques de l'agent, comme les fonctions sémantiques.
+    @abstractmethod
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
+        """
+        Convertit un texte en langage naturel en un ensemble de croyances formelles.
 
-        Cette méthode peut être surchargée par les classes filles pour des configurations        
-        plus complexes. Par défaut, elle s'assure que l'ID du service LLM est défini.     
+        Args:
+            text (str): Le texte à convertir.
+            context (Optional[Dict[str, Any]]): Contexte additionnel pour
+                guider la conversion.
 
-        Args:            
-          llm_service_id (Optional[str]): L'ID du service LLM à utiliser.        
-        """        
-        if llm_service_id:            
-            self._llm_service_id = llm_service_id            
-            self.logger.info(            
-              f"Composants de l'agent configurés pour utiliser le service LLM: {llm_service_id}"            
-            )        
-        else:            
-            self.logger.info(            
-              "Aucun service LLM spécifique fourni pour la configuration des composants."            
-            )        
+        Returns:
+            Tuple[Optional['BeliefSet'], str]: Un tuple contenant l'objet
+            `BeliefSet` créé (ou None en cas d'échec) et un message de statut.
+        """
+        pass
 
-    @abstractmethod        
-    def text_to_belief_set(        
-        self, text: str, context: Optional[Dict[str, Any]] = None        
-    ) -> Tuple[Optional["BeliefSet"], str]:        
-        """        
-        Convertit un texte en langage naturel en un ensemble de croyances formelles.      
+    @abstractmethod
+    def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
+        """
+        Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.
 
-        Args:            
-          text (str): Le texte à convertir.     
-          context (Optional[Dict[str, Any]]): Contexte additionnel pour        
-            guider la conversion.   
+        Args:
+            text (str): Le texte source pour inspirer les requêtes.
+            belief_set (BeliefSet): L'ensemble de croyances sur lequel les
+                requêtes seront basées.
+            context (Optional[Dict[str, Any]]): Contexte additionnel.
 
-        Returns:            
-          Tuple[Optional['BeliefSet'], str]: Un tuple contenant l'objet        
-          `BeliefSet` créé (ou None en cas d'échec) et un message de statut.  
-        """        
-        pass        
+        Returns:
+            List[str]: Une liste de requêtes logiques sous forme de chaînes.
+        """
+        pass
 
-    @abstractmethod        
-    def generate_queries(        
-        self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None        
-    ) -> List[str]:        
-        """        
-        Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.        
+    @abstractmethod
+    def execute_query(self, belief_set: "BeliefSet", query: str) -> Tuple[Optional[bool], str]:
+        """
+        Exécute une requête logique sur un ensemble de croyances.
 
-        Args:            
-          text (str): Le texte source pour inspirer les requêtes.   
-          belief_set ("BeliefSet"): L'ensemble de croyances sur lequel        
-            les requêtes seront basées. 
-          context (Optional[Dict[str, Any]]): Contexte additionnel pour        
-            guider la conversion.   
+        Utilise `self.tweety_bridge` pour interagir avec le solveur logique.
 
-        Returns:            
-          List[str]: Une liste de requêtes logiques sous forme de chaînes.    
-        """        
-        pass        
+        Args:
+            belief_set (BeliefSet): La base de connaissances sur laquelle la
+                requête est exécutée.
+            query (str): La requête logique à exécuter.
 
-    @abstractmethod        
-    def execute_query(        
-        self, belief_set: "BeliefSet", query: str        
-    ) -> Tuple[Optional[bool], str]:        
-        """        
-        Exécute une requête logique sur un ensemble de croyances.     
+        Returns:
+            Tuple[Optional[bool], str]: Un tuple contenant le résultat
+            (True, False, ou None si indéterminé) et un message de statut
+            du solveur.
+        """
+        pass
 
-        Args:            
-          belief_set ("BeliefSet"): La base de connaissances sur laquelle la requête est exécutée.   
-          query (str): La requête logique à exécuter.     
+    @abstractmethod
+    def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Interprète les résultats des requêtes logiques en langage naturel.
 
-        Returns:            
-          Tuple[Optional[bool], str]: Un tuple avec le résultat (True, False, ou None si indéterminé) et un message de statut du solveur.    
-        """        
-        pass        
+        Args:
+            text (str): Le texte source original.
+            belief_set (BeliefSet): L'ensemble de croyances utilisé.
+            queries (List[str]): La liste des requêtes qui ont été exécutées.
+            results (List[Tuple[Optional[bool], str]]): La liste des résultats
+                correspondant aux requêtes.
+            context (Optional[Dict[str, Any]]): Contexte additionnel.
 
-    @abstractmethod        
-    def interpret_results(        
-        self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None        
-    ) -> str:        
-        """        
-        Interprète les résultats des requêtes logiques en langage naturel.      
+        Returns:
+            str: Une synthèse en langage naturel des résultats logiques.
+        """
+        pass
 
-        Args:            
-          text (str): Le texte source original. 
-          belief_set ("BeliefSet"): L'ensemble de croyances utilisé.  
-          queries (List[str]): La liste des requêtes qui ont été exécutées.   
-          results (List[Tuple[Optional[bool], str]]): La liste des résultats        
-            correspondant aux requêtes.       
-          context (Optional[Dict[str, Any]]): Contexte additionnel.   
+    @abstractmethod
+    def validate_formula(self, formula: str) -> bool:
+        """
+        Valide la syntaxe d'une formule logique.
 
-        Returns:            
-          str: Une synthèse en langage naturel des résultats logiques.        
-        """        
-        pass        
+        Utilise `self.tweety_bridge` pour accéder au parser de la logique cible.
 
-    # @abstractmethod # Remplacé par l'utilisation directe du bridge  
-    # def validate_formula(self, formula: str) -> bool:        
-    #     """        
-    #     Valide la syntaxe d'une formule logique.  
+        Args:
+            formula (str): La formule à valider.
 
-    #     Args:            
-    #       formula (str): La formule à valider.  
+        Returns:
+            bool: True si la syntaxe de la formule est correcte, False sinon.
+        """
+        pass
 
-    #     Returns:            
-    #       bool: True si la syntaxe de la formule est correcte, False sinon.   
-    #     """        
-    #     pass        
+    @abstractmethod
+    def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
+        """
+        Vérifie si un ensemble de croyances est logiquement cohérent.
 
-    # @abstractmethod # Remplacé par l'utilisation directe du bridge  
-    # def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:        
-    #     """        
-    #     Vérifie si un ensemble de croyances est logiquement cohérent. 
+        Utilise le `TweetyBridge` pour appeler le solveur approprié.
 
-    #     Args:            
-    #       belief_set ("BeliefSet"): L'ensemble de croyances à vérifier.
+        Args:
+            belief_set (BeliefSet): L'ensemble de croyances à vérifier.
 
-    #     Returns:            
-    #       Tuple[bool, str]: Un tuple contenant un booléen (True si cohérent) et un message de statut du solveur.   
-    #     """        
-    #     pass        
+        Returns:
+            Tuple[bool, str]: Un tuple contenant un booléen (True si cohérent)
+            et un message de statut du solveur.
+        """
+        pass
 
-    async def process_task(        
-        self, task_id: str, task_description: str, state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Traite une tâche assignée à l'agent logique.        
-        Migré depuis AbstractLogicAgent pour unifier l'architecture.        
-        """        
-        self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")        
-        state = state_manager.get_current_state_snapshot(summarize=False)        
-        if "Traduire" in task_description and "Belief Set" in task_description:            
-            return await self._handle_translation_task(            
-              task_id, task_description, state, state_manager            
-            )        
-        elif "Exécuter" in task_description and "Requêtes" in task_description:            
-            return await self._handle_query_task(            
-              task_id, task_description, state, state_manager            
-            )        
-        else:            
-            error_msg = f"Type de tâche non reconnu: {task_description}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
+    def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
+        """
+        Traite une tâche assignée à l'agent logique.
+        Migré depuis AbstractLogicAgent pour unifier l'architecture.
+        """
+        self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")
+        state = state_manager.get_current_state_snapshot(summarize=False)
+        if "Traduire" in task_description and "Belief Set" in task_description:
+            return self._handle_translation_task(task_id, task_description, state, state_manager)
+        elif "Exécuter" in task_description and "Requêtes" in task_description:
+            return self._handle_query_task(task_id, task_description, state, state_manager)
+        else:
+            error_msg = f"Type de tâche non reconnu: {task_description}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
 
-    async def _handle_translation_task(        
-        self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Génère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.        
-        """        
-        raw_text = self._extract_source_text(task_description, state)        
-        if not raw_text:            
-            error_msg = "Impossible de trouver le texte source pour la traduction"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
+    def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+        """
+        Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
+        """
+        raw_text = self._extract_source_text(task_description, state)
+        if not raw_text:
+            error_msg = "Impossible de trouver le texte source pour la traduction"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+        
+        belief_set, status_msg = self.text_to_belief_set(raw_text)
+        if not belief_set:
+            error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+        
+        bs_id = state_manager.add_belief_set(logic_type=belief_set.logic_type, content=belief_set.content)
+        answer_text = f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
+        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
+        return {"status": "success", "message": answer_text, "belief_set_id": bs_id}
 
-        belief_set, status_msg = await self.text_to_belief_set(raw_text)        
-        if not belief_set:            
-            error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
+    def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+        """
+        Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
+        """
+        belief_set_id = self._extract_belief_set_id(task_description)
+        if not belief_set_id:
+            error_msg = "Impossible de trouver l'ID de l'ensemble de croyances dans la description de la tâche"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+        
+        belief_sets = state.get("belief_sets", {})
+        if belief_set_id not in belief_sets:
+            error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+        
+        belief_set_data = belief_sets[belief_set_id]
+        belief_set = self._create_belief_set_from_data(belief_set_data)
+        raw_text = self._extract_source_text(task_description, state)
+        queries = self.generate_queries(raw_text, belief_set)
+        if not queries:
+            error_msg = "Aucune requête n'a pu être générée"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[belief_set_id])
+            return {"status": "error", "message": error_msg}
+        
+        formatted_results = []
+        log_ids = []
+        raw_results = []
+        for query in queries:
+            result, result_str = self.execute_query(belief_set, query)
+            raw_results.append((result, result_str))
+            formatted_results.append(result_str)
+            log_id = state_manager.log_query_result(belief_set_id=belief_set_id, query=query, raw_result=result_str)
+            log_ids.append(log_id)
 
-        bs_id = state_manager.add_belief_set(            
-          logic_type=belief_set.logic_type, content=belief_set.content            
-        )        
-        answer_text = (            
-          f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"            
-        )        
-        state_manager.add_answer(            
-          task_id=task_id,                
-          author_agent=self.name,                
-          answer_text=answer_text,                
-          source_ids=[bs_id],            
-        )        
-        return {"status": "success", "message": answer_text, "belief_set_id": bs_id}        
+        interpretation = self.interpret_results(raw_text, belief_set, queries, raw_results)
+        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=interpretation, source_ids=[belief_set_id] + log_ids)
+        return {"status": "success", "message": interpretation, "queries": queries, "results": formatted_results, "log_ids": log_ids}
 
-    async def _handle_query_task(        
-        self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any        
-    ) -> Dict[str, Any]:        
-        """        
-        Génère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.        
-        """        
-        belief_set_id = self._extract_belief_set_id(task_description)        
-        if not belief_set_id:            
-            error_msg = "Impossible de trouver l'ID de l'ensemble de croyances dans la description de la tâche"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
+    def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:
+        """
+        Extrait le texte source pertinent pour une tâche.
+        """
+        raw_text = state.get("raw_text", "")
+        if not raw_text and "texte:" in task_description.lower():
+            parts = task_description.split("texte:", 1)
+            if len(parts) > 1:
+                raw_text = parts[1].strip()
+        return raw_text
 
-        belief_sets = state.get("belief_sets", {})        
-        if belief_set_id not in belief_sets:            
-            error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
+    def _extract_belief_set_id(self, task_description: str) -> Optional[str]:
+        """
+        Extrait un ID d'ensemble de croyances à partir de la description d'une tâche.
+        """
+        if "belief_set_id:" in task_description.lower():
+            parts = task_description.split("belief_set_id:", 1)
+            if len(parts) > 1:
+                bs_id_part = parts[1].strip()
+                bs_id = bs_id_part.split()[0].strip()
+                return bs_id
+        return None
 
-        belief_set_data = belief_sets[belief_set_id]        
-        belief_set = self._create_belief_set_from_data(belief_set_data)        
-        raw_text = self._extract_source_text(task_description, state)        
-        queries = await self.generate_queries(raw_text, belief_set)        
-        if not queries:            
-            error_msg = "Aucune requête n'a pu être générée"            
-            self.logger.error(error_msg)            
-            state_manager.add_answer(            
-              task_id=task_id,                
-              author_agent=self.name,                
-              answer_text=error_msg,                
-              source_ids=[],            
-            )            
-            return {"status": "error", "message": error_msg}        
-
-        formatted_results = []        
-        log_ids = []        
-        raw_results = []        
-        for query in queries:            
-            result, result_str = self.execute_query(belief_set, query)            
-            raw_results.append((result, result_str))        
-            formatted_results.append(result_str)        
-            log_id = state_manager.log_query_result(            
-              belief_set_id=belief_set_id, query=query, raw_result=result_str            
-            )        
-            log_ids.append(log_id)        
-
-        interpretation = self.interpret_results(            
-          raw_text, belief_set, queries, raw_results            
-        )        
-        state_manager.add_answer(            
-          task_id=task_id,                
-          author_agent=self.name,                
-          answer_text=interpretation,                
-          source_ids=[belief_set_id] + log_ids,            
-        )        
-        return {            
-          "status": "successs",                
-          "message": interpretation,                
-          "queries": queries,                
-          "results": formatted_results,                
-          "log_ids": log_ids,            
-        }        
-
-    def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:        
-        """        
-        Extrait le texte source pertinent pour une tâche.        
-        """        
-        raw_text = state.get("raw_text", "")        
-        if not raw_text and "texte:" in task_description.lower():            
-            parts = task_description.split("texte:", 1)            
-            if len(parts) > 1:                
-              raw_text = parts[1].strip()        
-        return raw_text        
-
-    def _extract_belief_set_id(self, task_description: str) -> Optional[str]:        
-        """        
-        Extrait un ID d'ensemble de croyances à partir de la description d'une tâche.        
-        """        
-        if "belief_set_id:" in task_description.lower():            
-            parts = task_description.split("belief_set_id:", 1)            
-            if len(parts) > 1:                
-              bs_id_part = parts[1].strip()                
-              bs_id = bs_id_part.split()[0].strip()                
-              return bs_id        
-        return None        
-
-    @abstractmethod        
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":        
-        """        
-        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.        
-        """        
-        pass        
+    @abstractmethod
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
+        """
+        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
+        """
+        pass

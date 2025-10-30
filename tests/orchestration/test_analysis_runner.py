@@ -48,11 +48,39 @@ async def test_analysis_runner_full_integration_flow(
     
     # Simuler AgentGroupChat pour retourner un historique de chat prédéfini
     mock_agent_group_chat = MagicMock()
+    mock_chat_instance = mock_agent_group_chat.return_value
+    
+    # Simuler le chat_history final après l'exécution de invoke.
+    # Le script principal va itérer sur ce chat_history pour l'affichage.
+    mock_msg1 = MagicMock()
+    mock_msg1.role = AuthorRole.USER
+    mock_msg1.name = "User"
+    mock_msg1.content = "Le sénateur prétend que sa loi va créer des emplois..."
+    
+    mock_msg2 = MagicMock()
+    mock_msg2.role = AuthorRole.ASSISTANT
+    mock_msg2.name = "Project_Manager"
+    mock_msg2.content = "Analysis complete, fallacy identified."
+    
+    # L'instance de chat mockée aura ce chat_history après l'appel à invoke
+    mock_chat_instance.chat_history = [mock_msg1, mock_msg2]
+    
+    # --- Act (Action) ---
+    # Le script `main` est exécuté. `capsys` va capturer toute sortie vers stdout/stderr.
+    await analysis_runner_main()
+    
+    # --- Assert (Vérification) ---
+    
+    # Vérifier que les méthodes clés ont été appelées
+    mock_app_settings.assert_called_once()
+    mock_kernel_builder.create_kernel.assert_called_once_with(mock_settings_instance)
     
     # --- Act (Action) ---
     
     # Importer et exécuter le module à tester
     from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+    
+    # --- Act (Action) ---
     
     # Créer l'instance avec les mocks
     runner = AnalysisRunner(mock_settings_instance)
@@ -92,3 +120,15 @@ async def test_analysis_runner_full_integration_flow(
     assert "text_analyzed" in result
     assert result["text_analyzed"] == "Test text for integration"
     assert result["mode"] == "demo"
+    
+    # Récupérer la sortie capturée par la fixture `capsys`
+    captured = capsys.readouterr()
+    output = captured.out
+
+    # Vérifier que la sortie finale contient les informations attendues de l'historique
+    # Le premier message vient du `chat_history` créé dans le script principal
+    # Vérifier que la sortie finale contient les informations attendues de l'historique mocké
+    assert "[USER] - User:" in output
+    assert "Le sénateur prétend que sa loi va créer des emplois..." in output
+    assert "[ASSISTANT] - Project_Manager:" in output
+    assert "Analysis complete, fallacy identified." in output
