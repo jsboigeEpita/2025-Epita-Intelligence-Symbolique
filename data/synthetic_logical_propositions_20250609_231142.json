@@ -1,0 +1,124 @@
+{
+  "timestamp": "2025-06-09T21:11:42.073264+00:00",
+  "propositions": [
+    {
+      "id": "PROP_1_502071",
+      "text": "For all B, if B is happy then B is necessary",
+      "domain": "first_order",
+      "variables": [
+        "A",
+        "B",
+        "C"
+      ],
+      "predicates": [
+        "Necessary",
+        "Happy",
+        "Tall"
+      ],
+      "connectors": [],
+      "quantifiers": [
+        "forall"
+      ]
+    },
+    {
+      "id": "PROP_2_502071",
+      "text": "It is necessarily Athens is rich",
+      "domain": "modal",
+      "variables": [
+        "Y",
+        "B"
+      ],
+      "predicates": [
+        "Rich"
+      ],
+      "connectors": [],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_3_502071",
+      "text": "For all R, if R is tall then R is teacher",
+      "domain": "first_order",
+      "variables": [
+        "R",
+        "B",
+        "Z"
+      ],
+      "predicates": [
+        "Tall",
+        "Teacher",
+        "Human"
+      ],
+      "connectors": [
+        "||"
+      ],
+      "quantifiers": [
+        "forall"
+      ]
+    },
+    {
+      "id": "PROP_4_502071",
+      "text": "It is possible that Plato is human",
+      "domain": "modal",
+      "variables": [
+        "X"
+      ],
+      "predicates": [
+        "Wise",
+        "Rich",
+        "Human",
+        "Smart"
+      ],
+      "connectors": [],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_5_502071",
+      "text": "There exists an C such that C is wise",
+      "domain": "first_order",
+      "variables": [
+        "C"
+      ],
+      "predicates": [
+        "Believes",
+        "Loves",
+        "Wise"
+      ],
+      "connectors": [],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_6_502071",
+      "text": "Either Happy or Happy",
+      "domain": "propositional",
+      "variables": [
+        "Q",
+        "R",
+        "P"
+      ],
+      "predicates": [
+        "Possible",
+        "Happy",
+        "Knows",
+        "Rich"
+      ],
+      "connectors": [
+        "||"
+      ],
+      "quantifiers": [
+        "forall"
+      ]
+    }
+  ],
+  "domains_used": [
+    "first_order",
+    "modal",
+    "propositional"
+  ],
+  "total_variables": 9,
+  "total_predicates": 12,
+  "generation_seed": 502071
+}

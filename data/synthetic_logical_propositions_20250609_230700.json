@@ -1,0 +1,182 @@
+{
+  "timestamp": "2025-06-09T21:07:00.763188+00:00",
+  "propositions": [
+    {
+      "id": "PROP_1_220763",
+      "text": "It is possibly Bob is tall",
+      "domain": "modal",
+      "variables": [
+        "Z",
+        "Y",
+        "X"
+      ],
+      "predicates": [
+        "Student",
+        "Knows",
+        "Tall"
+      ],
+      "connectors": [
+        "<=>"
+      ],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_2_220763",
+      "text": "Necessary is true",
+      "domain": "propositional",
+      "variables": [
+        "P"
+      ],
+      "predicates": [
+        "Happy",
+        "Necessary"
+      ],
+      "connectors": [],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_3_220763",
+      "text": "Believes and Possible",
+      "domain": "propositional",
+      "variables": [
+        "X"
+      ],
+      "predicates": [
+        "Rich",
+        "Knows",
+        "Believes",
+        "Possible"
+      ],
+      "connectors": [
+        "&&"
+      ],
+      "quantifiers": [
+        "forall"
+      ]
+    },
+    {
+      "id": "PROP_4_220763",
+      "text": "Science is wise",
+      "domain": "first_order",
+      "variables": [
+        "C",
+        "Y",
+        "Q"
+      ],
+      "predicates": [
+        "Wise",
+        "Loves"
+      ],
+      "connectors": [
+        "=>",
+        "||"
+      ],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_5_220763",
+      "text": "There exists an Y such that Y is teacher",
+      "domain": "first_order",
+      "variables": [
+        "R",
+        "P",
+        "Y"
+      ],
+      "predicates": [
+        "Loves",
+        "Teacher"
+      ],
+      "connectors": [
+        "=>"
+      ],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_6_220763",
+      "text": "It is it is required that Socrates is tall",
+      "domain": "modal",
+      "variables": [
+        "P",
+        "Y"
+      ],
+      "predicates": [
+        "Tall",
+        "Loves",
+        "Rich"
+      ],
+      "connectors": [
+        "&&"
+      ],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_7_220763",
+      "text": "Paris is happy",
+      "domain": "first_order",
+      "variables": [
+        "X"
+      ],
+      "predicates": [
+        "Happy",
+        "Possible"
+      ],
+      "connectors": [
+        "&&"
+      ],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_8_220763",
+      "text": "Wise is true",
+      "domain": "propositional",
+      "variables": [
+        "A",
+        "Z",
+        "X"
+      ],
+      "predicates": [
+        "Student",
+        "Wise"
+      ],
+      "connectors": [],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_9_220763",
+      "text": "It is necessarily London is mortal",
+      "domain": "modal",
+      "variables": [
+        "R",
+        "Q"
+      ],
+      "predicates": [
+        "Teacher",
+        "Rich",
+        "Mortal"
+      ],
+      "connectors": [
+        "=>",
+        "||"
+      ],
+      "quantifiers": [
+        "exists"
+      ]
+    }
+  ],
+  "domains_used": [
+    "first_order",
+    "modal",
+    "propositional"
+  ],
+  "total_variables": 8,
+  "total_predicates": 12,
+  "generation_seed": 220763
+}

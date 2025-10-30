@@ -1,0 +1,435 @@
+{
+  "context_patterns": {},
+  "fallacy_patterns": {},
+  "feedback_history": [
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-18T18:09:14.294262"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T00:36:09.912258"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T00:52:05.374402"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T02:27:20.659095"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T11:30:16.000683"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T12:03:46.858771"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T14:07:41.637756"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T16:06:36.356081"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T17:30:22.996780"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T18:48:15.674712"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:06:21.106311"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:16:23.943400"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:16:53.782416"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:17:15.817716"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:17:34.519957"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T19:18:23.397252"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T21:04:11.418937"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T21:34:53.712333"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T21:37:16.891003"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T21:46:03.227837"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T21:50:20.707413"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T22:05:12.647567"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T22:40:39.025212"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T23:12:24.832907"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-19T23:22:19.845853"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-20T13:25:48.482050"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T13:33:20.881507"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T13:54:59.888045"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T17:41:36.856545"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:00:14.049282"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:23:57.747058"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:36:17.896537"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:42:53.968111"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:46:33.170507"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T18:47:19.911097"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T19:16:28.957315"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T19:36:49.948844"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T21:15:05.423881"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T21:38:31.226352"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T21:46:12.245997"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T21:52:31.868078"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-21T21:56:07.238353"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T00:25:25.310187"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T00:32:41.001301"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T00:42:56.691224"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T01:51:28.495170"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:03:20.352827"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:11:12.136223"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:18:20.660722"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:24:51.237343"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:34:46.343181"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:46:08.067121"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T02:54:07.556705"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-22T03:00:30.363794"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-23T18:10:59.042276"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-23T21:24:49.023624"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-24T00:00:23.270833"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-24T01:11:58.670780"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-24T01:47:45.044822"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:11:39.216896"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:17:52.962636"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:24:21.505727"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:32:19.924867"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:39:01.689616"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T11:45:11.446884"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T14:42:16.661192"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T18:59:17.427433"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-30T19:09:45.655286"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-31T02:22:18.400308"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-31T02:29:40.830674"
+    },
+    {
+      "fallacy_id": "fallacy_0",
+      "is_correct": true,
+      "feedback_text": "Bonne détection.",
+      "timestamp": "2025-07-31T02:43:18.477068"
+    }
+  ],
+  "confidence_adjustments": {
+    "Appel à l'autorité": 0.5
+  }
+}

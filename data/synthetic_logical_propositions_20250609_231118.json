@@ -1,0 +1,122 @@
+{
+  "timestamp": "2025-06-09T21:11:18.233824+00:00",
+  "propositions": [
+    {
+      "id": "PROP_1_478233",
+      "text": "It is possible that Paris is happy",
+      "domain": "modal",
+      "variables": [
+        "A",
+        "Q"
+      ],
+      "predicates": [
+        "Possible",
+        "Happy",
+        "Teacher",
+        "Believes"
+      ],
+      "connectors": [
+        "<=>",
+        "=>"
+      ],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_2_478233",
+      "text": "Plato is rich",
+      "domain": "first_order",
+      "variables": [
+        "Z",
+        "X",
+        "A"
+      ],
+      "predicates": [
+        "Rich"
+      ],
+      "connectors": [
+        "!",
+        "&&"
+      ],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_3_478233",
+      "text": "Student and Student",
+      "domain": "propositional",
+      "variables": [
+        "C"
+      ],
+      "predicates": [
+        "Smart",
+        "Believes",
+        "Student"
+      ],
+      "connectors": [
+        "&&",
+        "||"
+      ],
+      "quantifiers": [
+        "exists"
+      ]
+    },
+    {
+      "id": "PROP_4_478233",
+      "text": "If Mortal then Mortal",
+      "domain": "propositional",
+      "variables": [
+        "Q"
+      ],
+      "predicates": [
+        "Mortal",
+        "Possible",
+        "Tall"
+      ],
+      "connectors": [
+        "=>",
+        "<=>"
+      ],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_5_478233",
+      "text": "Bob is believes",
+      "domain": "first_order",
+      "variables": [
+        "R",
+        "Y",
+        "X"
+      ],
+      "predicates": [
+        "Student",
+        "Wise",
+        "Believes"
+      ],
+      "connectors": [],
+      "quantifiers": []
+    },
+    {
+      "id": "PROP_6_478233",
+      "text": "Mortal is true",
+      "domain": "propositional",
+      "variables": [
+        "B",
+        "Q",
+        "P"
+      ],
+      "predicates": [
+        "Mortal",
+        "Necessary"
+      ],
+      "connectors": [],
+      "quantifiers": []
+    }
+  ],
+  "domains_used": [
+    "propositional",
+    "first_order",
+    "modal"
+  ],
+  "total_variables": 9,
+  "total_predicates": 11,
+  "generation_seed": 478233
+}
