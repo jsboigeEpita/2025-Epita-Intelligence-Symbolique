@@ -58,10 +58,9 @@ if TYPE_CHECKING:
 
 
 class BaseAgent(ChatCompletionAgent, ABC):        
-    """Classe de base abstraite (ABC) pour tous les agents du système.   
-
-    Cette classe établit un contrat que tous les agents doivent suivre. Elle définit l'interface commune pour l'initialisation, la configuration,        
-    la description des capacités et le cycle d'invocation. Chaque agent doit être associé à un `Kernel` de Semantic Kernel.     
+    """Classe de base abstraite (ABC) pour tous les agents du système.
+    Cette classe établit un contrat que tous les agents doivent suivre. Elle définit l'interface commune pour l'initialisation, la configuration,
+    la description des capacités et le cycle d'invocation. Chaque agent doit être associé à un `Kernel` de Semantic Kernel.
 
     Le contrat impose aux classes dérivées d'implémenter des méthodes clés pour la configuration n (`setup_agent_components`) et t l'exécution        
     de leur logique métier (`invoke_single`).     
