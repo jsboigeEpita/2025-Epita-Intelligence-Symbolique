@@ -7,6 +7,7 @@ Orchestrateur authentique utilisant des LLMs réels pour l'analyse d'argumentati
 en intégrant toutes les capacités du système unifié.
 """
 
+import warnings
 import logging
 import asyncio
 import json
@@ -76,6 +77,13 @@ class RealLLMOrchestrator:
     ):
         self.mode = mode
         self.kernel = kernel
+        warnings.warn(
+            "`RealLLMOrchestrator` is deprecated and will be removed in a future version. "
+            "It is maintained for backward compatibility only. "
+            "Please use the new agent group chat architecture for new implementations.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         self.config = config or self._default_config()
         self.logger = logging.getLogger(__name__)
         self.is_initialized = False

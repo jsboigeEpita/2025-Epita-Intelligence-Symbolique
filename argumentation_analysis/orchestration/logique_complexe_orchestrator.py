@@ -1,6 +1,7 @@
 # argumentation_analysis/orchestration/logique_complexe_orchestrator.py
 
 import logging
+import warnings
 import asyncio
 from typing import Optional, List, Dict, Any
 from semantic_kernel import Kernel
@@ -84,6 +85,13 @@ from .base import Agent, SelectionStrategy, TerminationStrategy
 # Définition minimale pour LogiqueComplexeOrchestrator
 class LogiqueComplexeOrchestrator:
     def __init__(self, kernel: Kernel = None, **kwargs):
+        warnings.warn(
+            "`LogiqueComplexeOrchestrator` is deprecated and contains minimal logic. "
+            "It is maintained for backward compatibility only. "
+            "Please use the new agent group chat architecture for new implementations.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         self._logger = logging.getLogger(self.__class__.__name__)
         self.kernel = kernel
         self._logger.info(

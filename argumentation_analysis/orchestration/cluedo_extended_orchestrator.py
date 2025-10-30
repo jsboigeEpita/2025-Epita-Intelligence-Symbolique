@@ -1,14 +1,14 @@
-﻿# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
-"""
+﻿"""
 Orchestrateur pour workflow Cluedo étendu avec 3 agents : Sherlock → Watson → Moriarty.
 
-Ce module implémente l'orchestration avancée pour le workflow 3-agents avec agent Oracle,
+Ce module implémente l'orchestration avancée pour le workflow3-agents avec agent Oracle,
 incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec CluedoOracleState.
 """
 
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
+import warnings
 from datetime import datetime
 
 import semantic_kernel as sk
@@ -22,20 +22,6 @@ from semantic_kernel.agents import Agent
 
 # from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-
-
-class AgentGroupChat:
-    """Fallback class for compatibility."""
-
-    def __init__(self, agents: List[Agent] = None, **kwargs):
-        self.agents = agents or []
-
-
-AGENTS_AVAILABLE = True
-from semantic_kernel.functions import KernelArguments
-from semantic_kernel.contents.streaming_chat_message_content import (
-    StreamingChatMessageContent,
-)
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
 try:
@@ -384,6 +370,13 @@ class CluedoExtendedOrchestrator:
             oracle_strategy: Stratégie Oracle ("cooperative", "competitive", "balanced", "progressive")
             adaptive_selection: Active la sélection adaptative (Phase 2)
         """
+        warnings.warn(
+            "`CluedoExtendedOrchestrator` is deprecated and will be removed in a future version. "
+            "It is maintained for backward compatibility only. "
+            "Please use new agent group chat architecture for new implementations.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         self.kernel = kernel
         self.settings = settings
         self.max_turns = max_turns
@@ -482,6 +475,7 @@ class CluedoExtendedOrchestrator:
         selection_strategy = CyclicSelectionStrategy(
             agents, self.adaptive_selection, self.oracle_state
         )  # PHASE C: Passer oracle_state
+
         termination_strategy = OracleTerminationStrategy(
             max_turns=self.max_turns,
             max_cycles=self.max_cycles,
@@ -988,6 +982,7 @@ class CluedoExtendedOrchestrator:
             "suspect",
             "suppose",
         ]
+
         if not any(keyword in content_lower for keyword in suggestion_keywords):
             return None
 
@@ -1117,6 +1112,7 @@ class CluedoExtendedOrchestrator:
                 "can_refute": False,
                 "error": str(e),
             }
+
         # Trouver l'agent et le contenu qui ont déclenché la réaction
         trigger_agent = None
         trigger_content = ""
@@ -1217,6 +1213,14 @@ async def run_cluedo_oracle_game(
     Returns:
         Résultat complet du workflow
     """
+    warnings.warn(
+        "`run_cluedo_oracle_game` is deprecated and part of a legacy module. "
+        "It is maintained for backward compatibility only. "
+        "Please use new agent group chat architecture for new implementations.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     orchestrator = CluedoExtendedOrchestrator(
         kernel=kernel,
         max_turns=max_turns,
@@ -1225,6 +1229,7 @@ async def run_cluedo_oracle_game(
     )
 
     await orchestrator.setup_workflow()
+
     return await orchestrator.execute_workflow(initial_question)
 
 

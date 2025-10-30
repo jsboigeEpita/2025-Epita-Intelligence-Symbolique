@@ -1,15 +1,24 @@
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
+import warnings
+from datetime import datetime
 
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
+from argumentation_analysis.orchestration.base import (
+    SelectionStrategy,
+    TerminationStrategy,
+)
+from semantic_kernel.agents import Agent
+
+# from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.functions import KernelArguments
 from pydantic import Field
 
-# Configuration du logging en premier
+# Configuration du logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -82,6 +91,13 @@ async def run_cluedo_game(
     history: List[ChatMessageContent] = None,
     max_turns: Optional[int] = 10,
 ) -> (List[Dict[str, Any]], EnqueteCluedoState):
+    warnings.warn(
+        "`run_cluedo_game` is deprecated and part of a legacy module. "
+        "It is maintained for backward compatibility only. "
+        "Please use new agent group chat architecture for new implementations.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     """Exécute une partie de Cluedo avec une logique de tours de jeu."""
     if history is None:
         history = []
@@ -109,7 +125,9 @@ async def run_cluedo_game(
 
     elements = enquete_state.elements_jeu_cluedo
     all_constants = [
-        name.replace(" ", "") for category in elements.values() for name in category
+        name.replace(" ", "")
+        for category in elements.values()
+        for name in category
     ]
 
     # Récupération du service_id depuis les settings
@@ -209,8 +227,6 @@ async def main():
         )
     print("--- Fin de l'État ---")
 
-
-if __name__ == "__main__":
     try:
         asyncio.run(main())
     except Exception as e:
@@ -218,3 +234,7 @@ if __name__ == "__main__":
         import traceback
 
         traceback.print_exc()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
