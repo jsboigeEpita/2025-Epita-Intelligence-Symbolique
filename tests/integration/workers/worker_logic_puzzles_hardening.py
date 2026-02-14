@@ -3,6 +3,7 @@
 """
 Worker pour l'exécution des tests de puzzles logiques dans un environnement JVM isolé.
 """
+
 import sys
 import json
 import asyncio

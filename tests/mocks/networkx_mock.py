@@ -423,9 +423,9 @@ sys.modules["networkx"] = sys.modules[__name__]
 sys.modules["networkx.algorithms"] = algorithms
 sys.modules["networkx.algorithms.centrality"] = algorithms.centrality
 sys.modules["networkx.algorithms.shortest_paths"] = algorithms.shortest_paths
-sys.modules[
-    "networkx.algorithms.shortest_paths.generic"
-] = algorithms.shortest_paths.generic
+sys.modules["networkx.algorithms.shortest_paths.generic"] = (
+    algorithms.shortest_paths.generic
+)
 sys.modules["networkx.algorithms.components"] = algorithms.components
 sys.modules["networkx.generators"] = generators
 sys.modules["networkx.generators.classic"] = generators.classic

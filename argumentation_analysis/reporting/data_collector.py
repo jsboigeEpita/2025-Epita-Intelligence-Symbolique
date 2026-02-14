@@ -344,7 +344,7 @@ class DataCollector:
                 "memory_usage_mb": 128,
                 "active_agents_count": 3,
                 "success_rate": 1.0,
-            }
+            },
             # Add other necessary data sections here
         }
         logger.info("Data gathering complete.")

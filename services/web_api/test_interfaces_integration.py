@@ -4,7 +4,7 @@
 Tests d'intégration inter-interfaces
 ====================================
 
-Tests pour valider la coexistence et l'intégration entre l'interface React 
+Tests pour valider la coexistence et l'intégration entre l'interface React
 et l'interface Flask dans le même environnement de services web.
 
 Version: 1.0.0

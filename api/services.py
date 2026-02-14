@@ -208,13 +208,17 @@ class DungAnalysisService:
         for name in arg_names:
             all_status[name] = {
                 "credulously_accepted": any(name in ext for ext in preferred_ext_str),
-                "skeptically_accepted": all(name in ext for ext in preferred_ext_str)
-                if preferred_ext_str
-                else False,
+                "skeptically_accepted": (
+                    all(name in ext for ext in preferred_ext_str)
+                    if preferred_ext_str
+                    else False
+                ),
                 "grounded_accepted": name in grounded_ext_str,
-                "stable_accepted": all(name in ext for ext in stable_ext_str)
-                if stable_ext_str
-                else False,
+                "stable_accepted": (
+                    all(name in ext for ext in stable_ext_str)
+                    if stable_ext_str
+                    else False
+                ),
             }
         return all_status
 

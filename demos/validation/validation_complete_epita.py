@@ -73,7 +73,6 @@ from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.contents.function_result_content import FunctionResultContent
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if not (PROJECT_ROOT / "examples" / "scripts_demonstration").exists():
     PROJECT_ROOT = Path(__file__).resolve().parent.parent

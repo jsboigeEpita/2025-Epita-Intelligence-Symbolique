@@ -237,9 +237,11 @@ class SessionSummary:
             investigation_type=InvestigationType(data["investigation_type"]),
             status=SessionStatus(data["status"]),
             start_time=datetime.fromisoformat(data["start_time"]),
-            end_time=datetime.fromisoformat(data["end_time"])
-            if data.get("end_time")
-            else None,
+            end_time=(
+                datetime.fromisoformat(data["end_time"])
+                if data.get("end_time")
+                else None
+            ),
             participating_agents=participating_agents,
             lead_investigator=data.get("lead_investigator"),
             investigation_outcome=data.get("investigation_outcome"),
@@ -819,9 +821,9 @@ class InvestigationSessionModel:
             "status": self.status.value,
             "start_time": self.start_time.isoformat(),
             "end_time": self.end_time.isoformat() if self.end_time else None,
-            "max_duration": self.max_duration.total_seconds()
-            if self.max_duration
-            else None,
+            "max_duration": (
+                self.max_duration.total_seconds() if self.max_duration else None
+            ),
             "auto_checkpoint_interval": self.auto_checkpoint_interval.total_seconds(),
             "max_checkpoints": self.max_checkpoints,
             "registered_agents": {
@@ -836,9 +838,11 @@ class InvestigationSessionModel:
             "session_beliefs": self.session_beliefs,
             "shared_justifications": self.shared_justifications,
             "global_consistency_state": self.global_consistency_state,
-            "last_checkpoint_time": self.last_checkpoint_time.isoformat()
-            if self.last_checkpoint_time
-            else None,
+            "last_checkpoint_time": (
+                self.last_checkpoint_time.isoformat()
+                if self.last_checkpoint_time
+                else None
+            ),
             "investigation_phases": self.investigation_phases,
             "current_phase": self.current_phase,
             "hypotheses_under_test": self.hypotheses_under_test,
@@ -884,9 +888,11 @@ class InvestigationSessionModel:
             status=status,
             start_time=start_time,
             end_time=end_time,
-            max_duration=timedelta(seconds=data["max_duration"])
-            if data.get("max_duration")
-            else None,
+            max_duration=(
+                timedelta(seconds=data["max_duration"])
+                if data.get("max_duration")
+                else None
+            ),
             auto_checkpoint_interval=timedelta(
                 seconds=data.get("auto_checkpoint_interval", 600)
             ),

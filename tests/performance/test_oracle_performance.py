@@ -39,7 +39,6 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
     MoriartyInterrogatorAgent,
 )
 
-
 # Configuration pour tests de performance
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PERFORMANCE_TESTS_ENABLED = (
@@ -149,7 +148,7 @@ def performance_profiler():
 def real_gpt_kernel_performance():
     """
     Kernel optimisé pour tests de performance.
-    
+
     Note: Les tests utilisant cette fixture DOIVENT être marqués avec
     @pytest.mark.requires_openai pour un skip cohérent en l'absence de clé API.
     """

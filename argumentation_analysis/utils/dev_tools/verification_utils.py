@@ -29,7 +29,6 @@ from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.config.settings import settings
 
-
 logger = logging.getLogger(__name__)
 
 # --- Fonctions déplacées depuis argumentation_analysis/utils/extract_repair/marker_verification_logic.py ---
@@ -151,17 +150,17 @@ def verify_extract(
     else:  # Cas où start_found ou end_found (ou les deux) sont faux
         result_details["status"] = "invalid"
         if not start_found and not end_found:
-            result_details[
-                "message"
-            ] = "Extrait invalide. Les deux marqueurs sont introuvables."
+            result_details["message"] = (
+                "Extrait invalide. Les deux marqueurs sont introuvables."
+            )
         elif not start_found:
-            result_details[
-                "message"
-            ] = "Extrait invalide. Le marqueur de début est introuvable."
+            result_details["message"] = (
+                "Extrait invalide. Le marqueur de début est introuvable."
+            )
         else:
-            result_details[
-                "message"
-            ] = "Extrait invalide. Le marqueur de fin est introuvable."
+            result_details["message"] = (
+                "Extrait invalide. Le marqueur de fin est introuvable."
+            )
         logger.error(f"Extrait '{extract_name}' invalide. {result_details['message']}")
 
     return result_details

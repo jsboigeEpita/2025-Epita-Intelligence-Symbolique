@@ -366,9 +366,9 @@ class UnifiedCorpusManager:
             total_content_length=total_content_length,
             file_size_bytes=file_size,
             last_modified=last_modified,
-            encryption_status="encrypted"
-            if self.encrypted_file_path.exists()
-            else "not_found",
+            encryption_status=(
+                "encrypted" if self.encrypted_file_path.exists() else "not_found"
+            ),
             sources_summary=sources_summary,
         )
 
@@ -417,9 +417,11 @@ class UnifiedCorpusManager:
                     "end_marker": extract.get("end_marker", ""),
                     "has_content": "full_text" in extract
                     and bool(extract.get("full_text")),
-                    "content_length": len(extract.get("full_text", ""))
-                    if extract.get("full_text")
-                    else 0,
+                    "content_length": (
+                        len(extract.get("full_text", ""))
+                        if extract.get("full_text")
+                        else 0
+                    ),
                     "metadata": extract.get("metadata", {}),
                 }
 
@@ -727,10 +729,11 @@ class UnifiedCorpusManager:
                         "total_sources": total_sources,
                         "total_extracts": total_extracts,
                         "corrupted_sources": corrupted_sources,
-                        "integrity_score": (total_sources - corrupted_sources)
-                        / total_sources
-                        if total_sources > 0
-                        else 0,
+                        "integrity_score": (
+                            (total_sources - corrupted_sources) / total_sources
+                            if total_sources > 0
+                            else 0
+                        ),
                     }
 
                 else:

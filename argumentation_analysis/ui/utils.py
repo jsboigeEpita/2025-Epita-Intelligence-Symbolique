@@ -425,7 +425,7 @@ def get_full_text_for_source(
                 source_url=reconstructed_url,
                 tika_server_url_override=tika_server_url_val,
                 plaintext_extensions_override=plaintext_extensions_val,
-                temp_download_dir_override=temp_download_dir_val
+                temp_download_dir_override=temp_download_dir_val,
                 # raw_file_cache_path n'est pas géré par app_config ici, fetch_with_tika le déduit si besoin
             )
         else:

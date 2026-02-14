@@ -66,9 +66,11 @@ class MockArgumentMiner:
                         "premise": premise_content,
                         "conclusion": conclusion_content,
                         "confidence": 0.85 if conclusion_content else 0.60,
-                        "details": "Prémisse et conclusion explicitement marquées."
-                        if conclusion_content
-                        else "Prémisse détectée sans conclusion explicite.",
+                        "details": (
+                            "Prémisse et conclusion explicitement marquées."
+                            if conclusion_content
+                            else "Prémisse détectée sans conclusion explicite."
+                        ),
                     }
                 )
 

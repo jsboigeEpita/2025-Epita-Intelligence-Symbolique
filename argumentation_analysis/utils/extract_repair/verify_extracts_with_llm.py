@@ -375,9 +375,11 @@ async def evaluate_extract(
             "coherence": int(coherence_match.group(1)) if coherence_match else 0,
             "relevance": int(relevance_match.group(1)) if relevance_match else 0,
             "integrity": int(integrity_match.group(1)) if integrity_match else 0,
-            "comments": comments_match.group(1)
-            if comments_match
-            else "Commentaires non disponibles",
+            "comments": (
+                comments_match.group(1)
+                if comments_match
+                else "Commentaires non disponibles"
+            ),
         }
 
     # Récupérer les résultats de l'évaluation

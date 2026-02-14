@@ -101,7 +101,7 @@ def test_fix_encoding_unknown_encoding(temp_file_for_encoding_test):
     # Une séquence de début de caractère multi-byte UTF-8 tronquée peut causer cela.
     # Ou des bytes spécifiques à des encodages non listés (ex: KOI8-R)
     unknown_bytes = (
-        b"\x9A\x7A\x80\xFF\xFE"  # Séquence aléatoire, peu probable d'être valide
+        b"\x9a\x7a\x80\xff\xfe"  # Séquence aléatoire, peu probable d'être valide
     )
     file_path = temp_file_for_encoding_test(None, content_bytes=unknown_bytes)
 

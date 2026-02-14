@@ -41,7 +41,7 @@ class SynthesisAgent(BaseAgent):
         _informal_agent (Optional[Any]): Instance de l'agent d'analyse informelle.
         _llm_service_id (str): ID du service LLM utilisé pour les fonctions sémantiques.
     """
-    
+
     # Déclaration des attributs Pydantic pour compatibilité avec BaseAgent
     _enable_advanced_features: bool = PrivateAttr(default=False)
     _logic_agents_cache: Dict[str, Any] = PrivateAttr(default_factory=dict)

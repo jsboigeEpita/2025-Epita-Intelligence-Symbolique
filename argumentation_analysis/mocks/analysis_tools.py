@@ -48,9 +48,9 @@ class MockContextualFallacyDetector:
                     {
                         "fallacy_type": fallacy_type,
                         "description": f"Simulation de sophisme: {fallacy_type}",
-                        "context_text": argument[:50] + "..."
-                        if len(argument) > 50
-                        else argument,
+                        "context_text": (
+                            argument[:50] + "..." if len(argument) > 50 else argument
+                        ),
                         "severity": round(random.uniform(0.5, 0.9), 2),
                         "contextual_factors": {
                             "domain": random.choice(
@@ -197,9 +197,9 @@ class MockSemanticArgumentAnalyzer:
                 components.append(
                     {
                         "component_type": "claim",
-                        "text": argument[:50] + "..."
-                        if len(argument) > 50
-                        else argument,
+                        "text": (
+                            argument[:50] + "..." if len(argument) > 50 else argument
+                        ),
                         "confidence": round(random.uniform(0.6, 0.9), 2),
                     }
                 )
@@ -207,9 +207,9 @@ class MockSemanticArgumentAnalyzer:
                 components.append(
                     {
                         "component_type": "data",
-                        "text": argument[:30] + "..."
-                        if len(argument) > 30
-                        else argument,
+                        "text": (
+                            argument[:30] + "..." if len(argument) > 30 else argument
+                        ),
                         "confidence": round(random.uniform(0.5, 0.8), 2),
                     }
                 )

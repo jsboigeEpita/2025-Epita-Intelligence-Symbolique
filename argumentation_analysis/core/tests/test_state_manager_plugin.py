@@ -11,9 +11,9 @@ from unittest.mock import patch, MagicMock, call
 
 # Mock pour semantic_kernel.functions.kernel_function
 sys.modules["semantic_kernel.functions"] = MagicMock()
-sys.modules[
-    "semantic_kernel.functions"
-].kernel_function = lambda **kwargs: lambda func: func
+sys.modules["semantic_kernel.functions"].kernel_function = (
+    lambda **kwargs: lambda func: func
+)
 
 # Maintenant on peut importer les modules à tester
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState

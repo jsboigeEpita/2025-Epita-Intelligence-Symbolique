@@ -148,9 +148,7 @@ def afficher_rapport_global(
     couleur_taux = (
         Colors.GREEN
         if taux_global >= 90
-        else Colors.WARNING
-        if taux_global >= 70
-        else Colors.FAIL
+        else Colors.WARNING if taux_global >= 70 else Colors.FAIL
     )
     print(f"{couleur_taux}Taux de succès global : {taux_global:.1f}%{Colors.ENDC}")
 

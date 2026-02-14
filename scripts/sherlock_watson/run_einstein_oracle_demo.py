@@ -538,7 +538,9 @@ def display_einstein_results(result: Dict[str, Any]):
     print(f"   Indices donnés: {len(oracle_perf.get('indices_progression', []))}")
 
     print(f"\n🎉 SUCCÈS DÉMO:")
-    print(f"   Puzzle complété: {'✅' if demo_success.get('puzzle_completed') else '❌'}")
+    print(
+        f"   Puzzle complété: {'✅' if demo_success.get('puzzle_completed') else '❌'}"
+    )
     print(f"   Moriarty Oracle: {demo_success.get('moriarty_as_oracle', 'N/A')}")
     print(f"   Déduction agents: {demo_success.get('agents_deduction', 'N/A')}")
 

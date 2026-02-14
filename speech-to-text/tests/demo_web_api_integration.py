@@ -69,7 +69,9 @@ def main():
         if analysis_result["status"] == "success":
             print(f"\n✅ Analysis completed successfully!")
             print(f"📊 Found {analysis_result['summary']['total_fallacies']} fallacies")
-            print(f"📈 Overall quality: {analysis_result['summary']['overall_quality']}")
+            print(
+                f"📈 Overall quality: {analysis_result['summary']['overall_quality']}"
+            )
             print(f"🌐 API version: {analysis_result['summary']['api_version']}")
 
             if analysis_result["fallacies_detected"]:

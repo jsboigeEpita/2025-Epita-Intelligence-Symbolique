@@ -612,9 +612,9 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
             - (
                 len(contradictory_relations) / max(1, len(argument_relations))
             ),  # Pénaliser les contradictions
-            0.0
-            if circular_reasoning
-            else 1.0,  # Pénaliser fortement le raisonnement circulaire
+            (
+                0.0 if circular_reasoning else 1.0
+            ),  # Pénaliser fortement le raisonnement circulaire
         ]
 
         coherence_score = sum(coherence_factors) / len(coherence_factors)
@@ -1251,9 +1251,9 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
 
         # Si un raisonnement circulaire est détecté, réduire le score de cohérence
         if circular_reasoning_detected:
-            structure_coherence[
-                "coherence_score"
-            ] = 0.3  # Score faible pour le raisonnement circulaire
+            structure_coherence["coherence_score"] = (
+                0.3  # Score faible pour le raisonnement circulaire
+            )
 
         # Évaluer la cohérence globale
         overall_coherence = self._evaluate_overall_coherence(

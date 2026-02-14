@@ -56,6 +56,7 @@ class TestModalLogicAgent:
         et de référence lors des tests.
         """
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = Mock(spec=Kernel)
         from semantic_kernel.functions.kernel_function import KernelFunction
 
@@ -64,10 +65,10 @@ class TestModalLogicAgent:
         mock_llm_service.service_id = "test_service"
         kernel.services = {"test_service": mock_llm_service}
         kernel.get_service = Mock(return_value=mock_llm_service)
-        
+
         # Ajouter l'attribut _kernel attendu par l'agent
         kernel._kernel = kernel  # Pour compatibilité avec agent_bases.py
-        
+
         # Pré-créer la structure des plugins avec des mocks de fonctions robustes
         kernel.plugins = {}
         for agent_name in ["TestModalAgent", "IntegrationAgent"]:
@@ -105,7 +106,9 @@ class TestModalLogicAgent:
         assert agent.name == "TestAgent"
         assert agent.logic_type == "Modal"
         assert agent._llm_service_id == "test_service"
-        assert isinstance(agent.kernel, Mock)  # CORRECTION: ModalLogicAgent utilise self.kernel, pas self._kernel
+        assert isinstance(
+            agent.kernel, Mock
+        )  # CORRECTION: ModalLogicAgent utilise self.kernel, pas self._kernel
 
     def test_get_agent_capabilities(self, modal_agent):
         """Test la récupération des capacités de l'agent."""
@@ -623,6 +626,7 @@ class TestModalLogicAgentIntegration:
         et de référence lors des tests.
         """
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = Mock(spec=Kernel)
         from semantic_kernel.functions.kernel_function import KernelFunction
 

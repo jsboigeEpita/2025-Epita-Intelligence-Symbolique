@@ -9,7 +9,7 @@ Ce test valide que tous les composants LLM du système utilisent GPT-4o-mini aut
 sans aucun fallback mock, conformément au plan Phase 2.
 
 Objectifs de validation :
-- Configuration UnifiedConfig strictement authentique  
+- Configuration UnifiedConfig strictement authentique
 - Service LLM GPT-4o-mini réel (OpenAI/Azure)
 - Agents core sans mocks
 - Semantic Kernel compatibility layer authentique

@@ -5,7 +5,7 @@
 Détecteur de sophismes unifié utilisant la vraie taxonomie.
 
 Ce module implémente un mécanisme unifié de détection de sophismes qui :
-- S'appuie sur la taxonomie réelle (400+ sophismes) 
+- S'appuie sur la taxonomie réelle (400+ sophismes)
 - Utilise les clés de la taxonomie pour désigner les sophismes
 - Présente les branches principales puis approfondit au bon niveau de spécificité
 - Remplace les mécanismes éparpillés et les mocks

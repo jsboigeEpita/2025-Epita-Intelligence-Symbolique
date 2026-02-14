@@ -23,9 +23,9 @@ try:
     # Importer le module directement par son chemin relatif
     from ..core.extract import extract_agent as core_extract_agent_module
 
-    sys.modules[
-        "argumentation_analysis.agents.extract.extract_agent"
-    ] = core_extract_agent_module
+    sys.modules["argumentation_analysis.agents.extract.extract_agent"] = (
+        core_extract_agent_module
+    )
 except ImportError as e:
     import logging
 

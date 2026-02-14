@@ -1,6 +1,7 @@
 """
 Utilitaires de gestion du cache pour l'interface utilisateur.
 """
+
 import hashlib
 import logging
 from pathlib import Path

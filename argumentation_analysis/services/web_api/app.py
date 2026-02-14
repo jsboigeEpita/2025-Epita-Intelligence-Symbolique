@@ -4,6 +4,7 @@
 """
 API Flask pour l'analyse argumentative.
 """
+
 import os
 import sys
 
@@ -40,7 +41,6 @@ from argumentation_analysis.services.web_api.models.response_models import Error
 # pour éviter de charger des bibliothèques natives (ex: PyTorch) avant la JVM.
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 from argumentation_analysis.config.settings import settings
-
 
 # La définition de la classe AppServices est déplacée dans le hook pour la même raison.
 

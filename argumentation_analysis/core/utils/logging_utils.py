@@ -4,6 +4,7 @@ Ce module fournit des utilitaires pour configurer le logging de l'application.
 Il permet d'initialiser le système de logging avec un niveau et un format
 standards, et de contrôler la verbosité des bibliothèques tierces.
 """
+
 import logging
 import sys
 

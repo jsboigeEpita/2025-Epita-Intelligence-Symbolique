@@ -4,6 +4,7 @@
 Script de simulation pour démontrer l'équilibrage de la participation des agents
 avec la stratégie BalancedParticipationStrategy.
 """
+
 #
 # Ce script utilise de véritables instances d'agents (et non des mocks) pour simuler
 # une conversation. Il démontre comment la `BalancedParticipationStrategy` peut être utilisée pour
@@ -43,7 +44,6 @@ from argumentation_analysis.agents.core.informal.informal_agent import (
     InformalAnalysisAgent,
 )
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-
 
 # Configuration du logging
 logging.basicConfig(

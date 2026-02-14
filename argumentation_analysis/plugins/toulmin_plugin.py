@@ -4,6 +4,7 @@ Module defining the ToulminPlugin for Semantic Kernel.
 This plugin is designed to be called by the Semantic Kernel to analyze
 an argument according to the Toulmin model.
 """
+
 from __future__ import annotations
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from typing import TYPE_CHECKING

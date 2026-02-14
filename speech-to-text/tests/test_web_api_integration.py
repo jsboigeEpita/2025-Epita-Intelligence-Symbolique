@@ -160,7 +160,9 @@ def test_complete_analysis_api():
                 f"🏗️ Structure score: {analysis_result['summary']['structure_score']}"
             )
         if "coherence_score" in analysis_result["summary"]:
-            print(f"🔗 Coherence score: {analysis_result['summary']['coherence_score']}")
+            print(
+                f"🔗 Coherence score: {analysis_result['summary']['coherence_score']}"
+            )
 
     except Exception as e:
         pytest.fail(f"Error during complete analysis: {str(e)}")

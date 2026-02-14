@@ -20,7 +20,7 @@ if not logger.handlers:
 
 
 def extract_execution_time_from_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Extrait les temps d'exécution à partir des timestamps dans les résultats d'analyse.
@@ -98,7 +98,7 @@ def extract_execution_time_from_results(
 
 
 def count_fallacies_in_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, int]]:
     """
     Compte le nombre de sophismes détectés par différents agents/types d'analyse
@@ -132,9 +132,9 @@ def count_fallacies_in_results(
             logger.debug(
                 f"Aucune donnée d'analyse (ou format incorrect) pour '{extract_name}' lors du comptage des sophismes. Utilisation des valeurs par défaut (0)."
             )
-            fallacy_counts[
-                extract_name
-            ] = current_extract_counts  # Contient maintenant les clés avec 0
+            fallacy_counts[extract_name] = (
+                current_extract_counts  # Contient maintenant les clés avec 0
+            )
             continue
 
         # Analyse de base - sophismes contextuels
@@ -173,9 +173,9 @@ def count_fallacies_in_results(
         # Analyse avancée - sophismes contextuels
         advanced_contextual_data = analyses_data.get("contextual_fallacies", {})
         if isinstance(advanced_contextual_data, dict):
-            current_extract_counts[
-                "advanced_contextual"
-            ] = advanced_contextual_data.get("contextual_fallacies_count", 0)
+            current_extract_counts["advanced_contextual"] = (
+                advanced_contextual_data.get("contextual_fallacies_count", 0)
+            )
         else:
             current_extract_counts["advanced_contextual"] = 0
 
@@ -186,7 +186,7 @@ def count_fallacies_in_results(
 
 
 def extract_confidence_scores_from_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Extrait les scores de confiance des différentes analyses.
@@ -238,9 +238,9 @@ def extract_confidence_scores_from_results(
                 "overall_analysis", {}
             )
             if isinstance(overall_rhetorical_analysis, dict):
-                current_extract_scores[
-                    "advanced_rhetorical"
-                ] = overall_rhetorical_analysis.get("rhetorical_quality", 0.0)
+                current_extract_scores["advanced_rhetorical"] = (
+                    overall_rhetorical_analysis.get("rhetorical_quality", 0.0)
+                )
             else:
                 current_extract_scores["advanced_rhetorical"] = 0.0
 
@@ -249,9 +249,9 @@ def extract_confidence_scores_from_results(
                 "coherence_analysis", {}
             )
             if isinstance(coherence_sub_analysis, dict):
-                current_extract_scores[
-                    "advanced_coherence"
-                ] = coherence_sub_analysis.get("overall_coherence", 0.0)
+                current_extract_scores["advanced_coherence"] = (
+                    coherence_sub_analysis.get("overall_coherence", 0.0)
+                )
             else:
                 current_extract_scores["advanced_coherence"] = 0.0
         else:
@@ -276,7 +276,7 @@ def extract_confidence_scores_from_results(
 
 
 def analyze_contextual_richness_from_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Analyse la richesse contextuelle des résultats d'analyse.
@@ -358,7 +358,7 @@ def analyze_contextual_richness_from_results(
 
 
 def evaluate_coherence_relevance_from_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Évalue la pertinence des évaluations de cohérence à partir des résultats d'analyse.
@@ -379,9 +379,9 @@ def evaluate_coherence_relevance_from_results(
         extract_name = result.get(
             "extract_name", "Inconnu_" + str(datetime.now().timestamp())
         )
-        current_extract_scores: Dict[
-            str, float
-        ] = {}  # Nom original était current_extract_relevance
+        current_extract_scores: Dict[str, float] = (
+            {}
+        )  # Nom original était current_extract_relevance
         analyses_data = result.get("analyses")
 
         if analyses_data is None or not isinstance(analyses_data, dict):
@@ -461,7 +461,7 @@ def _calculate_obj_complexity(obj: Any, depth: int = 0) -> float:
 
 
 def analyze_result_complexity_from_results(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Analyse la complexité des résultats produits par chaque agent/type d'analyse.

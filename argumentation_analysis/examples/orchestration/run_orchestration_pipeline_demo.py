@@ -14,13 +14,13 @@ Usage:
 Exemples:
     # Démonstration complète avec tous les modes
     python run_orchestration_pipeline_demo.py
-    
+
     # Mode spécifique
     python run_orchestration_pipeline_demo.py --mode hierarchical_full --type comprehensive
-    
+
     # Texte personnalisé
     python run_orchestration_pipeline_demo.py --text "Votre texte à analyser"
-    
+
     # Comparaison des approches
     python run_orchestration_pipeline_demo.py --compare
 

@@ -35,14 +35,14 @@ class TacticalState:
         self.task_assignments: Dict[str, str] = {}  # task_id -> agent_id
 
         # Dépendances entre tâches
-        self.task_dependencies: Dict[
-            str, List[str]
-        ] = {}  # task_id -> [dependent_task_ids]
+        self.task_dependencies: Dict[str, List[str]] = (
+            {}
+        )  # task_id -> [dependent_task_ids]
 
         # Progression des tâches
-        self.task_progress: Dict[
-            str, float
-        ] = {}  # task_id -> completion_rate (0.0 to 1.0)
+        self.task_progress: Dict[str, float] = (
+            {}
+        )  # task_id -> completion_rate (0.0 to 1.0)
 
         # Résultats intermédiaires
         self.intermediate_results: Dict[str, Any] = {}
@@ -476,9 +476,13 @@ class TacticalState:
             "task_dependencies": self.task_dependencies,
             "task_progress": self.task_progress,
             "intermediate_results": {
-                k: str(v)
-                if not isinstance(v, (dict, list, str, int, float, bool, type(None)))
-                else v
+                k: (
+                    str(v)
+                    if not isinstance(
+                        v, (dict, list, str, int, float, bool, type(None))
+                    )
+                    else v
+                )
                 for k, v in self.intermediate_results.items()
             },
             "identified_conflicts": self.identified_conflicts,

@@ -309,9 +309,9 @@ def run_embedding_generation_pipeline(
             f"Traitement de la source: {source_id} (Type: {source_info.get('type', 'N/A')}, Chemin/URL: {source_info.get('path', 'N/A')})"
         )
 
-        full_text_content_retrieved_this_run: Optional[
-            str
-        ] = None  # Pour suivre si le texte a été récupéré dans cette exécution
+        full_text_content_retrieved_this_run: Optional[str] = (
+            None  # Pour suivre si le texte a été récupéré dans cette exécution
+        )
 
         # Étape 3a: Récupération du texte complet si absent
         if source_info.get("full_text") and source_info["full_text"].strip():

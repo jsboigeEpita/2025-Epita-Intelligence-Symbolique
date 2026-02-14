@@ -96,9 +96,11 @@ class ComprehensiveAnalysisResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convertit le résultat en dictionnaire."""
         return {
-            "text_analyzed": self.text_analyzed[:200] + "..."
-            if len(self.text_analyzed) > 200
-            else self.text_analyzed,
+            "text_analyzed": (
+                self.text_analyzed[:200] + "..."
+                if len(self.text_analyzed) > 200
+                else self.text_analyzed
+            ),
             "analysis_timestamp": self.analysis_timestamp.isoformat(),
             "analysis_depth": self.analysis_depth.value,
             "family_results": {

@@ -37,7 +37,6 @@ import logging
 from typing import Dict, List, Any, Optional
 from unittest.mock import patch, AsyncMock
 
-
 # Import a shared fixture to manage the JVM lifecycle
 # La fixture jvm_session est maintenant fournie automatiquement par conftest.py (autouse=True)
 # et peut être demandée comme dépendance sans import direct.
@@ -119,7 +118,9 @@ class TestFOLTweetyCompatibility:
         try:
             belief_set = FirstOrderBeliefSet(content=formula_str)
             is_consistent, msg = await agent.is_consistent(belief_set)
-            logger.info(f"✅ Formule syntaxiquement correcte acceptée par Tweety: {msg}")
+            logger.info(
+                f"✅ Formule syntaxiquement correcte acceptée par Tweety: {msg}"
+            )
             assert is_consistent is True
         except Exception as e:
             pytest.fail(f"Une syntaxe FOL valide a été rejetée: {e}")

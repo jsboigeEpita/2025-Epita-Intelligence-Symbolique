@@ -2,7 +2,7 @@
 """
 Version corrigée de ModalLogicAgent avec mécanisme de retry automatique fonctionnel.
 
-Cette version corrige le problème où le retry automatique de Semantic Kernel 
+Cette version corrige le problème où le retry automatique de Semantic Kernel
 ne se déclenche pas pour les erreurs de syntaxe TweetyProject.
 
 CORRECTIONS APPORTÉES :
@@ -397,7 +397,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
     def _extract_json_block(self, text: str) -> str:
         # Normalize text to string if it's a list (fix for AttributeError: 'list' object has no attribute 'find')
         if isinstance(text, list):
-            text = ' '.join(str(item) for item in text)
+            text = " ".join(str(item) for item in text)
         """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
         start_index = text.find("{")
         if start_index == -1:

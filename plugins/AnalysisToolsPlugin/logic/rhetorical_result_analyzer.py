@@ -18,7 +18,6 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-
 # Importer l'analyseur de résultats rhétoriques de base
 
 # Importer les analyseurs améliorés

@@ -24,6 +24,7 @@ Les scénarios de test utilisent des plugins factices (`prefixer`, `suffixer`, `
 pour construire des chaînes de traitement prédictibles, y compris des scénarios d'échec
 et des campagnes de benchmark complètes.
 """
+
 import unittest
 import os
 import sys

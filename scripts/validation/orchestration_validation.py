@@ -435,9 +435,9 @@ class OrchestrationValidator:
             "total_tests": total_tests,
             "successful_tests": successful_tests,
             "failed_tests": total_tests - successful_tests,
-            "success_rate": (successful_tests / total_tests * 100)
-            if total_tests > 0
-            else 0,
+            "success_rate": (
+                (successful_tests / total_tests * 100) if total_tests > 0 else 0
+            ),
             "execution_time_seconds": time.time() - self.start_time,
             "total_errors": len(self.results["errors"]),
         }
@@ -458,8 +458,7 @@ class OrchestrationValidator:
         report_file.parent.mkdir(exist_ok=True)
 
         with open(report_file, "w", encoding="utf-8") as f:
-            f.write(
-                f"""# Rapport de Validation - API Orchestration
+            f.write(f"""# Rapport de Validation - API Orchestration
 
 ## Informations Generales
 
@@ -477,8 +476,7 @@ class OrchestrationValidator:
 
 ## Details des Tests d'Orchestration
 
-"""
-            )
+""")
 
             for test_name, test_result in self.results["tests"].items():
                 status = "[OK] PASS" if test_result["success"] else "[FAIL] FAIL"
@@ -497,8 +495,7 @@ class OrchestrationValidator:
                     f.write(f"- {error}\n")
                 f.write("\n")
 
-            f.write(
-                """## Capacites d'Orchestration Validees
+            f.write("""## Capacites d'Orchestration Validees
 
 ### 1. Orchestrateurs Principaux
 - CluedoExtendedOrchestrator [OK]
@@ -554,8 +551,7 @@ Les problèmes identifies sont mineurs et n'empêchent pas le fonctionnement
 du système d'orchestration multi-agents.
 
 **Statut global**: [OK] VALIDe POUR PRODUCTION
-"""
-            )
+""")
 
         self.logger.info(f"Rapport genere: {report_file}")
         return report_file

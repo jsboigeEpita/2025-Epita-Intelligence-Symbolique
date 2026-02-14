@@ -493,14 +493,18 @@ def JString(value):
     )  # s_self pour éviter conflit avec value externe
     jstring_mock.__repr__ = lambda s_self: f"JString('{str(value)}')"
     jstring_mock.__eq__ = MagicMock(
-        side_effect=lambda other: str(value) == other
-        if isinstance(other, str)
-        else (
-            hasattr(other, "_mock_jpype_jstring_value")
-            and str(value) == other._mock_jpype_jstring_value
+        side_effect=lambda other: (
+            str(value) == other
+            if isinstance(other, str)
+            else (
+                (
+                    hasattr(other, "_mock_jpype_jstring_value")
+                    and str(value) == other._mock_jpype_jstring_value
+                )
+                if isinstance(other, MagicMock)
+                else False
+            )
         )
-        if isinstance(other, MagicMock)
-        else False
     )
     jstring_mock.__hash__ = MagicMock(side_effect=lambda: hash(str(value)))
     # Simuler le fait que c'est une instance de java.lang.String

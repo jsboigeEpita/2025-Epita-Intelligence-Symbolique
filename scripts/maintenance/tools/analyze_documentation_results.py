@@ -164,7 +164,9 @@ def main():
 
     print(f"📊 Plan de correction généré:")
     print(f"   🔗 Total liens brisés: {correction_plan['summary']['total_broken']}")
-    print(f"   🏆 Documents prioritaires: {correction_plan['summary']['priority_docs']}")
+    print(
+        f"   🏆 Documents prioritaires: {correction_plan['summary']['priority_docs']}"
+    )
     print(
         f"   🤖 Corrections automatiques: {correction_plan['summary']['auto_correctable']}"
     )

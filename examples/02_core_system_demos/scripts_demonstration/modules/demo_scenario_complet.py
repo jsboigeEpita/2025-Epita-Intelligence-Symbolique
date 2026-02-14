@@ -2,6 +2,7 @@
 """
 Module de démonstration : Scénario Complet (Squelette)
 """
+
 from modules.demo_utils import DemoLogger
 
 

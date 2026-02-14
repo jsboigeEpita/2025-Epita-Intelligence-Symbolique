@@ -6,6 +6,7 @@ spécifiques peuvent hériter. Il définit une interface commune pour l'initiali
 l'exécution de l'analyse, la validation de la configuration et la description
 de la structure des résultats attendus.
 """
+
 from argumentation_analysis.paths import RESULTS_DIR
 
 # Template de type d'analyse pour l'architecture hiérarchique

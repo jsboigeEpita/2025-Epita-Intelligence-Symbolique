@@ -1,4 +1,5 @@
 """Test d'intégration rapide des composants JTMS."""
+
 import pytest
 
 

@@ -1,6 +1,6 @@
 """
 Gestionnaire de Sessions JTMS
-Gère le cycle de vie des sessions JTMS avec support de versioning, 
+Gère le cycle de vie des sessions JTMS avec support de versioning,
 checkpoints, rollback et synchronisation multi-agents.
 """
 

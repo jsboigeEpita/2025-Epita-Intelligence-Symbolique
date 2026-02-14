@@ -42,9 +42,9 @@ def setup_orchestration_service_for_test():
         return test_service
 
     # Surcharger la dépendance dans l'application FastAPI
-    app.dependency_overrides[
-        get_orchestration_service
-    ] = get_test_orchestration_service_override
+    app.dependency_overrides[get_orchestration_service] = (
+        get_test_orchestration_service_override
+    )
 
     yield  # Le test est exécuté ici
 

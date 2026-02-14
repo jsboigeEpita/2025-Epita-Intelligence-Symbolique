@@ -220,9 +220,9 @@ class OrchestrationServiceManager:
 
         # Kernel Semantic Kernel et service LLM principal
         self.kernel: Optional[sk.Kernel] = None
-        self.llm_service_id: Optional[
-            str
-        ] = "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
+        self.llm_service_id: Optional[str] = (
+            "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
+        )
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
 
         # État d'initialisation
@@ -415,9 +415,9 @@ class OrchestrationServiceManager:
                 exc_info=True,
             )
             # Optionnellement, remettre les managers à None pour indiquer un état d'échec partiel
-            self.strategic_manager = (
-                self.tactical_manager
-            ) = self.operational_manager = None
+            self.strategic_manager = self.tactical_manager = (
+                self.operational_manager
+            ) = None
 
     async def _initialize_specialized_orchestrators(self):
         """Initialise les orchestrateurs spécialisés."""
@@ -588,9 +588,9 @@ class OrchestrationServiceManager:
                 request = FactCheckingRequest(
                     text=text,
                     analysis_depth=AnalysisDepth.STANDARD,
-                    enable_fact_checking=options.get("enable_fact_checking", True)
-                    if options
-                    else True,
+                    enable_fact_checking=(
+                        options.get("enable_fact_checking", True) if options else True
+                    ),
                     api_config=options.get("api_config") if options else None,
                     context=options.get("context") if options else None,
                 )
@@ -961,7 +961,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 "fact_checking_orchestrator": self.fact_checking_orchestrator
                 is not None,
                 "middleware": self.middleware is not None,
-            }
+            },
             # 'config' est obsolète, les paramètres sont dans `settings`
         }
 
@@ -1196,7 +1196,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
 
 
 async def create_service_manager(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> OrchestrationServiceManager:
     """
     Crée et initialise un OrchestrationServiceManager.

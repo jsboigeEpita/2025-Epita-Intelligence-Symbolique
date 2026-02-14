@@ -17,12 +17,11 @@ class TestFOLLogicAgent:
         """Provides a FOLLogicAgent instance with a real kernel + mock service."""
         from semantic_kernel import Kernel
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = Kernel()
         kernel.add_service(
             OpenAIChatCompletion(
-                service_id="default",
-                ai_model_id="gpt-4",
-                api_key="test-key"
+                service_id="default", ai_model_id="gpt-4", api_key="test-key"
             )
         )
         return FOLLogicAgent(kernel=kernel)
@@ -48,9 +47,11 @@ class TestFOLLogicAgent:
         # Mock the agent's internal text_to_belief_set method to return a valid BeliefSet
         # Use object.__setattr__ to bypass Pydantic V2 __setattr__ validation
         mock_belief_set = FirstOrderBeliefSet(content="forall X: (Cat(X) => Mammal(X))")
-        object.__setattr__(fol_agent, 'text_to_belief_set', AsyncMock(
-            return_value=(mock_belief_set, "Conversion successful")
-        ))
+        object.__setattr__(
+            fol_agent,
+            "text_to_belief_set",
+            AsyncMock(return_value=(mock_belief_set, "Conversion successful")),
+        )
 
         task_id = "task_1"
         task_description = "Traduire le texte en Belief Set"

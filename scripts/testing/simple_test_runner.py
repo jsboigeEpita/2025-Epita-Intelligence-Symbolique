@@ -107,7 +107,7 @@ def run_script_test():
                 "schema": "http",
                 "host_parts": ["testserver"],
                 "path": "/script_test.txt",
-                "extracts": []
+                "extracts": [],
                 # Pas de full_text pour forcer le script à le récupérer
             }
         ]

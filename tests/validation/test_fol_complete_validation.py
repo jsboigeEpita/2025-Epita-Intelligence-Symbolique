@@ -8,7 +8,7 @@ Ce script exécute une validation exhaustive selon les critères de la tâche :
 
 MÉTRIQUES DE VALIDATION :
 ✅ 100% des formules FOL générées valides
-✅ 0 erreur de parsing Tweety avec syntaxe FOL  
+✅ 0 erreur de parsing Tweety avec syntaxe FOL
 ✅ >95% compatibilité avec sophismes existants
 ✅ Temps réponse ≤ Modal Logic précédent
 ✅ >90% couverture tests pour FOLLogicAgent
@@ -110,25 +110,28 @@ class FOLValidationMetrics:
     def get_summary(self) -> Dict[str, Any]:
         """Retourne résumé des métriques."""
         return {
-            "test_success_rate": self.passed_tests / self.total_tests
-            if self.total_tests > 0
-            else 0.0,
-            "fol_syntax_validity_rate": self.fol_syntax_valid_count
-            / self.fol_syntax_total_count
-            if self.fol_syntax_total_count > 0
-            else 0.0,
+            "test_success_rate": (
+                self.passed_tests / self.total_tests if self.total_tests > 0 else 0.0
+            ),
+            "fol_syntax_validity_rate": (
+                self.fol_syntax_valid_count / self.fol_syntax_total_count
+                if self.fol_syntax_total_count > 0
+                else 0.0
+            ),
             "tweety_parsing_success_rate": (
-                self.tweety_parsing_attempts - self.tweety_parsing_errors
-            )
-            / self.tweety_parsing_attempts
-            if self.tweety_parsing_attempts > 0
-            else 0.0,
-            "avg_analysis_time": statistics.mean(self.analysis_times)
-            if self.analysis_times
-            else 0.0,
-            "avg_confidence": statistics.mean(self.confidence_scores)
-            if self.confidence_scores
-            else 0.0,
+                (self.tweety_parsing_attempts - self.tweety_parsing_errors)
+                / self.tweety_parsing_attempts
+                if self.tweety_parsing_attempts > 0
+                else 0.0
+            ),
+            "avg_analysis_time": (
+                statistics.mean(self.analysis_times) if self.analysis_times else 0.0
+            ),
+            "avg_confidence": (
+                statistics.mean(self.confidence_scores)
+                if self.confidence_scores
+                else 0.0
+            ),
             "sophism_compatibility": self.sophism_compatibility_rate,
             "migration_success": self.migration_success_rate,
             "total_tests": self.total_tests,
@@ -761,7 +764,9 @@ def main():
         print("=" * 80)
 
         print(f"\n🕐 Temps total: {report['total_validation_time']:.2f}s")
-        print(f"🎯 Succès global: {'✅ OUI' if report['overall_success'] else '❌ NON'}")
+        print(
+            f"🎯 Succès global: {'✅ OUI' if report['overall_success'] else '❌ NON'}"
+        )
 
         print(f"\n📊 Résultats validation:")
         for validation, success in report["validation_results"].items():

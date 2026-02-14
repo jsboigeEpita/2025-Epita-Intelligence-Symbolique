@@ -897,9 +897,9 @@ def run_comprehensive_report_pipeline(
         )
         for metric_name in all_metrics_for_corpus:
             if metric_name in advanced_corpus_scores:
-                combined_average_scores[corpus_name][
-                    metric_name
-                ] = advanced_corpus_scores[metric_name]
+                combined_average_scores[corpus_name][metric_name] = (
+                    advanced_corpus_scores[metric_name]
+                )
             elif metric_name in base_corpus_scores:
                 combined_average_scores[corpus_name][metric_name] = base_corpus_scores[
                     metric_name

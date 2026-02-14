@@ -3,6 +3,7 @@
 """
 Tests pour les utilitaires d'extraction de métriques de argumentation_analysis.utils.metrics_extraction.
 """
+
 import pytest
 import numpy as np
 from unittest.mock import Mock, patch
@@ -87,7 +88,7 @@ def sample_results_for_time_extraction() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_extract_execution_time_success(
-    sample_results_for_time_extraction: List[Dict[str, Any]]
+    sample_results_for_time_extraction: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_time_extraction[:2]
     execution_times = extract_execution_time_from_results(results_subset)
@@ -110,7 +111,7 @@ def test_extract_execution_time_empty_results():
 
 @pytest.mark.use_real_numpy
 def test_extract_execution_time_missing_or_invalid_data(
-    sample_results_for_time_extraction: List[Dict[str, Any]]
+    sample_results_for_time_extraction: List[Dict[str, Any]],
 ):
     problematic_results = sample_results_for_time_extraction[2:]
     execution_times = extract_execution_time_from_results(problematic_results)
@@ -202,7 +203,7 @@ def sample_results_for_fallacy_counting() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_count_fallacies_success(
-    sample_results_for_fallacy_counting: List[Dict[str, Any]]
+    sample_results_for_fallacy_counting: List[Dict[str, Any]],
 ):
     results_subset = [
         sample_results_for_fallacy_counting[0],
@@ -223,7 +224,7 @@ def test_count_fallacies_success(
 
 @pytest.mark.use_real_numpy
 def test_count_fallacies_none_and_missing(
-    sample_results_for_fallacy_counting: List[Dict[str, Any]]
+    sample_results_for_fallacy_counting: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_fallacy_counting[1:5]
     fallacy_counts = count_fallacies_in_results(results_subset)
@@ -256,7 +257,7 @@ def test_count_fallacies_empty_results():
 
 @pytest.mark.use_real_numpy
 def test_count_fallacies_extract_name_missing(
-    sample_results_for_fallacy_counting: List[Dict[str, Any]]
+    sample_results_for_fallacy_counting: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_fallacy_counting[5]]
     fallacy_counts = count_fallacies_in_results(results_subset)
@@ -305,7 +306,7 @@ def sample_results_for_confidence_scores() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_extract_confidence_scores_success(
-    sample_results_for_confidence_scores: List[Dict[str, Any]]
+    sample_results_for_confidence_scores: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_confidence_scores[0]]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
@@ -320,7 +321,7 @@ def test_extract_confidence_scores_success(
 
 @pytest.mark.use_real_numpy
 def test_extract_confidence_scores_zeros_and_missing(
-    sample_results_for_confidence_scores: List[Dict[str, Any]]
+    sample_results_for_confidence_scores: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_confidence_scores[1:4]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
@@ -339,7 +340,7 @@ def test_extract_confidence_scores_empty_results():
 
 @pytest.mark.use_real_numpy
 def test_extract_confidence_scores_extract_name_missing(
-    sample_results_for_confidence_scores: List[Dict[str, Any]]
+    sample_results_for_confidence_scores: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_confidence_scores[4]]
     confidence_scores = extract_confidence_scores_from_results(results_subset)
@@ -406,7 +407,7 @@ def sample_results_for_richness_analysis() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_success(
-    sample_results_for_richness_analysis: List[Dict[str, Any]]
+    sample_results_for_richness_analysis: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_richness_analysis[0]]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
@@ -420,7 +421,7 @@ def test_analyze_contextual_richness_success(
 
 @pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_empty_and_missing(
-    sample_results_for_richness_analysis: List[Dict[str, Any]]
+    sample_results_for_richness_analysis: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_richness_analysis[1:4]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
@@ -436,7 +437,7 @@ def test_analyze_contextual_richness_empty_results_list():
 
 @pytest.mark.use_real_numpy
 def test_analyze_contextual_richness_extract_name_missing(
-    sample_results_for_richness_analysis: List[Dict[str, Any]]
+    sample_results_for_richness_analysis: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_richness_analysis[4]]
     richness_scores = analyze_contextual_richness_from_results(results_subset)
@@ -503,7 +504,7 @@ def sample_results_for_coherence_relevance() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_success(
-    sample_results_for_coherence_relevance: List[Dict[str, Any]]
+    sample_results_for_coherence_relevance: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_coherence_relevance[0]]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
@@ -517,7 +518,7 @@ def test_evaluate_coherence_relevance_success(
 
 @pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_empty_and_missing(
-    sample_results_for_coherence_relevance: List[Dict[str, Any]]
+    sample_results_for_coherence_relevance: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_coherence_relevance[1:4]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
@@ -533,7 +534,7 @@ def test_evaluate_coherence_relevance_empty_results_list():
 
 @pytest.mark.use_real_numpy
 def test_evaluate_coherence_relevance_extract_name_missing(
-    sample_results_for_coherence_relevance: List[Dict[str, Any]]
+    sample_results_for_coherence_relevance: List[Dict[str, Any]],
 ):
     results_subset = [sample_results_for_coherence_relevance[4]]
     relevance_scores = evaluate_coherence_relevance_from_results(results_subset)
@@ -595,7 +596,7 @@ def sample_results_for_complexity() -> List[Dict[str, Any]]:
 
 @pytest.mark.use_real_numpy
 def test_analyze_result_complexity_success(
-    sample_results_for_complexity: List[Dict[str, Any]]
+    sample_results_for_complexity: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_complexity[:2]
     complexity_scores = analyze_result_complexity_from_results(results_subset)
@@ -614,7 +615,7 @@ def test_analyze_result_complexity_success(
 
 @pytest.mark.use_real_numpy
 def test_analyze_result_complexity_empty_and_missing(
-    sample_results_for_complexity: List[Dict[str, Any]]
+    sample_results_for_complexity: List[Dict[str, Any]],
 ):
     results_subset = sample_results_for_complexity[2:]
     complexity_scores = analyze_result_complexity_from_results(results_subset)

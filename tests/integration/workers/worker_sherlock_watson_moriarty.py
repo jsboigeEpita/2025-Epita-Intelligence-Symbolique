@@ -39,7 +39,6 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
     MoriartyInterrogatorAgent,
 )
 
-
 # Configuration pour tests réels GPT-4o-mini
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10

@@ -340,7 +340,7 @@ def check_jpype_config() -> bool:
 
 
 def check_python_dependencies(
-    requirements_file_path: typing.Union[str, _PathInternal]
+    requirements_file_path: typing.Union[str, _PathInternal],
 ) -> bool:  # Annotation de type modifiée
     """
     Vérifie si les dépendances Python spécifiées dans un fichier de requirements
@@ -490,7 +490,9 @@ def check_python_dependencies(
             except (
                 Exception
             ) as e:  # Capturer d'autres erreurs potentielles (ex: parsing de version invalide)
-                logger.error(f"    ❓ Erreur lors de la vérification de {req_name}: {e}")
+                logger.error(
+                    f"    ❓ Erreur lors de la vérification de {req_name}: {e}"
+                )
                 overall_all_ok = False
 
     except (

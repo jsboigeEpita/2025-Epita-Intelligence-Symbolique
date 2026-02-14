@@ -475,9 +475,9 @@ Votre mission : Fasciner par votre mystère élégant."""
             "total_cards_revealed": sum(
                 len(cards) for cards in self.cards_revealed_by_agent.values()
             ),
-            "recent_suggestions": self.suggestion_history[-5:]
-            if self.suggestion_history
-            else [],
+            "recent_suggestions": (
+                self.suggestion_history[-5:] if self.suggestion_history else []
+            ),
         }
 
         # Merge avec les stats de base

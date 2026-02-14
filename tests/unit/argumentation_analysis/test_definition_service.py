@@ -21,7 +21,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

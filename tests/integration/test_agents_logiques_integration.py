@@ -9,7 +9,7 @@ Valide le traitement authentique des données et l'analyse logique.
 
 Tests couverts:
 - Processeur données custom production
-- Détection sophistiques authentique  
+- Détection sophistiques authentique
 - Analyse logique modale
 - Extraction propositions
 - Traitement anti-mock

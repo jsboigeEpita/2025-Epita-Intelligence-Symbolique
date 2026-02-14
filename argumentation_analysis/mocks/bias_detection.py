@@ -92,9 +92,11 @@ class MockBiasDetector:
                                     "bias_type": bias_type,
                                     "detected_pattern": pattern,
                                     "context_snippet": context_snippet,
-                                    "severity_simulated": "Moyen"
-                                    if "Généralisation" in bias_type
-                                    else "Faible",
+                                    "severity_simulated": (
+                                        "Moyen"
+                                        if "Généralisation" in bias_type
+                                        else "Faible"
+                                    ),
                                     "confidence": 0.65
                                     + (
                                         0.1 * patterns.index(pattern) % 0.2

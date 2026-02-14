@@ -38,24 +38,24 @@ jpype_mock.JArray = MockJType(list, "JArray")
 # --- Partie 2 : Mocker JClass (factory de classes Java) ---
 def mock_JClass(class_name):
     """Mock de JClass qui crée des classes Java simulées.
-    
+
     Args:
         class_name: Nom complet de la classe Java (ex: 'java.lang.String')
-    
+
     Returns:
         Une classe mock avec attributs Java-like
     """
     mock_class = MagicMock(name=f"MockJavaClass_{class_name}")
     mock_class.class_name = class_name
-    mock_class.__name__ = class_name.split('.')[-1]
-    
+    mock_class.__name__ = class_name.split(".")[-1]
+
     # Simuler le constructeur de classe
     def mock_constructor(*args, **kwargs):
         instance = MagicMock(name=f"Instance_{class_name}")
         instance._class = mock_class
         instance._value = args[0] if args else None
         return instance
-    
+
     mock_class.__call__ = mock_constructor
     return mock_class
 
@@ -66,17 +66,17 @@ jpype_mock.JClass = mock_JClass
 # --- Partie 3 : Mocker JException (exception Java complète) ---
 class MockJException(Exception):
     """Mock de JException avec interface Java-like."""
-    
+
     def __init__(self, message=""):
         super().__init__(message)
         self.message = message
         self._java_class = MagicMock(name="JavaClass_MockException")
         self._java_class.getName.return_value = "org.mockexception.MockException"
-    
+
     def getClass(self):
         """Simule la méthode getClass() de Java."""
         return self._java_class
-    
+
     def getMessage(self):
         """Simule la méthode getMessage() de Java."""
         return self.message

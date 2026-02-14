@@ -223,9 +223,9 @@ class InformalAnalysisPlugin:
         result["current_node"] = {
             "pk": int(current_row.name),
             "path": current_path,
-            "depth": int(current_row["depth"])
-            if pd.notna(current_row.get("depth"))
-            else 0,
+            "depth": (
+                int(current_row["depth"]) if pd.notna(current_row.get("depth")) else 0
+            ),
             "Name": current_row.get("Name", ""),
             "nom_vulgarise": current_row.get("nom_vulgarise", ""),
             "famille": current_row.get("Famille", ""),

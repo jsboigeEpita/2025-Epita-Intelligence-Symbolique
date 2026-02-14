@@ -16,7 +16,6 @@ import sys
 import asyncio
 import traceback
 
-
 # Imports du système Oracle
 sys.path.append(".")
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import (

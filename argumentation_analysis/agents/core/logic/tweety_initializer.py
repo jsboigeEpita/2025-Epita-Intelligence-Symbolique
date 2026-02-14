@@ -4,6 +4,7 @@ Gestionnaire d'initialisation pour les composants Tweety.
 Ce module suppose que la JVM a déjà été démarrée et configurée par un
 gestionnaire externe (ex: une fixture pytest de session).
 """
+
 import jpype
 import logging
 import os

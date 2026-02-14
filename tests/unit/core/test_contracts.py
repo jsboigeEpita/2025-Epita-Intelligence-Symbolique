@@ -7,6 +7,7 @@ les types et les contraintes des modèles de requête et de réponse, ces tests
 agissent comme un garde-fou contre les changements cassants et assurent
 une communication inter-services fiable.
 """
+
 import pytest
 from pydantic import ValidationError
 

@@ -103,9 +103,11 @@ def progressive_hints_monitor():
         )
 
         return {
-            "progression": "increasing"
-            if avg_complexity_second_half > avg_complexity_first_half
-            else "stable",
+            "progression": (
+                "increasing"
+                if avg_complexity_second_half > avg_complexity_first_half
+                else "stable"
+            ),
             "total_hints": len(hints_data["hints_given"]),
             "avg_effectiveness": sum(hints_data["effectiveness_scores"])
             / len(hints_data["effectiveness_scores"]),

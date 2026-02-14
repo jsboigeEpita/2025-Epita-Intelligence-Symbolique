@@ -85,7 +85,9 @@ class RealExtractAgentTest(unittest.TestCase):
                 self.assertEqual(premise, "P", "Prémisse doit être P")
                 self.assertEqual(conclusion, "Q", "Conclusion doit être Q")
 
-            print("✅ Extraction de patterns logiques basiques réussie (VERSION RÉELLE)")
+            print(
+                "✅ Extraction de patterns logiques basiques réussie (VERSION RÉELLE)"
+            )
             return True
 
         except Exception as e:

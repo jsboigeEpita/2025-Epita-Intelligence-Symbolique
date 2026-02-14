@@ -125,12 +125,16 @@ class GroupChatOrchestration:
             "total_messages": total_messages,
             "active_agents": list(self.active_agents.keys()),
             "agents_participation": agents_participation,
-            "conversation_start": self.conversation_history[0]["timestamp"]
-            if self.conversation_history
-            else None,
-            "last_activity": self.conversation_history[-1]["timestamp"]
-            if self.conversation_history
-            else None,
+            "conversation_start": (
+                self.conversation_history[0]["timestamp"]
+                if self.conversation_history
+                else None
+            ),
+            "last_activity": (
+                self.conversation_history[-1]["timestamp"]
+                if self.conversation_history
+                else None
+            ),
         }
 
     def coordinate_analysis(
@@ -338,9 +342,9 @@ class GroupChatOrchestration:
 
         # Consolidation des résultats avec gestion d'erreurs
         try:
-            collaborative_results[
-                "consolidated_analysis"
-            ] = self._consolidate_results_robust(individual_results)
+            collaborative_results["consolidated_analysis"] = (
+                self._consolidate_results_robust(individual_results)
+            )
         except Exception as e:
             self.logger.error(f"Erreur lors de la consolidation: {e}")
             collaborative_results["consolidated_analysis"] = {

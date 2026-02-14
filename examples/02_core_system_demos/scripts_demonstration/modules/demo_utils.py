@@ -190,9 +190,7 @@ def afficher_stats_tests(resultats: Dict[str, Any]) -> None:
         couleur_taux = (
             Colors.GREEN
             if taux_succes >= 90
-            else Colors.WARNING
-            if taux_succes >= 70
-            else Colors.FAIL
+            else Colors.WARNING if taux_succes >= 70 else Colors.FAIL
         )
 
         print(f"{Colors.GREEN}{Symbols.CHECK} Tests réussis : {passed}{Colors.ENDC}")

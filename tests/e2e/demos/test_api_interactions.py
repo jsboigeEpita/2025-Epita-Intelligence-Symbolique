@@ -38,9 +38,9 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                     "url": response.url,
                     "method": response.request.method,
                     "status": response.status,
-                    "response_text": response.text()
-                    if response.status == 200
-                    else None,
+                    "response_text": (
+                        response.text() if response.status == 200 else None
+                    ),
                 }
             )
 
@@ -48,8 +48,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
 
     # Test 1: Vérifier la connectivité backend
     try:
-        page.evaluate(
-            f"""
+        page.evaluate(f"""
             fetch('{backend_url}/api/health')
                 .then(response => response.json())
                 .then(data => {{
@@ -60,8 +59,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                     console.error('API Error:', error);
                     window.apiConnected = false;
                 }});
-        """
-        )
+        """)
 
         time.sleep(2)  # Attendre la réponse
         print("✅ Test de connectivité API exécuté")
@@ -78,8 +76,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
     expect(page.locator("#text-input")).to_have_value(test_text)
 
     # Déclencher l'analyse via JavaScript pour capturer les requêtes
-    page.evaluate(
-        f"""
+    page.evaluate(f"""
         (async function() {{
             const textInput = document.getElementById('text-input');
             const results = document.getElementById('results');
@@ -110,8 +107,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                 window.analysisError = error.message;
             }}
         }})();
-    """
-    )
+    """)
 
     # Attendre le résultat
     time.sleep(3)
@@ -125,8 +121,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
 
     page.locator("#text-input").fill(sophism_text)
 
-    page.evaluate(
-        f"""
+    page.evaluate(f"""
         (async function() {{
             const textInput = document.getElementById('text-input');
             
@@ -151,8 +146,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                 window.fallacyError = error.message;
             }}
         }})();
-    """
-    )
+    """)
 
     time.sleep(3)
 
@@ -165,8 +159,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
 
     page.locator("#text-input").fill(complex_text)
 
-    page.evaluate(
-        f"""
+    page.evaluate(f"""
         (async function() {{
             const textInput = document.getElementById('text-input');
             
@@ -193,8 +186,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                 window.complexError = error.message;
             }}
         }})();
-    """
-    )
+    """)
 
     time.sleep(3)
 

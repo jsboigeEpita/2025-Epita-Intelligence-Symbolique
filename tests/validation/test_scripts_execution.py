@@ -118,9 +118,11 @@ class ScriptExecutionValidator:
                 "stdout": stdout.decode("utf-8", errors="ignore"),
                 "stderr": stderr.decode("utf-8", errors="ignore"),
                 "execution_time": execution_time,
-                "error": None
-                if process.returncode == 0
-                else stderr.decode("utf-8", errors="ignore"),
+                "error": (
+                    None
+                    if process.returncode == 0
+                    else stderr.decode("utf-8", errors="ignore")
+                ),
             }
 
         except Exception as e:

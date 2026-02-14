@@ -471,7 +471,9 @@ def save_validation_traces(cluedo_results: Dict, einstein_results: Dict) -> str:
 async def main():
     """Point d'entrée principal de la validation Point 1"""
     try:
-        print("🚀 VALIDATION POINT 1/5 : DÉMOS SHERLOCK-WATSON-MORIARTY AVEC VRAIS LLMS")
+        print(
+            "🚀 VALIDATION POINT 1/5 : DÉMOS SHERLOCK-WATSON-MORIARTY AVEC VRAIS LLMS"
+        )
         print("=" * 80)
 
         # Test démo Cluedo

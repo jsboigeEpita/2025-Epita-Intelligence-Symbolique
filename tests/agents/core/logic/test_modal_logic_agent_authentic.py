@@ -173,7 +173,9 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
         if belief_set is not None:
             assert isinstance(belief_set, ModalBeliefSet)
             assert len(belief_set.content) > 0
-            print(f"✅ Belief set Modal authentique créé: {belief_set.content[:100]}...")
+            print(
+                f"✅ Belief set Modal authentique créé: {belief_set.content[:100]}..."
+            )
 
             is_valid, validation_msg = tweety_bridge.validate_modal_belief_set(
                 belief_set.content

@@ -480,12 +480,16 @@ class RhetoricalSystemValidator:
             "total_operations": total_operations,
             "mock_operations": total_mock_usages,
             "real_operations": total_real_processing,
-            "mock_percentage": (total_mock_usages / total_operations * 100)
-            if total_operations > 0
-            else 0,
-            "real_percentage": (total_real_processing / total_operations * 100)
-            if total_operations > 0
-            else 0,
+            "mock_percentage": (
+                (total_mock_usages / total_operations * 100)
+                if total_operations > 0
+                else 0
+            ),
+            "real_percentage": (
+                (total_real_processing / total_operations * 100)
+                if total_operations > 0
+                else 0
+            ),
         }
 
         # Recommandations
@@ -535,7 +539,9 @@ def main():
         )
 
         print("\n" + "=" * 80)
-        print("🎯 VALIDATION SYSTÈME D'ANALYSE RHÉTORIQUE UNIFIÉ - DONNÉES SYNTHÉTIQUES")
+        print(
+            "🎯 VALIDATION SYSTÈME D'ANALYSE RHÉTORIQUE UNIFIÉ - DONNÉES SYNTHÉTIQUES"
+        )
         print("=" * 80)
         print(f"✅ Validation terminée avec succès")
         print(f"📊 Rapport détaillé: {report_file}")

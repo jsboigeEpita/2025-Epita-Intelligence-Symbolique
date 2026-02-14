@@ -67,7 +67,7 @@ async def main():
         save_changes=args.save,
         hitler_only=args.hitler_only,
         custom_input_path_str=args.input,
-        output_json_path_str=args.output_json
+        output_json_path_str=args.output_json,
         # args.verbose est utilisé pour configurer le logger de ce script,
         # le pipeline utilisera son propre logger configuré ou hérité.
     )

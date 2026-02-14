@@ -62,9 +62,11 @@ class FactCheckingResponse:
         """Convertit la réponse en dictionnaire."""
         return {
             "request_id": self.request_id,
-            "text_analyzed": self.text_analyzed[:200] + "..."
-            if len(self.text_analyzed) > 200
-            else self.text_analyzed,
+            "text_analyzed": (
+                self.text_analyzed[:200] + "..."
+                if len(self.text_analyzed) > 200
+                else self.text_analyzed
+            ),
             "analysis_timestamp": self.analysis_timestamp.isoformat(),
             "comprehensive_result": self.comprehensive_result.to_dict(),
             "processing_time": self.processing_time,
@@ -367,9 +369,9 @@ class FactCheckingOrchestrator:
                 # Créer une réponse d'erreur
                 error_response = FactCheckingResponse(
                     request_id=f"batch_error_{i}",
-                    text_analyzed=texts[i][:100] + "..."
-                    if len(texts[i]) > 100
-                    else texts[i],
+                    text_analyzed=(
+                        texts[i][:100] + "..." if len(texts[i]) > 100 else texts[i]
+                    ),
                     analysis_timestamp=datetime.now(),
                     comprehensive_result=ComprehensiveAnalysisResult(
                         text_analyzed=texts[i],
@@ -470,7 +472,7 @@ _global_fact_checking_orchestrator = None
 
 
 def get_fact_checking_orchestrator(
-    api_config: Optional[Dict[str, Any]] = None
+    api_config: Optional[Dict[str, Any]] = None,
 ) -> FactCheckingOrchestrator:
     """
     Récupère l'instance globale de l'orchestrateur fact-checking (singleton pattern).

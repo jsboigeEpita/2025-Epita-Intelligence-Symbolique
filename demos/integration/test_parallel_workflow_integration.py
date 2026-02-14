@@ -25,9 +25,11 @@ async def main():
         kernel.add_service(
             OpenAIChatCompletion(
                 ai_model_id=openai_settings.chat_model_id,
-                api_key=openai_settings.api_key.get_secret_value()
-                if openai_settings.api_key
-                else None,
+                api_key=(
+                    openai_settings.api_key.get_secret_value()
+                    if openai_settings.api_key
+                    else None
+                ),
                 org_id=openai_settings.org_id,
             ),
         )

@@ -6,6 +6,7 @@ tels que la configuration des tâches d'analyse via une UI,
 la gestion des opérations sur les fichiers d'extraits, et
 d'autres utilitaires spécifiques à l'interface.
 """
+
 # ui/__init__.py
 
 # Exporter les fonctions principales pour un import plus simple

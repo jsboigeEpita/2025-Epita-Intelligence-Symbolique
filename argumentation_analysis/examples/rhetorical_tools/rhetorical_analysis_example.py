@@ -49,7 +49,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.feedback_mech
 
 from argumentation_analysis.paths import RESULTS_DIR
 
-
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,

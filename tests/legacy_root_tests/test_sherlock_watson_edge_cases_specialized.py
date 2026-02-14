@@ -10,7 +10,7 @@ OBJECTIFS SPÉCIALISÉS :
 4. Tester scenarios de récupération d'erreurs
 5. Évaluer adaptation aux formats non-standard
 
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 08/06/2025
 """
 
@@ -230,9 +230,9 @@ class SpecializedEdgeCaseTester:
                 result["recovery_successful"] = True
 
             else:
-                result[
-                    "response"
-                ] = f"{agent_name}: Cas edge non reconnu, utilisation du fallback"
+                result["response"] = (
+                    f"{agent_name}: Cas edge non reconnu, utilisation du fallback"
+                )
                 result["behavior_assessment"] = "fallback_mode"
                 result["recovery_successful"] = True
 

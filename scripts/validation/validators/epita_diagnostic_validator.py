@@ -269,7 +269,7 @@ async def perform_epita_diagnostic(
         "problemes_dependances_potentiels": problemes_potentiels,
         "evaluation_pedagogique_estimee": evaluation_pedagogique,
         "plan_actions_validation": plan_validation,
-        "status_global_diagnostic": "ANALYSE_STATIQUE_EFFECTUEE"
+        "status_global_diagnostic": "ANALYSE_STATIQUE_EFFECTUEE",
         # Ce statut pourrait devenir DYNAMIQUE si des tests réels sont implémentés
     }
 

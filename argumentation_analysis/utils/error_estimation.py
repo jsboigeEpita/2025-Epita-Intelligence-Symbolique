@@ -65,7 +65,7 @@ def estimate_false_positives_negatives_rates(
     }
 
     def create_result_dict(
-        results_list: List[Dict[str, Any]]
+        results_list: List[Dict[str, Any]],
     ) -> Dict[str, Dict[str, Any]]:
         """Convertit une liste de résultats en un dictionnaire indexé par "source_name:extract_name".
 

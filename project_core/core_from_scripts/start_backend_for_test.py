@@ -8,6 +8,7 @@ qui orchestre les tests. Il démarre le serveur webapp, écrit son PID dans
 un fichier pour permettre au script appelant de le gérer (attendre, ou
 terminer le processus), et redirige stdout/stderr vers des fichiers de log.
 """
+
 import os
 import sys
 import subprocess

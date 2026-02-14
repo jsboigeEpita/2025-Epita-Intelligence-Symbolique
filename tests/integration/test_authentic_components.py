@@ -5,7 +5,7 @@ Tests d'intégration pour composants authentiques
 
 Suite de tests pour valider l'intégration complète avec :
 - GPT-4o-mini réel
-- Tweety JAR authentique  
+- Tweety JAR authentique
 - Taxonomie 1408 sophismes
 - Pipeline 100% authentique
 """

@@ -3,6 +3,7 @@
 Utilitaires pour les opérations sur les chemins de fichiers, la sanitization
 des noms de fichiers, et l'archivage.
 """
+
 from pathlib import Path
 import logging
 import re

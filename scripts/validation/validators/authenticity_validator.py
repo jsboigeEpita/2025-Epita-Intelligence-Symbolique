@@ -74,9 +74,9 @@ async def validate_authenticity(
                 "details": config_details,
             }
         else:
-            authenticity_results[
-                "error"
-            ] = "Configuration unifiée non disponible ou UnifiedConfig non importé"
+            authenticity_results["error"] = (
+                "Configuration unifiée non disponible ou UnifiedConfig non importé"
+            )
             logger.warning(
                 "UnifiedConfig non disponible pour la validation d'authenticité."
             )
@@ -203,9 +203,9 @@ def _validate_taxonomy_authenticity(config) -> Tuple[bool, Dict[str, Any]]:
 
         if expected_nodes < 1000:
             details["status"] = "insufficient_nodes"
-            details[
-                "error"
-            ] = f"Nombre de nœuds insuffisant: {expected_nodes}, requis: >=1000"
+            details["error"] = (
+                f"Nombre de nœuds insuffisant: {expected_nodes}, requis: >=1000"
+            )
             return False, details
 
         details["expected_nodes"] = expected_nodes

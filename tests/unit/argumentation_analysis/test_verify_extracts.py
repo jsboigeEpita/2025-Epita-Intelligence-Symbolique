@@ -20,7 +20,6 @@ import os
 import sys
 from pathlib import Path
 
-
 # Ajouter le répertoire parent au chemin de recherche des modules
 # Importer les modèles nécessaires pour les tests
 from argumentation_analysis.models.extract_definition import (

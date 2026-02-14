@@ -409,9 +409,11 @@ class TestRunner:
         # Configuration de test
         config = TestConfig(
             mode=TestMode.COMPONENT if component else TestMode.ALL,
-            level=TestLevel(level)
-            if level in [l.value for l in TestLevel]
-            else TestLevel.STANDARD,
+            level=(
+                TestLevel(level)
+                if level in [l.value for l in TestLevel]
+                else TestLevel.STANDARD
+            ),
             component=component,
             authentic=authentic,
             fast=fast,

@@ -178,9 +178,11 @@ class AnalysisService:
             "gpt4o_mini_enabled": True,
             "mock_disabled": True,
             "manager_initialized": self.is_available(),
-            "uptime_seconds": getattr(self.manager.state, "get_uptime", lambda: 0)()
-            if hasattr(self.manager, "state")
-            else 0,
+            "uptime_seconds": (
+                getattr(self.manager.state, "get_uptime", lambda: 0)()
+                if hasattr(self.manager, "state")
+                else 0
+            ),
         }
 
 

@@ -92,9 +92,11 @@ class DocumentationLinkAnalyzer:
                 "exists": target_path.exists(),
                 "is_file": target_path.is_file() if target_path.exists() else False,
                 "is_dir": target_path.is_dir() if target_path.exists() else False,
-                "relative_to_project": str(target_path.relative_to(self.project_root))
-                if target_path.exists()
-                else None,
+                "relative_to_project": (
+                    str(target_path.relative_to(self.project_root))
+                    if target_path.exists()
+                    else None
+                ),
             }
 
             return result
@@ -159,9 +161,9 @@ class DocumentationLinkAnalyzer:
             "total_links": total_links,
             "broken_links": broken_links,
             "valid_links": total_links - broken_links,
-            "broken_percentage": (broken_links / total_links * 100)
-            if total_links > 0
-            else 0,
+            "broken_percentage": (
+                (broken_links / total_links * 100) if total_links > 0 else 0
+            ),
         }
 
         return results

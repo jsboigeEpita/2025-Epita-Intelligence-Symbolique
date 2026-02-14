@@ -113,7 +113,7 @@ class FOLLogicAgent(BaseLogicAgent):
     Conçu comme alternative fiable à ModalLogicAgent pour éviter
     les échecs fréquents tout en maintenant une analyse formelle authentique.
     """
-    
+
     # Attributs privés Pydantic V2 pour éviter ValidationError
     _analysis_cache: Dict[str, "FOLAnalysisResult"] = PrivateAttr(default_factory=dict)
     _conversion_prompt: str = PrivateAttr(default="")
@@ -541,23 +541,23 @@ RÉPONDS EN FORMAT JSON :
 
         content = text + str(context) if context else text
         return hashlib.md5(content.encode()).hexdigest()
+
     # ==================== PROPERTIES BACKWARD COMPATIBILITY ====================
-    
+
     @property
     def analysis_cache(self) -> Dict[str, "FOLAnalysisResult"]:
         """Expose _analysis_cache for backward compatibility."""
         return self._analysis_cache
-    
+
     @property
     def conversion_prompt(self) -> str:
         """Expose _conversion_prompt for backward compatibility."""
         return self._conversion_prompt
-    
+
     @property
     def analysis_prompt(self) -> str:
         """Expose _analysis_prompt for backward compatibility."""
         return self._analysis_prompt
-
 
     # ==================== IMPLÉMENTATION MÉTHODES ABSTRAITES ====================
 

@@ -814,7 +814,7 @@ class TestTacticalCoordinatorCoverageAuthentic(unittest.TestCase):
         incomplete_result = {
             "id": "incomplete-result-1",
             "task_id": "op-task-incomplete",
-            "status": "completed"
+            "status": "completed",
             # Manque tactical_task_id
         }
 

@@ -3,7 +3,7 @@ Tests de configuration pour GPT-4o-mini réel.
 
 Tests couvrant:
 - Validation configuration OpenAI correcte
-- Test connexion GPT-4o-mini fonctionnelle  
+- Test connexion GPT-4o-mini fonctionnelle
 - Test modèles supportés et limites
 """
 
@@ -19,7 +19,6 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
-
 
 # Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")

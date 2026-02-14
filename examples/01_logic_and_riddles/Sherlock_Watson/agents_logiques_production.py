@@ -14,7 +14,7 @@ SOURCES AUTHENTIQUES:
 
 FONCTIONNALITÉS PRODUCTION:
 ✅ Logique propositionnelle réelle
-✅ Agents d'argumentation authentiques  
+✅ Agents d'argumentation authentiques
 ✅ Détection sophistiques réelle
 ✅ Communication inter-agents fonctionnelle
 ✅ Raisonnement modal et temporel
@@ -167,10 +167,12 @@ class ProductionCustomDataProcessor:
                             "pattern": pattern,
                             "match": match.group(),
                             "position": match.span(),
-                            "severity": "high"
-                            if sophism_type
-                            in [SophismType.AD_HOMINEM, SophismType.STRAWMAN]
-                            else "medium",
+                            "severity": (
+                                "high"
+                                if sophism_type
+                                in [SophismType.AD_HOMINEM, SophismType.STRAWMAN]
+                                else "medium"
+                            ),
                         }
                     )
 
@@ -365,11 +367,11 @@ class ProductionLogicalAgent:
             "agent_id": self.agent_id,
             "analysis": analysis,
             "logical_validity": analysis.logical_consistency,
-            "argument_quality": "strong"
-            if analysis.argument_strength > 0.7
-            else "weak"
-            if analysis.argument_strength < 0.3
-            else "moderate",
+            "argument_quality": (
+                "strong"
+                if analysis.argument_strength > 0.7
+                else "weak" if analysis.argument_strength < 0.3 else "moderate"
+            ),
             "sophistries_flagged": len(analysis.sophistries_detected),
             "recommendations": self._generate_recommendations(analysis),
             "processing_authentic": True,
@@ -596,11 +598,11 @@ class ProductionAgentOrchestrator:
             "total_arguments": total_arguments,
             "total_exchanges": total_exchanges,
             "average_argument_quality": round(avg_quality, 3),
-            "debate_quality": "high"
-            if avg_quality > 0.7
-            else "low"
-            if avg_quality < 0.3
-            else "moderate",
+            "debate_quality": (
+                "high"
+                if avg_quality > 0.7
+                else "low" if avg_quality < 0.3 else "moderate"
+            ),
             "production_analysis": True,
         }
 

@@ -8,7 +8,7 @@ Tests d'intégration utilisant les VRAIES classes du système, pas de fausses cl
 Phase 3A CORRIGÉE - Utilise les vraies classes Semantic Kernel existantes.
 
 Tests avec:
-- VRAIE classe SherlockEnqueteAgent 
+- VRAIE classe SherlockEnqueteAgent
 - VRAIE classe WatsonLogicAssistant
 - VRAIS composants Semantic Kernel
 - VRAIE orchestration système

@@ -228,9 +228,9 @@ class CritiqueEngine:
             if valid_steps == total_steps:
                 critique_result["critique_summary"] = "Chaîne de raisonnement solide"
             else:
-                critique_result[
-                    "critique_summary"
-                ] = f"Chaîne partiellement valide: {valid_steps}/{total_steps} étapes valides"
+                critique_result["critique_summary"] = (
+                    f"Chaîne partiellement valide: {valid_steps}/{total_steps} étapes valides"
+                )
 
             return critique_result
 
@@ -309,13 +309,13 @@ class CritiqueEngine:
 
             # Résumé du challenge
             if challenge_result["challenge_valid"]:
-                challenge_result[
-                    "challenge_summary"
-                ] = f"Challenge valide (force: {challenge_result['challenge_strength']:.2f})"
+                challenge_result["challenge_summary"] = (
+                    f"Challenge valide (force: {challenge_result['challenge_strength']:.2f})"
+                )
             else:
-                challenge_result[
-                    "challenge_summary"
-                ] = "Challenge faible - assumption probablement solide"
+                challenge_result["challenge_summary"] = (
+                    "Challenge faible - assumption probablement solide"
+                )
 
             challenge_result["confidence_impact"] = (
                 -challenge_result["challenge_strength"] * 0.5
@@ -475,9 +475,11 @@ class CritiqueEngine:
             critique_state = {
                 "agent_name": self._agent_context._agent_name,
                 "agent_type": "watson_validator",
-                "session_id": self._agent_context._jtms_session.session_id
-                if self._agent_context._jtms_session
-                else "unknown_session",
+                "session_id": (
+                    self._agent_context._jtms_session.session_id
+                    if self._agent_context._jtms_session
+                    else "unknown_session"
+                ),
                 "validation_history": self._agent_context.validation_history,
                 "critique_patterns": self._agent_context.critique_patterns,
                 "conflict_resolutions": [

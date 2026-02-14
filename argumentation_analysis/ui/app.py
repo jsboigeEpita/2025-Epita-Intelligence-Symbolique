@@ -7,6 +7,7 @@ de sélectionner des sources de texte (bibliothèque, URL, fichier, saisie direc
 de configurer des options d'extraction, et de lancer la préparation du texte
 pour une analyse ultérieure.
 """
+
 # ui/app.py
 import ipywidgets as widgets
 from IPython.display import display, clear_output
@@ -571,9 +572,9 @@ def configure_analysis_task() -> Optional[str]:
                             and texte_brut_source is not None
                             and not source_info.get("full_text")
                         ):
-                            source_info[
-                                "full_text"
-                            ] = texte_brut_source  # Mettre à jour l'objet en mémoire
+                            source_info["full_text"] = (
+                                texte_brut_source  # Mettre à jour l'objet en mémoire
+                            )
                             app_logger.info(
                                 f"   -> Champ 'full_text' mis à jour en mémoire pour la source biblio: {source_info.get('source_name')} après fetch."
                             )

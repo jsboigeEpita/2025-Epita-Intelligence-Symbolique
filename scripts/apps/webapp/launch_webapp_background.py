@@ -20,7 +20,6 @@ sys.path.insert(0, str(project_root_path))
 # Si l'environnement n'est pas bon, il lèvera une exception claire.
 import argumentation_analysis.core.environment
 
-
 """
 Lance le serveur backend de l'application en processus d'arrière-plan.
 

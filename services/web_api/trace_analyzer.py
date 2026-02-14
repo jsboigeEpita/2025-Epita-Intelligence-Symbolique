@@ -7,7 +7,7 @@ Outil intelligent pour analyser les traces Playwright sans surcharger la mémoir
 Extrait seulement les informations critiques nécessaires à l'investigation.
 
 Problème résolu:
-- Fichiers de traces volumineux (227k+ tokens)  
+- Fichiers de traces volumineux (227k+ tokens)
 - Risque de dépassement de la limite de tokens (200k max)
 - Besoin d'analyser les réponses API /analyze sans manipulation lourde
 
@@ -421,9 +421,7 @@ class PlaywrightTraceAnalyzer:
             status_indicator = (
                 "[OK]"
                 if test.status == "passed"
-                else "[FAIL]"
-                if test.status == "failed"
-                else "[SKIP]"
+                else "[FAIL]" if test.status == "failed" else "[SKIP]"
             )
             print(f"  {status_indicator} {test.test_name} ({test.duration_ms}ms)")
 

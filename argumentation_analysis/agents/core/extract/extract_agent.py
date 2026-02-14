@@ -123,16 +123,24 @@ class ExtractAgent(BaseAgent):
 
         super().__init__(kernel=kernel, agent_name=agent_name)
         # Use BaseAgent's logger property (self.logger) instead of setting a new one
-        object.__setattr__(self, '_llm_service_id', llm_service_id)
-        object.__setattr__(self, 'llm_service', None)
+        object.__setattr__(self, "_llm_service_id", llm_service_id)
+        object.__setattr__(self, "llm_service", None)
         if llm_service_id:
-            object.__setattr__(self, 'llm_service', self.kernel.get_service(llm_service_id))
+            object.__setattr__(
+                self, "llm_service", self.kernel.get_service(llm_service_id)
+            )
 
-        object.__setattr__(self, '_find_similar_text_func', find_similar_text_func or find_similar_text)
-        object.__setattr__(self, '_extract_text_func', extract_text_func or extract_text_with_markers)
-        object.__setattr__(self, '_native_extract_plugin', next(
-            (p for p in plugins if isinstance(p, ExtractAgentPlugin)), None
-        ))
+        object.__setattr__(
+            self, "_find_similar_text_func", find_similar_text_func or find_similar_text
+        )
+        object.__setattr__(
+            self, "_extract_text_func", extract_text_func or extract_text_with_markers
+        )
+        object.__setattr__(
+            self,
+            "_native_extract_plugin",
+            next((p for p in plugins if isinstance(p, ExtractAgentPlugin)), None),
+        )
 
         if not llm_service_id:
             self.logger.warning(

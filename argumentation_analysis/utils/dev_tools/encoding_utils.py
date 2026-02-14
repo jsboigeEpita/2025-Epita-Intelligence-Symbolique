@@ -218,9 +218,7 @@ if __name__ == "__main__":
                 original_encoding = (
                     "latin-1"
                     if "latin1" in filename
-                    else "cp1252"
-                    if "cp1252" in filename
-                    else "unknown"
+                    else "cp1252" if "cp1252" in filename else "unknown"
                 )
                 logger.info(
                     f"Fichier {filename} (bytes) écrit avec encodage brut (simulant {original_encoding})."

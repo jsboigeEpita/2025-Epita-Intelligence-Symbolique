@@ -38,9 +38,9 @@ async def validate_orchestration(
     try:
         # Test ConversationOrchestrator
         if available_components.get("conversation_orchestrator", False):
-            orchestration_results[
-                "conversation_orchestrator"
-            ] = await _test_conversation_orchestrator(test_texts)
+            orchestration_results["conversation_orchestrator"] = (
+                await _test_conversation_orchestrator(test_texts)
+            )
         else:
             orchestration_results["conversation_orchestrator"] = {
                 "status": "unavailable",
@@ -49,9 +49,9 @@ async def validate_orchestration(
 
         # Test RealLLMOrchestrator
         if available_components.get("real_llm_orchestrator", False):
-            orchestration_results[
-                "real_llm_orchestrator"
-            ] = await _test_real_llm_orchestrator(test_texts)
+            orchestration_results["real_llm_orchestrator"] = (
+                await _test_real_llm_orchestrator(test_texts)
+            )
         else:
             orchestration_results["real_llm_orchestrator"] = {
                 "status": "unavailable",

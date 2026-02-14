@@ -6,7 +6,6 @@ from unittest.mock import patch, MagicMock
 import asyncio
 from pathlib import Path
 
-
 # Import des classes et fonctions à tester depuis le nouveau script
 from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
     UnifiedProductionConfig,

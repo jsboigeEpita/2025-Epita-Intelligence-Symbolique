@@ -32,7 +32,6 @@ from .modal_handler import ModalHandler
 from .af_handler import AFHandler as ArgumentationFrameworkHandler
 from .tweety_initializer import TweetyInitializer
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -136,6 +135,7 @@ class TweetyBridge:
     def initializer(self) -> TweetyInitializer:
         """Retourne l'initialiseur Tweety, qui gère le chargement des classes Java."""
         return self._initializer
+
     @property
     def fol_handler(self) -> FirstOrderLogicHandler:
         """Retourne le handler pour la logique du premier ordre, en l'initialisant si nécessaire."""
@@ -163,11 +163,15 @@ class TweetyBridge:
         """Backward compatibility wrapper for execute_fol_query."""
         return self.fol_handler.execute_fol_query(belief_set, query)
 
-    def execute_modal_query(self, belief_set: str, query: str, logic_type: str = "K") -> Tuple[bool, str]:
+    def execute_modal_query(
+        self, belief_set: str, query: str, logic_type: str = "K"
+    ) -> Tuple[bool, str]:
         """Backward compatibility wrapper for execute_modal_query."""
         return self.modal_handler.execute_modal_query(belief_set, query, logic_type)
 
-    def check_consistency(self, belief_set: str, logic_type: str = "propositional") -> Tuple[bool, str]:
+    def check_consistency(
+        self, belief_set: str, logic_type: str = "propositional"
+    ) -> Tuple[bool, str]:
         """Backward compatibility wrapper for check_consistency."""
         if logic_type == "propositional":
             return self.pl_handler.check_consistency(belief_set)
@@ -177,7 +181,6 @@ class TweetyBridge:
             return self.modal_handler.check_consistency(belief_set, logic_type)
         else:
             return False, f"Unknown logic type: {logic_type}"
-
 
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""

@@ -314,9 +314,9 @@ class OracleTerminationStrategy(TerminationStrategy):
             "max_turns": self.max_turns,
             "max_cycles": self.max_cycles,
             "is_solution_found": self.is_solution_found,
-            "solution_proposed": self.oracle_state.is_solution_proposed
-            if self.oracle_state
-            else False,
+            "solution_proposed": (
+                self.oracle_state.is_solution_proposed if self.oracle_state else False
+            ),
             "elimination_possible": self._check_elimination_complete(),
         }
 
@@ -794,13 +794,15 @@ class CluedoExtendedOrchestrator:
             "reason": "Solution correcte" if success else "Solution incorrecte",
             "proposed_solution": proposed,
             "correct_solution": correct,
-            "partial_matches": {
-                "suspect": proposed.get("suspect") == correct.get("suspect"),
-                "arme": proposed.get("arme") == correct.get("arme"),
-                "lieu": proposed.get("lieu") == correct.get("lieu"),
-            }
-            if proposed and correct
-            else {},
+            "partial_matches": (
+                {
+                    "suspect": proposed.get("suspect") == correct.get("suspect"),
+                    "arme": proposed.get("arme") == correct.get("arme"),
+                    "lieu": proposed.get("lieu") == correct.get("lieu"),
+                }
+                if proposed and correct
+                else {}
+            ),
         }
 
     def _calculate_performance_metrics(
@@ -811,10 +813,11 @@ class CluedoExtendedOrchestrator:
 
         return {
             "efficiency": {
-                "turns_per_minute": agent_interactions.get("total_turns", 0)
-                / (execution_time / 60)
-                if execution_time > 0
-                else 0,
+                "turns_per_minute": (
+                    agent_interactions.get("total_turns", 0) / (execution_time / 60)
+                    if execution_time > 0
+                    else 0
+                ),
                 "oracle_queries_per_turn": oracle_stats.get("workflow_metrics", {}).get(
                     "oracle_interactions", 0
                 )

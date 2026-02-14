@@ -71,7 +71,7 @@ def create_gitkeep_in_directory(dir_path: Path, overwrite: bool = False) -> bool
 
 
 def check_files_existence(
-    file_paths: Iterable[Union[str, Path]]
+    file_paths: Iterable[Union[str, Path]],
 ) -> Tuple[List[Path], List[Path]]:
     """
     Vérifie l'existence d'une liste de fichiers.

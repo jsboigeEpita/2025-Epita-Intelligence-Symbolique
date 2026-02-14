@@ -68,20 +68,24 @@ def detect_fallacies_simple(text: str) -> Dict[str, Any]:
             "total_fallacies": total_fallacies,
             "unique_fallacy_types": len(fallacy_types),
             "fallacy_types_found": fallacy_types,
-            "overall_quality": "poor"
-            if total_fallacies > 3
-            else "moderate"
-            if total_fallacies > 1
-            else "good",
+            "overall_quality": (
+                "poor"
+                if total_fallacies > 3
+                else "moderate" if total_fallacies > 1 else "good"
+            ),
         },
         "recommendations": [
-            "Consider providing evidence for claims"
-            if total_fallacies > 0
-            else "Good logical structure",
+            (
+                "Consider providing evidence for claims"
+                if total_fallacies > 0
+                else "Good logical structure"
+            ),
             "Avoid personal attacks" if "Ad Hominem" in fallacy_types else None,
-            "Question authority claims"
-            if "Appeal to Authority" in fallacy_types
-            else None,
+            (
+                "Question authority claims"
+                if "Appeal to Authority" in fallacy_types
+                else None
+            ),
             "Check causal relationships" if "False Cause" in fallacy_types else None,
         ],
     }

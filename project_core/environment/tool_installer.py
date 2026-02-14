@@ -76,9 +76,9 @@ def ensure_tools_are_installed(
                     path_to_add = path_to_add / "bin"
 
                 if str(path_to_add) not in os.environ.get("PATH", ""):
-                    os.environ[
-                        "PATH"
-                    ] = f"{str(path_to_add)}{os.pathsep}{os.environ.get('PATH', '')}"
+                    os.environ["PATH"] = (
+                        f"{str(path_to_add)}{os.pathsep}{os.environ.get('PATH', '')}"
+                    )
                     local_logger.info(f"Ajouté '{path_to_add}' au PATH système.")
 
             elif tool_env_var:

@@ -252,9 +252,9 @@ class TestFunctionalReplacement:
 
                 # Vérifications fonctionnelles
                 checks = {
-                    "has_formulas": len(result.formulas) > 0
-                    if expected["has_formulas"]
-                    else True,
+                    "has_formulas": (
+                        len(result.formulas) > 0 if expected["has_formulas"] else True
+                    ),
                     "confidence_acceptable": result.confidence_score
                     >= expected["min_confidence"],
                     "no_critical_errors": len(

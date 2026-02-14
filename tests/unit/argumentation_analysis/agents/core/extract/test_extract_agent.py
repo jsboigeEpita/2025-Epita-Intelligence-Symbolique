@@ -36,12 +36,11 @@ def mock_load_source_text(mocker):
 async def agent_with_mocked_invoke():
     """Crée un agent avec un kernel dont la méthode 'invoke' est mockée."""
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
     kernel = Kernel()
     kernel.add_service(
         OpenAIChatCompletion(
-            service_id="default",
-            ai_model_id="gpt-4",
-            api_key="test-key"
+            service_id="default", ai_model_id="gpt-4", api_key="test-key"
         )
     )
     mock_response = MagicMock(spec=FunctionResult)
@@ -49,7 +48,7 @@ async def agent_with_mocked_invoke():
         "Je suis une réponse intentionnellement non-JSON."
     )
     # Pre-install mock invoke (bypass Pydantic V2 __setattr__ on Kernel)
-    object.__setattr__(kernel, 'invoke', AsyncMock(return_value=mock_response))
+    object.__setattr__(kernel, "invoke", AsyncMock(return_value=mock_response))
     agent = ExtractAgent(kernel=kernel)
     return agent
 

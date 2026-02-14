@@ -20,7 +20,6 @@ import os
 import tempfile
 from pathlib import Path
 
-
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))

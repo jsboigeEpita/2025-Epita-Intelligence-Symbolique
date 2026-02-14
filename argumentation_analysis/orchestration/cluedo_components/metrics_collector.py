@@ -99,13 +99,15 @@ class MetricsCollector:
             "reason": "Solution correcte" if success else "Solution incorrecte",
             "proposed_solution": proposed,
             "correct_solution": correct,
-            "partial_matches": {
-                "suspect": proposed.get("suspect") == correct.get("suspect"),
-                "arme": proposed.get("arme") == correct.get("arme"),
-                "lieu": proposed.get("lieu") == correct.get("lieu"),
-            }
-            if proposed and correct
-            else {},
+            "partial_matches": (
+                {
+                    "suspect": proposed.get("suspect") == correct.get("suspect"),
+                    "arme": proposed.get("arme") == correct.get("arme"),
+                    "lieu": proposed.get("lieu") == correct.get("lieu"),
+                }
+                if proposed and correct
+                else {}
+            ),
         }
 
     def _calculate_performance_metrics(
@@ -116,10 +118,11 @@ class MetricsCollector:
 
         return {
             "efficiency": {
-                "turns_per_minute": agent_interactions.get("total_turns", 0)
-                / (execution_time / 60)
-                if execution_time > 0
-                else 0,
+                "turns_per_minute": (
+                    agent_interactions.get("total_turns", 0) / (execution_time / 60)
+                    if execution_time > 0
+                    else 0
+                ),
                 "oracle_queries_per_turn": oracle_stats.get("workflow_metrics", {}).get(
                     "oracle_interactions", 0
                 )
@@ -198,8 +201,9 @@ class MetricsCollector:
             "suggestion_quality_scores": suggestion_quality_scores,
             "workflow_optimization_level": workflow_optimization_level,
             "enhanced_strategy_active": self.strategy == "enhanced_auto_reveal",
-            "average_suggestion_quality": sum(suggestion_quality_scores)
-            / len(suggestion_quality_scores)
-            if suggestion_quality_scores
-            else 0.0,
+            "average_suggestion_quality": (
+                sum(suggestion_quality_scores) / len(suggestion_quality_scores)
+                if suggestion_quality_scores
+                else 0.0
+            ),
         }

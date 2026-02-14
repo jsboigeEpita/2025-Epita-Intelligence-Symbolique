@@ -7,7 +7,7 @@ et gestion d'état partagé. Capture l'orchestration multi-tours avec évolution
 
 Ce module capture :
 - Conversation agentielle avec markup élégant
-- Évolution de l'état partagé entre phases 
+- Évolution de l'état partagé entre phases
 - Coordination Project Manager
 - Orchestration multi-tours avec gestion d'état
 """

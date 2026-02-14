@@ -104,11 +104,13 @@ class ValidationService:
                         "argument_type": request.argument_type,
                         "method": "formal",
                     },
-                    issues=[]
-                    if is_formally_valid
-                    else [
-                        "L'argument n'est pas logiquement valide selon le moteur formel."
-                    ],
+                    issues=(
+                        []
+                        if is_formally_valid
+                        else [
+                            "L'argument n'est pas logiquement valide selon le moteur formel."
+                        ]
+                    ),
                     suggestions=[],
                 )
 

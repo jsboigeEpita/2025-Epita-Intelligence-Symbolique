@@ -73,11 +73,12 @@ class TestFOLLogicAgentInitialization:
         kernel = Kernel()
         # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel.add_service(
             OpenAIChatCompletion(
                 service_id="default",
                 ai_model_id="gpt-4",
-                api_key="test-key"  # Mock pour tests
+                api_key="test-key",  # Mock pour tests
             )
         )
         agent = ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestFOLAgent")
@@ -109,9 +110,7 @@ class TestFOLLogicAgentInitialization:
         kernel = Kernel()
         kernel.add_service(
             OpenAIChatCompletion(
-                service_id="default",
-                ai_model_id="gpt-4",
-                api_key="test-key"
+                service_id="default", ai_model_id="gpt-4", api_key="test-key"
             )
         )
         agent = ConcreteFOLLogicAgent(kernel=kernel)
@@ -152,13 +151,14 @@ class TestFOLSyntaxGeneration:
     def fol_agent(self):
         """Agent FOL pour les tests."""
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = Kernel()
         # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
         kernel.add_service(
             OpenAIChatCompletion(
                 service_id="default",
                 ai_model_id="gpt-4",
-                api_key="test-key"  # Mock pour tests
+                api_key="test-key",  # Mock pour tests
             )
         )
         return ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestAgent")
@@ -241,22 +241,23 @@ class TestFOLTweetyIntegration:
     async def fol_agent_with_tweety(self):
         """Agent FOL avec TweetyBridge mocké."""
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = Kernel()
         # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
         kernel.add_service(
             OpenAIChatCompletion(
                 service_id="default",
                 ai_model_id="gpt-4",
-                api_key="test-key"  # Mock pour tests
+                api_key="test-key",  # Mock pour tests
             )
         )
-        
+
         # Récupérer le service ajouté pour le passer à l'agent
         llm_service = kernel.get_service("default")
         agent = ConcreteFOLLogicAgent(
             kernel=kernel,
             agent_name="TestFOLAgent",
-            service_id=llm_service  # CORRECT: service_id au lieu de service
+            service_id=llm_service,  # CORRECT: service_id au lieu de service
         )
 
         agent._tweety_bridge = AsyncMock()
@@ -348,9 +349,7 @@ class TestFOLAnalysisPipeline:
         kernel = Kernel()
         kernel.add_service(
             OpenAIChatCompletion(
-                service_id="default",
-                ai_model_id="gpt-4",
-                api_key="test-key"
+                service_id="default", ai_model_id="gpt-4", api_key="test-key"
             )
         )
 
@@ -360,7 +359,7 @@ class TestFOLAnalysisPipeline:
         )
 
         # Pre-install mock invoke on kernel (bypass Pydantic V2 __setattr__)
-        object.__setattr__(kernel, 'invoke', AsyncMock())
+        object.__setattr__(kernel, "invoke", AsyncMock())
 
         agent._tweety_bridge = AsyncMock()
         agent._tweety_bridge.check_consistency = AsyncMock(return_value=True)
@@ -381,39 +380,39 @@ class TestFOLAnalysisPipeline:
         )
 
         fol_agent_full.kernel.invoke.side_effect = [
-                FunctionResult(
-                    function=mock_metadata,
-                    value=json.dumps(
-                        {
-                            "formulas": ["∀x(Human(x) → Mortal(x))", "Human(socrate)"],
-                            "predicates": {
-                                "Human": "être humain",
-                                "Mortal": "être mortel",
-                            },
-                            "variables": {"x": "individu", "socrate": "constante"},
-                            "reasoning": "Syllogisme classique",
-                        }
-                    ),
+            FunctionResult(
+                function=mock_metadata,
+                value=json.dumps(
+                    {
+                        "formulas": ["∀x(Human(x) → Mortal(x))", "Human(socrate)"],
+                        "predicates": {
+                            "Human": "être humain",
+                            "Mortal": "être mortel",
+                        },
+                        "variables": {"x": "individu", "socrate": "constante"},
+                        "reasoning": "Syllogisme classique",
+                    }
                 ),
-                FunctionResult(
-                    function=mock_metadata,
-                    value=json.dumps(
-                        {
-                            "consistency": True,
-                            "inferences": ["Mortal(socrate)"],
-                            "interpretations": [
-                                {
-                                    "description": "Modèle valide",
-                                    "model": {"socrate": "mortal"},
-                                }
-                            ],
-                            "errors": [],
-                            "confidence": 0.95,
-                            "reasoning_steps": ["Analyse syllogisme", "Validation FOL"],
-                        }
-                    ),
+            ),
+            FunctionResult(
+                function=mock_metadata,
+                value=json.dumps(
+                    {
+                        "consistency": True,
+                        "inferences": ["Mortal(socrate)"],
+                        "interpretations": [
+                            {
+                                "description": "Modèle valide",
+                                "model": {"socrate": "mortal"},
+                            }
+                        ],
+                        "errors": [],
+                        "confidence": 0.95,
+                        "reasoning_steps": ["Analyse syllogisme", "Validation FOL"],
+                    }
                 ),
-            ]
+            ),
+        ]
 
         sophism_text = "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
         result = await fol_agent_full.analyze(sophism_text)
@@ -432,15 +431,15 @@ class TestFOLAnalysisPipeline:
             name="mock", plugin_name="mock", description="mock", is_prompt=True
         )
         fol_agent_full.kernel.invoke.return_value = FunctionResult(
-                function=mock_metadata,
-                value=json.dumps(
-                    {
-                        "formulas": ["∀x(P(x) → Q(x))"],
-                        "predicates": {"P": "propriété P", "Q": "propriété Q"},
-                        "reasoning": "Implication universelle",
-                    }
-                ),
-            )
+            function=mock_metadata,
+            value=json.dumps(
+                {
+                    "formulas": ["∀x(P(x) → Q(x))"],
+                    "predicates": {"P": "propriété P", "Q": "propriété Q"},
+                    "reasoning": "Implication universelle",
+                }
+            ),
+        )
 
         text = "Tous les P sont Q."
         result = await fol_agent_full.analyze(text)
@@ -493,11 +492,11 @@ class TestFOLAnalysisPipeline:
             name="mock", plugin_name="mock", description="mock", is_prompt=True
         )
         fol_agent_full.kernel.invoke.return_value = FunctionResult(
-                function=mock_metadata,
-                value=json.dumps(
-                    {"formulas": ["∀x(Fast(x))"], "reasoning": "Test performance"}
-                ),
-            )
+            function=mock_metadata,
+            value=json.dumps(
+                {"formulas": ["∀x(Fast(x))"], "reasoning": "Test performance"}
+            ),
+        )
 
         start_time = time.time()
         result = await fol_agent_full.analyze("Test de performance FOL.")

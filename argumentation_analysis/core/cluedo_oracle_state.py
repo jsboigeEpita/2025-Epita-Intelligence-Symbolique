@@ -481,9 +481,9 @@ class CluedoOracleState(EnqueteCluedoState):
                             f"Agent {agent_name} inquiry trigger",
                             "dramatic",
                         )
-                        oracle_response.metadata[
-                            "enhanced_revelation"
-                        ] = enhanced_revelation
+                        oracle_response.metadata["enhanced_revelation"] = (
+                            enhanced_revelation
+                        )
                         oracle_response.revealed_information.append(revealed_card)
 
                         # Log the revelation
@@ -738,9 +738,9 @@ class CluedoOracleState(EnqueteCluedoState):
                 "total_revealed": len(self.revelations_log),
             },
             "dataset_statistics": dataset_stats,
-            "recent_revelations": list(self.recent_revelations)[-5:]
-            if self.recent_revelations
-            else [],
+            "recent_revelations": (
+                list(self.recent_revelations)[-5:] if self.recent_revelations else []
+            ),
         }
 
         return stats
@@ -798,9 +798,9 @@ class CluedoOracleState(EnqueteCluedoState):
         """Retourne les informations sur le tour actuel."""
         return {
             "turn_number": len(self.interaction_pattern),
-            "last_agent": self.interaction_pattern[-1]
-            if self.interaction_pattern
-            else None,
+            "last_agent": (
+                self.interaction_pattern[-1] if self.interaction_pattern else None
+            ),
             "total_oracle_queries": self.oracle_queries_count,
             "cards_revealed_count": len(self.revelations_log),
             "suggestions_count": len(self.suggestions_historique),
@@ -855,9 +855,9 @@ class CluedoOracleState(EnqueteCluedoState):
             "solution_proposed": self.is_solution_proposed,
             "can_solve_by_elimination": self.is_game_solvable_by_elimination(),
             "moriarty_cards_count": len(self.get_moriarty_cards()),
-            "latest_interactions": self.interaction_pattern[-5:]
-            if self.interaction_pattern
-            else [],
+            "latest_interactions": (
+                self.interaction_pattern[-5:] if self.interaction_pattern else []
+            ),
         }
 
     # PHASE C: Méthodes de mémoire contextuelle pour fluidité transitions
@@ -975,9 +975,11 @@ class CluedoOracleState(EnqueteCluedoState):
             "turn_number": len(self.conversation_history),
             "reacting_agent": agent_name,
             "trigger_agent": trigger_agent,
-            "trigger_content": trigger_content[:100] + "..."
-            if len(trigger_content) > 100
-            else trigger_content,
+            "trigger_content": (
+                trigger_content[:100] + "..."
+                if len(trigger_content) > 100
+                else trigger_content
+            ),
             "reaction_type": reaction_type,
             "reaction_content": reaction_content,
         }
@@ -1596,9 +1598,11 @@ Permettez-moi de lever le voile sur le mystère :
         enhanced_revelation = {
             "content": revelation_content,
             "style": reveal_style,
-            "dramatic_effect": random.uniform(0.7, 1.0)
-            if reveal_style == "dramatic"
-            else random.uniform(0.3, 0.6),
+            "dramatic_effect": (
+                random.uniform(0.7, 1.0)
+                if reveal_style == "dramatic"
+                else random.uniform(0.3, 0.6)
+            ),
             "card_revealed": card,
             "context": context,
             "enhanced_features": ["contextual_response", "style_adaptation"],
@@ -1622,9 +1626,9 @@ Permettez-moi de lever le voile sur le mystère :
             "agent_interactions": {
                 "agents_active": agents_active,
                 "total_interactions": len(self.interaction_pattern),
-                "interaction_pattern": self.interaction_pattern[-10:]
-                if self.interaction_pattern
-                else [],
+                "interaction_pattern": (
+                    self.interaction_pattern[-10:] if self.interaction_pattern else []
+                ),
                 "oracle_queries": self.oracle_queries_count,
             },
             "enhanced_features": {

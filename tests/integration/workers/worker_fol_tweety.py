@@ -34,7 +34,6 @@ import time
 import logging
 from typing import Dict, List, Any, Optional
 
-
 # Import a shared fixture to manage the JVM lifecycle
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 
@@ -352,7 +351,7 @@ class TestFOLErrorHandling:
     async def test_fol_timeout_handling(self, fol_agent_with_kernel):
         """Test gestion timeouts analyse FOL."""
         from unittest.mock import AsyncMock
-        
+
         agent = fol_agent_with_kernel
 
         # Mock timeout avec AsyncMock pour méthode async

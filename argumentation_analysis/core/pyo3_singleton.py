@@ -107,7 +107,9 @@ def get_pyo3_module(
         logger.info(f"[OK] Module PyO3 '{module_name}' chargé avec succès.")
         return module
     except ImportError as e:
-        logger.error(f"❌ Erreur lors du chargement du module PyO3 '{module_name}': {e}")
+        logger.error(
+            f"❌ Erreur lors du chargement du module PyO3 '{module_name}': {e}"
+        )
         return None
     except Exception as e:
         logger.error(

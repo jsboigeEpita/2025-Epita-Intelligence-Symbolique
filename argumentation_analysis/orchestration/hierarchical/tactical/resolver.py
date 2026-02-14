@@ -599,9 +599,11 @@ class ConflictResolver:
                 "premises": list(
                     set(arg1.get("premises", []) + arg2.get("premises", []))
                 ),
-                "conclusion": arg1.get("conclusion")
-                if arg1.get("confidence", 0.5) >= arg2.get("confidence", 0.5)
-                else arg2.get("conclusion"),
+                "conclusion": (
+                    arg1.get("conclusion")
+                    if arg1.get("confidence", 0.5) >= arg2.get("confidence", 0.5)
+                    else arg2.get("conclusion")
+                ),
                 "confidence": max(
                     arg1.get("confidence", 0.5), arg2.get("confidence", 0.5)
                 ),

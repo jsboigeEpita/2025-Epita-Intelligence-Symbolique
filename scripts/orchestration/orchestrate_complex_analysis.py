@@ -52,13 +52,13 @@ class ConversationTracker:
             "timestamp": datetime.now().isoformat(),
             "agent": agent,
             "action": action,
-            "input_preview": input_text[:200] + "..."
-            if len(input_text) > 200
-            else input_text,
+            "input_preview": (
+                input_text[:200] + "..." if len(input_text) > 200 else input_text
+            ),
             "input_length": len(input_text),
-            "output_preview": str(output)[:300] + "..."
-            if len(str(output)) > 300
-            else str(output),
+            "output_preview": (
+                str(output)[:300] + "..." if len(str(output)) > 300 else str(output)
+            ),
             "output_length": len(str(output)),
             "duration_seconds": duration,
         }

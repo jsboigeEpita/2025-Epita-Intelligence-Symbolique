@@ -17,7 +17,6 @@ from argumentation_analysis.core.interfaces.fallacy_detector import (
     AbstractFallacyDetector,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

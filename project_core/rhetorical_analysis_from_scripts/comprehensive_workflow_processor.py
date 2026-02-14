@@ -322,7 +322,9 @@ class PipelineEngine:
                         else:
                             results["analyses"].append(result)
 
-            self.logger.info(f"✅ Pipeline terminé: {len(results['analyses'])} analyses")
+            self.logger.info(
+                f"✅ Pipeline terminé: {len(results['analyses'])} analyses"
+            )
 
         except Exception as e:
             error_msg = f"Erreur pipeline d'analyse: {e}"
@@ -355,9 +357,9 @@ class PipelineEngine:
             )  # Limite pour performance
 
             return {
-                "content_preview": content[:200] + "..."
-                if len(content) > 200
-                else content,
+                "content_preview": (
+                    content[:200] + "..." if len(content) > 200 else content
+                ),
                 "analysis": analysis_result,
                 "timestamp": datetime.now().isoformat(),
                 "status": "success",
@@ -365,9 +367,9 @@ class PipelineEngine:
 
         except Exception as e:
             return {
-                "content_preview": content[:200] + "..."
-                if len(content) > 200
-                else content,
+                "content_preview": (
+                    content[:200] + "..." if len(content) > 200 else content
+                ),
                 "error": str(e),
                 "timestamp": datetime.now().isoformat(),
                 "status": "error",
@@ -499,9 +501,9 @@ class ValidationSuite:
                     "status": status,
                     "duration": duration,
                     "returncode": result.returncode,
-                    "output": result.stdout[-500:]
-                    if result.stdout
-                    else "",  # Dernières 500 chars
+                    "output": (
+                        result.stdout[-500:] if result.stdout else ""
+                    ),  # Dernières 500 chars
                     "error": result.stderr[-500:] if result.stderr else "",
                 }
 
@@ -664,9 +666,9 @@ class TestOrchestrator:
             results["summary"] = {
                 "total_scenarios": total_tests,
                 "successful_scenarios": successful_tests,
-                "success_rate": successful_tests / total_tests
-                if total_tests > 0
-                else 0,
+                "success_rate": (
+                    successful_tests / total_tests if total_tests > 0 else 0
+                ),
                 "total_iterations": self.config.performance_iterations * total_tests,
             }
 
@@ -791,9 +793,9 @@ class ResultsAggregator:
             "execution_summary": {
                 "start_time": results.start_time.isoformat(),
                 "end_time": results.end_time.isoformat() if results.end_time else None,
-                "duration_seconds": results.duration.total_seconds()
-                if results.duration
-                else None,
+                "duration_seconds": (
+                    results.duration.total_seconds() if results.duration else None
+                ),
                 "status": results.status,
                 "total_processed": results.total_processed,
                 "success_count": results.success_count,
@@ -1371,11 +1373,11 @@ def parse_arguments(args: Optional[List[str]] = None) -> WorkflowConfig:
         mock_detection=not parsed_args.disable_mock_detection,
         # Configuration rapports
         output_dir=Path(parsed_args.output_dir),
-        report_formats=[
-            ReportFormat(fmt) for fmt in (parsed_args.format or ["json", "markdown"])
-        ]
-        if not parsed_args.no_reports
-        else [],
+        report_formats=(
+            [ReportFormat(fmt) for fmt in (parsed_args.format or ["json", "markdown"])]
+            if not parsed_args.no_reports
+            else []
+        ),
         include_metrics=True,
     )
 

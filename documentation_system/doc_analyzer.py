@@ -124,9 +124,9 @@ class ProjectArchitectureAnalyzer:
                 try:
                     module_info = self._analyze_single_module(py_file)
                     if module_info:
-                        self.modules[
-                            str(py_file.relative_to(self.project_root))
-                        ] = module_info
+                        self.modules[str(py_file.relative_to(self.project_root))] = (
+                            module_info
+                        )
                 except Exception as e:
                     print(f" Erreur lors de l'analyse de {py_file}: {e}")
 
@@ -332,10 +332,12 @@ class ProjectArchitectureAnalyzer:
             "entry_points_count": len(
                 [m for m in self.modules.values() if m.is_entry_point]
             ),
-            "avg_complexity": sum(m.complexity_score for m in self.modules.values())
-            / len(self.modules)
-            if self.modules
-            else 0,
+            "avg_complexity": (
+                sum(m.complexity_score for m in self.modules.values())
+                / len(self.modules)
+                if self.modules
+                else 0
+            ),
             "categories": list(set(m.category for m in self.modules.values())),
             "types": list(set(m.type for m in self.modules.values())),
         }

@@ -120,9 +120,9 @@ class FrameworkService:
                 attack_relations=attack_relations,
                 support_relations=support_relations,
                 extensions=extensions,
-                semantics_used=request.options.semantics
-                if request.options
-                else "preferred",
+                semantics_used=(
+                    request.options.semantics if request.options else "preferred"
+                ),
                 argument_count=stats["argument_count"],
                 attack_count=stats["attack_count"],
                 support_count=stats["support_count"],
@@ -459,9 +459,11 @@ class FrameworkService:
             vis_nodes.append(
                 {
                     "id": node.id,
-                    "label": node.content[:30] + "..."
-                    if len(node.content) > 30
-                    else node.content,
+                    "label": (
+                        node.content[:30] + "..."
+                        if len(node.content) > 30
+                        else node.content
+                    ),
                     "status": node.status,
                     "x": (i % 5) * 100,  # Layout simple en grille
                     "y": (i // 5) * 100,

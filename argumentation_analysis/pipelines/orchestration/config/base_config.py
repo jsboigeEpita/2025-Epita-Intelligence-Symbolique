@@ -53,9 +53,11 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
         # Initialiser la configuration de base
         super().__init__(
             analysis_modes=analysis_modes,
-            orchestration_mode=orchestration_mode
-            if isinstance(orchestration_mode, str)
-            else orchestration_mode.value,
+            orchestration_mode=(
+                orchestration_mode
+                if isinstance(orchestration_mode, str)
+                else orchestration_mode.value
+            ),
             logic_type=logic_type,
             use_mocks=use_mocks,
             use_advanced_tools=use_advanced_tools,

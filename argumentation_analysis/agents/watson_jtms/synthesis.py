@@ -83,9 +83,11 @@ class SynthesisEngine:
                         "confidence": belief.confidence,  # Supposant que belief a un attribut confidence
                         "formal_confidence": validation.get("confidence", 0.0),
                         "provable": validation.get("provable", False),
-                        "agent_source": belief.agent_source
-                        if hasattr(belief, "agent_source")
-                        else "unknown",  # Supposant que belief a agent_source
+                        "agent_source": (
+                            belief.agent_source
+                            if hasattr(belief, "agent_source")
+                            else "unknown"
+                        ),  # Supposant que belief a agent_source
                     }
 
                     current_confidence = (

@@ -4,6 +4,7 @@
 """
 Définition des routes de l'API Flask pour l'analyse argumentative.
 """
+
 import logging
 from flask import jsonify, request
 

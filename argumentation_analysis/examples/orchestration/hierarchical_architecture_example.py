@@ -31,7 +31,6 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
 
-
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,

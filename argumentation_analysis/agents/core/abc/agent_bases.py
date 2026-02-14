@@ -13,6 +13,7 @@ formelle ou d'autres mécanismes.
   des systèmes de raisonnement logique formel, ajoutant des abstractions pour
   la manipulation de croyances et l'exécution de requêtes.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -20,8 +21,12 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.agents.chat_completion.chat_completion_agent import (
+    ChatCompletionAgent,
+)
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from pydantic import PrivateAttr
 
 # Note historique : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
@@ -111,24 +116,27 @@ class BaseAgent(ChatCompletionAgent, ABC):
                 raise ValueError(
                     f"No LLM service found in kernel for id '{llm_service_id}'. Error: {e}"
                 )
-        
+
         # Appel du constructeur parent ChatCompletionAgent
         super().__init__(
             kernel=kernel,
             service=llm_service,
             name=agent_name,
             instructions=system_prompt or "",
-            description=description or (system_prompt if system_prompt else f"Agent {agent_name}")
+            description=description
+            or (system_prompt if system_prompt else f"Agent {agent_name}"),
         )
-        
+
         # Propriétés spécifiques à BaseAgent (backward compatibility)
         self.id = agent_name  # Alias pour compatibilité avec ancien code
         self._llm_service_id = llm_service_id
-    
+
     def model_post_init(self, __context) -> None:
         """Initialisation post-construction Pydantic V2."""
         super().model_post_init(__context)
-        self._agent_logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
+        self._agent_logger = logging.getLogger(
+            f"agent.{self.__class__.__name__}.{self.name}"
+        )
 
     @property
     def logger(self) -> logging.Logger:

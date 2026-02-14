@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script pour traiter les vrais fichiers orphelins identifiés par Git 
+Script pour traiter les vrais fichiers orphelins identifiés par Git
 dans le projet Sherlock Watson.
 """
 
@@ -180,11 +180,11 @@ class RealOrphanFilesProcessor:
                     "recommendation": recommendation,
                     "reason": reason,
                     "size": full_path.stat().st_size if full_path.exists() else 0,
-                    "modified": datetime.fromtimestamp(
-                        full_path.stat().st_mtime
-                    ).isoformat()
-                    if full_path.exists()
-                    else None,
+                    "modified": (
+                        datetime.fromtimestamp(full_path.stat().st_mtime).isoformat()
+                        if full_path.exists()
+                        else None
+                    ),
                     "content_analysis": content_analysis,
                 }
 

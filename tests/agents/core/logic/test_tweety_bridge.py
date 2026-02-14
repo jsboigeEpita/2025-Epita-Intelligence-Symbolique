@@ -3,6 +3,7 @@
 """
 Tests unitaires pour la classe TweetyBridge.
 """
+
 import sys
 import os
 from pathlib import Path

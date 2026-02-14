@@ -5,6 +5,7 @@ Plugin pour l'exploration de la taxonomie des sophismes.
 Ce plugin centralise la logique d'accès à la taxonomie des sophismes,
 y compris la gestion des familles de sophismes et la recherche d'informations détaillées.
 """
+
 import logging
 import os
 from typing import Dict, List, Any, Optional
@@ -231,9 +232,11 @@ class TaxonomyExplorerPlugin(BasePlugin):
                 severity=severity,
                 context_relevance=context_relevance,
                 family_pattern_score=family_score,
-                detection_method=f"taxonomy_family_{family_id}"
-                if family_id
-                else "taxonomy_unclassified",
+                detection_method=(
+                    f"taxonomy_family_{family_id}"
+                    if family_id
+                    else "taxonomy_unclassified"
+                ),
             )
             classified_fallacies.append(classified.model_dump())
 

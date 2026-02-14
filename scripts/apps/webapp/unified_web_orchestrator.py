@@ -6,7 +6,7 @@ Orchestrateur Unifié d'Application Web Python
 
 Remplace tous les scripts PowerShell redondants d'intégration web :
 - integration_test_with_trace.ps1
-- integration_test_with_trace_robust.ps1  
+- integration_test_with_trace_robust.ps1
 - integration_test_with_trace_fixed.ps1
 - integration_test_trace_working.ps1
 - integration_test_trace_simple_success.ps1

@@ -491,10 +491,10 @@ Vous êtes un gardien impartial mais stratégique des données."""
         )
 
         # Initialisation des attributs spécifiques à Oracle (bypass Pydantic V2 __setattr__)
-        object.__setattr__(self, 'dataset_manager', dataset_manager)
-        object.__setattr__(self, 'access_log', [])
-        object.__setattr__(self, 'revealed_information', set())
-        object.__setattr__(self, 'access_level', access_level or "standard")
+        object.__setattr__(self, "dataset_manager", dataset_manager)
+        object.__setattr__(self, "access_log", [])
+        object.__setattr__(self, "revealed_information", set())
+        object.__setattr__(self, "access_level", access_level or "standard")
 
         # Configurer les types de requêtes autorisées
         if allowed_query_types is None:
@@ -503,17 +503,15 @@ Vous êtes un gardien impartial mais stratégique des données."""
                 QueryType.GAME_STATE,
                 QueryType.CLUE_REQUEST,
             ]
-        object.__setattr__(self, 'allowed_query_types', allowed_query_types)
+        object.__setattr__(self, "allowed_query_types", allowed_query_types)
 
         # Outils Oracle
         oracle_tools = OracleTools(dataset_manager, agent_name)
-        object.__setattr__(self, 'oracle_tools', oracle_tools)
+        object.__setattr__(self, "oracle_tools", oracle_tools)
 
         # Enregistrement des outils Oracle comme plugin dans le kernel (si kernel disponible)
         if kernel:
-            kernel.add_plugin(
-                oracle_tools, plugin_name=f"oracle_tools_{agent_name}"
-            )
+            kernel.add_plugin(oracle_tools, plugin_name=f"oracle_tools_{agent_name}")
 
             # Ajouter les plugins supplémentaires si fournis
             if plugins:
@@ -611,9 +609,11 @@ Vous êtes un gardien impartial mais stratégique des données."""
             "total_interactions": total_interactions,
             "authorized_interactions": authorized_interactions,
             "denied_interactions": total_interactions - authorized_interactions,
-            "authorization_rate": authorized_interactions / total_interactions
-            if total_interactions > 0
-            else 0.0,
+            "authorization_rate": (
+                authorized_interactions / total_interactions
+                if total_interactions > 0
+                else 0.0
+            ),
             "total_revealed_items": len(self.revealed_information),
             "dataset_manager_stats": self.dataset_manager.get_access_statistics(),
         }

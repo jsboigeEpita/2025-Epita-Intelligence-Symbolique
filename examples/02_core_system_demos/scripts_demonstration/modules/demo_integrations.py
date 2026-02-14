@@ -409,15 +409,15 @@ def run_demo_interactive(custom_data: str = None) -> bool:
 
     # 2. Interface stratégique-tactique
     afficher_progression(2, total_etapes, "Interface stratégique-tactique")
-    resultats_modules[
-        "Interface Stratégique-Tactique"
-    ] = demo_interface_tactique_strategique(logger, config)
+    resultats_modules["Interface Stratégique-Tactique"] = (
+        demo_interface_tactique_strategique(logger, config)
+    )
 
     # 3. Interface tactique-opérationnel
     afficher_progression(3, total_etapes, "Interface tactique-opérationnel")
-    resultats_modules[
-        "Interface Tactique-Opérationnel"
-    ] = demo_interface_tactique_operationnel(logger, config)
+    resultats_modules["Interface Tactique-Opérationnel"] = (
+        demo_interface_tactique_operationnel(logger, config)
+    )
 
     # 4. Intégration JPype-Tweety - AVEC DONNÉES CUSTOM
     afficher_progression(4, total_etapes, "Intégration JPype-Tweety")

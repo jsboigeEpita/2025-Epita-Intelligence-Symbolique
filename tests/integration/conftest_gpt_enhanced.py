@@ -436,7 +436,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def create_test_oracle_state(
-    elements_jeu: Dict[str, Any]
+    elements_jeu: Dict[str, Any],
 ) -> Optional[CluedoOracleState]:
     """Crée un état Oracle pour tests."""
     if not ORACLE_SYSTEM_AVAILABLE:

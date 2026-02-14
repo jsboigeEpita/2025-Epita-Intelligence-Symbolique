@@ -234,9 +234,9 @@ class MainOrchestrator:
         results: Dict[str, Any] = {
             "status": "pending",
             "strategy_used": OrchestrationStrategy.HIERARCHICAL_FULL.value,
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
             "strategic_analysis": {},
             "tactical_coordination": {},
             "operational_results": {},
@@ -300,9 +300,9 @@ class MainOrchestrator:
                 results["operational_results"] = operational_results
 
             # Synthèse hiérarchique
-            results[
-                "hierarchical_coordination"
-            ] = await self._synthesize_hierarchical_results(results)
+            results["hierarchical_coordination"] = (
+                await self._synthesize_hierarchical_results(results)
+            )
             results["status"] = "success"
 
         except Exception as e:
@@ -466,9 +466,9 @@ class MainOrchestrator:
         results: Dict[str, Any] = {
             "status": "pending",
             "strategy_used": OrchestrationStrategy.STRATEGIC_ONLY.value,
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
             "strategic_analysis": {},
         }
 
@@ -493,9 +493,9 @@ class MainOrchestrator:
                 ):  # ou autre indicateur de succès
                     results["status"] = "success"
                 else:
-                    results[
-                        "status"
-                    ] = "partial_failure"  # ou "error" si c'est plus approprié
+                    results["status"] = (
+                        "partial_failure"  # ou "error" si c'est plus approprié
+                    )
                     results["strategic_analysis"]["error"] = analysis_output.get(
                         "error", "Strategic analysis did not produce expected output."
                     )
@@ -533,9 +533,9 @@ class MainOrchestrator:
         results: Dict[str, Any] = {
             "status": "pending",
             "strategy_used": OrchestrationStrategy.TACTICAL_COORDINATION.value,
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
             "tactical_coordination_results": {},  # Clé spécifique pour les résultats de cette stratégie
         }
 
@@ -551,9 +551,9 @@ class MainOrchestrator:
                     "[TACTICAL_COORDINATION] StrategicManager ou TacticalCoordinator non configuré."
                 )
                 results["status"] = "error"
-                results[
-                    "error_message"
-                ] = "StrategicManager ou TacticalCoordinator non configuré."
+                results["error_message"] = (
+                    "StrategicManager ou TacticalCoordinator non configuré."
+                )
                 # S'assurer que la clé existe même en cas d'erreur de configuration
                 if "tactical_coordination_results" not in results:
                     results["tactical_coordination_results"] = {}
@@ -578,9 +578,9 @@ class MainOrchestrator:
                     "[TACTICAL_COORDINATION] L'analyse stratégique n'a pas produit d'objectifs."
                 )
                 results["status"] = "partial_failure"
-                results[
-                    "error_message"
-                ] = "L'analyse stratégique interne n'a pas produit d'objectifs."
+                results["error_message"] = (
+                    "L'analyse stratégique interne n'a pas produit d'objectifs."
+                )
                 results["tactical_coordination_results"][
                     "error"
                 ] = "Aucun objectif stratégique obtenu pour la coordination tactique."
@@ -662,9 +662,11 @@ class MainOrchestrator:
                 return {
                     "status": "error",
                     "strategy_used": OrchestrationStrategy.OPERATIONAL_DIRECT.value,
-                    "input_text_snippet": text_input[:100] + "..."
-                    if len(text_input) > 100
-                    else text_input,
+                    "input_text_snippet": (
+                        text_input[:100] + "..."
+                        if len(text_input) > 100
+                        else text_input
+                    ),
                     "error_message": error_msg,
                     "operational_results": {"error": error_msg},
                 }
@@ -726,9 +728,9 @@ class MainOrchestrator:
             }
 
             if error_message_content:
-                final_output[
-                    "error_message"
-                ] = error_message_content  # Peut être redondant si déjà dans operational_results
+                final_output["error_message"] = (
+                    error_message_content  # Peut être redondant si déjà dans operational_results
+                )
 
             logger.info(
                 f"[OPERATIONAL_DIRECT] Stratégie terminée avec le statut: {final_output['status']}"
@@ -743,9 +745,9 @@ class MainOrchestrator:
             return {
                 "status": "error",
                 "strategy_used": OrchestrationStrategy.OPERATIONAL_DIRECT.value,
-                "input_text_snippet": text_input[:100] + "..."
-                if len(text_input) > 100
-                else text_input,
+                "input_text_snippet": (
+                    text_input[:100] + "..." if len(text_input) > 100 else text_input
+                ),
                 "error_message": str(e),
                 "operational_results": {"error": str(e)},
             }
@@ -759,9 +761,9 @@ class MainOrchestrator:
         output_results: Dict[str, Any] = {
             "status": "pending",
             "strategy_used": OrchestrationStrategy.SPECIALIZED_DIRECT.value,
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
             "specialized_orchestration": {},
         }
 
@@ -968,24 +970,30 @@ class MainOrchestrator:
                     "investigation_type": "cluedo",
                     "conversation_history": conversation_history,
                     "enquete_state": {
-                        "nom_enquete": final_solution.get("nom_enquete", "N/A")
-                        if isinstance(final_solution, dict)
-                        else "N/A",
-                        "solution_proposee": final_solution
-                        if final_solution
-                        else "N/A",
-                        "hypotheses_count": len(
+                        "nom_enquete": (
+                            final_solution.get("nom_enquete", "N/A")
+                            if isinstance(final_solution, dict)
+                            else "N/A"
+                        ),
+                        "solution_proposee": (
+                            final_solution if final_solution else "N/A"
+                        ),
+                        "hypotheses_count": (
+                            len(
+                                results.get("oracle_statistics", {})
+                                .get("agent_interactions", {})
+                                .get("suggestions_made", [])
+                            )
+                            if results
+                            else 0
+                        ),
+                        "tasks_count": (
                             results.get("oracle_statistics", {})
                             .get("agent_interactions", {})
-                            .get("suggestions_made", [])
-                        )
-                        if results
-                        else 0,
-                        "tasks_count": results.get("oracle_statistics", {})
-                        .get("agent_interactions", {})
-                        .get("total_turns", 0)
-                        if results
-                        else 0,
+                            .get("total_turns", 0)
+                            if results
+                            else 0
+                        ),
                     },
                     "full_results": results,  # Inclure tous les résultats pour un débogage plus facile
                 }
@@ -1176,9 +1184,9 @@ class MainOrchestrator:
             "status": "success",
             "strategy_used": OrchestrationStrategy.COMPLEX_PIPELINE.value,
             "message": "Complex pipeline strategy executed successfully.",
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
         }
 
     async def _execute_manual_selection(self, text_input: str) -> Dict[str, Any]:
@@ -1190,9 +1198,9 @@ class MainOrchestrator:
             "status": "success",
             "strategy_used": OrchestrationStrategy.MANUAL_SELECTION.value,
             "message": "Manual selection strategy executed successfully.",
-            "input_text_snippet": text_input[:100] + "..."
-            if len(text_input) > 100
-            else text_input,
+            "input_text_snippet": (
+                text_input[:100] + "..." if len(text_input) > 100 else text_input
+            ),
         }
 
     def _initialize_specialized_orchestrators(self) -> Dict[str, Dict[str, Any]]:
@@ -1222,13 +1230,15 @@ class MainOrchestrator:
             s_map["real_llm"] = {
                 "orchestrator": RealLLMOrchestrator(self.kernel),
                 "priority": 3,
-                "types": [
-                    AnalysisType.COMPREHENSIVE,
-                    AnalysisType.RHETORICAL,
-                    AnalysisType.FALLACY_FOCUSED,
-                ]
-                if AnalysisType
-                else [],
+                "types": (
+                    [
+                        AnalysisType.COMPREHENSIVE,
+                        AnalysisType.RHETORICAL,
+                        AnalysisType.FALLACY_FOCUSED,
+                    ]
+                    if AnalysisType
+                    else []
+                ),
             }
 
         if LogiqueComplexeOrchestrator:

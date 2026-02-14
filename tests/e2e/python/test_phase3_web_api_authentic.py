@@ -14,7 +14,7 @@ MISSION PHASE 3:
 - Documentation des flux de données réels
 
 Version: 1.0.0
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
@@ -415,14 +415,15 @@ class Phase3WebAPITester:
         termination_report = REPORTS_DIR / f"phase3_termination_report_{timestamp}.md"
         await self._create_termination_report(termination_report, timestamp)
 
-        logger.info(f"✅ Rapports générés: {web_report.name}, {termination_report.name}")
+        logger.info(
+            f"✅ Rapports générés: {web_report.name}, {termination_report.name}"
+        )
         return termination_report
 
     async def _create_web_interface_report(self, report_path: Path, timestamp: str):
         """Crée le rapport détaillé de l'interface Web."""
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(
-                f"""# Rapport Interface Web Phase 3
+            f.write(f"""# Rapport Interface Web Phase 3
 ## Session: {self.session_id}
 ## Date: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
 
@@ -448,13 +449,11 @@ class Phase3WebAPITester:
 
 ### Screenshots Capturés
 {len(self.screenshots_captured)} captures d'écran sauvegardées:
-"""
-            )
+""")
             for screenshot in self.screenshots_captured:
                 f.write(f"- {screenshot}\n")
 
-            f.write(
-                f"""
+            f.write(f"""
 ### Élimination des Mocks
 - ✅ Aucun MockWebAPI détecté
 - ✅ Aucun FakeHTTPResponse utilisé
@@ -471,16 +470,14 @@ class Phase3WebAPITester:
 - Conversations: `logs/phase3_web_conversations_{timestamp}.json`
 - Rapport interface: `reports/phase3_web_interface_report_{timestamp}.md`
 - Rapport terminaison: `reports/phase3_termination_report_{timestamp}.md`
-"""
-            )
+""")
 
     async def _create_termination_report(self, report_path: Path, timestamp: str):
         """Crée le rapport de terminaison de la Phase 3."""
         duration = datetime.now() - self.start_time
 
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(
-                f"""# Rapport de Terminaison Phase 3
+            f.write(f"""# Rapport de Terminaison Phase 3
 ## Interface Web/API avec Orchestration Playwright Authentique
 
 ### Informations de Session
@@ -547,8 +544,7 @@ L'interface Web EPITA showccase une architecture moderne avec:
 ---
 **Phase 3/6 - TERMINÉE AVEC SUCCÈS** ✅
 *Excellence de l'interface Web moderne avec architecture Python cross-platform et interactions authentiques démontrée.*
-"""
-            )
+""")
 
 
 async def main():

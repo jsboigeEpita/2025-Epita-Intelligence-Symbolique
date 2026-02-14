@@ -4,6 +4,7 @@
 Worker pour le test de chargement de théorie (test_load_theory).
 Exécuté dans un sous-processus avec une JVM dédiée.
 """
+
 import os
 import sys
 import jpype

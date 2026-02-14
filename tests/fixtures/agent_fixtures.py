@@ -18,7 +18,6 @@ import pytest
 import os
 import sys
 
-
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 # sys.path.append(os.path.abspath('../..'))
 # Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.

@@ -111,11 +111,11 @@ class HypothesisTracker:
             "supporting_evidence_count": supporting_count,
             "contradicting_evidence_count": contradicting_count,
             "jtms_validity": belief_valid,
-            "status": "strong"
-            if strength_score > 0.7
-            else "weak"
-            if strength_score < 0.3
-            else "moderate",
+            "status": (
+                "strong"
+                if strength_score > 0.7
+                else "weak" if strength_score < 0.3 else "moderate"
+            ),
         }
 
 

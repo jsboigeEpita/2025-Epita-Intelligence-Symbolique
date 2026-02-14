@@ -247,7 +247,9 @@ def pytest_collection_finish(session):
     Hook exécuté après la collecte des tests.
     Détecte si des tests E2E sont présents et stocke le résultat dans le cache.
     """
-    is_e2e_session = any(item.get_closest_marker("e2e") is not None for item in session.items)
+    is_e2e_session = any(
+        item.get_closest_marker("e2e") is not None for item in session.items
+    )
     session.config.cache.set("is_e2e_session", is_e2e_session)
     if is_e2e_session:
         logger.warning(
@@ -258,49 +260,51 @@ def pytest_collection_finish(session):
 @pytest.fixture
 def mock_chat_completion_service():
     """Mock LLM service compatible Pydantic ChatCompletionAgent.
-    
+
     Utilise MagicMock avec spec=ChatCompletionClientBase pour passer
     validation Pydantic lors de l'initialisation de BaseAgent héritant
     ChatCompletionAgent (correction Mission D3.2 Phase B).
-    
+
     Returns:
         MagicMock: Service mock avec spec ChatCompletionClientBase
     """
-    from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+    from semantic_kernel.connectors.ai.chat_completion_client_base import (
+        ChatCompletionClientBase,
+    )
     from semantic_kernel.contents import ChatMessageContent
     from unittest.mock import MagicMock, AsyncMock
-    
+
     # Mock avec spec pour validation Pydantic
     mock_service = MagicMock(spec=ChatCompletionClientBase)
     mock_service.service_id = "test_llm_service"
     mock_service.ai_model_id = "test-model"
-    
+
     # Mock méthode get_chat_message_contents (async)
     async def mock_get_chat_message_contents(*args, **kwargs):
         return [ChatMessageContent(role="assistant", content="Mock response")]
-    
+
     mock_service.get_chat_message_contents = AsyncMock(
         side_effect=mock_get_chat_message_contents
     )
-    
+
     return mock_service
 
 
 @pytest.fixture
 def mock_kernel_with_llm(mock_chat_completion_service):
     """Kernel avec service LLM mock Pydantic-compatible pré-configuré.
-    
+
     Utilise mock_chat_completion_service pour garantir compatibilité
     avec BaseAgent héritant ChatCompletionAgent (Mission D3.2 Phase B).
-    
+
     Args:
         mock_chat_completion_service: Fixture service mock Pydantic-compatible
-        
+
     Returns:
         Kernel: Instance Kernel avec service LLM mock ajouté
     """
     from semantic_kernel import Kernel
-    
+
     kernel = Kernel()
     kernel.add_service(mock_chat_completion_service)
     return kernel
@@ -528,42 +532,42 @@ def check_mock_llm_is_forced(request, monkeypatch):
         monkeypatch.setattr(settings, "use_mock_llm", True)
         yield
 
+
 def pytest_collection_modifyitems(config, items):
     """
     Auto-marque les tests utilisant semantic_kernel avec marker llm_integration.
-    
+
     Résout régression: Introduction markers llm_* sans migration complète.
     Restaure centaines tests semantic_kernel désactivés depuis juin 2025.
-    
+
     Mission D3.2 - Réincorporation Tests LLM Baseline Niveau 2
     """
     import os
-    
+
     for item in items:
         # Récupérer fichier source du test
         test_file = str(item.fspath)
-        
+
         # Vérifier si test a déjà un marker llm_*
         has_llm_marker = any(
-            marker.name in {'llm_light', 'llm_integration', 'llm_critical'}
+            marker.name in {"llm_light", "llm_integration", "llm_critical"}
             for marker in item.iter_markers()
         )
-        
+
         # Si pas de marker llm_*, vérifier imports semantic_kernel
         if not has_llm_marker and os.path.exists(test_file):
             try:
-                with open(test_file, 'r', encoding='utf-8') as f:
+                with open(test_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                
+
                 # Détection imports semantic_kernel
-                if 'semantic_kernel' in content or 'from semantic_kernel' in content:
+                if "semantic_kernel" in content or "from semantic_kernel" in content:
                     # Auto-marquer avec llm_integration par défaut
                     item.add_marker(pytest.mark.llm_integration)
-                    
+
             except Exception as e:
                 # En cas d'erreur lecture, ignorer silencieusement
                 pass
-
 
 
 @pytest.fixture(scope="session")

@@ -119,12 +119,16 @@ def check_python_tokens(file_path: str) -> Tuple[bool, str, List[Dict[str, Any]]
         logger.error(message, exc_info=True)
         error_tokens_found.append(
             {
-                "line": e.args[1][0]
-                if len(e.args) > 1 and isinstance(e.args[1], tuple)
-                else "N/A",
-                "col": e.args[1][1]
-                if len(e.args) > 1 and isinstance(e.args[1], tuple)
-                else "N/A",
+                "line": (
+                    e.args[1][0]
+                    if len(e.args) > 1 and isinstance(e.args[1], tuple)
+                    else "N/A"
+                ),
+                "col": (
+                    e.args[1][1]
+                    if len(e.args) > 1 and isinstance(e.args[1], tuple)
+                    else "N/A"
+                ),
                 "message": str(e),
             }
         )

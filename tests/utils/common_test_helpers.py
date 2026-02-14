@@ -23,7 +23,6 @@ import shutil
 from pathlib import Path
 from contextlib import contextmanager
 
-
 # Configurer le logging
 logging.basicConfig(
     level=logging.INFO,

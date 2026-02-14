@@ -222,6 +222,7 @@ class SherlockEnqueteAgent(BaseAgent):
     """
 
     _service_id: str
+
     def __init__(
         self,
         kernel: Kernel,

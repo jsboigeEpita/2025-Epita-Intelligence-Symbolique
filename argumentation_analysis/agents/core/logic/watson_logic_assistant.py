@@ -369,7 +369,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             instructions=actual_system_prompt,
             service_id=service_id,
         )
-        
+
         # Ensure kernel is accessible as instance attribute (fix for AttributeError: 'WatsonLogicAssistant' object has no attribute 'kernel')
         self.kernel = kernel
 

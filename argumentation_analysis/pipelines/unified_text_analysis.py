@@ -312,13 +312,13 @@ class UnifiedTextAnalysisPipeline:
                     self.config.orchestration_mode in ["real", "conversation"]
                     and self.orchestrator
                 ):
-                    results[
-                        "informal_analysis"
-                    ] = await self._perform_informal_analysis_orchestrated(text)
+                    results["informal_analysis"] = (
+                        await self._perform_informal_analysis_orchestrated(text)
+                    )
                 else:
-                    results[
-                        "informal_analysis"
-                    ] = await self._perform_informal_analysis(text)
+                    results["informal_analysis"] = (
+                        await self._perform_informal_analysis(text)
+                    )
 
             # Analyse formelle
             if "formal" in self.config.analysis_modes:
@@ -333,9 +333,9 @@ class UnifiedTextAnalysisPipeline:
             # Orchestration si activée
             if self.orchestrator and self.config.orchestration_mode != "pipeline":
                 logger.info("[ANALYZE] Execution orchestration avancee...")
-                results[
-                    "orchestration_analysis"
-                ] = await self._perform_orchestration_analysis(text)
+                results["orchestration_analysis"] = (
+                    await self._perform_orchestration_analysis(text)
+                )
 
             # Génération des recommandations
             results["recommendations"] = self._generate_recommendations(results)
@@ -397,10 +397,11 @@ class UnifiedTextAnalysisPipeline:
         fallacies = informal_results["fallacies"]
         informal_results["summary"] = {
             "total_fallacies": len(fallacies),
-            "average_confidence": sum(f.get("confidence", 0) for f in fallacies)
-            / len(fallacies)
-            if fallacies
-            else 0,
+            "average_confidence": (
+                sum(f.get("confidence", 0) for f in fallacies) / len(fallacies)
+                if fallacies
+                else 0
+            ),
             "severity_distribution": self._calculate_severity_distribution(fallacies),
         }
 
@@ -432,9 +433,9 @@ class UnifiedTextAnalysisPipeline:
 
             if not logic_agent:
                 formal_results["status"] = "Failed"
-                formal_results[
-                    "reason"
-                ] = f"Impossible de créer l'agent logique '{self.config.logic_type}'"
+                formal_results["reason"] = (
+                    f"Impossible de créer l'agent logique '{self.config.logic_type}'"
+                )
                 return formal_results
 
             # Conversion en ensemble de croyances
@@ -458,11 +459,11 @@ class UnifiedTextAnalysisPipeline:
                     query_results.append(
                         {
                             "query": query,
-                            "result": "Entailed"
-                            if result
-                            else "Not Entailed"
-                            if result is not None
-                            else "Unknown",
+                            "result": (
+                                "Entailed"
+                                if result
+                                else "Not Entailed" if result is not None else "Unknown"
+                            ),
                             "raw_output": raw_output,
                         }
                     )
@@ -473,9 +474,11 @@ class UnifiedTextAnalysisPipeline:
                         "belief_set_summary": {
                             "is_consistent": is_consistent,
                             "details": consistency_details,
-                            "formulas_count": len(belief_set.content.split("\n"))
-                            if hasattr(belief_set, "content")
-                            else 0,
+                            "formulas_count": (
+                                len(belief_set.content.split("\n"))
+                                if hasattr(belief_set, "content")
+                                else 0
+                            ),
                         },
                         "queries": query_results,
                         "consistency_check": is_consistent,
@@ -483,9 +486,9 @@ class UnifiedTextAnalysisPipeline:
                 )
             else:
                 formal_results["status"] = "Failed"
-                formal_results[
-                    "reason"
-                ] = f"Échec conversion en ensemble de croyances: {status}"
+                formal_results["reason"] = (
+                    f"Échec conversion en ensemble de croyances: {status}"
+                )
 
         except Exception as e:
             logger.error(f"Erreur analyse formelle: {e}")
@@ -527,9 +530,9 @@ class UnifiedTextAnalysisPipeline:
                 )
             else:
                 unified_results["status"] = "Failed"
-                unified_results[
-                    "reason"
-                ] = "L'analyse de synthèse n'a retourné aucun résultat."
+                unified_results["reason"] = (
+                    "L'analyse de synthèse n'a retourné aucun résultat."
+                )
 
         except Exception as e:
             logger.error(f"Erreur analyse unifiée: {e}")
@@ -876,9 +879,11 @@ class UnifiedTextAnalysisPipeline:
                                             "text_fragment": f"Fragment extrait de l'analyse orchestrée #{i+1}",
                                             "explanation": f"Sophisme '{nom.strip()}' identifié par l'orchestrateur LLM",
                                             "severity": "Moyen",  # Valeur par défaut
-                                            "confidence": float(confiance)
-                                            if confiance.replace(".", "").isdigit()
-                                            else 0.0,
+                                            "confidence": (
+                                                float(confiance)
+                                                if confiance.replace(".", "").isdigit()
+                                                else 0.0
+                                            ),
                                         }
                                         informal_results["fallacies"].append(sophisme)
 
@@ -896,10 +901,11 @@ class UnifiedTextAnalysisPipeline:
             fallacies = informal_results["fallacies"]
             informal_results["summary"] = {
                 "total_fallacies": len(fallacies),
-                "average_confidence": sum(f.get("confidence", 0) for f in fallacies)
-                / len(fallacies)
-                if fallacies
-                else 0,
+                "average_confidence": (
+                    sum(f.get("confidence", 0) for f in fallacies) / len(fallacies)
+                    if fallacies
+                    else 0
+                ),
                 "severity_distribution": self._calculate_severity_distribution(
                     fallacies
                 ),

@@ -7,6 +7,7 @@ Script de nettoyage automatique des traces sensibles.
 Ce script nettoie automatiquement les traces sensibles générées lors de l'analyse
 de discours politiques complexes, en préservant la sécurité des données.
 """
+
 import argumentation_analysis.core.environment
 
 import os

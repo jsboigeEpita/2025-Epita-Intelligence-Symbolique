@@ -7,7 +7,6 @@ import sys
 import asyncio
 import os
 
-
 # Ajouter le répertoire racine au path
 from unittest.mock import Mock, AsyncMock
 

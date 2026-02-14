@@ -205,7 +205,9 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
         # Afficher les résultats d'analyse
         for mode, analysis_result in result.results.items():
             logger.info(f"\n🔍 === RÉSULTATS {mode.upper()} ===")
-            logger.info(f"🤖 Modèle utilisé: {analysis_result.get('model_used', 'N/A')}")
+            logger.info(
+                f"🤖 Modèle utilisé: {analysis_result.get('model_used', 'N/A')}"
+            )
             logger.info(f"🎯 Authentique: {analysis_result.get('authentic', False)}")
 
             if analysis_result.get("fallacies_detected"):

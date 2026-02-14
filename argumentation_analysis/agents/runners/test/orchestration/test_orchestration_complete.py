@@ -224,7 +224,9 @@ async def run_orchestration_test():
         end_time = asyncio.get_event_loop().time()
         duration = end_time - start_time
 
-        logger.info(f"🏁 Orchestration terminée avec succès en {duration:.2f} secondes.")
+        logger.info(
+            f"🏁 Orchestration terminée avec succès en {duration:.2f} secondes."
+        )
 
         # Finaliser la trace
         trace_path = tracer.finalize_trace()

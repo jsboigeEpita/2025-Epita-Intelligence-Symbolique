@@ -515,7 +515,9 @@ class UnifiedReportTemplate:
                 if "queries" in formal and formal["queries"]:
                     lines.append("\n### Requêtes logiques exécutées")
                     for query in formal["queries"]:
-                        result_icon = "✅" if query.get("result") == "Entailed" else "❌"
+                        result_icon = (
+                            "✅" if query.get("result") == "Entailed" else "❌"
+                        )
                         lines.append(
                             f"- {result_icon} `{query.get('query', 'N/A')}` → {query.get('result', 'N/A')}"
                         )

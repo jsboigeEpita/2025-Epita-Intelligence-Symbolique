@@ -47,7 +47,6 @@ from argumentation_analysis.utils.extract_repair.marker_repair_logic import (
     generate_report as generate_marker_repair_report,  # Renommé pour clarté
 )
 
-
 logger = logging.getLogger(__name__)
 
 # --- Fonctions déplacées depuis argumentation_analysis/scripts/repair_extract_markers.py ---
@@ -182,9 +181,9 @@ async def repair_extract_markers(
                     # qui modifie l'objet extract_definitions passé par référence.
                     # Ou, si ExtractDefinitions est immuable, repair_plugin devrait retourner la nouvelle instance.
                     # En supposant que ExtractRepairPlugin modifie l'objet en place :
-                    source_info.extracts[
-                        extract_idx
-                    ].start_marker = new_start  # Modification directe
+                    source_info.extracts[extract_idx].start_marker = (
+                        new_start  # Modification directe
+                    )
 
                     current_status = "repaired"
                     message = (

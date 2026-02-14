@@ -4,7 +4,7 @@
 """
 Communication Middleware Core Module for the Orchestration Pipeline.
 
-This module centralizes the logic for creating and managing the 
+This module centralizes the logic for creating and managing the
 communication middleware used between different components of the
 hierarchical architecture.
 """

@@ -47,7 +47,7 @@ crypto_service = CryptoService()
 
 
 def load_source_text(
-    source_info: Union[Dict[str, Any], SourceDefinition]
+    source_info: Union[Dict[str, Any], SourceDefinition],
 ) -> Tuple[Optional[str], str]:
     """
     Charge le texte source à partir des informations de la source en utilisant `FetchService`.
@@ -357,7 +357,7 @@ def export_definitions_to_json(
 
 
 def import_definitions_from_json(
-    input_path: Union[str, Path]
+    input_path: Union[str, Path],
 ) -> Tuple[bool, Union[List[Dict[str, Any]], str]]:
     """
     Importe les définitions d'extraits depuis un fichier JSON non chiffré.

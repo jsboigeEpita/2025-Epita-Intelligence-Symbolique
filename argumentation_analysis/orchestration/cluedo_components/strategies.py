@@ -248,8 +248,8 @@ class OracleTerminationStrategy(TerminationStrategy):
             "max_turns": self.max_turns,
             "max_cycles": self.max_cycles,
             "is_solution_found": self.is_solution_found,
-            "solution_proposed": self.oracle_state.is_solution_proposed
-            if self.oracle_state
-            else False,
+            "solution_proposed": (
+                self.oracle_state.is_solution_proposed if self.oracle_state else False
+            ),
             "elimination_possible": self._check_elimination_complete(),
         }

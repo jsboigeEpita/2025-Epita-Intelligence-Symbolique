@@ -5,7 +5,7 @@ Script de Démarrage du Système de Documentation IA Symbolique
 
 Ce script lance automatiquement toute la chaîne de traitement :
 1. Analyse de l'architecture du projet
-2. Génération de la carte des connaissances  
+2. Génération de la carte des connaissances
 3. Création de la documentation HTML
 4. Lancement de l'interface interactive
 

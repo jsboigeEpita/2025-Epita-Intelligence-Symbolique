@@ -50,7 +50,9 @@ class SyncOperation:
     operation_id: str
     source_session: str
     target_session: str
-    operation_type: str  # sync_beliefs, merge_sessions, validate_cross, resolve_conflicts
+    operation_type: (
+        str  # sync_beliefs, merge_sessions, validate_cross, resolve_conflicts
+    )
     status: str = "pending"
     start_time: datetime = field(default_factory=datetime.now)
     end_time: Optional[datetime] = None
@@ -1081,9 +1083,9 @@ class JTMSCommunicationHub:
             "status": "handled",
             "agent_id": agent_id,
             "failure_type": failure_type,
-            "recovery_action": "auto_restart"
-            if recovery_actions
-            else "manual_intervention",
+            "recovery_action": (
+                "auto_restart" if recovery_actions else "manual_intervention"
+            ),
             "agent_status": "failed",
             "notification_sent": True,
             "recovery_actions": recovery_actions,
@@ -1204,9 +1206,9 @@ class JTMSCommunicationHub:
             "merged_beliefs": synchronized_beliefs,
             "conflicts": conflicts,
             "conflicts_resolved": len(conflicts) == 0,
-            "consistency_status": "consistent"
-            if len(conflicts) == 0
-            else "inconsistent",
+            "consistency_status": (
+                "consistent" if len(conflicts) == 0 else "inconsistent"
+            ),
             "timestamp": time.time(),
         }
 

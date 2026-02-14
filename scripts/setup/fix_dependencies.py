@@ -7,6 +7,7 @@ Script pour résoudre les problèmes de dépendances pour les tests.
 Ce script installe les versions compatibles de numpy, pandas et autres dépendances
 nécessaires pour exécuter les tests.
 """
+
 import argumentation_analysis.core.environment
 
 import sys

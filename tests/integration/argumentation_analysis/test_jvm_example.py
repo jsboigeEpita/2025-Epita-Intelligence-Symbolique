@@ -2,6 +2,7 @@
 """
 Exemple de test utilisant la JVM réelle.
 """
+
 import logging
 import pytest
 import jpype

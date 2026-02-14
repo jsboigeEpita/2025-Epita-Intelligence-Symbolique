@@ -335,9 +335,11 @@ class PermissionManager:
             "daily_queries_used": daily_count,
             "daily_queries_limit": rule.max_daily_queries,
             "total_queries": len(agent_logs),
-            "success_rate": sum(1 for log in agent_logs if log.result) / len(agent_logs)
-            if agent_logs
-            else 0.0,
+            "success_rate": (
+                sum(1 for log in agent_logs if log.result) / len(agent_logs)
+                if agent_logs
+                else 0.0
+            ),
             "allowed_query_types": [qt.value for qt in rule.allowed_query_types],
             "reveal_policy": rule.reveal_policy,
         }

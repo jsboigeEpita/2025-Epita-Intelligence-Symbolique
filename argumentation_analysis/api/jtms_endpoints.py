@@ -382,9 +382,7 @@ async def explain_belief(
             + (
                 "vraie"
                 if result["current_status"] is True
-                else "fausse"
-                if result["current_status"] is False
-                else "inconnue"
+                else "fausse" if result["current_status"] is False else "inconnue"
             ),
         )
 

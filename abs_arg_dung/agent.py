@@ -288,13 +288,13 @@ class DungAgent:
 
         status = {
             "credulously_accepted": any(arg_name in ext for ext in preferred),
-            "skeptically_accepted": all(arg_name in ext for ext in preferred)
-            if preferred
-            else False,
+            "skeptically_accepted": (
+                all(arg_name in ext for ext in preferred) if preferred else False
+            ),
             "grounded_accepted": arg_name in grounded,
-            "stable_accepted": any(arg_name in ext for ext in stable)
-            if stable
-            else False,
+            "stable_accepted": (
+                any(arg_name in ext for ext in stable) if stable else False
+            ),
         }
 
         return status

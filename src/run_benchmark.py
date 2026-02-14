@@ -31,15 +31,13 @@ def main():
     hello_world_plugin_path = os.path.join(plugins_path, "hello_world")
     os.makedirs(hello_world_plugin_path, exist_ok=True)
     with open(os.path.join(hello_world_plugin_path, "__init__.py"), "w") as f:
-        f.write(
-            """
+        f.write("""
 from src.core.plugins.interfaces import BasePlugin
 
 class HelloWorldPlugin(BasePlugin):
     def greet(self, name: str) -> dict:
         return {"greeting": f"Hello, {name}!"}
-"""
-        )
+""")
 
     plugin_loader = PluginLoader(plugin_paths=[plugins_path])
     plugin_registry = plugin_loader.discover()

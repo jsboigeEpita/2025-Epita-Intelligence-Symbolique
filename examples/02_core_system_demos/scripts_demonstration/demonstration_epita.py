@@ -261,15 +261,13 @@ except ImportError as e:
 
 def afficher_banniere_principale():
     """Affiche la bannière principale du système"""
-    print(
-        f"""
+    print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
 |                [EPITA] DEMONSTRATION - Intelligence Symbolique              |
 |                        Architecture Modulaire v2.0                         |
 +==============================================================================+
-{Colors.ENDC}"""
-    )
+{Colors.ENDC}""")
 
 
 def afficher_menu_categories(config: Dict[str, Any]) -> None:
@@ -513,15 +511,13 @@ def execute_all_categories_non_interactive(config: Dict[str, Any], **kwargs) -> 
     """Exécute toutes les catégories de tests en mode non-interactif avec trace complète."""
     logger = DemoLogger("all_tests")
 
-    print(
-        f"""
+    print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
 |              [EPITA] MODE --ALL-TESTS - Trace Complète Non-Interactive     |
 |                     Exécution de toutes les catégories                     |
 +==============================================================================+
-{Colors.ENDC}"""
-    )
+{Colors.ENDC}""")
 
     start_time = time.time()
     categories = config.get("categories", {})
@@ -671,15 +667,13 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
     """Mode validation avec données dédiées pour détecter mocks vs réel."""
     logger = DemoLogger("validation_custom")
 
-    print(
-        f"""
+    print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
 |              [EPITA] VALIDATION AVEC DONNÉES DÉDIÉES                        |
 |                   Détection Mocks vs Traitement Réel                        |
 +==============================================================================+
-{Colors.ENDC}"""
-    )
+{Colors.ENDC}""")
 
     validator = EpitaValidator()
     datasets = validator.create_custom_datasets()
@@ -875,15 +869,13 @@ def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
     """Test avec des données custom spécifiques fournies par l'utilisateur."""
     logger = DemoLogger("custom_data_test")
 
-    print(
-        f"""
+    print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
 |              [EPITA] TEST AVEC DONNÉES CUSTOM SPÉCIFIQUES                   |
 |                        Texte fourni par l'utilisateur                       |
 +==============================================================================+
-{Colors.ENDC}"""
-    )
+{Colors.ENDC}""")
 
     print(f"\n{Colors.BOLD}[DOC] DONNÉES À TESTER:{Colors.ENDC}")
     print(f"   Longueur: {len(custom_text)} caractères")

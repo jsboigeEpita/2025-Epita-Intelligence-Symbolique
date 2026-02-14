@@ -6,6 +6,7 @@ Ce module sert de point d'entrée principal pour les utilitaires de fichiers,
 important des fonctionnalités spécifiques depuis des sous-modules dédiés.
 Il centralise la logique de manipulation de fichiers pour le projet.
 """
+
 import logging
 from pathlib import (
     Path,

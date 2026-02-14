@@ -435,7 +435,7 @@ def find_valid_java_home() -> Optional[str]:
 def get_jvm_options() -> List[str]:
     """
     Retourne une liste d'options JVM optimisées.
-    
+
     Mission D3.2: Réactivation options mémoire pour stabiliser tests JPype/Tweety
     """
     options = [

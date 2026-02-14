@@ -225,9 +225,9 @@ class DocumentationAnalyzer:
             "total_links": total_links,
             "broken_links": broken_count,
             "valid_links": valid_count,
-            "broken_percentage": (broken_count / total_links * 100)
-            if total_links > 0
-            else 0,
+            "broken_percentage": (
+                (broken_count / total_links * 100) if total_links > 0 else 0
+            ),
         }
 
         return self.results

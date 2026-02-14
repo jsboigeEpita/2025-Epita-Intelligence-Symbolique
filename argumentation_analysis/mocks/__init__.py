@@ -6,6 +6,7 @@ Il contient des objets et fonctions simulés (mocks) utilisés pour les tests
 ou pour remplacer des dépendances complexes lors du développement ou de
 certaines configurations d'exécution.
 """
+
 import logging
 
 logger = logging.getLogger(__name__)

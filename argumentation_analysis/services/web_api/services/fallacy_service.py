@@ -524,12 +524,16 @@ class FallacyService:
                             description=fallacy_info["description"],
                             severity=fallacy_info["severity"],
                             confidence=0.6,
-                            location={"start": position, "end": position + len(pattern)}
-                            if position >= 0
-                            else None,
-                            context=self._extract_context(text, position)
-                            if position >= 0
-                            else None,
+                            location=(
+                                {"start": position, "end": position + len(pattern)}
+                                if position >= 0
+                                else None
+                            ),
+                            context=(
+                                self._extract_context(text, position)
+                                if position >= 0
+                                else None
+                            ),
                             explanation=f"Pattern détecté: {pattern}",
                         )
                         fallacies.append(fallacy)

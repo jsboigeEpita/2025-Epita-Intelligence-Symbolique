@@ -168,16 +168,18 @@ def test_oracle_fixes_consolidated():
     # L'appel à l'intérieur de l'outil peut rester async, mais le test est synchrone.
     # Pour ce test, nous allons mocker la méthode de l'outil pour qu'elle soit synchrone.
     agent.oracle_tools.validate_agent_permissions = Mock(
-        side_effect=lambda target_agent, query_type: "Permission accordée"
-        if mock_dataset_manager.check_permission(target_agent, query_type)
-        else "Permission refusée"
+        side_effect=lambda target_agent, query_type: (
+            "Permission accordée"
+            if mock_dataset_manager.check_permission(target_agent, query_type)
+            else "Permission refusée"
+        )
     )
     agent.oracle_tools.query_oracle_dataset = Mock(
-        side_effect=lambda query_type, query_params: (_ for _ in ()).throw(
-            ValueError("Type de requ.te invalide")
+        side_effect=lambda query_type, query_params: (
+            (_ for _ in ()).throw(ValueError("Type de requ.te invalide"))
+            if query_type == "invalid_query"
+            else None
         )
-        if query_type == "invalid_query"
-        else None
     )
 
     # Test success

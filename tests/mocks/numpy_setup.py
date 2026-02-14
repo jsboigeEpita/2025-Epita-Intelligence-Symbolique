@@ -128,9 +128,9 @@ def setup_numpy_for_tests_fixture(request):
                 sys.modules["matplotlib"] = matplotlib_mock
                 sys.modules["matplotlib.pyplot"] = matplotlib_mock.pyplot
                 sys.modules["matplotlib.backends"] = matplotlib_mock.backends
-                sys.modules[
-                    "matplotlib.backends.backend_agg"
-                ] = matplotlib_mock.backends.backend_agg
+                sys.modules["matplotlib.backends.backend_agg"] = (
+                    matplotlib_mock.backends.backend_agg
+                )
                 # Ajouter les attributs attendus par matplotlib sur le backend mocké
                 backend_agg_mock = matplotlib_mock.backends.backend_agg
                 backend_agg_mock.FigureCanvas = MagicMock()

@@ -3,6 +3,7 @@
 """
 Tests pour les utilitaires de chargement de données de argumentation_analysis.utils.data_loader.
 """
+
 import pytest
 import json
 from pathlib import Path

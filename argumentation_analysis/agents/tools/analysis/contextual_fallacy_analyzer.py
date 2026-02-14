@@ -295,9 +295,9 @@ class ContextualFallacyAnalyzer:
             fallacy_copy = fallacy.copy()
             if fallacy_copy["fallacy_type"] in context_fallacy_mapping[context_type]:
                 # Ajuster la confiance en fonction du contexte
-                fallacy_copy[
-                    "confidence"
-                ] = 0.8  # Confiance plus élevée pour les sophismes contextuels
+                fallacy_copy["confidence"] = (
+                    0.8  # Confiance plus élevée pour les sophismes contextuels
+                )
                 fallacy_copy["contextual_relevance"] = "Élevée"
                 contextual_fallacies.append(fallacy_copy)
             else:

@@ -5,6 +5,7 @@ Ce module teste toutes les fonctionnalités de l'agent de synthèse unifié,
 y compris l'orchestration d'analyses, l'unification des résultats et
 la génération de rapports.
 """
+
 from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
 import asyncio
@@ -59,14 +60,15 @@ class TestSynthesisAgent:
     def mock_kernel(self, mocker):
         """Fixture pour un kernel mocké."""
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         kernel = mocker.MagicMock(spec=Kernel)
-        
+
         # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
         mock_llm_service = mocker.MagicMock(spec=OpenAIChatCompletion)
         mock_llm_service.service_id = "test_service"
         kernel.services = {"test_service": mock_llm_service}
         kernel.get_service = mocker.MagicMock(return_value=mock_llm_service)
-        
+
         kernel.plugins = {}
         kernel.get_prompt_execution_settings_from_service_id = mocker.MagicMock(
             return_value=None
@@ -77,10 +79,7 @@ class TestSynthesisAgent:
     @pytest.fixture
     def synthesis_agent(self, mock_kernel):
         """Fixture pour une instance de SynthesisAgent."""
-        agent = SynthesisAgent(
-            kernel=mock_kernel,
-            agent_name="TestSynthesisAgent"
-        )
+        agent = SynthesisAgent(kernel=mock_kernel, agent_name="TestSynthesisAgent")
         return agent
 
     @pytest.fixture
@@ -95,10 +94,7 @@ class TestSynthesisAgent:
 
     def test_init_synthesis_agent_basic(self, mock_kernel):
         """Test l'initialisation du SynthesisAgent en mode basique."""
-        agent = SynthesisAgent(
-            kernel=mock_kernel,
-            agent_name="TestAgent"
-        )
+        agent = SynthesisAgent(kernel=mock_kernel, agent_name="TestAgent")
 
         assert agent.name == "TestAgent"
         assert agent.fusion_manager is None
@@ -113,7 +109,7 @@ class TestSynthesisAgent:
         agent = SynthesisAgent(
             kernel=mock_kernel,
             agent_name="AdvancedAgent",
-            enable_advanced_features=True  # Ajouter le paramètre manquant
+            enable_advanced_features=True,  # Ajouter le paramètre manquant
         )
 
         assert agent.name == "AdvancedAgent"
@@ -459,6 +455,7 @@ class TestSynthesisAgentIntegration:
     def integration_agent(self, mocker):
         """Agent configuré pour tests d'intégration."""
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
         mock_kernel = mocker.MagicMock(spec=Kernel)
         mock_llm_service = mocker.MagicMock(spec=OpenAIChatCompletion)
         mock_llm_service.service_id = "test_service"

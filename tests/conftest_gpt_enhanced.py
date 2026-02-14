@@ -22,7 +22,6 @@ import time
 import logging
 from typing import Dict, Any, Optional
 
-
 # Imports Semantic Kernel
 try:
     from semantic_kernel.kernel import Kernel
@@ -406,7 +405,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def create_test_oracle_state(
-    elements_jeu: Dict[str, Any]
+    elements_jeu: Dict[str, Any],
 ) -> Optional[CluedoOracleState]:
     """Crée un état Oracle pour tests."""
     if not ORACLE_SYSTEM_AVAILABLE:

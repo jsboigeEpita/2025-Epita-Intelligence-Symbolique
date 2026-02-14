@@ -21,7 +21,6 @@ import sys
 import shutil
 from pathlib import Path
 
-
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

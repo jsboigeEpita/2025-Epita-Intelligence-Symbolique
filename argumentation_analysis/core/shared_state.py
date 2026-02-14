@@ -288,12 +288,16 @@ class RhetoricalAnalysisState:
                 self.raw_text[:50] + "..." if len(self.raw_text) > 50 else self.raw_text
             )
             return {
-                "raw_text": self.raw_text[:150] + "..."
-                if len(self.raw_text) > 150
-                else self.raw_text,
-                "raw_text_snippet": self.raw_text[:150] + "..."
-                if len(self.raw_text) > 150
-                else self.raw_text,
+                "raw_text": (
+                    self.raw_text[:150] + "..."
+                    if len(self.raw_text) > 150
+                    else self.raw_text
+                ),
+                "raw_text_snippet": (
+                    self.raw_text[:150] + "..."
+                    if len(self.raw_text) > 150
+                    else self.raw_text
+                ),
                 "task_count": len(self.analysis_tasks),
                 "tasks_defined": list(self.analysis_tasks.keys()),
                 "argument_count": len(self.identified_arguments),

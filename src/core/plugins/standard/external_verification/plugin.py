@@ -69,9 +69,9 @@ class VerificationSource:
             "snippet": self.snippet,
             "reliability": self.reliability.value,
             "relevance_score": self.relevance_score,
-            "publication_date": self.publication_date.isoformat()
-            if self.publication_date
-            else None,
+            "publication_date": (
+                self.publication_date.isoformat() if self.publication_date else None
+            ),
             "domain": self.domain,
             "supports_claim": self.supports_claim,
             "contradicts_claim": self.contradicts_claim,

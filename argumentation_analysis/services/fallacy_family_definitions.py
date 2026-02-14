@@ -11,7 +11,6 @@ from enum import Enum
 
 from .fallacy_taxonomy_service import FallacyFamily
 
-
 # Dictionnaire de sévérité par famille de sophismes
 FALLACY_FAMILY_SEVERITY = {
     FallacyFamily.AUTHORITY_POPULARITY: {

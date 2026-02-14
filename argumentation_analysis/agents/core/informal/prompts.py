@@ -5,6 +5,7 @@ Ce module contient les chaînes de caractères formatées (templates) utilisées
 comme prompts pour les fonctions sémantiques du `InformalAnalysisAgent`.
 Chaque prompt est une constante de module conçue pour une tâche LLM spécifique.
 """
+
 # agents/core/informal/prompts.py
 import logging
 

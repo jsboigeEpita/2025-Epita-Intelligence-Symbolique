@@ -15,7 +15,6 @@ import pytest
 import logging
 from unittest.mock import patch, MagicMock
 
-
 # Chemins pour le patching
 SETTINGS_PATH = "argumentation_analysis.service_setup.analysis_services.settings"
 LOAD_DOTENV_PATH = "argumentation_analysis.service_setup.analysis_services.load_dotenv"

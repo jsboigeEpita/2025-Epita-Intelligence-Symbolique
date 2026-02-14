@@ -117,7 +117,7 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
     @pytest.fixture(autouse=True)
     async def setup_method(self, mock_kernel_with_llm):
         """Fixture pytest pour l'initialisation avant chaque test.
-        
+
         Utilise mock_kernel_with_llm fixture Pydantic-compatible (Mission D3.2 Phase B).
         """
         logger.info("Setting up test case for pytest in TestAbstractLogicAgent...")
@@ -130,7 +130,7 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
 
         # ✅ Utiliser fixture Pydantic-compatible au lieu de Mock() simple
         self.kernel = mock_kernel_with_llm
-        
+
         self.agent = MockLogicAgent(self.kernel, "TestAgent")
 
         self.initial_snapshot_data = {

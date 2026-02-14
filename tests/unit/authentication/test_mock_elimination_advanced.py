@@ -330,7 +330,7 @@ class TestAuthenticityMetrics:
         """Test de calcul du score d'authenticité global du système."""
 
         def calculate_system_authenticity(
-            components: Dict[str, bool]
+            components: Dict[str, bool],
         ) -> Dict[str, Any]:
             """Calcule les métriques d'authenticité du système."""
             total_components = len(components)

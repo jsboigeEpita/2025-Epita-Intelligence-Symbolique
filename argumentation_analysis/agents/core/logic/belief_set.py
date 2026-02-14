@@ -156,7 +156,7 @@ class FirstOrderBeliefSet(BeliefSet):
         """
         return {
             "logic_type": self.logic_type,
-            "content": self.content
+            "content": self.content,
             # Note: self.java_belief_set is not serialized
         }
 

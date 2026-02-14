@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def group_results_by_corpus(
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]],
 ) -> DefaultDict[str, List[Dict[str, Any]]]:
     """
     Regroupe les résultats d'analyse par corpus.

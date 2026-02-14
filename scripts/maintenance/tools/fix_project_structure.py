@@ -56,7 +56,9 @@ def run_command(command, description):
         if result.returncode == 0:
             logging.info(f"✅ {description} terminé avec succès.")
         else:
-            logging.error(f"❌ {description} a échoué avec le code {result.returncode}.")
+            logging.error(
+                f"❌ {description} a échoué avec le code {result.returncode}."
+            )
 
         return result.returncode
 

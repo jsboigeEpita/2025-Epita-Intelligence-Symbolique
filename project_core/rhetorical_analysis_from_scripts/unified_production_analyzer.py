@@ -20,6 +20,7 @@ Version: 1.0.0
 Créé: 10/06/2025
 Auteur: Roo
 """
+
 # Workflow d'Exécution :
 # 1. Parsing des arguments CLI et/ou d'un fichier de configuration.
 # 2. Validation des dépendances critiques (Python, Tweety, LLM).
@@ -760,9 +761,9 @@ class UnifiedProductionAnalyzer:
 
             # Conversation summary si activé
             if self.config.enable_conversation_trace:
-                analysis_result[
-                    "conversation_summary"
-                ] = self.trace_analyzer.get_conversation_summary()
+                analysis_result["conversation_summary"] = (
+                    self.trace_analyzer.get_conversation_summary()
+                )
 
             # Stockage résultat
             self.analysis_results.append(analysis_result)

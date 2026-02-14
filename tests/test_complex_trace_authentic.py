@@ -366,12 +366,12 @@ class ComplexTraceAuthenticityTester:
                 "sentence_count": decrypted_text.count(".")
                 + decrypted_text.count("!")
                 + decrypted_text.count("?"),
-                "avg_word_length": sum(
-                    len(word.strip(".,!?")) for word in decrypted_text.split()
-                )
-                / len(decrypted_text.split())
-                if decrypted_text.split()
-                else 0,
+                "avg_word_length": (
+                    sum(len(word.strip(".,!?")) for word in decrypted_text.split())
+                    / len(decrypted_text.split())
+                    if decrypted_text.split()
+                    else 0
+                ),
                 "philosophy_terms": sum(
                     1
                     for term in [
@@ -384,16 +384,18 @@ class ComplexTraceAuthenticityTester:
                     ]
                     if term in decrypted_text.lower()
                 ),
-                "complexity_indicators": [
-                    "métaphysique",
-                    "paradoxale",
-                    "computationnelle",
-                ]
-                if any(
-                    term in decrypted_text.lower()
-                    for term in ["métaphysique", "paradoxale", "computationnelle"]
-                )
-                else [],
+                "complexity_indicators": (
+                    [
+                        "métaphysique",
+                        "paradoxale",
+                        "computationnelle",
+                    ]
+                    if any(
+                        term in decrypted_text.lower()
+                        for term in ["métaphysique", "paradoxale", "computationnelle"]
+                    )
+                    else []
+                ),
             }
 
             execution_time = time.time() - start_time
@@ -556,13 +558,17 @@ class ComplexTraceAuthenticityTester:
                 ),
             },
             "recommendations": [
-                "Les composants testés montrent des signes d'authenticité"
-                if authenticity_evidence["authenticity_verdict"] == "AUTHENTIC"
-                else "Suspicion d'utilisation de mocks détectée",
+                (
+                    "Les composants testés montrent des signes d'authenticité"
+                    if authenticity_evidence["authenticity_verdict"] == "AUTHENTIC"
+                    else "Suspicion d'utilisation de mocks détectée"
+                ),
                 f"Temps d'exécution total: {sum(self.timing_data.values()):.4f}s",
-                f"Variance de timing: {max(self.timing_data.values()) - min(self.timing_data.values()):.4f}s"
-                if self.timing_data
-                else "Pas de données de timing",
+                (
+                    f"Variance de timing: {max(self.timing_data.values()) - min(self.timing_data.values()):.4f}s"
+                    if self.timing_data
+                    else "Pas de données de timing"
+                ),
             ],
         }
 

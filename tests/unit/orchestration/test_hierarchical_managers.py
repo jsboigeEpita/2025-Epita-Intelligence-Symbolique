@@ -7,7 +7,7 @@ Tests Unitaires pour les Gestionnaires Hiérarchiques
 
 Tests pour valider le fonctionnement des gestionnaires de l'architecture hiérarchique :
 - StrategicManager (niveau stratégique)
-- TaskCoordinator (niveau tactique) 
+- TaskCoordinator (niveau tactique)
 - OperationalManager (niveau opérationnel)
 
 Structure des tests :

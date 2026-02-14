@@ -237,9 +237,11 @@ async def status():
                     "timestamp": datetime.now().isoformat(),
                     "services": {
                         "service_manager": "active",
-                        "fallacy_analyzers": "available"
-                        if FALLACY_ANALYZERS_AVAILABLE
-                        else "unavailable",
+                        "fallacy_analyzers": (
+                            "available"
+                            if FALLACY_ANALYZERS_AVAILABLE
+                            else "unavailable"
+                        ),
                         "health_check": health_status,
                         "service_details": service_details,
                     },
@@ -261,9 +263,11 @@ async def status():
                     "timestamp": datetime.now().isoformat(),
                     "services": {
                         "service_manager": "unavailable",
-                        "fallacy_analyzers": "available"
-                        if FALLACY_ANALYZERS_AVAILABLE
-                        else "unavailable",
+                        "fallacy_analyzers": (
+                            "available"
+                            if FALLACY_ANALYZERS_AVAILABLE
+                            else "unavailable"
+                        ),
                     },
                     "webapp": {
                         "version": "1.0.0",
@@ -451,11 +455,11 @@ def _generate_analysis_summary(result: Dict[str, Any], text: str) -> Dict[str, A
         },
         "analysis_metrics": {
             "logic_keywords_found": logic_score,
-            "complexity_level": "élevée"
-            if word_count > 100
-            else "moyenne"
-            if word_count > 50
-            else "simple",
+            "complexity_level": (
+                "élevée"
+                if word_count > 100
+                else "moyenne" if word_count > 50 else "simple"
+            ),
         },
         "components_summary": _extract_components_used(result),
         "processing_time": result.get("duration", 0),
@@ -508,11 +512,11 @@ def _fallback_analysis(
                     "logic_keywords_detected": logic_score,
                 },
                 "assessment": {
-                    "complexity": "élevée"
-                    if word_count > 100
-                    else "moyenne"
-                    if word_count > 50
-                    else "simple",
+                    "complexity": (
+                        "élevée"
+                        if word_count > 100
+                        else "moyenne" if word_count > 50 else "simple"
+                    ),
                     "logical_structure": "présente" if logic_score > 0 else "limitée",
                     "analysis_confidence": 0.7,
                 },
@@ -531,11 +535,11 @@ def _fallback_analysis(
             },
             "analysis_metrics": {
                 "logic_keywords_found": logic_score,
-                "complexity_level": "élevée"
-                if word_count > 100
-                else "moyenne"
-                if word_count > 50
-                else "simple",
+                "complexity_level": (
+                    "élevée"
+                    if word_count > 100
+                    else "moyenne" if word_count > 50 else "simple"
+                ),
             },
             "components_summary": ["Analyseur Basique"],
             "processing_time": duration,

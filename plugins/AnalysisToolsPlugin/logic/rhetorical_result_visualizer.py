@@ -276,9 +276,11 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         # Préparer les données pour la heatmap
         arg_ids = list(identified_arguments.keys())
         arg_texts = [
-            identified_arguments[arg_id][:30] + "..."
-            if len(identified_arguments[arg_id]) > 30
-            else identified_arguments[arg_id]
+            (
+                identified_arguments[arg_id][:30] + "..."
+                if len(identified_arguments[arg_id]) > 30
+                else identified_arguments[arg_id]
+            )
             for arg_id in arg_ids
         ]
         fallacy_counts = [fallacies_per_argument[arg_id] for arg_id in arg_ids]
