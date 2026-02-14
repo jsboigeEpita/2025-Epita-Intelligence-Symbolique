@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 line-length = 88
 target-version = ['py38', 'py39', 'py310']
 extend-exclude = '''
-# Exclude student project directories
+# Exclude student project directories and files with syntax errors
 /(
     1\.4\.1-JTMS
     | 1_2_7_argumentation_dialogique
@@ -16,6 +16,7 @@ extend-exclude = '''
     | 2\.3\.5_argument_quality
     | 2\.3\.6_local_llm
     | 3\.1\.5_Interface_Mobile
+    | documentation_system
 )/
 '''
 
