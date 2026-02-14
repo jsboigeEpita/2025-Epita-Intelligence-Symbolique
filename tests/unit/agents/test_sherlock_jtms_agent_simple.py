@@ -53,7 +53,7 @@ class TestSherlockJTMSAgentSimple:
     async def test_formulate_hypothesis(self, sherlock_agent):
         """Test de formulation d'hypothèse"""
         # Mock de la réponse de l'agent de base
-        sherlock_agent._kernel.invoke_prompt = AsyncMock(
+        sherlock_agent.kernel.invoke_prompt = AsyncMock(
             return_value="Colonel Moutarde est le meurtrier"
         )
 

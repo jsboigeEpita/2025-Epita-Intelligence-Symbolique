@@ -211,7 +211,7 @@ class TestPhase2AuthenticLLMValidation:
 
         # Validation que l'agent utilise le kernel fourni
         # L'agent stocke le kernel en interne et l'utilise pour ses composants
-        assert informal_agent._kernel == kernel or hasattr(
+        assert informal_agent.kernel == kernel or hasattr(
             informal_agent, "_internal_kernel"
         )
 

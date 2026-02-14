@@ -10,6 +10,7 @@ from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
 )
+from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
@@ -107,17 +108,16 @@ class TestSherlockEnqueteAgentAuthentic:
     async def test_agent_instantiation(self, sherlock_agent):
         """Test l'instanciation basique de l'agent."""
         agent = sherlock_agent
-        assert isinstance(agent, SherlockEnqueteAgent)
+        assert isinstance(agent, SherlockJTMSAgent)
         assert agent.name == TEST_AGENT_NAME
-        assert hasattr(agent, "_kernel")
-        assert agent._kernel is not None
-        assert isinstance(agent._kernel, Kernel)
+        assert hasattr(agent, "kernel")
+        assert agent.kernel is not None
+        assert isinstance(agent.kernel, Kernel)
 
     async def test_agent_inheritance(self, sherlock_agent):
         """Test que l'agent hérite correctement."""
         agent = sherlock_agent
-        assert isinstance(agent, SherlockEnqueteAgent)
-        assert isinstance(agent, BaseAgent)
+        assert isinstance(agent, SherlockJTMSAgent)
         assert hasattr(agent, "logger")
         assert hasattr(agent, "name")
         assert len(agent.name) > 0
@@ -189,7 +189,7 @@ class TestSherlockEnqueteAgentAuthentic:
     async def test_agent_configuration_validation(self, sherlock_agent):
         """Test la validation de la configuration de l'agent."""
         agent = sherlock_agent
-        assert hasattr(agent, "_kernel")
+        assert hasattr(agent, "kernel")
         assert hasattr(agent, "name")
         assert hasattr(agent, "system_prompt")
         assert hasattr(agent, "logger")
@@ -197,7 +197,7 @@ class TestSherlockEnqueteAgentAuthentic:
         assert isinstance(agent.name, str)
         assert len(agent.name) > 0
 
-        assert agent._kernel is not None
+        assert agent.kernel is not None
         assert agent.logger is not None
 
 

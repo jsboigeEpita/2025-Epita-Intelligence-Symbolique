@@ -115,8 +115,8 @@ class TestCluedoOrchestrationRealIntegration:
         # Vérifications que c'est bien la vraie classe
         assert isinstance(sherlock_agent, SherlockEnqueteAgent)
         assert sherlock_agent.name == "Sherlock_Real_Test"
-        assert hasattr(sherlock_agent, "_kernel")  # Attribut réel de la vraie classe
-        assert sherlock_agent._kernel is not None
+        assert hasattr(sherlock_agent, "kernel")  # Attribut réel de la vraie classe
+        assert sherlock_agent.kernel is not None
 
         logger.info("✅ VRAI agent Sherlock créé avec succès")
 
@@ -139,8 +139,8 @@ class TestCluedoOrchestrationRealIntegration:
         # Vérifications que c'est bien la vraie classe
         assert isinstance(watson_agent, WatsonLogicAssistant)
         assert watson_agent.name == "Watson_Real_Test"
-        assert hasattr(watson_agent, "_kernel")  # Attribut réel de la vraie classe
-        assert watson_agent._kernel is not None
+        assert hasattr(watson_agent, "kernel")  # Attribut réel de la vraie classe
+        assert watson_agent.kernel is not None
 
         logger.info("✅ VRAI agent Watson créé avec succès")
 

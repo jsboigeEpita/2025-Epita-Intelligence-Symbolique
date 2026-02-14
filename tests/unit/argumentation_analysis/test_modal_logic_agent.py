@@ -66,8 +66,8 @@ class TestModalLogicAgent:
         kernel.services = {"test_service": mock_llm_service}
         kernel.get_service = Mock(return_value=mock_llm_service)
 
-        # Ajouter l'attribut _kernel attendu par l'agent
-        kernel._kernel = kernel  # Pour compatibilité avec agent_bases.py
+        # Ajouter l'attribut kernel attendu par l'agent (ChatCompletionAgent hérité)
+        kernel.kernel = kernel  # Pour compatibilité avec agent_bases.py
 
         # Pré-créer la structure des plugins avec des mocks de fonctions robustes
         kernel.plugins = {}

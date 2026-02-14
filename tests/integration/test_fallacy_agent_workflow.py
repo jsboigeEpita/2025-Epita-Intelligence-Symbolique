@@ -483,7 +483,7 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_names
     # Récupère les types des plugins réellement chargés dans le kernel de l'agent
     # L'API a changé, les plugins sont maintenant dans le kernel
     # On vérifie les NOMS des plugins enregistrés dans le kernel de l'agent
-    loaded_plugin_names = list(agent._kernel.plugins.keys())
+    loaded_plugin_names = list(agent.kernel.plugins.keys())
 
     # --- Assert ---
     # Utiliser un set pour comparer l'égalité sans se soucier de l'ordre

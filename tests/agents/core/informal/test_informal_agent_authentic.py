@@ -62,20 +62,20 @@ class TestInformalAnalysisAgentAuthentic:
 
         # Vérifications de base authentiques
         assert agent.name == "authentic_informal_agent"
-        assert agent._kernel is not None
+        assert agent.kernel is not None
         # Le nouvel agent 'ChatCompletionAgent' n'a plus de 'kernel_wrapper'
         # assert hasattr(agent, 'kernel_wrapper')
 
         # Le nouvel agent expose ses fonctions (outils) via la propriété 'plugins'
         # Correction: Les plugins sont dans le kernel, pas directement sur l'agent.
-        assert agent._kernel.plugins is not None
-        assert len(agent._kernel.plugins) > 0
+        assert agent.kernel.plugins is not None
+        assert len(agent.kernel.plugins) > 0
 
         # On vérifie la présence d'au moins un plugin important
-        assert "FallacyIdentificationPlugin" in agent._kernel.plugins
+        assert "FallacyIdentificationPlugin" in agent.kernel.plugins
 
         print(
-            f"[AUTHENTIC] Plugins chargés dans le kernel de l'agent: {list(agent._kernel.plugins.keys())}"
+            f"[AUTHENTIC] Plugins chargés dans le kernel de l'agent: {list(agent.kernel.plugins.keys())}"
         )
 
         # Les méthodes get_agent_capabilities() et get_agent_info() n'existent plus
