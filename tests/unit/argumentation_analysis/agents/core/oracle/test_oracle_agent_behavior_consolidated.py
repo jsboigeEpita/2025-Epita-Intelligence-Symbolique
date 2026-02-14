@@ -50,9 +50,16 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import (
 
 @pytest.fixture
 def mock_kernel() -> Kernel:
-    """Fournit une instance mockée du Kernel Semantic Kernel."""
-    kernel = Mock(spec=Kernel)
-    kernel.add_plugin = Mock()
+    """Fournit une instance du Kernel Semantic Kernel avec service LLM."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    kernel = Kernel()
+    kernel.add_service(
+        OpenAIChatCompletion(
+            service_id="default",
+            ai_model_id="gpt-4",
+            api_key="test-key"
+        )
+    )
     return kernel
 
 

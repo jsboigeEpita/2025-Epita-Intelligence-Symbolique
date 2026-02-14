@@ -59,8 +59,20 @@ async def extract_agent_data():
     OrchestrationServiceManager_module = MagicMock()
     agent_module_to_patch.load_source_text = OrchestrationServiceManager_module
 
-    # Initialiser les mocks
-    kernel_mock = AsyncMock()
+    # Initialiser le kernel avec un service LLM (requis par Pydantic V2)
+    from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    kernel_mock = Kernel()
+    kernel_mock.add_service(
+        OpenAIChatCompletion(
+            service_id="default",
+            ai_model_id="gpt-4",
+            api_key="test-key"
+        )
+    )
+    # Pre-install mock invoke on kernel (bypass Pydantic V2 __setattr__)
+    object.__setattr__(kernel_mock, 'invoke', AsyncMock())
+
     extract_plugin_mock = MagicMock(spec=ExtractAgentPlugin)
     extract_plugin_mock.extract_results = []  # Initialiser la liste
 

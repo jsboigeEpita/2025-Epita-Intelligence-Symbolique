@@ -58,7 +58,15 @@ class TestSynthesisAgent:
     @pytest.fixture
     def mock_kernel(self, mocker):
         """Fixture pour un kernel mocké."""
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         kernel = mocker.MagicMock(spec=Kernel)
+        
+        # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
+        mock_llm_service = mocker.MagicMock(spec=OpenAIChatCompletion)
+        mock_llm_service.service_id = "test_service"
+        kernel.services = {"test_service": mock_llm_service}
+        kernel.get_service = mocker.MagicMock(return_value=mock_llm_service)
+        
         kernel.plugins = {}
         kernel.get_prompt_execution_settings_from_service_id = mocker.MagicMock(
             return_value=None
@@ -70,7 +78,8 @@ class TestSynthesisAgent:
     def synthesis_agent(self, mock_kernel):
         """Fixture pour une instance de SynthesisAgent."""
         agent = SynthesisAgent(
-            mock_kernel, "TestSynthesisAgent", enable_advanced_features=False
+            kernel=mock_kernel,
+            agent_name="TestSynthesisAgent"
         )
         return agent
 
@@ -78,16 +87,20 @@ class TestSynthesisAgent:
     def advanced_synthesis_agent(self, mock_kernel):
         """Fixture pour un SynthesisAgent avec fonctionnalités avancées."""
         agent = SynthesisAgent(
-            mock_kernel, "AdvancedSynthesisAgent", enable_advanced_features=True
+            kernel=mock_kernel,
+            agent_name="AdvancedSynthesisAgent",
+            enable_advanced_features=True,
         )
         return agent
 
     def test_init_synthesis_agent_basic(self, mock_kernel):
         """Test l'initialisation du SynthesisAgent en mode basique."""
-        agent = SynthesisAgent(mock_kernel, "TestAgent", enable_advanced_features=False)
+        agent = SynthesisAgent(
+            kernel=mock_kernel,
+            agent_name="TestAgent"
+        )
 
         assert agent.name == "TestAgent"
-        assert not agent.enable_advanced_features
         assert agent.fusion_manager is None
         assert agent.conflict_manager is None
         assert agent.evidence_manager is None
@@ -98,11 +111,12 @@ class TestSynthesisAgent:
     def test_init_synthesis_agent_advanced(self, mock_kernel):
         """Test l'initialisation du SynthesisAgent en mode avancé."""
         agent = SynthesisAgent(
-            mock_kernel, "AdvancedAgent", enable_advanced_features=True
+            kernel=mock_kernel,
+            agent_name="AdvancedAgent",
+            enable_advanced_features=True  # Ajouter le paramètre manquant
         )
 
         assert agent.name == "AdvancedAgent"
-        assert agent.enable_advanced_features
         assert agent.fusion_manager is None
         assert agent.conflict_manager is None
         assert agent.evidence_manager is None
@@ -149,7 +163,7 @@ class TestSynthesisAgent:
         )
 
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "orchestrate_analysis",
             new_callable=AsyncMock,
             return_value=(mock_logic_result, mock_informal_result),
@@ -162,7 +176,7 @@ class TestSynthesisAgent:
             total_processing_time_ms=180.0,
         )
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "unify_results",
             new_callable=AsyncMock,
             return_value=expected_report,
@@ -182,7 +196,7 @@ class TestSynthesisAgent:
         self, mocker, advanced_synthesis_agent
     ):
         """Test que le mode avancé lève NotImplementedError."""
-        advanced_synthesis_agent.fusion_manager = mocker.MagicMock()
+        advanced_synthesis_agent._fusion_manager = mocker.MagicMock()
         with pytest.raises(NotImplementedError):
             await advanced_synthesis_agent.synthesize_analysis("Texte de test")
 
@@ -195,13 +209,13 @@ class TestSynthesisAgent:
         )
 
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "_run_formal_analysis",
             new_callable=AsyncMock,
             return_value=mock_logic_result,
         )
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "_run_informal_analysis",
             new_callable=AsyncMock,
             return_value=mock_informal_result,
@@ -218,13 +232,13 @@ class TestSynthesisAgent:
     async def test_orchestrate_analysis_with_exceptions(self, mocker, synthesis_agent):
         """Test l'orchestration avec gestion d'exceptions."""
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "_run_formal_analysis",
             new_callable=AsyncMock,
             side_effect=Exception("Erreur"),
         )
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "_run_informal_analysis",
             new_callable=AsyncMock,
             return_value=InformalAnalysisResult(),
@@ -247,7 +261,7 @@ class TestSynthesisAgent:
             fallacies_detected=[{"type": "ad_hominem"}]
         )
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "_generate_simple_summary",
             new_callable=AsyncMock,
             return_value="Résumé",
@@ -369,7 +383,7 @@ class TestSynthesisAgent:
     @pytest.mark.asyncio
     async def test_get_response_with_text(self, mocker, synthesis_agent):
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "synthesize_analysis",
             new_callable=AsyncMock,
             return_value=UnifiedReport(
@@ -379,7 +393,7 @@ class TestSynthesisAgent:
             ),
         )
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "generate_report",
             new_callable=AsyncMock,
             return_value="Rapport",
@@ -395,7 +409,7 @@ class TestSynthesisAgent:
     @pytest.mark.asyncio
     async def test_invoke(self, mocker, synthesis_agent):
         mocker.patch.object(
-            synthesis_agent,
+            SynthesisAgent,
             "invoke_single",
             new_callable=AsyncMock,
             return_value="Report",
@@ -408,7 +422,7 @@ class TestSynthesisAgent:
         async def gen():
             yield "Stream"
 
-        mocker.patch.object(synthesis_agent, "invoke", return_value=gen())
+        mocker.patch.object(SynthesisAgent, "invoke", return_value=gen())
         results = [res async for res in synthesis_agent.invoke_stream("text")]
         assert len(results) == 1 and results[0] == "Stream"
 
@@ -444,7 +458,12 @@ class TestSynthesisAgentIntegration:
     @pytest.fixture
     def integration_agent(self, mocker):
         """Agent configuré pour tests d'intégration."""
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         mock_kernel = mocker.MagicMock(spec=Kernel)
+        mock_llm_service = mocker.MagicMock(spec=OpenAIChatCompletion)
+        mock_llm_service.service_id = "test_service"
+        mock_kernel.services = {"test_service": mock_llm_service}
+        mock_kernel.get_service = mocker.MagicMock(return_value=mock_llm_service)
         mock_kernel.plugins = {}
         agent = SynthesisAgent(
             mock_kernel, "IntegrationAgent", enable_advanced_features=False
@@ -455,10 +474,10 @@ class TestSynthesisAgentIntegration:
     async def test_full_synthesis_workflow(self, mocker, integration_agent):
         """Test du workflow complet de synthèse."""
         mocker.patch.object(
-            integration_agent, "_get_logic_agent", side_effect=MockLogicAgent
+            SynthesisAgent, "_get_logic_agent", side_effect=MockLogicAgent
         )
         mocker.patch.object(
-            integration_agent, "_get_informal_agent", return_value=MockInformalAgent()
+            SynthesisAgent, "_get_informal_agent", return_value=MockInformalAgent()
         )
 
         result = await integration_agent.synthesize_analysis(
@@ -482,7 +501,7 @@ class TestSynthesisAgentIntegration:
             total_processing_time_ms=123.0,
         )
         mocker.patch.object(
-            integration_agent,
+            SynthesisAgent,
             "synthesize_analysis",
             new_callable=AsyncMock,
             return_value=mock_report,

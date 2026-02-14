@@ -71,6 +71,15 @@ class TestFOLLogicAgentInitialization:
         """Test création agent avec configuration FOL."""
         config = PresetConfigs.authentic_fol()
         kernel = Kernel()
+        # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="default",
+                ai_model_id="gpt-4",
+                api_key="test-key"  # Mock pour tests
+            )
+        )
         agent = ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestFOLAgent")
 
         assert agent.name == "TestFOLAgent"
@@ -98,6 +107,13 @@ class TestFOLLogicAgentInitialization:
     def test_agent_parameters_configuration(self):
         """Test paramètres agent (expertise, style, contraintes)."""
         kernel = Kernel()
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="default",
+                ai_model_id="gpt-4",
+                api_key="test-key"
+            )
+        )
         agent = ConcreteFOLLogicAgent(kernel=kernel)
 
         assert "∀x" in agent.conversion_prompt
@@ -135,7 +151,16 @@ class TestFOLSyntaxGeneration:
     @pytest.fixture
     def fol_agent(self):
         """Agent FOL pour les tests."""
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         kernel = Kernel()
+        # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="default",
+                ai_model_id="gpt-4",
+                api_key="test-key"  # Mock pour tests
+            )
+        )
         return ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestAgent")
 
     def test_quantifier_universal_generation(self, fol_agent):
@@ -215,8 +240,24 @@ class TestFOLTweetyIntegration:
     @pytest_asyncio.fixture
     async def fol_agent_with_tweety(self):
         """Agent FOL avec TweetyBridge mocké."""
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         kernel = Kernel()
-        agent = ConcreteFOLLogicAgent(kernel=kernel)
+        # Ajouter un service LLM mock pour éviter KernelServiceNotFoundError
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="default",
+                ai_model_id="gpt-4",
+                api_key="test-key"  # Mock pour tests
+            )
+        )
+        
+        # Récupérer le service ajouté pour le passer à l'agent
+        llm_service = kernel.get_service("default")
+        agent = ConcreteFOLLogicAgent(
+            kernel=kernel,
+            agent_name="TestFOLAgent",
+            service_id=llm_service  # CORRECT: service_id au lieu de service
+        )
 
         agent._tweety_bridge = AsyncMock()
         agent._tweety_bridge.check_consistency = AsyncMock(return_value=True)
@@ -302,10 +343,24 @@ class TestFOLAnalysisPipeline:
     @pytest_asyncio.fixture
     async def fol_agent_full(self):
         """Agent FOL avec tous les composants mockés."""
-        mock_kernel_for_agent = AsyncMock(spec=Kernel)
-        mock_kernel_for_agent.services = True
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-        agent = ConcreteFOLLogicAgent(kernel=mock_kernel_for_agent)
+        kernel = Kernel()
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="default",
+                ai_model_id="gpt-4",
+                api_key="test-key"
+            )
+        )
+
+        agent = ConcreteFOLLogicAgent(
+            kernel=kernel,
+            agent_name="TestFOLAgent",
+        )
+
+        # Pre-install mock invoke on kernel (bypass Pydantic V2 __setattr__)
+        object.__setattr__(kernel, 'invoke', AsyncMock())
 
         agent._tweety_bridge = AsyncMock()
         agent._tweety_bridge.check_consistency = AsyncMock(return_value=True)
@@ -325,8 +380,7 @@ class TestFOLAnalysisPipeline:
             name="mock", plugin_name="mock", description="mock", is_prompt=True
         )
 
-        fol_agent_full._kernel.invoke = AsyncMock(
-            side_effect=[
+        fol_agent_full.kernel.invoke.side_effect = [
                 FunctionResult(
                     function=mock_metadata,
                     value=json.dumps(
@@ -360,7 +414,6 @@ class TestFOLAnalysisPipeline:
                     ),
                 ),
             ]
-        )
 
         sophism_text = "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
         result = await fol_agent_full.analyze(sophism_text)
@@ -378,8 +431,7 @@ class TestFOLAnalysisPipeline:
         mock_metadata = KernelFunctionMetadata(
             name="mock", plugin_name="mock", description="mock", is_prompt=True
         )
-        fol_agent_full._kernel.invoke = AsyncMock(
-            return_value=FunctionResult(
+        fol_agent_full.kernel.invoke.return_value = FunctionResult(
                 function=mock_metadata,
                 value=json.dumps(
                     {
@@ -389,7 +441,6 @@ class TestFOLAnalysisPipeline:
                     }
                 ),
             )
-        )
 
         text = "Tous les P sont Q."
         result = await fol_agent_full.analyze(text)
@@ -417,7 +468,7 @@ class TestFOLAnalysisPipeline:
             function=mock_meta,
             value=json.dumps({"consistency": True, "inferences": [], "errors": []}),
         )
-        fol_agent_full._kernel.invoke.side_effect = [
+        fol_agent_full.kernel.invoke.side_effect = [
             conversion_response,
             llm_analysis_response,
         ]
@@ -441,14 +492,12 @@ class TestFOLAnalysisPipeline:
         mock_metadata = KernelFunctionMetadata(
             name="mock", plugin_name="mock", description="mock", is_prompt=True
         )
-        fol_agent_full._kernel.invoke = AsyncMock(
-            return_value=FunctionResult(
+        fol_agent_full.kernel.invoke.return_value = FunctionResult(
                 function=mock_metadata,
                 value=json.dumps(
                     {"formulas": ["∀x(Fast(x))"], "reasoning": "Test performance"}
                 ),
             )
-        )
 
         start_time = time.time()
         result = await fol_agent_full.analyze("Test de performance FOL.")

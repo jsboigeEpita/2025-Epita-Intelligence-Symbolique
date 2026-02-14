@@ -17,6 +17,7 @@ import time
 from typing import Dict, Any, Optional, Tuple, List
 
 from semantic_kernel import Kernel
+from pydantic import PrivateAttr
 
 from ..abc.agent_bases import BaseAgent
 from .data_models import LogicAnalysisResult, InformalAnalysisResult, UnifiedReport
@@ -34,12 +35,23 @@ class SynthesisAgent(BaseAgent):
     4.  Générer une synthèse, évaluer la cohérence et produire un `UnifiedReport`.
 
     Attributes:
-        enable_advanced_features (bool): Drapeau pour activer les fonctionnalités
+        _enable_advanced_features (bool): Drapeau pour activer les fonctionnalités
             des phases futures (non implémentées en Phase 1).
         _logic_agents_cache (Dict[str, Any]): Cache pour les instances des agents logiques.
         _informal_agent (Optional[Any]): Instance de l'agent d'analyse informelle.
         _llm_service_id (str): ID du service LLM utilisé pour les fonctions sémantiques.
     """
+    
+    # Déclaration des attributs Pydantic pour compatibilité avec BaseAgent
+    _enable_advanced_features: bool = PrivateAttr(default=False)
+    _logic_agents_cache: Dict[str, Any] = PrivateAttr(default_factory=dict)
+    _informal_agent: Optional[Any] = PrivateAttr(default=None)
+    _llm_service_id: Optional[str] = PrivateAttr(default=None)
+    # Modules avancés (Phase 2+) - déclarés comme PrivateAttr pour Pydantic V2
+    _fusion_manager: Optional[Any] = PrivateAttr(default=None)
+    _conflict_manager: Optional[Any] = PrivateAttr(default=None)
+    _evidence_manager: Optional[Any] = PrivateAttr(default=None)
+    _quality_manager: Optional[Any] = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -62,22 +74,58 @@ class SynthesisAgent(BaseAgent):
         system_prompt = self._get_synthesis_system_prompt()
         super().__init__(kernel, agent_name, system_prompt, **kwargs)
 
-        self.enable_advanced_features = enable_advanced_features
-        self._logic_agents_cache: Dict[str, Any] = {}
-        self._informal_agent: Optional[
-            "InformalAgent"
-        ] = None  # Note: InformalAgent may need to be defined or imported
+        self._enable_advanced_features = enable_advanced_features
+        self._logic_agents_cache = {}
+        self._informal_agent = None
         self._llm_service_id = service_id
 
         # Modules avancés (Phase 2+) - désactivés en Phase 1
-        self.fusion_manager = None
-        self.conflict_manager = None
-        self.evidence_manager = None
-        self.quality_manager = None
+        self._fusion_manager = None
+        self._conflict_manager = None
+        self._evidence_manager = None
+        self._quality_manager = None
 
-        self._logger.info(
+        self.logger.info(
             f"SynthesisAgent initialisé (mode avancé: {enable_advanced_features})"
         )
+
+    # ==================== BACKWARD COMPATIBILITY PROPERTIES ====================
+
+    @property
+    def fusion_manager(self):
+        return self._fusion_manager
+
+    @fusion_manager.setter
+    def fusion_manager(self, value):
+        self._fusion_manager = value
+
+    @property
+    def conflict_manager(self):
+        return self._conflict_manager
+
+    @conflict_manager.setter
+    def conflict_manager(self, value):
+        self._conflict_manager = value
+
+    @property
+    def evidence_manager(self):
+        return self._evidence_manager
+
+    @evidence_manager.setter
+    def evidence_manager(self, value):
+        self._evidence_manager = value
+
+    @property
+    def quality_manager(self):
+        return self._quality_manager
+
+    @quality_manager.setter
+    def quality_manager(self, value):
+        self._quality_manager = value
+
+    @property
+    def enable_advanced_features(self):
+        return self._enable_advanced_features
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """Décrit les capacités de l'agent de synthèse."""
@@ -88,10 +136,10 @@ class SynthesisAgent(BaseAgent):
             "unified_reporting": True,
             "logic_types_supported": ["propositional", "first_order", "modal"],
             "phase": 1,
-            "advanced_features_enabled": self.enable_advanced_features,
+            "advanced_features_enabled": self._enable_advanced_features,
         }
 
-        if self.enable_advanced_features:
+        if self._enable_advanced_features:
             capabilities.update(
                 {
                     "fusion_management": False,  # À implémenter en Phase 2
@@ -119,13 +167,13 @@ class SynthesisAgent(BaseAgent):
             UnifiedReport: L'objet `UnifiedReport` complet contenant tous les
                 résultats et la synthèse.
         """
-        self._logger.info(
+        self.logger.info(
             f"Début de la synthèse d'analyse (texte: {len(text)} caractères)"
         )
         start_time = time.time()
 
         try:
-            if self.enable_advanced_features and self.fusion_manager is not None:
+            if self._enable_advanced_features and self._fusion_manager is not None:
                 # Mode avancé (Phase 2+) - à implémenter
                 result = await self._advanced_synthesis(text)
             else:
@@ -135,13 +183,13 @@ class SynthesisAgent(BaseAgent):
             end_time = time.time()
             result.total_processing_time_ms = (end_time - start_time) * 1000
 
-            self._logger.info(
+            self.logger.info(
                 f"Synthèse terminée en {result.total_processing_time_ms:.2f}ms"
             )
             return result
 
         except Exception as e:
-            self._logger.error(f"Erreur lors de la synthèse: {str(e)}", exc_info=True)
+            self.logger.error(f"Erreur lors de la synthèse: {str(e)}", exc_info=True)
             raise
 
     async def orchestrate_analysis(
@@ -161,7 +209,7 @@ class SynthesisAgent(BaseAgent):
             En cas d'erreur dans une des analyses, un objet de résultat vide
             est retourné pour cette analyse.
         """
-        self._logger.info("Orchestration des analyses formelles et informelles")
+        self.logger.info("Orchestration des analyses formelles et informelles")
 
         # Lancement des analyses en parallèle pour optimiser les performances
         formal_task = self._run_formal_analysis(text)
@@ -174,11 +222,11 @@ class SynthesisAgent(BaseAgent):
 
         # Gestion des erreurs
         if isinstance(formal_results, Exception):
-            self._logger.error(f"Erreur analyse formelle: {formal_results}")
+            self.logger.error(f"Erreur analyse formelle: {formal_results}")
             formal_results = LogicAnalysisResult()  # Résultat vide par défaut
 
         if isinstance(informal_results, Exception):
-            self._logger.error(f"Erreur analyse informelle: {informal_results}")
+            self.logger.error(f"Erreur analyse informelle: {informal_results}")
             informal_results = InformalAnalysisResult()  # Résultat vide par défaut
 
         return formal_results, informal_results
@@ -204,7 +252,7 @@ class SynthesisAgent(BaseAgent):
         Returns:
             UnifiedReport: Le rapport unifié, prêt à être formaté ou utilisé.
         """
-        self._logger.info("Unification des résultats d'analyses")
+        self.logger.info("Unification des résultats d'analyses")
 
         # Création du rapport de base
         unified_report = UnifiedReport(
@@ -249,7 +297,7 @@ class SynthesisAgent(BaseAgent):
         Returns:
             str: Une chaîne de caractères formatée en Markdown représentant le rapport.
         """
-        self._logger.info("Génération du rapport textuel")
+        self.logger.info("Génération du rapport textuel")
 
         report_sections = []
 
@@ -342,7 +390,7 @@ class SynthesisAgent(BaseAgent):
 
     async def _simple_synthesis(self, text: str) -> UnifiedReport:
         """Synthèse simple sans modules avancés (Phase 1)."""
-        self._logger.info("Exécution de la synthèse simple (Phase 1)")
+        self.logger.info("Exécution de la synthèse simple (Phase 1)")
 
         # Orchestration des analyses
         logic_result, informal_result = await self.orchestrate_analysis(text)
@@ -359,7 +407,7 @@ class SynthesisAgent(BaseAgent):
 
     async def _run_formal_analysis(self, text: str) -> LogicAnalysisResult:
         """Exécute les analyses logiques formelles."""
-        self._logger.info("Démarrage des analyses logiques formelles")
+        self.logger.info("Démarrage des analyses logiques formelles")
         start_time = time.time()
 
         result = LogicAnalysisResult()
@@ -394,14 +442,14 @@ class SynthesisAgent(BaseAgent):
             result.processing_time_ms = (end_time - start_time) * 1000
 
         except Exception as e:
-            self._logger.error(f"Erreur dans l'analyse formelle: {str(e)}")
+            self.logger.error(f"Erreur dans l'analyse formelle: {str(e)}")
             result.propositional_result = f"Erreur: {str(e)}"
 
         return result
 
     async def _run_informal_analysis(self, text: str) -> InformalAnalysisResult:
         """Exécute l'analyse informelle."""
-        self._logger.info("Démarrage de l'analyse informelle")
+        self.logger.info("Démarrage de l'analyse informelle")
         start_time = time.time()
 
         result = InformalAnalysisResult()
@@ -428,7 +476,7 @@ class SynthesisAgent(BaseAgent):
             result.processing_time_ms = (end_time - start_time) * 1000
 
         except Exception as e:
-            self._logger.error(f"Erreur dans l'analyse informelle: {str(e)}")
+            self.logger.error(f"Erreur dans l'analyse informelle: {str(e)}")
             result.arguments_structure = f"Erreur: {str(e)}"
 
         return result
@@ -436,7 +484,7 @@ class SynthesisAgent(BaseAgent):
     def _get_logic_agent(self, logic_type: str):
         """Récupère ou crée un agent logique du type spécifié (simulation Phase 1)."""
         # Pour la Phase 1, on simule les agents logiques
-        self._logger.info(f"Simulation agent logique: {logic_type}")
+        self.logger.info(f"Simulation agent logique: {logic_type}")
         if logic_type not in self._logic_agents_cache:
             # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
             raise NotImplementedError(
@@ -449,7 +497,7 @@ class SynthesisAgent(BaseAgent):
         """Récupère ou crée l'agent d'analyse informelle (simulation Phase 1)."""
         if self._informal_agent is None:
             # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
-            self._logger.error("MockInformalAgent éliminé")
+            self.logger.error("MockInformalAgent éliminé")
             raise NotImplementedError(
                 "MockInformalAgent éliminé - implémenter agent authentique"
             )
@@ -471,7 +519,7 @@ class SynthesisAgent(BaseAgent):
             return str(result) if result else f"Analyse {logic_type} sans résultat"
 
         except Exception as e:
-            self._logger.error(f"Erreur agent {logic_type}: {str(e)}")
+            self.logger.error(f"Erreur agent {logic_type}: {str(e)}")
             return f"Erreur analyse {logic_type}: {str(e)}"
 
     async def _analyze_with_informal_agent(self, agent, text: str):
@@ -488,7 +536,7 @@ class SynthesisAgent(BaseAgent):
             return result
 
         except Exception as e:
-            self._logger.error(f"Erreur agent informel: {str(e)}")
+            self.logger.error(f"Erreur agent informel: {str(e)}")
             return f"Erreur analyse informelle: {str(e)}"
 
     async def _generate_simple_summary(
@@ -645,7 +693,7 @@ class SynthesisAgent(BaseAgent):
         Exécute la logique principale de l'agent (synthèse) et retourne une réponse unique.
         Implémentation de la méthode abstraite de BaseAgent.
         """
-        self._logger.debug(f"invoking SynthesisAgent with text: {text[:80]}...")
+        self.logger.debug(f"invoking SynthesisAgent with text: {text[:80]}...")
         return await self.synthesize_analysis(text)
 
     async def get_response(self, *args, **kwargs):

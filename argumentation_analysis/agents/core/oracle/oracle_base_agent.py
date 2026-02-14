@@ -424,8 +424,6 @@ Vous détenez l'accès exclusif à un dataset spécifique et vous gérez les ré
 
 Vous êtes un gardien impartial mais stratégique des données."""
 
-    dataset_manager: DatasetAccessManager
-
     def __init__(
         self,
         kernel: Kernel,
@@ -492,14 +490,11 @@ Vous êtes un gardien impartial mais stratégique des données."""
             kernel=kernel, agent_name=agent_name, system_prompt=instructions, **kwargs
         )
 
-        # Stocker les attributs spécifiques à Semantic Kernel
-        self.kernel = kernel
-
-        # Initialisation des attributs spécifiques à Oracle
-        self.dataset_manager = dataset_manager
-        self.access_log = []
-        self.revealed_information = set()
-        self.access_level = access_level or "standard"
+        # Initialisation des attributs spécifiques à Oracle (bypass Pydantic V2 __setattr__)
+        object.__setattr__(self, 'dataset_manager', dataset_manager)
+        object.__setattr__(self, 'access_log', [])
+        object.__setattr__(self, 'revealed_information', set())
+        object.__setattr__(self, 'access_level', access_level or "standard")
 
         # Configurer les types de requêtes autorisées
         if allowed_query_types is None:
@@ -508,15 +503,16 @@ Vous êtes un gardien impartial mais stratégique des données."""
                 QueryType.GAME_STATE,
                 QueryType.CLUE_REQUEST,
             ]
-        self.allowed_query_types = allowed_query_types
+        object.__setattr__(self, 'allowed_query_types', allowed_query_types)
 
         # Outils Oracle
-        self.oracle_tools = OracleTools(dataset_manager, agent_name)
+        oracle_tools = OracleTools(dataset_manager, agent_name)
+        object.__setattr__(self, 'oracle_tools', oracle_tools)
 
         # Enregistrement des outils Oracle comme plugin dans le kernel (si kernel disponible)
         if kernel:
             kernel.add_plugin(
-                self.oracle_tools, plugin_name=f"oracle_tools_{agent_name}"
+                oracle_tools, plugin_name=f"oracle_tools_{agent_name}"
             )
 
             # Ajouter les plugins supplémentaires si fournis
@@ -524,17 +520,12 @@ Vous êtes un gardien impartial mais stratégique des données."""
                 for i, plugin in enumerate(plugins):
                     plugin_name = f"plugin_{agent_name}_{i}"
                     kernel.add_plugin(plugin, plugin_name=plugin_name)
-
-        # Logger spécialisé
-        self._logger = logging.getLogger(
-            f"agent.{self.__class__.__name__}.{agent_name}"
-        )
         # Protection contre les Mock objects dans les tests
         try:
             dataset_name = type(dataset_manager.dataset).__name__
         except AttributeError:
             dataset_name = "RealDataset_Unknown"  # MOCK ÉLIMINÉ PHASE 3
-        self._logger.info(
+        self.logger.info(
             f"OracleBaseAgent '{agent_name}' initialisé avec dataset: {dataset_name}"
         )
 
@@ -557,7 +548,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         Returns:
             OracleResponse: Un objet structuré contenant le résultat de l'opération.
         """
-        self._logger.info(
+        self.logger.info(
             f"Traitement demande Oracle: {requesting_agent} -> {query_type.value}"
         )
 
@@ -577,7 +568,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
             return response
 
         except Exception as e:
-            self._logger.error(f"Erreur traitement demande Oracle: {e}", exc_info=True)
+            self.logger.error(f"Erreur traitement demande Oracle: {e}", exc_info=True)
 
             error_response = OracleResponse(
                 authorized=False,
@@ -605,7 +596,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         }
 
         self.access_log.append(log_entry)
-        self._logger.debug(
+        self.logger.debug(
             f"Interaction Oracle enregistrée: {requesting_agent} -> {query_type.value} -> {response.authorized}"
         )
 
@@ -650,7 +641,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         self.access_log.clear()
         self.revealed_information.clear()
         self.dataset_manager.reset_statistics()
-        self._logger.info(f"État Oracle {self.name} remis à zéro")
+        self.logger.info(f"État Oracle {self.name} remis à zéro")
 
     # Implémentation des méthodes abstraites requises par BaseAgent
 
@@ -670,7 +661,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         """Configure les composants spécifiques de l'agent Oracle."""
         self._llm_service_id = llm_service_id
         # Les outils Oracle sont déjà configurés dans __init__
-        self._logger.info(
+        self.logger.info(
             f"Agent Oracle '{self.name}' configuré avec service LLM: {llm_service_id}"
         )
 
@@ -678,7 +669,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         """Obtient une réponse de l'agent Oracle."""
         # Pour l'Oracle, la réponse dépend du type de requête
         # Cette méthode peut être surchargée par les agents spécialisés
-        self._logger.info(f"Oracle '{self.name}' reçoit message: {message[:100]}...")
+        self.logger.info(f"Oracle '{self.name}' reçoit message: {message[:100]}...")
 
         # Réponse basique - peut être améliorée selon les besoins
         return f"Oracle '{self.name}' a reçu votre message. Utilisez les outils Oracle pour des requêtes spécifiques."
@@ -697,7 +688,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         if message is None:
             message = kwargs.get("input", kwargs.get("query", ""))
 
-        self._logger.info(
+        self.logger.info(
             f"Oracle '{self.name}' invoke_single appelé avec: {message[:100] if message else 'message vide'}..."
         )
 
@@ -706,7 +697,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
             response = await self.get_response(message, **kwargs)
             return response
         except Exception as e:
-            self._logger.error(f"Erreur lors de invoke_single: {e}")
+            self.logger.error(f"Erreur lors de invoke_single: {e}")
             return f"Erreur Oracle: {str(e)}"
 
     # Properties héritées de BaseAgent : name, instructions, etc.
