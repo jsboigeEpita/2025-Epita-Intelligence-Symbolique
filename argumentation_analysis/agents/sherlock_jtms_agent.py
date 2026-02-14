@@ -217,6 +217,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
         # Note: le system_prompt custom n'est plus directement passé ici,
         # la factory utilise le prompt standardisé.
         # Pour une customisation, il faudrait étendre la factory.
+        self._system_prompt = system_prompt or self._get_default_system_prompt()
 
         # Gestionnaires spécialisés JTMS
         self._hypothesis_tracker = HypothesisTracker(self._jtms_session)
@@ -227,6 +228,18 @@ class SherlockJTMSAgent(JTMSAgentBase):
         self._max_concurrent_hypotheses = 5
 
         self._logger.info(f"SherlockJTMSAgent initialisé avec JTMS intégré")
+
+    @property
+    def system_prompt(self) -> str:
+        """Retourne le prompt système de l'agent."""
+        return self._system_prompt
+
+    def _get_default_system_prompt(self) -> str:
+        """Retourne le prompt système par défaut pour Sherlock Holmes."""
+        return """Vous êtes Sherlock Holmes, le célèbre détective consultant.
+Votre rôle est d'analyser les situations avec une logique déductive implacable,
+de formuler des hypothèses basées sur les faits observables, et de tirer
+des conclusions rationnelles à partir des preuves disponibles."""
 
     # === MÉTHODES SPÉCIALISÉES SHERLOCK ===
 
