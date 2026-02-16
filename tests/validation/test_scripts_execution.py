@@ -284,7 +284,7 @@ class TestScriptsExecution:
             script_name="einstein_demo",
             environment=script_test_environment,
             timeout=timeout,
-            additional_args=["--test-mode", "--max-hints", "2"],
+            additional_args=["--integration-test"],
         )
 
         assert result[

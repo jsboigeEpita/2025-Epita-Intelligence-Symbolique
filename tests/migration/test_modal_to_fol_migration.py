@@ -25,16 +25,26 @@ Tests de régression et comparaison :
 """
 
 import os
+import sys
 import pytest
 import asyncio
 import time
 import logging
 from typing import Dict, List, Any, Optional, Tuple
+from unittest.mock import MagicMock
 
-pytestmark = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"),
-    reason="Tests require OPENAI_API_KEY for FOL/Modal logic agent migration validation",
-)
+_jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
+
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Tests require OPENAI_API_KEY for FOL/Modal logic agent migration validation",
+    ),
+    pytest.mark.skipif(
+        _jpype_is_mocked,
+        reason="FOL migration tests require real JVM (jpype mocked by --disable-jvm-session)",
+    ),
+]
 
 import statistics
 

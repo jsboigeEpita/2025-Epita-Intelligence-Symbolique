@@ -48,7 +48,7 @@ class TestLogicalAgentHardening:
         # 1. Initialize the agent
         settings = AppSettings()
         agent = SherlockJTMSAgent(
-            kernel, settings, agent_name="test_contradiction_agent"
+            kernel, agent_name="test_contradiction_agent"
         )
 
         # 2. Add a single fact

@@ -147,22 +147,23 @@ def test_successful_simple_argument_analysis(playwright: Playwright, backend_url
             f"CORPS COMPLET DE LA REPONSE API /api/analyze:\n{json.dumps(response_body, indent=2, ensure_ascii=False)}"
         )
 
+        # API returns "success": true (not "status": "success")
+        # and data is at top level (not nested in "results")
         assert (
-            response_body.get("status") == "success"
-        ), "Le champ 'status' de la reponse n'est pas 'success'."
+            response_body.get("success") is True
+        ), "Le champ 'success' de la reponse n'est pas True."
 
-        results = response_body.get("results", {})
         assert (
-            "fallacies" in results
-        ), "La clé 'fallacies' est absente de l'objet 'results'."
+            "fallacies" in response_body
+        ), "La clé 'fallacies' est absente de la reponse."
         assert (
-            "argument_structure" in results
-        ), "La clé 'argument_structure' est absente de l'objet 'results'."
+            "argument_structure" in response_body
+        ), "La clé 'argument_structure' est absente de la reponse."
         assert (
-            results.get("fallacy_count") == 0
-        ), f"Compte de sophismes attendu: 0, obtenu: {results.get('fallacy_count')}"
+            response_body.get("fallacy_count") == 0
+        ), f"Compte de sophismes attendu: 0, obtenu: {response_body.get('fallacy_count')}"
 
-        structure = results.get("argument_structure")
+        structure = response_body.get("argument_structure")
         assert structure is not None, "La structure de l'argument est nulle."
 
         # NOTE: La reconstruction de l'argument retourne actuellement une liste vide.
