@@ -41,6 +41,7 @@ try:
         DatasetAccessManager,
     )
     from semantic_kernel.kernel import Kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 
     print("[OK] Imports critiques reussis")
@@ -148,11 +149,20 @@ def test_validate_suggestion_async():
 # Tests de test_oracle_fixes_simple.py
 
 
+def _create_real_kernel():
+    """Create a real Kernel with a real OpenAIChatCompletion service for Pydantic V2 compatibility."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(
+        service_id="test_service", api_key="test-key-not-real", ai_model_id="test"
+    )
+    kernel.add_service(service)
+    return kernel
+
+
 def test_oracle_fixes_consolidated():
     """Test consolidé des corrections Oracle."""
     print("\n=== Test consolidé des corrections Oracle ===")
-    mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = Mock()
+    mock_kernel = _create_real_kernel()
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_permission_manager = Mock(spec=PermissionManager)
     mock_permission_manager.is_authorized = Mock(return_value=True)

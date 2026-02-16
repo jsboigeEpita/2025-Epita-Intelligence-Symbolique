@@ -28,6 +28,17 @@ from argumentation_analysis.agents.core.oracle.permissions import (
     PermissionManager,
 )
 from semantic_kernel.kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+
+def _create_real_kernel():
+    """Create a real Kernel with a real OpenAIChatCompletion service for Pydantic V2 compatibility."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(
+        service_id="test_service", api_key="test-key-not-real", ai_model_id="test"
+    )
+    kernel.add_service(service)
+    return kernel
 
 
 def test_all_group3_fixes():
@@ -36,9 +47,8 @@ def test_all_group3_fixes():
 
     results = []
 
-    # Setup de base
-    mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = Mock()
+    # Setup de base avec un vrai Kernel pour compatibilite Pydantic V2
+    mock_kernel = _create_real_kernel()
 
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_permission_manager = Mock(spec=PermissionManager)

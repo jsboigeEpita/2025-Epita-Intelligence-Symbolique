@@ -17,6 +17,33 @@ import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
 
+# Apply nest_asyncio early at module level to allow nested event loops
+nest_asyncio.apply()
+
+# Patch backports.asyncio.runner.Runner.run for nest_asyncio compatibility.
+# nest_asyncio patches asyncio.run() and loop.run_until_complete(), but NOT
+# backports.asyncio.runner.Runner.run() which pytest_asyncio uses internally.
+# Without this patch, pytest_asyncio fixtures fail with:
+#   "RuntimeError: Runner.run() cannot be called from a running event loop"
+# when Playwright or other plugins maintain a running event loop.
+try:
+    from backports.asyncio.runner import runner as _br
+    import asyncio.events as _aevt
+
+    _orig_runner_run = _br.Runner.run
+
+    def _patched_runner_run(self, coro, *, context=None):
+        _saved = _aevt._get_running_loop
+        _aevt._get_running_loop = lambda: None
+        try:
+            return _orig_runner_run(self, coro, context=context)
+        finally:
+            _aevt._get_running_loop = _saved
+
+    _br.Runner.run = _patched_runner_run
+except (ImportError, AttributeError):
+    pass
+
 # --- Mocking global pour les tests E2E ---
 # Si --disable-jvm-session est présent, on mocke jpype AVANT toute autre importation.
 _disable_jvm_early_check = any(arg == "--disable-jvm-session" for arg in sys.argv)
@@ -397,22 +424,11 @@ def setup_test_environment():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées.
-    Cette fixture est maintenant en `autouse=True` pour s'assurer qu'elle s'exécute tôt.
+    Ensures nest_asyncio is applied. The actual apply() call is done at module
+    level (top of this file) for earliest possible initialization. This fixture
+    exists for backward compatibility and logging.
     """
-    try:
-        import nest_asyncio
-
-        nest_asyncio.apply()
-        logger.info("nest_asyncio.apply() has been called.")
-    except ImportError:
-        logger.error(
-            "`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`."
-        )
-        pytest.fail(
-            "Missing dependency: nest_asyncio is required for running async tests with Playwright.",
-            pytrace=False,
-        )
+    logger.info("nest_asyncio.apply() was called at module level (early init).")
     yield
 
 

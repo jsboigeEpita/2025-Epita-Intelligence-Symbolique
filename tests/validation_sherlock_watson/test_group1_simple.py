@@ -25,11 +25,22 @@ try:
         DatasetAccessManager,
     )
     from semantic_kernel.kernel import Kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 except ImportError as e:
     print(f"ERREUR d'import: {e}")
     sys.exit(1)
 
 from unittest.mock import Mock, AsyncMock
+
+
+def _create_real_kernel():
+    """Create a real Kernel with a real OpenAIChatCompletion service for Pydantic V2 compatibility."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(
+        service_id="test_service", api_key="test-key-not-real", ai_model_id="test"
+    )
+    kernel.add_service(service)
+    return kernel
 
 
 def test_group1_fixes():
@@ -40,9 +51,8 @@ def test_group1_fixes():
     print("\n1. Test execute_oracle_query_success pattern:")
 
     try:
-        # Setup comme dans le test corrigé
-        mock_kernel = Mock(spec=Kernel)
-        # mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        # Setup avec un vrai Kernel pour compatibilité Pydantic V2
+        mock_kernel = _create_real_kernel()
 
         mock_dataset_manager = Mock(spec=DatasetAccessManager)
         expected_response = OracleResponse(
@@ -92,8 +102,7 @@ def test_group1_fixes():
     print("\n2. Test oracle_error_handling pattern:")
 
     try:
-        mock_kernel2 = Mock(spec=Kernel)
-        # mock_kernel2.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        mock_kernel2 = _create_real_kernel()
 
         mock_dataset_manager2 = Mock(spec=DatasetAccessManager)
         # CORRECTION: AsyncMock avec side_effect
@@ -126,15 +135,14 @@ def test_group1_fixes():
     print("\n3. Test query_type_validation pattern:")
 
     try:
-        mock_kernel3 = Mock(spec=Kernel)
-        # mock_kernel3.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        mock_kernel3 = _create_real_kernel()
 
         mock_dataset_manager3 = Mock(spec=DatasetAccessManager)
         valid_response = OracleResponse(
             authorized=True,
             message="Requête valide",
             data={},
-            query_type=QueryTy.CARD_INQUIRY,
+            query_type=QueryType.CARD_INQUIRY,
         )
         # CORRECTION: AsyncMock
         mock_dataset_manager3.execute_oracle_query = AsyncMock(

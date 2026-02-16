@@ -33,6 +33,17 @@ from argumentation_analysis.agents.core.oracle.oracle_base_agent import (
 )
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 from semantic_kernel.kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+
+def _create_real_kernel():
+    """Create a real Kernel with a real OpenAIChatCompletion service for Pydantic V2 compatibility."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(
+        service_id="test_service", api_key="test-key-not-real", ai_model_id="test"
+    )
+    kernel.add_service(service)
+    return kernel
 
 
 def test_dataset_manager_check_permission():
@@ -112,9 +123,8 @@ def test_oracle_tools_integration():
     """Test l'integration avec OracleTools."""
     print("Test 3: Integration OracleTools avec check_agent_permission")
 
-    # Creer les mocks
-    mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = Mock()
+    # Creer le kernel reel pour compatibilite Pydantic V2
+    mock_kernel = _create_real_kernel()
 
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = AsyncMock(return_value=True)
