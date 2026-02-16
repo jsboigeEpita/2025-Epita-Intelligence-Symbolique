@@ -192,6 +192,7 @@ class TestModalToFOLInterface:
             mock_level=MockLevel.PARTIAL,
             require_real_gpt=False,
             require_real_tweety=False,
+            require_full_taxonomy=False,
         )
 
         # La config devrait fonctionner (même si agents différents)
@@ -466,6 +467,7 @@ class TestOrchestrationIntegration:
             mock_level=MockLevel.PARTIAL,
             require_real_gpt=False,
             require_real_tweety=False,
+            require_full_taxonomy=False,
         )
 
         # La configuration doit être valide (même si différente)

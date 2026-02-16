@@ -12,6 +12,7 @@ Tests avancés pour le module orchestration.hierarchical.tactical.monitor.
 """
 
 import unittest
+from unittest.mock import patch
 
 import sys
 import os
