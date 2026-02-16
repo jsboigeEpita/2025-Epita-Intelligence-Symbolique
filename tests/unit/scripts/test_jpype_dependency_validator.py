@@ -16,10 +16,14 @@ from unittest.mock import patch, MagicMock
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+# Skip tests that need real jpype when --disable-jvm-session mocks it
+_jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
+
 
 class TestJPypeDependencyValidator:
     """Tests pour diagnostiquer le problème JPype dans DependencyValidator"""
 
+    @pytest.mark.skipif(_jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session")
     def test_jpype_import_direct(self):
         """Test 1: Vérifier que jpype peut être importé directement"""
         try:
@@ -36,6 +40,7 @@ class TestJPypeDependencyValidator:
         except ImportError as e:
             pytest.fail(f"Impossible d'importer jpype: {e}")
 
+    @pytest.mark.skipif(_jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session")
     def test_jpype_import_alternative(self):
         """Test 2: Vérifier l'import jpype alternatif"""
         try:
