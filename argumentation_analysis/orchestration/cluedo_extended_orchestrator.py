@@ -8,6 +8,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+from inspect import isawaitable
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 

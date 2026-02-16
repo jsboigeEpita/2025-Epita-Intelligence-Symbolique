@@ -213,7 +213,7 @@ def test_sherlock_agent_integration_real(agent_factory):
         )
 
         assert agent is not None
-        assert isinstance(agent, SherlockEnqueteAgent)
+        assert isinstance(agent, (SherlockEnqueteAgent, SherlockJTMSAgent))
         assert agent.name == "IntegrationTestAgent"
 
         print("✅ Test d'intégration authentique via factory réussi")

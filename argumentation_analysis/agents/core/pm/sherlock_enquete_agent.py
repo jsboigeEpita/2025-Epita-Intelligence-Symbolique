@@ -245,7 +245,7 @@ class SherlockEnqueteAgent(BaseAgent):
         )
         self.kernel = kernel
         self.instructions = system_prompt or SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
-        self.logger = logging.getLogger(agent_name)
+        object.__setattr__(self, "_agent_logger", logging.getLogger(agent_name))
         self._service_id = service_id
 
         # Le plugin avec les outils de Sherlock, en lui passant le kernel

@@ -230,10 +230,10 @@ class TestCluedoOrchestrationRealIntegration:
         watson = factory.create_watson_agent(agent_name="Watson_Methods_Test")
 
         # Vérifier les vraies méthodes de la vraie classe
-        assert hasattr(watson, "analyze_text")
-        assert hasattr(watson, "get_belief_set_content")
-        assert callable(getattr(watson, "analyze_text"))
-        assert callable(getattr(watson, "get_belief_set_content"))
+        assert hasattr(watson, "text_to_belief_set")
+        assert hasattr(watson, "get_agent_belief_set_content")
+        assert callable(getattr(watson, "text_to_belief_set"))
+        assert callable(getattr(watson, "get_agent_belief_set_content"))
 
         logger.info("✅ VRAIES méthodes des agents disponibles")
 

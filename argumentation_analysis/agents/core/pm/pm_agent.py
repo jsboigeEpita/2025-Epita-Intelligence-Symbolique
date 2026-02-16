@@ -28,9 +28,7 @@ class ProjectManagerAgent(BaseAgent):
     en fournissant des instructions à un orchestrateur externe pour l'exécution.
     """
 
-    logger: Optional[logging.Logger] = Field(
-        default_factory=lambda: logging.getLogger(__name__)
-    )
+    # logger inherited from BaseAgent (read-only @property over _agent_logger PrivateAttr)
 
     def __init__(
         self,

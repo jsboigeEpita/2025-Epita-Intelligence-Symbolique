@@ -73,9 +73,7 @@ class InformalAnalysisAgent(BaseAgent):
         "max_fallacies": 5,
         "include_context": False,
     }
-    logger: Optional[logging.Logger] = Field(
-        default_factory=lambda: logging.getLogger(__name__)
-    )
+    # logger inherited from BaseAgent (read-only @property over _agent_logger PrivateAttr)
     _taxonomy_file_path: Optional[str] = PrivateAttr(default=None)
 
     def __init__(
