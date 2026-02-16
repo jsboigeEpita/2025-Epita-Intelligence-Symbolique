@@ -1470,15 +1470,22 @@ Permettez-moi de lever le voile sur le mystère :
         """
         metrics = self.get_ideal_trace_metrics()
 
+        def _score(key, default=0.0):
+            """Extract score from metric, handling both flat floats and nested dicts."""
+            val = metrics.get(key, default)
+            if isinstance(val, dict):
+                return val.get("score_global", default)
+            return val
+
         validations = {
-            "score_global_8_plus": metrics["score_trace_ideale"] >= 8.0,
-            "naturalite_dialogue_7_5_plus": metrics["naturalite_dialogue"] >= 7.5,
-            "personnalites_distinctes_7_5_plus": metrics["personnalites_distinctes"]
+            "score_global_8_plus": _score("score_trace_ideale") >= 8.0,
+            "naturalite_dialogue_7_5_plus": _score("naturalite_dialogue") >= 7.5,
+            "personnalites_distinctes_7_5_plus": _score("personnalites_distinctes")
             >= 7.5,
-            "fluidite_transitions_7_plus": metrics["fluidite_transitions"] >= 7.0,
-            "progression_logique_8_plus": metrics["progression_logique"] >= 8.0,
-            "dosage_revelations_8_plus": metrics["dosage_revelations"] >= 8.0,
-            "engagement_global_8_plus": metrics["engagement_global"] >= 8.0,
+            "fluidite_transitions_7_plus": _score("fluidite_transitions") >= 7.0,
+            "progression_logique_8_plus": _score("progression_logique") >= 8.0,
+            "dosage_revelations_8_plus": _score("dosage_revelations") >= 8.0,
+            "engagement_global_8_plus": _score("engagement_global") >= 8.0,
             "conversation_length_sufficient": len(self.conversation_history) >= 5,
             "dramatic_elements_present": any(
                 "*" in msg.get("content", "") for msg in self.conversation_history

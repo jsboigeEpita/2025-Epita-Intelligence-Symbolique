@@ -99,11 +99,20 @@ def test_phase_d_simple():
 
         print("METRIQUES PHASE D:")
         for metric_name, score in ideal_metrics.items():
-            status = "[OK]" if score >= 8.0 else "[WARN]" if score >= 7.0 else "[NON]"
-            print(f"{status} {metric_name.replace('_', ' ').title()}: {score:.1f}/10")
+            if isinstance(score, (int, float)):
+                status = (
+                    "[OK]" if score >= 8.0 else "[WARN]" if score >= 7.0 else "[NON]"
+                )
+                print(
+                    f"{status} {metric_name.replace('_', ' ').title()}: {score:.1f}/10"
+                )
+            else:
+                print(f"[INFO] {metric_name.replace('_', ' ').title()}: {score}")
 
         # Score global
-        global_score = ideal_metrics["score_trace_ideale"]
+        global_score = ideal_metrics.get("score_trace_ideale", 0.0)
+        if not isinstance(global_score, (int, float)):
+            global_score = 0.0
         print(f"\nSCORE TRACE IDEALE: {global_score:.1f}/10")
 
         # Test 5: Validation Phase D

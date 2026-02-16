@@ -14,7 +14,6 @@ CORRECTIONS APPORTÉES :
 import logging
 import re
 import json
-import jpype
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
 from semantic_kernel import Kernel
@@ -540,7 +539,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             )
             return belief_set_obj, "Conversion réussie"
 
-        except (json.JSONDecodeError, ValueError, jpype.JException) as e:
+        except (json.JSONDecodeError, ValueError) as e:
             # MODIFICATION CRITIQUE : Ne plus gérer le retry manuellement
             # Laisser l'erreur remonter pour que SK puisse faire le retry automatique
             error_msg = f"Erreur de conversion/validation: {e}"
@@ -557,6 +556,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                 raise
 
         except Exception as e:
+            # Catches jpype.JException and any other unexpected errors
             error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg

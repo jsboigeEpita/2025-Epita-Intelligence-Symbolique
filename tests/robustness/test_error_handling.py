@@ -578,6 +578,8 @@ class TestStateCorruptionRecovery:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Test Corruption Recovery",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Test de récupération après corruption d'état",
+            initial_context="Test corruption recovery",
             oracle_strategy="enhanced_auto_reveal",
         )
 
