@@ -13,6 +13,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 )
 from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
+from semantic_kernel.prompt_template.input_variable import InputVariable
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
@@ -261,6 +262,12 @@ class SherlockEnqueteAgent(BaseAgent):
             template="{{$chat_history}}",
             description="Chat with Sherlock, the master detective.",
             template_format="semantic-kernel",
+            input_variables=[
+                InputVariable(
+                    name="chat_history",
+                    allow_dangerously_set_content=True,
+                )
+            ],
             execution_settings={self._service_id: execution_settings},
         )
 

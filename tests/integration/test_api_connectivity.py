@@ -65,7 +65,7 @@ def test_api_connectivity():
             client_openai_direct.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": "Bonjour!"}],
-                max_tokens=5,
+                max_completion_tokens=5,
             )
             print("  Connexion directe à OpenAI (GPT-4o-mini) réussie.")
         except Exception as e:
