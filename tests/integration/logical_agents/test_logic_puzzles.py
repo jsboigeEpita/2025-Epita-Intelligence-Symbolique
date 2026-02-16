@@ -1,5 +1,6 @@
 # tests/integration/logical_agents/test_logic_puzzles.py
 
+import os
 import pytest
 import json
 from pathlib import Path
@@ -8,6 +9,11 @@ import asyncio
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.config.settings import AppSettings
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for agent logic puzzle solving",
+)
 
 
 # Fixture to create a mock kernel for the agent

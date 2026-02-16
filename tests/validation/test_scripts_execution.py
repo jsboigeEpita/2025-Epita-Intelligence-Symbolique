@@ -17,6 +17,11 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Script execution tests require OPENAI_API_KEY for LLM-based workflows",
+)
+
 # Configuration des chemins
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts" / "sherlock_watson"

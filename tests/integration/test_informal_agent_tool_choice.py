@@ -1,3 +1,4 @@
+import os
 import asyncio
 import pytest
 import semantic_kernel as sk
@@ -10,6 +11,11 @@ sys.path.insert(0, str(project_root))
 
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for real LLM agent tool choice validation",
+)
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents.core.informal.informal_definitions import (

@@ -12,6 +12,11 @@ import semantic_kernel as sk
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
 
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for real LLM agent integration",
+)
+
 # --- Test Data Loading ---
 
 

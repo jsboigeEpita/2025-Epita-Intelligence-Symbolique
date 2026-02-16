@@ -24,11 +24,17 @@ Tests de régression et comparaison :
 - Migration transparente via configuration
 """
 
+import os
 import pytest
 import asyncio
 import time
 import logging
 from typing import Dict, List, Any, Optional, Tuple
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for FOL/Modal logic agent migration validation",
+)
 
 import statistics
 

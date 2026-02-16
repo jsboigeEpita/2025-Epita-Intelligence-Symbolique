@@ -60,9 +60,10 @@ class TestInformalDefinitions:  # Suppression de l'héritage unittest.TestCase
         ]
 
         if hasattr(df, "columns"):
-            assert len(df.columns) == len(
+            # DataFrame may have additional columns (depth, path) beyond base columns
+            assert len(df.columns) >= len(
                 expected_columns_without_pk
-            ), f"Attendu {len(expected_columns_without_pk)} colonnes, trouvé {len(df.columns)}: {df.columns}"
+            ), f"Attendu au moins {len(expected_columns_without_pk)} colonnes, trouvé {len(df.columns)}: {df.columns}"
             for col in expected_columns_without_pk:
                 assert col in df.columns, f"Colonne manquante: {col}"
 

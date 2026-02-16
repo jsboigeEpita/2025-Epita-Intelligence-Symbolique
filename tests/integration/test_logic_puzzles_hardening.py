@@ -1,5 +1,11 @@
+import os
 import pytest
 from tests.utils.scenario_runner import run_scenario_from_file
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for logic puzzle scenario execution",
+)
 
 
 @pytest.mark.real_jpype

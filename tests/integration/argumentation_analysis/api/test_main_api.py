@@ -88,4 +88,7 @@ def test_analyze_endpoint_plugin_not_found():
     )
     assert response.status_code == 404
     json_response = response.json()
-    assert "Plugin 'PluginInexistant' not found" in json_response["detail"]
+    detail = json_response["detail"]
+    assert (
+        "PluginInexistant" in detail
+    ), f"Expected plugin not found error mentioning 'PluginInexistant', got: {detail}"

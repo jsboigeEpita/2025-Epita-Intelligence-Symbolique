@@ -1,3 +1,4 @@
+import os
 import pytest
 
 #!/usr/bin/env python3
@@ -19,6 +20,11 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game
 from semantic_kernel import Kernel
 from argumentation_analysis.core.bootstrap import initialize_project_environment
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for Cluedo Oracle workflow execution",
+)
 
 # Configuration du logging simple
 logging.basicConfig(
