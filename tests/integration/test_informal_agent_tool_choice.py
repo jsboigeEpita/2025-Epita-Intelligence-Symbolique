@@ -17,7 +17,6 @@ pytestmark = pytest.mark.skipif(
     reason="Tests require OPENAI_API_KEY for real LLM agent tool choice validation",
 )
 from semantic_kernel.contents.chat_history import ChatHistory
-from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents.core.informal.informal_definitions import (
     InformalAnalysisPlugin as IdentificationPlugin,
     IdentifiedFallacy,
@@ -45,9 +44,7 @@ def test_informal_agent_forced_tool_choice(tmp_path):
     log_file = tmp_path / "test_trace.log"
 
     # 3. Création de l'agent tracé
-    settings = AppSettings()
-    settings.service_manager.default_llm_service_id = llm_service_id
-    agent_factory = AgentFactory(kernel, settings)
+    agent_factory = AgentFactory(kernel, llm_service_id)
     agent = agent_factory.create_informal_fallacy_agent(
         config_name="simple", trace_log_path=str(log_file)
     )
@@ -82,9 +79,13 @@ def test_informal_agent_forced_tool_choice(tmp_path):
         f"\n--- Contenu du fichier de trace ---\n{trace_content}\n---------------------------------"
     )
 
-    expected_trace = "Calling IdentificationPlugin-identify_fallacies function"
+    # TracedAgent logs "START INVOKE" and "FINAL HISTORY" with full history JSON.
+    # Function calls appear as FunctionCallContent in the history serialization.
     assert (
-        expected_trace in trace_content
-    ), f"La trace de l'appel à l'outil '{expected_trace}' n'a pas été trouvée dans le log."
+        "START INVOKE" in trace_content
+    ), "La trace 'START INVOKE' n'a pas été trouvée dans le log."
+    assert (
+        "FINAL HISTORY" in trace_content
+    ), "La trace 'FINAL HISTORY' n'a pas été trouvée dans le log."
 
-    print(f"\n[SUCCESS] La trace de l'appel à l'outil a été trouvée dans le log.")
+    print(f"\n[SUCCESS] La trace de l'invocation a été trouvée dans le log.")

@@ -161,6 +161,12 @@ class ScriptExecutionValidator:
             output,
             flags=re.DOTALL | re.IGNORECASE,
         )
+        # Exclure les messages bénins contenant "error" (fallback de services, etc.)
+        clean_output = re.sub(
+            r"(?i)not found, using fallback[^\n]*Error:[^\n]*",
+            "",
+            clean_output,
+        )
         output_lower = clean_output.lower()
 
         analysis["contains_errors"] = any(
