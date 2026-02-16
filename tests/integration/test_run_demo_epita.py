@@ -14,7 +14,7 @@ while not (PROJECT_ROOT / "pyproject.toml").exists():
             "Impossible de trouver la racine du projet (contenant pyproject.toml)"
         )
 
-DEMO_SCRIPT_PATH = PROJECT_ROOT / "demos" / "validation_complete_epita.py"
+DEMO_SCRIPT_PATH = PROJECT_ROOT / "demos" / "validation" / "validation_complete_epita.py"
 
 
 @pytest.mark.integration

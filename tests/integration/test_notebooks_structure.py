@@ -78,13 +78,13 @@ class TestNotebooksStructure(unittest.TestCase):
     def test_logic_agents_tutorial_notebook(self):
         """Test de la structure du notebook tutoriel sur les agents logiques."""
         self._verify_notebook_structure(
-            os.path.join("examples", "notebooks", "logic_agents_tutorial.ipynb")
+            os.path.join("examples", "05_notebooks", "logic_agents_tutorial.ipynb")
         )
 
     def test_api_logic_tutorial_notebook(self):
         """Test de la structure du notebook tutoriel sur l'API Web pour les opérations logiques."""
         self._verify_notebook_structure(
-            os.path.join("examples", "notebooks", "api_logic_tutorial.ipynb")
+            os.path.join("examples", "05_notebooks", "api_logic_tutorial.ipynb")
         )
 
 
