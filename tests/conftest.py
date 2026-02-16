@@ -33,12 +33,59 @@ try:
     _orig_runner_run = _br.Runner.run
 
     def _patched_runner_run(self, coro, *, context=None):
+        # Only suppress _get_running_loop for the initial guard check inside
+        # Runner.run (which raises "cannot be called from a running event loop").
+        # We must NOT keep _get_running_loop patched during actual coroutine
+        # execution, because asyncio.Event/Lock/Condition rely on it to bind
+        # to the running loop (Python 3.10+ _LoopBoundMixin).
         _saved = _aevt._get_running_loop
         _aevt._get_running_loop = lambda: None
         try:
-            return _orig_runner_run(self, coro, context=context)
+            self._lazy_init()
         finally:
             _aevt._get_running_loop = _saved
+
+        # Now run the coroutine with the real _get_running_loop restored.
+        # We replicate the core of Runner.run but skip the guard check.
+        import asyncio
+        import contextvars
+        import functools
+        import signal
+        import threading
+        from asyncio import coroutines, exceptions
+
+        if context is None:
+            context = self._context
+
+        task = self._loop.create_task(coro)
+
+        if (
+            threading.current_thread() is threading.main_thread()
+            and signal.getsignal(signal.SIGINT) is signal.default_int_handler
+        ):
+            sigint_handler = functools.partial(self._on_sigint, main_task=task)
+            try:
+                signal.signal(signal.SIGINT, sigint_handler)
+            except ValueError:
+                sigint_handler = None
+        else:
+            sigint_handler = None
+
+        self._interrupt_count = 0
+        try:
+            return self._loop.run_until_complete(task)
+        except exceptions.CancelledError:
+            if self._interrupt_count > 0:
+                uncancel = getattr(task, "uncancel", None)
+                if uncancel is not None and uncancel() == 0:
+                    raise KeyboardInterrupt()
+            raise
+        finally:
+            if (
+                sigint_handler is not None
+                and signal.getsignal(signal.SIGINT) is sigint_handler
+            ):
+                signal.signal(signal.SIGINT, signal.default_int_handler)
 
     _br.Runner.run = _patched_runner_run
 except (ImportError, AttributeError):

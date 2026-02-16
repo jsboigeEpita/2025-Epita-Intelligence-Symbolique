@@ -151,7 +151,6 @@ class TestCluedoOrchestratorIntegration:
         # that the mocked agents are correctly assigned.
         pass
 
-    @pytest.mark.xfail(reason="Pydantic V2 prevents setting logger on agent — needs real Kernel/Service pattern")
     @patch(
         "argumentation_analysis.orchestration.cluedo_extended_orchestrator.CyclicSelectionStrategy.next"
     )
