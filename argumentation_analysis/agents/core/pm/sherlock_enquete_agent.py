@@ -255,7 +255,7 @@ class SherlockEnqueteAgent(BaseAgent):
 
         # Création de la fonction agent principale
         execution_settings = OpenAIPromptExecutionSettings(
-            service_id=self._service_id, max_tokens=2000, temperature=0.7, top_p=0.8
+            service_id=self._service_id, max_completion_tokens=2000
         )
 
         prompt_template_config = PromptTemplateConfig(

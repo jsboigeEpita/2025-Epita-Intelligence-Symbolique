@@ -88,8 +88,7 @@ class AuthenticAPITester:
                     },
                     {"role": "user", "content": unique_prompt},
                 ],
-                max_tokens=1500,
-                temperature=0.7,
+                max_completion_tokens=1500,
             )
 
             end_time = time.time()

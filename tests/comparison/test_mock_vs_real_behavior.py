@@ -339,7 +339,7 @@ class BehaviorComparator:
         """Exécution basique avec GPT réel."""
         chat_service = kernel.get_service("comparison-real-gpt")
 
-        settings = OpenAIChatPromptExecutionSettings(max_tokens=150, temperature=0.3)
+        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=150)
 
         prompt = scenario.get("prompt", "Test de comparaison")
         messages = [ChatMessageContent(role="user", content=prompt)]

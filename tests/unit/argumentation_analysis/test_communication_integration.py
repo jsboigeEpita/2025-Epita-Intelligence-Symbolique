@@ -973,7 +973,7 @@ def test_async_request_response(async_test_environment):
     asyncio.run(run_test())
 
 
-@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
+@pytest.mark.timeout(30)
 def test_async_parallel_requests(async_test_environment):
     """Test de l'envoi parallèle de requêtes asynchrones (version simplifiée)."""
 

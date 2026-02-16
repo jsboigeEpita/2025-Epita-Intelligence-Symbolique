@@ -128,7 +128,7 @@ class TestRealGPTIntegration:
         assert chat_service is not None
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.1
+            max_completion_tokens=100
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory au lieu d'une liste simple
@@ -313,7 +313,7 @@ class TestRealGPTPerformance:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=50, temperature=0.0
+            max_completion_tokens=50
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -340,7 +340,7 @@ class TestRealGPTPerformance:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.0
+            max_completion_tokens=100
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -372,7 +372,7 @@ class TestRealGPTErrorHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=50, temperature=0.0
+            max_completion_tokens=50
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -410,7 +410,7 @@ class TestRealGPTErrorHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=30, temperature=0.0
+            max_completion_tokens=30
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -457,7 +457,7 @@ class TestRealGPTAuthenticity:
         )
 
         settings = real_chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.5
+            max_completion_tokens=100
         )
 
         test_question = "Qu'est-ce qui rend Sherlock Holmes unique comme détective ?"
@@ -530,7 +530,7 @@ class TestRealGPTLoadHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=30, temperature=0.0
+            max_completion_tokens=30
         )
 
         results = []

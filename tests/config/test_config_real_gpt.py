@@ -87,7 +87,7 @@ class GPTConfigValidator:
             # Test de connectivité simple
             start_time = time.time()
 
-            settings = OpenAIChatPromptExecutionSettings(max_tokens=10, temperature=0.1)
+            settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=10)
 
             messages = [ChatMessageContent(role="user", content="Test")]
 
@@ -266,8 +266,7 @@ class TestKernelConfiguration:
 
         # Settings optimisés pour performance
         optimized_settings = OpenAIChatPromptExecutionSettings(
-            max_tokens=200,
-            temperature=0.1,  # Bas pour cohérence
+            max_completion_tokens=200,
             top_p=0.9,
             frequency_penalty=0.0,
             presence_penalty=0.0,
@@ -384,7 +383,7 @@ class TestConfigurationIntegration:
 
         # Settings réalistes pour Oracle Enhanced
         settings = OpenAIChatPromptExecutionSettings(
-            max_tokens=300, temperature=0.3, top_p=0.9
+            max_completion_tokens=300, top_p=0.9
         )
 
         # Test d'une interaction typique Oracle

@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 from project_core.core_from_scripts.refactoring_manager import RefactoringManager
 
 
-@pytest.mark.skip(reason="Suspecté de causer un crash, désactivation temporaire.")
+@pytest.mark.skip(reason="Tests hang: apply_refactoring_plan blocks indefinitely (confirmed 2026-02-16)")
 class TestRefactoringManager(unittest.TestCase):
     """
     Unit tests for the RefactoringManager.
@@ -73,7 +73,6 @@ class TestRefactoringManager(unittest.TestCase):
         )
         self.assertEqual(modified_content.strip(), expected_content.strip())
 
-    @pytest.mark.skip(reason="Temporarily disabled to debug test suite hang")
     def test_apply_refactoring_plan_dry_run(self):
         """
         Test that `dry_run` computes diffs but does not modify files.

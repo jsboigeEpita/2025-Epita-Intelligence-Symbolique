@@ -154,8 +154,10 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info(f"✅ Service LLM authentique direct validé: {service_type}")
 
+    @pytest.mark.real_llm
     @pytest.mark.xfail(
-        reason="PYTEST_CURRENT_TEST env var causes create_llm_service to return mock in test environment",
+        reason="conftest autouse fixture sets PYTEST_RUNNING which causes create_llm_service "
+        "to return mock; needs FORCE_REAL_LLM_IN_TEST=true outside pytest",
         strict=False,
     )
     def test_force_mock_rejection(self):
@@ -246,8 +248,10 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info("✅ Configuration environnement authentique validée")
 
+    @pytest.mark.real_llm
     @pytest.mark.xfail(
-        reason="PYTEST_CURRENT_TEST env var causes create_llm_service to return mock in test environment",
+        reason="conftest autouse fixture sets PYTEST_RUNNING which causes create_llm_service "
+        "to return mock; needs FORCE_REAL_LLM_IN_TEST=true outside pytest",
         strict=False,
     )
     def test_no_mock_fallbacks_in_system(self):
@@ -299,8 +303,10 @@ class TestPhase2AuthenticLLMValidation:
 
         logger.info(f"✅ Performance création kernel: {creation_time:.3f}s (< 3s)")
 
+    @pytest.mark.real_llm
     @pytest.mark.xfail(
-        reason="PYTEST_CURRENT_TEST env var causes create_llm_service to return mock in test environment",
+        reason="conftest autouse fixture sets PYTEST_RUNNING which causes create_llm_service "
+        "to return mock; needs FORCE_REAL_LLM_IN_TEST=true outside pytest",
         strict=False,
     )
     def test_phase2_success_criteria(self):

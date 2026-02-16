@@ -13,6 +13,11 @@ def mock_llm_service():
     return service
 
 
+@pytest.mark.xfail(
+    reason="Test structurally broken: mocks _execute_conversation_phase but run_analysis uses "
+    "_run_phase_1_informal_analysis which requires self.agents['ProjectManager']",
+    strict=False,
+)
 @pytest.mark.asyncio
 @patch(
     "argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState"
@@ -20,7 +25,6 @@ def mock_llm_service():
 @patch("argumentation_analysis.orchestration.analysis_runner_v2.StateManagerPlugin")
 @patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory")
 @patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat")
-@pytest.mark.skip(reason="Temporarily disabled due to fatal jpype error")
 async def test_run_analysis_v2_success_simplified(
     mock_group_chat,
     mock_agent_factory,
@@ -31,9 +35,7 @@ async def test_run_analysis_v2_success_simplified(
     """
     Tests a simplified successful execution of the analysis orchestration v2.
     """
-
-    async def run_test():
-        test_text = "This is a test text."
+    test_text = "This is a test text."
 
     # --- Act ---
     runner = AnalysisRunnerV2(llm_service=mock_llm_service)

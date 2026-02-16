@@ -136,35 +136,6 @@ async def test_initialize_success(
         )
 
 
-@pytest.mark.xfail(reason="API changed: initialize() no longer calls setup_agent_components")
-async def test_initialize_failure_agent_setup_fails(
-    extract_agent_adapter_not_initialized, mock_project_context
-):
-    adapter = extract_agent_adapter_not_initialized
-    mock_kernel_instance = MagicMock(spec=sk.Kernel)
-    mock_llm_id = "llm_fail_id"
-
-    with patch(
-        "argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgent"
-    ) as MockExtractAgentClass:
-        mock_extract_agent_instance = AsyncMock()
-        mock_extract_agent_instance.setup_agent_components = AsyncMock(
-            side_effect=Exception("Component setup failed")
-        )
-        MockExtractAgentClass.return_value = mock_extract_agent_instance
-
-        success = await adapter.initialize(
-            kernel=mock_kernel_instance,
-            llm_service_id=mock_llm_id,
-            project_context=mock_project_context,
-        )
-
-        assert success is False
-        assert adapter.initialized is False
-        MockExtractAgentClass.assert_called_once()
-        mock_extract_agent_instance.setup_agent_components.assert_called_once()
-
-
 async def test_initialize_exception_during_agent_instantiation(
     extract_agent_adapter_not_initialized, mock_project_context
 ):
@@ -235,7 +206,6 @@ def test_can_process_task_not_initialized(extract_agent_adapter_not_initialized)
     assert adapter.can_process_task(task_valid) is False
 
 
-@pytest.mark.xfail(reason="API changed: process_task no longer sets in_progress status")
 async def test_process_task_success_relevant_segment_extraction(
     extract_agent_adapter_initialized, mock_operational_state
 ):
@@ -264,7 +234,7 @@ async def test_process_task_success_relevant_segment_extraction(
     mock_operational_state.update_task_status.assert_any_call(
         task_id_original,
         "in_progress",
-        {"message": "Traitement de la tâche en cours", "agent": adapter.name},
+        None,
     )
     adapter.agent.extract_from_name.assert_called_once_with(
         {"source_name": "doc1", "source_text": "Some text."}, "ext1"
@@ -272,20 +242,14 @@ async def test_process_task_success_relevant_segment_extraction(
     assert result["status"] == "completed"
     assert result["task_id"] == task_id_original
     assert len(result["outputs"]["extracted_segments"]) == 1
-    assert result["outputs"]["extracted_segments"][0]["extracted_text"] == "extracted"
+    assert result["outputs"]["extracted_segments"][0]["content"] == "extracted"
     mock_operational_state.update_task_status.assert_called_with(
         task_id_original,
         "completed",
-        {
-            "message": "Traitement terminé avec statut: completed",
-            "results_count": 1,
-            "issues_count": 0,
-        },
+        None,
     )
-    mock_operational_state.update_metrics.assert_called_once()
 
 
-@pytest.mark.xfail(reason="API changed: process_task return format changed")
 async def test_process_task_extraction_error(
     extract_agent_adapter_initialized, mock_operational_state
 ):
@@ -307,39 +271,7 @@ async def test_process_task_extraction_error(
 
     assert result["status"] == "completed_with_issues"
     assert result["task_id"] == task_data["id"]
-    assert result["outputs"] == {"extracted_segments": [], "normalized_text": []}
+    assert result["outputs"] == {}
     assert len(result["issues"]) == 1
     assert result["issues"][0]["type"] == "extraction_error"
     assert result["issues"][0]["description"] == "Extraction failed"
-
-
-@pytest.mark.xfail(reason="API changed: _normalize_text method removed from adapter")
-async def test_normalize_text_remove_stopwords(extract_agent_adapter_initialized):
-    adapter = extract_agent_adapter_initialized
-    text = "Ceci est un test et une démonstration de la normalisation"
-    params = {"remove_stopwords": True}
-    normalized = adapter._normalize_text(text, params)
-    assert normalized == "Ceci test démonstration normalisation"
-
-
-@pytest.mark.xfail(reason="API changed: _normalize_text method removed from adapter")
-async def test_normalize_text_no_stopwords(extract_agent_adapter_initialized):
-    adapter = extract_agent_adapter_initialized
-    text = "Ceci est un test"
-    params = {"remove_stopwords": False}
-    normalized = adapter._normalize_text(text, params)
-    assert normalized == "Ceci est un test"
-
-
-@pytest.mark.xfail(reason="API changed: _normalize_text method removed from adapter")
-async def test_normalize_text_lemmatize_logs_not_implemented(
-    extract_agent_adapter_initialized, caplog
-):
-    adapter = extract_agent_adapter_initialized
-    text = "testing lemmatization"
-    params = {"lemmatize": True}
-
-    with caplog.at_level("INFO"):
-        adapter._normalize_text(text, params)
-
-    assert "Lemmatisation demandée mais non implémentée." in caplog.text

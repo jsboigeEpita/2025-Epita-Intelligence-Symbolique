@@ -492,9 +492,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             prompt_config.add_execution_settings(
                 OpenAIPromptExecutionSettings(
                     service_id=self._llm_service_id,
-                    max_tokens=200,
-                    temperature=0.6,
-                    top_p=0.7,
+                    max_completion_tokens=200,
                 )
             )
 

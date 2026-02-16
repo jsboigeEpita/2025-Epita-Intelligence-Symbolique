@@ -87,11 +87,10 @@ class TestPilotRealLLMAPI:
 
         # Settings minimaux pour réduire coût
         settings = OpenAIChatPromptExecutionSettings(
-            max_tokens=10,  # Minimal
-            temperature=0,  # Déterministe
+            max_completion_tokens=10,  # Minimal
         )
 
-        logger.info("✅ Paramètres configurés (max_tokens=10, temperature=0)")
+        logger.info("✅ Paramètres configurés (max_completion_tokens=10)")
 
         # ÉTAPE 3: APPEL API RÉEL (CRITIQUE)
         logger.info("📝 Étape 3/4 : 🚀 APPEL API OPENAI RÉEL EN COURS...")

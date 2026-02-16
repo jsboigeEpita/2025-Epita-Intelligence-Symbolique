@@ -143,9 +143,10 @@ def test_analyze_non_argumentative_text(client):
 
 
 @pytest.mark.integration
+@pytest.mark.real_llm
 @pytest.mark.xfail(
-    reason="PYTEST_CURRENT_TEST overrides FORCE_REAL_LLM_IN_TEST in llm_service.py, "
-    "causing mock LLM to be used instead of real LLM - mock cannot detect fallacies",
+    reason="conftest autouse fixture sets PYTEST_RUNNING which forces mock LLM; "
+    "mock cannot detect fallacies - needs FORCE_REAL_LLM_IN_TEST=true outside pytest",
     strict=False,
 )
 def test_analyze_complex_argumentative_text(client):

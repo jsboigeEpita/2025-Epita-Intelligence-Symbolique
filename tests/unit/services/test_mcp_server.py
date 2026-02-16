@@ -18,7 +18,7 @@ from argumentation_analysis.services.web_api.models.response_models import (
 def mcp_service_mock():
     """Fixture améliorée pour mocker complètement l'initialisation et les services."""
     with patch("services.mcp_server.main.FastMCP") as mock_fast_mcp, patch(
-        "argumentation_analysis.core.bootstrap.initialize_project_environment"
+        "services.mcp_server.main.initialize_project_environment"
     ) as mock_init_env, patch(
         "services.mcp_server.main.AppServices"
     ) as mock_app_services:
@@ -86,7 +86,6 @@ def mcp_service_mock():
         yield service
 
 
-@pytest.mark.skip(reason="Provoque un crash systeme en l'absence de JVM")
 def test_mcp_service_initialization(mcp_service_mock: MCPService):
     """Teste l'initialisation correcte du service MCP et le bon nombre d'outils."""
     assert mcp_service_mock is not None
@@ -95,7 +94,6 @@ def test_mcp_service_initialization(mcp_service_mock: MCPService):
     assert mcp_service_mock.mcp_instance_mock.tool.call_count == 10
 
 
-@pytest.mark.skip(reason="Provoque un crash systeme en l'absence de JVM")
 def test_analyze_text_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'analyze_text'."""
     import asyncio
@@ -105,7 +103,6 @@ def test_analyze_text_method(mcp_service_mock: MCPService):
     assert response["text_analyzed"] == "Sample text"
 
 
-@pytest.mark.skip(reason="Provoque un crash systeme en l'absence de JVM")
 def test_validate_argument_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'validate_argument'."""
     import asyncio
@@ -117,7 +114,6 @@ def test_validate_argument_method(mcp_service_mock: MCPService):
     assert response["result"]["is_valid"] is True
 
 
-@pytest.mark.skip(reason="Provoque un crash systeme en l'absence de JVM")
 def test_detect_fallacies_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'detect_fallacies'."""
     import asyncio
@@ -128,7 +124,6 @@ def test_detect_fallacies_method(mcp_service_mock: MCPService):
     assert not response["fallacies"]
 
 
-@pytest.mark.skip(reason="Provoque un crash systeme en l'absence de JVM")
 def test_build_framework_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'build_framework' avec des données valides."""
     import asyncio
