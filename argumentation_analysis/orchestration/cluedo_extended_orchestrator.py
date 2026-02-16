@@ -1206,6 +1206,7 @@ async def run_cluedo_oracle_game(
     max_turns: int = 15,
     max_cycles: int = 5,
     oracle_strategy: str = "balanced",
+    settings=None,
 ) -> Dict[str, Any]:
     """
     Interface simplifiée pour exécuter une partie Cluedo avec Oracle.
@@ -1216,12 +1217,18 @@ async def run_cluedo_oracle_game(
         max_turns: Nombre maximum de tours
         max_cycles: Nombre maximum de cycles
         oracle_strategy: Stratégie Oracle
+        settings: Instance AppSettings (optionnel, utilise settings global si non fourni)
 
     Returns:
         Résultat complet du workflow
     """
+    if settings is None:
+        from argumentation_analysis.config.settings import settings as app_settings
+
+        settings = app_settings
     orchestrator = CluedoExtendedOrchestrator(
         kernel=kernel,
+        settings=settings,
         max_turns=max_turns,
         max_cycles=max_cycles,
         oracle_strategy=oracle_strategy,

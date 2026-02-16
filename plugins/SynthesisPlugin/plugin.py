@@ -1,5 +1,5 @@
 import json
-from core.plugins.interfaces import BasePlugin
+from src.core.plugins.interfaces import BasePlugin
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions.kernel_arguments import KernelArguments

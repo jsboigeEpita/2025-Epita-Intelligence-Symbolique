@@ -1213,8 +1213,10 @@ class MainOrchestrator:
         # Le kernel est disponible via self.kernel.
 
         if CluedoExtendedOrchestrator:
+            from argumentation_analysis.config.settings import settings as app_settings
+
             s_map["cluedo"] = {
-                "orchestrator": CluedoExtendedOrchestrator(self.kernel),
+                "orchestrator": CluedoExtendedOrchestrator(self.kernel, settings=app_settings),
                 "priority": 1,
                 "types": [AnalysisType.INVESTIGATIVE] if AnalysisType else [],
             }

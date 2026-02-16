@@ -162,8 +162,11 @@ def test_phase_c_simple():
             print("[OK] Import CluedoExtendedOrchestrator reussi")
 
             # Test des nouvelles méthodes d'analyse contextuelle
+            from unittest.mock import Mock
+
+            mock_settings = Mock()
             orchestrator = CluedoExtendedOrchestrator(
-                kernel=None, oracle_strategy="balanced"
+                kernel=None, settings=mock_settings, oracle_strategy="balanced"
             )
 
             # Test de détection du type de message
@@ -189,9 +192,9 @@ def test_phase_c_simple():
             "test_timestamp": datetime.now().isoformat(),
             "test_type": "Phase C - Fluidite Transitions",
             "fluidity_metrics": fluidity_metrics,
-            "contextual_references": oracle_state.contextual_references,
-            "emotional_reactions": oracle_state.emotional_reactions,
-            "conversation_history": oracle_state.conversation_history,
+            "contextual_references": list(oracle_state.contextual_references),
+            "emotional_reactions": list(oracle_state.emotional_reactions),
+            "conversation_history": list(oracle_state.conversation_history),
             "phase_c_evaluation": {
                 "references_success": ref_success,
                 "reactions_success": reaction_success,

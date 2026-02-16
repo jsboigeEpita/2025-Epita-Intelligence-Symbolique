@@ -24,6 +24,7 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.functions import KernelArguments
+from unittest.mock import Mock
 
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     CluedoExtendedOrchestrator,
@@ -155,7 +156,7 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="balanced"
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -190,7 +191,7 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="balanced"
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -228,7 +229,7 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="enhanced_auto_reveal"
+            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="enhanced_auto_reveal"
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -492,7 +493,7 @@ class TestRealGPTAuthenticity:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=5, oracle_strategy="balanced"
+            kernel=real_gpt_kernel, settings=Mock(), max_turns=5, oracle_strategy="balanced"
         )
 
         oracle_state = await orchestrator.setup_workflow(

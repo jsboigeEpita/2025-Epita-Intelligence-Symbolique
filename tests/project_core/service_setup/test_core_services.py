@@ -8,6 +8,7 @@ from config.unified_config import UnifiedConfig
 """Tests pour l'initialisation des services centraux."""
 
 import pytest
+from unittest.mock import patch
 
 from pathlib import Path
 
@@ -104,37 +105,42 @@ def temp_project_root(tmp_path: Path) -> Path:
 
 def test_initialize_analysis_services_defaults(
     mock_ui_config, temp_project_root
-):  # mock_services_constructors retiré pour l'instant
+):
     """Teste l'initialisation avec les valeurs par défaut."""
-    # La nouvelle fonction attend un dictionnaire 'config'
-    # Les mocks pour les services individuels ne sont plus directement applicables de la même manière.
-    # Nous allons mocker les dépendances de initialize_analysis_services : initialize_jvm et create_llm_service
+    from unittest.mock import MagicMock
+
+    mock_llm_service = MagicMock()
 
     with patch(
-        "argumentation_analysis.service_setup.analysis_services.initialize_jvm"
+        "argumentation_analysis.service_setup.analysis_services.initialize_jvm",
+        return_value=True,
     ) as mock_init_jvm, patch(
-        "argumentation_analysis.service_setup.analysis_services.create_llm_service"
+        "argumentation_analysis.service_setup.analysis_services.create_llm_service",
+        return_value=mock_llm_service,
     ) as mock_create_llm, patch(
         "argumentation_analysis.service_setup.analysis_services.load_dotenv"
-    ) as mock_load_dotenv, patch(
-        "argumentation_analysis.service_setup.analysis_services.LIBS_DIR",
-        "mock/libs/dir",
-    ) as mock_libs_dir:  # Mocker LIBS_DIR
-        mock_init_jvm  # Mock eliminated - using authentic gpt-5-mini True  # Simule succès JVM
-        mock_create_llm  # Mock eliminated - using authentic gpt-5-mini Magicawait self._create_authentic_gpt4o_mini_instance() # Simule un service LLM créé
-        mock_load_dotenv  # Mock eliminated - using authentic gpt-5-mini True # Simule chargement .env réussi
+    ), patch(
+        "argumentation_analysis.service_setup.analysis_services.find_dotenv",
+        return_value=".env",
+    ), patch(
+        "argumentation_analysis.service_setup.analysis_services.settings"
+    ) as mock_settings:
+        # Configure settings mock
+        mock_settings.enable_jvm = True
+        mock_settings.libs_dir = temp_project_root / "libs"
+        (temp_project_root / "libs").mkdir(exist_ok=True)
+        mock_settings.use_mock_llm = True
+        mock_settings.default_model_id = "test-model"
 
-        sample_config = {"LIBS_DIR_PATH": "mock/libs/dir"}  # Passer une config minimale
-        services = initialize_analysis_services(config=sample_config)
+        services = initialize_analysis_services(config={})
 
         assert "jvm_ready" in services
         assert services["jvm_ready"] is True
         assert "llm_service" in services
-        assert services["llm_service"] is not None
+        assert services["llm_service"] is mock_llm_service
 
-        # mock_load_dotenv.# Mock assertion eliminated - authentic validation
-        mock_init_jvm.assert_called_once_with(lib_dir_path="mock/libs/dir")
-        # mock_create_llm.# Mock assertion eliminated - authentic validation
+        mock_init_jvm.assert_called_once()
+        mock_create_llm.assert_called_once()
 
 
 # def test_initialize_core_services_with_overrides(mock_services_constructors, temp_project_root):

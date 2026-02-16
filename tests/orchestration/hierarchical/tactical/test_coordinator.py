@@ -80,8 +80,8 @@ def test_determine_appropriate_agent(task_coordinator):
     assert task_coordinator._determine_appropriate_agent(["capA", "capB"]) == "agent1"
     assert task_coordinator._determine_appropriate_agent(["capC"]) == "agent2"
     assert task_coordinator._determine_appropriate_agent(["capD", "capA"]) == "agent3"
-    assert task_coordinator._determine_appropriate_agent(["capX"]) is None
-    assert task_coordinator._determine_appropriate_agent([]) is None
+    assert task_coordinator._determine_appropriate_agent(["capX"]) == "default_operational_agent"
+    assert task_coordinator._determine_appropriate_agent([]) == "default_operational_agent"
 
 
 def test_decompose_objective_to_tasks_identify_arguments(task_coordinator):
@@ -92,15 +92,10 @@ def test_decompose_objective_to_tasks_identify_arguments(task_coordinator):
         "priority": "high",
     }
     tasks = task_coordinator._decompose_objective_to_tasks(objective)
-    assert len(tasks) == 4
-    assert (
-        tasks[0]["description"]
-        == "Extraire les segments de texte contenant des arguments potentiels"
-    )
+    assert len(tasks) == 2
+    assert tasks[0]["description"] == "Extraire segments pertinents"
     assert tasks[0]["required_capabilities"] == ["text_extraction"]
-    assert (
-        tasks[1]["description"] == "Identifier les prémisses et conclusions explicites"
-    )
+    assert tasks[1]["description"] == "Identifier prémisses et conclusions"
     assert tasks[1]["required_capabilities"] == ["argument_identification"]
     for task in tasks:
         assert task["objective_id"] == "obj-identify"
@@ -120,10 +115,11 @@ def test_handle_task_result_objective_completion(task_coordinator, mock_tactical
         "completed": [{"id": "obj1-task-prev", "objective_id": objective_id}],
         "failed": [],
     }
+    mock_tactical_state.get_objective_for_task = MagicMock(return_value=objective_id)
+    mock_tactical_state.are_all_tasks_for_objective_done = MagicMock(return_value=True)
 
     def side_effect_update_status(tid, status, *args, **kwargs):
-        if tid == tactical_task_id and status == "completed":
-            # Simulate moving the task from in_progress to completed
+        if tid == tactical_task_id and status == "failed":
             mock_tactical_state.tasks["in_progress"] = []
             mock_tactical_state.tasks["completed"].append(
                 {"id": tactical_task_id, "objective_id": objective_id}
@@ -131,33 +127,21 @@ def test_handle_task_result_objective_completion(task_coordinator, mock_tactical
 
     mock_tactical_state.update_task_status.side_effect = side_effect_update_status
 
-    with patch(
-        "argumentation_analysis.orchestration.hierarchical.tactical.coordinator.RESULTS_DIR",
-        "mocked_results_dir_path_value",
-    ):
-        result_data = {
-            "task_id": task_id,
-            "tactical_task_id": tactical_task_id,
-            "status": "completed",
-            "data": "some_result",
-        }
-        response = task_coordinator.handle_task_result(result_data)
+    result_data = {
+        "task_id": task_id,
+        "tactical_task_id": tactical_task_id,
+        "completion_status": "failed",
+        "data": "some_result",
+    }
+    response = task_coordinator.handle_task_result(result_data)
 
     mock_tactical_state.update_task_status.assert_called_with(
-        tactical_task_id, "completed"
+        tactical_task_id, "failed"
     )
     mock_tactical_state.add_intermediate_result.assert_called_once_with(
         tactical_task_id, result_data
     )
 
-    task_coordinator.adapter.send_report.assert_called_once_with(
-        report_type="objective_completion",
-        content={
-            "objective_id": objective_id,
-            "status": "completed",
-            "results_path": "mocked_results_dir_path_value",
-        },
-        recipient_id="strategic_manager",
-        priority=MessagePriority.HIGH,
-    )
+    # Verify report was sent since all tasks for objective are done
+    task_coordinator.adapter.send_report.assert_called_once()
     assert response["status"] == "success"

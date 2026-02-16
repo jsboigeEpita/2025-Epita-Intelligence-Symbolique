@@ -19,7 +19,7 @@ from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 # Imports du système Oracle
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
@@ -88,7 +88,7 @@ class TestOracleWorkflowIntegration:
     def oracle_orchestrator(self, mock_kernel):
         """Orchestrateur Oracle configuré pour les tests."""
         return CluedoExtendedOrchestrator(
-            kernel=mock_kernel, max_turns=10, max_cycles=3, oracle_strategy="balanced"
+            kernel=mock_kernel, settings=Mock(), max_turns=10, max_cycles=3, oracle_strategy="balanced"
         )
 
     @pytest.mark.asyncio
@@ -234,7 +234,7 @@ class TestOracleWorkflowIntegration:
 
         for strategy in strategies:
             orchestrator = CluedoExtendedOrchestrator(
-                kernel=mock_kernel, max_turns=5, max_cycles=2, oracle_strategy=strategy
+                kernel=mock_kernel, settings=Mock(), max_turns=5, max_cycles=2, oracle_strategy=strategy
             )
             orchestrators.append(orchestrator)
 
@@ -427,6 +427,7 @@ class TestOracleErrorHandlingIntegration:
         """Test la récupération en cas d'échec d'agent."""
         orchestrator = CluedoExtendedOrchestrator(
             kernel=error_test_kernel,  # pytest-asyncio injecte le résultat de la fixture, pas la coroutine
+            settings=Mock(),
             max_turns=5,
             max_cycles=2,
             oracle_strategy="balanced",

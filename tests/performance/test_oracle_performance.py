@@ -23,6 +23,7 @@ import os
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+from unittest.mock import Mock
 from concurrent.futures import ThreadPoolExecutor
 
 # Imports Semantic Kernel pour tests réels
@@ -327,6 +328,7 @@ class TestOracleResponseTimePerformance:
         try:
             orchestrator = CluedoExtendedOrchestrator(
                 kernel=real_gpt_kernel_performance,
+                settings=Mock(),
                 max_turns=4,
                 max_cycles=2,
                 oracle_strategy="enhanced_auto_reveal",

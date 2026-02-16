@@ -131,13 +131,12 @@ def test_load_key_from_passphrase_arg():
 
 def test_load_key_from_settings():
     """Teste le chargement de la clé via la configuration `settings`."""
+    mock_secret = mock.MagicMock()
+    mock_secret.get_secret_value.return_value = TEST_PASSPHRASE_SIMPLE
     with mock.patch(
         "argumentation_analysis.core.utils.crypto_utils.settings.passphrase",
-        new_callable=mock.PropertyMock,
-    ) as mock_passphrase:
-        mock_passphrase.return_value.get_secret_value.return_value = (
-            TEST_PASSPHRASE_SIMPLE
-        )
+        mock_secret,
+    ):
         key = load_encryption_key(passphrase_arg=None)
         assert key is not None
         assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
@@ -173,13 +172,12 @@ def test_load_key_no_source():
 
 def test_load_key_invalid_arg_valid_env():
     """Teste le cas où passphrase_arg est invalide (vide) mais la variable d'environnement est valide."""
+    mock_secret = mock.MagicMock()
+    mock_secret.get_secret_value.return_value = TEST_PASSPHRASE_SIMPLE
     with mock.patch(
         "argumentation_analysis.core.utils.crypto_utils.settings.passphrase",
-        new_callable=mock.PropertyMock,
-    ) as mock_passphrase:
-        mock_passphrase.return_value.get_secret_value.return_value = (
-            TEST_PASSPHRASE_SIMPLE
-        )
+        mock_secret,
+    ):
         key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_EMPTY)
         assert (
             key is not None

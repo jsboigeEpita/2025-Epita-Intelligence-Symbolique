@@ -77,6 +77,7 @@ class BehaviorComparator:
             if ORACLE_SYSTEM_AVAILABLE:
                 orchestrator = CluedoExtendedOrchestrator(
                     kernel=mock_kernel,
+                    settings=Mock(),
                     max_turns=test_scenario.get("max_turns", 3),
                     max_cycles=test_scenario.get("max_cycles", 2),
                     oracle_strategy="enhanced_auto_reveal",
@@ -135,6 +136,7 @@ class BehaviorComparator:
             if ORACLE_SYSTEM_AVAILABLE:
                 orchestrator = CluedoExtendedOrchestrator(
                     kernel=real_kernel,
+                    settings=Mock(),
                     max_turns=test_scenario.get("max_turns", 3),
                     max_cycles=test_scenario.get("max_cycles", 2),
                     oracle_strategy="enhanced_auto_reveal",

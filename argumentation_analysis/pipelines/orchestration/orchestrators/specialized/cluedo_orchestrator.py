@@ -25,10 +25,14 @@ except ImportError as e:
 
 
 class CluedoOrchestratorWrapper:
-    def __init__(self, kernel: Optional[sk.Kernel] = None):
+    def __init__(self, kernel: Optional[sk.Kernel] = None, settings=None):
         if not CluedoExtendedOrchestrator:
             raise ImportError("CluedoExtendedOrchestrator is not available.")
-        self.orchestrator = CluedoExtendedOrchestrator(kernel=kernel)
+        if settings is None:
+            from argumentation_analysis.config.settings import settings as app_settings
+
+            settings = app_settings
+        self.orchestrator = CluedoExtendedOrchestrator(kernel=kernel, settings=settings)
         logger.info("[CLUEDO] CluedoOrchestrator initialized.")
 
     async def run_investigation(self, text: str) -> Dict[str, Any]:

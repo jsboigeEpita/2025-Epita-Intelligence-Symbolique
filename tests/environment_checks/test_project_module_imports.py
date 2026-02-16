@@ -10,7 +10,7 @@ PROJECT_MODULES_TO_CHECK = [
     "argumentation_analysis.core.shared_state",
     "argumentation_analysis.agents.core.informal.informal_agent",
     "argumentation_analysis.agents.core.extract.extract_agent",
-    "argumentation_analysis.orchestration.analysis_runner",
+    "argumentation_analysis.orchestration.analysis_runner_v2",
     # Ajoutez ici d'autres modules internes importants si nécessaire
 ]
 

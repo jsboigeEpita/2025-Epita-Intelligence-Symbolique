@@ -7,21 +7,23 @@ class ChaoticPlugin:
     Un plugin de test conçu pour simuler des scénarios d'erreur contrôlés.
     """
 
-    def process_or_fail(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def process_or_fail(self, fail: bool = False, **kwargs) -> Dict[str, Any]:
         """
-        Traite un dictionnaire ou lève une ValueError si la clé "fail" est True.
+        Traite les arguments ou lève une ValueError si fail est True.
 
         Args:
-            data: Le dictionnaire d'entrée.
+            fail: Si True, lève une ValueError.
+            **kwargs: Données supplémentaires.
 
         Returns:
             Le dictionnaire traité avec un statut "processed".
 
         Raises:
-            ValueError: Si data["fail"] est True.
+            ValueError: Si fail est True.
         """
-        if data.get("fail", False):
+        if fail:
             raise ValueError("Échec intentionnel simulé par le ChaoticPlugin.")
 
-        data["status"] = "processed"
-        return data
+        result = dict(kwargs)
+        result["status"] = "processed"
+        return result

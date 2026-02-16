@@ -77,8 +77,10 @@ class TestNewOrchestrator:
     ):
         """Vérifie que le nouvel orchestrateur s'exécute sans erreur."""
         kernel_instance = await mock_kernel
+        mock_settings = Mock()
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel_instance,
+            settings=mock_settings,
             max_turns=3,
             max_cycles=1,
             oracle_strategy="cooperative",

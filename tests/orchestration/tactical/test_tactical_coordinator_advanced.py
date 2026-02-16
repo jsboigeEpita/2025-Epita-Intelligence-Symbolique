@@ -362,8 +362,8 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
         """Teste l'initialisation authentique du coordinateur."""
         # Vérifier que le coordinateur est correctement initialisé
         self.assertIsNotNone(self.coordinator)
-        self.assertIsNotNone(self.coordinator.tactical_state)
-        self.assertIsInstance(self.coordinator.tactical_state, TacticalState)
+        self.assertIsNotNone(self.coordinator.state)
+        self.assertIsInstance(self.coordinator.state, TacticalState)
 
         # Vérifier que l'adaptateur est authentique
         self.assertIsInstance(self.adapter, AuthenticAdapter)

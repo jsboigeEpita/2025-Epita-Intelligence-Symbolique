@@ -300,8 +300,11 @@ async def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
     if not ORACLE_SYSTEM_AVAILABLE:
         pytest.skip("Système Oracle non disponible")
 
+    from unittest.mock import Mock
+
     orchestrator = CluedoExtendedOrchestrator(
         kernel=validated_gpt_kernel,
+        settings=Mock(),
         max_turns=5,
         max_cycles=2,
         oracle_strategy="enhanced_auto_reveal",
@@ -320,11 +323,14 @@ async def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
 @pytest.fixture
 def mock_enhanced_orchestrator(mock_gpt_kernel, oracle_test_elements):
     """Orchestrateur Enhanced avec kernel mocké."""
+    from unittest.mock import Mock
+
     if not ORACLE_SYSTEM_AVAILABLE:
         pytest.skip("Système Oracle non disponible")
 
     orchestrator = CluedoExtendedOrchestrator(
         kernel=mock_gpt_kernel,
+        settings=Mock(),
         max_turns=5,
         max_cycles=2,
         oracle_strategy="enhanced_auto_reveal",

@@ -900,10 +900,11 @@ class CluedoOracleState(EnqueteCluedoState):
         if not self.conversation_history:
             return []
 
+        history_list = list(self.conversation_history)
         recent_messages = (
-            self.conversation_history[-num_messages:]
-            if len(self.conversation_history) >= num_messages
-            else self.conversation_history
+            history_list[-num_messages:]
+            if len(history_list) >= num_messages
+            else history_list
         )
 
         # Enrichissement avec informations contextuelles

@@ -1,6 +1,8 @@
 {
-    "name": "String Concat",
+    "manifest_version": "1.0",
+    "plugin_name": "string_concat",
     "version": "1.0",
     "description": "A test plugin for comparing string concatenation methods.",
-    "entry_point": "string_concat_plugin.py"
+    "entry_point": "string_concat_plugin.py",
+    "class_name": "StringConcatPlugin"
 }
