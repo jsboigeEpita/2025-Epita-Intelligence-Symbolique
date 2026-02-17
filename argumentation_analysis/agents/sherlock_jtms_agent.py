@@ -103,7 +103,8 @@ class HypothesisTracker:
             strength_score = supporting_count / (supporting_count + contradicting_count)
 
         # Vérifier le statut JTMS
-        belief_valid = self.jtms_session.jtms.beliefs.get(hypothesis_id, {}).valid
+        belief = self.jtms_session.jtms.beliefs.get(hypothesis_id)
+        belief_valid = belief.valid if belief is not None else None
 
         return {
             "hypothesis_id": hypothesis_id,

@@ -182,11 +182,11 @@ class TestPilotRealLLMAPI:
     @pytest.mark.requires_api
     async def test_pilot_kernel_invoke_real(self):
         """
-        TEST PILOTE ALTERNATIF : Via Kernel.invoke()
+        TEST PILOTE ALTERNATIF : Via Kernel.invoke_prompt()
 
-        Test alternatif utilisant l'API Kernel pour appel LLM.
+        Test alternatif utilisant l'API Kernel pour appel LLM direct.
         """
-        logger.info("🎯 TEST PILOTE ALTERNATIF : Via Kernel.invoke()")
+        logger.info("🎯 TEST PILOTE ALTERNATIF : Via Kernel.invoke_prompt()")
 
         # Configuration
         config = UnifiedConfig(
@@ -197,25 +197,25 @@ class TestPilotRealLLMAPI:
         kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
         assert kernel is not None
 
-        # Fonction simple
-        @kernel.function(name="test_func", description="Test function")
-        def simple_test(input: str) -> str:
-            """Simple echo function"""
-            return f"Echo: {input}"
-
         # Mesure durée
         start = time.time()
 
         try:
-            # Appel via kernel (devrait utiliser LLM si configuré)
-            result = await kernel.invoke(function=simple_test, input="test")
+            # Appel direct via invoke_prompt (SK 1.37 API)
+            from semantic_kernel.functions import KernelArguments
+
+            result = await kernel.invoke_prompt(
+                prompt="Respond with exactly: Echo test OK",
+                arguments=KernelArguments(),
+            )
 
             duration = time.time() - start
 
-            # Note: kernel.invoke avec function peut ne pas utiliser LLM
-            # C'est surtout un test de configuration
-            logger.info(f"✅ Kernel.invoke terminé en {duration:.3f}s")
-            logger.info(f"✅ Résultat: {result}")
+            content = str(result).strip()
+            assert len(content) > 0, "La réponse du kernel est vide"
+
+            logger.info(f"✅ Kernel.invoke_prompt terminé en {duration:.3f}s")
+            logger.info(f"✅ Résultat: {content}")
 
         except Exception as e:
             logger.error(f"❌ Erreur: {e}")

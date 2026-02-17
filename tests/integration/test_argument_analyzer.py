@@ -15,6 +15,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="session")
+def frontend_url(request) -> str:
+    """Fixture to get the frontend URL from the --frontend-url pytest option."""
+    return request.config.getoption("--frontend-url", default="http://localhost:8085")
+
+
 def test_dummy_health_check_to_isolate_playwright():
     """
     A simple, dependency-free test to ensure the pytest runner itself is working.
