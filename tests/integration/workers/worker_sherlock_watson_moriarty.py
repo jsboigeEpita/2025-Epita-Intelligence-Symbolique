@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # tests/integration/workers/worker_sherlock_watson_moriarty.py
 """
 Worker pour les tests d'intégration avec GPT-4o-mini réel pour Sherlock/Watson/Moriarty.
@@ -95,26 +89,8 @@ def rate_limiter():
     return _rate_limit
 
 
-# Tests d'intégration corrigés
-@pytest.mark.skip(
-    reason="Legacy tests for old orchestrator, disabling to fix collection."
-)
+# Tests d'intégration with real GPT-4o-mini
 class TestRealGPTIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests d'intégration avec GPT-4o-mini réel - Corrigés."""
 
     @pytest.mark.asyncio

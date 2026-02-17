@@ -143,40 +143,23 @@ class TestSherlockEnqueteAgentAuthentic:
         assert agent.name == TEST_AGENT_NAME
         assert agent.system_prompt == custom_prompt
 
-    @pytest.mark.skip(reason="SherlockJTMSAgent n'a pas get_current_case_description - API différente de SherlockEnqueteAgent")
-    async def test_get_current_case_description_real(self, sherlock_agent):
-        """Test authentique de récupération de description d'affaire."""
+    async def test_jtms_add_belief(self, sherlock_agent):
+        """Test JTMS add_belief (replaces old get_current_case_description test)."""
         agent = sherlock_agent
-        try:
-            description = await agent.get_current_case_description()
+        # SherlockJTMSAgent inherits add_belief from JTMSAgentBase
+        agent.add_belief("Le gardien était absent", "TRUE")
+        beliefs = agent.get_all_beliefs()
+        assert any(
+            "gardien" in str(name).lower() for name in beliefs.keys()
+        ), f"Belief not found in {beliefs}"
 
-            if description is not None:
-                assert isinstance(description, str)
-            else:
-                print("Description retournée: None (normal sans plugin configuré)")
-
-        except Exception as e:
-            assert "Erreur:" in str(e) or "Plugin" in str(e)
-            print(f"Exception attendue sans plugin: {e}")
-
-    @pytest.mark.skip(reason="SherlockJTMSAgent n'a pas add_new_hypothesis - utiliser formulate_hypothesis à la place")
-    async def test_add_new_hypothesis_real(self, sherlock_agent):
-        """Test authentique d'ajout d'hypothèse."""
+    async def test_jtms_formulate_hypothesis(self, sherlock_agent):
+        """Test formulate_hypothesis (replaces old add_new_hypothesis test)."""
         agent = sherlock_agent
-        hypothesis_text = "Le coupable est le Colonel Moutarde."
-        confidence_score = 0.75
-
-        try:
-            result = await agent.add_new_hypothesis(hypothesis_text, confidence_score)
-
-            if result is not None:
-                assert isinstance(result, (dict, str))
-            else:
-                print("Hypothèse retournée: None (normal sans plugin configuré)")
-
-        except Exception as e:
-            assert "Erreur:" in str(e) or "Plugin" in str(e)
-            print(f"Exception attendue sans plugin: {e}")
+        context = "Un vol a eu lieu au musée. Le gardien était absent."
+        result = await agent.formulate_hypothesis(context=context)
+        assert isinstance(result, dict)
+        assert "hypothesis" in result or "hypothesis_id" in result or "confidence" in result
 
     async def test_agent_error_handling(self, sherlock_agent):
         """Test la gestion d'erreur authentique de l'agent."""
