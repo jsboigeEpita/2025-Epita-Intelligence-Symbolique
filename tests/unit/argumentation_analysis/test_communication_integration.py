@@ -884,8 +884,10 @@ def async_test_environment():
     logger.info("Async test environment teardown complete")
 
 
-@pytest.mark.skip(
-    reason="Désactivation temporaire pour débloquer la suite de tests, fusion des raisons."
+@pytest.mark.xfail(
+    reason="Async request-response: responder_agent's response is not received "
+    "by requester (response=None). Likely a timing issue in the middleware.",
+    strict=False,
 )
 def test_async_request_response(async_test_environment):
     """Test de la communication asynchrone par requête-réponse (version simplifiée)."""

@@ -157,7 +157,7 @@ def mock_chat_completion_service(case_config):
 
 
 @pytest.mark.skip(
-    reason="Test is outdated due to ComplexFallacyAnalyzer and workflow refactoring"
+    reason="ARCHIVED: ComplexFallacyAnalyzer and workflow refactoring removed the tested API"
 )
 def test_agent_workflow_with_different_configurations(
     informal_fallacy_plugin, mock_chat_completion_service, case_config

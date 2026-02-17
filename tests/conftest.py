@@ -284,6 +284,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: marks tests as end-to-end tests")
     config.addinivalue_line("markers", "api: marks tests related to the API")
     config.addinivalue_line(
+        "markers", "timeout: marks tests with a timeout guard (seconds)"
+    )
+    config.addinivalue_line(
         "markers", "real_llm: marks tests that require a real LLM service"
     )
     config.addinivalue_line(

@@ -103,9 +103,7 @@ def group_chat(sherlock_agent, watson_agent):
     return gc
 
 
-@pytest.mark.skip(
-    reason="Legacy test for old agent orchestration, disabling to fix collection."
-)
+@pytest.mark.timeout(60)
 def test_sherlock_jtms_hypotheses(sherlock_agent, group_chat):
     async def _async_test():
         """Test des capacités JTMS de Sherlock."""

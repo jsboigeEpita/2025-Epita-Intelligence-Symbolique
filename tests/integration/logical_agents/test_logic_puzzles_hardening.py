@@ -4,14 +4,20 @@ from pathlib import Path
 import asyncio
 
 import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.config.settings import AppSettings
 
 
-# Fixture to create a mock kernel for the agent
+# Fixture to create a kernel with LLM service for the agent
 @pytest.fixture
 def kernel():
-    return sk.Kernel()
+    k = sk.Kernel()
+    chat_service = OpenAIChatCompletion(
+        service_id="default", ai_model_id="gpt-5-mini"
+    )
+    k.add_service(chat_service)
+    return k
 
 
 # Fixture to load scenarios from JSON files
@@ -69,10 +75,6 @@ class TestLogicalAgentHardening:
             len(consistency_report.get("conflicts", [])) > 0
         ), "The list of conflicts should not be empty."
 
-    @pytest.mark.xfail(
-        reason="Bare Kernel has no LLM service; deduce_solution() requires registered ChatCompletion",
-        strict=False,
-    )
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
     def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """

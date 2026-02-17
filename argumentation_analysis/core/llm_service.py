@@ -75,8 +75,9 @@ def create_llm_service(
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Gestion des mocks pour les tests
+    # force_authentic overrides force_mock and test environment detection
     is_test_environment = "PYTEST_CURRENT_TEST" in os.environ
-    if force_mock or (is_test_environment and not force_authentic):
+    if not force_authentic and (force_mock or is_test_environment):
         if force_mock:
             logger.warning(
                 f"Création forcée d'un service LLM MOCKÉ pour '{service_id}'."
