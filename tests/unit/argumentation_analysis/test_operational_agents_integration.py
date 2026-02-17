@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests d'intégration pour les agents opérationnels dans l'architecture hiérarchique.
@@ -62,33 +56,7 @@ from argumentation_analysis.paths import RESULTS_DIR
 logging.basicConfig(level=logging.ERROR)
 
 
-@pytest.mark.skip(
-    reason="Provoque un crash systematique en l'absence de JVM, probablement dans la fixture"
-)
 class TestOperationalAgentsIntegration:
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-
-        async def _run():
-            return await config.get_kernel_with_gpt4o_mini()
-
-        return asyncio.run(_run())
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _run():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_run())
-
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture(scope="function")

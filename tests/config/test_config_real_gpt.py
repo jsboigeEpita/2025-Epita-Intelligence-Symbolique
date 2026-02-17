@@ -24,11 +24,10 @@ from semantic_kernel.contents.chat_history import ChatHistory
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
-# Skip si pas d'API key
-# On skip inconditionnellement ces tests pour le moment, car ils nécessitent une clé API valide
-# et échouent dans l'environnement de test actuel.
-pytestmark = pytest.mark.skip(
-    reason="Désactivé temporairement: Nécessite une clé API OpenAI valide et configurée dans l'environnement d'exécution."
+# Skip si pas d'API key - ces tests nécessitent une clé API OpenAI valide
+pytestmark = pytest.mark.skipif(
+    not REAL_GPT_AVAILABLE,
+    reason="Requires valid OPENAI_API_KEY in environment",
 )
 
 
@@ -87,7 +86,7 @@ class GPTConfigValidator:
             # Test de connectivité simple
             start_time = time.time()
 
-            settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=10)
+            settings = OpenAIChatPromptExecutionSettings()
 
             messages = [ChatMessageContent(role="user", content="Test")]
 
@@ -166,6 +165,7 @@ class TestGPTConfigValidation:
             ), f"Aucun problème détecté pour: {invalid_key}"
 
     @pytest.mark.asyncio
+    @pytest.mark.real_llm
     async def test_gpt4o_mini_connectivity(self, gpt_config_validator):
         """Test la connectivité GPT-4o-mini."""
         connectivity = await gpt_config_validator.test_api_connectivity(OPENAI_API_KEY)
@@ -253,6 +253,7 @@ class TestKernelConfiguration:
             ), f"Modèle incorrect pour {config['id']}"
 
     @pytest.mark.asyncio
+    @pytest.mark.real_llm
     async def test_kernel_settings_optimization(self):
         """Test l'optimisation des settings du kernel."""
         kernel = Kernel()
@@ -264,13 +265,8 @@ class TestKernelConfiguration:
         )
         kernel.add_service(chat_service)
 
-        # Settings optimisés pour performance
-        optimized_settings = OpenAIChatPromptExecutionSettings(
-            max_completion_tokens=200,
-            top_p=0.9,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-        )
+        # Settings for gpt-5-mini (rejects top_p, frequency_penalty, presence_penalty, max_completion_tokens returns empty)
+        optimized_settings = OpenAIChatPromptExecutionSettings()
 
         # Test avec settings optimisés
         messages = [
@@ -369,6 +365,7 @@ class TestConfigurationIntegration:
     """Tests d'intégration de configuration."""
 
     @pytest.mark.asyncio
+    @pytest.mark.real_llm
     async def test_end_to_end_configuration(self):
         """Test configuration end-to-end."""
         # Configuration complète
@@ -381,10 +378,8 @@ class TestConfigurationIntegration:
         )
         kernel.add_service(chat_service)
 
-        # Settings réalistes pour Oracle Enhanced
-        settings = OpenAIChatPromptExecutionSettings(
-            max_completion_tokens=300, top_p=0.9
-        )
+        # Settings for Oracle Enhanced (gpt-5-mini: max_completion_tokens returns empty via SK 1.37)
+        settings = OpenAIChatPromptExecutionSettings()
 
         # Test d'une interaction typique Oracle
         oracle_prompt = """En tant que Moriarty dans un jeu Cluedo Enhanced, 

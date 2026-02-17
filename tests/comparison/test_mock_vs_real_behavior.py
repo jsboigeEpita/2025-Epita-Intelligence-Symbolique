@@ -1,11 +1,5 @@
 # Fichier adapté pour Oracle Enhanced v2.1.0
 
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 """
 Tests comparatifs Mock vs Réel pour Oracle Enhanced.
 
@@ -472,22 +466,6 @@ class BehaviorComparator:
             return "cost_consideration_needed"
         else:
             return "balanced_tradeoff"
-
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
 
 @pytest.fixture
 def behavior_comparator():
