@@ -117,14 +117,16 @@ class TestPilotRealLLMAPI:
         logger.info("📝 Étape 4/4 : Validation critères authenticité...")
 
         # CRITÈRE 1: Durée minimale (preuve latence réseau)
+        # Note: avec max_completion_tokens=10 et une bonne connexion, OpenAI peut répondre en < 0.5s
+        # Le seuil de 0.1s suffit à prouver qu'il y a un appel réseau (un mock serait < 0.01s)
         logger.info(f"🔍 Critère 1/5 : Durée = {duration:.3f}s")
-        assert duration > 0.5, (
-            f"❌ ÉCHEC CRITIQUE : Durée trop courte ({duration:.3f}s < 0.5s)\n"
+        assert duration > 0.1, (
+            f"❌ ÉCHEC CRITIQUE : Durée trop courte ({duration:.3f}s < 0.1s)\n"
             f"   → PREUVE de mock résiduel ou cache\n"
-            f"   → Un appel API réel prend minimum 0.5-1s (latence réseau)"
+            f"   → Un appel API réel prend minimum 0.1s (latence réseau)"
         )
         logger.info(
-            f"✅ Durée acceptable ({duration:.3f}s > 0.5s) - Latence réseau confirmée"
+            f"✅ Durée acceptable ({duration:.3f}s > 0.1s) - Latence réseau confirmée"
         )
 
         # CRITÈRE 2: Réponse non vide

@@ -16,7 +16,49 @@ from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 from typing import List, Dict, Any
 
-# Imports des composants à tester
+# Imports des composants à tester — séparés pour que les modules existants
+# ne soient pas bloqués par ceux qui n'existent pas encore.
+
+# Modules qui EXISTENT
+EXTRACTOR_AVAILABLE = False
+ANALYZER_AVAILABLE = False
+ORCHESTRATOR_AVAILABLE = False
+
+try:
+    from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
+        FactClaimExtractor,
+        FactualClaim,
+        ClaimType,
+        ClaimVerifiability,
+    )
+    EXTRACTOR_AVAILABLE = True
+except ImportError:
+    pass
+
+try:
+    from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
+        FallacyFamilyAnalyzer,
+        AnalysisDepth,
+        get_family_analyzer,
+    )
+    ANALYZER_AVAILABLE = True
+except ImportError:
+    pass
+
+try:
+    from argumentation_analysis.orchestration.fact_checking_orchestrator import (
+        FactCheckingOrchestrator,
+        FactCheckingRequest,
+        get_fact_checking_orchestrator,
+    )
+    ORCHESTRATOR_AVAILABLE = True
+except ImportError:
+    pass
+
+# Modules qui N'EXISTENT PAS ENCORE (code jamais implémenté)
+TAXONOMY_AVAILABLE = False
+VERIFICATION_AVAILABLE = False
+
 try:
     from argumentation_analysis.services.fallacy_taxonomy_service import (
         FallacyTaxonomyManager,
@@ -24,41 +66,34 @@ try:
         ClassifiedFallacy,
         get_taxonomy_manager,
     )
-    from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
-        FactClaimExtractor,
-        FactualClaim,
-        ClaimType,
-        ClaimVerifiability,
-    )
+    TAXONOMY_AVAILABLE = True
+except ImportError:
+    pass
+
+try:
     from argumentation_analysis.services.fact_verification_service import (
         FactVerificationService,
         VerificationStatus,
         SourceReliability,
     )
-    from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
-        FallacyFamilyAnalyzer,
-        AnalysisDepth,
-        get_family_analyzer,
-    )
-    from argumentation_analysis.orchestration.fact_checking_orchestrator import (
-        FactCheckingOrchestrator,
-        FactCheckingRequest,
-        get_fact_checking_orchestrator,
-    )
+    VERIFICATION_AVAILABLE = True
+except ImportError:
+    pass
 
-    COMPONENTS_AVAILABLE = True
-except ImportError as e:
-    COMPONENTS_AVAILABLE = False
-    IMPORT_ERROR = str(e)
+# Legacy flag for backward compat
+COMPONENTS_AVAILABLE = all([
+    EXTRACTOR_AVAILABLE, ANALYZER_AVAILABLE, ORCHESTRATOR_AVAILABLE,
+    TAXONOMY_AVAILABLE, VERIFICATION_AVAILABLE,
+])
 
 
+@pytest.mark.skipif(
+    not TAXONOMY_AVAILABLE,
+    reason="fallacy_taxonomy_service module not implemented yet",
+)
 class TestFallacyTaxonomyService:
     """Tests pour le service de taxonomie des sophismes."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fallacy_taxonomy_manager_initialization(self):
         """Test l'initialisation du gestionnaire de taxonomie."""
         with patch(
@@ -73,10 +108,6 @@ class TestFallacyTaxonomyService:
             assert FallacyFamily.AUTHORITY_POPULARITY in manager.families
             assert FallacyFamily.EMOTIONAL_APPEALS in manager.families
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fallacy_family_enumeration(self):
         """Test l'énumération des familles de sophismes."""
         families = list(FallacyFamily)
@@ -97,10 +128,6 @@ class TestFallacyTaxonomyService:
         for expected in expected_families:
             assert expected in family_values
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_classified_fallacy_creation(self):
         """Test la création d'un sophisme classifié."""
         fallacy = ClassifiedFallacy(
@@ -126,13 +153,13 @@ class TestFallacyTaxonomyService:
         assert fallacy_dict["confidence"] == 0.8
 
 
+@pytest.mark.skipif(
+    not EXTRACTOR_AVAILABLE,
+    reason="fact_claim_extractor module not available",
+)
 class TestFactClaimExtractor:
     """Tests pour l'extracteur d'affirmations factuelles."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fact_claim_extractor_initialization(self):
         """Test l'initialisation de l'extracteur."""
         extractor = FactClaimExtractor()
@@ -141,10 +168,6 @@ class TestFactClaimExtractor:
         assert extractor.language == "fr"
         assert len(extractor.claim_patterns) > 0
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_claim_type_enumeration(self):
         """Test l'énumération des types d'affirmations."""
         claim_types = list(ClaimType)
@@ -166,10 +189,6 @@ class TestFactClaimExtractor:
         for expected in expected_types:
             assert expected in claim_type_values
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_factual_claim_creation(self):
         """Test la création d'une affirmation factuelle."""
         claim = FactualClaim(
@@ -198,10 +217,6 @@ class TestFactClaimExtractor:
         assert claim_dict["claim_type"] == "statistical"
         assert claim_dict["confidence"] == 0.9
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_extract_factual_claims_basic(self):
         """Test d'extraction basique d'affirmations."""
         extractor = FactClaimExtractor()
@@ -218,13 +233,13 @@ class TestFactClaimExtractor:
             assert claim.confidence >= 0.0
 
 
+@pytest.mark.skipif(
+    not VERIFICATION_AVAILABLE,
+    reason="fact_verification_service module not implemented yet",
+)
 class TestFactVerificationService:
     """Tests pour le service de vérification factuelle."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fact_verification_service_initialization(self):
         """Test l'initialisation du service de vérification."""
         service = FactVerificationService()
@@ -233,10 +248,6 @@ class TestFactVerificationService:
         assert hasattr(service, "source_reliability_map")
         assert len(service.source_reliability_map) > 0
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_verification_status_enumeration(self):
         """Test l'énumération des statuts de vérification."""
         statuses = list(VerificationStatus)
@@ -255,10 +266,6 @@ class TestFactVerificationService:
         for expected in expected_statuses:
             assert expected in status_values
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_source_reliability_assessment(self):
         """Test l'évaluation de la fiabilité des sources."""
         service = FactVerificationService()
@@ -275,10 +282,6 @@ class TestFactVerificationService:
         reliability = service._assess_source_reliability("unknown-domain.com")
         assert reliability == SourceReliability.UNKNOWN
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     @pytest.mark.asyncio
     async def test_verify_claim_simulation(self):
         """Test de vérification d'affirmation (mode simulation)."""
@@ -311,13 +314,13 @@ class TestFactVerificationService:
         assert result.verification_date is not None
 
 
+@pytest.mark.skipif(
+    not (ANALYZER_AVAILABLE and TAXONOMY_AVAILABLE and VERIFICATION_AVAILABLE),
+    reason="FallacyFamilyAnalyzer tests require taxonomy and verification modules (not implemented)",
+)
 class TestFallacyFamilyAnalyzer:
     """Tests pour l'analyseur par famille de sophismes."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fallacy_family_analyzer_initialization(self):
         """Test l'initialisation de l'analyseur."""
         with patch(
@@ -338,10 +341,6 @@ class TestFallacyFamilyAnalyzer:
             assert analyzer.fact_extractor is not None
             assert analyzer.fact_verifier is not None
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_analysis_depth_enumeration(self):
         """Test l'énumération des profondeurs d'analyse."""
         depths = list(AnalysisDepth)
@@ -353,13 +352,13 @@ class TestFallacyFamilyAnalyzer:
             assert expected in depth_values
 
 
+@pytest.mark.skipif(
+    not (ORCHESTRATOR_AVAILABLE and TAXONOMY_AVAILABLE and VERIFICATION_AVAILABLE),
+    reason="FactCheckingOrchestrator tests require taxonomy and verification modules (not implemented)",
+)
 class TestFactCheckingOrchestrator:
     """Tests pour l'orchestrateur de fact-checking."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fact_checking_orchestrator_initialization(self):
         """Test l'initialisation de l'orchestrateur."""
         with patch(
@@ -384,10 +383,6 @@ class TestFactCheckingOrchestrator:
             assert orchestrator.taxonomy_manager is not None
             assert orchestrator.family_analyzer is not None
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     def test_fact_checking_request_creation(self):
         """Test la création d'une requête de fact-checking."""
         request = FactCheckingRequest(
@@ -402,10 +397,6 @@ class TestFactCheckingOrchestrator:
         assert request.enable_fact_checking is True
         assert request.max_claims == 10
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     @pytest.mark.asyncio
     async def test_quick_fact_check(self):
         """Test de fact-checking rapide."""
@@ -437,10 +428,6 @@ class TestFactCheckingOrchestrator:
             assert result["status"] == "no_claims"
             assert "processing_time" in result
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
     @pytest.mark.asyncio
     async def test_health_check(self):
         """Test du contrôle de santé de l'orchestrateur."""
@@ -479,10 +466,7 @@ class TestFactCheckingOrchestrator:
 class TestIntegrationFunctionality:
     """Tests d'intégration des fonctionnalités."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
+    @pytest.mark.skipif(not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented")
     def test_singleton_pattern_taxonomy_manager(self):
         """Test du pattern singleton pour le gestionnaire de taxonomie."""
         with patch(
@@ -497,8 +481,8 @@ class TestIntegrationFunctionality:
             assert manager1 is manager2
 
     @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
+        not (ANALYZER_AVAILABLE and TAXONOMY_AVAILABLE and VERIFICATION_AVAILABLE),
+        reason="Requires taxonomy and verification modules (not implemented)",
     )
     def test_singleton_pattern_family_analyzer(self):
         """Test du pattern singleton pour l'analyseur par famille."""
@@ -520,8 +504,8 @@ class TestIntegrationFunctionality:
             assert analyzer1 is analyzer2
 
     @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
+        not (ORCHESTRATOR_AVAILABLE and TAXONOMY_AVAILABLE and VERIFICATION_AVAILABLE),
+        reason="Requires taxonomy and verification modules (not implemented)",
     )
     def test_singleton_pattern_fact_checking_orchestrator(self):
         """Test du pattern singleton pour l'orchestrateur de fact-checking."""
@@ -550,10 +534,7 @@ class TestIntegrationFunctionality:
 class TestPerformance:
     """Tests de performance pour les nouveaux composants."""
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
+    @pytest.mark.skipif(not EXTRACTOR_AVAILABLE, reason="fact_claim_extractor not available")
     def test_fact_extraction_performance(self):
         """Test de performance de l'extraction d'affirmations."""
         extractor = FactClaimExtractor()
@@ -573,10 +554,7 @@ class TestPerformance:
         assert processing_time < 10.0
         assert isinstance(claims, list)
 
-    @pytest.mark.skipif(
-        not COMPONENTS_AVAILABLE,
-        reason=f"Composants non disponibles: {IMPORT_ERROR if not COMPONENTS_AVAILABLE else ''}",
-    )
+    @pytest.mark.skipif(not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented")
     def test_taxonomy_manager_performance(self):
         """Test de performance du gestionnaire de taxonomie."""
         with patch(
