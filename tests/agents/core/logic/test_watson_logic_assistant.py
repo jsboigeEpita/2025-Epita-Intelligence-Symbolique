@@ -113,22 +113,26 @@ def test_watson_logic_assistant_default_name_and_prompt(
     assert agent.system_prompt == WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 
 
-@pytest.mark.skip(
-    reason="mock_tweety_bridge causes Pydantic V2 ValidationError in KernelFunctionFromPrompt.prompt_execution_settings during agent setup_agent_components()"
-)
 @pytest.mark.asyncio
 @pytest.mark.llm_integration
 async def test_get_agent_belief_set_content(
-    agent_factory: AgentFactory, mock_tweety_bridge: MagicMock
+    mock_kernel_with_llm: Kernel, mock_tweety_bridge: MagicMock
 ) -> None:
     """
-    Teste la méthode get_agent_belief_set_content de WatsonLogicAssistant créé via la factory.
+    Teste la méthode get_agent_belief_set_content de WatsonLogicAssistant.
+    Creates agent directly (not via factory) to avoid Pydantic V2 ValidationError
+    during setup_agent_components() with mock tweety bridge.
+    Uses object.__setattr__ to patch invoke on Pydantic V2 frozen Kernel.
     """
-    with patch(
-        "argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge",
-        return_value=mock_tweety_bridge,
-    ):
-        agent = agent_factory.create_watson_agent(agent_name=TEST_AGENT_NAME)
+    # Pre-install mock invoke on kernel (Pydantic V2 frozen model)
+    mock_invoke = AsyncMock()
+    object.__setattr__(mock_kernel_with_llm, "invoke", mock_invoke)
+
+    agent = WatsonLogicAssistant(
+        kernel=mock_kernel_with_llm,
+        agent_name=TEST_AGENT_NAME,
+        tweety_bridge=mock_tweety_bridge,
+    )
 
     belief_set_id = "test_belief_set_001"
 
@@ -136,72 +140,59 @@ async def test_get_agent_belief_set_content(
     expected_content_value_attr = "Contenu de l'ensemble de croyances (via value)"
     mock_invoke_result_value_attr = MagicMock()
     mock_invoke_result_value_attr.value = expected_content_value_attr
+    mock_invoke.return_value = mock_invoke_result_value_attr
 
-    with patch.object(
-        agent.kernel,
-        "invoke",
-        new=AsyncMock(return_value=mock_invoke_result_value_attr),
-    ) as mock_invoke:
-        content = await agent.get_agent_belief_set_content(belief_set_id)
-
-        mock_invoke.assert_called_once_with(
-            plugin_name="EnqueteStatePlugin",
-            function_name="get_belief_set_content",
-            arguments=KernelArguments(belief_set_id=belief_set_id),
-        )
-        assert content == expected_content_value_attr
+    content = await agent.get_agent_belief_set_content(belief_set_id)
+    mock_invoke.assert_called_once_with(
+        plugin_name="EnqueteStatePlugin",
+        function_name="get_belief_set_content",
+        arguments=KernelArguments(belief_set_id=belief_set_id),
+    )
+    assert content == expected_content_value_attr
 
     # Cas 2: invoke retourne directement la valeur
+    mock_invoke.reset_mock()
     expected_content_direct = "Contenu de l'ensemble de croyances (direct)"
-    with patch.object(
-        agent.kernel,
-        "invoke",
-        new=AsyncMock(return_value=expected_content_direct),
-    ) as mock_invoke:
-        content_direct = await agent.get_agent_belief_set_content(belief_set_id)
+    mock_invoke.return_value = expected_content_direct
 
-        mock_invoke.assert_called_once_with(
-            plugin_name="EnqueteStatePlugin",
-            function_name="get_belief_set_content",
-            arguments=KernelArguments(belief_set_id=belief_set_id),
-        )
-        assert content_direct == expected_content_direct
+    content_direct = await agent.get_agent_belief_set_content(belief_set_id)
+    mock_invoke.assert_called_once_with(
+        plugin_name="EnqueteStatePlugin",
+        function_name="get_belief_set_content",
+        arguments=KernelArguments(belief_set_id=belief_set_id),
+    )
+    assert content_direct == expected_content_direct
 
     # Cas 3: invoke retourne None (simulant un belief set non trouvé ou vide)
-    with patch.object(
-        agent.kernel,
-        "invoke",
-        new=AsyncMock(return_value=None),
-    ) as mock_invoke:
-        content_none = await agent.get_agent_belief_set_content(belief_set_id)
+    mock_invoke.reset_mock()
+    mock_invoke.return_value = None
+
+    content_none = await agent.get_agent_belief_set_content(belief_set_id)
+    mock_invoke.assert_called_once_with(
+        plugin_name="EnqueteStatePlugin",
+        function_name="get_belief_set_content",
+        arguments=KernelArguments(belief_set_id=belief_set_id),
+    )
+    assert content_none is None
+
+    # Cas 4: Gestion d'erreur si invoke échoue
+    mock_invoke.reset_mock()
+    mock_invoke.side_effect = Exception("Test error on get_belief_set_content")
+
+    with patch.object(agent.logger, "error") as mock_logger_error:
+        error_content = await agent.get_agent_belief_set_content(belief_set_id)
 
         mock_invoke.assert_called_once_with(
             plugin_name="EnqueteStatePlugin",
             function_name="get_belief_set_content",
             arguments=KernelArguments(belief_set_id=belief_set_id),
         )
-        assert content_none is None
-
-    # Cas 4: Gestion d'erreur si invoke échoue
-    with patch.object(
-        agent.kernel,
-        "invoke",
-        new=AsyncMock(side_effect=Exception("Test error on get_belief_set_content")),
-    ) as mock_invoke:
-        with patch.object(agent.logger, "error") as mock_logger_error:
-            error_content = await agent.get_agent_belief_set_content(belief_set_id)
-
-            mock_invoke.assert_called_once_with(
-                plugin_name="EnqueteStatePlugin",
-                function_name="get_belief_set_content",
-                arguments=KernelArguments(belief_set_id=belief_set_id),
-            )
-            assert error_content is None
-            mock_logger_error.assert_called_once()
-            assert (
-                f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: Test error on get_belief_set_content"
-                in mock_logger_error.call_args[0][0]
-            )
+        assert error_content is None
+        mock_logger_error.assert_called_once()
+        assert (
+            f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: Test error on get_belief_set_content"
+            in mock_logger_error.call_args[0][0]
+        )
 
 
 # @pytest.mark.asyncio
