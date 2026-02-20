@@ -2,6 +2,10 @@
 from config.unified_config import UnifiedConfig
 import sys
 import pathlib
+from unittest.mock import MagicMock
+
+# Skip entire module when jpype is mocked by --disable-jvm-session
+_jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -36,6 +40,13 @@ import time
 import logging
 from typing import Dict, List, Any, Optional
 from unittest.mock import patch, AsyncMock
+
+pytestmark = [
+    pytest.mark.skipif(
+        _jpype_is_mocked,
+        reason="FOL-Tweety tests require real JVM (jpype mocked by --disable-jvm-session)",
+    ),
+]
 
 # Import a shared fixture to manage the JVM lifecycle
 # La fixture jvm_session est maintenant fournie automatiquement par conftest.py (autouse=True)

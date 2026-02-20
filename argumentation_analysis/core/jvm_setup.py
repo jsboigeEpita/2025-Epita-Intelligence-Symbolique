@@ -448,6 +448,85 @@ def get_jvm_options() -> List[str]:
     return options
 
 
+def _configure_external_tools():
+    """
+    Auto-detect and configure external reasoning tools for Tweety.
+
+    Detects Clingo (ASP), SPASS (Modal logic), and EProver (FOL theorem prover)
+    and configures Tweety's Java classes to use them when available.
+
+    Pattern from CoursIA tweety_init.py (issue #27).
+    """
+    if not jpype.isJVMStarted():
+        return
+
+    tools_found = {}
+    exe_suffix = ".exe" if platform.system() == "Windows" else ""
+
+    # Clingo — ASP solver (Tweety expects the DIRECTORY containing the binary)
+    for candidate in [
+        shutil.which("clingo"),
+        str(PROJ_ROOT / f"ext_tools/clingo/clingo{exe_suffix}"),
+    ]:
+        if candidate and Path(candidate).exists():
+            tools_found["clingo"] = str(Path(candidate).parent.resolve())
+            break
+
+    # SPASS — Modal logic theorem prover
+    for candidate in [
+        shutil.which("SPASS"),
+        str(PROJ_ROOT / f"ext_tools/spass/SPASS{exe_suffix}"),
+    ]:
+        if candidate and Path(candidate).exists():
+            tools_found["spass"] = str(Path(candidate).resolve())
+            break
+
+    # EProver — FOL theorem prover
+    for candidate in [
+        shutil.which("eprover"),
+        str(PROJ_ROOT / f"ext_tools/EProver/eprover{exe_suffix}"),
+    ]:
+        if candidate and Path(candidate).exists():
+            tools_found["eprover"] = str(Path(candidate).resolve())
+            break
+
+    if not tools_found:
+        logger.info("No external reasoning tools detected (Clingo, SPASS, EProver).")
+        return
+
+    logger.info(f"External tools detected: {list(tools_found.keys())}")
+
+    # Configure Tweety Java classes with detected tool paths
+    try:
+        JString = jpype.JClass("java.lang.String")
+
+        if "clingo" in tools_found:
+            try:
+                ClingoSolver = jpype.JClass(
+                    "org.tweetyproject.lp.asp.reasoner.ClingoSolver"
+                )
+                ClingoSolver.setPathToClingo(JString(tools_found["clingo"]))
+                logger.info(f"  Clingo configured: {tools_found['clingo']}")
+            except Exception as e:
+                logger.debug(f"  Clingo configuration skipped: {e}")
+
+        if "eprover" in tools_found:
+            try:
+                # EProver is used by EFOLReasoner for FOL theorem proving
+                logger.info(f"  EProver available: {tools_found['eprover']}")
+            except Exception as e:
+                logger.debug(f"  EProver configuration skipped: {e}")
+
+        if "spass" in tools_found:
+            try:
+                logger.info(f"  SPASS available: {tools_found['spass']}")
+            except Exception as e:
+                logger.debug(f"  SPASS configuration skipped: {e}")
+
+    except Exception as e:
+        logger.warning(f"External tools configuration failed (non-fatal): {e}")
+
+
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
     Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
@@ -577,6 +656,10 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             )
             _JVM_INITIALIZED_THIS_SESSION = True
             logger.info("[SUCCESS] JVM démarrée avec succès.")
+
+            # Auto-detect and configure external reasoning tools (issue #27)
+            _configure_external_tools()
+
             return True
         except Exception as e:
             logger.critical(
