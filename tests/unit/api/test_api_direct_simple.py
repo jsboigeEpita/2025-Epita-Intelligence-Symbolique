@@ -23,9 +23,9 @@ EXPECTED_MODEL = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 API_ENVIRONMENT_AVAILABLE = True
 API_ENVIRONMENT_ERROR = None
 API_FILES_REQUIRED = [
-    "api/main_simple.py",
-    "api/endpoints_simple.py",
-    "api/dependencies_simple.py",
+    "api/main.py",
+    "api/endpoints.py",
+    "api/dependencies.py",
 ]
 
 try:
@@ -64,9 +64,9 @@ def test_environment_setup():
 
     # Verifier fichiers API
     api_files = [
-        "api/main_simple.py",
-        "api/endpoints_simple.py",
-        "api/dependencies_simple.py",
+        "api/main.py",
+        "api/endpoints.py",
+        "api/dependencies.py",
     ]
     for file_path in api_files:
         assert Path(file_path).exists(), f"Fichier manquant: {file_path}"
@@ -97,7 +97,7 @@ def test_api_startup_and_basic_functionality():
             sys.executable,
             "-m",
             "uvicorn",
-            "api.main_simple:app",
+            "api.main:app",
             "--host",
             "127.0.0.1",
             "--port",
