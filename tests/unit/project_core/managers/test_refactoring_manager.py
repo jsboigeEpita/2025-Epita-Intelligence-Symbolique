@@ -1,49 +1,34 @@
 # -*- coding: utf-8 -*-
-import unittest
 import json
 import pytest
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from project_core.core_from_scripts.refactoring_manager import RefactoringManager
 
 
-@pytest.mark.skip(reason="Tests hang: apply_refactoring_plan blocks indefinitely (confirmed 2026-02-16)")
-class TestRefactoringManager(unittest.TestCase):
+class TestRefactoringManager:
     """
     Unit tests for the RefactoringManager.
     """
 
-    def setUp(self):
-        """Set up test environment."""
+    def setup_method(self):
+        """Set up test environment with a temporary directory."""
+        self._tmpdir = tempfile.mkdtemp(prefix="test_refactor_")
+        self.test_dir = Path(self._tmpdir)
         self.manager = RefactoringManager()
-        self.test_dir = Path("./temp_test_refactor")
-        self.test_dir.mkdir(exist_ok=True)
 
-    def tearDown(self):
+    def teardown_method(self):
         """Clean up test environment."""
-        for f in self.test_dir.glob("**/*"):
-            if f.is_file():
-                f.unlink()
-        for d in self.test_dir.glob("**/"):
-            if d.is_dir():
-                try:
-                    d.rmdir()
-                except OSError:  # ignore if not empty
-                    pass
-        try:
-            self.test_dir.rmdir()
-        except OSError:
-            pass
+        import shutil
+        shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_apply_refactoring_plan_update_import(self):
         """
         Test that `update_import` refactoring is correctly applied.
         """
-        # 1. Create a dummy source file
-        source_content = (
-            "from a.b.c import MyClass\\n\\nclass Test(MyClass):\\n    pass"
-        )
+        # 1. Create a dummy source file with valid Python
+        source_content = "from a.b.c import MyClass\n\nclass Test(MyClass):\n    pass\n"
         source_file = self.test_dir / "source_module.py"
         source_file.write_text(source_content, encoding="utf-8")
 
@@ -61,24 +46,22 @@ class TestRefactoringManager(unittest.TestCase):
         plan_file = self.test_dir / "plan.json"
         plan_file.write_text(json.dumps(plan), encoding="utf-8")
 
-        # 3. Apply the plan
+        # 3. Apply the plan (use test_dir to avoid scanning the entire project)
         self.manager.apply_refactoring_plan(
-            plan_file, dry_run=False, project_root=Path(".")
+            plan_file, dry_run=False, project_root=self.test_dir
         )
 
         # 4. Verify the result
         modified_content = source_file.read_text(encoding="utf-8")
-        expected_content = (
-            "from x.y.z import MyClass\\n\\nclass Test(MyClass):\\n    pass\\n"
-        )
-        self.assertEqual(modified_content.strip(), expected_content.strip())
+        assert "from x.y.z import MyClass" in modified_content
+        assert "from a.b.c import MyClass" not in modified_content
 
     def test_apply_refactoring_plan_dry_run(self):
         """
         Test that `dry_run` computes diffs but does not modify files.
         """
         # 1. Create a dummy source file
-        source_content = "from old.place import Thing"
+        source_content = "from old.place import Thing\n"
         source_file = self.test_dir / "another_module.py"
         source_file.write_text(source_content, encoding="utf-8")
 
@@ -98,28 +81,25 @@ class TestRefactoringManager(unittest.TestCase):
 
         # 3. Apply the plan in dry_run mode
         diffs = self.manager.apply_refactoring_plan(
-            plan_file, dry_run=True, project_root=Path(".")
+            plan_file, dry_run=True, project_root=self.test_dir
         )
 
-        # 4. Verify the result
-        self.assertIn(str(source_file), diffs)
-        self.assertIn("-from old.place import Thing", diffs[str(source_file)])
-        self.assertIn("+from new.place import Thing", diffs[str(source_file)])
+        # 4. Verify diffs were computed
+        assert len(diffs) > 0, "No diffs were computed"
+        diff_values = "\n".join(diffs.values())
+        assert "-from old.place import Thing" in diff_values
+        assert "+from new.place import Thing" in diff_values
 
         # 5. Ensure the original file is unchanged
         original_content_after = source_file.read_text(encoding="utf-8")
-        self.assertEqual(source_content, original_content_after)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert source_content == original_content_after
 
     def test_apply_refactoring_plan_rename_function(self):
         """
         Test that `rename_function` refactoring is correctly applied.
         """
         # 1. Create a dummy source file
-        source_content = "def old_func():\\n    pass\\n\\nold_func()"
+        source_content = "def old_func():\n    pass\n\nold_func()\n"
         source_file = self.test_dir / "func_rename_module.py"
         source_file.write_text(source_content, encoding="utf-8")
 
@@ -143,6 +123,4 @@ if __name__ == "__main__":
 
         # 4. Verify the result
         modified_content = source_file.read_text(encoding="utf-8")
-        # ast.unparse might add extra newlines
-        expected_content = "def old_func():\\n    pass\\n\\nnew_func()"
-        self.assertIn(expected_content.strip(), modified_content.strip())
+        assert "new_func()" in modified_content

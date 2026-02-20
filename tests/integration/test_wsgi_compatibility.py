@@ -8,8 +8,9 @@ import os
 
 # pytest.mark.usefixtures("test_client")
 @pytest.mark.integration
-@pytest.mark.skip(
-    reason="Test is hanging, blocking the CI/CD pipeline. Needs investigation."
+@pytest.mark.skipif(
+    not os.getenv("RUN_E2E_TESTS"),
+    reason="Requires running backend server (set RUN_E2E_TESTS=1 to enable)",
 )
 def test_wsgi_health_check_via_asgi(e2e_servers, backend_url):
     """
