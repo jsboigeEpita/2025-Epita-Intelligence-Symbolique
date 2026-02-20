@@ -293,7 +293,7 @@ class TestFOLTweetyIntegration:
         result = await fol_agent_with_tweety._analyze_with_tweety(valid_formulas)
 
         fol_agent_with_tweety._tweety_bridge.check_consistency.assert_called_once_with(
-            valid_formulas
+            "∀x(P(x) → Q(x))\n∃y(R(y) ∧ S(y))", "first_order"
         )
         fol_agent_with_tweety._tweety_bridge.derive_inferences.assert_called_once_with(
             valid_formulas

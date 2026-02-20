@@ -18,6 +18,7 @@ Fonctionnalités :
 
 import logging
 import asyncio
+import inspect
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
 from pydantic import PrivateAttr
@@ -215,9 +216,10 @@ RÉPONDS EN FORMAT JSON :
         """
         try:
             # Initialisation du pont Tweety pour FOL
-            if not self.tweety_bridge:
-                self.tweety_bridge = TweetyBridge()
-                await self.tweety_bridge.initialize_fol_reasoner()
+            if not getattr(self, '_tweety_bridge', None):
+                self._tweety_bridge = TweetyBridge()
+                if hasattr(self._tweety_bridge, 'initialize_fol_reasoner'):
+                    await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL initialisé")
 
             # Configuration des fonctions sémantiques FOL
@@ -404,29 +406,41 @@ RÉPONDS EN FORMAT JSON :
         """
         result = FOLAnalysisResult(formulas=formulas)
 
-        if not self.tweety_bridge:
+        bridge = getattr(self, '_tweety_bridge', None)
+        if not bridge:
             logger.warning("⚠️ TweetyBridge non initialisé - analyse limitée")
             result.consistency_check = True  # Assume consistent si pas de vérification
             result.confidence_score = 0.5
             return result
 
         try:
-            # Test de cohérence
-            is_consistent = await self.tweety_bridge.check_consistency(formulas)
+            # Test de cohérence — handle both sync and async bridges
+            content_str = "\n".join(formulas)
+            raw = bridge.check_consistency(content_str, "first_order")
+            if inspect.isawaitable(raw):
+                raw = await raw
+            is_consistent = raw[0] if isinstance(raw, tuple) else raw
             result.consistency_check = is_consistent
 
             # Calcul d'inférences
-            if is_consistent:
-                inferences = await self.tweety_bridge.derive_inferences(formulas)
-                result.inferences = inferences
+            if is_consistent and hasattr(bridge, 'derive_inferences'):
+                raw_inf = bridge.derive_inferences(formulas)
+                if inspect.isawaitable(raw_inf):
+                    raw_inf = await raw_inf
+                result.inferences = raw_inf
                 result.confidence_score = 0.9
+            elif is_consistent:
+                result.confidence_score = 0.8
             else:
                 result.validation_errors.append("Formules incohérentes détectées")
                 result.confidence_score = 0.3
 
             # Génération d'interprétations
-            interpretations = await self.tweety_bridge.generate_models(formulas)
-            result.interpretations = interpretations
+            if hasattr(bridge, 'generate_models'):
+                raw_models = bridge.generate_models(formulas)
+                if inspect.isawaitable(raw_models):
+                    raw_models = await raw_models
+                result.interpretations = raw_models
 
         except Exception as e:
             logger.error(f"❌ Erreur analyse Tweety: {e}")
@@ -585,9 +599,10 @@ RÉPONDS EN FORMAT JSON :
                 super().setup_agent_components(llm_service_id)
 
             # Initialisation TweetyBridge si pas déjà fait
-            if not self.tweety_bridge:
-                self.tweety_bridge = TweetyBridge()
-                await self.tweety_bridge.initialize_fol_reasoner()
+            if not getattr(self, '_tweety_bridge', None):
+                self._tweety_bridge = TweetyBridge()
+                if hasattr(self._tweety_bridge, 'initialize_fol_reasoner'):
+                    await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL configuré")
 
             # Configuration des fonctions sémantiques
@@ -596,7 +611,7 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             logger.warning(f"⚠️ Configuration composants FOL partielle: {e}")
 
-    def text_to_belief_set(
+    async def text_to_belief_set(
         self, text: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Optional[BeliefSet], str]:
         """Convertit texte en ensemble de croyances FOL."""
@@ -617,7 +632,7 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             return None, f"Conversion error: {str(e)}"
 
-    def generate_queries(
+    async def generate_queries(
         self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None
     ) -> List[str]:
         """Génère requêtes FOL pertinentes."""
@@ -643,21 +658,31 @@ RÉPONDS EN FORMAT JSON :
     ) -> Tuple[Optional[bool], str]:
         """Exécute requête sur ensemble de croyances."""
         try:
-            formulas = [b.content for b in belief_set.beliefs]
+            formulas = [f.strip() for f in belief_set.content.split('\n') if f.strip()]
+
+            bridge = getattr(self, '_tweety_bridge', None)
 
             if query == "consistency_check":
                 # Test cohérence
-                if self.tweety_bridge:
-                    is_consistent = await self.tweety_bridge.check_consistency(formulas)
-                    return is_consistent, f"Consistency: {is_consistent}"
+                if bridge:
+                    # Real TweetyBridge: check_consistency(str, logic_type) -> Tuple[bool, str]
+                    # Fallback TweetyBridge: check_consistency(List[str]) -> bool
+                    raw = bridge.check_consistency(belief_set.content, "first_order")
+                    if inspect.isawaitable(raw):
+                        raw = await raw
+                    if isinstance(raw, tuple):
+                        return raw[0], f"Consistency: {raw[1]}"
+                    return raw, f"Consistency: {raw}"
                 else:
                     return True, "Consistency assumed (no Tweety)"
 
             elif query == "derive_conclusions":
                 # Dérivation d'inférences
-                if self.tweety_bridge:
-                    inferences = await self.tweety_bridge.derive_inferences(formulas)
-                    return len(inferences) > 0, f"Inferences: {inferences}"
+                if bridge and hasattr(bridge, 'derive_inferences'):
+                    result = bridge.derive_inferences(formulas)
+                    if inspect.isawaitable(result):
+                        result = await result
+                    return len(result) > 0, f"Inferences: {result}"
                 else:
                     return True, "Inferences simulated"
 
@@ -708,11 +733,16 @@ RÉPONDS EN FORMAT JSON :
     async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """Vérifie cohérence ensemble de croyances."""
         try:
-            formulas = [b.content for b in belief_set.beliefs]
-
-            if self.tweety_bridge:
-                is_consistent = await self.tweety_bridge.check_consistency(formulas)
-                return is_consistent, f"Tweety consistency check: {is_consistent}"
+            bridge = getattr(self, '_tweety_bridge', None)
+            if bridge:
+                # Real TweetyBridge: check_consistency(str, logic_type) -> Tuple[bool, str]
+                # Fallback TweetyBridge: check_consistency(List[str]) -> bool
+                raw = bridge.check_consistency(belief_set.content, "first_order")
+                if inspect.isawaitable(raw):
+                    raw = await raw
+                if isinstance(raw, tuple):
+                    return raw[0], f"Tweety consistency check: {raw[1]}"
+                return raw, f"Tweety consistency check: {raw}"
             else:
                 # Vérification heuristique basique
                 return True, "Basic consistency assumed"
