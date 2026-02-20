@@ -1,9 +1,25 @@
-﻿import pytest
+﻿import socket
+import pytest
 from playwright.sync_api import Page, expect
 import time
 import requests
 
 
+def _check_server(host, port, timeout=2):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        result = s.connect_ex((host, port))
+        s.close()
+        return result == 0
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not _check_server("localhost", 3000),
+    reason="Frontend server not running on localhost:3000",
+)
 def test_interface_integration_complete_robust(page: Page):
     """Test d'integration complet avec trace des actions et verification robuste"""
 

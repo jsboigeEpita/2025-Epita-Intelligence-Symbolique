@@ -512,8 +512,27 @@ def jvm_session(request):
             "Saut du test car l'initialisation de la JVM a échoué dans pytest_sessionstart."
         )
 
-    # La JVM est prête, le test peut s'exécuter.
-    yield
+    # Double-check: verify JVM is actually functional (cache may say True
+    # even when JVM crashed with a Windows access violation during startup)
+    import jpype
+    if not jpype.isJVMStarted():
+        pytest.skip(
+            "Saut du test car la JVM n'est pas réellement démarrée (jpype.isJVMStarted() = False)."
+        )
+
+    # Health check: try a simple Java operation to confirm JVM is not corrupted
+    try:
+        _str_class = jpype.JClass("java.lang.String")
+        _test = _str_class("jvm_health_check")
+        assert str(_test) == "jvm_health_check"
+    except Exception:
+        pytest.skip(
+            "Saut du test car la JVM est démarrée mais non fonctionnelle (JClass health check échoué)."
+        )
+
+    # La JVM est prête — yield le module jpype pour que les fixtures
+    # puissent utiliser jvm_session.JClass(), etc.
+    yield jpype
 
 
 # La fixture jvm_fixture est supprimée car elle est la source des conflits.

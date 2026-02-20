@@ -19,10 +19,9 @@ def test_minimal_jvm_is_functional(jvm_session):
     Vérifie que la JVM est démarrée et fonctionnelle en exécutant une opération simple.
     La fixture 'jvm_session' garantit que la JVM est initialisée.
     """
-    # La fixture 'jvm_session' a déjà été résolue, donc la JVM doit être active.
-    assert jvm_session is True, "La fixture de session JVM n'a pas réussi."
+    # La fixture 'jvm_session' yields the jpype module when JVM is started.
+    assert jvm_session is not None, "La fixture de session JVM n'a pas réussi."
 
-    # Importation nécessaire de jpype
     import jpype
     import jpype.imports
 

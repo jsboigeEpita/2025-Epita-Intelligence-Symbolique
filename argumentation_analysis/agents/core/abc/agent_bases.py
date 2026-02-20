@@ -144,6 +144,11 @@ class BaseAgent(ChatCompletionAgent, ABC):
         return self._agent_logger
 
     @property
+    def agent_name(self) -> str:
+        """Retourne le nom de l'agent (alias pour self.name)."""
+        return self.name
+
+    @property
     def system_prompt(self) -> Optional[str]:
         """Retourne le prompt système de l'agent (alias pour self.instructions)."""
         return self.instructions

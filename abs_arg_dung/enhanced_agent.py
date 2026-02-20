@@ -83,17 +83,16 @@ class EnhancedDungAgent(DungAgent):
             else:
                 attacked_by_others.add(target)
 
-        # Arguments qui ne sont ni self-attacking ni attaqués par des arguments valides
+        # Arguments qui ne sont ni self-attacking ni attaqués par d'autres arguments
         candidates = []
         for node in nodes:
             if node not in self_attacking:
-                # Vérifier si attaqué par un argument non-self-attacking
-                attacked_by_valid = any(
+                # Vérifier si attaqué par un autre argument (self-attacking ou non)
+                attacked_by_other = any(
                     source != target and target == node
                     for source, target in attacks
-                    if source not in self_attacking
                 )
-                if not attacked_by_valid:
+                if not attacked_by_other:
                     candidates.append(node)
 
         return sorted(candidates) if candidates else None
