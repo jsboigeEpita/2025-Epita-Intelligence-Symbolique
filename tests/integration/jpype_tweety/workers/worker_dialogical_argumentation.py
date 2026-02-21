@@ -113,7 +113,7 @@ def test_dialogical_argumentation_logic():
                 "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner"
             ),
             "GroundedReasoner": jpype.JClass(
-                "org.tweetyproject.arg.dung.reasoner.GroundedReasoner"
+                "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner"
             ),
         }
         # Importer d'autres classes si nécessaire...

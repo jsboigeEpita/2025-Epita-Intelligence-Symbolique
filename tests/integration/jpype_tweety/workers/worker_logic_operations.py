@@ -137,12 +137,7 @@ def test_logic_operations_logic():
                 "org.tweetyproject.logics.pl.syntax.Equivalence"
             ),
             "PlFormula": jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula"),
-            "PossibleWorldIterator": jpype.JClass(
-                "org.tweetyproject.logics.pl.util.PossibleWorldIterator"
-            ),
-            "PlSignature": jpype.JClass(
-                "org.tweetyproject.logics.pl.syntax.PlSignature"
-            ),
+            # PossibleWorldIterator removed: not in Tweety 1.28 JAR and unused by tests
         }
 
         logger.info("--- Exécution de _test_load_logic_theory_from_file ---")

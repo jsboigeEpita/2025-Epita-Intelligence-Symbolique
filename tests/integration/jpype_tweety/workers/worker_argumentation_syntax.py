@@ -149,10 +149,10 @@ def test_argumentation_syntax_logic():
             "Argument": jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument"),
             "Attack": jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack"),
             "CompleteReasoner": jpype.JClass(
-                "org.tweetyproject.arg.dung.reasoner.CompleteReasoner"
+                "org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner"
             ),
             "StableReasoner": jpype.JClass(
-                "org.tweetyproject.arg.dung.reasoner.StableReasoner"
+                "org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner"
             ),
         }
 

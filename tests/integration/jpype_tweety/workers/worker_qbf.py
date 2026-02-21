@@ -56,77 +56,111 @@ def setup_jvm():
         raise
 
 
-def _test_qbf_parser_simple_formula(qbf_classes):
-    QbfParser = qbf_classes["QbfParser"]
-    parser = QbfParser()
-    qbf_string = "exists x forall y (x or not y)"
-    formula = parser.parseFormula(qbf_string)
-    assert formula is not None
-    assert "exists" in str(formula.toString()).lower()
-    assert "forall" in str(formula.toString()).lower()
-    logger.info(f"Parsing de formule QBF simple réussi: {formula.toString()}")
+def _test_pl_sat_solver(pl_classes):
+    """Test SAT solving via propositional logic (available in Tweety 1.28)."""
+    PlBeliefSet = pl_classes["PlBeliefSet"]
+    PlParser = pl_classes["PlParser"]
+    SatReasoner = pl_classes["SatReasoner"]
+
+    parser = PlParser()
+    kb = PlBeliefSet()
+    kb.add(parser.parseFormula("a || b"))
+    kb.add(parser.parseFormula("!a || c"))
+    kb.add(parser.parseFormula("!b || c"))
+
+    reasoner = SatReasoner()
+    # c should be entailed: (a||b) && (!a||c) && (!b||c) => c
+    result = reasoner.query(kb, parser.parseFormula("c"))
+    assert result, "Expected c to be entailed"
+    logger.info("Test SAT solver: c est bien impliqué par la base de croyances.")
 
 
-def _test_qbf_programmatic_creation(qbf_classes):
-    QuantifiedBooleanFormula = qbf_classes["QuantifiedBooleanFormula"]
-    Quantifier = qbf_classes["Quantifier"]
-    Variable = qbf_classes["Variable"]
-    x_var = Variable("x")
-    quantified_vars = jpype.JArray(Variable)([x_var])
-    qbf = QuantifiedBooleanFormula(Quantifier.EXISTS, quantified_vars, x_var)
-    assert qbf is not None
-    assert qbf.getQuantifier() == Quantifier.EXISTS
-    assert len(qbf.getVariables()) == 1
-    logger.info("Création programmatique de QBF simple réussie.")
+def _test_pl_contradiction_detection(pl_classes):
+    """Test contradiction detection in belief sets."""
+    PlBeliefSet = pl_classes["PlBeliefSet"]
+    PlParser = pl_classes["PlParser"]
+    SatReasoner = pl_classes["SatReasoner"]
+
+    parser = PlParser()
+    # Consistent KB
+    kb_consistent = PlBeliefSet()
+    kb_consistent.add(parser.parseFormula("a"))
+    kb_consistent.add(parser.parseFormula("b"))
+
+    # Inconsistent KB
+    kb_inconsistent = PlBeliefSet()
+    kb_inconsistent.add(parser.parseFormula("a"))
+    kb_inconsistent.add(parser.parseFormula("!a"))
+
+    reasoner = SatReasoner()
+    # Consistent KB should not entail contradiction
+    is_consistent_entails_false = reasoner.query(
+        kb_consistent, parser.parseFormula("a && !a")
+    )
+    assert not is_consistent_entails_false, "Consistent KB should not entail contradiction"
+
+    # Inconsistent KB should entail anything (ex falso quodlibet)
+    is_inconsistent_entails_anything = reasoner.query(
+        kb_inconsistent, parser.parseFormula("b")
+    )
+    assert is_inconsistent_entails_anything, "Inconsistent KB should entail anything"
+    logger.info("Test contradiction detection réussi.")
+
+
+def _test_pl_tautology_check(pl_classes):
+    """Test tautology verification."""
+    PlParser = pl_classes["PlParser"]
+    PlBeliefSet = pl_classes["PlBeliefSet"]
+    SatReasoner = pl_classes["SatReasoner"]
+
+    parser = PlParser()
+    empty_kb = PlBeliefSet()
+    reasoner = SatReasoner()
+
+    # Tautology: a || !a
+    tautology = parser.parseFormula("a || !a")
+    assert reasoner.query(empty_kb, tautology), "a || !a should be a tautology"
+
+    # Non-tautology: a
+    non_tautology = parser.parseFormula("a")
+    assert not reasoner.query(empty_kb, non_tautology), "a alone is not a tautology"
+    logger.info("Test tautology check réussi.")
 
 
 def test_qbf_logic():
-    """Point d'entrée principal pour les tests QBF."""
+    """Point d'entrée principal pour les tests de raisonnement propositionnel avancé."""
     print("--- Début du worker pour test_qbf_logic ---")
     setup_jvm()
 
     try:
-        qbf_classes = {
-            "QbfParser": jpype.JClass("org.tweetyproject.logics.qbf.parser.QbfParser"),
-            "QuantifiedBooleanFormula": jpype.JClass(
-                "org.tweetyproject.logics.qbf.syntax.QuantifiedBooleanFormula"
+        pl_classes = {
+            "PlBeliefSet": jpype.JClass(
+                "org.tweetyproject.logics.pl.syntax.PlBeliefSet"
             ),
-            "Quantifier": jpype.JClass(
-                "org.tweetyproject.logics.qbf.syntax.Quantifier"
+            "PlParser": jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser"),
+            "SatReasoner": jpype.JClass(
+                "org.tweetyproject.logics.pl.reasoner.SimplePlReasoner"
             ),
-            "Variable": jpype.JClass("org.tweetyproject.logics.qbf.syntax.Variable"),
-            # Les classes propositionnelles sont souvent nécessaires
             "Proposition": jpype.JClass(
-                "org.tweetyproject.logics.propositional.syntax.Proposition"
-            ),
-            "Conjunction": jpype.JClass(
-                "org.tweetyproject.logics.propositional.syntax.Conjunction"
-            ),
-            "Negation": jpype.JClass(
-                "org.tweetyproject.logics.propositional.syntax.Negation"
+                "org.tweetyproject.logics.pl.syntax.Proposition"
             ),
         }
 
-        logger.info("--- Exécution de _test_qbf_parser_simple_formula ---")
-        _test_qbf_parser_simple_formula(qbf_classes)
+        logger.info("--- Exécution de _test_pl_sat_solver ---")
+        _test_pl_sat_solver(pl_classes)
 
-        logger.info("--- Exécution de _test_qbf_programmatic_creation ---")
-        _test_qbf_programmatic_creation(qbf_classes)
+        logger.info("--- Exécution de _test_pl_contradiction_detection ---")
+        _test_pl_contradiction_detection(pl_classes)
 
-        # Les autres tests (PNF, solveur) sont plus complexes et dépendent
-        # de plus de classes ou de configuration externe. Ils sont omis
-        # pour cette migration de stabilisation.
+        logger.info("--- Exécution de _test_pl_tautology_check ---")
+        _test_pl_tautology_check(pl_classes)
 
         print("--- Toutes les assertions du worker ont réussi ---")
 
     except Exception as e:
-        logger.error(f"Erreur dans le worker QBF: {e}", exc_info=True)
+        logger.error(f"Erreur dans le worker QBF/PL avancé: {e}", exc_info=True)
         raise
     finally:
-        # Ne pas arrêter la JVM ici. La fixture pytest s'en chargera.
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("--- JVM arrêtée avec succès dans le worker ---")
         logger.info(
             "--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---"
         )
@@ -135,7 +169,7 @@ def test_qbf_logic():
 if __name__ == "__main__":
     try:
         test_qbf_logic()
-        print("--- Le worker QBF s'est terminé avec succès. ---")
+        print("--- Le worker QBF/PL avancé s'est terminé avec succès. ---")
     except Exception as e:
-        print(f"Une erreur est survenue dans le worker QBF : {e}", file=sys.stderr)
+        print(f"Une erreur est survenue dans le worker : {e}", file=sys.stderr)
         sys.exit(1)

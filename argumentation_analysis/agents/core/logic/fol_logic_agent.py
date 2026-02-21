@@ -107,6 +107,88 @@ class FOLAnalysisResult:
     reasoning_steps: List[str] = field(default_factory=list)
 
 
+class BeliefSetBuilderPlugin:
+    """
+    Plugin for programmatically building FOL belief sets.
+
+    Accumulates sort/predicate/constant/formula declarations,
+    then builds a Tweety FolBeliefSet via create_belief_set_programmatically().
+    """
+
+    def __init__(self):
+        self._sorts: Dict[str, List[str]] = {}  # sort_name -> [constants]
+        self._predicates: Dict[str, List[str]] = {}  # pred_name -> [arg_sort_names]
+        self._formulas: List[str] = []
+
+    def reset(self):
+        """Clear all accumulated declarations."""
+        self._sorts.clear()
+        self._predicates.clear()
+        self._formulas.clear()
+
+    def add_sort(self, sort_name: str):
+        """Declare a sort (type/domain)."""
+        if sort_name not in self._sorts:
+            self._sorts[sort_name] = []
+
+    def add_constant_to_sort(self, const_name: str, sort_name: str):
+        """Add a constant to a sort."""
+        if sort_name not in self._sorts:
+            self._sorts[sort_name] = []
+        if const_name not in self._sorts[sort_name]:
+            self._sorts[sort_name].append(const_name)
+
+    def add_predicate_schema(self, pred_name: str, arg_sorts: List[str]):
+        """Declare a predicate with its argument sorts."""
+        self._predicates[pred_name] = list(arg_sorts)
+
+    def add_atomic_fact(self, pred_name: str, args: List[str]):
+        """Add an atomic formula: pred(arg1, arg2, ...)."""
+        args_str = ", ".join(args)
+        self._formulas.append(f"{pred_name}({args_str})")
+
+    def add_negated_atomic_fact(self, pred_name: str, args: List[str]):
+        """Add a negated atomic formula: !pred(arg1, arg2, ...)."""
+        args_str = ", ".join(args)
+        self._formulas.append(f"!{pred_name}({args_str})")
+
+    def add_universal_implication(
+        self, antecedent_pred: str, consequent_pred: str, sort_name: str
+    ):
+        """Add forall X: (antecedent(X) => consequent(X))."""
+        self._formulas.append(
+            f"forall X: ({antecedent_pred}(X) => {consequent_pred}(X))"
+        )
+
+    def add_existential_conjunction(
+        self, pred1: str, pred2: str, sort_name: str
+    ):
+        """Add exists X: (pred1(X) && pred2(X))."""
+        self._formulas.append(
+            f"exists X: ({pred1}(X) && {pred2}(X))"
+        )
+
+    def build_tweety_belief_set(self, tweety_bridge):
+        """
+        Build a Tweety FolBeliefSet from accumulated declarations.
+
+        Args:
+            tweety_bridge: TweetyBridge instance with fol_handler.
+
+        Returns:
+            Java FolBeliefSet object.
+        """
+        builder_data = {
+            "_sorts": dict(self._sorts),
+            "_predicates": dict(self._predicates),
+            "_formulas": list(self._formulas),
+        }
+        belief_set, _signature = tweety_bridge.fol_handler.create_belief_set_programmatically(
+            builder_data
+        )
+        return belief_set
+
+
 class FOLLogicAgent(BaseLogicAgent):
     """
     Agent de logique du premier ordre utilisant TweetyProject.
@@ -272,6 +354,11 @@ RÉPONDS EN FORMAT JSON :
         logger.info(f"🔍 Début analyse FOL pour texte de {len(text)} caractères")
 
         try:
+            # 0. Lazy setup: register semantic functions if not done yet
+            if not getattr(self, '_components_initialized', False):
+                await self.setup_agent_components()
+                object.__setattr__(self, '_components_initialized', True)
+
             # 1. Vérification du cache
             cache_key = self._generate_cache_key(text, context)
             if cache_key in self._analysis_cache:
@@ -622,6 +709,18 @@ RÉPONDS EN FORMAT JSON :
     def analysis_prompt(self) -> str:
         """Expose _analysis_prompt for backward compatibility."""
         return self._analysis_prompt
+
+    @property
+    def tweety_bridge(self):
+        """Expose _tweety_bridge for programmatic belief set construction."""
+        return self._tweety_bridge
+
+    @property
+    def _builder_plugin(self) -> "BeliefSetBuilderPlugin":
+        """Lazy-initialized BeliefSetBuilderPlugin for programmatic FOL construction."""
+        if not hasattr(self, '_builder_plugin_instance') or self._builder_plugin_instance is None:
+            object.__setattr__(self, '_builder_plugin_instance', BeliefSetBuilderPlugin())
+        return self._builder_plugin_instance
 
     # ==================== IMPLÉMENTATION MÉTHODES ABSTRAITES ====================
 

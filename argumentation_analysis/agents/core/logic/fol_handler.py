@@ -412,13 +412,13 @@ class FOLHandler:
                         "SimpleFolReasoner"
                     )
                     # Check if KB entails a contradiction
-                    # A KB is inconsistent if forall X: (X == X && !(X == X)) is entailed
-                    contradiction_str = "forall X: (X == X && !(X == X))"
+                    # Use "-" (Tweety's built-in contradiction/bottom symbol)
+                    # which doesn't require any predicates in the signature
                     local_parser = jpype.JClass(
                         "org.tweetyproject.logics.fol.parser.FolParser"
                     )()
                     local_parser.setSignature(java_belief_set.getMinimalSignature())
-                    contradiction = local_parser.parseFormula(contradiction_str)
+                    contradiction = local_parser.parseFormula("-")
                     inconsistent = reasoner.query(java_belief_set, contradiction)
                     is_consistent = not bool(inconsistent)
                     msg = f"FOL consistency check: {'consistent' if is_consistent else 'inconsistent'}"
