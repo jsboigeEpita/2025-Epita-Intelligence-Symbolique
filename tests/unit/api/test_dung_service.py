@@ -72,6 +72,8 @@ class TestDungServiceDirect:
             [("a", "a"), ("a", "b")],
             options={"compute_extensions": True},
         )
-        assert result["extensions"]["grounded"] == ["b"]
+        # Grounded extension is empty: a self-attacks (out), b is attacked by a
+        # but not defended by anyone, so b is also out of the grounded extension.
+        assert result["extensions"]["grounded"] == []
         assert result["argument_status"]["a"]["credulously_accepted"] is False
         assert "a" in result["graph_properties"]["self_attacking_nodes"]

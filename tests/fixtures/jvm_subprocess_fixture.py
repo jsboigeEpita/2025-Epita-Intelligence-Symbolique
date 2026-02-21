@@ -2,9 +2,7 @@ import pytest
 import subprocess
 import sys
 import os
-import subprocess
 from pathlib import Path
-import subprocess
 from dotenv import load_dotenv, find_dotenv
 
 
@@ -27,22 +25,22 @@ def run_in_jvm_subprocess():
                 f"Le script de test à exécuter n'a pas été trouvé : {script_path}"
             )
 
-        # Nouvelle approche: l'injection de PYTHONPATH via un script Python est plus fiable
         project_root = Path(__file__).parent.parent.parent.resolve()
 
-        # La commande complète pour le sous-processus
         command_for_subprocess = [sys.executable, str(script_path)]
 
-        # Créer un environnement pour le sous-processus qui inclut la racine du projet dans PYTHONPATH
+        # Créer un environnement pour le sous-processus
         env = os.environ.copy()
         env["PYTHONPATH"] = str(project_root) + os.pathsep + env.get("PYTHONPATH", "")
         env["PROJECT_ROOT"] = str(project_root)
 
-        # Charger les variables du fichier .env pour les rendre disponibles dans le sous-processus
+        # Remove PYTEST_CURRENT_TEST to prevent auto-mock in subprocess
+        env.pop("PYTEST_CURRENT_TEST", None)
+
+        # Charger les variables du fichier .env
         dotenv_path = find_dotenv(str(project_root / ".env"))
         if dotenv_path:
             load_dotenv(dotenv_path=dotenv_path, override=True)
-            # Mettre à jour l'environnement du sous-processus avec les variables chargées
             env.update(
                 {
                     k: v
@@ -52,30 +50,31 @@ def run_in_jvm_subprocess():
             )
 
         print(
-            f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}"
+            f"Exécution du worker en sous-processus: {' '.join(command_for_subprocess)}"
         )
 
-        # On capture la sortie pour pouvoir l'afficher en cas d'erreur.
         result = subprocess.run(
             command_for_subprocess,
             capture_output=True,
-            check=False,  # On gère l'échec manuellement avec pytest.fail
+            check=False,
             cwd=project_root,
             env=env,
             text=True,
             encoding="utf-8",
-            errors="replace",  # Gère les caractères non-UTF8 (ex: accents français)
+            errors="replace",
         )
 
-        # La sortie (stdout/stderr) s'affichera directement dans la console pytest.
-        # Nous vérifions uniquement le code de retour.
+        # Print captured output so pytest shows it
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
 
-        # Vérifier manuellement le code de sortie
         if result.returncode != 0:
             pytest.fail(
-                f"Le sous-processus de test JVM a échoué avec le code {result.returncode}. "
-                "Vérifiez la sortie de la console ci-dessus pour les logs du worker, "
-                "y compris les erreurs potentielles de téléchargement ou d'initialisation de la JVM.",
+                f"Le sous-processus de test JVM a échoué avec le code {result.returncode}.\n"
+                f"STDOUT:\n{result.stdout[-2000:] if result.stdout else '(vide)'}\n"
+                f"STDERR:\n{result.stderr[-2000:] if result.stderr else '(vide)'}",
                 pytrace=False,
             )
 
