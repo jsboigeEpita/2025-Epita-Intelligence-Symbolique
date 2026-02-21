@@ -34,22 +34,14 @@ TEST_TIMEOUT = 30
 
 
 @pytest.mark.skipif(
-    not os.getenv("RUN_API_SERVER_TESTS"),
-    reason="API server tests require RUN_API_SERVER_TESTS=1 and a running FastAPI server on port 8001",
+    any(arg == "--disable-jvm-session" for arg in sys.argv),
+    reason="API server requires real JVM (run without --disable-jvm-session)",
 )
 class TestAPIFastAPIAuthentique:
     """Tests unitaires pour l'API FastAPI avec GPT-4o-mini authentique."""
 
     api_process = None
     api_started = False
-    server_logs = []
-
-    @staticmethod
-    def _log_stream(stream):
-        """Lit et logue le contenu d'un stream."""
-        for line in iter(stream.readline, ""):
-            TestAPIFastAPIAuthentique.server_logs.append(line.strip())
-        stream.close()
 
     @classmethod
     def setup_class(cls):
@@ -58,7 +50,7 @@ class TestAPIFastAPIAuthentique:
             sys.executable,
             "-m",
             "uvicorn",
-            "api.main_simple:app",
+            "api.main:app",
             "--host",
             "127.0.0.1",
             f"--port={API_PORT}",
@@ -66,23 +58,15 @@ class TestAPIFastAPIAuthentique:
             "info",
         ]
 
-        cls.api_process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-        )
-
-        # Threads pour lire les logs sans bloquer
-        cls.stdout_thread = threading.Thread(
-            target=cls._log_stream, args=(cls.api_process.stdout,)
-        )
-        cls.stderr_thread = threading.Thread(
-            target=cls._log_stream, args=(cls.api_process.stderr,)
-        )
-        cls.stdout_thread.start()
-        cls.stderr_thread.start()
+        try:
+            cls.api_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            print(f"\n[ERREUR] Impossible de démarrer le serveur API: {e}")
+            return
 
         start_time = time.time()
         health_url = API_BASE_URL.replace("/api", "") + "/health"
@@ -102,7 +86,7 @@ class TestAPIFastAPIAuthentique:
 
     @classmethod
     def teardown_class(cls):
-        """Arrête le serveur API et les threads de logging."""
+        """Arrête le serveur API."""
         if cls.api_process:
             print("\n[INFO] Arrêt du serveur API...")
             cls.api_process.terminate()
@@ -111,14 +95,6 @@ class TestAPIFastAPIAuthentique:
             except subprocess.TimeoutExpired:
                 print("[WARNING] Le processus serveur ne s'est pas terminé, forçage.")
                 cls.api_process.kill()
-
-            # Attendre que les threads de log finissent
-            cls.stdout_thread.join(timeout=2)
-            cls.stderr_thread.join(timeout=2)
-
-            print("[INFO] Logs du serveur capturés :")
-            for log in cls.server_logs:
-                print(f"  [SERVER] {log}")
 
     def test_01_environment_setup(self):
         """Test 1: Vérification de la configuration environnement."""
@@ -129,9 +105,9 @@ class TestAPIFastAPIAuthentique:
 
         # Vérifier que les fichiers API existent
         api_files = [
-            "api/main_simple.py",
-            "api/endpoints_simple.py",
-            "api/dependencies_simple.py",
+            "api/main.py",
+            "api/endpoints.py",
+            "api/dependencies.py",
         ]
 
         for file_path in api_files:

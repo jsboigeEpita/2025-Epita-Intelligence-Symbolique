@@ -62,8 +62,14 @@ class TestAuthenticGPTIntegration:
                 force_authentic=True,
             )
 
-            # Test de réponse authentique
-            response = asyncio.run(llm_service.generate_response(self.test_prompt))
+            # Test de réponse authentique via SK 1.37 API
+            from semantic_kernel.contents import ChatHistory
+            chat_history = ChatHistory()
+            chat_history.add_user_message(self.test_prompt)
+            results = asyncio.run(
+                llm_service.get_chat_message_contents(chat_history=chat_history, settings=None)
+            )
+            response = str(results[0]) if results else ""
 
             # Validations de qualité
             assert isinstance(response, str)
@@ -116,9 +122,7 @@ class TestAuthenticTweetyIntegration:
         self.authentic_config = PresetConfigs.authentic_fol()
         self.test_formula = "∀x(Politician(x) → Lies(x))"
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_tweety_jar_configuration(self):
         """Test de configuration Tweety JAR authentique."""
         tweety_config = self.authentic_config.get_tweety_config()
@@ -127,12 +131,7 @@ class TestAuthenticTweetyIntegration:
         assert tweety_config["require_real_jar"] is True
         assert tweety_config["logic_type"] == "fol"
 
-        # Vérifier les variables d'environnement
-        assert os.getenv("USE_REAL_JPYPE") is not None
-
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_tweety_jar_availability(self):
         """Test de disponibilité du JAR Tweety authentique."""
         # Chemins possibles pour le JAR Tweety
@@ -153,9 +152,7 @@ class TestAuthenticTweetyIntegration:
         if not jar_found:
             pytest.skip("JAR Tweety authentique non trouvé")
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_fol_logic_agent_initialization(self):
         """Test d'initialisation agent logique FOL avec Tweety réel."""
         try:
@@ -171,9 +168,7 @@ class TestAuthenticTweetyIntegration:
         except Exception as e:
             pytest.skip(f"Agent FOL réel non disponible: {e}")
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_tweety_formula_parsing(self):
         """Test de parsing de formule avec Tweety authentique."""
         try:
@@ -298,9 +293,10 @@ class TestAuthenticPipelineIntegration:
         """
 
     @pytest.mark.skipif(
-        not all([os.getenv("OPENAI_API_KEY"), os.getenv("USE_REAL_JPYPE")]),
-        reason="Composants authentiques requis",
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Clé API OpenAI requise",
     )
+    @pytest.mark.jpype
     def test_full_authentic_pipeline_execution(self):
         """Test d'exécution pipeline complet 100% authentique."""
         try:

@@ -18,6 +18,7 @@ import time
 import requests
 import subprocess
 import os
+import sys
 
 # Configuration modèle LLM depuis .env
 EXPECTED_MODEL = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
@@ -35,8 +36,8 @@ TEST_TIMEOUT = 45
 
 
 @pytest.mark.skipif(
-    not os.getenv("RUN_API_SERVER_TESTS"),
-    reason="API server tests require RUN_API_SERVER_TESTS=1 and a running FastAPI server on port 8001",
+    any(arg == "--disable-jvm-session" for arg in sys.argv),
+    reason="API server requires real JVM (run without --disable-jvm-session)",
 )
 class TestAPIFastAPISimple:
     """Tests unitaires simplifiés pour l'API FastAPI avec GPT-4o-mini authentique."""
@@ -66,9 +67,9 @@ class TestAPIFastAPISimple:
 
         # Vérifier que les fichiers API existent
         api_files = [
-            "api/main_simple.py",
-            "api/endpoints_simple.py",
-            "api/dependencies_simple.py",
+            "api/main.py",
+            "api/endpoints.py",
+            "api/dependencies.py",
         ]
 
         for file_path in api_files:
@@ -84,7 +85,7 @@ class TestAPIFastAPISimple:
                     "python",
                     "-m",
                     "uvicorn",
-                    "api.main_simple:app",
+                    "api.main:app",
                     "--host",
                     "127.0.0.1",
                     "--port",
@@ -95,8 +96,8 @@ class TestAPIFastAPISimple:
 
                 self.__class__.api_process = subprocess.Popen(
                     cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                     cwd=os.getcwd(),
                     env=dict(os.environ, PYTHONPATH=os.getcwd()),
                 )

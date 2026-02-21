@@ -1,43 +1,77 @@
-from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
+"""
+Test du service d'analyse Dung (Abstract Argumentation Framework).
+
+Converti depuis un test subprocess (qui bloquait) vers un test direct
+in-process utilisant get_dung_analysis_service() avec la JVM disponible.
+"""
 import pytest
 import os
 
-# Le chemin vers le script worker qui exécute les tests dépendants de la JVM.
-# Ce chemin est relatif au répertoire racine du projet.
-WORKER_SCRIPT_PATH = "tests/unit/api/workers/worker_dung_service.py"
+
+def _is_jvm_available():
+    """Check if JVM/JPype is available (not mocked) for Dung service tests."""
+    try:
+        import jpype
+        # When --disable-jvm-session mocks jpype, isJVMStarted returns a MagicMock (truthy)
+        result = jpype.isJVMStarted()
+        return result is True  # Strict check: MagicMock is not True
+    except (ImportError, AttributeError):
+        return False
 
 
-def test_dung_service_via_worker(run_in_jvm_subprocess):
-    """
-    Exécute les tests du service Dung dans un sous-processus isolé.
+@pytest.mark.jpype
+@pytest.mark.tweety
+class TestDungServiceDirect:
+    """Tests directs du DungAnalysisService sans subprocess."""
 
-    Ce test s'appuie sur la fixture 'run_in_jvm_subprocess' pour:
-    1. Configurer un environnement Python avec les dépendances nécessaires.
-    2. Démarrer une JVM dédiée pour le sous-processus.
-    3. Exécuter le script worker spécifié.
-    4. Capturer la sortie (stdout/stderr) et le code de sortie.
+    @pytest.fixture(autouse=True)
+    def setup_dung_service(self):
+        """Initialize the Dung service, skip if JVM not available."""
+        if not _is_jvm_available():
+            pytest.skip("JVM not started — run without --disable-jvm-session")
 
-    Le worker contient la logique de test détaillée (initialisation du service,
-    appels de méthodes, assertions). Ce test principal ne fait que valider
-    que le worker s'est exécuté sans erreur et a renvoyé un signal de succès.
-    """
-    pytest.skip("Test désactivé car il bloque l'exécution de la suite de tests.")
-    # Vérifie que le script worker existe avant de tenter de l'exécuter.
-    # Le chemin est construit à partir de la racine du projet.
-    assert os.path.exists(
-        WORKER_SCRIPT_PATH
-    ), f"Le script worker est introuvable: {WORKER_SCRIPT_PATH}"
+        try:
+            from api.dependencies import get_dung_analysis_service
+            self.service = get_dung_analysis_service()
+        except Exception as e:
+            pytest.skip(f"DungAnalysisService not available: {e}")
 
-    # Appel de la fixture qui exécute le script dans un environnement contrôlé.
-    result = run_in_jvm_subprocess(WORKER_SCRIPT_PATH)
+    def test_simple_framework(self):
+        """Scenario 1: Simple framework a→b→c."""
+        result = self.service.analyze_framework(
+            ["a", "b", "c"],
+            [("a", "b"), ("b", "c")],
+            options={"compute_extensions": True},
+        )
+        assert "extensions" in result
+        assert result["extensions"]["grounded"] == ["a", "c"]
+        assert result["extensions"]["preferred"] == [["a", "c"]]
 
-    # Validation de la sortie du worker.
-    # On s'attend à ce que le worker imprime un message de succès.
-    assert (
-        "SUCCESS" in result.stdout
-    ), f"L'exécution du worker a échoué. Sortie: {result.stdout}\nErreurs: {result.stderr}"
+    def test_cyclic_framework(self):
+        """Scenario 2: Cyclic framework a↔b."""
+        result = self.service.analyze_framework(
+            ["a", "b"],
+            [("a", "b"), ("b", "a")],
+            options={"compute_extensions": True},
+        )
+        assert result["extensions"]["grounded"] == []
+        assert sorted([sorted(e) for e in result["extensions"]["preferred"]]) == [["a"], ["b"]]
 
-    # Vérifie que le worker s'est terminé avec un code de sortie 0 (succès).
-    assert (
-        result.returncode == 0
-    ), f"Le worker s'est terminé avec un code d'erreur. Code: {result.returncode}"
+    def test_empty_framework(self):
+        """Scenario 3: Empty framework (no args, no attacks)."""
+        result = self.service.analyze_framework(
+            [], [], options={"compute_extensions": True}
+        )
+        assert result["extensions"]["grounded"] == []
+        assert result["extensions"]["preferred"] == []
+
+    def test_self_attacking_argument(self):
+        """Scenario 4: Self-attacking argument a→a, a→b."""
+        result = self.service.analyze_framework(
+            ["a", "b"],
+            [("a", "a"), ("a", "b")],
+            options={"compute_extensions": True},
+        )
+        assert result["extensions"]["grounded"] == ["b"]
+        assert result["argument_status"]["a"]["credulously_accepted"] is False
+        assert "a" in result["graph_properties"]["self_attacking_nodes"]

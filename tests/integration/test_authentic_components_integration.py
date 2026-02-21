@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python3
 """
 Tests d'intégration pour les composants authentiques
@@ -21,6 +15,8 @@ from pathlib import Path
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+from config.unified_config import UnifiedConfig
 
 
 async def _create_authentic_gpt4o_mini_instance():
@@ -109,10 +105,12 @@ class TestRealTweetyIntegration:
     @pytest.mark.requires_tweety_jar
     def test_real_tweety_availability(self):
         """Test de disponibilité de Tweety authentique."""
-        use_real_tweety = os.getenv("USE_REAL_JPYPE", "false").lower() == "true"
-
-        if not use_real_tweety:
-            pytest.skip("USE_REAL_JPYPE=true required for real Tweety tests")
+        try:
+            import jpype
+            if not jpype.isJVMStarted():
+                pytest.skip("JVM not started — run without --disable-jvm-session")
+        except ImportError:
+            pytest.skip("jpype not available")
 
         # Vérifier l'existence du JAR Tweety
         tweety_jar_paths = [
@@ -197,11 +195,16 @@ class TestRealTweetyIntegration:
             pytest.skip("Components not available")
 
     def _is_real_tweety_available(self) -> bool:
-        """Vérifie si Tweety réel est disponible."""
-        use_real = os.getenv("USE_REAL_JPYPE", "false").lower() == "true"
+        """Vérifie si Tweety réel est disponible (JVM started + JAR present)."""
+        try:
+            import jpype
+            if not jpype.isJVMStarted():
+                return False
+        except ImportError:
+            return False
         jar_paths = ["libs/tweety.jar", "services/tweety/tweety.jar"]
         jar_exists = any(Path(p).exists() for p in jar_paths)
-        return use_real and jar_exists
+        return jar_exists
 
 
 class TestCompleteTaxonomyIntegration:
@@ -293,15 +296,14 @@ class TestUnifiedAuthenticComponentsIntegration:
     def test_full_authentic_pipeline(self):
         """Test du pipeline complet avec tous composants authentiques."""
         # Vérifier disponibilité des composants authentiques
-        requirements = {
-            "openai_key": bool(os.getenv("OPENAI_API_KEY")),
-            "real_tweety": os.getenv("USE_REAL_JPYPE", "false").lower() == "true",
-            "mock_level_none": os.getenv("MOCK_LEVEL", "") == "none",
-        }
-
-        missing = [k for k, v in requirements.items() if not v]
-        if missing:
-            pytest.skip(f"Missing requirements: {missing}")
+        if not os.getenv("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY required")
+        try:
+            import jpype
+            if not jpype.isJVMStarted():
+                pytest.skip("JVM not started — run without --disable-jvm-session")
+        except ImportError:
+            pytest.skip("jpype not available")
 
         try:
             from argumentation_analysis.orchestration.real_llm_orchestrator import (
@@ -417,11 +419,13 @@ class TestUnifiedAuthenticComponentsIntegration:
 
     def _are_authentic_components_available(self) -> bool:
         """Vérifie si les composants authentiques sont disponibles."""
-        return (
-            bool(os.getenv("OPENAI_API_KEY"))
-            and os.getenv("USE_REAL_JPYPE", "false").lower() == "true"
-            and os.getenv("MOCK_LEVEL", "minimal") == "none"
-        )
+        if not os.getenv("OPENAI_API_KEY"):
+            return False
+        try:
+            import jpype
+            return jpype.isJVMStarted()
+        except ImportError:
+            return False
 
 
 if __name__ == "__main__":
