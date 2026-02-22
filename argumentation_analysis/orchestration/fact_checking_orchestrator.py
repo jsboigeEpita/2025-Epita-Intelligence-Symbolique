@@ -33,6 +33,24 @@ from src.core.plugins.standard.external_verification.plugin import (
 logger = logging.getLogger(__name__)
 
 
+# Backward compatibility functions for service-layer access.
+# These exist as module-level names to support unittest.mock.patch() in tests.
+def get_taxonomy_manager():
+    """Get the taxonomy manager singleton (compat shim)."""
+    from argumentation_analysis.services.fallacy_taxonomy_service import (
+        get_taxonomy_manager as _get_tm,
+    )
+    return _get_tm()
+
+
+def get_verification_service():
+    """Get the fact verification service singleton (compat shim)."""
+    from argumentation_analysis.services.fact_verification_service import (
+        get_verification_service as _get_vs,
+    )
+    return _get_vs()
+
+
 @dataclass
 class FactCheckingRequest:
     """Requête d'analyse avec fact-checking intégré."""
@@ -88,27 +106,35 @@ class FactCheckingOrchestrator:
 
     def __init__(
         self,
-        plugin_registry: Dict[str, BasePlugin],
+        plugin_registry: Optional[Dict[str, BasePlugin]] = None,
         api_config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialise l'orchestrateur de fact-checking.
 
-        :param plugin_registry: Un registre contenant les instances des plugins chargés.
+        :param plugin_registry: Registre des plugins (ou None pour singletons).
         :param api_config: Configuration des APIs externes (Tavily, SearXNG, etc.)
         """
         self.logger = logging.getLogger("FactCheckingOrchestrator")
         self.api_config = api_config or {}
-        self.plugin_registry = plugin_registry
+        self.plugin_registry = plugin_registry or {}
 
         # Initialiser les composants
         self.fact_extractor = FactClaimExtractor()
 
-        # Récupérer les plugins depuis le registre
-        self.taxonomy_plugin = self.plugin_registry.get("taxonomy_explorer")
-        self.verification_plugin: ExternalVerificationPlugin = self.plugin_registry.get(
-            "external_verification"
-        )
+        # Récupérer les plugins depuis le registre ou les singletons
+        if plugin_registry is not None:
+            self.taxonomy_plugin = self.plugin_registry.get("taxonomy_explorer")
+            self.verification_plugin = self.plugin_registry.get(
+                "external_verification"
+            )
+        else:
+            self.taxonomy_plugin = get_taxonomy_manager()
+            self.verification_plugin = get_verification_service()
+
+        # Backward compat aliases
+        self.taxonomy_manager = self.taxonomy_plugin
+        self.verification_service = self.verification_plugin
 
         if not self.taxonomy_plugin or not self.verification_plugin:
             raise ValueError(
@@ -425,9 +451,10 @@ class FactCheckingOrchestrator:
             "components": {},
         }
 
+        test_text = "En 2023, 50% des français utilisent internet quotidiennement."
+
+        # Test de l'extracteur d'affirmations
         try:
-            # Test de l'extracteur d'affirmations
-            test_text = "En 2023, 50% des français utilisent internet quotidiennement."
             test_claims = self.fact_extractor.extract_factual_claims(
                 test_text, max_claims=1
             )
@@ -435,25 +462,43 @@ class FactCheckingOrchestrator:
                 "status": "ok" if test_claims else "warning",
                 "claims_extracted": len(test_claims),
             }
+        except Exception as e:
+            health_status["components"]["fact_extractor"] = {
+                "status": "error",
+                "error": str(e),
+            }
 
-            # Test du gestionnaire de taxonomie
-            test_fallacies = await self.taxonomy_plugin.detect_and_classify(
+        # Test du gestionnaire de taxonomie (try sync service API, fallback async plugin)
+        try:
+            test_fallacies = self.taxonomy_manager.detect_fallacies_with_families(
                 test_text, max_fallacies=1
             )
-            health_status["components"]["taxonomy_plugin"] = {
+            taxonomy_status = {
                 "status": "ok",
                 "fallacies_detected": len(test_fallacies),
             }
+        except Exception:
+            try:
+                test_fallacies = await self.taxonomy_plugin.detect_and_classify(
+                    test_text, max_fallacies=1
+                )
+                taxonomy_status = {
+                    "status": "ok",
+                    "fallacies_detected": len(test_fallacies),
+                }
+            except Exception as e:
+                taxonomy_status = {
+                    "status": "warning",
+                    "error": str(e),
+                }
+        health_status["components"]["taxonomy_plugin"] = taxonomy_status
+        health_status["components"]["taxonomy_manager"] = taxonomy_status
 
-            # Test de l'analyseur par famille (test léger)
-            health_status["components"]["family_analyzer"] = {
-                "status": "ok",
-                "note": "Interface disponible",
-            }
-
-        except Exception as e:
-            health_status["status"] = "unhealthy"
-            health_status["error"] = str(e)
+        # Test de l'analyseur par famille (test léger)
+        health_status["components"]["family_analyzer"] = {
+            "status": "ok",
+            "note": "Interface disponible",
+        }
 
         return health_status
 

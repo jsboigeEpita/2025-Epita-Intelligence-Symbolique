@@ -125,21 +125,28 @@ class FallacyFamilyAnalyzer:
 
     def __init__(
         self,
-        taxonomy_plugin: TaxonomyExplorerPlugin,
-        verification_plugin: ExternalVerificationPlugin,
+        taxonomy_plugin: Optional[TaxonomyExplorerPlugin] = None,
+        verification_plugin: Optional[ExternalVerificationPlugin] = None,
         api_config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialise l'analyseur par famille.
 
-        :param taxonomy_plugin: Instance du plugin de taxonomie.
-        :param verification_plugin: Instance du plugin de vérification externe.
+        :param taxonomy_plugin: Instance du plugin de taxonomie (ou None pour singleton).
+        :param verification_plugin: Instance du plugin de vérification (ou None pour singleton).
         :param api_config: Configuration des APIs pour le fact-checking.
         """
         self.logger = logging.getLogger("FallacyFamilyAnalyzer")
 
+        # Resolve via singletons if not injected directly
+        if taxonomy_plugin is None:
+            taxonomy_plugin = get_taxonomy_manager()
+        if verification_plugin is None:
+            verification_plugin = get_verification_service()
+
         # Initialiser les composants via injection de dépendances
         self.taxonomy_plugin = taxonomy_plugin
+        self.taxonomy_manager = taxonomy_plugin  # backward compat alias
         self.fact_extractor = FactClaimExtractor()
         self.fact_verifier = verification_plugin
 
@@ -730,21 +737,46 @@ class FallacyFamilyAnalyzer:
         return recommendations[:5]  # Limiter à 5 recommandations max
 
 
+# Backward compatibility functions for service-layer access.
+# These exist as module-level names to support unittest.mock.patch() in tests.
+def get_taxonomy_manager():
+    """Get the taxonomy manager singleton (compat shim)."""
+    from argumentation_analysis.services.fallacy_taxonomy_service import (
+        get_taxonomy_manager as _get_tm,
+    )
+    return _get_tm()
+
+
+def get_verification_service():
+    """Get the fact verification service singleton (compat shim)."""
+    from argumentation_analysis.services.fact_verification_service import (
+        get_verification_service as _get_vs,
+    )
+    return _get_vs()
+
+
 # Instance globale de l'analyseur
 _global_family_analyzer = None
 
 
 def get_family_analyzer(
-    taxonomy_plugin: "TaxonomyExplorerPlugin",
+    taxonomy_plugin: Optional["TaxonomyExplorerPlugin"] = None,
     api_config: Optional[Dict[str, Any]] = None,
 ) -> FallacyFamilyAnalyzer:
     """
-    Crée une instance de l'analyseur par famille.
+    Récupère ou crée une instance de l'analyseur par famille.
 
-    :param taxonomy_plugin: Instance du plugin de taxonomie à injecter.
+    :param taxonomy_plugin: Instance du plugin de taxonomie à injecter. Si None, utilise singleton.
     :param api_config: Configuration optionnelle des APIs
     :return: Instance de l'analyseur
     """
-    # Le pattern singleton global est abandonné au profit de l'injection de dépendance
-    # contrôlée par l'orchestrateur.
-    return FallacyFamilyAnalyzer(taxonomy_plugin=taxonomy_plugin, api_config=api_config)
+    global _global_family_analyzer
+    if taxonomy_plugin is not None:
+        # Explicit plugin injection — create directly (no singleton)
+        return FallacyFamilyAnalyzer(
+            taxonomy_plugin=taxonomy_plugin, api_config=api_config
+        )
+    # Singleton mode
+    if _global_family_analyzer is None:
+        _global_family_analyzer = FallacyFamilyAnalyzer(api_config=api_config)
+    return _global_family_analyzer
