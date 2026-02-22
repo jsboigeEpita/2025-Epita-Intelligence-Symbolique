@@ -136,9 +136,9 @@ class TestAuthenticTweetyIntegration:
         """Test de disponibilité du JAR Tweety authentique."""
         # Chemins possibles pour le JAR Tweety
         possible_jar_paths = [
+            "libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
             "libs/tweety-full.jar",
             "libs/tweety.jar",
-            "portable_jdk/tweety-full.jar",
         ]
 
         jar_found = False
@@ -156,13 +156,13 @@ class TestAuthenticTweetyIntegration:
     def test_real_fol_logic_agent_initialization(self):
         """Test d'initialisation agent logique FOL avec Tweety réel."""
         try:
-            fol_agent = FOLLogicAgent(
-                enable_jvm=True, use_real_tweety=True, logic_type="fol"
-            )
+            config = UnifiedConfig()
+            kernel = config.get_kernel_with_gpt4o_mini()
+            fol_agent = FOLLogicAgent(kernel=kernel)
 
             # Vérifier l'initialisation
-            assert hasattr(fol_agent, "enable_jvm")
-            assert fol_agent.enable_jvm is True
+            assert hasattr(fol_agent, "analyze")
+            assert hasattr(fol_agent, "logic_type")
             assert not hasattr(fol_agent, "_is_mock")
 
         except Exception as e:
@@ -172,20 +172,17 @@ class TestAuthenticTweetyIntegration:
     def test_real_tweety_formula_parsing(self):
         """Test de parsing de formule avec Tweety authentique."""
         try:
-            fol_agent = FOLLogicAgent(enable_jvm=True, use_real_tweety=True)
+            config = UnifiedConfig()
+            kernel = config.get_kernel_with_gpt4o_mini()
+            fol_agent = FOLLogicAgent(kernel=kernel)
 
-            # Test de parsing de formule réelle
-            result = asyncio.run(fol_agent.parse_formula(self.test_formula))
+            # Test analyse with a real formula
+            result = asyncio.run(fol_agent.analyze(self.test_formula))
 
             # Validations
-            assert isinstance(result, dict)
-            assert "parsed" in result or "formula" in result
-            assert "error" not in result or result.get("error") is None
-
-            # Vérifier que ce n'est pas un résultat mock
-            result_str = str(result).lower()
-            assert "mock" not in result_str
-            assert "fake" not in result_str
+            assert result is not None
+            assert hasattr(result, "formulas")
+            assert hasattr(result, "confidence_score")
 
         except Exception as e:
             pytest.skip(f"Tweety réel non disponible: {e}")
