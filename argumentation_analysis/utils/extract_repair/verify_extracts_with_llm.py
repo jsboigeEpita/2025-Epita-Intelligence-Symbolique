@@ -41,7 +41,7 @@ from semantic_kernel.contents import ChatMessageContent
 
 # from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
+from ag2.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 
 try:
     # Import relatif depuis le package utils
