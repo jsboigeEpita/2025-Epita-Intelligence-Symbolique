@@ -117,6 +117,101 @@ def parse_extract_verification_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+VALID_LOGIC_TYPES = ("propositional", "first_order", "modal")
+VALID_MOCK_LEVELS = ("none", "minimal", "full")
+
+
+def parse_extended_args(args_list=None) -> argparse.Namespace:
+    """
+    Parse les arguments CLI étendus pour l'analyse argumentative.
+
+    Args:
+        args_list: Liste d'arguments (par défaut sys.argv[1:]).
+
+    Returns:
+        argparse.Namespace: Les arguments parsés.
+    """
+    parser = argparse.ArgumentParser(
+        description="Analyse argumentative étendue"
+    )
+    parser.add_argument(
+        "--logic-type",
+        choices=list(VALID_LOGIC_TYPES),
+        default="propositional",
+        help="Type de logique à utiliser",
+    )
+    parser.add_argument(
+        "--mock-level",
+        choices=list(VALID_MOCK_LEVELS),
+        default="minimal",
+        help="Niveau de mocking (none, minimal, full)",
+    )
+    parser.add_argument(
+        "--use-real-tweety",
+        action="store_true",
+        default=False,
+        help="Utiliser Tweety réel via JVM",
+    )
+    parser.add_argument(
+        "--use-real-llm",
+        action="store_true",
+        default=False,
+        help="Utiliser un LLM réel (pas de mock)",
+    )
+    parser.add_argument(
+        "--text",
+        type=str,
+        default=None,
+        help="Texte à analyser",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Mode verbeux",
+    )
+    return parser.parse_args(args_list)
+
+
+def validate_cli_args(args: argparse.Namespace) -> None:
+    """
+    Valide les arguments CLI parsés. Lève ValueError si invalides.
+
+    Args:
+        args: Arguments parsés via parse_extended_args.
+
+    Raises:
+        ValueError: Si logic_type ou mock_level sont invalides.
+    """
+    if hasattr(args, "logic_type") and args.logic_type not in VALID_LOGIC_TYPES:
+        raise ValueError(
+            f"logic_type invalide: '{args.logic_type}'. "
+            f"Valeurs acceptées: {VALID_LOGIC_TYPES}"
+        )
+    if hasattr(args, "mock_level") and args.mock_level not in VALID_MOCK_LEVELS:
+        raise ValueError(
+            f"mock_level invalide: '{args.mock_level}'. "
+            f"Valeurs acceptées: {VALID_MOCK_LEVELS}"
+        )
+
+
+def get_default_cli_config() -> dict:
+    """
+    Retourne la configuration CLI par défaut.
+
+    Returns:
+        dict: Dictionnaire de configuration par défaut.
+    """
+    return {
+        "logic_type": "propositional",
+        "mock_level": "minimal",
+        "use_real_tweety": False,
+        "use_real_llm": False,
+        "text": None,
+        "verbose": False,
+    }
+
+
 def parse_extract_repair_arguments() -> argparse.Namespace:
     """
     Parse les arguments de ligne de commande spécifiques au script de réparation des extraits.
