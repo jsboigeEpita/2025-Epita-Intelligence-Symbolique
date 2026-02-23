@@ -162,22 +162,20 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
 
     try:
         belief_set, message = await agent.text_to_belief_set(test_text)
-
-        if belief_set is not None:
-            assert isinstance(belief_set, PropositionalBeliefSet)
-            assert belief_set.content is not None
-            assert len(belief_set.content.strip()) > 0
-            print(f"[AUTHENTIC] Ensemble de croyances généré: {belief_set.content}")
-
-            if authentic_pl_agent["tweety_available"]:
-                valid = agent.tweety_bridge.validate_belief_set(belief_set.content)
-                print(f"[AUTHENTIC] Validation TweetyBridge: {valid}")
-        else:
-            print(f"[AUTHENTIC] Conversion produit résultat vide: {message}")
-
     except Exception as e:
-        print(f"[AUTHENTIC] Erreur lors de la conversion: {e}")
-        pytest.skip(f"Erreur de service LLM: {e}")
+        pytest.skip(f"LLM text_to_belief_set failed: {e}")
+
+    if belief_set is None:
+        pytest.skip(f"LLM returned None belief set: {message}")
+
+    assert isinstance(belief_set, PropositionalBeliefSet)
+    assert belief_set.content is not None
+    assert len(belief_set.content.strip()) > 0
+    print(f"[AUTHENTIC] Ensemble de croyances généré: {belief_set.content}")
+
+    if authentic_pl_agent["tweety_available"]:
+        valid = agent.tweety_bridge.validate_belief_set(belief_set.content)
+        print(f"[AUTHENTIC] Validation TweetyBridge: {valid}")
 
     execution_time = time.time() - start_time
     print(f"[AUTHENTIC] Test de conversion terminé en {execution_time:.2f}s")
@@ -199,18 +197,16 @@ async def test_generate_queries_authentic(authentic_pl_agent):
 
     try:
         queries = await agent.generate_queries(test_text, belief_set)
-
-        assert isinstance(queries, list)
-        print(f"[AUTHENTIC] Requêtes générées: {queries}")
-
-        if authentic_pl_agent["tweety_available"] and len(queries) > 0:
-            for query in queries:
-                valid = agent.validate_formula(query)
-                print(f"[AUTHENTIC] Validation requête '{query}': {valid}")
-
     except Exception as e:
-        print(f"[AUTHENTIC] Erreur lors de la génération: {e}")
-        pytest.skip(f"Erreur de service LLM: {e}")
+        pytest.skip(f"LLM generate_queries failed: {e}")
+
+    assert isinstance(queries, list)
+    print(f"[AUTHENTIC] Requêtes générées: {queries}")
+
+    if authentic_pl_agent["tweety_available"] and len(queries) > 0:
+        for query in queries:
+            valid = agent.validate_formula(query)
+            print(f"[AUTHENTIC] Validation requête '{query}': {valid}")
 
     execution_time = time.time() - start_time
     print(f"[AUTHENTIC] Test de génération terminé en {execution_time:.2f}s")
@@ -263,34 +259,49 @@ async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agen
     start_time = time.time()
     test_text = "Si Alice étudie alors elle réussit. Alice étudie. Donc Alice réussit."
 
+    # Step 1: Text to belief set
     try:
         belief_set, conversion_msg = await agent.text_to_belief_set(test_text)
-        print(f"[AUTHENTIC] Conversion: {conversion_msg}")
+    except Exception as e:
+        pytest.skip(f"Workflow step 1 (text_to_belief_set) failed: {e}")
 
-        if belief_set is None:
-            pytest.skip("Conversion a échoué - impossible de continuer le workflow")
+    print(f"[AUTHENTIC] Conversion: {conversion_msg}")
 
+    if belief_set is None:
+        pytest.skip(f"LLM returned None belief set: {conversion_msg}")
+
+    # Step 2: Generate queries
+    try:
         queries = await agent.generate_queries(test_text, belief_set)
-        print(f"[AUTHENTIC] Requêtes: {queries}")
+    except Exception as e:
+        pytest.skip(f"Workflow step 2 (generate_queries) failed: {e}")
 
-        results = []
-        for query in queries:
+    print(f"[AUTHENTIC] Requêtes: {queries}")
+
+    # Step 3: Execute queries
+    results = []
+    for query in queries:
+        try:
             result, message = agent.execute_query(belief_set, query)
-            results.append((result, message))
-            print(f"[AUTHENTIC] Requête '{query}' -> {result}")
+        except Exception as e:
+            pytest.skip(f"Workflow step 3 (execute_query '{query}') failed: {e}")
+        results.append((result, message))
+        print(f"[AUTHENTIC] Requête '{query}' -> {result}")
 
+    # Step 4: Interpret results
+    try:
         interpretation = await agent.interpret_results(
             test_text, belief_set, queries, results
         )
-        print(f"[AUTHENTIC] Interprétation: {interpretation}")
-
-        assert len(queries) > 0
-        assert len(results) == len(queries)
-        assert interpretation is not None
-
     except Exception as e:
-        print(f"[AUTHENTIC] Erreur workflow: {e}")
-        pytest.skip(f"Erreur dans le workflow authentique: {e}")
+        pytest.skip(f"Workflow step 4 (interpret_results) failed: {e}")
+
+    print(f"[AUTHENTIC] Interprétation: {interpretation}")
+
+    # Assertions outside try-except
+    assert len(queries) > 0
+    assert len(results) == len(queries)
+    assert interpretation is not None
 
     execution_time = time.time() - start_time
     print(f"[AUTHENTIC] Workflow complet terminé en {execution_time:.2f}s")

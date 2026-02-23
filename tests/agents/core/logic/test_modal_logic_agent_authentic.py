@@ -167,26 +167,22 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
 
     try:
         belief_set, message = await agent.text_to_belief_set(test_text)
-
-        print(f"✅ Conversion Modal authentique: {message}")
-
-        if belief_set is not None:
-            assert isinstance(belief_set, ModalBeliefSet)
-            assert len(belief_set.content) > 0
-            print(
-                f"✅ Belief set Modal authentique créé: {belief_set.content[:100]}..."
-            )
-
-            is_valid, validation_msg = tweety_bridge.validate_modal_belief_set(
-                belief_set.content
-            )
-            print(
-                f"✅ Validation TweetyBridge Modal authentique: {is_valid} - {validation_msg}"
-            )
-
     except Exception as e:
-        print(f"⚠️ Erreur test Modal authentique: {e}")
-        pytest.skip(f"Test Modal authentique échoué: {e}")
+        pytest.skip(f"LLM text_to_belief_set failed: {e}")
+
+    print(f"✅ Conversion Modal authentique: {message}")
+
+    if belief_set is None:
+        pytest.skip(f"LLM returned None belief set: {message}")
+
+    assert isinstance(belief_set, ModalBeliefSet)
+    assert len(belief_set.content) > 0
+    print(f"✅ Belief set Modal authentique créé: {belief_set.content[:100]}...")
+
+    is_valid, validation_msg = tweety_bridge.validate_modal_belief_set(
+        belief_set.content
+    )
+    print(f"✅ Validation TweetyBridge Modal authentique: {is_valid} - {validation_msg}")
 
 
 @pytest.mark.asyncio
@@ -204,21 +200,19 @@ async def test_generate_queries_authentic_modal(authentic_agent):
 
     try:
         queries = await agent.generate_queries(context_text, belief_set)
-
-        print(f"✅ Génération Modal authentique de {len(queries)} requêtes")
-        assert isinstance(queries, list)
-
-        for i, query in enumerate(queries[:3]):
-            if query:
-                print(f"  Requête Modal {i+1}: {query}")
-                is_valid, msg = tweety_bridge.modal_handler.validate_modal_formula(
-                    query
-                )
-                print(f"  Validation Modal: {is_valid} - {msg}")
-
     except Exception as e:
-        print(f"⚠️ Erreur génération requêtes Modal authentique: {e}")
-        pytest.skip(f"Test Modal authentique échoué: {e}")
+        pytest.skip(f"LLM generate_queries failed: {e}")
+
+    print(f"✅ Génération Modal authentique de {len(queries)} requêtes")
+    assert isinstance(queries, list)
+
+    for i, query in enumerate(queries[:3]):
+        if query:
+            print(f"  Requête Modal {i+1}: {query}")
+            is_valid, msg = tweety_bridge.modal_handler.validate_modal_formula(
+                query
+            )
+            print(f"  Validation Modal: {is_valid} - {msg}")
 
 
 def test_execute_query_authentic_modal(authentic_agent):
@@ -233,15 +227,13 @@ def test_execute_query_authentic_modal(authentic_agent):
 
     try:
         result, message = agent.execute_query(belief_set, query)
-
-        print(f"✅ Exécution authentique requête Modal: {result} - {message}")
-        assert isinstance(result, bool)
-        assert isinstance(message, str)
-        assert len(message) > 0
-
     except Exception as e:
-        print(f"⚠️ Erreur exécution requête Modal authentique: {e}")
-        pytest.skip(f"Test Modal authentique échoué: {e}")
+        pytest.skip(f"Tweety execute_query failed: {e}")
+
+    print(f"✅ Exécution authentique requête Modal: {result} - {message}")
+    assert isinstance(result, bool)
+    assert isinstance(message, str)
+    assert len(message) > 0
 
 
 def test_tweety_bridge_modal_integration_authentic(authentic_agent):
@@ -271,27 +263,38 @@ async def test_full_workflow_modal_authentic(authentic_agent):
     Il est possible que nous trouvions une preuve.
     """
 
+    # Step 1: Text to belief set
     try:
         belief_set, bs_message = await agent.text_to_belief_set(test_text)
-        print(f"✅ Étape 1 Modal authentique - Belief set: {bs_message}")
-
-        if belief_set is not None:
-            queries = await agent.generate_queries(test_text, belief_set)
-            print(f"✅ Étape 2 Modal authentique - {len(queries)} requêtes générées")
-
-            for i, query in enumerate(queries[:2]):
-                if query:
-                    result, exec_message = agent.execute_query(belief_set, query)
-                    print(
-                        f"✅ Étape 3.{i+1} Modal authentique - Requête '{query}': {result}"
-                    )
-                    assert isinstance(result, bool)
-
-            print("✅ Workflow Modal complet authentique terminé avec succès")
-
     except Exception as e:
-        print(f"⚠️ Erreur workflow Modal authentique: {e}")
-        pytest.skip(f"Workflow Modal authentique échoué: {e}")
+        pytest.skip(f"Workflow step 1 (text_to_belief_set) failed: {e}")
+
+    print(f"✅ Étape 1 Modal authentique - Belief set: {bs_message}")
+
+    if belief_set is None:
+        pytest.skip(f"LLM returned None belief set: {bs_message}")
+
+    # Step 2: Generate queries
+    try:
+        queries = await agent.generate_queries(test_text, belief_set)
+    except Exception as e:
+        pytest.skip(f"Workflow step 2 (generate_queries) failed: {e}")
+
+    print(f"✅ Étape 2 Modal authentique - {len(queries)} requêtes générées")
+
+    # Step 3: Execute queries
+    for i, query in enumerate(queries[:2]):
+        if query:
+            try:
+                result, exec_message = agent.execute_query(belief_set, query)
+            except Exception as e:
+                pytest.skip(f"Workflow step 3 (execute_query '{query}') failed: {e}")
+            print(
+                f"✅ Étape 3.{i+1} Modal authentique - Requête '{query}': {result}"
+            )
+            assert isinstance(result, bool)
+
+    print("✅ Workflow Modal complet authentique terminé avec succès")
 
 
 def test_modal_specific_features_authentic(authentic_agent):
