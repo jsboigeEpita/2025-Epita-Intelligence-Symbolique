@@ -198,6 +198,7 @@ sessions/
 # Log files
 *.log
 logs/*.log
+logs/*.md
 logs/**/*.log
 _e2e_logs/*.log
 tests/functional/logs/
