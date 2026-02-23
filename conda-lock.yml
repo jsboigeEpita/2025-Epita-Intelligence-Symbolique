@@ -5478,7 +5478,7 @@ package:
     sha256: 4cf3d4eb1aa9b348dec30105c55cd9b7d4629285735a102beb4441e38db90553
   category: main
   optional: false
-- name: pyautogen
+- name: ag2
   version: '0.9'
   manager: pip
   platform: win-64
@@ -5493,7 +5493,7 @@ package:
     python-dotenv: '*'
     termcolor: '*'
     tiktoken: '*'
-  url: https://files.pythonhosted.org/packages/fb/eb/ceb8c7d04d7d453472282ce40a833a7fe09f2e751dad53ad88f60199b5e9/pyautogen-0.9.0-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/fb/eb/ceb8c7d04d7d453472282ce40a833a7fe09f2e751dad53ad88f60199b5e9/ag2-0.9.0-py3-none-any.whl
   hash:
     sha256: 88be3538fb98fc443d05ec0f6b1e95660a1dffe10d9769067ba699fac8155a4a
   category: main
