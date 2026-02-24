@@ -15,6 +15,5 @@ __all__ = [
     "ContextualFallacyAnalyzer",
     "FallacySeverityEvaluator",
     "ComplexFallacyAnalyzer",
-    "RhetoricalResultAnalyzer",
     "RhetoricalResultVisualizer",
 ]
