@@ -297,6 +297,8 @@ local_llm_data/
 # Fichiers temporaires de débogage
 _temp_prover9_install/
 
+# E2E test logs
+_e2e_logs/
 
 # Fichiers et répertoires de nettoyage final
 project_logs/

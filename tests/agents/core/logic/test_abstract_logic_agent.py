@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai  # Gardé pour l'instant, pourrait être utilisé par le kernel SK sous-jacent
 from semantic_kernel.contents import (
     ChatHistory,

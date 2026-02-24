@@ -184,9 +184,11 @@ GitHub Actions (`.github/workflows/ci.yml`):
 ## Related Resources
 
 - `D:\CoursIA` — Professor's course repository with Tweety notebooks (`MyIA.AI.Notebooks/SymbolicAI/Tweety/`) — reference for Tweety/JPype best practices
-- `docs/architecture/` — System architecture docs
-- `docs/guides/` — Installation, deployment, testing guides
+- `docs/architecture/` — System architecture docs, design documents, diagrams
+- `docs/guides/` — Installation, deployment, testing guides, troubleshooting, tutorials
 - `docs/projets/` — 17 student project subjects with detailed specs
-- `docs/troubleshooting/` — Common issues and solutions
-- `KNOWN_ISSUES.md` — Tracked problems (PyTorch WinError 182 resolved)
+- `docs/technical/` — API docs, agent components, entry points, tools reference
+- `docs/reports/` — Audit reports, mission reports, analysis results
+- `docs/validation/` — Test verification reports
+- `KNOWN_ISSUES.md` — Tracked problems and active issues
 - Issue #21 — Planned Tweety environment update from CoursIA
