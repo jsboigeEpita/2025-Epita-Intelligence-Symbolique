@@ -37,10 +37,10 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.core.plugins.plugin_loader import PluginLoader
-from src.core.services.orchestration_service import OrchestrationService
-from src.benchmarking.benchmark_service import BenchmarkService
-from src.core.contracts import OrchestrationRequest
+from argumentation_analysis.plugin_framework.core.plugins.plugin_loader import PluginLoader
+from argumentation_analysis.plugin_framework.core.services.orchestration_service import OrchestrationService
+from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import BenchmarkService
+from argumentation_analysis.plugin_framework.core.contracts import OrchestrationRequest
 
 
 class TestWorkflowExecution(unittest.TestCase):

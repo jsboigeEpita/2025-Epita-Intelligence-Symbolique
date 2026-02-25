@@ -17,11 +17,11 @@ from datetime import datetime
 from .fact_claim_extractor import FactClaimExtractor, FactualClaim
 
 # Importations nettoyées
-from src.core.plugins.standard.taxonomy_explorer.plugin import (
+from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
     TaxonomyExplorerPlugin,
     ClassifiedFallacy,
 )
-from src.core.plugins.standard.external_verification.plugin import (
+from argumentation_analysis.plugin_framework.core.plugins.standard.external_verification.plugin import (
     ExternalVerificationPlugin,
 )
 

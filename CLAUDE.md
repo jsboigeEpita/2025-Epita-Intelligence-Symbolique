@@ -105,9 +105,9 @@ Several root-level directories contain code that should live under `argumentatio
 | `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
 | ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **ARCHIVED** → `docs/archives/core_overflow/` |
 | ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
-| `services/` | `argumentation_analysis/services/` | **PARTIAL** — legacy `web_api_from_libs/` archived; MCP server + UI wrappers kept |
+| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **MIGRATED** — `mcp_server/` → `argumentation_analysis/services/mcp_server/`; legacy archived |
 | ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **MIGRATED** — `AnalysisToolsPlugin` → `argumentation_analysis/plugins/analysis_tools/`; minor plugins archived |
-| `src/` | `argumentation_analysis/agents/` | **DEFERRED** to #35 — legacy plugin/benchmark framework, 13 active imports |
+| ~~`src/`~~ | ~~`argumentation_analysis/agents/`~~ | **MIGRATED** → `argumentation_analysis/plugin_framework/` (duplicate orchestration_service deleted) |
 | `project_core/` | `argumentation_analysis/core/` | **KEPT** — infrastructure utilities (NOT business logic) |
 
 **Rule**: When adding new code, put it inside `argumentation_analysis/`. Do not add new modules at root level.

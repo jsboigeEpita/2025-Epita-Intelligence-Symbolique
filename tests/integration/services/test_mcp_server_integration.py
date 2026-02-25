@@ -13,7 +13,7 @@ except ImportError:
         allow_module_level=True,
     )
 
-from services.mcp_server.main import MCPService
+from argumentation_analysis.services.mcp_server.main import MCPService
 
 SERVICE_NAME = "argumentation_analysis_mcp"
 

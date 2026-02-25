@@ -5,7 +5,7 @@ import pytest
 import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 
-from services.mcp_server.main import MCPService, AppServices
+from argumentation_analysis.services.mcp_server.main import MCPService, AppServices
 from argumentation_analysis.services.web_api.models.response_models import (
     AnalysisResponse,
     ValidationResponse,
@@ -17,10 +17,10 @@ from argumentation_analysis.services.web_api.models.response_models import (
 @pytest.fixture
 def mcp_service_mock():
     """Fixture améliorée pour mocker complètement l'initialisation et les services."""
-    with patch("services.mcp_server.main.FastMCP") as mock_fast_mcp, patch(
-        "services.mcp_server.main.initialize_project_environment"
+    with patch("argumentation_analysis.services.mcp_server.main.FastMCP") as mock_fast_mcp, patch(
+        "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
     ) as mock_init_env, patch(
-        "services.mcp_server.main.AppServices"
+        "argumentation_analysis.services.mcp_server.main.AppServices"
     ) as mock_app_services:
         # Mocker l'instance de FastMCP et sa méthode 'tool'
         mock_mcp_instance = mock_fast_mcp.return_value

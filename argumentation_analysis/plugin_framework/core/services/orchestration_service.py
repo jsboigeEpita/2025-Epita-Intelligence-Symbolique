@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from src.core.contracts import OrchestrationRequest, OrchestrationResponse
+from argumentation_analysis.plugin_framework.core.contracts import OrchestrationRequest, OrchestrationResponse
 
 
 class OrchestrationService:

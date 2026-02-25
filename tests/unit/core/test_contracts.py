@@ -11,7 +11,7 @@ une communication inter-services fiable.
 import pytest
 from pydantic import ValidationError
 
-from src.core.contracts import OrchestrationRequest, OrchestrationResponse
+from argumentation_analysis.plugin_framework.core.contracts import OrchestrationRequest, OrchestrationResponse
 
 
 def test_valid_request_creation():

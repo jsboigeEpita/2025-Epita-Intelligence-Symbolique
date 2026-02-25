@@ -1,8 +1,8 @@
 from typing import Dict, Any
 
 # On suppose que le CWD est la racine du projet pour cet import relatif
-from src.core.plugin_loader import BasePlugin
-from src.core.contracts import PluginManifest
+from argumentation_analysis.plugin_framework.core.plugin_loader import BasePlugin
+from argumentation_analysis.plugin_framework.core.contracts import PluginManifest
 
 
 class HelloWorldPlugin(BasePlugin):

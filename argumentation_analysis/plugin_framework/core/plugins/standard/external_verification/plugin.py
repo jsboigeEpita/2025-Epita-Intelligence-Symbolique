@@ -13,14 +13,14 @@ from enum import Enum
 from datetime import datetime, timedelta
 
 # Import des composants de base des plugins
-from src.core.plugins.interfaces import BasePlugin
+from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
 
 # Import des composants de l'ancien service
 from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
     FactualClaim,
     ClaimVerifiability,
 )
-from src.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
+from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
 
 logger = logging.getLogger(__name__)
 

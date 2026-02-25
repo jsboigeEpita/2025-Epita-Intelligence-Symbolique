@@ -1,10 +1,10 @@
 import time
 from typing import List, Dict, Any
-from src.core.contracts import BenchmarkResult, BenchmarkSuiteResult
-from src.core.services.orchestration_service import (
+from argumentation_analysis.plugin_framework.core.contracts import BenchmarkResult, BenchmarkSuiteResult
+from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
     OrchestrationService,
-    OrchestrationRequest,
 )
+from argumentation_analysis.plugin_framework.core.contracts import OrchestrationRequest
 
 
 class BenchmarkService:

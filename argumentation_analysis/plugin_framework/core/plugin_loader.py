@@ -2,7 +2,7 @@ import os
 import importlib
 import inspect
 from typing import Dict, List, Any
-from src.core.plugins.interfaces import BasePlugin
+from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
 
 
 class PluginLoader:

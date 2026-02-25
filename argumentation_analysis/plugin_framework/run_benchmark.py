@@ -8,9 +8,9 @@ from pprint import pprint
 # ou que la structure est gérée par un point d'entrée qui le fait.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.core.plugin_loader import PluginLoader
-from src.core.services.orchestration_service import OrchestrationService
-from src.benchmarking.benchmark_service import BenchmarkService
+from argumentation_analysis.plugin_framework.core.plugin_loader import PluginLoader
+from argumentation_analysis.plugin_framework.core.services.orchestration_service import OrchestrationService
+from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import BenchmarkService
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
     os.makedirs(hello_world_plugin_path, exist_ok=True)
     with open(os.path.join(hello_world_plugin_path, "__init__.py"), "w") as f:
         f.write("""
-from src.core.plugins.interfaces import BasePlugin
+from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
 
 class HelloWorldPlugin(BasePlugin):
     def greet(self, name: str) -> dict:

@@ -1,6 +1,6 @@
 import functools
 import tiktoken
-from src.benchmarking.benchmark_service import BenchmarkService
+from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import BenchmarkService
 
 
 def track_tokens(benchmark_service: BenchmarkService):
