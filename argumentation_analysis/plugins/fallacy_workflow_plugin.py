@@ -1,4 +1,4 @@
-# Fichier: argumentation_analysis/agents/plugins/fallacy_workflow_plugin.py
+# Fichier: argumentation_analysis/plugins/fallacy_workflow_plugin.py
 import asyncio
 import csv
 import json

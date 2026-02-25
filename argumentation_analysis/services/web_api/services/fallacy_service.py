@@ -13,10 +13,10 @@ from typing import Dict, List, Any, Optional
 # Imports du moteur d'analyse
 try:
     # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
-    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import (
+    from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
         EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer,
     )
-    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import (
+    from argumentation_analysis.plugins.analysis_tools.logic.fallacy_severity_evaluator import (
         EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator,
     )
 

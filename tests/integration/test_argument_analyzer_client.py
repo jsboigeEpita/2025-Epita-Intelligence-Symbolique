@@ -15,7 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    from services.web_api_from_libs.app import create_app
+    from argumentation_analysis.services.web_api.app import create_app
 
     _flask_app_available = True
 except Exception as e:
@@ -24,7 +24,7 @@ except Exception as e:
 
 pytestmark = pytest.mark.skipif(
     not _flask_app_available,
-    reason="services.web_api_from_libs.app not importable",
+    reason="argumentation_analysis.services.web_api.app not importable",
 )
 
 

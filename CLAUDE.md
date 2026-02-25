@@ -102,13 +102,13 @@ Several root-level directories contain code that should live under `argumentatio
 
 | Root directory | Overlaps with | Status |
 |---|---|---|
-| `api/` | `argumentation_analysis/api/` | Dual API — root has general endpoints, inside has JTMS-specific |
+| `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
 | ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **ARCHIVED** → `docs/archives/core_overflow/` |
 | ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
-| `services/` | `argumentation_analysis/services/` | Root has web wrappers, inside has business logic |
-| `plugins/` | `argumentation_analysis/plugins/` | Root has AnalysisToolsPlugin (canonical), inside has SK plugins |
-| `src/` | `argumentation_analysis/agents/` | Legacy agent/benchmark container |
-| `project_core/` | `argumentation_analysis/core/` | Infrastructure utilities (NOT business logic) — kept intentionally |
+| `services/` | `argumentation_analysis/services/` | **PARTIAL** — legacy `web_api_from_libs/` archived; MCP server + UI wrappers kept |
+| ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **MIGRATED** — `AnalysisToolsPlugin` → `argumentation_analysis/plugins/analysis_tools/`; minor plugins archived |
+| `src/` | `argumentation_analysis/agents/` | **DEFERRED** to #35 — legacy plugin/benchmark framework, 13 active imports |
+| `project_core/` | `argumentation_analysis/core/` | **KEPT** — infrastructure utilities (NOT business logic) |
 
 **Rule**: When adding new code, put it inside `argumentation_analysis/`. Do not add new modules at root level.
 

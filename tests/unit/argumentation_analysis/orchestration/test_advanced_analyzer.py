@@ -23,7 +23,7 @@ from argumentation_analysis.mocks.advanced_tools import (
     MockEnhancedRhetoricalResultAnalyzer,
 )
 
-from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 from argumentation_analysis.utils.analysis_comparison import compare_rhetorical_analyses
 from argumentation_analysis.utils.data_generation import generate_sample_text
 

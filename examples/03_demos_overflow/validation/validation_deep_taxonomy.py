@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 import pandas as pd
 import semantic_kernel as sk
 from pathlib import Path
@@ -7,8 +8,11 @@ import os
 from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
+# Add showcases sibling directory to path for cross-directory imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "showcases"))
+
 from argumentation_analysis.paths import DATA_DIR
-from demos.simple_exploration_tool import SimpleExplorationTool
+from simple_exploration_tool import SimpleExplorationTool
 
 
 async def validate_deep_taxonomy_fallacy():

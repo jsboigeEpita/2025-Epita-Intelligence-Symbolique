@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 from tqdm import tqdm
 
-from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 from argumentation_analysis.orchestration.advanced_analyzer import (
     analyze_extract_advanced,
 )
