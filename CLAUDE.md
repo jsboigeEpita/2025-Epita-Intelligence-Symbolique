@@ -103,12 +103,12 @@ Several root-level directories contain code that should live under `argumentatio
 | Root directory | Overlaps with | Status |
 |---|---|---|
 | `api/` | `argumentation_analysis/api/` | Dual API — root has general endpoints, inside has JTMS-specific |
-| `core/` | `argumentation_analysis/core/` | Root has only prompt templates, nearly empty |
-| `demos/` | `argumentation_analysis/demos/` | Dual demo containers |
+| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **ARCHIVED** → `docs/archives/core_overflow/` |
+| ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
 | `services/` | `argumentation_analysis/services/` | Root has web wrappers, inside has business logic |
-| `plugins/` | `argumentation_analysis/plugins/` | Overlapping plugin names (Exploration, Guiding, Synthesis) |
+| `plugins/` | `argumentation_analysis/plugins/` | Root has AnalysisToolsPlugin (canonical), inside has SK plugins |
 | `src/` | `argumentation_analysis/agents/` | Legacy agent/benchmark container |
-| `project_core/` | `argumentation_analysis/core/` | Legacy utility container with service_manager |
+| `project_core/` | `argumentation_analysis/core/` | Infrastructure utilities (NOT business logic) — kept intentionally |
 
 **Rule**: When adding new code, put it inside `argumentation_analysis/`. Do not add new modules at root level.
 

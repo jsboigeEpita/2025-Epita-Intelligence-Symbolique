@@ -48,13 +48,9 @@ from .jtms_models import (
 )
 
 # Import des services
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from services.jtms_service import JTMSService
-from services.jtms_session_manager import JTMSSessionManager
-from plugins.semantic_kernel.jtms_plugin import (
+from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
+from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import (
     JTMSSemanticKernelPlugin,
     create_jtms_plugin,
 )
