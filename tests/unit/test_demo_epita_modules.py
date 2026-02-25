@@ -63,7 +63,9 @@ def _mock_executer_tests_partial(pattern_tests, logger=None, timeout=300):
 class TestDemoTestsValidation:
     """Tests for the Tests & Validation demo module."""
 
-    @patch("demo_tests_validation.executer_tests", side_effect=_mock_executer_tests_success)
+    @patch(
+        "demo_tests_validation.executer_tests", side_effect=_mock_executer_tests_success
+    )
     def test_run_demo_rapide_success(self, mock_exec):
         from demo_tests_validation import run_demo_rapide
 
@@ -71,7 +73,9 @@ class TestDemoTestsValidation:
         assert result is True
         assert mock_exec.call_count >= 1
 
-    @patch("demo_tests_validation.executer_tests", side_effect=_mock_executer_tests_partial)
+    @patch(
+        "demo_tests_validation.executer_tests", side_effect=_mock_executer_tests_partial
+    )
     def test_run_demo_rapide_with_failures(self, mock_exec):
         from demo_tests_validation import run_demo_rapide
 
@@ -88,14 +92,18 @@ class TestDemoTestsValidation:
 class TestDemoServicesCore:
     """Tests for the Services Core demo module."""
 
-    @patch("demo_services_core.executer_tests", side_effect=_mock_executer_tests_success)
+    @patch(
+        "demo_services_core.executer_tests", side_effect=_mock_executer_tests_success
+    )
     def test_run_demo_rapide_success(self, mock_exec):
         from demo_services_core import run_demo_rapide
 
         result = run_demo_rapide()
         assert result is True
 
-    @patch("demo_services_core.executer_tests", side_effect=_mock_executer_tests_partial)
+    @patch(
+        "demo_services_core.executer_tests", side_effect=_mock_executer_tests_partial
+    )
     def test_run_demo_rapide_partial_failure(self, mock_exec):
         from demo_services_core import run_demo_rapide
 

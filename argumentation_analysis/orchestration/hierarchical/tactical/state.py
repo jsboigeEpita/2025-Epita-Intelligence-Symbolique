@@ -595,9 +595,7 @@ class TacticalState:
             "conflicts": {
                 "total": len(self.identified_conflicts),
                 "resolved": sum(
-                    1
-                    for c in self.identified_conflicts
-                    if c.get("resolved", False)
+                    1 for c in self.identified_conflicts if c.get("resolved", False)
                 ),
             },
         }

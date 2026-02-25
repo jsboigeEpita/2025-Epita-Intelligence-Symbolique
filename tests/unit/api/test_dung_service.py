@@ -4,6 +4,7 @@ Test du service d'analyse Dung (Abstract Argumentation Framework).
 Converti depuis un test subprocess (qui bloquait) vers un test direct
 in-process utilisant get_dung_analysis_service() avec la JVM disponible.
 """
+
 import pytest
 import os
 
@@ -12,6 +13,7 @@ def _is_jvm_available():
     """Check if JVM/JPype is available (not mocked) for Dung service tests."""
     try:
         import jpype
+
         # When --disable-jvm-session mocks jpype, isJVMStarted returns a MagicMock (truthy)
         result = jpype.isJVMStarted()
         return result is True  # Strict check: MagicMock is not True
@@ -32,6 +34,7 @@ class TestDungServiceDirect:
 
         try:
             from api.dependencies import get_dung_analysis_service
+
             self.service = get_dung_analysis_service()
         except Exception as e:
             pytest.skip(f"DungAnalysisService not available: {e}")
@@ -55,7 +58,10 @@ class TestDungServiceDirect:
             options={"compute_extensions": True},
         )
         assert result["extensions"]["grounded"] == []
-        assert sorted([sorted(e) for e in result["extensions"]["preferred"]]) == [["a"], ["b"]]
+        assert sorted([sorted(e) for e in result["extensions"]["preferred"]]) == [
+            ["a"],
+            ["b"],
+        ]
 
     def test_empty_framework(self):
         """Scenario 3: Empty framework (no args, no attacks)."""

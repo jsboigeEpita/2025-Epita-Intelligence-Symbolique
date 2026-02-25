@@ -227,8 +227,6 @@ class TestServiceManagerUnavailable:
         assert data["services"]["service_manager"] == "unavailable"
 
     def test_analyze_returns_503(self, client_no_sm):
-        response = client_no_sm.post(
-            "/api/analyze", json={"text": "Test text"}
-        )
+        response = client_no_sm.post("/api/analyze", json={"text": "Test text"})
         assert response.status_code == 503
         assert "indisponible" in response.json()["error"]

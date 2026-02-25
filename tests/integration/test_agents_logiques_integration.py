@@ -27,7 +27,9 @@ from pathlib import Path
 # Configuration paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "examples" / "01_logic_and_riddles" / "Sherlock_Watson"))
+sys.path.insert(
+    0, str(PROJECT_ROOT / "examples" / "01_logic_and_riddles" / "Sherlock_Watson")
+)
 
 try:
     from agents_logiques_production import (

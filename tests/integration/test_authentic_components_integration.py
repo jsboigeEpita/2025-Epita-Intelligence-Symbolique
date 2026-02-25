@@ -107,6 +107,7 @@ class TestRealTweetyIntegration:
         """Test de disponibilité de Tweety authentique."""
         try:
             import jpype
+
             if not jpype.isJVMStarted():
                 pytest.skip("JVM not started — run without --disable-jvm-session")
         except ImportError:
@@ -193,6 +194,7 @@ class TestRealTweetyIntegration:
         """Vérifie si Tweety réel est disponible (JVM started + JAR present)."""
         try:
             import jpype
+
             if not jpype.isJVMStarted():
                 return False
         except ImportError:
@@ -299,6 +301,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             pytest.skip("OPENAI_API_KEY required")
         try:
             import jpype
+
             if not jpype.isJVMStarted():
                 pytest.skip("JVM not started — run without --disable-jvm-session")
         except ImportError:
@@ -422,6 +425,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             return False
         try:
             import jpype
+
             return jpype.isJVMStarted()
         except ImportError:
             return False

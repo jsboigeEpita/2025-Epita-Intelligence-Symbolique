@@ -11,9 +11,7 @@ _jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
 
 @pytest.mark.real_jpype
-@pytest.mark.skipif(
-    _jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session"
-)
+@pytest.mark.skipif(_jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session")
 def test_minimal_jvm_is_functional(jvm_session):
     """
     Vérifie que la JVM est démarrée et fonctionnelle en exécutant une opération simple.

@@ -55,9 +55,7 @@ class TestLogicalAgentHardening:
         # The `async def` was likely a leftover.
         # 1. Initialize the agent
         settings = AppSettings()
-        agent = SherlockJTMSAgent(
-            kernel, agent_name="test_contradiction_agent"
-        )
+        agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
 
         # 2. Add a single fact and declare it as true in JTMS
         fact_description = load_scenario["facts"][0]

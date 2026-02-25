@@ -64,7 +64,11 @@ class TestOracleWorkflowIntegration:
     def oracle_orchestrator(self, mock_kernel):
         """Orchestrateur Oracle configuré pour les tests."""
         return CluedoExtendedOrchestrator(
-            kernel=mock_kernel, settings=Mock(), max_turns=10, max_cycles=3, oracle_strategy="balanced"
+            kernel=mock_kernel,
+            settings=Mock(),
+            max_turns=10,
+            max_cycles=3,
+            oracle_strategy="balanced",
         )
 
     @pytest.mark.asyncio
@@ -210,7 +214,11 @@ class TestOracleWorkflowIntegration:
 
         for strategy in strategies:
             orchestrator = CluedoExtendedOrchestrator(
-                kernel=mock_kernel, settings=Mock(), max_turns=5, max_cycles=2, oracle_strategy=strategy
+                kernel=mock_kernel,
+                settings=Mock(),
+                max_turns=5,
+                max_cycles=2,
+                oracle_strategy=strategy,
             )
             orchestrators.append(orchestrator)
 

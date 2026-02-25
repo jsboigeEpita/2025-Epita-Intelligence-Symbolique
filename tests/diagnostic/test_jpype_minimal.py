@@ -10,9 +10,7 @@ _jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
 
 @pytest.mark.jvm_test
-@pytest.mark.skipif(
-    _jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session"
-)
+@pytest.mark.skipif(_jpype_is_mocked, reason="jpype is mocked by --disable-jvm-session")
 def test_jvm_initialization(jvm_session):
     """
     Teste que la JVM est correctement démarrée par la fixture de session

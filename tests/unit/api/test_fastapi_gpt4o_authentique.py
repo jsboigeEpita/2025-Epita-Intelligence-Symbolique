@@ -69,7 +69,10 @@ class TestAPIFastAPIAuthentique:
         """Test 4: Endpoint de statut de l'API."""
         response = client.get(f"{API_BASE_URL}/status")
         # Status may return 200 (operational/degraded) or 500 if service init fails
-        assert response.status_code in (200, 500), f"Unexpected status: {response.status_code}"
+        assert response.status_code in (
+            200,
+            500,
+        ), f"Unexpected status: {response.status_code}"
         if response.status_code == 200:
             data = response.json()
             assert "status" in data
@@ -113,9 +116,7 @@ class TestAPIFastAPIAuthentique:
         """Test 7: Analyse d'un texte contenant un sophisme."""
         test_text = "Cette théorie est fausse parce que son auteur est un idiot."
 
-        response = client.post(
-            f"{API_BASE_URL}/analyze", json={"text": test_text}
-        )
+        response = client.post(f"{API_BASE_URL}/analyze", json={"text": test_text})
 
         assert response.status_code == 200
         data = response.json()
@@ -141,7 +142,9 @@ class TestAPIFastAPIAuthentique:
         """Test 9: Gestion d'erreurs de l'endpoint d'analyse."""
         # Test avec texte vide
         response = client.post(f"{API_BASE_URL}/analyze", json={"text": ""})
-        assert response.status_code == 200, "Le service traite maintenant le texte vide."
+        assert (
+            response.status_code == 200
+        ), "Le service traite maintenant le texte vide."
 
         # Test sans paramètre text
         response = client.post(f"{API_BASE_URL}/analyze", json={})

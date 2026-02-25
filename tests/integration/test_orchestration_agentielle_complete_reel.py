@@ -130,9 +130,7 @@ def test_sherlock_jtms_hypotheses(sherlock_agent, group_chat):
         ), "La confiance de Sherlock est trop basse."
         # jtms_validity is None for newly-created hypotheses with no evidence
         # (JTMS belief starts as unknown until justifications support it)
-        assert (
-            "jtms_validity" in result
-        ), "jtms_validity key missing from result."
+        assert "jtms_validity" in result, "jtms_validity key missing from result."
 
     asyncio.run(_async_test())
 

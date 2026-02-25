@@ -182,7 +182,9 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
     is_valid, validation_msg = tweety_bridge.validate_modal_belief_set(
         belief_set.content
     )
-    print(f"✅ Validation TweetyBridge Modal authentique: {is_valid} - {validation_msg}")
+    print(
+        f"✅ Validation TweetyBridge Modal authentique: {is_valid} - {validation_msg}"
+    )
 
 
 @pytest.mark.asyncio
@@ -209,9 +211,7 @@ async def test_generate_queries_authentic_modal(authentic_agent):
     for i, query in enumerate(queries[:3]):
         if query:
             print(f"  Requête Modal {i+1}: {query}")
-            is_valid, msg = tweety_bridge.modal_handler.validate_modal_formula(
-                query
-            )
+            is_valid, msg = tweety_bridge.modal_handler.validate_modal_formula(query)
             print(f"  Validation Modal: {is_valid} - {msg}")
 
 
@@ -289,9 +289,7 @@ async def test_full_workflow_modal_authentic(authentic_agent):
                 result, exec_message = agent.execute_query(belief_set, query)
             except Exception as e:
                 pytest.skip(f"Workflow step 3 (execute_query '{query}') failed: {e}")
-            print(
-                f"✅ Étape 3.{i+1} Modal authentique - Requête '{query}': {result}"
-            )
+            print(f"✅ Étape 3.{i+1} Modal authentique - Requête '{query}': {result}")
             assert isinstance(result, bool)
 
     print("✅ Workflow Modal complet authentique terminé avec succès")

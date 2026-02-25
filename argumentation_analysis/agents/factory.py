@@ -61,7 +61,9 @@ class AgentFactory:
         )
 
         if trace_log_path:
-            return TracedAgent(agent_to_wrap=agent_to_create, trace_log_path=trace_log_path)
+            return TracedAgent(
+                agent_to_wrap=agent_to_create, trace_log_path=trace_log_path
+            )
         return agent_to_create
 
     def create_agent(self, agent_type: AgentType, **kwargs) -> FallacyAgentBase:

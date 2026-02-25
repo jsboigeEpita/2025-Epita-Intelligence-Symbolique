@@ -131,9 +131,7 @@ def parse_extended_args(args_list=None) -> argparse.Namespace:
     Returns:
         argparse.Namespace: Les arguments parsés.
     """
-    parser = argparse.ArgumentParser(
-        description="Analyse argumentative étendue"
-    )
+    parser = argparse.ArgumentParser(description="Analyse argumentative étendue")
     parser.add_argument(
         "--logic-type",
         choices=list(VALID_LOGIC_TYPES),

@@ -132,7 +132,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -167,7 +170,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -205,7 +211,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, settings=Mock(), max_turns=10, oracle_strategy="enhanced_auto_reveal"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="enhanced_auto_reveal",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -469,7 +478,10 @@ class TestRealGPTAuthenticity:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, settings=Mock(), max_turns=5, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=5,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(

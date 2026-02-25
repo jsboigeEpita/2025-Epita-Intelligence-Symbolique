@@ -220,7 +220,7 @@ class TestRealTweetyFOLAnalysis:
         """
 
         # Configuration pour analyse réelle
-        bridge = getattr(fol_agent_real_tweety, '_tweety_bridge', None)
+        bridge = getattr(fol_agent_real_tweety, "_tweety_bridge", None)
         if bridge and hasattr(bridge, "initialize_fol_reasoner"):
             await bridge.initialize_fol_reasoner()
 
@@ -256,7 +256,7 @@ class TestRealTweetyFOLAnalysis:
         Socrate n'est pas mortel.
         """
 
-        bridge = getattr(fol_agent_real_tweety, '_tweety_bridge', None)
+        bridge = getattr(fol_agent_real_tweety, "_tweety_bridge", None)
         if bridge and hasattr(bridge, "initialize_fol_reasoner"):
             await bridge.initialize_fol_reasoner()
 
@@ -286,7 +286,7 @@ class TestRealTweetyFOLAnalysis:
         Pierre est un étudiant.
         """
 
-        bridge = getattr(fol_agent_real_tweety, '_tweety_bridge', None)
+        bridge = getattr(fol_agent_real_tweety, "_tweety_bridge", None)
         if bridge and hasattr(bridge, "initialize_fol_reasoner"):
             await bridge.initialize_fol_reasoner()
 
@@ -360,7 +360,7 @@ class TestFOLErrorHandling:
         agent = fol_agent_with_kernel
 
         # Mock timeout avec AsyncMock pour méthode async
-        bridge = getattr(agent, '_tweety_bridge', None)
+        bridge = getattr(agent, "_tweety_bridge", None)
         if bridge:
             bridge.check_consistency = AsyncMock(
                 side_effect=asyncio.TimeoutError("Timeout test")
@@ -475,8 +475,10 @@ class TestFOLRealWorldIntegration:
         # Formules complexes générées (Unicode quantifiers ∀/∃ or ASCII forall/exists)
         formulas_text = belief_set.content
         assert (
-            "forall" in formulas_text or "exists" in formulas_text
-            or "∀" in formulas_text or "∃" in formulas_text
+            "forall" in formulas_text
+            or "exists" in formulas_text
+            or "∀" in formulas_text
+            or "∃" in formulas_text
         )  # Quantificateurs présents
 
         logger.info(f"✅ Analyse complexe terminée")

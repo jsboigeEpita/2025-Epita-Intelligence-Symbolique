@@ -212,9 +212,7 @@ class TestOracleResponseTimePerformance:
         try:
             from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-            settings = OpenAIChatPromptExecutionSettings(
-                max_completion_tokens=100
-            )
+            settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=100)
 
             messages = [
                 ChatMessageContent(

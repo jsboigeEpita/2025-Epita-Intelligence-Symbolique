@@ -64,10 +64,13 @@ class TestAuthenticGPTIntegration:
 
             # Test de réponse authentique via SK 1.37 API
             from semantic_kernel.contents import ChatHistory
+
             chat_history = ChatHistory()
             chat_history.add_user_message(self.test_prompt)
             results = asyncio.run(
-                llm_service.get_chat_message_contents(chat_history=chat_history, settings=None)
+                llm_service.get_chat_message_contents(
+                    chat_history=chat_history, settings=None
+                )
             )
             response = str(results[0]) if results else ""
 

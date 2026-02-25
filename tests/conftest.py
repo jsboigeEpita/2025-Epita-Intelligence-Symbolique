@@ -515,6 +515,7 @@ def jvm_session(request):
     # Double-check: verify JVM is actually functional (cache may say True
     # even when JVM crashed with a Windows access violation during startup)
     import jpype
+
     if not jpype.isJVMStarted():
         pytest.skip(
             "Saut du test car la JVM n'est pas réellement démarrée (jpype.isJVMStarted() = False)."

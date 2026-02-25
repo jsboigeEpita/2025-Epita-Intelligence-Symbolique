@@ -21,6 +21,7 @@ class TestRefactoringManager:
     def teardown_method(self):
         """Clean up test environment."""
         import shutil
+
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_apply_refactoring_plan_update_import(self):

@@ -90,7 +90,9 @@ except ImportError as e:
             self.is_initialized = True
             return True
 
-        async def analyze_text(self, request, analysis_type="unified_analysis") -> "LLMAnalysisResult":
+        async def analyze_text(
+            self, request, analysis_type="unified_analysis"
+        ) -> "LLMAnalysisResult":
             text = request if isinstance(request, str) else request.text
             return LLMAnalysisResult(
                 request_id="mock_req_001",

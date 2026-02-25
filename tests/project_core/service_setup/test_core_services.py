@@ -102,9 +102,7 @@ def temp_project_root(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_initialize_analysis_services_defaults(
-    mock_ui_config, temp_project_root
-):
+def test_initialize_analysis_services_defaults(mock_ui_config, temp_project_root):
     """Teste l'initialisation avec les valeurs par défaut."""
     from unittest.mock import MagicMock
 

@@ -410,9 +410,9 @@ class TestConfigurationIntegration:
             term in content.lower()
             for term in ["colonel", "moutarde", "mustard", "carte", "card"]
         )
-        assert colonel_mentioned, (
-            f"Aucune référence à la carte dans la réponse. Reçu: {content}"
-        )
+        assert (
+            colonel_mentioned
+        ), f"Aucune référence à la carte dans la réponse. Reçu: {content}"
         assert len(content) > 30, "Réponse E2E trop courte"
 
         # Performance E2E acceptable

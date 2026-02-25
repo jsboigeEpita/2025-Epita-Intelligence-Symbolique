@@ -1216,7 +1216,9 @@ class MainOrchestrator:
             from argumentation_analysis.config.settings import settings as app_settings
 
             s_map["cluedo"] = {
-                "orchestrator": CluedoExtendedOrchestrator(self.kernel, settings=app_settings),
+                "orchestrator": CluedoExtendedOrchestrator(
+                    self.kernel, settings=app_settings
+                ),
                 "priority": 1,
                 "types": [AnalysisType.INVESTIGATIVE] if AnalysisType else [],
             }

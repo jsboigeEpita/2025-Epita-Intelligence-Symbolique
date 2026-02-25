@@ -6,7 +6,7 @@ Tests de migration Modal Logic → FOL pour FOLLogicAgent.
 
 Ce module valide que l'agent FOL peut remplacer Modal Logic avec :
 ✅ Remplacement fonctionnel complet
-✅ Amélioration de la stabilité (moins d'erreurs)  
+✅ Amélioration de la stabilité (moins d'erreurs)
 ✅ Rétrocompatibilité avec sophismes existants
 ✅ Performance équivalente ou meilleure
 ✅ Intégration transparente avec orchestrations

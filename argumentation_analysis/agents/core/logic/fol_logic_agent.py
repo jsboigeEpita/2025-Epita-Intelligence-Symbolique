@@ -160,13 +160,9 @@ class BeliefSetBuilderPlugin:
             f"forall X: ({antecedent_pred}(X) => {consequent_pred}(X))"
         )
 
-    def add_existential_conjunction(
-        self, pred1: str, pred2: str, sort_name: str
-    ):
+    def add_existential_conjunction(self, pred1: str, pred2: str, sort_name: str):
         """Add exists X: (pred1(X) && pred2(X))."""
-        self._formulas.append(
-            f"exists X: ({pred1}(X) && {pred2}(X))"
-        )
+        self._formulas.append(f"exists X: ({pred1}(X) && {pred2}(X))")
 
     def build_tweety_belief_set(self, tweety_bridge):
         """
@@ -183,8 +179,8 @@ class BeliefSetBuilderPlugin:
             "_predicates": dict(self._predicates),
             "_formulas": list(self._formulas),
         }
-        belief_set, _signature = tweety_bridge.fol_handler.create_belief_set_programmatically(
-            builder_data
+        belief_set, _signature = (
+            tweety_bridge.fol_handler.create_belief_set_programmatically(builder_data)
         )
         return belief_set
 
@@ -299,9 +295,9 @@ RÉPONDS EN FORMAT JSON :
         """
         try:
             # Initialisation du pont Tweety pour FOL
-            if not getattr(self, '_tweety_bridge', None):
+            if not getattr(self, "_tweety_bridge", None):
                 self._tweety_bridge = TweetyBridge()
-                if hasattr(self._tweety_bridge, 'initialize_fol_reasoner'):
+                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
                     await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL initialisé")
 
@@ -355,9 +351,9 @@ RÉPONDS EN FORMAT JSON :
 
         try:
             # 0. Lazy setup: register semantic functions if not done yet
-            if not getattr(self, '_components_initialized', False):
+            if not getattr(self, "_components_initialized", False):
                 await self.setup_agent_components()
-                object.__setattr__(self, '_components_initialized', True)
+                object.__setattr__(self, "_components_initialized", True)
 
             # 1. Vérification du cache
             cache_key = self._generate_cache_key(text, context)
@@ -451,15 +447,15 @@ RÉPONDS EN FORMAT JSON :
         See issue #23 and CoursIA tweety_fol_bnf.md for reference.
         """
         replacements = {
-            '∀': 'forall ',
-            '∃': 'exists ',
-            '∧': '&&',
-            '∨': '||',
-            '→': '=>',
-            '¬': '!',
-            '↔': '<=>',
-            '⊥': '+',  # Tweety contradiction
-            '⊤': '-',  # Tweety tautology
+            "∀": "forall ",
+            "∃": "exists ",
+            "∧": "&&",
+            "∨": "||",
+            "→": "=>",
+            "¬": "!",
+            "↔": "<=>",
+            "⊥": "+",  # Tweety contradiction
+            "⊤": "-",  # Tweety tautology
         }
         for unicode_char, ascii_equiv in replacements.items():
             formula = formula.replace(unicode_char, ascii_equiv)
@@ -543,7 +539,7 @@ RÉPONDS EN FORMAT JSON :
         """
         result = FOLAnalysisResult(formulas=formulas)
 
-        bridge = getattr(self, '_tweety_bridge', None)
+        bridge = getattr(self, "_tweety_bridge", None)
         if not bridge:
             logger.warning("⚠️ TweetyBridge non initialisé - analyse limitée")
             result.consistency_check = True  # Assume consistent si pas de vérification
@@ -560,7 +556,7 @@ RÉPONDS EN FORMAT JSON :
             result.consistency_check = is_consistent
 
             # Calcul d'inférences
-            if is_consistent and hasattr(bridge, 'derive_inferences'):
+            if is_consistent and hasattr(bridge, "derive_inferences"):
                 raw_inf = bridge.derive_inferences(formulas)
                 if inspect.isawaitable(raw_inf):
                     raw_inf = await raw_inf
@@ -573,7 +569,7 @@ RÉPONDS EN FORMAT JSON :
                 result.confidence_score = 0.3
 
             # Génération d'interprétations
-            if hasattr(bridge, 'generate_models'):
+            if hasattr(bridge, "generate_models"):
                 raw_models = bridge.generate_models(formulas)
                 if inspect.isawaitable(raw_models):
                     raw_models = await raw_models
@@ -718,8 +714,13 @@ RÉPONDS EN FORMAT JSON :
     @property
     def _builder_plugin(self) -> "BeliefSetBuilderPlugin":
         """Lazy-initialized BeliefSetBuilderPlugin for programmatic FOL construction."""
-        if not hasattr(self, '_builder_plugin_instance') or self._builder_plugin_instance is None:
-            object.__setattr__(self, '_builder_plugin_instance', BeliefSetBuilderPlugin())
+        if (
+            not hasattr(self, "_builder_plugin_instance")
+            or self._builder_plugin_instance is None
+        ):
+            object.__setattr__(
+                self, "_builder_plugin_instance", BeliefSetBuilderPlugin()
+            )
         return self._builder_plugin_instance
 
     # ==================== IMPLÉMENTATION MÉTHODES ABSTRAITES ====================
@@ -748,9 +749,9 @@ RÉPONDS EN FORMAT JSON :
                 super().setup_agent_components(llm_service_id)
 
             # Initialisation TweetyBridge si pas déjà fait
-            if not getattr(self, '_tweety_bridge', None):
+            if not getattr(self, "_tweety_bridge", None):
                 self._tweety_bridge = TweetyBridge()
-                if hasattr(self._tweety_bridge, 'initialize_fol_reasoner'):
+                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
                     await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL configuré")
 
@@ -811,15 +812,17 @@ RÉPONDS EN FORMAT JSON :
         and formula-based queries (e.g., "Mortal(socrate)") for entailment checking.
         """
         try:
-            bridge = getattr(self, '_tweety_bridge', None)
+            bridge = getattr(self, "_tweety_bridge", None)
 
             if query == "consistency_check":
                 return await self.is_consistent(belief_set)
 
             elif query == "derive_conclusions":
                 # Dérivation d'inférences
-                formulas = [f.strip() for f in belief_set.content.split('\n') if f.strip()]
-                if bridge and hasattr(bridge, 'derive_inferences'):
+                formulas = [
+                    f.strip() for f in belief_set.content.split("\n") if f.strip()
+                ]
+                if bridge and hasattr(bridge, "derive_inferences"):
                     result = bridge.derive_inferences(formulas)
                     if inspect.isawaitable(result):
                         result = await result
@@ -829,8 +832,8 @@ RÉPONDS EN FORMAT JSON :
 
             else:
                 # Treat as a formula-based entailment query
-                if bridge and hasattr(bridge, 'fol_handler'):
-                    java_obj = getattr(belief_set, 'java_object', None)
+                if bridge and hasattr(bridge, "fol_handler"):
+                    java_obj = getattr(belief_set, "java_object", None)
                     if java_obj is not None:
                         raw = bridge.fol_handler.execute_fol_query(java_obj, query)
                     else:
@@ -897,11 +900,11 @@ RÉPONDS EN FORMAT JSON :
     async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """Vérifie cohérence ensemble de croyances."""
         try:
-            bridge = getattr(self, '_tweety_bridge', None)
+            bridge = getattr(self, "_tweety_bridge", None)
             if bridge:
                 # Prefer java_object if available (from programmatic construction)
-                java_obj = getattr(belief_set, 'java_object', None)
-                if java_obj is not None and hasattr(bridge, 'fol_handler'):
+                java_obj = getattr(belief_set, "java_object", None)
+                if java_obj is not None and hasattr(bridge, "fol_handler"):
                     # Direct path: pass Java object to FOL handler
                     raw = bridge.fol_handler.check_consistency(java_obj)
                 else:

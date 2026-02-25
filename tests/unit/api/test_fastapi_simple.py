@@ -96,9 +96,7 @@ class TestAPIFastAPISimple:
         """Test 6: Analyse d'un texte contenant un sophisme."""
         test_text = "Cette théorie est fausse parce que son auteur est un charlatan."
 
-        response = client.post(
-            "/api/analyze", json={"text": test_text}
-        )
+        response = client.post("/api/analyze", json={"text": test_text})
 
         assert response.status_code == 200
         data = response.json()

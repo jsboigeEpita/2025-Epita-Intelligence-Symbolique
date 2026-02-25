@@ -97,7 +97,9 @@ def _test_pl_contradiction_detection(pl_classes):
     is_consistent_entails_false = reasoner.query(
         kb_consistent, parser.parseFormula("a && !a")
     )
-    assert not is_consistent_entails_false, "Consistent KB should not entail contradiction"
+    assert (
+        not is_consistent_entails_false
+    ), "Consistent KB should not entail contradiction"
 
     # Inconsistent KB should entail anything (ex falso quodlibet)
     is_inconsistent_entails_anything = reasoner.query(

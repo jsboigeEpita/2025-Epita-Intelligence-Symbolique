@@ -744,6 +744,7 @@ def get_taxonomy_manager():
     from argumentation_analysis.services.fallacy_taxonomy_service import (
         get_taxonomy_manager as _get_tm,
     )
+
     return _get_tm()
 
 
@@ -752,6 +753,7 @@ def get_verification_service():
     from argumentation_analysis.services.fact_verification_service import (
         get_verification_service as _get_vs,
     )
+
     return _get_vs()
 
 

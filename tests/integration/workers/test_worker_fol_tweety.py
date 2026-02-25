@@ -297,7 +297,9 @@ Man(socrate)
 
         # Act: Utiliser le LLM pour convertir le texte en belief set.
         try:
-            belief_set, conversion_status = await agent.text_to_belief_set(syllogism_text)
+            belief_set, conversion_status = await agent.text_to_belief_set(
+                syllogism_text
+            )
         except Exception as e:
             pytest.skip(f"LLM text_to_belief_set failed (non-deterministic): {e}")
 
@@ -321,9 +323,7 @@ Man(socrate)
                 f"Inférence 'mortel(socrate)' non validée (LLM may have used different predicate names): {query_msg}"
             )
 
-        logger.info(
-            "✅ Test d'intégration de bout en bout avec LLM et Tweety réussi."
-        )
+        logger.info("✅ Test d'intégration de bout en bout avec LLM et Tweety réussi.")
 
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inconsistency_detection(
@@ -507,8 +507,7 @@ class TestFOLErrorHandling:
 
         assert not is_consistent, "is_consistent devrait être False en cas de timeout"
         assert (
-            "timeout" in consistency_msg.lower()
-            or "simulé" in consistency_msg.lower()
+            "timeout" in consistency_msg.lower() or "simulé" in consistency_msg.lower()
         ), f"Le message d'erreur '{consistency_msg}' ne mentionne pas le timeout."
         logger.info(f"✅ Gestion du timeout validée avec le message: {consistency_msg}")
 
@@ -691,7 +690,9 @@ class TestFOLRealWorldIntegration:
                 f"Inférence '{query}' non validée (LLM predicate naming varies): {query_msg}"
             )
         else:
-            logger.info(f"✅ L'inférence multilingue '{query}' a été validée avec succès.")
+            logger.info(
+                f"✅ L'inférence multilingue '{query}' a été validée avec succès."
+            )
 
 
 # ==================== UTILITAIRES DE TEST ====================

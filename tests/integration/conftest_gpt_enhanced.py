@@ -173,9 +173,7 @@ class GPTTestSession:
                 if not chat_service:
                     return False
 
-                settings = OpenAIChatPromptExecutionSettings(
-                    max_completion_tokens=20
-                )
+                settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=20)
 
                 messages = [ChatMessageContent(role="user", content="Test connection")]
 

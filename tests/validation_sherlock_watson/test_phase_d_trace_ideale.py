@@ -186,7 +186,9 @@ def test_phase_d_trace_ideale():
         for metric_name, score in ideal_metrics.items():
             if isinstance(score, (int, float)):
                 status = "[OK]" if score >= 8.0 else "⚠️" if score >= 7.0 else "[FAIL]"
-                print(f"{status} {metric_name.replace('_', ' ').title()}: {score:.1f}/10")
+                print(
+                    f"{status} {metric_name.replace('_', ' ').title()}: {score:.1f}/10"
+                )
             else:
                 print(f"[INFO] {metric_name.replace('_', ' ').title()}: {score}")
 
@@ -277,7 +279,11 @@ def test_phase_d_trace_ideale():
             test_score_raw = extensions.calculate_ideal_trace_metrics(test_data)[
                 "score_trace_ideale"
             ]
-            test_score = test_score_raw.get("score_global", 0.0) if isinstance(test_score_raw, dict) else test_score_raw
+            test_score = (
+                test_score_raw.get("score_global", 0.0)
+                if isinstance(test_score_raw, dict)
+                else test_score_raw
+            )
             user_test_scores.append(test_score)
 
             print(f"   Score: {test_score:.1f}/10")
@@ -295,7 +301,8 @@ def test_phase_d_trace_ideale():
         validation_criteria = {
             "Score trace idéale (≥8.0)": global_score >= 8.0,
             "Naturalité dialogue (≥7.5)": _score("naturalite_dialogue") >= 7.5,
-            "Personnalités distinctes (≥7.5)": _score("personnalites_distinctes") >= 7.5,
+            "Personnalités distinctes (≥7.5)": _score("personnalites_distinctes")
+            >= 7.5,
             "Fluidité transitions (≥7.0)": _score("fluidite_transitions") >= 7.0,
             "Progression logique (≥8.0)": _score("progression_logique") >= 8.0,
             "Dosage révélations (≥8.0)": _score("dosage_revelations") >= 8.0,
@@ -524,7 +531,11 @@ def demonstration_trace_ideale():
                 print(f"• {metric.replace('_', ' ').title()}: {score}")
 
         final_score_raw = final_metrics.get("score_trace_ideale", 0.0)
-        final_score = final_score_raw.get("score_global", 0.0) if isinstance(final_score_raw, dict) else final_score_raw
+        final_score = (
+            final_score_raw.get("score_global", 0.0)
+            if isinstance(final_score_raw, dict)
+            else final_score_raw
+        )
         print(f"\n🎯 SCORE TRACE IDÉALE: {final_score:.1f}/10")
 
         if final_score >= 8.0:

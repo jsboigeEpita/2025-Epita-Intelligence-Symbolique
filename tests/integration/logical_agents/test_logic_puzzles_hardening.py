@@ -13,9 +13,7 @@ from argumentation_analysis.config.settings import AppSettings
 @pytest.fixture
 def kernel():
     k = sk.Kernel()
-    chat_service = OpenAIChatCompletion(
-        service_id="default", ai_model_id="gpt-5-mini"
-    )
+    chat_service = OpenAIChatCompletion(service_id="default", ai_model_id="gpt-5-mini")
     k.add_service(chat_service)
     return k
 

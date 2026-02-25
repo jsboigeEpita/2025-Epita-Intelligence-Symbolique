@@ -77,7 +77,10 @@ def _test_preferred_reasoner_complex(dung_classes):
     # Diamond framework: a <-> b, c -> a, c -> b
     dt = DungTheory()
     a, b, c, d = Argument("a"), Argument("b"), Argument("c"), Argument("d")
-    dt.add(a); dt.add(b); dt.add(c); dt.add(d)
+    dt.add(a)
+    dt.add(b)
+    dt.add(c)
+    dt.add(d)
     dt.add(Attack(a, b))
     dt.add(Attack(b, a))
     dt.add(Attack(c, d))
@@ -85,8 +88,12 @@ def _test_preferred_reasoner_complex(dung_classes):
     reasoner = PreferredReasoner()
     extensions = reasoner.getModels(dt)
     # Should have 2 preferred extensions: {a, c} and {b, c}
-    assert extensions.size() == 2, f"Expected 2 preferred extensions, got {extensions.size()}"
-    logger.info(f"Test preferred reasoner complex: {extensions.size()} extensions found.")
+    assert (
+        extensions.size() == 2
+    ), f"Expected 2 preferred extensions, got {extensions.size()}"
+    logger.info(
+        f"Test preferred reasoner complex: {extensions.size()} extensions found."
+    )
 
 
 def _test_complete_reasoner(dung_classes):
@@ -99,14 +106,20 @@ def _test_complete_reasoner(dung_classes):
     # Simple chain: a -> b -> c
     dt = DungTheory()
     a, b, c = Argument("a"), Argument("b"), Argument("c")
-    dt.add(a); dt.add(b); dt.add(c)
+    dt.add(a)
+    dt.add(b)
+    dt.add(c)
     dt.add(Attack(a, b))
     dt.add(Attack(b, c))
 
     reasoner = CompleteReasoner()
     extensions = reasoner.getModels(dt)
-    assert extensions.size() >= 1, f"Expected at least 1 complete extension, got {extensions.size()}"
-    logger.info(f"Test complete reasoner: {extensions.size()} complete extensions found.")
+    assert (
+        extensions.size() >= 1
+    ), f"Expected at least 1 complete extension, got {extensions.size()}"
+    logger.info(
+        f"Test complete reasoner: {extensions.size()} complete extensions found."
+    )
 
 
 def _test_grounded_reasoner(dung_classes):
@@ -119,7 +132,9 @@ def _test_grounded_reasoner(dung_classes):
     # Framework: a -> b, c -> b (a and c are unattacked, b is attacked)
     dt = DungTheory()
     a, b, c = Argument("a"), Argument("b"), Argument("c")
-    dt.add(a); dt.add(b); dt.add(c)
+    dt.add(a)
+    dt.add(b)
+    dt.add(c)
     dt.add(Attack(a, b))
     dt.add(Attack(c, b))
 
@@ -143,7 +158,9 @@ def _test_stable_vs_preferred(dung_classes):
     # Odd cycle: a -> b -> c -> a (no stable extension, but preferred exists)
     dt = DungTheory()
     a, b, c = Argument("a"), Argument("b"), Argument("c")
-    dt.add(a); dt.add(b); dt.add(c)
+    dt.add(a)
+    dt.add(b)
+    dt.add(c)
     dt.add(Attack(a, b))
     dt.add(Attack(b, c))
     dt.add(Attack(c, a))
@@ -157,7 +174,9 @@ def _test_stable_vs_preferred(dung_classes):
     logger.info(
         f"Odd cycle: {stable_ext.size()} stable, {preferred_ext.size()} preferred extensions"
     )
-    assert stable_ext.size() == 0, f"Odd cycle should have 0 stable extensions, got {stable_ext.size()}"
+    assert (
+        stable_ext.size() == 0
+    ), f"Odd cycle should have 0 stable extensions, got {stable_ext.size()}"
     assert preferred_ext.size() >= 1, f"Odd cycle should have preferred extensions"
 
 

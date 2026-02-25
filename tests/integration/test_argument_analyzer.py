@@ -30,8 +30,7 @@ def _is_backend_reachable(host="localhost", port=8095, timeout=2):
 
 _backend_available = _is_backend_reachable()
 skip_no_backend = pytest.mark.skipif(
-    not _backend_available,
-    reason="Backend server not running on localhost:8095"
+    not _backend_available, reason="Backend server not running on localhost:8095"
 )
 
 

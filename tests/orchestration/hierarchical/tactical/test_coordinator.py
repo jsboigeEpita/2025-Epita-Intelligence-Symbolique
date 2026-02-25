@@ -80,8 +80,13 @@ def test_determine_appropriate_agent(task_coordinator):
     assert task_coordinator._determine_appropriate_agent(["capA", "capB"]) == "agent1"
     assert task_coordinator._determine_appropriate_agent(["capC"]) == "agent2"
     assert task_coordinator._determine_appropriate_agent(["capD", "capA"]) == "agent3"
-    assert task_coordinator._determine_appropriate_agent(["capX"]) == "default_operational_agent"
-    assert task_coordinator._determine_appropriate_agent([]) == "default_operational_agent"
+    assert (
+        task_coordinator._determine_appropriate_agent(["capX"])
+        == "default_operational_agent"
+    )
+    assert (
+        task_coordinator._determine_appropriate_agent([]) == "default_operational_agent"
+    )
 
 
 def test_decompose_objective_to_tasks_identify_arguments(task_coordinator):

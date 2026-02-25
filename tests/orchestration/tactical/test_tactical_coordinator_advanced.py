@@ -438,9 +438,7 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
 
                 logger.info("Assignation authentique de tâche réussie")
             else:
-                self.skipTest(
-                    "Méthode assign_task_to_operational non disponible"
-                )
+                self.skipTest("Méthode assign_task_to_operational non disponible")
 
         except Exception as e:
             logger.warning(f"Assignation de tâche échoué: {e}")

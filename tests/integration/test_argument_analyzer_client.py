@@ -44,14 +44,12 @@ def test_health_check_endpoint(flask_client):
     """
     response = flask_client.get("/api/health")
 
-    assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}"
-    )
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
     json_response = response.get_json()
-    assert json_response.get("status") == "ok", (
-        f"Expected 'status: ok', got: {json_response}"
-    )
+    assert (
+        json_response.get("status") == "ok"
+    ), f"Expected 'status: ok', got: {json_response}"
 
 
 def test_malformed_analyze_request_returns_400(flask_client):
@@ -66,9 +64,9 @@ def test_malformed_analyze_request_returns_400(flask_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 400, (
-        f"Expected 400 (Bad Request), got {response.status_code}"
-    )
+    assert (
+        response.status_code == 400
+    ), f"Expected 400 (Bad Request), got {response.status_code}"
 
 
 def test_successful_simple_argument_analysis(flask_client):
@@ -91,21 +89,17 @@ def test_successful_simple_argument_analysis(flask_client):
         content_type="application/json",
     )
 
-    assert response.status_code == 200, (
-        f"Expected 200, got {response.status_code}"
-    )
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
     response_body = response.get_json()
 
-    assert response_body.get("success") is True, (
-        f"Expected 'success' to be True, got: {response_body.get('success')}"
-    )
-    assert "fallacies" in response_body, (
-        "Missing 'fallacies' key in response"
-    )
-    assert "argument_structure" in response_body, (
-        "Missing 'argument_structure' key in response"
-    )
-    assert isinstance(response_body.get("fallacy_count"), int), (
-        f"Expected 'fallacy_count' to be int, got: {type(response_body.get('fallacy_count'))}"
-    )
+    assert (
+        response_body.get("success") is True
+    ), f"Expected 'success' to be True, got: {response_body.get('success')}"
+    assert "fallacies" in response_body, "Missing 'fallacies' key in response"
+    assert (
+        "argument_structure" in response_body
+    ), "Missing 'argument_structure' key in response"
+    assert isinstance(
+        response_body.get("fallacy_count"), int
+    ), f"Expected 'fallacy_count' to be int, got: {type(response_body.get('fallacy_count'))}"

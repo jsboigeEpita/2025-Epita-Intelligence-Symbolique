@@ -31,6 +31,7 @@ try:
         ClaimType,
         ClaimVerifiability,
     )
+
     EXTRACTOR_AVAILABLE = True
 except ImportError:
     pass
@@ -41,6 +42,7 @@ try:
         AnalysisDepth,
         get_family_analyzer,
     )
+
     ANALYZER_AVAILABLE = True
 except ImportError:
     pass
@@ -51,6 +53,7 @@ try:
         FactCheckingRequest,
         get_fact_checking_orchestrator,
     )
+
     ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     pass
@@ -66,6 +69,7 @@ try:
         ClassifiedFallacy,
         get_taxonomy_manager,
     )
+
     TAXONOMY_AVAILABLE = True
 except ImportError:
     pass
@@ -76,15 +80,21 @@ try:
         VerificationStatus,
         SourceReliability,
     )
+
     VERIFICATION_AVAILABLE = True
 except ImportError:
     pass
 
 # Legacy flag for backward compat
-COMPONENTS_AVAILABLE = all([
-    EXTRACTOR_AVAILABLE, ANALYZER_AVAILABLE, ORCHESTRATOR_AVAILABLE,
-    TAXONOMY_AVAILABLE, VERIFICATION_AVAILABLE,
-])
+COMPONENTS_AVAILABLE = all(
+    [
+        EXTRACTOR_AVAILABLE,
+        ANALYZER_AVAILABLE,
+        ORCHESTRATOR_AVAILABLE,
+        TAXONOMY_AVAILABLE,
+        VERIFICATION_AVAILABLE,
+    ]
+)
 
 
 @pytest.mark.skipif(
@@ -466,7 +476,9 @@ class TestFactCheckingOrchestrator:
 class TestIntegrationFunctionality:
     """Tests d'intégration des fonctionnalités."""
 
-    @pytest.mark.skipif(not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented")
+    @pytest.mark.skipif(
+        not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented"
+    )
     def test_singleton_pattern_taxonomy_manager(self):
         """Test du pattern singleton pour le gestionnaire de taxonomie."""
         with patch(
@@ -534,7 +546,9 @@ class TestIntegrationFunctionality:
 class TestPerformance:
     """Tests de performance pour les nouveaux composants."""
 
-    @pytest.mark.skipif(not EXTRACTOR_AVAILABLE, reason="fact_claim_extractor not available")
+    @pytest.mark.skipif(
+        not EXTRACTOR_AVAILABLE, reason="fact_claim_extractor not available"
+    )
     def test_fact_extraction_performance(self):
         """Test de performance de l'extraction d'affirmations."""
         extractor = FactClaimExtractor()
@@ -554,7 +568,9 @@ class TestPerformance:
         assert processing_time < 10.0
         assert isinstance(claims, list)
 
-    @pytest.mark.skipif(not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented")
+    @pytest.mark.skipif(
+        not TAXONOMY_AVAILABLE, reason="fallacy_taxonomy_service not implemented"
+    )
     def test_taxonomy_manager_performance(self):
         """Test de performance du gestionnaire de taxonomie."""
         with patch(

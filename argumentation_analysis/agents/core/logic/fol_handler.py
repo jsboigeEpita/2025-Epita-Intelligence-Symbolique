@@ -429,7 +429,10 @@ class FOLHandler:
                         "Falling back to parsing-only check."
                     )
                     # If we got here, at least the parsing succeeded
-                    return True, "Parsed successfully (no reasoner available for deep check)."
+                    return (
+                        True,
+                        "Parsed successfully (no reasoner available for deep check).",
+                    )
             else:
                 # No initializer — parsing success is the best we can do
                 return True, "Parsed successfully (no Tweety initializer)."
@@ -462,20 +465,18 @@ class FOLHandler:
                 return False, "Failed to create belief set."
 
             # Parse query formula with the belief set's signature
-            FolParser = jpype.JClass(
-                "org.tweetyproject.logics.fol.parser.FolParser"
-            )
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
             query_parser = FolParser()
             query_parser.setSignature(java_belief_set.getMinimalSignature())
             query_formula = query_parser.parseFormula(query_str)
 
             # Use reasoner if available
             if self._initializer_instance:
-                reasoner = self._initializer_instance.get_reasoner(
-                    "SimpleFolReasoner"
-                )
+                reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
                 entailed = bool(reasoner.query(java_belief_set, query_formula))
-                msg = f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
+                msg = (
+                    f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
+                )
                 return entailed, msg
             else:
                 return False, "No Tweety initializer available for query."

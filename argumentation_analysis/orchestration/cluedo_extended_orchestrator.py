@@ -48,7 +48,13 @@ class AgentGroupChat:
                     results.append(result)
                 except Exception:
                     pass
-        return results if results else [f"AgentGroupChat: processed '{input_text}' with {len(self.agents)} agents"]
+        return (
+            results
+            if results
+            else [
+                f"AgentGroupChat: processed '{input_text}' with {len(self.agents)} agents"
+            ]
+        )
 
 
 AGENTS_AVAILABLE = True

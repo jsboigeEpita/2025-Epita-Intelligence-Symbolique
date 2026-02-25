@@ -168,7 +168,11 @@ class TestFOLSyntaxGeneration:
         all_lines = fol_agent._basic_fol_conversion(text)
 
         # _basic_fol_conversion now returns declarations + formulas for Tweety
-        formulas = [f for f in all_lines if f and not f.startswith("thing") and not f.startswith("type(")]
+        formulas = [
+            f
+            for f in all_lines
+            if f and not f.startswith("thing") and not f.startswith("type(")
+        ]
         assert len(formulas) == 1
         assert "forall" in formulas[0]
         assert "=>" in formulas[0]
@@ -178,7 +182,11 @@ class TestFOLSyntaxGeneration:
         text = "Il existe des étudiants intelligents."
         all_lines = fol_agent._basic_fol_conversion(text)
 
-        formulas = [f for f in all_lines if f and not f.startswith("thing") and not f.startswith("type(")]
+        formulas = [
+            f
+            for f in all_lines
+            if f and not f.startswith("thing") and not f.startswith("type(")
+        ]
         assert len(formulas) == 1
         assert "exists" in formulas[0]
         assert "&&" in formulas[0]
@@ -188,7 +196,11 @@ class TestFOLSyntaxGeneration:
         text = "Tous les étudiants aiment leurs professeurs. Tous les professeurs respectent leurs étudiants."
         all_lines = fol_agent._basic_fol_conversion(text)
 
-        formulas = [f for f in all_lines if f and not f.startswith("thing") and not f.startswith("type(")]
+        formulas = [
+            f
+            for f in all_lines
+            if f and not f.startswith("thing") and not f.startswith("type(")
+        ]
         assert len(formulas) == 2
         for formula in formulas:
             assert "forall" in formula or "exists" in formula or "P" in formula
@@ -206,7 +218,11 @@ class TestFOLSyntaxGeneration:
         text = "Si il pleut alors le sol est mouillé."
         all_lines = fol_agent._basic_fol_conversion(text)
 
-        formulas = [f for f in all_lines if f and not f.startswith("thing") and not f.startswith("type(")]
+        formulas = [
+            f
+            for f in all_lines
+            if f and not f.startswith("thing") and not f.startswith("type(")
+        ]
         assert len(formulas) == 1
         assert "=>" in formulas[0]
 
@@ -418,7 +434,10 @@ class TestFOLAnalysisPipeline:
         result = await fol_agent_full.analyze(sophism_text)
 
         assert len(result.formulas) == 2
-        assert "forall x(Human(x) => Mortal(x))" in result.formulas or "∀x(Human(x) → Mortal(x))" in result.formulas
+        assert (
+            "forall x(Human(x) => Mortal(x))" in result.formulas
+            or "∀x(Human(x) → Mortal(x))" in result.formulas
+        )
         assert "Human(socrate)" in result.formulas
         assert result.consistency_check is True
         assert "Mortal(socrate)" in result.inferences

@@ -40,6 +40,7 @@ def get_taxonomy_manager():
     from argumentation_analysis.services.fallacy_taxonomy_service import (
         get_taxonomy_manager as _get_tm,
     )
+
     return _get_tm()
 
 
@@ -48,6 +49,7 @@ def get_verification_service():
     from argumentation_analysis.services.fact_verification_service import (
         get_verification_service as _get_vs,
     )
+
     return _get_vs()
 
 
@@ -125,9 +127,7 @@ class FactCheckingOrchestrator:
         # Récupérer les plugins depuis le registre ou les singletons
         if plugin_registry is not None:
             self.taxonomy_plugin = self.plugin_registry.get("taxonomy_explorer")
-            self.verification_plugin = self.plugin_registry.get(
-                "external_verification"
-            )
+            self.verification_plugin = self.plugin_registry.get("external_verification")
         else:
             self.taxonomy_plugin = get_taxonomy_manager()
             self.verification_plugin = get_verification_service()

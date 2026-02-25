@@ -144,8 +144,17 @@ class TestInformalAnalysisAgentAuthentic:
         result_lower = result_text.lower()
         assert any(
             term in result_lower
-            for term in ["sophisme", "fallac", "appel", "faux dilemme", "ad hominem",
-                         "autorité", "autorite", "expert", "argument"]
+            for term in [
+                "sophisme",
+                "fallac",
+                "appel",
+                "faux dilemme",
+                "ad hominem",
+                "autorité",
+                "autorite",
+                "expert",
+                "argument",
+            ]
         ), f"L'analyse ne mentionne aucun sophisme: {result_text[:500]}"
 
         execution_time = time.time() - start_time
@@ -203,8 +212,17 @@ class TestInformalAnalysisAgentAuthentic:
         result_lower = result_text.lower()
         assert any(
             term in result_lower
-            for term in ["argument", "affirm", "prétend", "soutien", "expert",
-                         "produit", "achet", "sophisme", "fallac"]
+            for term in [
+                "argument",
+                "affirm",
+                "prétend",
+                "soutien",
+                "expert",
+                "produit",
+                "achet",
+                "sophisme",
+                "fallac",
+            ]
         ), f"L'analyse ne mentionne aucun argument: {result_text[:500]}"
 
         execution_time = time.time() - start_time
@@ -256,11 +274,17 @@ class TestInformalAnalysisAgentAuthentic:
         assert any(
             term in result_lower
             for term in [
-                "appel à l'autorité", "appel a l'autorite",
-                "appeal to authority", "argument d'autorité",
+                "appel à l'autorité",
+                "appel a l'autorite",
+                "appeal to authority",
+                "argument d'autorité",
                 "argumentum ad verecundiam",
-                "autorité", "autorite", "authority",
-                "expert", "sophisme", "fallac",
+                "autorité",
+                "autorite",
+                "authority",
+                "expert",
+                "sophisme",
+                "fallac",
             ]
         ), f"L'analyse ne détecte pas l'appel à l'autorité: {result_text[:500]}"
 
@@ -300,10 +324,24 @@ class TestInformalAnalysisAgentAuthentic:
             async for result in agent.invoke(chat_history):
                 if isinstance(result, list):
                     for msg in result:
-                        if isinstance(msg, ChatMessageContent) and msg.role == "assistant":
-                            final_answer = msg.content if isinstance(msg.content, str) else str(msg.content)
-                elif isinstance(result, ChatMessageContent) and result.role == "assistant":
-                    final_answer = result.content if isinstance(result.content, str) else str(result.content)
+                        if (
+                            isinstance(msg, ChatMessageContent)
+                            and msg.role == "assistant"
+                        ):
+                            final_answer = (
+                                msg.content
+                                if isinstance(msg.content, str)
+                                else str(msg.content)
+                            )
+                elif (
+                    isinstance(result, ChatMessageContent)
+                    and result.role == "assistant"
+                ):
+                    final_answer = (
+                        result.content
+                        if isinstance(result.content, str)
+                        else str(result.content)
+                    )
                 elif result is not None:
                     final_answer = str(result)
         except Exception as e:
@@ -312,17 +350,25 @@ class TestInformalAnalysisAgentAuthentic:
             )
 
         # Vérification de la réponse finale
-        assert (
-            final_answer is not None
-        ), "L'agent n'a pas produit de réponse finale."
-        print(f"[AUTHENTIC] Réponse de l'agent (analyse de texte): {final_answer[:500]}")
+        assert final_answer is not None, "L'agent n'a pas produit de réponse finale."
+        print(
+            f"[AUTHENTIC] Réponse de l'agent (analyse de texte): {final_answer[:500]}"
+        )
 
         # Vérification de base du contenu
         final_answer_lower = final_answer.lower()
         assert any(
             term in final_answer_lower
-            for term in ["analyse", "sophisme", "argument", "fallac", "expert",
-                         "autorité", "texte", "produit"]
+            for term in [
+                "analyse",
+                "sophisme",
+                "argument",
+                "fallac",
+                "expert",
+                "autorité",
+                "texte",
+                "produit",
+            ]
         ), f"Réponse ne contient pas les termes attendus: {final_answer[:300]}"
 
         execution_time = time.time() - start_time
@@ -482,10 +528,24 @@ class TestInformalAnalysisAgentAuthentic:
             async for result in agent.invoke(chat_history):
                 if isinstance(result, list):
                     for msg in result:
-                        if isinstance(msg, ChatMessageContent) and msg.role == "assistant":
-                            final_answer = msg.content if isinstance(msg.content, str) else str(msg.content)
-                elif isinstance(result, ChatMessageContent) and result.role == "assistant":
-                    final_answer = result.content if isinstance(result.content, str) else str(result.content)
+                        if (
+                            isinstance(msg, ChatMessageContent)
+                            and msg.role == "assistant"
+                        ):
+                            final_answer = (
+                                msg.content
+                                if isinstance(msg.content, str)
+                                else str(msg.content)
+                            )
+                elif (
+                    isinstance(result, ChatMessageContent)
+                    and result.role == "assistant"
+                ):
+                    final_answer = (
+                        result.content
+                        if isinstance(result.content, str)
+                        else str(result.content)
+                    )
                 elif result is not None:
                     final_answer = str(result)
         except Exception as e:
@@ -494,17 +554,25 @@ class TestInformalAnalysisAgentAuthentic:
             )
 
         # Vérification de la réponse finale
-        assert (
-            final_answer is not None
-        ), "L'agent n'a pas produit de réponse finale."
-        print(f"[AUTHENTIC] Réponse de l'agent (workflow complet): {final_answer[:500]}")
+        assert final_answer is not None, "L'agent n'a pas produit de réponse finale."
+        print(
+            f"[AUTHENTIC] Réponse de l'agent (workflow complet): {final_answer[:500]}"
+        )
 
         # Vérification que la réponse contient les éléments clés du workflow
         final_answer_lower = final_answer.lower()
         assert any(
             term in final_answer_lower
-            for term in ["argument", "sophisme", "fallac", "analyse", "expert",
-                         "autorité", "texte", "produit"]
+            for term in [
+                "argument",
+                "sophisme",
+                "fallac",
+                "analyse",
+                "expert",
+                "autorité",
+                "texte",
+                "produit",
+            ]
         ), f"Réponse ne contient pas les termes attendus: {final_answer[:300]}"
 
         execution_time = time.time() - start_time

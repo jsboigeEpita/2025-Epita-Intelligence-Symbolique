@@ -467,6 +467,7 @@ class BehaviorComparator:
         else:
             return "balanced_tradeoff"
 
+
 @pytest.fixture
 def behavior_comparator():
     """Fixture du comparateur de comportements."""

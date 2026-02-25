@@ -159,7 +159,11 @@ class TestSherlockEnqueteAgentAuthentic:
         context = "Un vol a eu lieu au musée. Le gardien était absent."
         result = await agent.formulate_hypothesis(context=context)
         assert isinstance(result, dict)
-        assert "hypothesis" in result or "hypothesis_id" in result or "confidence" in result
+        assert (
+            "hypothesis" in result
+            or "hypothesis_id" in result
+            or "confidence" in result
+        )
 
     async def test_agent_error_handling(self, sherlock_agent):
         """Test la gestion d'erreur authentique de l'agent."""

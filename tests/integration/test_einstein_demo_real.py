@@ -417,7 +417,9 @@ class TestEinsteinOracleDemoReal:
                     # length is similar across levels. Just verify reasonable output.
                     output_lines = len(output.split("\n"))
                     if complexity == "simple":
-                        assert output_lines < 500, f"Output excessif pour simple: {output_lines} lignes"
+                        assert (
+                            output_lines < 500
+                        ), f"Output excessif pour simple: {output_lines} lignes"
                     elif complexity == "complex":
                         assert output_lines > 5, "Output trop court pour complex"
 
