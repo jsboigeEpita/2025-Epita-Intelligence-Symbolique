@@ -59,7 +59,7 @@ class MockAnalysisService:
     def get_status_details(self) -> dict:
         return {
             "service_type": "MockAnalysisService",
-            "gpt4o_mini_enabled": False,
+            "llm_enabled": False,
             "mock_disabled": False,
             "manager_initialized": True,
             "uptime_seconds": 0,
@@ -67,7 +67,7 @@ class MockAnalysisService:
 
 
 class AnalysisService:
-    """Service d'analyse authentique utilisant GPT-4o-mini via OrchestrationServiceManager"""
+    """Service d'analyse authentique via OrchestrationServiceManager"""
 
     def __init__(self, manager: OrchestrationServiceManager):
         self.manager = manager
@@ -75,13 +75,13 @@ class AnalysisService:
 
     async def analyze_text(self, text: str) -> dict:
         """
-        Effectue l'analyse authentique du texte via GPT-4o-mini
+        Effectue l'analyse authentique du texte via LLM
         """
         start_time = time.time()
         self.logger.info(f"[API] Démarrage analyse authentique : {text[:100]}...")
 
         try:
-            # Utilisation authentique du service manager avec GPT-4o-mini
+            # Utilisation authentique du service manager
             import json
 
             service_result = await self.manager.analyze_text(text)
@@ -94,7 +94,7 @@ class AnalysisService:
             llm_payload = {}
             summary = "Analyse terminée, mais le format du résultat est inattendu."
             fallacies_data = []
-            components_used = ["GPT-4o-mini", "OrchestrationServiceManager"]
+            components_used = ["LLM", "OrchestrationServiceManager"]
 
             try:
                 # Naviguer dans la structure pour trouver le résultat JSON string
@@ -131,7 +131,7 @@ class AnalysisService:
 
                 summary = llm_payload.get(
                     "summary",
-                    f"Analyse authentique GPT-4o-mini terminée. {len(fallacies_data)} sophismes détectés.",
+                    f"Analyse authentique terminée. {len(fallacies_data)} sophismes détectés.",
                 )
 
             except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -175,7 +175,7 @@ class AnalysisService:
         """Retourne les détails du statut du service"""
         return {
             "service_type": "OrchestrationServiceManager",
-            "gpt4o_mini_enabled": True,
+            "llm_enabled": True,
             "mock_disabled": True,
             "manager_initialized": self.is_available(),
             "uptime_seconds": (
@@ -255,21 +255,3 @@ def get_dung_analysis_service() -> DungAnalysisService:
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
     return _global_dung_service
-
-
-# ... (rest of the imports)
-
-# ... (rest of the global variables)
-_global_informal_analysis_service = None
-
-# ... (rest of the dependency functions)
-
-
-def get_informal_analysis_service():
-    """
-    Dependency injection for the InformalAnalysisService.
-    Uses a global singleton to instantiate the service only once.
-    """
-    raise NotImplementedError(
-        "InformalAnalysisService is deprecated. Use a plugin-based service instead."
-    )

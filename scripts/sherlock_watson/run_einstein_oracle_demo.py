@@ -182,13 +182,6 @@ class EinsteinOracleOrchestrator:
         # Création d'un état Oracle factice pour les agents (ils en ont besoin techniquement)
         elements = {"suspects": ["Einstein"], "armes": ["Logique"], "lieux": ["Puzzle"]}
 
-        # Import nécessaire pour CluedoDataset
-        from argumentation_analysis.agents.core.oracle.cluedo_dataset import (
-            CluedoDataset,
-        )
-
-        dummy_dataset = CluedoDataset(elements)
-
         self.dummy_oracle_state = self.CluedoOracleState(
             nom_enquete_cluedo="Puzzle Einstein Oracle Demo",
             elements_jeu_cluedo=elements,

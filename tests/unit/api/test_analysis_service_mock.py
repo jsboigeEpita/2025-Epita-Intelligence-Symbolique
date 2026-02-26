@@ -35,4 +35,4 @@ def test_status_endpoint_with_mock():
     data = response.json()
     assert data["status"] == "operational"  # Le mock se déclare comme "available"
     assert data["service_status"]["service_type"] == "MockAnalysisService"
-    assert data["service_status"]["gpt4o_mini_enabled"] is False
+    assert data["service_status"]["llm_enabled"] is False

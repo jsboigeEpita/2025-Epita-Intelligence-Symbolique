@@ -251,12 +251,10 @@ try:
     )
 except ImportError as e:
     print(f"Erreur d'import des utilitaires : {e}")
-    print("Chargement du mode legacy...")
-    # Fallback vers le mode legacy si les modules ne sont pas disponibles
-    from demonstration_epita_legacy import main as legacy_main
-
-    legacy_main()
-    sys.exit(0)
+    print("Les modules de démonstration ne sont pas disponibles.")
+    print("Vérifiez que vous exécutez depuis le répertoire racine du projet")
+    print("et que l'environnement Conda est activé (conda activate projet-is-roo-new).")
+    sys.exit(1)
 
 
 def afficher_banniere_principale():
@@ -478,33 +476,12 @@ def mode_metrics_only(config: Dict[str, Any]) -> None:
         print(f"  {icon} {nom}")
 
 
-def mode_execution_legacy() -> None:
-    """Exécute le comportement legacy pour compatibilité"""
+def mode_execution_legacy(**kwargs) -> None:
+    """Redirige le mode legacy vers quick-start (le script legacy original n'existe plus)."""
     print(
-        f"{Colors.WARNING}{Symbols.WARNING} Mode legacy - Chargement du script original...{Colors.ENDC}"
+        f"{Colors.WARNING}{Symbols.WARNING} Mode legacy redirigé vers quick-start.{Colors.ENDC}"
     )
-
-    try:
-        # Import et exécution du script legacy
-        legacy_path = Path(__file__).parent / "demonstration_epita_legacy.py"
-        spec = importlib.util.spec_from_file_location("legacy", legacy_path)
-        legacy_module = importlib.util.module_from_spec(spec)
-
-        # Simuler les arguments pour le mode normal
-        import sys
-
-        original_argv = sys.argv.copy()
-        sys.argv = ["demonstration_epita_legacy.py"]  # Mode normal
-
-        try:
-            spec.loader.exec_module(legacy_module)
-        finally:
-            sys.argv = original_argv
-
-    except Exception as e:
-        print(
-            f"{Colors.FAIL}Erreur lors de l'exécution du mode legacy : {e}{Colors.ENDC}"
-        )
+    mode_quick_start(**kwargs)
 
 
 def execute_all_categories_non_interactive(config: Dict[str, Any], **kwargs) -> None:
@@ -1075,9 +1052,9 @@ def main():
 
     if not config:
         print(
-            f"{Colors.FAIL}Impossible de charger la configuration. Exécution en mode legacy.{Colors.ENDC}"
+            f"{Colors.FAIL}Impossible de charger la configuration. Exécution en mode quick-start.{Colors.ENDC}"
         )
-        mode_execution_legacy()
+        mode_quick_start()
         return
 
     # Préparation des kwargs pour la propagation
@@ -1095,7 +1072,7 @@ def main():
     elif args.metrics:
         mode_metrics_only(config)
     elif args.legacy:
-        mode_execution_legacy()
+        mode_execution_legacy(**kwargs)
     elif args.interactive:
         logger = DemoLogger("demo_complet")
         logger.header("[EPITA] DÉMONSTRATION COMPLÈTE - MODE INTERACTIF")

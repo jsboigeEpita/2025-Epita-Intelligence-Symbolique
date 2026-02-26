@@ -84,6 +84,9 @@ class DemoLogger:
     def header(self, message: str):
         self.logger.info(f"{Colors.BOLD}{Colors.CYAN}{message}{Colors.ENDC}")
 
+    def separator(self, char: str = "=", length: int = 60):
+        self.logger.info(char * length)
+
 
 def charger_config_categories() -> Dict[str, Any]:
     """Charge la configuration des catégories depuis le fichier YAML"""

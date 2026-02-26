@@ -375,6 +375,8 @@ Votre mission : Fasciner par votre mystère élégant."""
             "balanced": RevealPolicy.BALANCED,
             "progressive": RevealPolicy.PROGRESSIVE,
             "enhanced_auto_reveal": RevealPolicy.PROGRESSIVE,
+            "enhanced_progressive": RevealPolicy.PROGRESSIVE,
+            "standard": RevealPolicy.BALANCED,
         }
 
         if strategy in strategy_mapping:

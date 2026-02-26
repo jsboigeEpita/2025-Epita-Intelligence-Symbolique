@@ -9,13 +9,12 @@ depuis la racine du projet. Il offre plusieurs options pour configurer l'orchest
 et permet d'exécuter l'analyse de manière indépendante.
 """
 
-import os
 import sys
 import asyncio
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, Optional, List
+from typing import Any
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -71,10 +70,9 @@ async def setup_environment() -> Any:
 
     # 2. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
-    from argumentation_analysis.paths import LIBS_DIR
 
     logging.info("Initialisation de la JVM...")
-    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
+    jvm_ready_status = initialize_jvm()
 
     if not jvm_ready_status:
         logging.warning(
@@ -102,8 +100,6 @@ async def setup_environment() -> Any:
 async def run_orchestration(
     text_content: str,
     llm_service: Any,
-    agents: Optional[List[str]] = None,
-    verbose: bool = False,
 ) -> None:
     """Exécute l'orchestration des agents sur le texte fourni.
 
@@ -111,13 +107,6 @@ async def run_orchestration(
     :type text_content: str
     :param llm_service: L'instance du service LLM initialisée.
     :type llm_service: Any
-    :param agents: Liste optionnelle des noms des agents à utiliser.
-                   Actuellement non utilisé directement par `run_analysis_conversation`.
-    :type agents: Optional[List[str]]
-    :param verbose: Indicateur de verbosité (non utilisé directement ici, mais pourrait l'être).
-    :type verbose: bool
-    :return: None
-    :rtype: None
     """
     if not text_content or not llm_service:
         logging.error(
@@ -163,16 +152,6 @@ async def main():
         help="Utiliser l'interface utilisateur pour sélectionner le texte",
     )
 
-    # Options pour les agents
-    parser.add_argument(
-        "--agents",
-        "-a",
-        type=str,
-        nargs="+",
-        choices=["pm", "informal", "pl", "extract"],
-        help="Liste des agents à utiliser (par défaut: tous)",
-    )
-
     # Options supplémentaires
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
@@ -216,7 +195,6 @@ async def main():
     elif args.ui:
         # Importer les dépendances nécessaires
         from argumentation_analysis.ui.app import configure_analysis_task
-        from argumentation_analysis.paths import LIBS_DIR
 
         try:
             logging.info("Lancement de l'interface utilisateur...")
@@ -234,7 +212,7 @@ async def main():
             return
 
     # Exécution de l'orchestration
-    await run_orchestration(text_content, llm_service, args.agents, args.verbose)
+    await run_orchestration(text_content, llm_service)
 
 
 if __name__ == "__main__":
