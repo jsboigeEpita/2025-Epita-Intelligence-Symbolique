@@ -76,7 +76,15 @@ def parse_arguments():
         "--oracle-strategy",
         type=str,
         default="enhanced_auto_reveal",
-        choices=["enhanced_auto_reveal", "enhanced_progressive", "progressive", "cooperative", "competitive", "balanced", "standard"],
+        choices=[
+            "enhanced_auto_reveal",
+            "enhanced_progressive",
+            "progressive",
+            "cooperative",
+            "competitive",
+            "balanced",
+            "standard",
+        ],
         help="Stratégie que l'Oracle (Moriarty) utilisera durant la partie.",
     )
     parser.add_argument(

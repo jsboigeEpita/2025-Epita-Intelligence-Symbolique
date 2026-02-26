@@ -328,7 +328,9 @@ class EinsteinOracleOrchestrator:
                 analysis = scripted[min(round_num - 1, len(scripted) - 2)]
         else:
             # Mode normal: appel LLM réel
-            indices_text = "\n".join(f"  {i+1}. {idx}" for i, idx in enumerate(all_indices))
+            indices_text = "\n".join(
+                f"  {i+1}. {idx}" for i, idx in enumerate(all_indices)
+            )
             prompt = (
                 f"Puzzle Einstein - Round {round_num}.\n"
                 f"5 maisons (positions 1-5), 5 nationalités (Anglais, Suédois, Danois, Norvégien, Allemand), "
@@ -341,9 +343,15 @@ class EinsteinOracleOrchestrator:
             )
             try:
                 response_messages = await self.agents["sherlock"].invoke(prompt)
-                analysis = str(response_messages[0].content if hasattr(response_messages[0], 'content') else response_messages[0])
+                analysis = str(
+                    response_messages[0].content
+                    if hasattr(response_messages[0], "content")
+                    else response_messages[0]
+                )
             except Exception as e:
-                logger.warning(f"Invocation Sherlock non disponible (round {round_num}): {e}")
+                logger.warning(
+                    f"Invocation Sherlock non disponible (round {round_num}): {e}"
+                )
                 analysis = f"[Sherlock réfléchit aux {len(all_indices)} indices disponibles...]"
 
         response = {
@@ -376,7 +384,9 @@ class EinsteinOracleOrchestrator:
             assist = scripted[min((round_num // 2) - 1, len(scripted) - 1)]
         else:
             # Mode normal: appel LLM réel
-            indices_text = "\n".join(f"  {i+1}. {idx}" for i, idx in enumerate(all_indices))
+            indices_text = "\n".join(
+                f"  {i+1}. {idx}" for i, idx in enumerate(all_indices)
+            )
             sherlock_last = ""
             for msg in reversed(self.conversation_history):
                 if msg["agent"] == "Sherlock":
@@ -392,10 +402,18 @@ class EinsteinOracleOrchestrator:
             )
             try:
                 response_messages = await self.agents["watson"].invoke(prompt)
-                assist = str(response_messages[0].content if hasattr(response_messages[0], 'content') else response_messages[0])
+                assist = str(
+                    response_messages[0].content
+                    if hasattr(response_messages[0], "content")
+                    else response_messages[0]
+                )
             except Exception as e:
-                logger.warning(f"Invocation Watson non disponible (round {round_num}): {e}")
-                assist = f"[Watson organise les {len(all_indices)} contraintes logiques...]"
+                logger.warning(
+                    f"Invocation Watson non disponible (round {round_num}): {e}"
+                )
+                assist = (
+                    f"[Watson organise les {len(all_indices)} contraintes logiques...]"
+                )
 
         response = {
             "round": round_num + 0.2,
@@ -504,7 +522,9 @@ async def run_einstein_oracle_demo(integration_test=False):
         environment_context = initialize_project_environment()
         kernel = environment_context.kernel
         if not kernel:
-            raise ValueError("Le kernel sémantique n'a pas été trouvé dans le contexte.")
+            raise ValueError(
+                "Le kernel sémantique n'a pas été trouvé dans le contexte."
+            )
 
     # Exécution de la démo Einstein
     orchestrator = EinsteinOracleOrchestrator(

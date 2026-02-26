@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import MagicMock, call
 from argumentation_analysis.plugin_framework.core.decorators import track_tokens
-from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import BenchmarkService
+from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import (
+    BenchmarkService,
+)
 
 
 class TestTrackTokensDecorator(unittest.TestCase):

@@ -8,7 +8,9 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from argumentation_analysis.plugin_framework.core.plugin_loader import PluginLoader
-from argumentation_analysis.plugin_framework.core.services.orchestration_service import OrchestrationService
+from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
+    OrchestrationService,
+)
 from argumentation_analysis.plugin_framework.core.contracts import OrchestrationRequest
 
 

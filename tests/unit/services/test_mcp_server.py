@@ -17,7 +17,9 @@ from argumentation_analysis.services.web_api.models.response_models import (
 @pytest.fixture
 def mcp_service_mock():
     """Fixture améliorée pour mocker complètement l'initialisation et les services."""
-    with patch("argumentation_analysis.services.mcp_server.main.FastMCP") as mock_fast_mcp, patch(
+    with patch(
+        "argumentation_analysis.services.mcp_server.main.FastMCP"
+    ) as mock_fast_mcp, patch(
         "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
     ) as mock_init_env, patch(
         "argumentation_analysis.services.mcp_server.main.AppServices"

@@ -9,8 +9,12 @@ from pprint import pprint
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from argumentation_analysis.plugin_framework.core.plugin_loader import PluginLoader
-from argumentation_analysis.plugin_framework.core.services.orchestration_service import OrchestrationService
-from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import BenchmarkService
+from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
+    OrchestrationService,
+)
+from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import (
+    BenchmarkService,
+)
 
 
 def main():

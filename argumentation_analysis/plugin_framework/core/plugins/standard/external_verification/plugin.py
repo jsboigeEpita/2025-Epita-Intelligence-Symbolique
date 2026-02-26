@@ -20,7 +20,9 @@ from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
     FactualClaim,
     ClaimVerifiability,
 )
-from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
+from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
+    TaxonomyExplorerPlugin,
+)
 
 logger = logging.getLogger(__name__)
 

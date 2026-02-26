@@ -70,7 +70,9 @@ class InformalFallacyAgent(BaseAgent):
             )
         if config_name in ["workflow_only", "full"]:
             try:
-                module = importlib.import_module("argumentation_analysis.plugins.fallacy_workflow_plugin")
+                module = importlib.import_module(
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin"
+                )
                 FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
                 self.kernel.add_plugin(
                     FallacyWorkflowPlugin(

@@ -25,7 +25,9 @@ from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import
     ComprehensiveAnalysisResult,
 )
 from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
-from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
+from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
+    TaxonomyExplorerPlugin,
+)
 from argumentation_analysis.plugin_framework.core.plugins.standard.external_verification.plugin import (
     ExternalVerificationPlugin,
 )

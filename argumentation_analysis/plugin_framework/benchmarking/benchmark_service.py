@@ -1,6 +1,9 @@
 import time
 from typing import List, Dict, Any
-from argumentation_analysis.plugin_framework.core.contracts import BenchmarkResult, BenchmarkSuiteResult
+from argumentation_analysis.plugin_framework.core.contracts import (
+    BenchmarkResult,
+    BenchmarkSuiteResult,
+)
 from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
     OrchestrationService,
 )

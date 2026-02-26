@@ -15,7 +15,11 @@ while not (PROJECT_ROOT / "pyproject.toml").exists():
         )
 
 DEMO_SCRIPT_PATH = (
-    PROJECT_ROOT / "examples" / "03_demos_overflow" / "validation" / "validation_complete_epita.py"
+    PROJECT_ROOT
+    / "examples"
+    / "03_demos_overflow"
+    / "validation"
+    / "validation_complete_epita.py"
 )
 
 
