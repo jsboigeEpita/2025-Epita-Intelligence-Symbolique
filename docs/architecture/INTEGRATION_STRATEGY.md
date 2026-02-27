@@ -139,3 +139,56 @@ Gate criteria:
 - [Plan file](../../.claude/plans/playful-painting-rossum.md) — detailed execution plan
 - [INTEGRATION_PLANS/](INTEGRATION_PLANS/) — per-project integration plans (to be created)
 - [TWEETY_CAPABILITY_MAP.md](TWEETY_CAPABILITY_MAP.md) — Tweety module mapping (to be created)
+
+---
+
+## Phase 2: Service Adapters (completed)
+
+### #44 — 2.3.2 CamemBERT Sophismes → `adapters/french_fallacy_adapter.py`
+
+**Pattern**: B (Adapter) — 3-tier hybrid detection replacing the missing CamemBERT fine-tune.
+
+The student's fine-tuned CamemBERT weights (1.8GB) are not in the repository.
+Instead of wrapping a model we cannot use, the adapter provides 3-tier fallacy
+detection with automatic fallback:
+
+| Tier | Method | Model | Dependency |
+|------|--------|-------|------------|
+| 1 | LLM zero-shot | ServiceDiscovery (Qwen 3.5 / OpenRouter) | ServiceDiscovery provider |
+| 2 | NLI zero-shot | mDeBERTa-v3-base-xnli-multilingual (~600MB) | transformers + torch |
+| 3 | Symbolic rules | spaCy Matcher patterns (from student code) | spacy + fr_core_news_lg |
+
+Capabilities: `fallacy_detection`, `neural_fallacy_detection`, `symbolic_fallacy_detection`
+
+### #50 — Arg_Semantic_Index → `services/semantic_index_service.py`
+
+**Pattern**: B (Adapter) — HTTP client wrapper for Kernel Memory.
+
+Wraps the student's `km_client.py` (thin HTTP client) into a proper service
+with configurable endpoints, structured response types, and CapabilityRegistry
+integration. Requires a running Kernel Memory Docker container.
+
+Capabilities: `semantic_search`, `document_indexing`, `rag_qa`
+
+### #52 — speech-to-text → `services/speech_transcription_service.py`
+
+**Pattern**: B (Adapter) — Whisper API client.
+
+Wraps audio transcription via OpenAI-compatible Whisper API endpoints.
+Supports file and bytes input, returns structured TranscriptionResult
+with segments and timestamps.
+
+Capabilities: `speech_transcription`, `audio_processing`
+
+### #51 — CaseAI → Documentation only (Patron C: External)
+
+**Pattern**: C (External) — Pure HTML5/JS browser game, no Python component.
+
+CaseAI is a self-contained murder mystery game (Phaser 3 + Tau Prolog + OpenAI
+gpt-4o). It runs entirely in the browser and does NOT call any
+`argumentation_analysis` endpoints. Integration is documentation-only:
+
+- **No adapter needed** — the game calls OpenAI API directly
+- **Future**: Could redirect LLM calls through our API for model abstraction
+- **Prolog solver**: Uses Tau Prolog (JS) for logic deduction — could be
+  replaced by TweetyBridge for consistency, but works fine as-is
