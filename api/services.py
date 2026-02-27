@@ -5,10 +5,7 @@ import networkx as nx
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from enhanced_agent import EnhancedDungAgent
-
-# L'agent est maintenant importable car le PYTHONPATH est géré dans api/main.py
-# from enhanced_agent import EnhancedDungAgent # Déplacé pour éviter conflit JVM
+    from abs_arg_dung.enhanced_agent import EnhancedDungAgent
 
 
 class DungAnalysisService:

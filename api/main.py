@@ -1,22 +1,8 @@
-import sys
-from pathlib import Path
-import os
 import glob
 import logging
 from .factory import create_app
 from .endpoints import router as api_router, framework_router, informal_router
 from argumentation_analysis.core.bootstrap import initialize_project_environment
-
-# --- Configuration du PYTHONPATH ---
-# Ajoute dynamiquement le répertoire 'abs_arg_dung' au PYTHONPATH.
-# C'est une solution nécessaire pour assurer que les modules de ce répertoire,
-# qui contiennent la logique d'analyse de l'argumentation de Dung,
-# soient importables par l'API, car ils ne sont pas installés comme un paquet standard.
-current_dir = Path(__file__).parent.resolve()
-abs_arg_dung_path = current_dir.parent / "abs_arg_dung"
-if str(abs_arg_dung_path) not in sys.path:
-    sys.path.insert(0, str(abs_arg_dung_path))
-# --- Fin de la configuration du PYTHONPATH ---
 
 # --- Gestion du cycle de vie de la JVM et des services ---
 
