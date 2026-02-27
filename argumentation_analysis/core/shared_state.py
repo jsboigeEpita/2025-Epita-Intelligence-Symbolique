@@ -356,6 +356,167 @@ class RhetoricalAnalysisState:
         return state
 
 
+class UnifiedAnalysisState(RhetoricalAnalysisState):
+    """Extended state encompassing all integrated student project dimensions.
+
+    Adds fields for counter-arguments, argument quality, JTMS beliefs,
+    Dung frameworks, governance decisions, debate transcripts, transcription
+    segments, semantic index references, and neural fallacy scores.
+    """
+
+    def __init__(self, initial_text: str):
+        super().__init__(initial_text)
+        # Counter-argument generation (2.3.3)
+        self.counter_arguments: List[Dict[str, Any]] = []
+        # Argument quality evaluation (2.3.5)
+        self.argument_quality_scores: Dict[str, Dict[str, Any]] = {}
+        # JTMS belief network (1.4.1)
+        self.jtms_beliefs: Dict[str, Dict[str, Any]] = {}
+        # Dung abstract argumentation frameworks (abs_arg_dung)
+        self.dung_frameworks: Dict[str, Dict[str, Any]] = {}
+        # Governance decisions and votes (2.1.6)
+        self.governance_decisions: List[Dict[str, Any]] = []
+        # Debate transcripts (1.2.7)
+        self.debate_transcripts: List[Dict[str, Any]] = []
+        # Speech transcription segments (speech-to-text)
+        self.transcription_segments: List[Dict[str, Any]] = []
+        # Semantic index references (Arg_Semantic_Index)
+        self.semantic_index_refs: List[Dict[str, Any]] = []
+        # Neural fallacy detection scores (2.3.2 CamemBERT)
+        self.neural_fallacy_scores: List[Dict[str, Any]] = []
+        # Workflow execution results
+        self.workflow_results: Dict[str, Any] = {}
+
+    def add_counter_argument(
+        self, original_arg: str, counter_content: str, strategy: str, score: float
+    ) -> str:
+        """Add a counter-argument result."""
+        ca_id = self._generate_id("ca", self.counter_arguments)
+        entry = {
+            "id": ca_id,
+            "original_argument": original_arg,
+            "counter_content": counter_content,
+            "strategy": strategy,
+            "score": score,
+        }
+        self.counter_arguments.append(entry)
+        state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
+        return ca_id
+
+    def add_quality_score(
+        self, arg_id: str, scores: Dict[str, float], overall: float
+    ) -> None:
+        """Add quality evaluation scores for an argument."""
+        self.argument_quality_scores[arg_id] = {
+            "scores": scores,
+            "overall": overall,
+        }
+        state_logger.info(f"Quality score added for {arg_id}: {overall:.2f}")
+
+    def add_jtms_belief(
+        self, name: str, valid: Optional[bool], justifications: List[str]
+    ) -> str:
+        """Add a JTMS belief to the network."""
+        belief_id = self._generate_id("jtms", self.jtms_beliefs)
+        self.jtms_beliefs[belief_id] = {
+            "name": name,
+            "valid": valid,
+            "justifications": justifications,
+        }
+        state_logger.info(f"JTMS belief added: {belief_id} ({name}, valid={valid})")
+        return belief_id
+
+    def add_dung_framework(
+        self,
+        name: str,
+        arguments: List[str],
+        attacks: List[List[str]],
+        extensions: Optional[Dict[str, List]] = None,
+    ) -> str:
+        """Add a Dung argumentation framework."""
+        df_id = self._generate_id("dung", self.dung_frameworks)
+        self.dung_frameworks[df_id] = {
+            "name": name,
+            "arguments": arguments,
+            "attacks": attacks,
+            "extensions": extensions or {},
+        }
+        state_logger.info(
+            f"Dung framework added: {df_id} ({len(arguments)} args, {len(attacks)} attacks)"
+        )
+        return df_id
+
+    def add_governance_decision(
+        self, method: str, winner: str, scores: Dict[str, float]
+    ) -> str:
+        """Add a governance voting decision."""
+        gd_id = self._generate_id("gov", self.governance_decisions)
+        entry = {
+            "id": gd_id,
+            "method": method,
+            "winner": winner,
+            "scores": scores,
+        }
+        self.governance_decisions.append(entry)
+        state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
+        return gd_id
+
+    def add_debate_transcript(
+        self, topic: str, exchanges: List[Dict[str, str]], winner: Optional[str] = None
+    ) -> str:
+        """Add a debate transcript."""
+        dt_id = self._generate_id("debate", self.debate_transcripts)
+        entry = {
+            "id": dt_id,
+            "topic": topic,
+            "exchanges": exchanges,
+            "winner": winner,
+        }
+        self.debate_transcripts.append(entry)
+        state_logger.info(f"Debate transcript added: {dt_id} (topic: {topic[:50]})")
+        return dt_id
+
+    def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
+        """Store workflow execution results."""
+        self.workflow_results[workflow_name] = results
+        state_logger.info(f"Workflow results stored for '{workflow_name}'")
+
+    def get_state_snapshot(self, summarize: bool = False) -> Dict[str, Any]:
+        """Extended snapshot including all unified dimensions."""
+        base = super().get_state_snapshot(summarize=summarize)
+        if summarize:
+            base.update(
+                {
+                    "counter_argument_count": len(self.counter_arguments),
+                    "quality_scores_count": len(self.argument_quality_scores),
+                    "jtms_belief_count": len(self.jtms_beliefs),
+                    "dung_framework_count": len(self.dung_frameworks),
+                    "governance_decision_count": len(self.governance_decisions),
+                    "debate_transcript_count": len(self.debate_transcripts),
+                    "transcription_segment_count": len(self.transcription_segments),
+                    "semantic_index_ref_count": len(self.semantic_index_refs),
+                    "neural_fallacy_score_count": len(self.neural_fallacy_scores),
+                    "workflow_results_count": len(self.workflow_results),
+                }
+            )
+        else:
+            base.update(
+                {
+                    "counter_arguments": self.counter_arguments,
+                    "argument_quality_scores": self.argument_quality_scores,
+                    "jtms_beliefs": self.jtms_beliefs,
+                    "dung_frameworks": self.dung_frameworks,
+                    "governance_decisions": self.governance_decisions,
+                    "debate_transcripts": self.debate_transcripts,
+                    "transcription_segments": self.transcription_segments,
+                    "semantic_index_refs": self.semantic_index_refs,
+                    "neural_fallacy_scores": self.neural_fallacy_scores,
+                    "workflow_results": self.workflow_results,
+                }
+            )
+        return base
+
+
 # Optionnel : Ajouter un log à la fin du fichier pour confirmer le chargement du module
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module core.shared_state chargé.")
