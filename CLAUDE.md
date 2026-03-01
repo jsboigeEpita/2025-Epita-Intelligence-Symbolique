@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-agent argumentation analysis system for EPITA (student project platform). Python 3.10+ with Java/JPype integration. The system analyzes rhetorical strategies, detects fallacies (8 families), performs fact-checking, and orchestrates collaborative reasoning agents (Sherlock/Watson paradigm).
 
-**History**: The core ("tronc commun") was built by the professor inside `argumentation_analysis/`. Student PRs were merged at root level as numbered directories. Over time, AI-assisted development caused code to "overflow" from `argumentation_analysis/` to root-level directories. The structure is being progressively cleaned up.
+**History**: The core ("tronc commun") was built by the professor inside `argumentation_analysis/`. Student PRs were merged at root level as numbered directories. Root-level overflow has been cleaned up (#34). 12 student projects have been integrated into the BaseAgent/SK architecture (#35): agents inherit from `BaseAgent`, logic is exposed via `@kernel_function` plugins, and everything is wired into `CapabilityRegistry` + `AgentFactory`.
 
 ## Build & Environment Setup
 
@@ -31,11 +31,16 @@ conda run -n projet-is-roo-new --no-capture-output <command>
 
 ### API Keys
 
-Copy `.env.example` to `.env`. Primary LLM access is through OpenRouter:
+Copy `.env.example` to `.env`. Primary LLM access is through OpenAI:
+```
+OPENAI_API_KEY=sk-...
+OPENAI_CHAT_MODEL_ID=gpt-5-mini
+```
+
+OpenRouter is also supported as an alternative:
 ```
 OPENROUTER_API_KEY=sk-or-v1-...
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=gpt-4o-mini
 ```
 
 Tests auto-skip when API keys are unavailable (no failures).
@@ -146,6 +151,24 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`oracle/`** — Cluedo dataset + `MoriartyInterrogatorAgent`
 - **`pm/`** — `SherlockEnqueteAgent` (investigation orchestration)
 - **`pl/`** — Propositional logic agent
+- **`debate/`** — `DebateAgent(BaseAgent)` — multi-personality adversarial debate with Walton-Krabbe protocols, argument scoring, knowledge bases. Alias: `EnhancedArgumentationAgent`.
+- **`counter_argument/`** — `CounterArgumentAgent(BaseAgent)` — generates counter-arguments using 5 rhetorical strategies (reductio ad absurdum, counter-example, distinction, reformulation, concession). 5-criteria weighted evaluator.
+- **`governance/`** — Governance simulation: 7 voting methods (majority, Borda, Condorcet, approval, etc.), conflict resolution, consensus metrics. NOT a BaseAgent — logic exposed via plugin.
+- **`quality/`** — Argument quality evaluation: 9 virtue detectors (clarity, coherence, relevance, etc.). Exposed via plugin.
+
+### Semantic Kernel Plugins (`argumentation_analysis/plugins/`)
+
+- **`quality_scoring_plugin.py`** — `QualityScoringPlugin`: 3 `@kernel_function` methods wrapping `ArgumentQualityEvaluator`
+- **`french_fallacy_plugin.py`** — `FrenchFallacyPlugin`: 3 `@kernel_function` methods for 3-tier hybrid fallacy detection (French NLP)
+- **`governance_plugin.py`** — `GovernancePlugin`: 4 `@kernel_function` methods for voting, conflict detection, consensus metrics
+
+### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
+
+- **`CapabilityRegistry`** — Central registry for agents, plugins, and services. `register_agent()`, `register_plugin()`, `register_service()`, `find_*_for_capability()`.
+- **`ServiceDiscovery`** — Provider registry with quality scoring. `register_provider()`, `get_best_provider()`.
+- **`WorkflowDSL`** (`orchestration/workflow_dsl.py`) — Declarative workflow builder: `add_phase(capability=...)`, `depends_on()`, `optional()`.
+- **`AgentFactory`** (`agents/factory.py`) — Creates agents with proper kernel wiring: `create_counter_argument_agent()`, `create_debate_agent()`.
+- **`UnifiedPipeline`** (`orchestration/unified_pipeline.py`) — `setup_registry()` auto-registers all components, 3 pre-built workflows (light/standard/full), `run_unified_analysis()` convenience function.
 
 ### Core Services (`argumentation_analysis/core/`)
 
@@ -154,6 +177,15 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`jvm_setup.py`** — JVM initialization for JPype/Tweety
 - **`bootstrap.py`** — System initialization
 - **`config.py`** / **`environment.py`** — Configuration management
+- **`capability_registry.py`** — CapabilityRegistry + ServiceDiscovery (Lego architecture)
+- **`shared_state.py`** — `UnifiedAnalysisState` extending `RhetoricalAnalysisState` with 10 new dimensions
+
+### Integrated Services (`argumentation_analysis/services/`)
+
+- **`jtms/jtms_core.py`** — JTMS (Justification-based Truth Maintenance System): Belief, Justification, JTMS classes
+- **`local_llm_service.py`** — OpenAI-compatible adapter for local LLM endpoints
+- **`speech_transcription.py`** — Speech-to-text adapter (HTTP service)
+- **`semantic_index_service.py`** — Kernel Memory semantic indexing adapter
 
 ### Key Integration Points
 
@@ -190,5 +222,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - `docs/technical/` — API docs, agent components, entry points, tools reference
 - `docs/reports/` — Audit reports, mission reports, analysis results
 - `docs/validation/` — Test verification reports
+- `docs/integration/plans/` — 12 per-project integration plans (one per student project)
+- `docs/architecture/INTEGRATION_STRATEGY.md` — Overall integration strategy and Lego architecture
 - `KNOWN_ISSUES.md` — Tracked problems and active issues
 - Issue #21 — Planned Tweety environment update from CoursIA
