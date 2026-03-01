@@ -108,7 +108,7 @@ def setup_registry(
     # Governance agent (2.1.6)
     try:
         from argumentation_analysis.agents.core.governance.governance_agent import (
-            GovernanceAgent,
+            Agent as GovernanceAgent,
         )
 
         registry.register_agent(
@@ -162,13 +162,13 @@ def setup_registry(
     if include_optional:
         # CamemBERT fallacy detector (2.3.2)
         try:
-            from argumentation_analysis.adapters.camembert_fallacy import (
-                CamembertFallacyAdapter,
+            from argumentation_analysis.adapters.french_fallacy_adapter import (
+                FrenchFallacyAdapter,
             )
 
             registry.register_agent(
                 name="camembert_fallacy_detector",
-                agent_class=CamembertFallacyAdapter,
+                agent_class=FrenchFallacyAdapter,
                 capabilities=["neural_fallacy_detection", "fallacy_detection"],
                 requires=["camembert_model"],
                 metadata={
@@ -197,7 +197,7 @@ def setup_registry(
 
         # Speech transcription service (speech-to-text)
         try:
-            from argumentation_analysis.services.speech_transcription import (
+            from argumentation_analysis.services.speech_transcription_service import (
                 SpeechTranscriptionService,
             )
 

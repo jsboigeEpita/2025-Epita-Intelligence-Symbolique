@@ -142,6 +142,42 @@ class AgentFactory:
             system_prompt=system_prompt,
         )
 
+    def create_counter_argument_agent(
+        self,
+        agent_name: str = "CounterArgumentAgent",
+        trace_log_path: Optional[str] = None,
+    ) -> Agent:
+        """Create a counter-argument generation agent."""
+        from argumentation_analysis.agents.core.counter_argument.counter_agent import (
+            CounterArgumentAgent,
+        )
+
+        return self._create_agent(
+            agent_class=CounterArgumentAgent,
+            agent_name=agent_name,
+            trace_log_path=trace_log_path,
+        )
+
+    def create_debate_agent(
+        self,
+        agent_name: str = "DebateAgent",
+        personality: str = "The Scholar",
+        position: str = "for",
+        trace_log_path: Optional[str] = None,
+    ) -> Agent:
+        """Create a debate agent with specified personality and position."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+        )
+
+        return self._create_agent(
+            agent_class=DebateAgent,
+            agent_name=agent_name,
+            personality=personality,
+            position=position,
+            trace_log_path=trace_log_path,
+        )
+
     def _create_agent(
         self, agent_class: Type[Agent], trace_log_path: Optional[str] = None, **kwargs
     ) -> Agent:

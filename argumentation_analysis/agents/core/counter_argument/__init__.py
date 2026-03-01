@@ -7,7 +7,7 @@ counter-argument generation (LLM or template), and quality evaluation.
 Integrated from student project 2.3.3-generation-contre-argument.
 """
 
-from .counter_agent import CounterArgumentAgent
+from .counter_agent import CounterArgumentAgent, CounterArgumentPlugin
 from .definitions import (
     Argument,
     ArgumentStrength,
@@ -24,6 +24,7 @@ from .strategies import RhetoricalStrategies
 
 __all__ = [
     "CounterArgumentAgent",
+    "CounterArgumentPlugin",
     "ArgumentParser",
     "VulnerabilityAnalyzer",
     "RhetoricalStrategies",

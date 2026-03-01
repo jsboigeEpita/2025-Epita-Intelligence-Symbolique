@@ -3,12 +3,28 @@ Tests for counter-argument generation package.
 
 Tests cover: imports, CapabilityRegistry registration, argument parsing,
 vulnerability analysis, rhetorical strategies, counter-argument evaluation,
-and the agent pipeline (with and without LLM).
+the SK plugin, and the BaseAgent pipeline (with and without LLM).
 """
 
-import asyncio
+import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+
+# ── Fixtures ─────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def mock_kernel():
+    """Create a kernel with a test LLM service (fake API key)."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+    kernel.add_service(service)
+    return kernel
+
 
 # ── Import tests ──────────────────────────────────────────────────
 
@@ -64,15 +80,24 @@ class TestCounterArgumentImport:
 
         assert callable(CounterArgumentAgent)
 
+    def test_import_plugin(self):
+        from argumentation_analysis.agents.core.counter_argument.counter_agent import (
+            CounterArgumentPlugin,
+        )
+
+        assert callable(CounterArgumentPlugin)
+
     def test_import_from_package(self):
         from argumentation_analysis.agents.core.counter_argument import (
             CounterArgumentAgent,
+            CounterArgumentPlugin,
             ArgumentParser,
             RhetoricalStrategies,
             CounterArgumentEvaluator,
         )
 
         assert CounterArgumentAgent is not None
+        assert CounterArgumentPlugin is not None
 
 
 # ── Registration tests ────────────────────────────────────────────
@@ -151,7 +176,7 @@ class TestArgumentParser:
         assert arg.argument_type == "abductive"
 
     def test_confidence_with_markers(self):
-        # With both premise and conclusion markers → high confidence
+        # With both premise and conclusion markers -> high confidence
         text = "Puisque les données le montrent, donc la conclusion est valide."
         arg = self.parser.parse_argument(text)
         assert arg.confidence >= 0.7
@@ -458,11 +483,53 @@ class TestCounterArgumentEvaluator:
         assert r1.logical_strength > r2.logical_strength
 
 
-# ── Agent pipeline tests ──────────────────────────────────────────
+# ── Plugin tests ─────────────────────────────────────────────────
+
+
+class TestCounterArgumentPlugin:
+    """Test the SK plugin wrapper."""
+
+    def setup_method(self):
+        from argumentation_analysis.agents.core.counter_argument.counter_agent import (
+            CounterArgumentPlugin,
+        )
+
+        self.plugin = CounterArgumentPlugin()
+
+    def test_parse_argument_returns_json(self):
+        result = self.plugin.parse_argument(
+            "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
+        )
+        parsed = json.loads(result)
+        assert "content" in parsed
+        assert "premises" in parsed
+        assert "conclusion" in parsed
+        assert "argument_type" in parsed
+        assert parsed["argument_type"] == "deductive"
+
+    def test_identify_vulnerabilities_returns_json(self):
+        result = self.plugin.identify_vulnerabilities(
+            "Tous les politiciens sont évidemment corrompus"
+        )
+        vulns = json.loads(result)
+        assert isinstance(vulns, list)
+        assert len(vulns) >= 1
+        assert "type" in vulns[0]
+
+    def test_suggest_strategy_returns_json(self):
+        result = self.plugin.suggest_strategy(
+            "Les statistiques montrent que la criminalité baisse"
+        )
+        parsed = json.loads(result)
+        assert "strategy" in parsed
+        assert parsed["strategy"] == "statistical_evidence"
+
+
+# ── Agent pipeline tests (BaseAgent) ─────────────────────────────
 
 
 class TestCounterArgumentAgent:
-    """Test the counter-argument agent pipeline."""
+    """Test the counter-argument agent pipeline with BaseAgent."""
 
     def setup_method(self):
         from argumentation_analysis.agents.core.counter_argument.counter_agent import (
@@ -471,89 +538,168 @@ class TestCounterArgumentAgent:
 
         self.AgentClass = CounterArgumentAgent
 
-    def test_create_agent_no_llm(self):
-        agent = self.AgentClass()
-        assert agent._llm_client is None
+        # Create kernel with test service
+        self.kernel = Kernel()
+        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+        self.kernel.add_service(service)
+
+    def _create_agent(self, **kwargs):
+        return self.AgentClass(kernel=self.kernel, **kwargs)
+
+    def test_create_agent(self):
+        agent = self._create_agent()
         assert agent.parser is not None
         assert agent.strategies is not None
         assert agent.evaluator is not None
+        assert agent.name == "CounterArgumentAgent"
 
-    def test_generate_fallback_no_llm(self):
-        """Agent generates template-based counter without LLM."""
-        agent = self.AgentClass()
-        result = asyncio.get_event_loop().run_until_complete(
-            agent.generate_counter_argument(
+    def test_agent_capabilities(self):
+        agent = self._create_agent()
+        caps = agent.get_agent_capabilities()
+        assert caps["counter_argument_generation"] is True
+        assert caps["argument_parsing"] is True
+        assert caps["vulnerability_analysis"] is True
+        assert len(caps["strategies"]) == 5
+        assert len(caps["counter_types"]) == 5
+
+    def test_setup_agent_components(self):
+        agent = self._create_agent()
+        agent.setup_agent_components()
+        # Plugin should be registered with kernel
+        plugin = self.kernel.get_plugin("counter_argument")
+        assert plugin is not None
+
+    async def test_generate_fallback_no_llm(self):
+        """Agent generates template-based counter when LLM call fails."""
+        agent = self._create_agent()
+
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("LLM unavailable"),
+        ):
+            result = await agent.generate_counter_argument(
                 "Tous les oiseaux peuvent voler car ils ont des ailes."
             )
-        )
+
         assert "argument" in result
         assert "vulnerabilities" in result
         assert "counter_argument" in result
         assert "evaluation" in result
-
         # Counter content should be non-empty (template fallback)
         assert len(result["counter_argument"].counter_content) > 10
 
-    def test_generate_with_mock_llm(self):
-        """Agent uses LLM when available."""
-        mock_client = MagicMock()
-        mock_client.chat_completion = AsyncMock(
-            return_value="This argument fails because the premise is unfounded."
-        )
+    async def test_generate_with_mock_llm(self):
+        """Agent uses LLM output when available."""
+        agent = self._create_agent()
 
-        agent = self.AgentClass(llm_client=mock_client)
-        result = asyncio.get_event_loop().run_until_complete(
-            agent.generate_counter_argument(
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            return_value="This argument fails because the premise is unfounded.",
+        ):
+            result = await agent.generate_counter_argument(
                 "Tous les politiciens sont corrompus car c'est évident."
             )
-        )
+
         assert "counter_argument" in result
         assert "unfounded" in result["counter_argument"].counter_content.lower()
-        mock_client.chat_completion.assert_called_once()
 
-    def test_generate_multiple(self):
+    async def test_generate_multiple(self):
         """Generate multiple counter-arguments."""
-        agent = self.AgentClass()
-        results = asyncio.get_event_loop().run_until_complete(
-            agent.generate_multiple(
+        agent = self._create_agent()
+
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            results = await agent.generate_multiple(
                 "Le réchauffement climatique est un mythe car il a neigé hier.",
                 count=3,
             )
-        )
+
         assert len(results) == 3
         # Should be sorted by score (best first)
         scores = [r["evaluation"].overall_score for r in results]
         assert scores == sorted(scores, reverse=True)
 
-    def test_llm_failure_falls_back(self):
+    async def test_llm_failure_falls_back(self):
         """Agent falls back to template when LLM fails."""
-        mock_client = MagicMock()
-        mock_client.chat_completion = AsyncMock(side_effect=RuntimeError("API error"))
+        agent = self._create_agent()
 
-        agent = self.AgentClass(llm_client=mock_client)
-        result = asyncio.get_event_loop().run_until_complete(
-            agent.generate_counter_argument("Argument simple pour tester.")
-        )
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("API error"),
+        ):
+            result = await agent.generate_counter_argument(
+                "Argument simple pour tester."
+            )
+
         # Should still produce a result via template fallback
         assert len(result["counter_argument"].counter_content) > 10
 
-    def test_specific_counter_type(self):
+    async def test_specific_counter_type(self):
         """Specify counter-argument type explicitly."""
         from argumentation_analysis.agents.core.counter_argument.definitions import (
             CounterArgumentType,
         )
 
-        agent = self.AgentClass()
-        result = asyncio.get_event_loop().run_until_complete(
-            agent.generate_counter_argument(
+        agent = self._create_agent()
+
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            result = await agent.generate_counter_argument(
                 "Tous les chats sont noirs car j'en ai vu un.",
                 counter_type=CounterArgumentType.REDUCTIO_AD_ABSURDUM,
             )
-        )
+
         assert (
             result["counter_argument"].counter_type
             == CounterArgumentType.REDUCTIO_AD_ABSURDUM
         )
+
+    async def test_invoke_single(self):
+        """Test the BaseAgent invoke_single interface."""
+        agent = self._create_agent()
+
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            result = await agent.invoke_single(
+                "Les vaccins sont dangereux car un ami est tombé malade."
+            )
+
+        assert "argument" in result
+        assert "counter_argument" in result
+
+    async def test_get_response_with_text(self):
+        """Test the BaseAgent get_response interface with text input."""
+        agent = self._create_agent()
+
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            result = await agent.get_response(
+                "La terre est plate car l'horizon est droit."
+            )
+
+        assert "argument" in result
 
 
 # ── Parser utility tests ─────────────────────────────────────────

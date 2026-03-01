@@ -26,6 +26,12 @@ from .debate_definitions import (
     DebateState,
     AGENT_PERSONALITIES,
 )
+from .debate_agent import (
+    DebateAgent,
+    DebatePlugin,
+    EnhancedArgumentationAgent,
+    EnhancedDebateModerator,
+)
 from .debate_scoring import ArgumentAnalyzer
 from .protocols import (
     DialogueType,
@@ -37,6 +43,10 @@ from .protocols import (
 )
 
 __all__ = [
+    "DebateAgent",
+    "DebatePlugin",
+    "EnhancedArgumentationAgent",
+    "EnhancedDebateModerator",
     "ArgumentType",
     "DebatePhase",
     "ArgumentMetrics",
@@ -51,3 +61,25 @@ __all__ = [
     "InquiryProtocol",
     "PersuasionProtocol",
 ]
+
+
+def register_with_capability_registry(registry):
+    """Register debate capabilities with the Lego registry."""
+    registry.register_agent(
+        name="debate_agent",
+        agent_class=DebateAgent,
+        capabilities=[
+            "adversarial_debate",
+            "argument_generation",
+            "strategy_adaptation",
+            "opponent_analysis",
+            "argument_scoring",
+        ],
+        metadata={
+            "description": (
+                "Generates arguments in adversarial debates with 8 personality "
+                "archetypes, adaptive strategies, 8-metric scoring, and "
+                "phase-based orchestration."
+            ),
+        },
+    )

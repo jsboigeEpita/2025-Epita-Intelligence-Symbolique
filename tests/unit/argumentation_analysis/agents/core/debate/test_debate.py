@@ -2,18 +2,46 @@
 Tests for the Debate module (integrated from 1.2.7 Dialogique).
 
 Tests validate:
-- Module import without errors
+- Module import without errors (including new DebatePlugin, DebateAgent)
 - CapabilityRegistry registration
 - Debate definitions (enums, dataclasses)
 - Argument scoring (8 metrics)
 - Walton-Krabbe protocols (transitions, termination)
 - Knowledge base (propositions, arguments, consistency)
-- Debate agent (fallback, LLM abstraction)
+- DebatePlugin (@kernel_function methods)
+- DebateAgent BaseAgent interface (setup_agent_components, capabilities)
+- Debate agent (fallback, LLM abstraction via SK kernel)
 - Debate moderator (phase-based orchestration)
 """
 
+import json
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_kernel():
+    """Create a Kernel with a mock OpenAI service for testing."""
+    kernel = Kernel()
+    service = OpenAIChatCompletion(
+        service_id="default", api_key="test-key"
+    )
+    kernel.add_service(service)
+    return kernel
+
+
+# ---------------------------------------------------------------------------
+# Import tests
+# ---------------------------------------------------------------------------
 
 
 class TestDebateImport:
@@ -29,19 +57,25 @@ class TestDebateImport:
             DebateState,
             AGENT_PERSONALITIES,
             ArgumentAnalyzer,
+            DebateAgent,
+            DebatePlugin,
             DialogueType,
             SpeechAct,
             Proposition,
             InquiryProtocol,
             PersuasionProtocol,
         )
-        from argumentation_analysis.agents.core.debate.protocols import FormalArgument
+        from argumentation_analysis.agents.core.debate.protocols import (
+            FormalArgument,
+        )
 
         assert ArgumentType is not None
         assert len(AGENT_PERSONALITIES) == 8
         assert len(DialogueType) == 6
         assert len(SpeechAct) == 9
         assert FormalArgument is not None
+        assert DebateAgent is not None
+        assert DebatePlugin is not None
 
     def test_import_definitions(self):
         """Definitions module has all expected types."""
@@ -66,14 +100,19 @@ class TestDebateImport:
         assert callable(ArgumentAnalyzer)
 
     def test_import_agent(self):
-        """Agent module imports."""
+        """Agent module imports DebateAgent and backward-compat alias."""
         from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+            DebatePlugin,
             EnhancedArgumentationAgent,
             EnhancedDebateModerator,
         )
 
-        assert callable(EnhancedArgumentationAgent)
+        assert callable(DebateAgent)
+        assert callable(DebatePlugin)
         assert callable(EnhancedDebateModerator)
+        # Backward compat alias
+        assert EnhancedArgumentationAgent is DebateAgent
 
     def test_import_protocols(self):
         """Protocols module imports all Walton-Krabbe types."""
@@ -100,20 +139,27 @@ class TestDebateImport:
         assert callable(KnowledgeBase)
 
 
+# ---------------------------------------------------------------------------
+# Registration tests
+# ---------------------------------------------------------------------------
+
+
 class TestDebateRegistration:
     """Test CapabilityRegistry registration."""
 
     def test_register_debate_agent(self):
         """Debate agent registers correctly in CapabilityRegistry."""
-        from argumentation_analysis.core.capability_registry import CapabilityRegistry
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
         from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
+            DebateAgent,
         )
 
         registry = CapabilityRegistry()
         registry.register_agent(
             "debate_agent",
-            EnhancedArgumentationAgent,
+            DebateAgent,
             capabilities=[
                 "adversarial_debate",
                 "argument_generation",
@@ -127,21 +173,186 @@ class TestDebateRegistration:
 
     def test_provides_declared_capabilities(self):
         """Debate provides the capabilities it declares."""
-        from argumentation_analysis.core.capability_registry import CapabilityRegistry
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
         from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
+            DebateAgent,
         )
 
         registry = CapabilityRegistry()
         registry.register_agent(
             "debate_agent",
-            EnhancedArgumentationAgent,
+            DebateAgent,
             capabilities=["adversarial_debate", "argument_generation"],
         )
 
         all_caps = registry.get_all_capabilities()
         assert "adversarial_debate" in all_caps
         assert "argument_generation" in all_caps
+
+    def test_register_with_convenience_function(self):
+        """register_with_capability_registry() works."""
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
+        from argumentation_analysis.agents.core.debate import (
+            register_with_capability_registry,
+        )
+
+        registry = CapabilityRegistry()
+        register_with_capability_registry(registry)
+
+        agents = registry.find_agents_for_capability("adversarial_debate")
+        assert len(agents) == 1
+        assert agents[0].name == "debate_agent"
+
+
+# ---------------------------------------------------------------------------
+# Plugin tests
+# ---------------------------------------------------------------------------
+
+
+class TestDebatePlugin:
+    """Test DebatePlugin @kernel_function methods."""
+
+    def test_plugin_creation(self):
+        """DebatePlugin can be created."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        assert plugin.analyzer is not None
+
+    def test_analyze_argument_quality(self):
+        """analyze_argument_quality returns valid JSON with 8 metrics."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.analyze_argument_quality(
+            text="Research shows that renewable energy reduces costs. "
+            "Studies demonstrate a 40% improvement."
+        )
+        data = json.loads(result)
+        assert "logical_coherence" in data
+        assert "evidence_quality" in data
+        assert "persuasiveness" in data
+        assert len(data) == 8
+
+    def test_analyze_logical_structure(self):
+        """analyze_logical_structure extracts premises and conclusion."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.analyze_logical_structure(
+            text="Energy costs are declining. Research shows rapid adoption. "
+            "Therefore we should invest now."
+        )
+        data = json.loads(result)
+        assert "premises" in data
+        assert "conclusion" in data
+        assert "therefore" in data["conclusion"].lower()
+
+    def test_suggest_debate_strategy(self):
+        """suggest_debate_strategy returns valid strategy."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.suggest_debate_strategy(
+            phase="opening", turn_number="1"
+        )
+        data = json.loads(result)
+        assert data["strategy"] == "balanced"
+
+    def test_suggest_strategy_aggressive(self):
+        """High opponent strength triggers aggressive strategy."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.suggest_debate_strategy(
+            phase="main_arguments",
+            turn_number="5",
+            opponent_strength="0.9",
+        )
+        data = json.loads(result)
+        assert data["strategy"] == "aggressive"
+
+
+# ---------------------------------------------------------------------------
+# BaseAgent interface tests
+# ---------------------------------------------------------------------------
+
+
+class TestDebateBaseAgentInterface:
+    """Test that DebateAgent properly implements BaseAgent interface."""
+
+    def test_inherits_from_base_agent(self, mock_kernel):
+        """DebateAgent inherits from BaseAgent."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+        )
+        from argumentation_analysis.agents.core.abc.agent_bases import (
+            BaseAgent,
+        )
+
+        agent = DebateAgent(kernel=mock_kernel)
+        assert isinstance(agent, BaseAgent)
+
+    def test_setup_agent_components(self, mock_kernel):
+        """setup_agent_components registers plugin with kernel."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+        )
+
+        agent = DebateAgent(kernel=mock_kernel)
+        agent.setup_agent_components()
+        # Plugin should be registered
+        plugins = mock_kernel.plugins
+        assert "debate" in plugins
+
+
+class TestDebateCapabilities:
+    """Test agent capabilities declaration."""
+
+    def test_capabilities_dict(self, mock_kernel):
+        """get_agent_capabilities returns expected capabilities."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+        )
+
+        agent = DebateAgent(kernel=mock_kernel)
+        caps = agent.get_agent_capabilities()
+        assert caps["adversarial_debate"] is True
+        assert caps["argument_generation"] is True
+        assert caps["strategy_adaptation"] is True
+        assert "personalities" in caps
+        assert len(caps["personalities"]) == 8
+        assert "phases" in caps
+        assert "argument_types" in caps
+
+    def test_capabilities_include_all_phases(self, mock_kernel):
+        """Capabilities include all 5 debate phases."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebateAgent,
+        )
+
+        agent = DebateAgent(kernel=mock_kernel)
+        caps = agent.get_agent_capabilities()
+        assert len(caps["phases"]) == 5
+
+
+# ---------------------------------------------------------------------------
+# Definitions tests (unchanged)
+# ---------------------------------------------------------------------------
 
 
 class TestDebateDefinitions:
@@ -234,6 +445,11 @@ class TestDebateDefinitions:
             assert "description" in profile
             assert "strengths" in profile
             assert "weaknesses" in profile
+
+
+# ---------------------------------------------------------------------------
+# Argument scoring tests (unchanged)
+# ---------------------------------------------------------------------------
 
 
 class TestArgumentAnalyzer:
@@ -348,6 +564,11 @@ class TestArgumentAnalyzer:
         assert m1.evidence_quality > m2.evidence_quality
 
 
+# ---------------------------------------------------------------------------
+# Walton-Krabbe protocol tests (unchanged)
+# ---------------------------------------------------------------------------
+
+
 class TestWaltonKrabbeProtocols:
     """Test Walton-Krabbe dialogue protocols."""
 
@@ -359,11 +580,11 @@ class TestWaltonKrabbeProtocols:
         )
 
         protocol = InquiryProtocol()
-        # QUESTION → CLAIM is allowed
+        # QUESTION -> CLAIM is allowed
         assert protocol.is_valid_move(SpeechAct.QUESTION, SpeechAct.CLAIM)
-        # CLAIM → SUPPORT is allowed
+        # CLAIM -> SUPPORT is allowed
         assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.SUPPORT)
-        # CLAIM → RETRACT is NOT allowed in inquiry
+        # CLAIM -> RETRACT is NOT allowed in inquiry
         assert not protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.RETRACT)
 
     def test_persuasion_protocol_transitions(self):
@@ -374,11 +595,11 @@ class TestWaltonKrabbeProtocols:
         )
 
         protocol = PersuasionProtocol()
-        # CLAIM → CHALLENGE is allowed
+        # CLAIM -> CHALLENGE is allowed
         assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.CHALLENGE)
-        # CHALLENGE → ARGUE is allowed
+        # CHALLENGE -> ARGUE is allowed
         assert protocol.is_valid_move(SpeechAct.CHALLENGE, SpeechAct.ARGUE)
-        # CHALLENGE → RETRACT is allowed (withdraw claim under challenge)
+        # CHALLENGE -> RETRACT is allowed (withdraw claim under challenge)
         assert protocol.is_valid_move(SpeechAct.CHALLENGE, SpeechAct.RETRACT)
 
     def test_inquiry_termination_consensus(self):
@@ -394,9 +615,15 @@ class TestWaltonKrabbeProtocols:
         prop = Proposition(content="Test")
         history = [
             DialogueMove(speaker="a", act=SpeechAct.CLAIM, content=prop),
-            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
-            DialogueMove(speaker="a", act=SpeechAct.UNDERSTAND, content=prop),
-            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
+            DialogueMove(
+                speaker="b", act=SpeechAct.UNDERSTAND, content=prop
+            ),
+            DialogueMove(
+                speaker="a", act=SpeechAct.UNDERSTAND, content=prop
+            ),
+            DialogueMove(
+                speaker="b", act=SpeechAct.UNDERSTAND, content=prop
+            ),
         ]
         assert protocol.is_terminal_state(history)
 
@@ -431,7 +658,9 @@ class TestWaltonKrabbeProtocols:
 
     def test_dialogue_type_enum(self):
         """All 6 dialogue types exist."""
-        from argumentation_analysis.agents.core.debate.protocols import DialogueType
+        from argumentation_analysis.agents.core.debate.protocols import (
+            DialogueType,
+        )
 
         assert DialogueType.INQUIRY.value == "inquiry"
         assert DialogueType.PERSUASION.value == "persuasion"
@@ -442,7 +671,9 @@ class TestWaltonKrabbeProtocols:
 
     def test_proposition_equality(self):
         """Propositions with same content are equal."""
-        from argumentation_analysis.agents.core.debate.protocols import Proposition
+        from argumentation_analysis.agents.core.debate.protocols import (
+            Proposition,
+        )
 
         p1 = Proposition(content="It is raining")
         p2 = Proposition(content="It is raining")
@@ -466,6 +697,11 @@ class TestWaltonKrabbeProtocols:
         assert "C" in s
 
 
+# ---------------------------------------------------------------------------
+# Knowledge base tests (unchanged)
+# ---------------------------------------------------------------------------
+
+
 class TestKnowledgeBase:
     """Test the knowledge base for argumentation."""
 
@@ -474,7 +710,9 @@ class TestKnowledgeBase:
         from argumentation_analysis.agents.core.debate.knowledge_base import (
             KnowledgeBase,
         )
-        from argumentation_analysis.agents.core.debate.protocols import Proposition
+        from argumentation_analysis.agents.core.debate.protocols import (
+            Proposition,
+        )
 
         kb = KnowledgeBase()
         p = Proposition(content="It is raining")
@@ -533,7 +771,9 @@ class TestKnowledgeBase:
         kb = KnowledgeBase()
         target = Proposition(content="It is sunny")
         neg = Proposition(content="\u00acIt is sunny")
-        arg = FormalArgument(premises=[Proposition(content="Clouds")], conclusion=neg)
+        arg = FormalArgument(
+            premises=[Proposition(content="Clouds")], conclusion=neg
+        )
         kb.add_argument(arg)
 
         attackers = kb.find_attacking_arguments(target)
@@ -544,7 +784,9 @@ class TestKnowledgeBase:
         from argumentation_analysis.agents.core.debate.knowledge_base import (
             KnowledgeBase,
         )
-        from argumentation_analysis.agents.core.debate.protocols import Proposition
+        from argumentation_analysis.agents.core.debate.protocols import (
+            Proposition,
+        )
 
         kb = KnowledgeBase()
         kb.add_proposition(Proposition(content="A"))
@@ -556,7 +798,9 @@ class TestKnowledgeBase:
         from argumentation_analysis.agents.core.debate.knowledge_base import (
             KnowledgeBase,
         )
-        from argumentation_analysis.agents.core.debate.protocols import Proposition
+        from argumentation_analysis.agents.core.debate.protocols import (
+            Proposition,
+        )
 
         kb = KnowledgeBase()
         kb.add_proposition(Proposition(content="A"))
@@ -564,37 +808,52 @@ class TestKnowledgeBase:
         assert not kb.is_consistent()
 
 
+# ---------------------------------------------------------------------------
+# Debate agent tests (adapted for BaseAgent)
+# ---------------------------------------------------------------------------
+
+
 class TestDebateAgent:
     """Test debate agent behavior."""
 
-    def test_agent_creation(self):
-        """Create agent with personality and position."""
+    def setup_method(self):
+        """Set up kernel for each test."""
         from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
+            DebateAgent,
         )
 
-        agent = EnhancedArgumentationAgent(
-            name="Scholar",
+        self.AgentClass = DebateAgent
+        self.kernel = Kernel()
+        service = OpenAIChatCompletion(
+            service_id="default", api_key="test-key"
+        )
+        self.kernel.add_service(service)
+
+    def _create_agent(self, **kwargs):
+        """Helper to create a DebateAgent with the test kernel."""
+        return self.AgentClass(kernel=self.kernel, **kwargs)
+
+    def test_agent_creation(self):
+        """Create agent with personality and position."""
+        agent = self._create_agent(
+            agent_name="Scholar",
             personality="Academic and methodical",
             position="for",
         )
         assert agent.name == "Scholar"
         assert agent.position == "for"
-        assert agent._llm_client is None
+        assert agent.personality == "Academic and methodical"
 
-    def test_fallback_argument(self):
-        """Agent produces fallback when no LLM available."""
-        from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
-        )
+    async def test_fallback_argument(self):
+        """Agent produces fallback when LLM unavailable."""
         from argumentation_analysis.agents.core.debate.debate_definitions import (
             ArgumentType,
             DebatePhase,
             DebateState,
         )
 
-        agent = EnhancedArgumentationAgent(
-            name="Test", personality="test", position="for"
+        agent = self._create_agent(
+            agent_name="Test", personality="test", position="for"
         )
         state = DebateState(
             topic="Climate change",
@@ -605,36 +864,30 @@ class TestDebateAgent:
             phase=DebatePhase.OPENING,
         )
 
-        import asyncio
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("LLM unavailable"),
+        ):
+            arg = await agent.generate_argument(
+                state, ArgumentType.OPENING_STATEMENT
+            )
 
-        arg = asyncio.get_event_loop().run_until_complete(
-            agent.generate_argument(state, ArgumentType.OPENING_STATEMENT)
-        )
         assert arg.agent_name == "Test"
         assert arg.content != ""
         assert arg.metrics.persuasiveness == 0.3  # Fallback metric
 
-    def test_agent_with_mock_llm(self):
-        """Agent uses injected LLM client."""
-        from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
-        )
+    async def test_agent_with_mock_llm(self):
+        """Agent uses SK kernel for LLM generation."""
         from argumentation_analysis.agents.core.debate.debate_definitions import (
             ArgumentType,
             DebatePhase,
             DebateState,
         )
 
-        mock_client = MagicMock()
-        mock_client.chat_completion = AsyncMock(
-            return_value="Renewable energy is the future because studies show declining costs."
-        )
-
-        agent = EnhancedArgumentationAgent(
-            name="Scholar",
-            personality="Academic",
-            position="for",
-            llm_client=mock_client,
+        agent = self._create_agent(
+            agent_name="Scholar", personality="Academic", position="for"
         )
         state = DebateState(
             topic="Renewable energy",
@@ -645,26 +898,31 @@ class TestDebateAgent:
             phase=DebatePhase.MAIN_ARGUMENTS,
         )
 
-        import asyncio
-
-        arg = asyncio.get_event_loop().run_until_complete(
-            agent.generate_argument(state, ArgumentType.EVIDENCE)
+        mock_response = (
+            "Renewable energy is the future because studies show "
+            "declining costs."
         )
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
+            arg = await agent.generate_argument(
+                state, ArgumentType.EVIDENCE
+            )
+
         assert "Renewable" in arg.content or "energy" in arg.content
-        mock_client.chat_completion.assert_called_once()
 
     def test_strategy_adaptation(self):
         """Agent adapts strategy based on debate phase."""
-        from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
-        )
         from argumentation_analysis.agents.core.debate.debate_definitions import (
             DebatePhase,
             DebateState,
         )
 
-        agent = EnhancedArgumentationAgent(
-            name="Test", personality="test", position="for"
+        agent = self._create_agent(
+            agent_name="Test", personality="test", position="for"
         )
         state = DebateState(
             topic="Test",
@@ -679,12 +937,8 @@ class TestDebateAgent:
 
     def test_logical_structure_analysis(self):
         """Agent extracts logical structure from text."""
-        from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
-        )
-
-        agent = EnhancedArgumentationAgent(
-            name="Test", personality="test", position="for"
+        agent = self._create_agent(
+            agent_name="Test", personality="test", position="for"
         )
         structure = agent._analyze_logical_structure(
             "Energy costs are declining. Research shows rapid adoption. "
@@ -694,9 +948,45 @@ class TestDebateAgent:
         assert "conclusion" in structure
         assert "therefore" in structure["conclusion"].lower()
 
+    async def test_invoke_single(self):
+        """invoke_single creates a debate state and generates argument."""
+        agent = self._create_agent(
+            agent_name="Test", personality="test", position="for"
+        )
+        with patch.object(
+            agent,
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            result = await agent.invoke_single("Climate change debate")
+
+        assert "argument" in result
+        assert "metrics" in result
+        assert "strategy" in result
+
+    async def test_invoke_single_empty_topic(self):
+        """invoke_single returns error for empty topic."""
+        agent = self._create_agent()
+        result = await agent.invoke_single("")
+        assert "error" in result
+
+
+# ---------------------------------------------------------------------------
+# Debate moderator tests (adapted for BaseAgent agents)
+# ---------------------------------------------------------------------------
+
 
 class TestDebateModerator:
     """Test the debate moderator."""
+
+    def setup_method(self):
+        """Set up kernel for agent creation."""
+        self.kernel = Kernel()
+        service = OpenAIChatCompletion(
+            service_id="default", api_key="test-key"
+        )
+        self.kernel.add_service(service)
 
     def test_moderator_creation(self):
         """Moderator can be created with rules."""
@@ -737,10 +1027,10 @@ class TestDebateModerator:
         score = mod._simulate_audience_reaction(arg)
         assert score >= 0
 
-    def test_run_debate_full(self):
+    async def test_run_debate_full(self):
         """Full debate runs with fallback agents (no LLM)."""
         from argumentation_analysis.agents.core.debate.debate_agent import (
-            EnhancedArgumentationAgent,
+            DebateAgent,
             EnhancedDebateModerator,
         )
         from argumentation_analysis.agents.core.debate.debate_definitions import (
@@ -748,16 +1038,37 @@ class TestDebateModerator:
         )
 
         agents = [
-            EnhancedArgumentationAgent("Alice", "Scholar", "for"),
-            EnhancedArgumentationAgent("Bob", "Skeptic", "against"),
+            DebateAgent(
+                kernel=self.kernel,
+                agent_name="Alice",
+                personality="Scholar",
+                position="for",
+            ),
+            DebateAgent(
+                kernel=self.kernel,
+                agent_name="Bob",
+                personality="Skeptic",
+                position="against",
+            ),
         ]
         moderator = EnhancedDebateModerator()
 
-        import asyncio
+        # Mock LLM for both agents to force fallback
+        with patch.object(
+            agents[0],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ), patch.object(
+            agents[1],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            state = await moderator.run_debate(
+                "Should we invest in renewable energy?", agents
+            )
 
-        state = asyncio.get_event_loop().run_until_complete(
-            moderator.run_debate("Should we invest in renewable energy?", agents)
-        )
         assert state.phase == DebatePhase.CONCLUDED
         assert len(state.arguments) == 14  # 2+6+4+2
         assert state.winner is not None
