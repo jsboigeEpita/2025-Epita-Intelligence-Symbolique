@@ -45,6 +45,14 @@ OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 
 Tests auto-skip when API keys are unavailable (no failures).
 
+### GitHub CLI
+
+The repo is owned by `jsboigeEpita`. A `GH_TOKEN` in `.env` grants `gh` CLI access with the correct account. **Always prefix `gh` commands** with the token export:
+```bash
+export GH_TOKEN=$(grep "^GH_TOKEN=" .env | cut -d= -f2) && gh issue list
+```
+Without this, `gh` uses the global default account (`jsboige`) which lacks write permissions on this repo.
+
 ## Testing
 
 ```bash
