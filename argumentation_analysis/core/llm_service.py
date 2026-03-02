@@ -22,7 +22,6 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
 )
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
 from argumentation_analysis.config.settings import settings
-from tests.mocks.llm_service_mocks import MockChatCompletion
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
@@ -45,7 +44,7 @@ def create_llm_service(
     service_type: str = "OpenAIChatCompletion",
     force_mock: bool = False,
     force_authentic: bool = False,
-) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
+) -> Union[OpenAIChatCompletion, AzureChatCompletion, "ChatCompletionClientBase"]:
     """
     Factory pour créer et configurer une instance de service de complétion de chat.
 
@@ -86,6 +85,9 @@ def create_llm_service(
             logger.warning(
                 f"Environnement de test détecté. Création d'un service LLM MOCKÉ pour '{service_id}'."
             )
+        # Lazy import to avoid requiring test modules in production code
+        from tests.mocks.llm_service_mocks import MockChatCompletion
+
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
     logger.info("Tentative de création d'un service LLM AUTHENTIQUE...")

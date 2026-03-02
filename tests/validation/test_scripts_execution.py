@@ -50,6 +50,9 @@ def script_test_environment():
     """Environnement de test pour validation des scripts."""
     env = os.environ.copy()
     env.update(TEST_ENV_BASE)
+    # Remove pytest env vars to prevent subprocess auto-mocking
+    env.pop("PYTEST_CURRENT_TEST", None)
+    env.pop("PYTEST_RUNNING", None)
     return env
 
 
@@ -151,7 +154,16 @@ class ScriptExecutionValidator:
         }
 
         # Détection d'erreurs et warnings
-        error_indicators = ["error", "exception", "failed", "traceback"]
+        # Use specific Python error patterns to avoid false positives from
+        # LLM output that naturally discusses "errors" in argumentation
+        error_indicators = [
+            "traceback (most recent call last)",
+            "importerror:",
+            "modulenotfounderror:",
+            "syntaxerror:",
+            "runtimeerror:",
+            "fatal error",
+        ]
         warning_indicators = ["warning", "warn", "attention"]
 
         # Exclure les erreurs contrôlées de l'analyse pour éviter les faux positifs
