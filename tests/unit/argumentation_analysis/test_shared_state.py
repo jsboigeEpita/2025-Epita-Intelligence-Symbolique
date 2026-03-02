@@ -256,5 +256,197 @@ class TestRhetoricalAnalysisState(unittest.TestCase):
         self.assertEqual(state._next_agent_designated, data["_next_agent_designated"])
 
 
+# ===========================================================================
+# UnifiedAnalysisState (Phase 4 Extensions)
+# ===========================================================================
+
+
+class TestUnifiedAnalysisState(unittest.TestCase):
+    """Tests for UnifiedAnalysisState — Phase 4 extended dimensions."""
+
+    def setUp(self):
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        self.state = UnifiedAnalysisState("Texte pour analyse unifiée.")
+
+    def test_inherits_from_rhetorical(self):
+        """UnifiedAnalysisState is a RhetoricalAnalysisState."""
+        self.assertIsInstance(self.state, RhetoricalAnalysisState)
+
+    def test_initial_extended_fields_empty(self):
+        """All Phase 4 fields start empty."""
+        self.assertEqual(self.state.counter_arguments, [])
+        self.assertEqual(self.state.argument_quality_scores, {})
+        self.assertEqual(self.state.jtms_beliefs, {})
+        self.assertEqual(self.state.dung_frameworks, {})
+        self.assertEqual(self.state.governance_decisions, [])
+        self.assertEqual(self.state.debate_transcripts, [])
+        self.assertEqual(self.state.transcription_segments, [])
+        self.assertEqual(self.state.semantic_index_refs, [])
+        self.assertEqual(self.state.neural_fallacy_scores, [])
+        self.assertEqual(self.state.workflow_results, {})
+
+    # --- Counter-arguments (2.3.3) ---
+
+    def test_add_counter_argument(self):
+        ca_id = self.state.add_counter_argument(
+            original_arg="Le ciel est bleu",
+            counter_content="La nuit le ciel est noir",
+            strategy="counter_example",
+            score=0.85,
+        )
+        self.assertTrue(ca_id.startswith("ca_"))
+        self.assertEqual(len(self.state.counter_arguments), 1)
+        entry = self.state.counter_arguments[0]
+        self.assertEqual(entry["id"], ca_id)
+        self.assertEqual(entry["original_argument"], "Le ciel est bleu")
+        self.assertEqual(entry["strategy"], "counter_example")
+        self.assertAlmostEqual(entry["score"], 0.85)
+
+    def test_add_multiple_counter_arguments(self):
+        id1 = self.state.add_counter_argument("A", "not A", "reductio", 0.7)
+        id2 = self.state.add_counter_argument("B", "not B", "distinction", 0.9)
+        self.assertNotEqual(id1, id2)
+        self.assertEqual(len(self.state.counter_arguments), 2)
+
+    # --- Quality scores (2.3.5) ---
+
+    def test_add_quality_score(self):
+        self.state.add_quality_score(
+            arg_id="arg_1",
+            scores={"clarity": 0.8, "coherence": 0.9},
+            overall=0.85,
+        )
+        self.assertIn("arg_1", self.state.argument_quality_scores)
+        entry = self.state.argument_quality_scores["arg_1"]
+        self.assertEqual(entry["overall"], 0.85)
+        self.assertEqual(entry["scores"]["clarity"], 0.8)
+
+    def test_quality_score_overwrites(self):
+        """Adding a score for the same arg_id overwrites the previous one."""
+        self.state.add_quality_score("arg_1", {"clarity": 0.5}, 0.5)
+        self.state.add_quality_score("arg_1", {"clarity": 0.9}, 0.9)
+        self.assertEqual(self.state.argument_quality_scores["arg_1"]["overall"], 0.9)
+
+    # --- JTMS beliefs (1.4.1) ---
+
+    def test_add_jtms_belief(self):
+        belief_id = self.state.add_jtms_belief(
+            name="rain", valid=True, justifications=["clouds", "humidity"]
+        )
+        self.assertTrue(belief_id.startswith("jtms_"))
+        self.assertIn(belief_id, self.state.jtms_beliefs)
+        entry = self.state.jtms_beliefs[belief_id]
+        self.assertEqual(entry["name"], "rain")
+        self.assertTrue(entry["valid"])
+        self.assertEqual(entry["justifications"], ["clouds", "humidity"])
+
+    def test_add_jtms_belief_none_valid(self):
+        """JTMS beliefs can have valid=None (undetermined)."""
+        belief_id = self.state.add_jtms_belief("mystery", valid=None, justifications=[])
+        self.assertIsNone(self.state.jtms_beliefs[belief_id]["valid"])
+
+    # --- Dung frameworks (abs_arg_dung) ---
+
+    def test_add_dung_framework(self):
+        df_id = self.state.add_dung_framework(
+            name="simple_framework",
+            arguments=["a", "b", "c"],
+            attacks=[["a", "b"], ["b", "c"]],
+            extensions={"grounded": ["a", "c"]},
+        )
+        self.assertTrue(df_id.startswith("dung_"))
+        self.assertIn(df_id, self.state.dung_frameworks)
+        entry = self.state.dung_frameworks[df_id]
+        self.assertEqual(entry["name"], "simple_framework")
+        self.assertEqual(len(entry["arguments"]), 3)
+        self.assertEqual(len(entry["attacks"]), 2)
+        self.assertEqual(entry["extensions"]["grounded"], ["a", "c"])
+
+    def test_add_dung_framework_no_extensions(self):
+        """Extensions default to empty dict when not provided."""
+        df_id = self.state.add_dung_framework(
+            name="minimal", arguments=["x"], attacks=[]
+        )
+        self.assertEqual(self.state.dung_frameworks[df_id]["extensions"], {})
+
+    # --- Governance decisions (2.1.6) ---
+
+    def test_add_governance_decision(self):
+        gd_id = self.state.add_governance_decision(
+            method="majority",
+            winner="option_A",
+            scores={"option_A": 5, "option_B": 3},
+        )
+        self.assertTrue(gd_id.startswith("gov_"))
+        self.assertEqual(len(self.state.governance_decisions), 1)
+        entry = self.state.governance_decisions[0]
+        self.assertEqual(entry["method"], "majority")
+        self.assertEqual(entry["winner"], "option_A")
+        self.assertEqual(entry["scores"]["option_A"], 5)
+
+    # --- Debate transcripts (1.2.7) ---
+
+    def test_add_debate_transcript(self):
+        dt_id = self.state.add_debate_transcript(
+            topic="Should AI be regulated?",
+            exchanges=[
+                {"agent": "Scholar", "content": "Yes, because..."},
+                {"agent": "Diplomat", "content": "No, because..."},
+            ],
+            winner="Scholar",
+        )
+        self.assertTrue(dt_id.startswith("debate_"))
+        self.assertEqual(len(self.state.debate_transcripts), 1)
+        entry = self.state.debate_transcripts[0]
+        self.assertEqual(entry["topic"], "Should AI be regulated?")
+        self.assertEqual(len(entry["exchanges"]), 2)
+        self.assertEqual(entry["winner"], "Scholar")
+
+    def test_add_debate_transcript_no_winner(self):
+        dt_id = self.state.add_debate_transcript(
+            topic="Draw debate", exchanges=[], winner=None
+        )
+        self.assertIsNone(self.state.debate_transcripts[0]["winner"])
+
+    # --- Workflow results ---
+
+    def test_set_workflow_results(self):
+        self.state.set_workflow_results("light", {"phases": 3, "status": "complete"})
+        self.assertIn("light", self.state.workflow_results)
+        self.assertEqual(self.state.workflow_results["light"]["status"], "complete")
+
+    def test_set_multiple_workflow_results(self):
+        self.state.set_workflow_results("light", {"status": "ok"})
+        self.state.set_workflow_results("full", {"status": "ok"})
+        self.assertEqual(len(self.state.workflow_results), 2)
+
+    # --- get_state_snapshot (summarize) ---
+
+    def test_snapshot_summarize_includes_extended_counts(self):
+        """Summarized snapshot includes all Phase 4 dimension counts."""
+        self.state.add_counter_argument("a", "b", "s", 0.5)
+        self.state.add_quality_score("arg_1", {}, 0.8)
+        self.state.add_jtms_belief("b", True, [])
+        self.state.add_dung_framework("f", ["x"], [])
+        self.state.add_governance_decision("borda", "x", {})
+        self.state.add_debate_transcript("t", [])
+
+        snapshot = self.state.get_state_snapshot(summarize=True)
+        self.assertEqual(snapshot["counter_argument_count"], 1)
+        self.assertEqual(snapshot["quality_scores_count"], 1)
+        self.assertEqual(snapshot["jtms_belief_count"], 1)
+        self.assertEqual(snapshot["dung_framework_count"], 1)
+        self.assertEqual(snapshot["governance_decision_count"], 1)
+        self.assertEqual(snapshot["debate_transcript_count"], 1)
+
+    def test_snapshot_full_includes_extended_data(self):
+        """Full snapshot includes actual Phase 4 data."""
+        self.state.add_counter_argument("a", "b", "s", 0.5)
+        snapshot = self.state.get_state_snapshot(summarize=False)
+        self.assertIn("counter_arguments", snapshot)
+        self.assertEqual(len(snapshot["counter_arguments"]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
