@@ -110,6 +110,7 @@ config/.env.authentic
 #*#
 .DS_Store
 Thumbs.db
+nul
 
 # Java / Maven / Gradle
 libs/*.jar

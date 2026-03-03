@@ -123,8 +123,8 @@ class CyclicSelectionStrategy(SelectionStrategy):
 
     def reset(self) -> None:
         """Remet à zéro la stratégie de sélection."""
-        self.current_index = 0
-        self.turn_count = 0
+        object.__setattr__(self, "current_index", 0)
+        object.__setattr__(self, "turn_count", 0)
         self._logger.info("Stratégie de sélection cyclique remise à zéro")
 
 
