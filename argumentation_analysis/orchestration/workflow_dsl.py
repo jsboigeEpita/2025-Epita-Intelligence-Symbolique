@@ -328,20 +328,36 @@ class WorkflowExecutor:
                 # Use the first available provider
                 provider = providers[0]
                 try:
-                    # Phase execution is a placeholder —
-                    # actual execution depends on component type
+                    import asyncio
+
+                    output = None
+                    if provider.invoke is not None:
+                        if phase.timeout_seconds:
+                            output = await asyncio.wait_for(
+                                provider.invoke(input_data, ctx),
+                                timeout=phase.timeout_seconds,
+                            )
+                        else:
+                            output = await provider.invoke(input_data, ctx)
+                    else:
+                        logger.warning(
+                            f"Phase '{phase_name}': component '{provider.name}' "
+                            f"has no invoke callable, output will be None"
+                        )
+
                     duration = time.time() - start
                     results[phase_name] = PhaseResult(
                         phase_name=phase_name,
                         status=PhaseStatus.COMPLETED,
                         capability=phase.capability,
                         component_used=provider.name,
-                        output=None,  # Will be populated by actual execution
+                        output=output,
                         duration_seconds=duration,
                     )
 
                     # Store result in context for downstream phases
                     ctx[f"phase_{phase_name}_result"] = results[phase_name]
+                    ctx[f"phase_{phase_name}_output"] = output
 
                     logger.info(
                         f"Phase '{phase_name}' completed "

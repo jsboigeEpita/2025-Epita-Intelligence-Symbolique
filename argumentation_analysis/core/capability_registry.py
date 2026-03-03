@@ -51,6 +51,7 @@ class ComponentRegistration:
     requires: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    invoke: Optional[Callable] = None  # async (input_text: str, context: Dict) -> Any
 
     @property
     def provides(self) -> List[str]:
@@ -97,6 +98,7 @@ class CapabilityRegistry:
         requires: Optional[List[str]] = None,
         parameters: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        invoke: Optional[Callable] = None,
     ) -> "ComponentRegistration":
         """
         Enregistre un composant dans le registre.
@@ -110,6 +112,7 @@ class CapabilityRegistry:
             requires: Liste des dependances requises
             parameters: Parametres configurables
             metadata: Metadonnees additionnelles
+            invoke: Async callable for phase execution: (input_text, context) -> Any
 
         Returns:
             L'enregistrement cree
@@ -132,6 +135,7 @@ class CapabilityRegistry:
             requires=requires or [],
             parameters=parameters or {},
             metadata=metadata or {},
+            invoke=invoke,
         )
 
         self._registrations[name] = registration

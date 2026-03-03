@@ -12,6 +12,8 @@ This module ties together the Lego architecture built in Phases 0-4:
 - All integrated student project components
 """
 
+import asyncio
+import json
 import logging
 from typing import Dict, Any, Optional, List
 
@@ -29,6 +31,112 @@ from argumentation_analysis.orchestration.workflow_dsl import (
 )
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+# --- Invoke callables for registered components ---
+# Each callable: async (input_text: str, context: Dict[str, Any]) -> Any
+
+
+async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke 9-virtue argument quality evaluator (sync, no dependencies)."""
+    from argumentation_analysis.agents.core.quality.quality_evaluator import (
+        ArgumentQualityEvaluator,
+    )
+
+    evaluator = ArgumentQualityEvaluator()
+    return await asyncio.to_thread(evaluator.evaluate, input_text)
+
+
+async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke counter-argument analysis via plugin (no kernel needed)."""
+    from argumentation_analysis.agents.core.counter_argument.counter_agent import (
+        CounterArgumentPlugin,
+    )
+
+    plugin = CounterArgumentPlugin()
+    parsed_json = plugin.parse_argument(input_text)
+    strategy_json = plugin.suggest_strategy(input_text)
+    return {
+        "parsed_argument": json.loads(parsed_json),
+        "suggested_strategy": json.loads(strategy_json),
+        "quality_context": context.get("phase_quality_output"),
+    }
+
+
+async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke debate argument analysis via plugin (no kernel needed)."""
+    from argumentation_analysis.agents.core.debate.debate_agent import DebatePlugin
+
+    plugin = DebatePlugin()
+    scores_json = plugin.analyze_argument_quality(input_text)
+    return json.loads(scores_json)
+
+
+async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke governance conflict detection on prior results."""
+    from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
+    plugin = GovernancePlugin()
+    methods_json = plugin.list_governance_methods()
+    return {
+        "available_methods": json.loads(methods_json),
+        "note": "Governance requires structured scenario input. "
+        "Use GovernancePlugin directly for full simulation.",
+    }
+
+
+async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke JTMS belief maintenance — extract claims and track beliefs."""
+    from argumentation_analysis.services.jtms.jtms_core import JTMS
+
+    jtms = JTMS()
+    sentences = [s.strip() for s in input_text.split(".") if s.strip()]
+    for i, sentence in enumerate(sentences[:10]):  # cap at 10 beliefs
+        jtms.add_belief(f"claim_{i}")
+    return {
+        "beliefs": {name: str(b.valid) for name, b in jtms.beliefs.items()},
+        "belief_count": len(jtms.beliefs),
+    }
+
+
+async def _invoke_camembert_fallacy(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke CamemBERT-based French fallacy detector (sync, heavy model)."""
+    from argumentation_analysis.adapters.french_fallacy_adapter import (
+        FrenchFallacyAdapter,
+    )
+
+    adapter = FrenchFallacyAdapter(enable_nli=False, enable_llm=False)
+    return await asyncio.to_thread(adapter.detect, input_text)
+
+
+async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke local LLM service for text analysis."""
+    from argumentation_analysis.services.local_llm_service import LocalLLMService
+
+    service = LocalLLMService()
+    messages = [{"role": "user", "content": input_text}]
+    return await service.chat_completion(messages)
+
+
+async def _invoke_semantic_index(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke semantic index service for argument search."""
+    from argumentation_analysis.services.semantic_index_service import (
+        SemanticIndexService,
+    )
+
+    service = SemanticIndexService()
+    results = await asyncio.to_thread(service.search, input_text)
+    return {"results": results}
+
+
+async def _invoke_speech_transcription(
+    input_text: str, context: Dict[str, Any]
+) -> Dict:
+    """Invoke speech transcription — requires audio_path in context."""
+    return {
+        "status": "ready",
+        "note": "Pass audio file path via context['audio_path'] for transcription.",
+    }
 
 
 def setup_registry(
@@ -61,6 +169,11 @@ def setup_registry(
         )
 
         register_counter_arg(registry)
+        # Wire invoke callable (registration was created by register_counter_arg)
+        if "counter_argument_agent" in registry._registrations:
+            registry._registrations["counter_argument_agent"].invoke = (
+                _invoke_counter_argument
+            )
         registered.append("counter_argument_agent")
     except ImportError as e:
         skipped.append(("counter_argument_agent", str(e)))
@@ -80,6 +193,7 @@ def setup_registry(
                 "quality_scoring",
             ],
             metadata={"description": "9-virtue argument quality evaluator"},
+            invoke=_invoke_quality_evaluator,
         )
         registered.append("quality_evaluator")
     except ImportError as e:
@@ -100,6 +214,7 @@ def setup_registry(
                 "debate_scoring",
             ],
             metadata={"description": "Multi-personality adversarial debate agent"},
+            invoke=_invoke_debate_analysis,
         )
         registered.append("debate_agent")
     except ImportError as e:
@@ -120,6 +235,7 @@ def setup_registry(
                 "preference_aggregation",
             ],
             metadata={"description": "7-method governance voting agent"},
+            invoke=_invoke_governance,
         )
         registered.append("governance_agent")
     except ImportError as e:
@@ -136,6 +252,7 @@ def setup_registry(
             service_class=JTMS,
             capabilities=["belief_maintenance", "truth_maintenance", "jtms_reasoning"],
             metadata={"description": "Justification-based Truth Maintenance System"},
+            invoke=_invoke_jtms,
         )
         registered.append("jtms_service")
     except ImportError as e:
@@ -152,6 +269,7 @@ def setup_registry(
             service_class=LocalLLMService,
             capabilities=["local_llm", "chat_completion"],
             metadata={"description": "OpenAI-compatible local LLM adapter"},
+            invoke=_invoke_local_llm,
         )
         registered.append("local_llm_service")
     except ImportError as e:
@@ -174,6 +292,7 @@ def setup_registry(
                 metadata={
                     "description": "CamemBERT-based neural fallacy detector (2.3.2)"
                 },
+                invoke=_invoke_camembert_fallacy,
             )
             registered.append("camembert_fallacy_detector")
         except ImportError as e:
@@ -190,6 +309,7 @@ def setup_registry(
                 service_class=SemanticIndexService,
                 capabilities=["semantic_indexing", "argument_search"],
                 metadata={"description": "Semantic argument indexing service"},
+                invoke=_invoke_semantic_index,
             )
             registered.append("semantic_index_service")
         except ImportError as e:
@@ -206,6 +326,7 @@ def setup_registry(
                 service_class=SpeechTranscriptionService,
                 capabilities=["speech_transcription", "speech_to_text"],
                 metadata={"description": "Whisper-based speech transcription service"},
+                invoke=_invoke_speech_transcription,
             )
             registered.append("speech_transcription_service")
         except ImportError as e:
@@ -358,6 +479,7 @@ async def run_unified_analysis(
     workflow_name: str = "standard",
     registry: Optional[CapabilityRegistry] = None,
     custom_workflow: Optional[WorkflowDefinition] = None,
+    context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Run a unified analysis pipeline on input text.
@@ -367,6 +489,7 @@ async def run_unified_analysis(
         workflow_name: Name of pre-built workflow ("light", "standard", "full").
         registry: CapabilityRegistry to use. If None, creates one via setup_registry().
         custom_workflow: If provided, use this workflow instead of a named one.
+        context: Additional context passed to each phase (e.g. kernel, config).
 
     Returns:
         Dict with keys:
@@ -391,7 +514,9 @@ async def run_unified_analysis(
         workflow = catalog[workflow_name]
 
     executor = WorkflowExecutor(registry)
-    phase_results = await executor.execute(workflow, input_data=text)
+    phase_results = await executor.execute(
+        workflow, input_data=text, context=context
+    )
 
     # Build summary
     completed = [

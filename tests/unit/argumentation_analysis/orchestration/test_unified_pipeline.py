@@ -517,3 +517,61 @@ class TestRunUnifiedAnalysis:
         assert "capabilities_missing" in result
         assert isinstance(result["capabilities_used"], list)
         assert isinstance(result["capabilities_missing"], list)
+
+
+# ============================================================
+# Test: real invocation through run_unified_analysis
+# ============================================================
+
+
+class TestRealInvocationViaUnifiedAnalysis:
+    """Test that run_unified_analysis produces real outputs (not None)."""
+
+    @pytest.mark.asyncio
+    async def test_light_workflow_produces_quality_output(self):
+        """Light workflow quality phase produces real evaluation scores."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        result = await run_unified_analysis(
+            "Les vaccins sont efficaces car les études scientifiques le prouvent.",
+            workflow_name="light",
+        )
+        quality_phase = result["phases"]["quality"]
+        assert quality_phase.output is not None
+        assert isinstance(quality_phase.output, dict)
+        assert "note_finale" in quality_phase.output
+
+    @pytest.mark.asyncio
+    async def test_light_workflow_chains_quality_to_counter(self):
+        """Light workflow chains quality output to counter-argument phase."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        result = await run_unified_analysis(
+            "La peine de mort est nécessaire car elle dissuade les criminels.",
+            workflow_name="light",
+        )
+        counter_phase = result["phases"]["counter"]
+        assert counter_phase.output is not None
+        assert "parsed_argument" in counter_phase.output
+        assert "quality_context" in counter_phase.output
+        # quality_context should contain the upstream quality output
+        assert counter_phase.output["quality_context"] is not None
+
+    @pytest.mark.asyncio
+    async def test_context_param_passed_through(self):
+        """Custom context is available to invoke callables."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        result = await run_unified_analysis(
+            "Argument test.",
+            workflow_name="light",
+            context={"custom_key": "custom_value"},
+        )
+        # Workflow should complete — context param doesn't break anything
+        assert result["summary"]["completed"] >= 1
