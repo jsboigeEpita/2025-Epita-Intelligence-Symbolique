@@ -467,9 +467,9 @@ class OrchestrationServiceManager:
                 self.logger.info("CluedoOrchestrator initialisé")
 
             if ConversationOrchestrator:
-                # Supposons qu'il puisse aussi bénéficier du kernel ou d'un llm_service
-                # Pour l'instant, on garde son initialisation simple.
-                self.conversation_orchestrator = ConversationOrchestrator()
+                self.conversation_orchestrator = ConversationOrchestrator(
+                    mode="demo", kernel=self.kernel
+                )
                 self.logger.info("ConversationOrchestrator initialisé")
 
             if RealLLMOrchestrator:

@@ -1225,7 +1225,7 @@ class MainOrchestrator:
 
         if ConversationOrchestrator:
             s_map["conversation"] = {
-                "orchestrator": ConversationOrchestrator(self.kernel),
+                "orchestrator": ConversationOrchestrator(kernel=self.kernel),
                 "priority": 2,
                 "types": [AnalysisType.DEBATE_ANALYSIS] if AnalysisType else [],
             }

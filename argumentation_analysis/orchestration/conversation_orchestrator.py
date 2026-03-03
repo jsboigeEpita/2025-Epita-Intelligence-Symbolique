@@ -493,11 +493,13 @@ class SimulatedAgent:
 class ConversationOrchestrator:
     """Orchestrateur conversationnel unifié compatible avec l'architecture Semantic Kernel."""
 
-    def __init__(self, mode: str = "demo"):
+    def __init__(self, mode: str = "demo", kernel=None):
         self.mode = mode
+        self.kernel = kernel
         self.conv_logger = ConversationLogger(mode)
         self.state = AnalysisState()
         self.logger = logging.getLogger(f"{__name__}.ConversationOrchestrator")
+        self._real_agents = {}  # Cache for real agent instances
 
         # Configuration des agents selon le mode
         self._setup_agents()
@@ -505,21 +507,273 @@ class ConversationOrchestrator:
         # Pour stockage du texte analysé
         self.current_text = ""
 
+    def _kernel_has_llm(self) -> bool:
+        """Check if the kernel has at least one LLM service registered."""
+        try:
+            return bool(self.kernel and self.kernel.services)
+        except Exception:
+            return False
+
     def _setup_agents(self):
         """Configure les agents selon le mode."""
-        if self.mode == "micro":
+        if self.mode == "real":
+            if self.kernel and self._kernel_has_llm():
+                self._setup_real_agents()
+            else:
+                self.logger.warning(
+                    "Mode 'real' requested but no kernel/LLM available. "
+                    "Falling back to 'demo' mode."
+                )
+                self.mode = "demo"
+                self._setup_simulated_agents()
+        elif self.mode == "micro":
             self.agents = [
                 SimulatedAgent("InformalAgent", "informal"),
                 SimulatedAgent("ModalLogicAgent", "modal"),
             ]
         else:
-            self.agents = [
-                SimulatedAgent("InformalAnalysisAgent", "informal"),
-                SimulatedAgent("FOLLogicAgent", "fol_logic"),
-                SimulatedAgent("SynthesisAgent", "synthesis"),
-            ]
+            self._setup_simulated_agents()
 
         self.logger.info(f"Mode {self.mode}: {len(self.agents)} agents configurés")
+
+    def _setup_simulated_agents(self):
+        """Setup simulated agents for demo/trace/enhanced modes."""
+        self.agents = [
+            SimulatedAgent("InformalAnalysisAgent", "informal"),
+            SimulatedAgent("FOLLogicAgent", "fol_logic"),
+            SimulatedAgent("SynthesisAgent", "synthesis"),
+        ]
+
+    def _setup_real_agents(self):
+        """Create real LLM-backed agents. Falls back per-agent on failure."""
+        self.agents = []  # Not used in real mode
+
+        # 1. InformalAnalysisAgent
+        try:
+            from argumentation_analysis.agents.core.informal.informal_agent import (
+                InformalAnalysisAgent,
+            )
+            informal = InformalAnalysisAgent(
+                kernel=self.kernel,
+                agent_name="InformalAnalysisAgent",
+            )
+            self._real_agents["informal"] = informal
+            self.logger.info("Real InformalAnalysisAgent created")
+        except Exception as e:
+            self.logger.warning(f"Cannot create real InformalAnalysisAgent: {e}")
+
+        # 2. SynthesisAgent
+        try:
+            from argumentation_analysis.agents.core.synthesis.synthesis_agent import (
+                SynthesisAgent as RealSynthesisAgent,
+            )
+            synth = RealSynthesisAgent(
+                kernel=self.kernel,
+                agent_name="SynthesisAgent",
+            )
+            self._real_agents["synthesis"] = synth
+            self.logger.info("Real SynthesisAgent created")
+        except Exception as e:
+            self.logger.warning(f"Cannot create real SynthesisAgent: {e}")
+
+        if not self._real_agents:
+            self.logger.error(
+                "No real agents could be created. Falling back to demo."
+            )
+            self.mode = "demo"
+            self._setup_simulated_agents()
+
+    def _adapt_real_result(self, agent_key: str, raw_result) -> Dict[str, Any]:
+        """Adapt real agent output to AnalysisState-compatible dict format."""
+        if isinstance(raw_result, dict):
+            result = raw_result
+        elif hasattr(raw_result, "model_dump"):
+            result = raw_result.model_dump()
+        else:
+            result = {"raw": str(raw_result)}
+
+        if agent_key == "informal":
+            fallacies = result.get("fallacies", [])
+            return {
+                "fallacies_count": len(fallacies),
+                "sophistication_score": min(len(fallacies) * 0.2 + 0.3, 1.0),
+                "main_issues": [
+                    f.get("fallacy_type", "unknown") for f in fallacies[:5]
+                ],
+                "raw_result": result,
+            }
+        elif agent_key == "fol_logic":
+            return {
+                "formulas_count": len(result.get("formulas", [])),
+                "propositions_count": len(result.get("formulas", [])),
+                "consistency": 1.0 if result.get("consistency_check", False) else 0.5,
+                "logical_score": result.get("confidence_score", 0.5),
+                "contradictions": len(result.get("validation_errors", [])),
+                "satisfiable": result.get("consistency_check", True),
+                "raw_result": result,
+            }
+        elif agent_key == "synthesis":
+            return {
+                "unified_score": result.get("confidence_level", 0.5) or 0.5,
+                "overall_validity": str(result.get("overall_validity", "unknown")),
+                "recommendation": result.get("executive_summary", "N/A"),
+                "raw_result": result,
+            }
+        return result
+
+    async def _invoke_real_agent(self, agent_key: str, agent, text: str):
+        """Invoke the appropriate method on a real agent."""
+        if agent_key == "informal":
+            if hasattr(agent, "perform_complete_analysis"):
+                return await agent.perform_complete_analysis(text)
+            elif hasattr(agent, "analyze_text"):
+                return await agent.analyze_text(text, analysis_type="fallacies")
+            else:
+                raise AttributeError(
+                    "InformalAnalysisAgent has no suitable analysis method"
+                )
+        elif agent_key == "fol_logic":
+            if hasattr(agent, "analyze_text"):
+                return await agent.analyze_text(text)
+            else:
+                raise AttributeError(
+                    "FOLLogicAgent has no suitable analysis method"
+                )
+        elif agent_key == "synthesis":
+            report = await agent.synthesize_analysis(text)
+            if hasattr(report, "model_dump"):
+                return report.model_dump()
+            return vars(report) if hasattr(report, "__dict__") else {"raw": str(report)}
+        else:
+            raise ValueError(f"Unknown agent key: {agent_key}")
+
+    async def _run_real_agent(
+        self, agent_key: str, agent, text: str, timeout: float = 60.0
+    ) -> Dict[str, Any]:
+        """Run a real agent with logging and timeout."""
+        import asyncio
+
+        agent_name = getattr(agent, "name", agent_key)
+
+        self.conv_logger.log_agent_message(
+            agent_name,
+            f"Starting real analysis ({agent_key})...",
+            f"{agent_key}_analysis",
+        )
+
+        try:
+            raw_result = await asyncio.wait_for(
+                self._invoke_real_agent(agent_key, agent, text),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            self.conv_logger.log_agent_message(
+                agent_name, f"Agent timed out after {timeout}s", "error"
+            )
+            return {"error": f"Timeout after {timeout}s"}
+        except Exception as e:
+            self.conv_logger.log_agent_message(
+                agent_name, f"Agent error: {str(e)[:200]}", "error"
+            )
+            return {"error": str(e)}
+
+        adapted = self._adapt_real_result(agent_key, raw_result)
+
+        self.conv_logger.log_tool_call(
+            agent_name,
+            f"real_{agent_key}_analysis",
+            {"text_length": len(text)},
+            adapted,
+        )
+
+        # Update state
+        if agent_key == "informal":
+            self.state.update_from_informal(adapted)
+        elif agent_key == "fol_logic":
+            self.state.update_from_modal(adapted)
+        elif agent_key == "synthesis":
+            self.state.update_from_synthesis(adapted)
+        self.state.agents_active += 1
+
+        self.conv_logger.log_agent_message(
+            agent_name,
+            f"Analysis complete. Result keys: {list(adapted.keys())}",
+            f"{agent_key}_analysis",
+        )
+
+        return adapted
+
+    async def run_orchestration_async(self, text: str) -> str:
+        """Execute orchestration with real LLM-backed agents (async)."""
+        if self.mode != "real":
+            return self.run_orchestration(text)
+
+        self.current_text = text
+        start_time = time.time()
+
+        self.logger.info(
+            f"Starting async orchestration mode 'real' for {len(text)} chars"
+        )
+
+        self.conv_logger.log_agent_message(
+            "ProjectManager",
+            f"Starting real LLM rhetorical analysis. "
+            f"Available agents: {list(self._real_agents.keys())}.",
+            "coordination",
+        )
+
+        self.state.phase = "active"
+        self.conv_logger.log_state_snapshot("initialization", self.state.to_dict())
+
+        agent_order = ["informal", "fol_logic", "synthesis"]
+
+        for agent_key in agent_order:
+            if agent_key not in self._real_agents:
+                self.logger.info(f"Agent '{agent_key}' not available, skipping")
+                continue
+
+            try:
+                await self._run_real_agent(
+                    agent_key, self._real_agents[agent_key], text
+                )
+                self.state.phase = f"post_{agent_key}"
+                self.conv_logger.log_state_snapshot(
+                    f"after_{agent_key}", self.state.to_dict()
+                )
+            except Exception as e:
+                self.logger.error(f"Agent '{agent_key}' failed: {e}")
+                self.conv_logger.log_agent_message(
+                    agent_key,
+                    f"Agent failed with error: {str(e)[:200]}",
+                    "error",
+                )
+
+        self.conv_logger.log_tool_call(
+            "ProjectManager",
+            "coordinate_final_synthesis",
+            {
+                "agents_results": len(self._real_agents),
+                "final_score": self.state.score,
+            },
+            {"coordination": "success", "status": "completed"},
+        )
+
+        self.conv_logger.log_agent_message(
+            "ProjectManager",
+            f"Real orchestration complete. Score: {self.state.score}.",
+            "conclusion",
+        )
+
+        self.state.phase = "completed"
+        self.state.completed = True
+        self.state.processing_time = time.time() - start_time
+        self.conv_logger.log_state_snapshot("final", self.state.to_dict())
+
+        self.logger.info(
+            f"Async orchestration completed in {self.state.processing_time:.3f}s"
+        )
+
+        return self.generate_report()
 
     def run_orchestration(self, text: str) -> str:
         """Exécute l'orchestration conversationnelle selon le mode."""
@@ -732,8 +986,10 @@ class ConversationOrchestrator:
         Returns:
             Dict contenant les résultats de l'orchestration
         """
-        # Lancer l'orchestration synchrone et retourner un format compatible
-        report = self.run_orchestration(text)
+        if self.mode == "real":
+            report = await self.run_orchestration_async(text)
+        else:
+            report = self.run_orchestration(text)
 
         return {
             "status": "success",
@@ -743,11 +999,17 @@ class ConversationOrchestrator:
             "mode": self.mode,
         }
 
+    async def run_conversation(self, text: str) -> Dict[str, Any]:
+        """Alias for run_demo_conversation (expected by MainOrchestrator)."""
+        return await self.run_demo_conversation(text)
 
-def create_conversation_orchestrator(mode: str = "demo") -> ConversationOrchestrator:
+
+def create_conversation_orchestrator(
+    mode: str = "demo", kernel=None
+) -> ConversationOrchestrator:
     """Factory pour créer un orchestrateur conversationnel."""
     logger.info(f"Création orchestrateur conversationnel mode {mode}")
-    return ConversationOrchestrator(mode)
+    return ConversationOrchestrator(mode=mode, kernel=kernel)
 
 
 # Fonctions de mode pour compatibilité avec l'interface existante
