@@ -665,6 +665,16 @@ async def run_unified_analysis(
 
     if custom_workflow is not None:
         workflow = custom_workflow
+    elif workflow_name == "auto":
+        try:
+            from argumentation_analysis.orchestration.router import TextAnalysisRouter
+
+            router = TextAnalysisRouter(registry=registry)
+            workflow = await router.analyze_and_route_async(text, registry=registry)
+        except Exception as e:
+            logger.warning("Auto-routing failed, falling back to standard: %s", e)
+            catalog = get_workflow_catalog()
+            workflow = catalog["standard"]
     else:
         catalog = get_workflow_catalog()
         if workflow_name not in catalog:
