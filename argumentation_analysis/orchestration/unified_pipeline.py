@@ -139,6 +139,149 @@ async def _invoke_speech_transcription(
     }
 
 
+# --- State writers: map capability → (output, state, ctx) → None ---
+# Each writer extracts relevant data from phase output and writes to
+# UnifiedAnalysisState via its typed add_*() methods.
+# Writers are defensive: guard with isinstance checks and .get() everywhere.
+
+
+def _write_quality_to_state(output, state, ctx) -> None:
+    """Write quality evaluator results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    arg_id = ctx.get("current_arg_id", "arg_input")
+    scores = {
+        k: v
+        for k, v in output.items()
+        if k != "note_finale" and isinstance(v, (int, float))
+    }
+    overall = output.get("note_finale", 0.0)
+    if isinstance(overall, (int, float)):
+        state.add_quality_score(arg_id, scores, float(overall))
+
+
+def _write_counter_argument_to_state(output, state, ctx) -> None:
+    """Write counter-argument results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    parsed = output.get("parsed_argument", {})
+    strategy = output.get("suggested_strategy", {})
+    if not isinstance(parsed, dict):
+        parsed = {}
+    if not isinstance(strategy, dict):
+        strategy = {}
+    original = str(parsed.get("premise", ctx.get("input_data", "")))[:200]
+    strategy_name = str(strategy.get("strategy_name", "unknown"))
+    score = strategy.get("confidence", 0.0)
+    if not isinstance(score, (int, float)):
+        score = 0.0
+    state.add_counter_argument(original, strategy_name, strategy_name, float(score))
+
+
+def _write_jtms_to_state(output, state, ctx) -> None:
+    """Write JTMS results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    beliefs = output.get("beliefs", {})
+    if not isinstance(beliefs, dict):
+        return
+    for name, valid_str in beliefs.items():
+        valid = True if valid_str == "True" else (False if valid_str == "False" else None)
+        state.add_jtms_belief(str(name), valid, justifications=[])
+
+
+def _write_debate_to_state(output, state, ctx) -> None:
+    """Write debate analysis results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    topic = str(ctx.get("input_data", ""))[:100]
+    winner = output.get("winner")
+    state.add_debate_transcript(
+        topic=topic,
+        exchanges=[],
+        winner=str(winner) if winner is not None else None,
+    )
+
+
+def _write_governance_to_state(output, state, ctx) -> None:
+    """Write governance results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    methods = output.get("available_methods", [])
+    if isinstance(methods, list) and methods:
+        state.add_governance_decision(
+            method="listing",
+            winner="N/A",
+            scores={str(m): 0.0 for m in methods},
+        )
+
+
+def _write_camembert_to_state(output, state, ctx) -> None:
+    """Write CamemBERT neural fallacy results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    detections = output.get("detections", [])
+    if not isinstance(detections, list):
+        return
+    for det in detections:
+        if not isinstance(det, dict):
+            continue
+        state.add_neural_fallacy_score(
+            text_segment=str(det.get("text", "")),
+            label=str(det.get("label", "unknown")),
+            confidence=float(det.get("confidence", 0.0)),
+        )
+
+
+def _write_semantic_index_to_state(output, state, ctx) -> None:
+    """Write semantic index results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    results = output.get("results", [])
+    if not isinstance(results, list):
+        return
+    query = str(ctx.get("input_data", ""))
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        state.add_semantic_index_ref(
+            query=query,
+            document_id=str(r.get("id", "unknown")),
+            score=float(r.get("score", 0.0)),
+            snippet=r.get("snippet"),
+        )
+
+
+def _write_speech_to_state(output, state, ctx) -> None:
+    """Write speech transcription results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    segments = output.get("segments", [])
+    if not isinstance(segments, list):
+        return
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        state.add_transcription_segment(
+            start_time=float(seg.get("start", 0.0)),
+            end_time=float(seg.get("end", 0.0)),
+            text=str(seg.get("text", "")),
+            speaker=seg.get("speaker"),
+        )
+
+
+CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
+    "argument_quality": _write_quality_to_state,
+    "counter_argument_generation": _write_counter_argument_to_state,
+    "belief_maintenance": _write_jtms_to_state,
+    "adversarial_debate": _write_debate_to_state,
+    "governance_simulation": _write_governance_to_state,
+    "neural_fallacy_detection": _write_camembert_to_state,
+    "semantic_indexing": _write_semantic_index_to_state,
+    "speech_transcription": _write_speech_to_state,
+}
+
+
 def setup_registry(
     include_optional: bool = True,
 ) -> CapabilityRegistry:
@@ -480,6 +623,8 @@ async def run_unified_analysis(
     registry: Optional[CapabilityRegistry] = None,
     custom_workflow: Optional[WorkflowDefinition] = None,
     context: Optional[Dict[str, Any]] = None,
+    state: Optional[Any] = None,
+    create_state: bool = True,
 ) -> Dict[str, Any]:
     """
     Run a unified analysis pipeline on input text.
@@ -490,6 +635,10 @@ async def run_unified_analysis(
         registry: CapabilityRegistry to use. If None, creates one via setup_registry().
         custom_workflow: If provided, use this workflow instead of a named one.
         context: Additional context passed to each phase (e.g. kernel, config).
+        state: Optional UnifiedAnalysisState instance. If provided, phase results
+               are written to it via state writers.
+        create_state: If True and no state provided, automatically create an
+                      UnifiedAnalysisState. Set to False to disable state tracking.
 
     Returns:
         Dict with keys:
@@ -498,9 +647,21 @@ async def run_unified_analysis(
             - summary: Dict with completed/failed/skipped counts
             - capabilities_used: List of capabilities that were successfully resolved
             - capabilities_missing: List of capabilities with no provider
+            - unified_state: UnifiedAnalysisState (if state tracking enabled)
+            - state_snapshot: Dict snapshot of the state (if state tracking enabled)
     """
     if registry is None:
         registry = setup_registry()
+
+    # Create or use provided state
+    if state is None and create_state:
+        try:
+            from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+            state = UnifiedAnalysisState(text)
+        except ImportError:
+            logger.warning("Could not import UnifiedAnalysisState; state tracking disabled")
+            state = None
 
     if custom_workflow is not None:
         workflow = custom_workflow
@@ -515,7 +676,11 @@ async def run_unified_analysis(
 
     executor = WorkflowExecutor(registry)
     phase_results = await executor.execute(
-        workflow, input_data=text, context=context
+        workflow,
+        input_data=text,
+        context=context,
+        state=state,
+        state_writers=CAPABILITY_STATE_WRITERS if state is not None else None,
     )
 
     # Build summary
@@ -540,7 +705,7 @@ async def run_unified_analysis(
         if r.status in (PhaseStatus.FAILED, PhaseStatus.SKIPPED)
     ]
 
-    return {
+    result = {
         "workflow_name": workflow.name,
         "phases": phase_results,
         "summary": {
@@ -555,3 +720,13 @@ async def run_unified_analysis(
         "capabilities_used": capabilities_used,
         "capabilities_missing": capabilities_missing,
     }
+
+    # Include state in results if available
+    if state is not None:
+        result["unified_state"] = state
+        try:
+            result["state_snapshot"] = state.get_state_snapshot(summarize=True)
+        except Exception:
+            result["state_snapshot"] = None
+
+    return result

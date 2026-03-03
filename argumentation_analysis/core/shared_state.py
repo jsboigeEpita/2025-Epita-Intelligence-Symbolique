@@ -476,6 +476,72 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         state_logger.info(f"Debate transcript added: {dt_id} (topic: {topic[:50]})")
         return dt_id
 
+    def add_neural_fallacy_score(
+        self,
+        text_segment: str,
+        label: str,
+        confidence: float,
+        detector: str = "camembert",
+    ) -> str:
+        """Add a neural fallacy detection score."""
+        nf_id = self._generate_id("nf", self.neural_fallacy_scores)
+        entry = {
+            "id": nf_id,
+            "text_segment": text_segment,
+            "label": label,
+            "confidence": confidence,
+            "detector": detector,
+        }
+        self.neural_fallacy_scores.append(entry)
+        state_logger.info(
+            f"Neural fallacy score added: {nf_id} ({label}: {confidence:.2f})"
+        )
+        return nf_id
+
+    def add_transcription_segment(
+        self,
+        start_time: float,
+        end_time: float,
+        text: str,
+        speaker: Optional[str] = None,
+    ) -> str:
+        """Add a speech transcription segment."""
+        ts_id = self._generate_id("ts", self.transcription_segments)
+        entry = {
+            "id": ts_id,
+            "start_time": start_time,
+            "end_time": end_time,
+            "text": text,
+            "speaker": speaker,
+        }
+        self.transcription_segments.append(entry)
+        state_logger.info(
+            f"Transcription segment added: {ts_id} ({start_time:.1f}s-{end_time:.1f}s)"
+        )
+        return ts_id
+
+    def add_semantic_index_ref(
+        self,
+        query: str,
+        document_id: str,
+        score: float,
+        snippet: Optional[str] = None,
+    ) -> str:
+        """Add a semantic index search reference."""
+        si_id = self._generate_id("si", self.semantic_index_refs)
+        entry = {
+            "id": si_id,
+            "query": query,
+            "document_id": document_id,
+            "score": score,
+            "snippet": snippet,
+        }
+        self.semantic_index_refs.append(entry)
+        state_logger.info(
+            f"Semantic index ref added: {si_id} (doc: {document_id}, score: {score:.2f})"
+        )
+        return si_id
+
     def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
         """Store workflow execution results."""
         self.workflow_results[workflow_name] = results

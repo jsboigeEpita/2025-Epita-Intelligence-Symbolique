@@ -575,3 +575,47 @@ class TestRealInvocationViaUnifiedAnalysis:
         )
         # Workflow should complete — context param doesn't break anything
         assert result["summary"]["completed"] >= 1
+
+
+# ============================================================
+# State integration via run_unified_analysis (#64)
+# ============================================================
+
+
+class TestStateViaRunUnifiedAnalysis:
+    @pytest.mark.asyncio
+    async def test_state_returned_by_default(self):
+        """run_unified_analysis returns unified_state and state_snapshot by default."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        registry = setup_registry(include_optional=False)
+        result = await run_unified_analysis(
+            "L'argument est valide car il est logiquement cohérent.",
+            workflow_name="light",
+            registry=registry,
+        )
+        assert "unified_state" in result
+        assert isinstance(result["unified_state"], UnifiedAnalysisState)
+        assert "state_snapshot" in result
+        assert isinstance(result["state_snapshot"], dict)
+        # Snapshot should have summary counts
+        assert "counter_argument_count" in result["state_snapshot"]
+
+    @pytest.mark.asyncio
+    async def test_create_state_false_omits_state(self):
+        """run_unified_analysis with create_state=False omits state from result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=False)
+        result = await run_unified_analysis(
+            "Test.", workflow_name="light", registry=registry, create_state=False
+        )
+        assert "unified_state" not in result
+        assert "state_snapshot" not in result

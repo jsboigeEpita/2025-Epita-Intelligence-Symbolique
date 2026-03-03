@@ -262,6 +262,8 @@ class WorkflowExecutor:
         workflow: WorkflowDefinition,
         input_data: Any,
         context: Optional[Dict[str, Any]] = None,
+        state: Optional[Any] = None,
+        state_writers: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, PhaseResult]:
         """
         Execute a workflow definition.
@@ -270,6 +272,12 @@ class WorkflowExecutor:
             workflow: The workflow to execute
             input_data: Input data (typically text to analyze)
             context: Additional context passed to each phase
+            state: Optional UnifiedAnalysisState (typed as Any to avoid
+                   circular import). If provided, phase results are written
+                   to it via state_writers.
+            state_writers: Dict mapping capability name to a callable
+                ``(output, state, ctx) -> None`` that writes phase output
+                to the state object.
 
         Returns:
             Dict mapping phase name to PhaseResult.
@@ -280,6 +288,10 @@ class WorkflowExecutor:
         execution_order = workflow.get_execution_order()
         ctx = dict(context or {})
         ctx["input_data"] = input_data
+
+        # Inject state into context for invoke callables to access
+        if state is not None:
+            ctx["unified_state"] = state
 
         logger.info(
             f"Executing workflow '{workflow.name}' — "
@@ -359,6 +371,19 @@ class WorkflowExecutor:
                     ctx[f"phase_{phase_name}_result"] = results[phase_name]
                     ctx[f"phase_{phase_name}_output"] = output
 
+                    # Write phase output to unified state if writer exists
+                    if (
+                        state is not None
+                        and state_writers
+                        and phase.capability in state_writers
+                    ):
+                        try:
+                            state_writers[phase.capability](output, state, ctx)
+                        except Exception as sw_err:
+                            logger.warning(
+                                f"State writer for '{phase.capability}' failed: {sw_err}"
+                            )
+
                     logger.info(
                         f"Phase '{phase_name}' completed "
                         f"using '{provider.name}' ({duration:.2f}s)"
@@ -376,6 +401,13 @@ class WorkflowExecutor:
                     )
                     logger.error(f"Phase '{phase_name}' FAILED: {e}")
 
+                    # Log error in unified state
+                    if state is not None and hasattr(state, "log_error"):
+                        try:
+                            state.log_error(phase_name, str(e))
+                        except Exception:
+                            pass
+
         # Summary
         completed = sum(
             1 for r in results.values() if r.status == PhaseStatus.COMPLETED
@@ -386,5 +418,22 @@ class WorkflowExecutor:
             f"Workflow '{workflow.name}' finished: "
             f"{completed} completed, {failed} failed, {skipped} skipped"
         )
+
+        # Store workflow summary in unified state
+        if state is not None and hasattr(state, "set_workflow_results"):
+            try:
+                state.set_workflow_results(
+                    workflow.name,
+                    {
+                        "completed": completed,
+                        "failed": failed,
+                        "skipped": skipped,
+                        "phases": {
+                            name: r.status.value for name, r in results.items()
+                        },
+                    },
+                )
+            except Exception as sw_err:
+                logger.warning(f"Failed to store workflow results in state: {sw_err}")
 
         return results

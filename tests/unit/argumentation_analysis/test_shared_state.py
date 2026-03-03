@@ -4,7 +4,10 @@ Tests unitaires pour le module shared_state.
 """
 
 import unittest
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentation_analysis.core.shared_state import (
+    RhetoricalAnalysisState,
+    UnifiedAnalysisState,
+)
 
 
 class TestRhetoricalAnalysisState(unittest.TestCase):
@@ -446,6 +449,67 @@ class TestUnifiedAnalysisState(unittest.TestCase):
         snapshot = self.state.get_state_snapshot(summarize=False)
         self.assertIn("counter_arguments", snapshot)
         self.assertEqual(len(snapshot["counter_arguments"]), 1)
+
+
+class TestUnifiedAnalysisStateNewMethods(unittest.TestCase):
+    """Tests for the 3 new add_*() methods added in #64."""
+
+    def setUp(self):
+        self.state = UnifiedAnalysisState("Test text")
+
+    def test_add_neural_fallacy_score(self):
+        nf_id = self.state.add_neural_fallacy_score(
+            "you're dumb", "ad_hominem", 0.92
+        )
+        self.assertTrue(nf_id.startswith("nf_"))
+        self.assertEqual(len(self.state.neural_fallacy_scores), 1)
+        self.assertEqual(self.state.neural_fallacy_scores[0]["label"], "ad_hominem")
+        self.assertAlmostEqual(self.state.neural_fallacy_scores[0]["confidence"], 0.92)
+        self.assertEqual(self.state.neural_fallacy_scores[0]["detector"], "camembert")
+
+    def test_add_neural_fallacy_score_custom_detector(self):
+        nf_id = self.state.add_neural_fallacy_score(
+            "text", "straw_man", 0.75, detector="custom_model"
+        )
+        self.assertEqual(self.state.neural_fallacy_scores[0]["detector"], "custom_model")
+
+    def test_add_transcription_segment(self):
+        ts_id = self.state.add_transcription_segment(0.0, 1.5, "Hello world", "Alice")
+        self.assertTrue(ts_id.startswith("ts_"))
+        self.assertEqual(len(self.state.transcription_segments), 1)
+        seg = self.state.transcription_segments[0]
+        self.assertAlmostEqual(seg["start_time"], 0.0)
+        self.assertAlmostEqual(seg["end_time"], 1.5)
+        self.assertEqual(seg["text"], "Hello world")
+        self.assertEqual(seg["speaker"], "Alice")
+
+    def test_add_transcription_segment_no_speaker(self):
+        ts_id = self.state.add_transcription_segment(2.0, 3.0, "Next segment")
+        self.assertIsNone(self.state.transcription_segments[0]["speaker"])
+
+    def test_add_semantic_index_ref(self):
+        si_id = self.state.add_semantic_index_ref(
+            "query text", "doc_42", 0.85, "relevant snippet"
+        )
+        self.assertTrue(si_id.startswith("si_"))
+        self.assertEqual(len(self.state.semantic_index_refs), 1)
+        ref = self.state.semantic_index_refs[0]
+        self.assertEqual(ref["document_id"], "doc_42")
+        self.assertAlmostEqual(ref["score"], 0.85)
+        self.assertEqual(ref["snippet"], "relevant snippet")
+
+    def test_add_semantic_index_ref_no_snippet(self):
+        si_id = self.state.add_semantic_index_ref("query", "doc_1", 0.5)
+        self.assertIsNone(self.state.semantic_index_refs[0]["snippet"])
+
+    def test_snapshot_includes_new_counts(self):
+        self.state.add_neural_fallacy_score("t", "l", 0.5)
+        self.state.add_transcription_segment(0, 1, "t")
+        self.state.add_semantic_index_ref("q", "d", 0.5)
+        snapshot = self.state.get_state_snapshot(summarize=True)
+        self.assertEqual(snapshot["neural_fallacy_score_count"], 1)
+        self.assertEqual(snapshot["transcription_segment_count"], 1)
+        self.assertEqual(snapshot["semantic_index_ref_count"], 1)
 
 
 if __name__ == "__main__":

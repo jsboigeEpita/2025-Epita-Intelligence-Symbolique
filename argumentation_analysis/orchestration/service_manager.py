@@ -225,6 +225,9 @@ class OrchestrationServiceManager:
         )
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
 
+        # Unified analysis state (Lego architecture — issue #64)
+        self._unified_state = None
+
         # État d'initialisation
         self._initialized = False
         self._shutdown = False
@@ -234,6 +237,41 @@ class OrchestrationServiceManager:
         )
 
     # La méthode _get_default_config est supprimée car la configuration est gérée par `settings`.
+
+    @property
+    def unified_state(self):
+        """Get the current unified analysis state, if one exists."""
+        return self._unified_state
+
+    def create_unified_state(self, text: str):
+        """Create a new UnifiedAnalysisState for an analysis session.
+
+        Args:
+            text: The input text being analyzed.
+
+        Returns:
+            UnifiedAnalysisState instance.
+        """
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        self._unified_state = UnifiedAnalysisState(text)
+        self.logger.info(
+            f"Created UnifiedAnalysisState for session {self.state.session_id}"
+        )
+        return self._unified_state
+
+    def get_unified_state_snapshot(self, summarize: bool = True):
+        """Get a JSON-serializable snapshot of the unified state.
+
+        Args:
+            summarize: If True, return counts instead of full data.
+
+        Returns:
+            Dict snapshot, or None if no state exists.
+        """
+        if self._unified_state is None:
+            return None
+        return self._unified_state.get_state_snapshot(summarize=summarize)
 
     def _setup_logging(self, log_level: int):
         """Configure le système de logging."""
