@@ -19,6 +19,7 @@ Usage:
 
 import logging
 from typing import (
+    Callable,
     Dict,
     List,
     Any,
@@ -42,6 +43,14 @@ class PhaseStatus(Enum):
 
 
 @dataclass
+class LoopConfig:
+    """Configuration for iterative phase execution."""
+
+    max_iterations: int = 3
+    convergence_fn: Optional[Callable[[Any, Any], bool]] = None
+
+
+@dataclass
 class WorkflowPhase:
     """Definition d'une phase dans un workflow."""
 
@@ -51,6 +60,9 @@ class WorkflowPhase:
     depends_on: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     timeout_seconds: Optional[float] = None
+    condition: Optional[Callable[[Dict[str, Any]], bool]] = None
+    loop_config: Optional[LoopConfig] = None
+    input_transform: Optional[Callable[[Any, Dict[str, Any]], Any]] = None
 
 
 @dataclass
@@ -183,6 +195,9 @@ class WorkflowBuilder:
         depends_on: Optional[List[str]] = None,
         parameters: Optional[Dict[str, Any]] = None,
         timeout_seconds: Optional[float] = None,
+        condition: Optional[Callable[[Dict[str, Any]], bool]] = None,
+        loop_config: Optional[LoopConfig] = None,
+        input_transform: Optional[Callable[[Any, Dict[str, Any]], Any]] = None,
     ) -> "WorkflowBuilder":
         """
         Add a phase to the workflow.
@@ -194,6 +209,9 @@ class WorkflowBuilder:
             depends_on: List of phase names that must complete before this one
             parameters: Phase-specific parameters passed to the component
             timeout_seconds: Maximum execution time for this phase
+            condition: Callable (ctx) -> bool; phase skipped when False
+            loop_config: LoopConfig for iterative execution
+            input_transform: Callable (input, ctx) -> transformed_input
 
         Returns:
             self (for chaining)
@@ -205,9 +223,36 @@ class WorkflowBuilder:
             depends_on=depends_on or [],
             parameters=parameters or {},
             timeout_seconds=timeout_seconds,
+            condition=condition,
+            loop_config=loop_config,
+            input_transform=input_transform,
         )
         self._phases.append(phase)
         return self
+
+    def add_conditional_phase(
+        self,
+        name: str,
+        capability: str,
+        condition: Callable[[Dict[str, Any]], bool],
+        **kwargs,
+    ) -> "WorkflowBuilder":
+        """Add a phase that only executes when condition(ctx) returns True."""
+        return self.add_phase(name, capability, condition=condition, **kwargs)
+
+    def add_loop(
+        self,
+        name: str,
+        capability: str,
+        max_iterations: int = 3,
+        convergence_fn: Optional[Callable[[Any, Any], bool]] = None,
+        **kwargs,
+    ) -> "WorkflowBuilder":
+        """Add a phase that loops until convergence or max_iterations."""
+        loop_cfg = LoopConfig(
+            max_iterations=max_iterations, convergence_fn=convergence_fn
+        )
+        return self.add_phase(name, capability, loop_config=loop_cfg, **kwargs)
 
     def set_metadata(self, key: str, value: Any) -> "WorkflowBuilder":
         """Set a metadata key-value pair on the workflow."""
@@ -308,6 +353,27 @@ class WorkflowExecutor:
 
                 start = time.time()
 
+                # Condition check — skip phase when condition returns False
+                if phase.condition is not None:
+                    try:
+                        if not phase.condition(ctx):
+                            results[phase_name] = PhaseResult(
+                                phase_name=phase_name,
+                                status=PhaseStatus.SKIPPED,
+                                capability=phase.capability,
+                                error="Condition not met",
+                            )
+                            logger.info(
+                                f"Phase '{phase_name}' skipped — "
+                                f"condition not met"
+                            )
+                            continue
+                    except Exception as cond_err:
+                        logger.warning(
+                            f"Condition eval failed for '{phase_name}': "
+                            f"{cond_err} — proceeding anyway"
+                        )
+
                 # Resolve capability
                 providers = self._registry.find_for_capability(phase.capability)
 
@@ -342,15 +408,33 @@ class WorkflowExecutor:
                 try:
                     import asyncio
 
+                    # Apply input transform if defined
+                    phase_input = input_data
+                    if phase.input_transform is not None:
+                        try:
+                            phase_input = phase.input_transform(input_data, ctx)
+                        except Exception as tf_err:
+                            logger.warning(
+                                f"Input transform failed for '{phase_name}': "
+                                f"{tf_err} — using original input"
+                            )
+                            phase_input = input_data
+
                     output = None
                     if provider.invoke is not None:
-                        if phase.timeout_seconds:
+                        if phase.loop_config is not None:
+                            # Iterative execution
+                            output = await self._execute_loop(
+                                phase, provider, phase_input, ctx,
+                                phase.loop_config,
+                            )
+                        elif phase.timeout_seconds:
                             output = await asyncio.wait_for(
-                                provider.invoke(input_data, ctx),
+                                provider.invoke(phase_input, ctx),
                                 timeout=phase.timeout_seconds,
                             )
                         else:
-                            output = await provider.invoke(input_data, ctx)
+                            output = await provider.invoke(phase_input, ctx)
                     else:
                         logger.warning(
                             f"Phase '{phase_name}': component '{provider.name}' "
@@ -437,3 +521,51 @@ class WorkflowExecutor:
                 logger.warning(f"Failed to store workflow results in state: {sw_err}")
 
         return results
+
+    async def _execute_loop(
+        self,
+        phase: WorkflowPhase,
+        provider: Any,
+        phase_input: Any,
+        ctx: Dict[str, Any],
+        loop_config: LoopConfig,
+    ) -> Any:
+        """Execute a phase iteratively until convergence or max_iterations."""
+        import asyncio
+
+        prev_output = None
+        final_output = None
+
+        for iteration in range(loop_config.max_iterations):
+            if phase.timeout_seconds:
+                output = await asyncio.wait_for(
+                    provider.invoke(phase_input, ctx),
+                    timeout=phase.timeout_seconds,
+                )
+            else:
+                output = await provider.invoke(phase_input, ctx)
+
+            # Store iteration result in context
+            ctx[f"phase_{phase.name}_output"] = output
+            ctx[f"phase_{phase.name}_iteration"] = iteration
+
+            # Check convergence
+            if loop_config.convergence_fn and prev_output is not None:
+                try:
+                    if loop_config.convergence_fn(prev_output, output):
+                        logger.info(
+                            f"Phase '{phase.name}' converged at "
+                            f"iteration {iteration}"
+                        )
+                        final_output = output
+                        break
+                except Exception as conv_err:
+                    logger.warning(
+                        f"Convergence check failed for '{phase.name}': "
+                        f"{conv_err} — continuing"
+                    )
+
+            prev_output = output
+            final_output = output
+
+        return final_output

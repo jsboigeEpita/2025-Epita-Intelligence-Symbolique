@@ -602,6 +602,107 @@ def build_full_workflow() -> WorkflowDefinition:
     )
 
 
+def build_quality_gated_counter_workflow() -> WorkflowDefinition:
+    """Quality-gated counter-argument with iterative refinement (Loop 3)."""
+
+    def quality_gate(ctx):
+        """Only generate counter-argument if quality score > 3.0."""
+        output = ctx.get("phase_quality_output")
+        if not output or not isinstance(output, dict):
+            return True  # proceed if no quality data
+        return output.get("note_finale", 0) > 3.0
+
+    def counter_quality_convergence(prev, curr):
+        """Converge when counter-argument quality stops improving."""
+        if not isinstance(prev, dict) or not isinstance(curr, dict):
+            return False
+        prev_score = prev.get("note_finale", 0)
+        curr_score = curr.get("note_finale", 0)
+        return curr_score >= prev_score  # stop when no improvement
+
+    return (
+        WorkflowBuilder("quality_gated_counter")
+        .add_phase("quality", capability="argument_quality")
+        .add_conditional_phase(
+            "counter",
+            capability="counter_argument_generation",
+            condition=quality_gate,
+            depends_on=["quality"],
+        )
+        .add_loop(
+            "quality_recheck",
+            capability="argument_quality",
+            max_iterations=3,
+            convergence_fn=counter_quality_convergence,
+            depends_on=["counter"],
+            input_transform=lambda inp, ctx: str(
+                ctx.get("phase_counter_output", {})
+                .get("suggested_strategy", {})
+                .get("strategy_name", inp)
+            ),
+        )
+        .build()
+    )
+
+
+def build_debate_governance_loop_workflow() -> WorkflowDefinition:
+    """Debate-Governance vote-contest-debate-revote loop (Loop 1). STUB."""
+    return (
+        WorkflowBuilder("debate_governance_loop")
+        .add_phase(
+            "governance_vote",
+            capability="governance_simulation",
+            optional=True,
+        )
+        .add_phase(
+            "debate",
+            capability="adversarial_debate",
+            depends_on=["governance_vote"],
+            optional=True,
+        )
+        .add_phase(
+            "governance_revote",
+            capability="governance_simulation",
+            depends_on=["debate"],
+            optional=True,
+        )
+        .build()
+    )
+
+
+def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
+    """JTMS-Dung belief retraction/extension recalc loop (Loop 2). STUB."""
+    return (
+        WorkflowBuilder("jtms_dung_loop")
+        .add_phase(
+            "jtms_beliefs",
+            capability="belief_maintenance",
+            optional=True,
+        )
+        .add_phase(
+            "dung_extensions",
+            capability="ranking_semantics",
+            depends_on=["jtms_beliefs"],
+            optional=True,
+        )
+        .build()
+    )
+
+
+def build_neural_symbolic_fallacy_workflow() -> WorkflowDefinition:
+    """Neural-Symbolic fallacy fusion loop (Loop 4). PARTIAL."""
+    return (
+        WorkflowBuilder("neural_symbolic_fallacy")
+        .add_phase(
+            "neural_detect",
+            capability="neural_fallacy_detection",
+            optional=True,
+        )
+        .add_phase("quality_baseline", capability="argument_quality")
+        .build()
+    )
+
+
 WORKFLOW_CATALOG: Dict[str, WorkflowDefinition] = {}
 
 
@@ -613,6 +714,10 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "light": build_light_workflow(),
             "standard": build_standard_workflow(),
             "full": build_full_workflow(),
+            "quality_gated": build_quality_gated_counter_workflow(),
+            "debate_governance": build_debate_governance_loop_workflow(),
+            "jtms_dung": build_jtms_dung_loop_workflow(),
+            "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
         }
     return WORKFLOW_CATALOG
 
