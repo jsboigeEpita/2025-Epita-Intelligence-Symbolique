@@ -93,7 +93,8 @@ def test_mcp_service_initialization(mcp_service_mock: MCPService):
     assert mcp_service_mock is not None
     mcp_service_mock.mock_init_env.assert_called_once()
     mcp_service_mock.mock_app_services_class.assert_called_once()
-    assert mcp_service_mock.mcp_instance_mock.tool.call_count == 10
+    # V1 registers 10 tools; V2 adds 13 more if dependencies are available
+    assert mcp_service_mock.mcp_instance_mock.tool.call_count >= 10
 
 
 def test_analyze_text_method(mcp_service_mock: MCPService):

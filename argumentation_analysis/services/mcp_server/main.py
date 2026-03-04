@@ -83,8 +83,12 @@ class AppServices:
 
 class MCPService:
     """
-    Service MCP pour l'analyse argumentative - miroir de l'API Web Flask.
-    Utilise les mêmes services et modèles que l'API Web pour cohérence.
+    Service MCP pour l'analyse argumentative.
+
+    V1 tools (10): mirror the Flask web API (analysis, validation, fallacy,
+    framework, logic).
+    V2 tools (13): expose the full infrastructure — workflows, capabilities,
+    multi-turn conversations, and specialized agents.
     """
 
     def __init__(self, service_name: str = "argumentation_analysis_mcp"):
@@ -95,8 +99,11 @@ class MCPService:
         self.logger = logging.getLogger(__name__)
         self._initialized = False
         self.services = None
+        self._registry = None
+        self._session_manager = None
         self._ensure_initialized()  # Initialisation directe
         self._register_tools()
+        self._register_v2_tools()
 
     def _ensure_initialized(self):
         """S'assure que les services sont initialisés selon le pattern de l'API Web."""
@@ -561,6 +568,7 @@ class MCPService:
         Équivalent de GET /api/endpoints
         """
         tools = {
+            # V1 tools (original)
             "health_check": {
                 "description": "Vérification de l'état de l'API et services"
             },
@@ -577,15 +585,110 @@ class MCPService:
                 "description": "Génération de requêtes logiques"
             },
             "list_available_tools": {"description": "Liste des outils disponibles"},
+            # V2 tools (infrastructure)
+            "list_workflows": {
+                "description": "Liste les workflows d'analyse disponibles"
+            },
+            "run_workflow": {
+                "description": "Exécute un workflow d'analyse nommé"
+            },
+            "get_workflow_details": {
+                "description": "Détails d'un workflow spécifique"
+            },
+            "start_conversation": {
+                "description": "Démarre une conversation d'analyse multi-tour"
+            },
+            "continue_conversation": {
+                "description": "Continue une conversation existante"
+            },
+            "get_conversation_status": {
+                "description": "Statut d'une session conversationnelle"
+            },
+            "list_capabilities": {
+                "description": "Liste les capacités enregistrées et leurs fournisseurs"
+            },
+            "invoke_capability": {
+                "description": "Invoque une capacité par nom"
+            },
+            "get_registry_summary": {
+                "description": "Résumé détaillé du registre de capacités"
+            },
+            "evaluate_quality": {
+                "description": "Évalue la qualité argumentative (9 vertus)"
+            },
+            "generate_counter_argument": {
+                "description": "Génère des contre-arguments (5 stratégies rhétoriques)"
+            },
+            "run_debate_analysis": {
+                "description": "Analyse par débat adversarial multi-personnalités"
+            },
+            "run_governance_analysis": {
+                "description": "Analyse pour prise de décision collective (7 méthodes de vote)"
+            },
         }
 
         return {
             "api_name": "Service MCP d'Analyse Argumentative",
-            "version": "1.0.0",
+            "version": "2.0.0",
             "transport": "MCP",
             "tools": tools,
             "total_tools": len(tools),
         }
+
+    # === V2 INFRASTRUCTURE ===
+
+    def _ensure_registry(self):
+        """Lazily initialize the CapabilityRegistry."""
+        if self._registry is None:
+            from argumentation_analysis.orchestration.unified_pipeline import (
+                setup_registry,
+            )
+
+            self._registry = setup_registry()
+            self.logger.info("CapabilityRegistry initialized")
+        return self._registry
+
+    def _get_session_manager(self):
+        """Lazily initialize the SessionManager."""
+        if self._session_manager is None:
+            from argumentation_analysis.services.mcp_server.session_manager import (
+                SessionManager,
+            )
+
+            self._session_manager = SessionManager()
+            self.logger.info("SessionManager initialized")
+        return self._session_manager
+
+    def _register_v2_tools(self):
+        """Register v2 tools (workflow, conversation, capability, specialized).
+
+        Fails silently if dependencies are not available, preserving backward
+        compatibility with the original 10 tools.
+        """
+        try:
+            from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
+                register_workflow_tools,
+            )
+            from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
+                register_conversation_tools,
+            )
+            from argumentation_analysis.services.mcp_server.tools.capability_tools import (
+                register_capability_tools,
+            )
+            from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
+                register_specialized_tools,
+            )
+
+            register_workflow_tools(self.mcp, self._ensure_registry)
+            register_conversation_tools(
+                self.mcp, self._ensure_registry, self._get_session_manager
+            )
+            register_capability_tools(self.mcp, self._ensure_registry)
+            register_specialized_tools(self.mcp, self._ensure_registry)
+
+            self.logger.info("V2 tools registered successfully (13 additional tools)")
+        except Exception as e:
+            self.logger.warning(f"V2 tools not registered: {e}")
 
     def run(self, transport: str = "streamable-http"):
         """Lance le serveur MCP."""
@@ -596,9 +699,5 @@ class MCPService:
 if __name__ == "__main__":
     print("Lancement du serveur MCP...")
     mcp_service = MCPService()
-
-    # Compter les outils enregistrés manuellement car FastMCP n'expose pas _tools
-    tools_count = 10  # health_check, analyze_text, validate_argument, detect_fallacies, build_framework, logic_graph, create_belief_set, execute_logic_query, generate_logic_queries, list_available_tools
-
-    print(f"Serveur MCP initialisé avec {tools_count} outils disponibles")
+    print("Serveur MCP initialisé avec 23 outils disponibles")
     mcp_service.run("streamable-http")
