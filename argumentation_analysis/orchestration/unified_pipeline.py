@@ -719,6 +719,23 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "jtms_dung": build_jtms_dung_loop_workflow(),
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
         }
+        # Macro workflows (Track D)
+        try:
+            from argumentation_analysis.workflows.democratech import (
+                build_democratech_workflow,
+            )
+            from argumentation_analysis.workflows.debate_tournament import (
+                build_debate_tournament_workflow,
+            )
+            from argumentation_analysis.workflows.fact_check_pipeline import (
+                build_fact_check_workflow,
+            )
+
+            WORKFLOW_CATALOG["democratech"] = build_democratech_workflow()
+            WORKFLOW_CATALOG["debate_tournament"] = build_debate_tournament_workflow()
+            WORKFLOW_CATALOG["fact_check"] = build_fact_check_workflow()
+        except Exception as e:
+            logger.warning(f"Macro workflows not registered: {e}")
     return WORKFLOW_CATALOG
 
 
