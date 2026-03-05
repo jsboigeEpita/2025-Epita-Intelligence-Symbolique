@@ -384,6 +384,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.semantic_index_refs: List[Dict[str, Any]] = []
         # Neural fallacy detection scores (2.3.2 CamemBERT)
         self.neural_fallacy_scores: List[Dict[str, Any]] = []
+        # Track A: Tweety handler results (#55-#62)
+        self.ranking_results: List[Dict[str, Any]] = []
+        self.aspic_results: List[Dict[str, Any]] = []
+        self.belief_revision_results: List[Dict[str, Any]] = []
+        self.dialogue_results: List[Dict[str, Any]] = []
+        self.probabilistic_results: List[Dict[str, Any]] = []
+        self.bipolar_results: List[Dict[str, Any]] = []
         # Workflow execution results
         self.workflow_results: Dict[str, Any] = {}
 
@@ -542,6 +549,95 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         )
         return si_id
 
+    def add_ranking_result(
+        self, method: str, arguments: List[str], comparisons: List[Dict[str, Any]]
+    ) -> str:
+        """Add a ranking semantics result."""
+        rk_id = self._generate_id("rank", self.ranking_results)
+        entry = {
+            "id": rk_id,
+            "method": method,
+            "arguments": arguments,
+            "comparisons": comparisons,
+        }
+        self.ranking_results.append(entry)
+        state_logger.info(f"Ranking result added: {rk_id} (method: {method})")
+        return rk_id
+
+    def add_aspic_result(
+        self, reasoner_type: str, extensions: List[Any], statistics: Dict[str, Any]
+    ) -> str:
+        """Add an ASPIC+ analysis result."""
+        as_id = self._generate_id("aspic", self.aspic_results)
+        entry = {
+            "id": as_id,
+            "reasoner_type": reasoner_type,
+            "extensions": extensions,
+            "statistics": statistics,
+        }
+        self.aspic_results.append(entry)
+        state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
+        return as_id
+
+    def add_belief_revision_result(
+        self, method: str, original: List[str], revised: List[str]
+    ) -> str:
+        """Add a belief revision result."""
+        br_id = self._generate_id("brevision", self.belief_revision_results)
+        entry = {
+            "id": br_id,
+            "method": method,
+            "original": original,
+            "revised": revised,
+        }
+        self.belief_revision_results.append(entry)
+        state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
+        return br_id
+
+    def add_dialogue_result(
+        self, topic: str, outcome: str, trace: List[Dict[str, Any]]
+    ) -> str:
+        """Add a dialogue protocol result."""
+        dl_id = self._generate_id("dialogue", self.dialogue_results)
+        entry = {
+            "id": dl_id,
+            "topic": topic,
+            "outcome": outcome,
+            "trace": trace,
+        }
+        self.dialogue_results.append(entry)
+        state_logger.info(f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})")
+        return dl_id
+
+    def add_probabilistic_result(
+        self, arguments: List[str], acceptance_probs: Dict[str, float]
+    ) -> str:
+        """Add a probabilistic argumentation result."""
+        pr_id = self._generate_id("prob", self.probabilistic_results)
+        entry = {
+            "id": pr_id,
+            "arguments": arguments,
+            "acceptance_probabilities": acceptance_probs,
+        }
+        self.probabilistic_results.append(entry)
+        state_logger.info(f"Probabilistic result added: {pr_id} ({len(arguments)} args)")
+        return pr_id
+
+    def add_bipolar_result(
+        self, framework_type: str, arguments: List[str], supports: List[List[str]]
+    ) -> str:
+        """Add a bipolar argumentation framework result."""
+        bp_id = self._generate_id("bipolar", self.bipolar_results)
+        entry = {
+            "id": bp_id,
+            "framework_type": framework_type,
+            "arguments": arguments,
+            "supports": supports,
+        }
+        self.bipolar_results.append(entry)
+        state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
+        return bp_id
+
     def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
         """Store workflow execution results."""
         self.workflow_results[workflow_name] = results
@@ -562,6 +658,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "transcription_segment_count": len(self.transcription_segments),
                     "semantic_index_ref_count": len(self.semantic_index_refs),
                     "neural_fallacy_score_count": len(self.neural_fallacy_scores),
+                    "ranking_result_count": len(self.ranking_results),
+                    "aspic_result_count": len(self.aspic_results),
+                    "belief_revision_result_count": len(self.belief_revision_results),
+                    "dialogue_result_count": len(self.dialogue_results),
+                    "probabilistic_result_count": len(self.probabilistic_results),
+                    "bipolar_result_count": len(self.bipolar_results),
                     "workflow_results_count": len(self.workflow_results),
                 }
             )
@@ -577,6 +679,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "transcription_segments": self.transcription_segments,
                     "semantic_index_refs": self.semantic_index_refs,
                     "neural_fallacy_scores": self.neural_fallacy_scores,
+                    "ranking_results": self.ranking_results,
+                    "aspic_results": self.aspic_results,
+                    "belief_revision_results": self.belief_revision_results,
+                    "dialogue_results": self.dialogue_results,
+                    "probabilistic_results": self.probabilistic_results,
+                    "bipolar_results": self.bipolar_results,
                     "workflow_results": self.workflow_results,
                 }
             )

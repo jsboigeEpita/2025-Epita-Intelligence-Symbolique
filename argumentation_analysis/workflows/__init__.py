@@ -5,6 +5,9 @@ Provides pre-built end-to-end pipelines:
 - Democratech: democratic deliberation with debate-governance loop
 - Debate Tournament: multi-round adversarial debate with scoring
 - Fact-Check Pipeline: claim verification via JTMS belief maintenance
+- Formal Debate: structured argumentation with ASPIC+, dialogue, ranking
+- Belief Dynamics: adversarial testing with AGM belief revision
+- Argument Strength: formal ranking + probabilistic evaluation
 """
 
 from argumentation_analysis.workflows.democratech import (
@@ -19,6 +22,18 @@ from argumentation_analysis.workflows.fact_check_pipeline import (
     build_fact_check_workflow,
     run_fact_check,
 )
+from argumentation_analysis.workflows.formal_debate import (
+    build_formal_debate_workflow,
+    run_formal_debate,
+)
+from argumentation_analysis.workflows.belief_dynamics import (
+    build_belief_dynamics_workflow,
+    run_belief_dynamics,
+)
+from argumentation_analysis.workflows.argument_strength import (
+    build_argument_strength_workflow,
+    run_argument_strength,
+)
 
 __all__ = [
     "build_democratech_workflow",
@@ -27,4 +42,10 @@ __all__ = [
     "run_tournament",
     "build_fact_check_workflow",
     "run_fact_check",
+    "build_formal_debate_workflow",
+    "run_formal_debate",
+    "build_belief_dynamics_workflow",
+    "run_belief_dynamics",
+    "build_argument_strength_workflow",
+    "run_argument_strength",
 ]

@@ -196,16 +196,18 @@ class TestRegistrySetup:
         assert "counter_argument_generation" in all_caps
 
     def test_setup_registry_declares_tweety_slots(self):
-        """Tweety extension slots are declared."""
+        """Tweety extension capabilities are registered (as services or slots)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
         )
 
         registry = setup_registry(include_optional=False)
-        slots = registry.get_all_slots()
-        assert "aspic_plus_reasoning" in slots
-        assert "adf_reasoning" in slots
-        assert "bipolar_argumentation" in slots
+        # Track A handlers are registered as services with invoke callables
+        # (or fall back to slots if registration fails)
+        all_caps = registry.get_all_capabilities()
+        assert "aspic_plus_reasoning" in all_caps
+        assert "adf_reasoning" in all_caps
+        assert "bipolar_argumentation" in all_caps
 
     def test_setup_registry_with_optional(self):
         """Optional components are attempted when include_optional=True."""

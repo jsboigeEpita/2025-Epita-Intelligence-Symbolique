@@ -365,6 +365,119 @@ def _write_speech_to_state(output, state, ctx) -> None:
         )
 
 
+def _write_ranking_to_state(output, state, ctx) -> None:
+    """Write ranking semantics results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    method = str(output.get("method", "unknown"))
+    arguments = output.get("arguments", [])
+    comparisons = output.get("comparisons", [])
+    if not isinstance(arguments, list):
+        arguments = []
+    if not isinstance(comparisons, list):
+        comparisons = []
+    state.add_ranking_result(method, arguments, comparisons)
+
+
+def _write_aspic_to_state(output, state, ctx) -> None:
+    """Write ASPIC+ analysis results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    reasoner_type = str(output.get("reasoner_type", "simple"))
+    extensions = output.get("extensions", [])
+    statistics = output.get("statistics", {})
+    if not isinstance(extensions, list):
+        extensions = []
+    if not isinstance(statistics, dict):
+        statistics = {}
+    state.add_aspic_result(reasoner_type, extensions, statistics)
+
+
+def _write_belief_revision_to_state(output, state, ctx) -> None:
+    """Write belief revision results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    method = str(output.get("method", "dalal"))
+    original = output.get("original", [])
+    revised = output.get("revised", [])
+    if not isinstance(original, list):
+        original = []
+    if not isinstance(revised, list):
+        revised = []
+    state.add_belief_revision_result(method, original, revised)
+
+
+def _write_dialogue_to_state(output, state, ctx) -> None:
+    """Write dialogue protocol results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    topic = str(output.get("topic", ""))
+    outcome = str(output.get("outcome", "unknown"))
+    trace = output.get("dialogue_trace", [])
+    if not isinstance(trace, list):
+        trace = []
+    state.add_dialogue_result(topic, outcome, trace)
+
+
+def _write_probabilistic_to_state(output, state, ctx) -> None:
+    """Write probabilistic argumentation results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    arguments = output.get("arguments", [])
+    acceptance = output.get("acceptance_probabilities", {})
+    if not isinstance(arguments, list):
+        arguments = []
+    if not isinstance(acceptance, dict):
+        acceptance = {}
+    state.add_probabilistic_result(arguments, acceptance)
+
+
+def _write_bipolar_to_state(output, state, ctx) -> None:
+    """Write bipolar argumentation results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    fw_type = str(output.get("framework_type", "necessity"))
+    arguments = output.get("arguments", [])
+    supports = output.get("supports", [])
+    if not isinstance(arguments, list):
+        arguments = []
+    if not isinstance(supports, list):
+        supports = []
+    state.add_bipolar_result(fw_type, arguments, supports)
+
+
+def _write_aba_to_state(output, state, ctx) -> None:
+    """Write ABA reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
+    if not output or not isinstance(output, dict):
+        return
+    assumptions = output.get("assumptions", [])
+    extensions = output.get("extensions", [])
+    if not isinstance(assumptions, list):
+        assumptions = []
+    state.add_dung_framework(
+        name=f"aba_{output.get('semantics', 'preferred')}",
+        arguments=assumptions,
+        attacks=[],
+        extensions={"aba_extensions": extensions},
+    )
+
+
+def _write_adf_to_state(output, state, ctx) -> None:
+    """Write ADF reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
+    if not output or not isinstance(output, dict):
+        return
+    statements = output.get("statements", [])
+    models = output.get("models", output.get("extensions", []))
+    if not isinstance(statements, list):
+        statements = []
+    state.add_dung_framework(
+        name=f"adf_{output.get('semantics', 'grounded')}",
+        arguments=statements,
+        attacks=[],
+        extensions={"adf_models": models},
+    )
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -374,6 +487,14 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "neural_fallacy_detection": _write_camembert_to_state,
     "semantic_indexing": _write_semantic_index_to_state,
     "speech_transcription": _write_speech_to_state,
+    "ranking_semantics": _write_ranking_to_state,
+    "aspic_plus_reasoning": _write_aspic_to_state,
+    "belief_revision": _write_belief_revision_to_state,
+    "dialogue_protocols": _write_dialogue_to_state,
+    "probabilistic_argumentation": _write_probabilistic_to_state,
+    "bipolar_argumentation": _write_bipolar_to_state,
+    "aba_reasoning": _write_aba_to_state,
+    "adf_reasoning": _write_adf_to_state,
 }
 
 
@@ -851,6 +972,23 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             WORKFLOW_CATALOG["fact_check"] = build_fact_check_workflow()
         except Exception as e:
             logger.warning(f"Macro workflows not registered: {e}")
+        # Formal workflows (Track A plugins + orchestration)
+        try:
+            from argumentation_analysis.workflows.formal_debate import (
+                build_formal_debate_workflow,
+            )
+            from argumentation_analysis.workflows.belief_dynamics import (
+                build_belief_dynamics_workflow,
+            )
+            from argumentation_analysis.workflows.argument_strength import (
+                build_argument_strength_workflow,
+            )
+
+            WORKFLOW_CATALOG["formal_debate"] = build_formal_debate_workflow()
+            WORKFLOW_CATALOG["belief_dynamics"] = build_belief_dynamics_workflow()
+            WORKFLOW_CATALOG["argument_strength"] = build_argument_strength_workflow()
+        except Exception as e:
+            logger.warning(f"Formal workflows not registered: {e}")
     return WORKFLOW_CATALOG
 
 
