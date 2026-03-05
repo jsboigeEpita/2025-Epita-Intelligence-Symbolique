@@ -139,6 +139,101 @@ async def _invoke_speech_transcription(
     }
 
 
+# --- Track A: Tweety handler invoke functions ---
+
+
+async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke ranking semantics handler."""
+    from argumentation_analysis.agents.core.logic.ranking_handler import RankingHandler
+    handler = RankingHandler()
+    args = context.get("arguments", ["a", "b", "c"])
+    attacks = context.get("attacks", [])
+    method = context.get("ranking_method", "categorizer")
+    return await asyncio.to_thread(handler.rank_arguments, args, attacks, method)
+
+
+async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke bipolar argumentation handler."""
+    from argumentation_analysis.agents.core.logic.bipolar_handler import BipolarHandler
+    handler = BipolarHandler()
+    args = context.get("arguments", [])
+    attacks = context.get("attacks", [])
+    supports = context.get("supports", [])
+    fw_type = context.get("framework_type", "necessity")
+    return await asyncio.to_thread(
+        handler.analyze_bipolar_framework, args, attacks, supports, fw_type
+    )
+
+
+async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke ABA handler."""
+    from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
+    handler = ABAHandler()
+    assumptions = context.get("assumptions", [])
+    rules = context.get("rules", [])
+    contraries = context.get("contraries")
+    semantics = context.get("semantics", "preferred")
+    return await asyncio.to_thread(
+        handler.analyze_aba_framework, assumptions, rules, contraries, semantics
+    )
+
+
+async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke ADF handler."""
+    from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
+    handler = ADFHandler()
+    statements = context.get("statements", [])
+    conditions = context.get("acceptance_conditions", {})
+    semantics = context.get("semantics", "grounded")
+    return await asyncio.to_thread(handler.analyze_adf, statements, conditions, semantics)
+
+
+async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke ASPIC+ handler."""
+    from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
+    handler = ASPICHandler()
+    strict = context.get("strict_rules", [])
+    defeasible = context.get("defeasible_rules", [])
+    axioms = context.get("axioms")
+    return await asyncio.to_thread(handler.analyze_aspic_framework, strict, defeasible, axioms)
+
+
+async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke belief revision handler."""
+    from argumentation_analysis.agents.core.logic.belief_revision_handler import BeliefRevisionHandler
+    handler = BeliefRevisionHandler()
+    beliefs = context.get("belief_set", [input_text])
+    new_belief = context.get("new_belief", input_text)
+    method = context.get("revision_method", "dalal")
+    return await asyncio.to_thread(handler.revise, beliefs, new_belief, method)
+
+
+async def _invoke_probabilistic(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke probabilistic argumentation handler."""
+    from argumentation_analysis.agents.core.logic.probabilistic_handler import ProbabilisticHandler
+    handler = ProbabilisticHandler()
+    args = context.get("arguments", [])
+    attacks = context.get("attacks", [])
+    probs = context.get("probabilities", {})
+    return await asyncio.to_thread(
+        handler.analyze_probabilistic_framework, args, attacks, probs
+    )
+
+
+async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke dialogue protocol handler."""
+    from argumentation_analysis.agents.core.logic.dialogue_handler import DialogueHandler
+    handler = DialogueHandler()
+    pro_args = context.get("proponent_args", [])
+    pro_attacks = context.get("proponent_attacks", [])
+    opp_args = context.get("opponent_args", [])
+    opp_attacks = context.get("opponent_attacks", [])
+    topic = context.get("topic", input_text)
+    return await asyncio.to_thread(
+        handler.execute_dialogue, pro_args, pro_attacks, opp_args, opp_attacks, topic
+    )
+
+
 # --- State writers: map capability → (output, state, ctx) → None ---
 # Each writer extracts relevant data from phase output and writes to
 # UnifiedAnalysisState via its typed add_*() methods.
@@ -489,19 +584,39 @@ def setup_registry(
 
 
 def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
-    """Declare Tweety module capability slots for future extensions."""
-    tweety_slots = [
-        ("aspic_plus_reasoning", "ASPIC+ structured argumentation"),
-        ("aba_reasoning", "Assumption-Based Argumentation"),
-        ("adf_reasoning", "Abstract Dialectical Frameworks"),
-        ("bipolar_argumentation", "Bipolar argumentation (support + attack)"),
-        ("ranking_semantics", "Qualitative argument ranking (Categoriser, Burden)"),
-        ("probabilistic_argumentation", "Probabilistic argument acceptance"),
-        ("dialogue_protocols", "Agent dialogue and negotiation protocols"),
-        ("belief_revision", "Belief dynamics and revision operators"),
+    """Register Tweety handler capabilities (Track A #55-#62)."""
+    tweety_handlers = [
+        ("ranking_semantics_handler", ["ranking_semantics"],
+         "Qualitative argument ranking (Categoriser, Burden)", _invoke_ranking),
+        ("bipolar_handler", ["bipolar_argumentation"],
+         "Bipolar argumentation (support + attack)", _invoke_bipolar),
+        ("aba_handler", ["aba_reasoning"],
+         "Assumption-Based Argumentation", _invoke_aba),
+        ("adf_handler", ["adf_reasoning"],
+         "Abstract Dialectical Frameworks", _invoke_adf),
+        ("aspic_handler", ["aspic_plus_reasoning"],
+         "ASPIC+ structured argumentation", _invoke_aspic),
+        ("belief_revision_handler", ["belief_revision"],
+         "Belief dynamics and revision operators", _invoke_belief_revision),
+        ("probabilistic_handler", ["probabilistic_argumentation"],
+         "Probabilistic argument acceptance", _invoke_probabilistic),
+        ("dialogue_handler", ["dialogue_protocols"],
+         "Agent dialogue and negotiation protocols", _invoke_dialogue),
     ]
-    for slot_name, description in tweety_slots:
-        registry.declare_slot(slot_name, requires=["jvm"], description=description)
+    for name, caps, desc, invoke_fn in tweety_handlers:
+        try:
+            registry.register_service(
+                name=name,
+                service_class=type(name, (), {}),  # placeholder class
+                capabilities=caps,
+                metadata={"description": desc, "requires": ["jvm"]},
+                invoke=invoke_fn,
+            )
+        except Exception as e:
+            logger.debug(f"Tweety handler {name} registration deferred: {e}")
+            # Fall back to slot declaration if JVM not available
+            for cap in caps:
+                registry.declare_slot(cap, requires=["jvm"], description=desc)
 
 
 # --- Pre-built workflow definitions ---
