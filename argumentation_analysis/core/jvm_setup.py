@@ -444,6 +444,13 @@ def get_jvm_options() -> List[str]:
         "-Dfile.encoding=UTF-8",
         # "-Djava.awt.headless=true" # NOTE: Désactivé car identifié comme cause de crash (voir docs)
     ]
+
+    # Add native library path for SAT solvers (Lingeling, MiniSat, PicoSAT)
+    native_libs_dir = PROJ_ROOT / settings.jvm.native_libs_dir
+    if native_libs_dir.exists():
+        options.append(f"-Djava.library.path={native_libs_dir.resolve()}")
+        logger.info(f"Native SAT libraries path: {native_libs_dir.resolve()}")
+
     logger.info(f"Options JVM configurées (Mission D3.2): {options}")
     return options
 
@@ -452,8 +459,11 @@ def _configure_external_tools():
     """
     Auto-detect and configure external reasoning tools for Tweety.
 
-    Detects Clingo (ASP), SPASS (Modal logic), and EProver (FOL theorem prover)
-    and configures Tweety's Java classes to use them when available.
+    Detects and wires:
+    - Clingo (ASP solver) → ClingoSolver.setPathToClingo()
+    - SPASS (Modal logic prover) → SPASSMlReasoner.setPathToSpass()
+    - EProver (FOL prover) → EFOLReasoner.setPathToEProver()
+    - Python SAT tools (sat_solver.py, marco.py, maxsat_solver.py) — detection only
 
     Pattern from CoursIA tweety_init.py (issue #27).
     """
@@ -490,11 +500,25 @@ def _configure_external_tools():
             tools_found["eprover"] = str(Path(candidate).resolve())
             break
 
-    if not tools_found:
-        logger.info("No external reasoning tools detected (Clingo, SPASS, EProver).")
+    # Python SAT tools (detection only, not Java-wired)
+    python_tools = {}
+    for tool_name, filename in [
+        ("sat_solver", "sat_solver.py"),
+        ("marco", "marco.py"),
+        ("maxsat_solver", "maxsat_solver.py"),
+    ]:
+        tool_path = PROJ_ROOT / "ext_tools" / filename
+        if tool_path.exists():
+            python_tools[tool_name] = str(tool_path.resolve())
+
+    if not tools_found and not python_tools:
+        logger.info("No external reasoning tools detected.")
         return
 
-    logger.info(f"External tools detected: {list(tools_found.keys())}")
+    if tools_found:
+        logger.info(f"External Java tools detected: {list(tools_found.keys())}")
+    if python_tools:
+        logger.info(f"External Python tools detected: {list(python_tools.keys())}")
 
     # Configure Tweety Java classes with detected tool paths
     try:
@@ -512,14 +536,21 @@ def _configure_external_tools():
 
         if "eprover" in tools_found:
             try:
-                # EProver is used by EFOLReasoner for FOL theorem proving
-                logger.info(f"  EProver available: {tools_found['eprover']}")
+                EFOLReasoner = jpype.JClass(
+                    "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
+                )
+                EFOLReasoner.setPathToEProver(JString(tools_found["eprover"]))
+                logger.info(f"  EProver configured: {tools_found['eprover']}")
             except Exception as e:
                 logger.debug(f"  EProver configuration skipped: {e}")
 
         if "spass" in tools_found:
             try:
-                logger.info(f"  SPASS available: {tools_found['spass']}")
+                SPASSMlReasoner = jpype.JClass(
+                    "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
+                )
+                SPASSMlReasoner.setPathToSpass(JString(tools_found["spass"]))
+                logger.info(f"  SPASS configured: {tools_found['spass']}")
             except Exception as e:
                 logger.debug(f"  SPASS configuration skipped: {e}")
 

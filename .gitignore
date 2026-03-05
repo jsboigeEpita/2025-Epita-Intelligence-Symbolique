@@ -168,6 +168,10 @@ data/extract_sources.json
 **/backups/
 !**/backups/__init__.py
 
+# External reasoning tools (binaries, copied from CoursIA)
+ext_tools/
+# Tweety resource/data files (downloaded or copied)
+resources/tweety/
 
 # Playwright test artifacts
 playwright-report/
