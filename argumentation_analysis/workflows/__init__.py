@@ -8,6 +8,7 @@ Provides pre-built end-to-end pipelines:
 - Formal Debate: structured argumentation with ASPIC+, dialogue, ranking
 - Belief Dynamics: adversarial testing with AGM belief revision
 - Argument Strength: formal ranking + probabilistic evaluation
+- Formal Verification: 10-phase pipeline using all logic agents + Tweety
 """
 
 from argumentation_analysis.workflows.democratech import (
@@ -34,6 +35,10 @@ from argumentation_analysis.workflows.argument_strength import (
     build_argument_strength_workflow,
     run_argument_strength,
 )
+from argumentation_analysis.workflows.formal_verification import (
+    build_formal_verification_workflow,
+    run_formal_verification,
+)
 
 __all__ = [
     "build_democratech_workflow",
@@ -48,4 +53,6 @@ __all__ = [
     "run_belief_dynamics",
     "build_argument_strength_workflow",
     "run_argument_strength",
+    "build_formal_verification_workflow",
+    "run_formal_verification",
 ]

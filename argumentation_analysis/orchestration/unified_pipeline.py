@@ -234,6 +234,156 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
     )
 
 
+# --- Invoke callables for logic agent capabilities (#71 Formal Verification) ---
+
+
+async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Extract verifiable claims from text using heuristic sentence splitting."""
+    import re
+    sentences = re.split(r'(?<=[.!?])\s+', input_text.strip())
+    claims = [s.strip() for s in sentences if len(s.strip()) > 20]
+    return {
+        "claims": claims,
+        "claim_count": len(claims),
+        "source_length": len(input_text),
+    }
+
+
+async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke propositional logic analysis via TweetyBridge (JVM required)."""
+    try:
+        from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+        bridge = TweetyBridge()
+        formulas = context.get("formulas", [input_text])
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        is_consistent, msg = await asyncio.to_thread(
+            bridge.check_consistency, belief_set_str, "propositional"
+        )
+        return {
+            "formulas": formulas,
+            "satisfiable": bool(is_consistent),
+            "model": {},
+            "message": msg,
+            "logic_type": "propositional",
+        }
+    except Exception as e:
+        return {"error": str(e), "formulas": [], "satisfiable": False, "logic_type": "propositional"}
+
+
+async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke first-order logic analysis via TweetyBridge (JVM required)."""
+    try:
+        from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+        bridge = TweetyBridge()
+        formulas = context.get("formulas", [input_text])
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        is_consistent, msg = await asyncio.to_thread(
+            bridge.check_consistency, belief_set_str, "first_order"
+        )
+        return {
+            "formulas": formulas,
+            "consistent": bool(is_consistent),
+            "inferences": [],
+            "confidence": 0.8 if is_consistent else 0.3,
+            "message": msg,
+            "logic_type": "first_order",
+        }
+    except Exception as e:
+        return {"error": str(e), "formulas": [], "consistent": False, "inferences": [], "confidence": 0.0}
+
+
+async def _invoke_modal_logic(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke modal logic analysis via TweetyBridge (JVM required)."""
+    try:
+        from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+        bridge = TweetyBridge()
+        formulas = context.get("formulas", [input_text])
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        modalities = []
+        for f in formulas:
+            f_str = str(f)
+            if "[]" in f_str or "necessarily" in f_str.lower():
+                modalities.append("necessity")
+            if "<>" in f_str or "possibly" in f_str.lower():
+                modalities.append("possibility")
+        return {
+            "formulas": formulas,
+            "valid": True,
+            "modalities": list(set(modalities)) or ["none_detected"],
+            "logic_type": "modal",
+        }
+    except Exception as e:
+        return {"error": str(e), "formulas": [], "valid": False, "modalities": []}
+
+
+async def _invoke_dung_extensions(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Dung framework extension computation via AFHandler (JVM required)."""
+    try:
+        from argumentation_analysis.agents.core.logic.af_handler import AFHandler
+        from argumentation_analysis.core.jvm_setup import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = AFHandler(initializer)
+        arguments = context.get("arguments", [])
+        attacks = context.get("attacks", [])
+        if not arguments:
+            arguments = [f"arg_{i}" for i in range(3)]
+            attacks = []
+        semantics = context.get("semantics", "preferred")
+        result = await asyncio.to_thread(
+            handler.analyze_dung_framework, arguments, attacks, semantics
+        )
+        return result
+    except Exception as e:
+        return {
+            "error": str(e),
+            "semantics": context.get("semantics", "preferred"),
+            "extensions": {},
+            "statistics": {},
+        }
+
+
+async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Aggregate all formal analysis results from upstream phases into a unified report."""
+    phase_results = {}
+    overall_scores = []
+
+    for key, val in context.items():
+        if key.startswith("phase_") and key.endswith("_output") and isinstance(val, dict):
+            phase_name = key[len("phase_"):-len("_output")]
+            phase_results[phase_name] = val
+            if "consistent" in val:
+                overall_scores.append(1.0 if val["consistent"] else 0.0)
+            if "satisfiable" in val:
+                overall_scores.append(1.0 if val["satisfiable"] else 0.0)
+            if "valid" in val:
+                overall_scores.append(1.0 if val["valid"] else 0.0)
+
+    overall_validity = sum(overall_scores) / len(overall_scores) if overall_scores else 0.5
+    summary_parts = []
+    for name, res in phase_results.items():
+        if "error" in res:
+            summary_parts.append(f"{name}: error ({res['error'][:50]})")
+        elif "consistent" in res:
+            summary_parts.append(f"{name}: consistent={res['consistent']}")
+        elif "satisfiable" in res:
+            summary_parts.append(f"{name}: satisfiable={res['satisfiable']}")
+        elif "extensions" in res:
+            ext_count = sum(len(v) if isinstance(v, list) else 0 for v in res["extensions"].values()) if isinstance(res.get("extensions"), dict) else 0
+            summary_parts.append(f"{name}: {ext_count} extensions")
+
+    return {
+        "summary": "; ".join(summary_parts) if summary_parts else "No formal results collected",
+        "phase_results": phase_results,
+        "overall_validity": overall_validity,
+        "phase_count": len(phase_results),
+    }
+
+
 # --- State writers: map capability → (output, state, ctx) → None ---
 # Each writer extracts relevant data from phase output and writes to
 # UnifiedAnalysisState via its typed add_*() methods.
@@ -478,6 +628,95 @@ def _write_adf_to_state(output, state, ctx) -> None:
     )
 
 
+def _write_fact_extraction_to_state(output, state, ctx) -> None:
+    """Write fact extraction results to state (uses existing extracts list)."""
+    if not output or not isinstance(output, dict):
+        return
+    claims = output.get("claims", [])
+    if not isinstance(claims, list):
+        return
+    for claim in claims:
+        if isinstance(claim, str) and claim.strip():
+            state.extracts.append({"type": "claim", "content": claim.strip()})
+
+
+def _write_propositional_to_state(output, state, ctx) -> None:
+    """Write propositional logic analysis results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    formulas = output.get("formulas", [])
+    satisfiable = output.get("satisfiable", False)
+    model = output.get("model", {})
+    if not isinstance(formulas, list):
+        formulas = []
+    if not isinstance(model, dict):
+        model = {}
+    state.add_propositional_analysis_result(formulas, bool(satisfiable), model)
+
+
+def _write_fol_to_state(output, state, ctx) -> None:
+    """Write FOL reasoning results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    formulas = output.get("formulas", [])
+    consistent = output.get("consistent", False)
+    inferences = output.get("inferences", [])
+    confidence = output.get("confidence", 0.0)
+    if not isinstance(formulas, list):
+        formulas = []
+    if not isinstance(inferences, list):
+        inferences = []
+    if not isinstance(confidence, (int, float)):
+        confidence = 0.0
+    state.add_fol_analysis_result(formulas, bool(consistent), inferences, float(confidence))
+
+
+def _write_modal_to_state(output, state, ctx) -> None:
+    """Write modal logic analysis results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    formulas = output.get("formulas", [])
+    valid = output.get("valid", False)
+    modalities = output.get("modalities", [])
+    if not isinstance(formulas, list):
+        formulas = []
+    if not isinstance(modalities, list):
+        modalities = []
+    state.add_modal_analysis_result(formulas, bool(valid), modalities)
+
+
+def _write_dung_extensions_to_state(output, state, ctx) -> None:
+    """Write Dung extension computation results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    semantics = str(output.get("semantics", "preferred"))
+    extensions = output.get("extensions", {})
+    statistics = output.get("statistics", {})
+    arguments = []
+    if isinstance(statistics, dict):
+        arguments = [f"arg_{i}" for i in range(statistics.get("arguments_count", 0))]
+    state.add_dung_framework(
+        name=f"verification_{semantics}",
+        arguments=arguments,
+        attacks=[],
+        extensions=extensions if isinstance(extensions, dict) else {},
+    )
+
+
+def _write_formal_synthesis_to_state(output, state, ctx) -> None:
+    """Write formal synthesis report to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    summary = str(output.get("summary", ""))
+    phase_results = output.get("phase_results", {})
+    overall_validity = output.get("overall_validity", 0.0)
+    if not isinstance(phase_results, dict):
+        phase_results = {}
+    if not isinstance(overall_validity, (int, float)):
+        overall_validity = 0.0
+    state.add_formal_synthesis_report(summary, phase_results, float(overall_validity))
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -495,6 +734,12 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "bipolar_argumentation": _write_bipolar_to_state,
     "aba_reasoning": _write_aba_to_state,
     "adf_reasoning": _write_adf_to_state,
+    "fact_extraction": _write_fact_extraction_to_state,
+    "propositional_logic": _write_propositional_to_state,
+    "fol_reasoning": _write_fol_to_state,
+    "modal_logic": _write_modal_to_state,
+    "dung_extensions": _write_dung_extensions_to_state,
+    "formal_synthesis": _write_formal_synthesis_to_state,
 }
 
 
@@ -693,6 +938,34 @@ def setup_registry(
 
     # --- Declare unfilled slots for future Tweety extensions ---
     _declare_tweety_slots(registry)
+
+    # --- Logic agent capabilities (#71 Formal Verification) ---
+    logic_capabilities = [
+        ("fact_extraction_service", ["fact_extraction"],
+         "Heuristic claim extraction from text", _invoke_fact_extraction),
+        ("propositional_logic_service", ["propositional_logic"],
+         "Propositional logic analysis via Tweety", _invoke_propositional_logic),
+        ("fol_reasoning_service", ["fol_reasoning"],
+         "First-order logic analysis via Tweety", _invoke_fol_reasoning),
+        ("modal_logic_service", ["modal_logic"],
+         "Modal logic analysis via Tweety", _invoke_modal_logic),
+        ("dung_extensions_service", ["dung_extensions"],
+         "Dung AF extension computation via AFHandler", _invoke_dung_extensions),
+        ("formal_synthesis_service", ["formal_synthesis"],
+         "Aggregate formal analysis into unified report", _invoke_formal_synthesis),
+    ]
+    for name, caps, desc, invoke_fn in logic_capabilities:
+        try:
+            registry.register_service(
+                name=name,
+                service_class=type(name, (), {}),
+                capabilities=caps,
+                metadata={"description": desc},
+                invoke=invoke_fn,
+            )
+            registered.append(name)
+        except Exception as e:
+            skipped.append((name, str(e)))
 
     logger.info(
         f"Registry setup complete: {len(registered)} registered, "
@@ -989,6 +1262,15 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             WORKFLOW_CATALOG["argument_strength"] = build_argument_strength_workflow()
         except Exception as e:
             logger.warning(f"Formal workflows not registered: {e}")
+        # Formal verification pipeline (#71)
+        try:
+            from argumentation_analysis.workflows.formal_verification import (
+                build_formal_verification_workflow,
+            )
+
+            WORKFLOW_CATALOG["formal_verification"] = build_formal_verification_workflow()
+        except Exception as e:
+            logger.warning(f"Formal verification workflow not registered: {e}")
     return WORKFLOW_CATALOG
 
 

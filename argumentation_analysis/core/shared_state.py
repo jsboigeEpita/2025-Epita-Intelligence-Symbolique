@@ -391,6 +391,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.dialogue_results: List[Dict[str, Any]] = []
         self.probabilistic_results: List[Dict[str, Any]] = []
         self.bipolar_results: List[Dict[str, Any]] = []
+        # Logic agent analysis results (#71 formal verification)
+        self.fol_analysis_results: List[Dict[str, Any]] = []
+        self.propositional_analysis_results: List[Dict[str, Any]] = []
+        self.modal_analysis_results: List[Dict[str, Any]] = []
+        self.formal_synthesis_reports: List[Dict[str, Any]] = []
         # Workflow execution results
         self.workflow_results: Dict[str, Any] = {}
 
@@ -638,6 +643,68 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
         return bp_id
 
+    def add_fol_analysis_result(
+        self, formulas: List[str], consistent: bool, inferences: List[str],
+        confidence: float = 0.0,
+    ) -> str:
+        """Add a first-order logic analysis result."""
+        fol_id = self._generate_id("fol", self.fol_analysis_results)
+        entry = {
+            "id": fol_id,
+            "formulas": formulas,
+            "consistent": consistent,
+            "inferences": inferences,
+            "confidence": confidence,
+        }
+        self.fol_analysis_results.append(entry)
+        state_logger.info(f"FOL analysis added: {fol_id} (consistent={consistent})")
+        return fol_id
+
+    def add_propositional_analysis_result(
+        self, formulas: List[str], satisfiable: bool, model: Optional[Dict[str, bool]] = None,
+    ) -> str:
+        """Add a propositional logic analysis result."""
+        pl_id = self._generate_id("pl", self.propositional_analysis_results)
+        entry = {
+            "id": pl_id,
+            "formulas": formulas,
+            "satisfiable": satisfiable,
+            "model": model or {},
+        }
+        self.propositional_analysis_results.append(entry)
+        state_logger.info(f"PL analysis added: {pl_id} (satisfiable={satisfiable})")
+        return pl_id
+
+    def add_modal_analysis_result(
+        self, formulas: List[str], valid: bool, modalities: List[str],
+    ) -> str:
+        """Add a modal logic analysis result."""
+        ml_id = self._generate_id("modal", self.modal_analysis_results)
+        entry = {
+            "id": ml_id,
+            "formulas": formulas,
+            "valid": valid,
+            "modalities": modalities,
+        }
+        self.modal_analysis_results.append(entry)
+        state_logger.info(f"Modal analysis added: {ml_id} (valid={valid})")
+        return ml_id
+
+    def add_formal_synthesis_report(
+        self, summary: str, phase_results: Dict[str, Any], overall_validity: float,
+    ) -> str:
+        """Add a formal synthesis report aggregating all logic analyses."""
+        fs_id = self._generate_id("fsyn", self.formal_synthesis_reports)
+        entry = {
+            "id": fs_id,
+            "summary": summary,
+            "phase_results": phase_results,
+            "overall_validity": overall_validity,
+        }
+        self.formal_synthesis_reports.append(entry)
+        state_logger.info(f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})")
+        return fs_id
+
     def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
         """Store workflow execution results."""
         self.workflow_results[workflow_name] = results
@@ -664,6 +731,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "dialogue_result_count": len(self.dialogue_results),
                     "probabilistic_result_count": len(self.probabilistic_results),
                     "bipolar_result_count": len(self.bipolar_results),
+                    "fol_analysis_count": len(self.fol_analysis_results),
+                    "propositional_analysis_count": len(self.propositional_analysis_results),
+                    "modal_analysis_count": len(self.modal_analysis_results),
+                    "formal_synthesis_count": len(self.formal_synthesis_reports),
                     "workflow_results_count": len(self.workflow_results),
                 }
             )
@@ -685,6 +756,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "dialogue_results": self.dialogue_results,
                     "probabilistic_results": self.probabilistic_results,
                     "bipolar_results": self.bipolar_results,
+                    "fol_analysis_results": self.fol_analysis_results,
+                    "propositional_analysis_results": self.propositional_analysis_results,
+                    "modal_analysis_results": self.modal_analysis_results,
+                    "formal_synthesis_reports": self.formal_synthesis_reports,
                     "workflow_results": self.workflow_results,
                 }
             )
