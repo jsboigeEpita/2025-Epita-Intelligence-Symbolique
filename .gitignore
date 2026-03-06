@@ -184,6 +184,9 @@ node_modules/
 .temp/
 environment_evaluation_report.json
 
+# Benchmark results (generated data, not code)
+argumentation_analysis/evaluation/results/
+
 # Fichiers temporaires de tests
 test_imports*.py
 diagnostic_*.py
