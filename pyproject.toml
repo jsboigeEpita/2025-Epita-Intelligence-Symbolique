@@ -125,6 +125,25 @@ dependencies = [
     "pytest-playwright"
 ]
 
+[tool.coverage.run]
+source = ["argumentation_analysis"]
+omit = [
+    "argumentation_analysis/**/tests/*",
+    "argumentation_analysis/agents/runners/*",
+    "argumentation_analysis/agents/test_scripts/*",
+    "argumentation_analysis/scripts/*",
+    "argumentation_analysis/ui/*",
+    "argumentation_analysis/examples/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["argumentation_analysis*"]

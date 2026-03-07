@@ -79,7 +79,7 @@ class FallacyWorkflowPlugin:
         one_shot_exec_settings = OpenAIPromptExecutionSettings(
             # On laisse le LLM décider (auto) ou répondre en texte (none).
             # Pour ce cas, 'none' est plus sûr pour garantir une réponse textuelle.
-            function_choice_behavior=FunctionChoiceBehavior.NONE
+            function_choice_behavior=FunctionChoiceBehavior.NoneInvoke()
         )
         return one_shot_kernel, one_shot_exec_settings
 
