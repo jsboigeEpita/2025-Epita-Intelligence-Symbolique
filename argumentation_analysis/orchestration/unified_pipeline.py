@@ -177,16 +177,134 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
 
 
 async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke governance conflict detection on prior results."""
+    """Invoke governance analysis via plugin + LLM-powered deliberation assessment."""
+    import os
     from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
 
     plugin = GovernancePlugin()
     methods_json = plugin.list_governance_methods()
-    return {
-        "available_methods": json.loads(methods_json),
-        "note": "Governance requires structured scenario input. "
-        "Use GovernancePlugin directly for full simulation.",
+    available_methods = json.loads(methods_json)
+
+    # Build positions from upstream phases (extract, debate, counter_argument)
+    extract_output = context.get("phase_extract_output", {})
+    debate_output = context.get("phase_debate_output", {})
+    counter_output = context.get("phase_counter_argument_output", {})
+
+    arguments = extract_output.get("arguments", [])
+    claims = extract_output.get("claims", [])
+
+    # Detect conflicts using plugin if we have enough upstream data
+    positions = {}
+    if arguments:
+        for i, arg in enumerate(arguments[:6]):
+            positions[f"agent_{i+1}"] = str(arg)
+    elif claims:
+        for i, claim in enumerate(claims[:6]):
+            positions[f"agent_{i+1}"] = str(claim)
+
+    conflicts = []
+    resolutions = []
+    if positions:
+        conflicts_json = plugin.detect_conflicts_fn(json.dumps(positions))
+        conflicts = json.loads(conflicts_json)
+        # Resolve each conflict with collaborative strategy
+        for conflict in conflicts[:5]:
+            resolution_json = plugin.resolve_conflict_fn(
+                json.dumps(conflict), strategy="collaborative"
+            )
+            resolutions.append(json.loads(resolution_json))
+
+    # Enrich with LLM-based governance and deliberation assessment
+    llm_governance = None
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            # Build context from upstream phases
+            context_parts = []
+            if arguments:
+                context_parts.append(
+                    "Arguments identified:\n"
+                    + "\n".join(f"- {a}" for a in arguments)
+                )
+            if debate_output.get("llm_debate_assessment"):
+                da = debate_output["llm_debate_assessment"]
+                context_parts.append(
+                    f"Debate winner: {da.get('winner', 'unknown')}, "
+                    f"quality: {da.get('debate_quality', 'N/A')}/5"
+                )
+            if counter_output.get("llm_counter_argument"):
+                ca = counter_output["llm_counter_argument"]
+                context_parts.append(
+                    f"Counter-argument ({ca.get('strategy_used', 'unknown')}): "
+                    f"{ca.get('counter_argument', '')[:200]}"
+                )
+            if conflicts:
+                context_parts.append(
+                    f"Conflicts detected: {len(conflicts)} between "
+                    + ", ".join(
+                        " vs ".join(c.get("agents", []))
+                        for c in conflicts[:3]
+                    )
+                )
+
+            deliberation_input = (
+                "\n\n".join(context_parts) if context_parts
+                else input_text[:2000]
+            )
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": (
+                        "You are a governance and collective decision-making analyst. "
+                        "Analyze the arguments, conflicts, and positions presented. "
+                        "Assess which voting/decision method would be most appropriate, "
+                        "evaluate consensus potential, and recommend a governance approach. "
+                        "Available methods: " + ", ".join(available_methods) + ". "
+                        "Respond with ONLY a JSON object:\n"
+                        '{"recommended_method": "method_name", '
+                        '"consensus_potential": 0.0-1.0, '
+                        '"fairness_assessment": "brief text", '
+                        '"conflict_severity": "low|medium|high", '
+                        '"stakeholder_analysis": [{"agent": "name", "position": "summary", "influence": 0.0-1.0}], '
+                        '"recommended_resolution": "collaborative|competitive|compromise", '
+                        '"governance_reasoning": "brief explanation of recommendation"}'
+                    )},
+                    {"role": "user", "content": deliberation_input},
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("{")
+            end = text_content.rfind("}") + 1
+            if start >= 0 and end > start:
+                llm_governance = json.loads(text_content[start:end])
+    except Exception as e:
+        logger.warning(f"LLM governance assessment failed: {e}")
+
+    result = {
+        "available_methods": available_methods,
+        "positions": positions,
+        "conflicts": conflicts,
+        "resolutions": resolutions,
+        "conflict_count": len(conflicts),
+        "extraction_method": "llm" if llm_governance else "heuristic",
     }
+    if llm_governance:
+        result["llm_governance_assessment"] = llm_governance
+        result["recommended_method"] = llm_governance.get("recommended_method")
+        result["consensus_potential"] = llm_governance.get("consensus_potential")
+    return result
 
 
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -636,13 +754,49 @@ def _write_governance_to_state(output, state, ctx) -> None:
     """Write governance results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
-    methods = output.get("available_methods", [])
-    if isinstance(methods, list) and methods:
-        state.add_governance_decision(
-            method="listing",
-            winner="N/A",
-            scores={str(m): 0.0 for m in methods},
-        )
+
+    llm_gov = output.get("llm_governance_assessment", {})
+    if not isinstance(llm_gov, dict):
+        llm_gov = {}
+
+    # Build scores from stakeholder analysis or conflicts
+    scores = {}
+    stakeholders = llm_gov.get("stakeholder_analysis", [])
+    if isinstance(stakeholders, list):
+        for s in stakeholders:
+            if isinstance(s, dict):
+                agent = str(s.get("agent", "unknown"))
+                influence = float(s.get("influence", 0.0))
+                scores[agent] = influence
+
+    # Fallback: use available methods as score keys if no stakeholders
+    if not scores:
+        methods = output.get("available_methods", [])
+        if isinstance(methods, list) and methods:
+            scores = {str(m): 0.0 for m in methods}
+
+    # If no scores at all (no methods, no stakeholders, no LLM), skip
+    has_conflicts = bool(output.get("conflicts"))
+    has_llm = bool(llm_gov)
+    if not scores and not has_conflicts and not has_llm:
+        return
+
+    recommended = output.get("recommended_method") or llm_gov.get("recommended_method", "majority")
+
+    # Determine winner from LLM assessment or conflict resolution
+    winner = "N/A"
+    if llm_gov.get("recommended_resolution"):
+        winner = str(llm_gov["recommended_resolution"])
+    elif output.get("resolutions"):
+        resolutions = output["resolutions"]
+        if isinstance(resolutions, list) and resolutions:
+            winner = str(resolutions[0].get("resolution_type", "N/A"))
+
+    state.add_governance_decision(
+        method=str(recommended),
+        winner=winner,
+        scores=scores,
+    )
 
 
 def _write_camembert_to_state(output, state, ctx) -> None:

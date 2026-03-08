@@ -702,20 +702,23 @@ class TestInvokeCallables:
         assert result["winner"] == "pro"
 
     async def test_invoke_governance(self):
-        """_invoke_governance calls GovernancePlugin."""
+        """_invoke_governance calls GovernancePlugin and returns enriched result."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_governance,
         )
 
         mock_plugin = MagicMock()
         mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
+        mock_plugin.detect_conflicts_fn.return_value = '[]'
         with patch(
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
             return_value=mock_plugin,
         ):
             result = await _invoke_governance("text", {})
         assert result["available_methods"] == ["majority", "borda"]
-        assert "note" in result
+        assert "conflicts" in result
+        assert "extraction_method" in result
+        assert result["conflict_count"] == 0
 
     async def test_invoke_jtms(self):
         """_invoke_jtms extracts sentences and creates beliefs."""
