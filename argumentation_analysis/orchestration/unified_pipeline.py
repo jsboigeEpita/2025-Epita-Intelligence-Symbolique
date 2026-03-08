@@ -238,14 +238,71 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Extract verifiable claims from text using heuristic sentence splitting."""
+    """Extract verifiable claims and arguments from text using LLM with heuristic fallback."""
+    import os
     import re
+
+    # Try LLM-based extraction first
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
+        if api_key:
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": (
+                        "You are an expert argument analyst. Extract the key arguments, "
+                        "claims, and rhetorical strategies from the text. "
+                        "Respond with ONLY a JSON object:\n"
+                        '{"arguments": ["arg1", "arg2", ...], '
+                        '"claims": ["claim1", "claim2", ...], '
+                        '"fallacies": [{"type": "name", "justification": "why"}], '
+                        '"summary": "brief analysis summary"}'
+                    )},
+                    {"role": "user", "content": input_text[:3000]},
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            # Parse JSON from response
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("{")
+            end = text_content.rfind("}") + 1
+            if start >= 0 and end > start:
+                data = json.loads(text_content[start:end])
+                return {
+                    "arguments": data.get("arguments", []),
+                    "claims": data.get("claims", []),
+                    "fallacies": data.get("fallacies", []),
+                    "summary": data.get("summary", ""),
+                    "claim_count": len(data.get("claims", [])),
+                    "argument_count": len(data.get("arguments", [])),
+                    "source_length": len(input_text),
+                    "extraction_method": "llm",
+                }
+    except Exception as e:
+        logger.warning(f"LLM fact extraction failed, falling back to heuristic: {e}")
+
+    # Heuristic fallback
     sentences = re.split(r'(?<=[.!?])\s+', input_text.strip())
     claims = [s.strip() for s in sentences if len(s.strip()) > 20]
     return {
+        "arguments": [],
         "claims": claims,
+        "fallacies": [],
+        "summary": "",
         "claim_count": len(claims),
+        "argument_count": 0,
         "source_length": len(input_text),
+        "extraction_method": "heuristic",
     }
 
 
@@ -629,15 +686,34 @@ def _write_adf_to_state(output, state, ctx) -> None:
 
 
 def _write_fact_extraction_to_state(output, state, ctx) -> None:
-    """Write fact extraction results to state (uses existing extracts list)."""
+    """Write fact extraction results to state (populates extracts + base fields)."""
     if not output or not isinstance(output, dict):
         return
+    # Write claims to extracts
     claims = output.get("claims", [])
-    if not isinstance(claims, list):
-        return
-    for claim in claims:
-        if isinstance(claim, str) and claim.strip():
-            state.extracts.append({"type": "claim", "content": claim.strip()})
+    if isinstance(claims, list):
+        for claim in claims:
+            if isinstance(claim, str) and claim.strip():
+                state.extracts.append({"type": "claim", "content": claim.strip()})
+    # Populate base identified_arguments from LLM extraction
+    arguments = output.get("arguments", [])
+    if isinstance(arguments, list):
+        for arg in arguments:
+            if isinstance(arg, str) and arg.strip():
+                state.add_argument(arg.strip())
+    # Populate base identified_fallacies from LLM extraction
+    fallacies = output.get("fallacies", [])
+    if isinstance(fallacies, list):
+        for f in fallacies:
+            if isinstance(f, dict):
+                state.add_fallacy(
+                    fallacy_type=str(f.get("type", "unknown")),
+                    justification=str(f.get("justification", "")),
+                )
+    # Set summary as analysis task if present
+    summary = output.get("summary", "")
+    if summary and isinstance(summary, str):
+        state.add_task(f"Fact extraction: {summary[:200]}")
 
 
 def _write_propositional_to_state(output, state, ctx) -> None:
@@ -1017,25 +1093,26 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
 
 
 def build_light_workflow() -> WorkflowDefinition:
-    """Minimal 3-phase analysis workflow."""
+    """Minimal 3-phase analysis workflow with fact extraction."""
     return (
         WorkflowBuilder("light_analysis")
-        .add_phase("quality", capability="argument_quality")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
             capability="counter_argument_generation",
             depends_on=["quality"],
         )
-        .add_phase("jtms", capability="belief_maintenance", optional=True)
         .build()
     )
 
 
 def build_standard_workflow() -> WorkflowDefinition:
-    """Standard 5-phase workflow with quality-gated counter-arguments."""
+    """Standard 5-phase workflow with fact extraction and quality-gated counter-arguments."""
     return (
         WorkflowBuilder("standard_analysis")
-        .add_phase("quality", capability="argument_quality")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
             capability="counter_argument_generation",
@@ -1064,7 +1141,7 @@ def build_standard_workflow() -> WorkflowDefinition:
 
 
 def build_full_workflow() -> WorkflowDefinition:
-    """Full pipeline traversing all 12 capabilities."""
+    """Full pipeline traversing all 12 capabilities with LLM extraction."""
     return (
         WorkflowBuilder("full_analysis")
         .add_phase(
@@ -1072,7 +1149,8 @@ def build_full_workflow() -> WorkflowDefinition:
             capability="speech_transcription",
             optional=True,
         )
-        .add_phase("quality", capability="argument_quality")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "neural_fallacy",
             capability="neural_fallacy_detection",

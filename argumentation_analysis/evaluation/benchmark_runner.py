@@ -162,7 +162,9 @@ class BenchmarkRunner:
             summary = result.get("summary", {})
             state_snap = result.get("unified_state")
             if hasattr(state_snap, "get_state_snapshot"):
-                state_snap = state_snap.get_state_snapshot(summarize=True)
+                # Use summarize=False so judge sees actual data (arguments, scores, etc.)
+                # not just counts (argument_count=0 hides real analysis output)
+                state_snap = state_snap.get_state_snapshot(summarize=False)
 
             # Serialize phase results (strip non-serializable)
             serializable_phases = {}

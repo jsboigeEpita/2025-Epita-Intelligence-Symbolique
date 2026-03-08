@@ -264,7 +264,7 @@ class TestPrebuiltWorkflows:
     """Test pre-built workflow definitions."""
 
     def test_build_light_workflow(self):
-        """Light workflow has 3 phases."""
+        """Light workflow has 3 phases (extract + quality + counter)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_light_workflow,
         )
@@ -273,32 +273,37 @@ class TestPrebuiltWorkflows:
         assert wf.name == "light_analysis"
         assert len(wf.phases) == 3
         caps = wf.get_required_capabilities()
+        assert "fact_extraction" in caps
         assert "argument_quality" in caps
         assert "counter_argument_generation" in caps
 
     def test_build_standard_workflow(self):
-        """Standard workflow has 5 phases with dependencies."""
+        """Standard workflow has 6 phases with fact extraction and dependencies."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
         )
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        assert len(wf.phases) == 5
+        assert len(wf.phases) == 6
+        # Quality depends on extract
+        quality_phase = wf.get_phase("quality")
+        assert "extract" in quality_phase.depends_on
         # Counter depends on quality
         counter_phase = wf.get_phase("counter")
         assert "quality" in counter_phase.depends_on
 
     def test_build_full_workflow(self):
-        """Full workflow traverses all major capabilities."""
+        """Full workflow traverses all major capabilities with fact extraction."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_full_workflow,
         )
 
         wf = build_full_workflow()
         assert wf.name == "full_analysis"
-        assert len(wf.phases) >= 7
+        assert len(wf.phases) >= 8
         caps = wf.get_required_capabilities()
+        assert "fact_extraction" in caps
         assert "argument_quality" in caps
         assert "counter_argument_generation" in caps
         assert "adversarial_debate" in caps
@@ -745,7 +750,7 @@ class TestInvokeCallables:
         assert "audio_path" in result["note"]
 
     async def test_invoke_fact_extraction(self):
-        """_invoke_fact_extraction splits text into claims."""
+        """_invoke_fact_extraction extracts claims from text (LLM or heuristic)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fact_extraction,
         )
@@ -754,9 +759,11 @@ class TestInvokeCallables:
         result = await _invoke_fact_extraction(text, {})
         assert result["claim_count"] >= 1
         assert result["source_length"] == len(text)
-        # Short sentences (<=20 chars) are excluded
-        for claim in result["claims"]:
-            assert len(claim) > 20
+        assert "extraction_method" in result
+        assert result["extraction_method"] in ("llm", "heuristic")
+        assert isinstance(result["claims"], list)
+        assert isinstance(result.get("arguments", []), list)
+        assert isinstance(result.get("fallacies", []), list)
 
     async def test_invoke_fact_extraction_empty(self):
         """_invoke_fact_extraction handles empty text."""
@@ -765,7 +772,6 @@ class TestInvokeCallables:
         )
 
         result = await _invoke_fact_extraction("", {})
-        assert result["claims"] == []
         assert result["claim_count"] == 0
 
     async def test_invoke_propositional_logic_success(self):
