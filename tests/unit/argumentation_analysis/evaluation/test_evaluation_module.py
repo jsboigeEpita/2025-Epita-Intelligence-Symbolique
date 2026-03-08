@@ -315,14 +315,19 @@ class TestLLMJudge:
     @pytest.mark.asyncio
     async def test_evaluate_returns_score(self):
         judge = LLMJudge()
-        mock_response = '{"completeness": 4, "accuracy": 3, "depth": 3, "coherence": 4, "actionability": 3, "overall": 3, "reasoning": "Decent analysis"}'
-        with patch("semantic_kernel.Kernel") as MockKernel, \
-             patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
-            mock_kernel = MagicMock()
-            mock_kernel.invoke_prompt = AsyncMock(return_value=mock_response)
-            mock_kernel.add_service = MagicMock()
-            MockKernel.return_value = mock_kernel
+        mock_response_content = '{"completeness": 4, "accuracy": 3, "depth": 3, "coherence": 4, "actionability": 3, "overall": 3, "reasoning": "Decent analysis"}'
 
+        mock_message = MagicMock()
+        mock_message.content = mock_response_content
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_completion = MagicMock()
+        mock_completion.choices = [mock_choice]
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_completion)
+
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
             score = await judge.evaluate(
                 input_text="Test text",
                 workflow_name="light",
@@ -334,7 +339,7 @@ class TestLLMJudge:
     @pytest.mark.asyncio
     async def test_evaluate_handles_error(self):
         judge = LLMJudge()
-        with patch("semantic_kernel.Kernel", side_effect=RuntimeError("No kernel")):
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("No client")):
             score = await judge.evaluate(
                 input_text="Test",
                 workflow_name="light",
