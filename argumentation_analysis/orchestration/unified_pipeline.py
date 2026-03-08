@@ -48,7 +48,8 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
 
 
 async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke counter-argument analysis via plugin (no kernel needed)."""
+    """Invoke counter-argument analysis via plugin + LLM enrichment."""
+    import os
     from argumentation_analysis.agents.core.counter_argument.counter_agent import (
         CounterArgumentPlugin,
     )
@@ -56,20 +57,123 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
     plugin = CounterArgumentPlugin()
     parsed_json = plugin.parse_argument(input_text)
     strategy_json = plugin.suggest_strategy(input_text)
-    return {
-        "parsed_argument": json.loads(parsed_json),
-        "suggested_strategy": json.loads(strategy_json),
+    parsed = json.loads(parsed_json)
+    strategy = json.loads(strategy_json)
+
+    # Enrich with LLM-generated counter-argument if available
+    llm_counter = None
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            # Use extracted arguments from upstream phase if available
+            extract_output = context.get("phase_extract_output", {})
+            arguments = extract_output.get("arguments", [])
+            args_context = ("\n".join(f"- {a}" for a in arguments)
+                           if arguments else input_text[:1500])
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": (
+                        "You are an expert in argumentation and counter-argument generation. "
+                        "Generate a strong counter-argument using one of: reductio ad absurdum, "
+                        "counter-example, distinction, reformulation, or concession+pivot. "
+                        "Respond with ONLY a JSON object:\n"
+                        '{"counter_argument": "text", "strategy_used": "name", '
+                        '"target_argument": "which argument", "strength": "weak|moderate|strong", '
+                        '"reasoning": "why this works"}'
+                    )},
+                    {"role": "user", "content": args_context},
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("{")
+            end = text_content.rfind("}") + 1
+            if start >= 0 and end > start:
+                llm_counter = json.loads(text_content[start:end])
+    except Exception as e:
+        logger.warning(f"LLM counter-argument enrichment failed: {e}")
+
+    result = {
+        "parsed_argument": parsed,
+        "suggested_strategy": strategy,
         "quality_context": context.get("phase_quality_output"),
     }
+    if llm_counter:
+        result["llm_counter_argument"] = llm_counter
+    return result
 
 
 async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke debate argument analysis via plugin (no kernel needed)."""
+    """Invoke debate argument analysis via plugin + LLM adversarial assessment."""
+    import os
     from argumentation_analysis.agents.core.debate.debate_agent import DebatePlugin
 
     plugin = DebatePlugin()
     scores_json = plugin.analyze_argument_quality(input_text)
-    return json.loads(scores_json)
+    base_scores = json.loads(scores_json)
+
+    # Enrich with LLM-based adversarial debate assessment
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            # Use extracted arguments from upstream
+            extract_output = context.get("phase_extract_output", {})
+            arguments = extract_output.get("arguments", [])
+            args_text = ("\n".join(f"- {a}" for a in arguments)
+                         if arguments else input_text[:1500])
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": (
+                        "You are a debate judge. Analyze the arguments presented, "
+                        "identify the strongest and weakest positions, and assess "
+                        "the overall quality of the argumentation. "
+                        "Respond with ONLY a JSON object:\n"
+                        '{"strongest_argument": "text", "weakest_argument": "text", '
+                        '"winner": "which side/position wins", '
+                        '"debate_quality": 1-5, '
+                        '"key_exchanges": [{"point": "text", "rebuttal": "text"}], '
+                        '"reasoning": "brief assessment"}'
+                    )},
+                    {"role": "user", "content": args_text},
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("{")
+            end = text_content.rfind("}") + 1
+            if start >= 0 and end > start:
+                llm_debate = json.loads(text_content[start:end])
+                base_scores["llm_debate_assessment"] = llm_debate
+                if not base_scores.get("winner"):
+                    base_scores["winner"] = llm_debate.get("winner")
+    except Exception as e:
+        logger.warning(f"LLM debate assessment failed: {e}")
+
+    return base_scores
 
 
 async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -466,6 +570,17 @@ def _write_counter_argument_to_state(output, state, ctx) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
+    # Use LLM-generated counter-argument if available
+    llm_ca = output.get("llm_counter_argument")
+    if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
+        target = str(llm_ca.get("target_argument", ""))[:200]
+        counter_text = str(llm_ca.get("counter_argument", ""))
+        strategy_name = str(llm_ca.get("strategy_used", "unknown"))
+        strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
+        score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
+        state.add_counter_argument(target, counter_text, strategy_name, score)
+        return
+    # Fallback to heuristic plugin output
     parsed = output.get("parsed_argument", {})
     strategy = output.get("suggested_strategy", {})
     if not isinstance(parsed, dict):
@@ -498,9 +613,21 @@ def _write_debate_to_state(output, state, ctx) -> None:
         return
     topic = str(ctx.get("input_data", ""))[:100]
     winner = output.get("winner")
+    # Build exchanges from LLM debate assessment if available
+    exchanges = []
+    llm_debate = output.get("llm_debate_assessment")
+    if isinstance(llm_debate, dict):
+        key_exchanges = llm_debate.get("key_exchanges", [])
+        if isinstance(key_exchanges, list):
+            for ex in key_exchanges:
+                if isinstance(ex, dict):
+                    exchanges.append({
+                        "point": str(ex.get("point", "")),
+                        "rebuttal": str(ex.get("rebuttal", "")),
+                    })
     state.add_debate_transcript(
         topic=topic,
-        exchanges=[],
+        exchanges=exchanges,
         winner=str(winner) if winner is not None else None,
     )
 
