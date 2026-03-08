@@ -216,6 +216,44 @@ After P0 (exclude test files) and removing clearly dead code (P2):
 - Core modules already meet or exceed their individual targets
 - Remaining gaps are concentrated in legacy/UI/entry-point code
 
+---
+
+## Coverage Update — 2026-03-08
+
+**Global line coverage: 70%** (45,553 stmts, 31,786 covered)
+
+The coverage target of 65% has been **exceeded** (70%). This was achieved through:
+- Phases 1-3 of #80: +652 tests (commits 773446b0, 9bca034e, 70479430)
+- Phase 4 (this session): +21 tests (effectiveness_analyzer, contextual_fallacy_adapter)
+- Coverage config exclusions applied (test-in-prod, runners, UI, scripts)
+
+### Updated Module Coverage vs Targets
+
+| Module | Target | Previous | **Current** | Status |
+|--------|--------|----------|-------------|--------|
+| `core/capability_registry.py` | 80% | 95.4% | **95%** | PASS |
+| `orchestration/workflow_dsl.py` | 80% | 95.7% | **96%** | PASS |
+| `plugins/semantic_kernel/jtms_plugin.py` | 75% | 0% | **95%** | PASS |
+| `orchestration/unified_pipeline.py` | 75% | 69.5% | **70%** | CLOSE |
+| `agents/core/*/agent.py` | 70% | 60.7% | ~65% | CLOSE |
+| `services/mcp_server/` | 80% | 63.8% | ~70% | IMPROVED |
+| `plugins/` | 75% | 39.3% | ~70% | IMPROVED |
+| **Global average** | **65%** | **57.7%** | **70%** | **PASS** |
+
+### Modules Now at 100% Coverage
+- `analytics/effectiveness_analyzer.py` (0% → 100%)
+- `adapters/contextual_fallacy_detector_adapter.py` (0% → 100%)
+- `cluedo_components/cluedo_plugins.py` (0% → 100%)
+- `cluedo_components/enhanced_logic.py` (0% → 100%)
+- `cluedo_components/logging_handler.py` (0% → 100%)
+- `cluedo_components/metrics_collector.py` (0% → 100%)
+- `cluedo_components/suggestion_handler.py` (0% → 100%)
+- `plugins/quality_scoring_plugin.py` (100%)
+- `services/mcp_server/session_manager.py` (100%)
+- `services/mcp_server/tools/_serialization.py` (100%)
+
+### Test Health: 9011 passed, 34 failed (pre-existing), 69 skipped
+
 ## Files Generated
 
 - `coverage_unit.json` — Raw coverage data (JSON)
