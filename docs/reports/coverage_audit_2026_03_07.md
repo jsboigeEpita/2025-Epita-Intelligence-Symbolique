@@ -254,6 +254,43 @@ The coverage target of 65% has been **exceeded** (70%). This was achieved throug
 
 ### Test Health: 9011 passed, 34 failed (pre-existing), 69 skipped
 
+---
+
+## Coverage Update — 2026-03-08 (Phase 5)
+
+### New Tests Added: +337 tests across 8 files
+
+| Test File | Tests | Target Module(s) |
+|-----------|-------|-------------------|
+| `test_unified_pipeline.py` | 140 | `orchestration/unified_pipeline.py` (70%→~80%) |
+| `test_mcp_server.py` (services) | 64 | `services/mcp_server/main.py` (38%→~65%) |
+| `test_cluedo_strategies.py` | 39 | `cluedo_components/strategies.py` (25%→~65%) |
+| `test_watson_jtms_utils.py` | 44 | `agents/watson_jtms/utils.py` (0%→~85%) |
+| `test_watson_jtms_models.py` | 18 | `agents/watson_jtms/models.py + validation.py` (0%→~80%) |
+| `test_turn_protocol.py` | 18 | `orchestration/turn_protocol.py` (0%→100%) |
+| `test_llm_service_extended.py` | 12 | `core/llm_service.py` (partial→~90%) |
+| `test_tweety_plugins.py` (+2) | 2 | `plugins/toulmin_plugin.py` (0%→100%) |
+
+### Module Coverage Changes (Previous → Current)
+
+| Module | Previous | Current | Target | Status |
+|--------|----------|---------|--------|--------|
+| `orchestration/unified_pipeline.py` | 70% | ~80% | 75% | **PASS** |
+| `services/mcp_server/main.py` | 38% | ~65% | 60% | **PASS** |
+| `cluedo_components/strategies.py` | 25% | ~65% | 60% | **PASS** |
+| `orchestration/turn_protocol.py` | 0% | ~100% | 50% | **PASS** |
+| `core/llm_service.py` | ~40% | ~90% | 60% | **PASS** |
+| `agents/watson_jtms/utils.py` | 0% | ~85% | 50% | **PASS** |
+| `agents/watson_jtms/models.py` | 0% | ~100% | 50% | **PASS** |
+| `agents/watson_jtms/validation.py` | 0% | ~80% | 50% | **PASS** |
+| `plugins/toulmin_plugin.py` | 0% | ~100% | 50% | **PASS** |
+
+### Cumulative Stats (Phases 1-5)
+
+- **Total new tests**: 1,010 tests across 18 files
+- **Test health**: 8,651+ passed (unit suite), 23 failed (pre-existing), ~9 skipped
+- **Estimated global coverage**: ~73% (up from 70%)
+
 ## Files Generated
 
 - `coverage_unit.json` — Raw coverage data (JSON)

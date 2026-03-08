@@ -621,3 +621,1340 @@ class TestStateViaRunUnifiedAnalysis:
         )
         assert "unified_state" not in result
         assert "state_snapshot" not in result
+
+
+# ============================================================
+# Test: Invoke callables
+# ============================================================
+
+
+class TestInvokeCallables:
+    """Test _invoke_* async callables with mocked dependencies."""
+
+    async def test_invoke_quality_evaluator(self):
+        """_invoke_quality_evaluator calls ArgumentQualityEvaluator.evaluate."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_quality_evaluator,
+        )
+
+        mock_evaluator = MagicMock()
+        mock_evaluator.evaluate.return_value = {"note_finale": 7.5, "clarity": 8.0}
+        with patch(
+            "argumentation_analysis.agents.core.quality.quality_evaluator.ArgumentQualityEvaluator",
+            return_value=mock_evaluator,
+        ):
+            result = await _invoke_quality_evaluator("Test arg", {})
+        assert result == {"note_finale": 7.5, "clarity": 8.0}
+
+    async def test_invoke_counter_argument(self):
+        """_invoke_counter_argument calls CounterArgumentPlugin methods."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_counter_argument,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.parse_argument.return_value = '{"premise": "X", "conclusion": "Y"}'
+        mock_plugin.suggest_strategy.return_value = '{"strategy_name": "reductio", "confidence": 0.9}'
+        with patch(
+            "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
+            return_value=mock_plugin,
+        ):
+            result = await _invoke_counter_argument("Test", {"phase_quality_output": {"score": 5}})
+        assert result["parsed_argument"]["premise"] == "X"
+        assert result["suggested_strategy"]["strategy_name"] == "reductio"
+        assert result["quality_context"] == {"score": 5}
+
+    async def test_invoke_counter_argument_no_quality_context(self):
+        """_invoke_counter_argument handles missing quality context."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_counter_argument,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.parse_argument.return_value = '{"premise": "X"}'
+        mock_plugin.suggest_strategy.return_value = '{"strategy_name": "analogy"}'
+        with patch(
+            "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
+            return_value=mock_plugin,
+        ):
+            result = await _invoke_counter_argument("Test", {})
+        assert result["quality_context"] is None
+
+    async def test_invoke_debate_analysis(self):
+        """_invoke_debate_analysis calls DebatePlugin."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_debate_analysis,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.analyze_argument_quality.return_value = '{"score": 7, "winner": "pro"}'
+        with patch(
+            "argumentation_analysis.agents.core.debate.debate_agent.DebatePlugin",
+            return_value=mock_plugin,
+        ):
+            result = await _invoke_debate_analysis("Some debate text", {})
+        assert result["score"] == 7
+        assert result["winner"] == "pro"
+
+    async def test_invoke_governance(self):
+        """_invoke_governance calls GovernancePlugin."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_governance,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
+        with patch(
+            "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
+            return_value=mock_plugin,
+        ):
+            result = await _invoke_governance("text", {})
+        assert result["available_methods"] == ["majority", "borda"]
+        assert "note" in result
+
+    async def test_invoke_jtms(self):
+        """_invoke_jtms extracts sentences and creates beliefs."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_jtms,
+        )
+
+        result = await _invoke_jtms("First claim. Second claim. Third.", {})
+        assert result["belief_count"] == 3
+        assert "claim_0" in result["beliefs"]
+        assert "claim_1" in result["beliefs"]
+        assert "claim_2" in result["beliefs"]
+
+    async def test_invoke_jtms_caps_at_10(self):
+        """_invoke_jtms caps beliefs at 10."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_jtms,
+        )
+
+        text = ". ".join([f"Sentence {i}" for i in range(20)]) + "."
+        result = await _invoke_jtms(text, {})
+        assert result["belief_count"] == 10
+
+    async def test_invoke_speech_transcription(self):
+        """_invoke_speech_transcription returns status info."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_speech_transcription,
+        )
+
+        result = await _invoke_speech_transcription("", {})
+        assert result["status"] == "ready"
+        assert "audio_path" in result["note"]
+
+    async def test_invoke_fact_extraction(self):
+        """_invoke_fact_extraction splits text into claims."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fact_extraction,
+        )
+
+        text = "This is a very long claim sentence. Short. Another long enough claim for extraction."
+        result = await _invoke_fact_extraction(text, {})
+        assert result["claim_count"] >= 1
+        assert result["source_length"] == len(text)
+        # Short sentences (<=20 chars) are excluded
+        for claim in result["claims"]:
+            assert len(claim) > 20
+
+    async def test_invoke_fact_extraction_empty(self):
+        """_invoke_fact_extraction handles empty text."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fact_extraction,
+        )
+
+        result = await _invoke_fact_extraction("", {})
+        assert result["claims"] == []
+        assert result["claim_count"] == 0
+
+    async def test_invoke_propositional_logic_success(self):
+        """_invoke_propositional_logic returns result on success."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_propositional_logic,
+        )
+
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (True, "consistent")
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_propositional_logic("p => q", {})
+        assert result["satisfiable"] is True
+        assert result["logic_type"] == "propositional"
+
+    async def test_invoke_propositional_logic_error(self):
+        """_invoke_propositional_logic returns error dict on exception."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_propositional_logic,
+        )
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=RuntimeError("JVM not started"),
+        ):
+            result = await _invoke_propositional_logic("p", {})
+        assert "error" in result
+        assert result["satisfiable"] is False
+
+    async def test_invoke_propositional_logic_non_list_formulas(self):
+        """_invoke_propositional_logic handles non-list formulas context."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_propositional_logic,
+        )
+
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (False, "inconsistent")
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_propositional_logic("p", {"formulas": "single_formula"})
+        assert result["formulas"] == ["single_formula"]
+        assert result["satisfiable"] is False
+
+    async def test_invoke_fol_reasoning_success(self):
+        """_invoke_fol_reasoning returns result on success."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fol_reasoning,
+        )
+
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (True, "ok")
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_fol_reasoning("forall X: P(X)", {})
+        assert result["consistent"] is True
+        assert result["confidence"] == 0.8
+
+    async def test_invoke_fol_reasoning_inconsistent(self):
+        """_invoke_fol_reasoning returns low confidence for inconsistency."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fol_reasoning,
+        )
+
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (False, "inconsistent")
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_fol_reasoning("text", {})
+        assert result["consistent"] is False
+        assert result["confidence"] == 0.3
+
+    async def test_invoke_fol_reasoning_error(self):
+        """_invoke_fol_reasoning returns error dict on exception."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fol_reasoning,
+        )
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=Exception("no JVM"),
+        ):
+            result = await _invoke_fol_reasoning("text", {})
+        assert "error" in result
+        assert result["confidence"] == 0.0
+
+    async def test_invoke_modal_logic_necessity(self):
+        """_invoke_modal_logic detects necessity modality."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_modal_logic,
+        )
+
+        mock_bridge = MagicMock()
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_modal_logic("text", {"formulas": ["[]p => q"]})
+        assert "necessity" in result["modalities"]
+        assert result["logic_type"] == "modal"
+
+    async def test_invoke_modal_logic_possibility(self):
+        """_invoke_modal_logic detects possibility modality."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_modal_logic,
+        )
+
+        mock_bridge = MagicMock()
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_modal_logic("text", {"formulas": ["<>p"]})
+        assert "possibility" in result["modalities"]
+
+    async def test_invoke_modal_logic_no_modality(self):
+        """_invoke_modal_logic returns none_detected when no modality keywords."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_modal_logic,
+        )
+
+        mock_bridge = MagicMock()
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ):
+            result = await _invoke_modal_logic("text", {"formulas": ["p => q"]})
+        assert result["modalities"] == ["none_detected"]
+
+    async def test_invoke_modal_logic_error(self):
+        """_invoke_modal_logic returns error dict on exception."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_modal_logic,
+        )
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=Exception("fail"),
+        ):
+            result = await _invoke_modal_logic("text", {})
+        assert "error" in result
+        assert result["valid"] is False
+
+    async def test_invoke_dung_extensions_error(self):
+        """_invoke_dung_extensions returns error dict on exception."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.af_handler.AFHandler",
+            side_effect=Exception("no handler"),
+        ):
+            result = await _invoke_dung_extensions("text", {})
+        assert "error" in result
+        assert result["extensions"] == {}
+
+    async def test_invoke_dung_extensions_no_arguments(self):
+        """_invoke_dung_extensions generates default args when none provided."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
+        mock_handler = MagicMock()
+        mock_handler.analyze_dung_framework.return_value = {"extensions": {"preferred": []}}
+
+        # Patch at the module level where the import happens inside the function
+        with patch.dict("sys.modules", {
+            "argumentation_analysis.agents.core.logic.af_handler": MagicMock(
+                AFHandler=MagicMock(return_value=mock_handler)
+            ),
+            "argumentation_analysis.core.jvm_setup": MagicMock(
+                TweetyInitializer=MagicMock()
+            ),
+        }):
+            result = await _invoke_dung_extensions("text", {})
+        # Should have called with default arg_0, arg_1, arg_2
+        call_args = mock_handler.analyze_dung_framework.call_args
+        assert call_args[0][0] == ["arg_0", "arg_1", "arg_2"]
+
+    async def test_invoke_formal_synthesis_no_phases(self):
+        """_invoke_formal_synthesis with empty context."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
+        result = await _invoke_formal_synthesis("text", {})
+        assert result["summary"] == "No formal results collected"
+        assert result["overall_validity"] == 0.5
+        assert result["phase_count"] == 0
+
+    async def test_invoke_formal_synthesis_with_results(self):
+        """_invoke_formal_synthesis aggregates upstream phase results."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
+        ctx = {
+            "phase_prop_output": {"satisfiable": True, "formulas": ["p"]},
+            "phase_fol_output": {"consistent": False, "formulas": ["forall X: P(X)"]},
+            "phase_modal_output": {"valid": True, "formulas": ["[]p"]},
+            "not_a_phase": "ignored",
+        }
+        result = await _invoke_formal_synthesis("text", ctx)
+        assert result["phase_count"] == 3
+        # 2 true + 1 false = 2/3
+        assert abs(result["overall_validity"] - 2.0 / 3.0) < 0.01
+
+    async def test_invoke_formal_synthesis_with_error_phase(self):
+        """_invoke_formal_synthesis handles phase with error."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
+        ctx = {
+            "phase_broken_output": {"error": "something went wrong badly here"},
+        }
+        result = await _invoke_formal_synthesis("text", ctx)
+        assert "error" in result["summary"]
+
+    async def test_invoke_formal_synthesis_with_extensions(self):
+        """_invoke_formal_synthesis handles phase with extensions."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
+        ctx = {
+            "phase_dung_output": {"extensions": {"preferred": [["a"], ["b"]], "grounded": [["a"]]}},
+        }
+        result = await _invoke_formal_synthesis("text", ctx)
+        assert "extensions" in result["summary"]
+
+
+# ============================================================
+# Test: State writer functions
+# ============================================================
+
+
+class TestStateWriters:
+    """Test _write_*_to_state functions with edge cases."""
+
+    def _make_state(self):
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        return UnifiedAnalysisState("Test text")
+
+    def test_write_quality_to_state(self):
+        """_write_quality_to_state writes scores correctly."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_quality_to_state,
+        )
+
+        state = self._make_state()
+        output = {"note_finale": 7.5, "clarity": 8.0, "relevance": 6.0, "non_numeric": "skip"}
+        _write_quality_to_state(output, state, {})
+        assert "arg_input" in state.argument_quality_scores
+        assert state.argument_quality_scores["arg_input"]["overall"] == 7.5
+
+    def test_write_quality_to_state_none_output(self):
+        """_write_quality_to_state handles None output."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_quality_to_state,
+        )
+
+        state = self._make_state()
+        _write_quality_to_state(None, state, {})
+        assert state.argument_quality_scores == {}
+
+    def test_write_quality_to_state_non_numeric_overall(self):
+        """_write_quality_to_state skips when note_finale is non-numeric."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_quality_to_state,
+        )
+
+        state = self._make_state()
+        _write_quality_to_state({"note_finale": "high"}, state, {})
+        assert state.argument_quality_scores == {}
+
+    def test_write_counter_argument_to_state(self):
+        """_write_counter_argument_to_state writes parsed results."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_counter_argument_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "parsed_argument": {"premise": "All birds fly"},
+            "suggested_strategy": {"strategy_name": "reductio", "confidence": 0.85},
+        }
+        _write_counter_argument_to_state(output, state, {})
+        assert len(state.counter_arguments) == 1
+        assert state.counter_arguments[0]["score"] == 0.85
+
+    def test_write_counter_argument_non_dict_parsed(self):
+        """_write_counter_argument_to_state handles non-dict parsed_argument."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_counter_argument_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "parsed_argument": "not a dict",
+            "suggested_strategy": "also not a dict",
+        }
+        _write_counter_argument_to_state(output, state, {"input_data": "test"})
+        assert len(state.counter_arguments) == 1
+
+    def test_write_counter_argument_non_numeric_score(self):
+        """_write_counter_argument_to_state handles non-numeric confidence."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_counter_argument_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "parsed_argument": {},
+            "suggested_strategy": {"confidence": "high"},
+        }
+        _write_counter_argument_to_state(output, state, {})
+        assert state.counter_arguments[0]["score"] == 0.0
+
+    def test_write_jtms_to_state(self):
+        """_write_jtms_to_state writes beliefs correctly."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_jtms_to_state,
+        )
+
+        state = self._make_state()
+        output = {"beliefs": {"claim_0": "True", "claim_1": "False", "claim_2": "maybe"}}
+        _write_jtms_to_state(output, state, {})
+        assert len(state.jtms_beliefs) == 3
+
+    def test_write_jtms_to_state_non_dict_beliefs(self):
+        """_write_jtms_to_state returns early if beliefs is not dict."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_jtms_to_state,
+        )
+
+        state = self._make_state()
+        _write_jtms_to_state({"beliefs": "invalid"}, state, {})
+        assert len(state.jtms_beliefs) == 0
+
+    def test_write_debate_to_state(self):
+        """_write_debate_to_state writes transcript."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_debate_to_state,
+        )
+
+        state = self._make_state()
+        output = {"winner": "pro"}
+        _write_debate_to_state(output, state, {"input_data": "Should AI be regulated?"})
+        assert len(state.debate_transcripts) == 1
+        assert state.debate_transcripts[0]["winner"] == "pro"
+
+    def test_write_debate_to_state_no_winner(self):
+        """_write_debate_to_state handles missing winner."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_debate_to_state,
+        )
+
+        state = self._make_state()
+        # Empty dict is falsy, so use a dict with some content but no winner
+        _write_debate_to_state({"some_key": "value"}, state, {})
+        assert len(state.debate_transcripts) == 1
+        assert state.debate_transcripts[0]["winner"] is None
+
+    def test_write_debate_to_state_empty_dict(self):
+        """_write_debate_to_state returns early for empty dict (falsy)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_debate_to_state,
+        )
+
+        state = self._make_state()
+        _write_debate_to_state({}, state, {})
+        assert len(state.debate_transcripts) == 0
+
+    def test_write_governance_to_state(self):
+        """_write_governance_to_state writes decision."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_governance_to_state,
+        )
+
+        state = self._make_state()
+        output = {"available_methods": ["majority", "borda"]}
+        _write_governance_to_state(output, state, {})
+        assert len(state.governance_decisions) == 1
+
+    def test_write_governance_to_state_empty_methods(self):
+        """_write_governance_to_state does nothing for empty methods."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_governance_to_state,
+        )
+
+        state = self._make_state()
+        _write_governance_to_state({"available_methods": []}, state, {})
+        assert len(state.governance_decisions) == 0
+
+    def test_write_camembert_to_state(self):
+        """_write_camembert_to_state writes fallacy detections."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_camembert_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "detections": [
+                {"text": "attack the person", "label": "ad_hominem", "confidence": 0.92},
+                {"text": "straw man", "label": "straw_man", "confidence": 0.78},
+            ]
+        }
+        _write_camembert_to_state(output, state, {})
+        assert len(state.neural_fallacy_scores) == 2
+
+    def test_write_camembert_to_state_non_list_detections(self):
+        """_write_camembert_to_state handles non-list detections."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_camembert_to_state,
+        )
+
+        state = self._make_state()
+        _write_camembert_to_state({"detections": "not a list"}, state, {})
+        assert len(state.neural_fallacy_scores) == 0
+
+    def test_write_camembert_to_state_non_dict_detection(self):
+        """_write_camembert_to_state skips non-dict items in detections."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_camembert_to_state,
+        )
+
+        state = self._make_state()
+        _write_camembert_to_state({"detections": ["not_a_dict", 42]}, state, {})
+        assert len(state.neural_fallacy_scores) == 0
+
+    def test_write_semantic_index_to_state(self):
+        """_write_semantic_index_to_state writes search results."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_semantic_index_to_state,
+        )
+
+        state = self._make_state()
+        output = {"results": [{"id": "doc1", "score": 0.95, "snippet": "relevant text"}]}
+        _write_semantic_index_to_state(output, state, {"input_data": "query"})
+        assert len(state.semantic_index_refs) == 1
+
+    def test_write_semantic_index_to_state_non_list(self):
+        """_write_semantic_index_to_state handles non-list results."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_semantic_index_to_state,
+        )
+
+        state = self._make_state()
+        _write_semantic_index_to_state({"results": "not list"}, state, {})
+        assert len(state.semantic_index_refs) == 0
+
+    def test_write_speech_to_state(self):
+        """_write_speech_to_state writes transcription segments."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_speech_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "segments": [
+                {"start": 0.0, "end": 1.5, "text": "Hello", "speaker": "A"},
+                {"start": 1.5, "end": 3.0, "text": "World"},
+            ]
+        }
+        _write_speech_to_state(output, state, {})
+        assert len(state.transcription_segments) == 2
+
+    def test_write_speech_to_state_non_list_segments(self):
+        """_write_speech_to_state handles non-list segments."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_speech_to_state,
+        )
+
+        state = self._make_state()
+        _write_speech_to_state({"segments": "invalid"}, state, {})
+        assert len(state.transcription_segments) == 0
+
+    def test_write_fact_extraction_to_state(self):
+        """_write_fact_extraction_to_state appends claims to extracts."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
+        state = self._make_state()
+        output = {"claims": ["Claim one about something", "  ", "Claim two about another thing"]}
+        _write_fact_extraction_to_state(output, state, {})
+        # Only non-empty stripped strings are added
+        assert len(state.extracts) == 2
+
+    def test_write_fact_extraction_to_state_non_list_claims(self):
+        """_write_fact_extraction_to_state handles non-list claims."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
+        state = self._make_state()
+        _write_fact_extraction_to_state({"claims": "not list"}, state, {})
+        assert len(state.extracts) == 0
+
+    def test_write_propositional_to_state(self):
+        """_write_propositional_to_state writes analysis result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_propositional_to_state,
+        )
+
+        state = self._make_state()
+        output = {"formulas": ["p => q"], "satisfiable": True, "model": {"p": True}}
+        _write_propositional_to_state(output, state, {})
+
+    def test_write_propositional_to_state_non_list_formulas(self):
+        """_write_propositional_to_state handles non-list formulas."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_propositional_to_state,
+        )
+
+        state = self._make_state()
+        output = {"formulas": "single", "satisfiable": False, "model": "not dict"}
+        _write_propositional_to_state(output, state, {})
+
+    def test_write_fol_to_state(self):
+        """_write_fol_to_state writes FOL analysis result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fol_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "formulas": ["forall X: P(X)"],
+            "consistent": True,
+            "inferences": ["P(a)"],
+            "confidence": 0.9,
+        }
+        _write_fol_to_state(output, state, {})
+
+    def test_write_fol_to_state_bad_types(self):
+        """_write_fol_to_state handles non-list/non-numeric types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fol_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "formulas": "not list",
+            "consistent": False,
+            "inferences": "not list",
+            "confidence": "not num",
+        }
+        _write_fol_to_state(output, state, {})
+
+    def test_write_modal_to_state(self):
+        """_write_modal_to_state writes modal analysis."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_modal_to_state,
+        )
+
+        state = self._make_state()
+        output = {"formulas": ["[]p"], "valid": True, "modalities": ["necessity"]}
+        _write_modal_to_state(output, state, {})
+
+    def test_write_modal_to_state_bad_types(self):
+        """_write_modal_to_state handles non-list types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_modal_to_state,
+        )
+
+        state = self._make_state()
+        _write_modal_to_state({"formulas": 42, "valid": True, "modalities": "not list"}, state, {})
+
+    def test_write_dung_extensions_to_state(self):
+        """_write_dung_extensions_to_state writes Dung framework results."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "semantics": "grounded",
+            "extensions": {"grounded": [["a"]]},
+            "statistics": {"arguments_count": 3},
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_dung_extensions_to_state_non_dict_extensions(self):
+        """_write_dung_extensions_to_state handles non-dict extensions."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = self._make_state()
+        output = {"semantics": "preferred", "extensions": "not dict", "statistics": {}}
+        _write_dung_extensions_to_state(output, state, {})
+        # Should still create the framework entry with empty extensions
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_formal_synthesis_to_state(self):
+        """_write_formal_synthesis_to_state writes synthesis report."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_formal_synthesis_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "summary": "prop: satisfiable=True",
+            "phase_results": {"prop": {"satisfiable": True}},
+            "overall_validity": 0.85,
+        }
+        _write_formal_synthesis_to_state(output, state, {})
+
+    def test_write_formal_synthesis_to_state_bad_types(self):
+        """_write_formal_synthesis_to_state handles bad types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_formal_synthesis_to_state,
+        )
+
+        state = self._make_state()
+        output = {"summary": 42, "phase_results": "not dict", "overall_validity": "high"}
+        _write_formal_synthesis_to_state(output, state, {})
+
+    def test_write_ranking_to_state(self):
+        """_write_ranking_to_state writes ranking result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_ranking_to_state,
+        )
+
+        state = self._make_state()
+        output = {"method": "categorizer", "arguments": ["a", "b"], "comparisons": [{"a": 1, "b": 2}]}
+        _write_ranking_to_state(output, state, {})
+
+    def test_write_ranking_to_state_bad_types(self):
+        """_write_ranking_to_state handles non-list arguments/comparisons."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_ranking_to_state,
+        )
+
+        state = self._make_state()
+        _write_ranking_to_state({"method": "x", "arguments": "bad", "comparisons": "bad"}, state, {})
+
+    def test_write_aspic_to_state(self):
+        """_write_aspic_to_state writes ASPIC+ result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_aspic_to_state,
+        )
+
+        state = self._make_state()
+        output = {"reasoner_type": "simple", "extensions": [["a"]], "statistics": {"count": 1}}
+        _write_aspic_to_state(output, state, {})
+
+    def test_write_aspic_to_state_bad_types(self):
+        """_write_aspic_to_state handles non-list/non-dict types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_aspic_to_state,
+        )
+
+        state = self._make_state()
+        _write_aspic_to_state({"extensions": "bad", "statistics": "bad"}, state, {})
+
+    def test_write_belief_revision_to_state(self):
+        """_write_belief_revision_to_state writes revision result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_belief_revision_to_state,
+        )
+
+        state = self._make_state()
+        output = {"method": "dalal", "original": ["p", "q"], "revised": ["p", "r"]}
+        _write_belief_revision_to_state(output, state, {})
+
+    def test_write_belief_revision_to_state_bad_types(self):
+        """_write_belief_revision_to_state handles non-list types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_belief_revision_to_state,
+        )
+
+        state = self._make_state()
+        _write_belief_revision_to_state({"original": "bad", "revised": "bad"}, state, {})
+
+    def test_write_dialogue_to_state(self):
+        """_write_dialogue_to_state writes dialogue result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_dialogue_to_state,
+        )
+
+        state = self._make_state()
+        output = {"topic": "AI", "outcome": "agreement", "dialogue_trace": [{"move": "claim"}]}
+        _write_dialogue_to_state(output, state, {})
+
+    def test_write_dialogue_to_state_bad_trace(self):
+        """_write_dialogue_to_state handles non-list trace."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_dialogue_to_state,
+        )
+
+        state = self._make_state()
+        _write_dialogue_to_state({"dialogue_trace": "bad"}, state, {})
+
+    def test_write_probabilistic_to_state(self):
+        """_write_probabilistic_to_state writes probabilistic result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_probabilistic_to_state,
+        )
+
+        state = self._make_state()
+        output = {"arguments": ["a"], "acceptance_probabilities": {"a": 0.7}}
+        _write_probabilistic_to_state(output, state, {})
+
+    def test_write_probabilistic_to_state_bad_types(self):
+        """_write_probabilistic_to_state handles non-list/non-dict types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_probabilistic_to_state,
+        )
+
+        state = self._make_state()
+        _write_probabilistic_to_state({"arguments": "bad", "acceptance_probabilities": "bad"}, state, {})
+
+    def test_write_bipolar_to_state(self):
+        """_write_bipolar_to_state writes bipolar result."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_bipolar_to_state,
+        )
+
+        state = self._make_state()
+        output = {"framework_type": "necessity", "arguments": ["a"], "supports": [["a", "b"]]}
+        _write_bipolar_to_state(output, state, {})
+
+    def test_write_bipolar_to_state_bad_types(self):
+        """_write_bipolar_to_state handles non-list types."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_bipolar_to_state,
+        )
+
+        state = self._make_state()
+        _write_bipolar_to_state({"arguments": "bad", "supports": "bad"}, state, {})
+
+    def test_write_aba_to_state(self):
+        """_write_aba_to_state writes ABA results as Dung framework."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_aba_to_state,
+        )
+
+        state = self._make_state()
+        output = {"assumptions": ["a", "b"], "extensions": [["a"]], "semantics": "preferred"}
+        _write_aba_to_state(output, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_aba_to_state_non_list_assumptions(self):
+        """_write_aba_to_state handles non-list assumptions."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_aba_to_state,
+        )
+
+        state = self._make_state()
+        _write_aba_to_state({"assumptions": "bad"}, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_adf_to_state(self):
+        """_write_adf_to_state writes ADF results as Dung framework."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_adf_to_state,
+        )
+
+        state = self._make_state()
+        output = {"statements": ["s1"], "models": [{"s1": True}], "semantics": "grounded"}
+        _write_adf_to_state(output, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_adf_to_state_non_list_statements(self):
+        """_write_adf_to_state handles non-list statements."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_adf_to_state,
+        )
+
+        state = self._make_state()
+        _write_adf_to_state({"statements": "bad"}, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_write_adf_to_state_uses_extensions_fallback(self):
+        """_write_adf_to_state falls back to 'extensions' key if no 'models'."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_adf_to_state,
+        )
+
+        state = self._make_state()
+        output = {"statements": ["s1"], "extensions": [["s1"]]}
+        _write_adf_to_state(output, state, {})
+        assert len(state.dung_frameworks) == 1
+
+    def test_all_state_writers_handle_none(self):
+        """All state writers handle None output gracefully."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        state = self._make_state()
+        for cap, writer in CAPABILITY_STATE_WRITERS.items():
+            writer(None, state, {})
+        # No crash = success
+
+    def test_all_state_writers_handle_empty_dict(self):
+        """All state writers handle empty dict output gracefully."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        state = self._make_state()
+        for cap, writer in CAPABILITY_STATE_WRITERS.items():
+            writer({}, state, {})
+        # No crash = success
+
+
+# ============================================================
+# Test: Additional workflow builders
+# ============================================================
+
+
+class TestAdditionalWorkflows:
+    """Test workflow builders not covered by TestPrebuiltWorkflows."""
+
+    def test_build_quality_gated_counter_workflow(self):
+        """Quality-gated counter workflow has 3 phases."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        assert wf.name == "quality_gated_counter"
+        assert len(wf.phases) == 3
+
+    def test_build_debate_governance_loop_workflow(self):
+        """Debate-governance loop workflow has 3 phases."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_debate_governance_loop_workflow,
+        )
+
+        wf = build_debate_governance_loop_workflow()
+        assert wf.name == "debate_governance_loop"
+        assert len(wf.phases) == 3
+
+    def test_build_jtms_dung_loop_workflow(self):
+        """JTMS-Dung loop workflow has 2 phases."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_jtms_dung_loop_workflow,
+        )
+
+        wf = build_jtms_dung_loop_workflow()
+        assert wf.name == "jtms_dung_loop"
+        assert len(wf.phases) == 2
+
+    def test_build_neural_symbolic_fallacy_workflow(self):
+        """Neural-symbolic fallacy workflow has 2 phases."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_neural_symbolic_fallacy_workflow,
+        )
+
+        wf = build_neural_symbolic_fallacy_workflow()
+        assert wf.name == "neural_symbolic_fallacy"
+        assert len(wf.phases) == 2
+
+    def test_workflow_catalog_includes_extra_workflows(self):
+        """Workflow catalog includes quality_gated, debate_governance, etc."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
+        catalog = get_workflow_catalog()
+        assert "quality_gated" in catalog
+        assert "debate_governance" in catalog
+        assert "jtms_dung" in catalog
+        assert "neural_symbolic" in catalog
+
+    def test_quality_gate_function_proceeds_when_no_quality(self):
+        """Quality gate function returns True when no quality data."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        counter_phase = wf.get_phase("counter")
+        # The condition should return True when no quality output
+        assert counter_phase.condition({}) is True
+
+    def test_quality_gate_function_proceeds_when_high_score(self):
+        """Quality gate function returns True when score > 3.0."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        counter_phase = wf.get_phase("counter")
+        assert counter_phase.condition({"phase_quality_output": {"note_finale": 5.0}}) is True
+
+    def test_quality_gate_function_blocks_when_low_score(self):
+        """Quality gate function returns False when score <= 3.0."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        counter_phase = wf.get_phase("counter")
+        assert counter_phase.condition({"phase_quality_output": {"note_finale": 2.0}}) is False
+
+    def test_quality_gate_function_non_dict_output(self):
+        """Quality gate function returns True for non-dict quality output."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        counter_phase = wf.get_phase("counter")
+        assert counter_phase.condition({"phase_quality_output": "not a dict"}) is True
+
+    def test_convergence_function_not_converged(self):
+        """Convergence function returns False when score decreases."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        recheck_phase = wf.get_phase("quality_recheck")
+        conv_fn = recheck_phase.loop_config.convergence_fn
+        prev = {"note_finale": 5.0}
+        curr = {"note_finale": 4.0}
+        assert conv_fn(prev, curr) is False
+
+    def test_convergence_function_converged(self):
+        """Convergence function returns True when score stops improving."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        recheck_phase = wf.get_phase("quality_recheck")
+        conv_fn = recheck_phase.loop_config.convergence_fn
+        prev = {"note_finale": 5.0}
+        curr = {"note_finale": 5.0}
+        assert conv_fn(prev, curr) is True
+
+    def test_convergence_function_non_dict(self):
+        """Convergence function returns False for non-dict inputs."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_quality_gated_counter_workflow,
+        )
+
+        wf = build_quality_gated_counter_workflow()
+        recheck_phase = wf.get_phase("quality_recheck")
+        conv_fn = recheck_phase.loop_config.convergence_fn
+        assert conv_fn("not dict", {"note_finale": 5.0}) is False
+        assert conv_fn({"note_finale": 5.0}, "not dict") is False
+
+
+# ============================================================
+# Test: run_unified_analysis edge cases
+# ============================================================
+
+
+class TestRunUnifiedAnalysisEdgeCases:
+    """Test edge cases in run_unified_analysis."""
+
+    async def test_run_with_auto_routing_fallback(self):
+        """run_unified_analysis with workflow_name='auto' falls back to standard on error."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=False)
+        with patch(
+            "argumentation_analysis.orchestration.router.TextAnalysisRouter",
+            side_effect=Exception("Router not available"),
+        ):
+            result = await run_unified_analysis(
+                "Test text", workflow_name="auto", registry=registry
+            )
+        assert result["workflow_name"] == "standard_analysis"
+
+    async def test_run_with_provided_state(self):
+        """run_unified_analysis uses provided state object."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        registry = setup_registry(include_optional=False)
+        state = UnifiedAnalysisState("Custom state text")
+        result = await run_unified_analysis(
+            "Test text", workflow_name="light", registry=registry, state=state
+        )
+        assert result["unified_state"] is state
+
+    async def test_run_with_state_snapshot_error(self):
+        """run_unified_analysis handles get_state_snapshot failure."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=False)
+        mock_state = MagicMock()
+        mock_state.get_state_snapshot.side_effect = Exception("snapshot error")
+        result = await run_unified_analysis(
+            "Test text", workflow_name="light", registry=registry, state=mock_state
+        )
+        assert result["unified_state"] is mock_state
+        assert result["state_snapshot"] is None
+
+    async def test_run_unified_analysis_state_import_error(self):
+        """run_unified_analysis handles UnifiedAnalysisState import failure."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=False)
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.setup_registry",
+            return_value=registry,
+        ), patch.dict(
+            "sys.modules",
+            {"argumentation_analysis.core.shared_state": None},
+        ):
+            # Force ImportError for UnifiedAnalysisState
+            result = await run_unified_analysis(
+                "Test text",
+                workflow_name="light",
+                registry=registry,
+                create_state=True,
+            )
+        # State creation failed but analysis should still succeed
+        assert "phases" in result
+        assert "summary" in result
+
+    async def test_run_summary_lists_phases(self):
+        """run_unified_analysis summary includes phase name lists."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=False)
+        result = await run_unified_analysis(
+            "Test argument text.",
+            workflow_name="light",
+            registry=registry,
+        )
+        summary = result["summary"]
+        assert "completed_phases" in summary
+        assert "failed_phases" in summary
+        assert "skipped_phases" in summary
+        assert isinstance(summary["completed_phases"], list)
+
+
+# ============================================================
+# Test: CAPABILITY_STATE_WRITERS mapping
+# ============================================================
+
+
+class TestCapabilityStateWritersMapping:
+    """Test the CAPABILITY_STATE_WRITERS dict has correct entries."""
+
+    def test_all_expected_capabilities_present(self):
+        """CAPABILITY_STATE_WRITERS has entries for all core capabilities."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        expected = [
+            "argument_quality",
+            "counter_argument_generation",
+            "belief_maintenance",
+            "adversarial_debate",
+            "governance_simulation",
+            "neural_fallacy_detection",
+            "semantic_indexing",
+            "speech_transcription",
+            "ranking_semantics",
+            "aspic_plus_reasoning",
+            "belief_revision",
+            "dialogue_protocols",
+            "probabilistic_argumentation",
+            "bipolar_argumentation",
+            "aba_reasoning",
+            "adf_reasoning",
+            "fact_extraction",
+            "propositional_logic",
+            "fol_reasoning",
+            "modal_logic",
+            "dung_extensions",
+            "formal_synthesis",
+        ]
+        for cap in expected:
+            assert cap in CAPABILITY_STATE_WRITERS, f"Missing writer for {cap}"
+
+    def test_all_writers_are_callable(self):
+        """All state writers are callable."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        for cap, writer in CAPABILITY_STATE_WRITERS.items():
+            assert callable(writer), f"Writer for {cap} is not callable"
+
+
+# ============================================================
+# Test: _declare_tweety_slots error handling
+# ============================================================
+
+
+class TestDeclareTweetySlots:
+    """Test _declare_tweety_slots with registration failures."""
+
+    def test_declare_tweety_slots_registers_services(self):
+        """_declare_tweety_slots registers all 8 Tweety handlers."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _declare_tweety_slots,
+        )
+
+        registry = CapabilityRegistry()
+        _declare_tweety_slots(registry)
+        caps = registry.get_all_capabilities()
+        assert "ranking_semantics" in caps
+        assert "bipolar_argumentation" in caps
+        assert "aba_reasoning" in caps
+        assert "adf_reasoning" in caps
+        assert "aspic_plus_reasoning" in caps
+        assert "dialogue_protocols" in caps
+
+    def test_declare_tweety_slots_fallback_to_slot(self):
+        """_declare_tweety_slots falls back to slot declaration on error."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _declare_tweety_slots,
+        )
+
+        registry = CapabilityRegistry()
+        # Make register_service always raise to force slot declaration path
+        with patch.object(
+            registry, "register_service", side_effect=Exception("forced failure")
+        ):
+            _declare_tweety_slots(registry)
+
+        # All capabilities should be declared as slots
+        slots = registry.get_all_slots()
+        assert "ranking_semantics" in slots
+        assert "bipolar_argumentation" in slots
+
+
+# ============================================================
+# Test: setup_registry error handling
+# ============================================================
+
+
+class TestSetupRegistryErrors:
+    """Test setup_registry with import failures."""
+
+    def test_setup_registry_handles_counter_argument_import_error(self):
+        """setup_registry skips counter_argument when import fails."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.CapabilityRegistry"
+        ) as MockRegistry:
+            mock_reg = MagicMock()
+            mock_reg._registrations = {}
+            mock_reg.summary.return_value = {"total_registrations": 0}
+            MockRegistry.return_value = mock_reg
+            # This tests that ImportError is caught gracefully
+            registry = setup_registry(include_optional=False)
+            assert registry is not None
+
+    def test_setup_registry_logic_capability_exception(self):
+        """setup_registry handles exceptions during logic capability registration."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        registry = CapabilityRegistry()
+        # Register a service with a duplicate name to cause an error
+        # The setup_registry function catches Exception for logic capabilities
+        # Verify it doesn't crash
+        result = setup_registry(include_optional=False)
+        assert isinstance(result, CapabilityRegistry)

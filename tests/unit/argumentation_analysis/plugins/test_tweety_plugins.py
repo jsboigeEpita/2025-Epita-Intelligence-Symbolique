@@ -223,3 +223,23 @@ class TestBeliefRevisionPlugin:
         plugin = BeliefRevisionPlugin()
         with pytest.raises(json.JSONDecodeError):
             plugin.contract_beliefs("invalid")
+
+
+# =====================================================================
+# ToulminPlugin Tests
+# =====================================================================
+
+
+class TestToulminPlugin:
+    """Test ToulminPlugin @kernel_function methods."""
+
+    def test_plugin_instantiation(self):
+        from argumentation_analysis.plugins.toulmin_plugin import ToulminPlugin
+        plugin = ToulminPlugin()
+        assert hasattr(plugin, "analyze_argument")
+
+    async def test_analyze_argument_not_implemented(self):
+        from argumentation_analysis.plugins.toulmin_plugin import ToulminPlugin
+        plugin = ToulminPlugin()
+        with pytest.raises(NotImplementedError, match="not yet implemented"):
+            await plugin.analyze_argument("The death penalty should be abolished because it is cruel.")
