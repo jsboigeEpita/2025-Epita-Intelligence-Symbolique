@@ -78,15 +78,15 @@ class LLMJudge:
         """
         Evaluate analysis quality using an LLM.
 
+        Uses the OpenAI SDK directly (avoids SK invoke_prompt encoding issues).
+
         Args:
             input_text: The original text that was analyzed.
             workflow_name: The workflow used for analysis.
             analysis_results: The analysis output to evaluate.
             model_registry: Optional ModelRegistry for model switching.
         """
-        from semantic_kernel import Kernel
-        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-        from semantic_kernel.contents import ChatHistory
+        from openai import AsyncOpenAI
         import os
 
         # Prepare the prompt
@@ -107,23 +107,21 @@ class LLMJudge:
             model_registry.activate(self.model_name)
 
         try:
-            kernel = Kernel()
             model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            service = OpenAIChatCompletion(
-                service_id="judge",
-                ai_model_id=model_id,
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_msg},
+                ],
             )
-            kernel.add_service(service)
 
-            chat = ChatHistory(system_message=JUDGE_SYSTEM_PROMPT)
-            chat.add_user_message(user_msg)
-
-            response = await kernel.invoke_prompt(
-                prompt=f"{{{{$chat_history}}}}",
-                chat_history=chat,
-            )
-
-            raw = str(response)
+            raw = response.choices[0].message.content or ""
             # Parse JSON from response
             score_data = self._parse_json_response(raw)
 
