@@ -109,9 +109,11 @@ class TestComputeConsensusMetrics:
 class TestListGovernanceMethods:
     def test_returns_list(self, plugin):
         result = json.loads(plugin.list_governance_methods())
-        assert isinstance(result, list)
+        assert isinstance(result, dict)
+        assert "agent_based" in result
+        assert isinstance(result["agent_based"], list)
 
     def test_contains_majority(self, plugin):
         result = json.loads(plugin.list_governance_methods())
         # At least majority should be present
-        assert len(result) >= 1
+        assert len(result["agent_based"]) >= 1

@@ -10,6 +10,8 @@ from argumentation_analysis.core.utils.logging_utils import setup_logging
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 
+from argumentation_analysis.core.config import settings, PLSolverChoice
+
 setup_logging()  # Appel de la configuration globale du logging
 logger = logging.getLogger(__name__)  # Obtient le logger pour ce module
 
@@ -304,4 +306,43 @@ class PLHandler:
             logger.error(f"Unexpected error during PL query: {e}", exc_info=True)
             raise
 
-    # Add other PL-specific methods as needed, e.g., model finding, transformations, etc.
+    # ── SAT solver dispatch ──────────────────────────────────────────
+
+    def _get_sat_handler(self):
+        """Lazy-load the SAT handler for PySAT-based solving."""
+        if not hasattr(self, "_sat_handler") or self._sat_handler is None:
+            from .sat_handler import SATHandler
+            self._sat_handler = SATHandler(default_solver=settings.pysat_solver)
+        return self._sat_handler
+
+    def pl_check_consistency_sat(
+        self, knowledge_base_str: str
+    ) -> bool:
+        """Check PL consistency using PySAT instead of Tweety."""
+        formula_strings = [
+            f.strip().rstrip("%")
+            for f in knowledge_base_str.split("\n")
+            if f.strip() and f.strip() != "```"
+        ]
+        if not formula_strings:
+            return True
+        # Normalize formulas for SAT handler
+        normalized = [self._normalize_formula(f) for f in formula_strings]
+        handler = self._get_sat_handler()
+        is_consistent, msg = handler.check_consistency(normalized, settings.pysat_solver)
+        logger.info(f"PySAT consistency check: {msg}")
+        return is_consistent
+
+    def pl_query_sat(
+        self, knowledge_base_str: str, query_formula_str: str
+    ) -> bool:
+        """Check PL entailment using PySAT instead of Tweety."""
+        formula_strings = [
+            f.strip().rstrip("%")
+            for f in knowledge_base_str.split("\n")
+            if f.strip() and f.strip() != "```"
+        ]
+        normalized_kb = [self._normalize_formula(f) for f in formula_strings]
+        normalized_query = self._normalize_formula(query_formula_str.rstrip("%").strip())
+        handler = self._get_sat_handler()
+        return handler.query(normalized_kb, normalized_query, settings.pysat_solver)

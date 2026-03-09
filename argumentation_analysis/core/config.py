@@ -17,6 +17,13 @@ class ModalSolverChoice(str, enum.Enum):
     SPASS = "spass"
 
 
+class PLSolverChoice(str, enum.Enum):
+    """Énumération pour les solveurs de logique propositionnelle."""
+
+    TWEETY = "tweety"
+    PYSAT = "pysat"
+
+
 class ArgAnalysisSettings(BaseSettings):
     """
     Paramètres de configuration pour le système d'analyse d'arguments.
@@ -38,6 +45,19 @@ class ArgAnalysisSettings(BaseSettings):
     # 'spass' utilise SPASSMlReasoner (requires SPASS binary).
     #
     modal_solver: ModalSolverChoice = ModalSolverChoice.TWEETY
+
+    #
+    # Le choix du solveur pour la logique propositionnelle.
+    # 'tweety' (défaut) utilise SimplePlReasoner via JPype.
+    # 'pysat' utilise PySAT (CaDiCaL, Glucose, etc.) — no JVM required.
+    #
+    pl_solver: PLSolverChoice = PLSolverChoice.TWEETY
+
+    #
+    # Le solveur SAT spécifique à utiliser avec PySAT.
+    # Options: cadical195, cryptominisat5, glucose42, maplechrono, lingeling, minisat22
+    #
+    pysat_solver: str = "cadical195"
 
     model_config = SettingsConfigDict(env_prefix="ARG_ANALYSIS_")
 
