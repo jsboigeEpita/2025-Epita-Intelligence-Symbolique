@@ -137,6 +137,20 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             depends_on=["pl_analysis"],
             optional=True,
         )
+        # DeLP for defeasible reasoning (#89)
+        .add_phase(
+            "delp_analysis",
+            capability="defeasible_logic",
+            depends_on=["pl_analysis"],
+            optional=True,
+        )
+        # QBF for quantified Boolean verification (#90)
+        .add_phase(
+            "qbf_analysis",
+            capability="qbf_reasoning",
+            depends_on=["pl_analysis"],
+            optional=True,
+        )
         .add_phase(
             "jtms_tracking",
             capability="belief_maintenance",
@@ -155,6 +169,7 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
                 "ranking", "aspic_analysis", "belief_revision",
                 "adf_analysis", "bipolar_analysis", "setaf_analysis",
                 "dl_analysis", "cl_analysis",
+                "delp_analysis", "qbf_analysis",
             ],
         )
         .set_metadata("domain", "formal_verification")

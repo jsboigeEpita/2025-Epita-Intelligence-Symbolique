@@ -491,3 +491,57 @@ class TweetyLogicPlugin:
             votes=votes,
         )
         return json.dumps(result, default=str)
+
+    @kernel_function(
+        name="analyze_epistemic_framework",
+        description="Analyze an Epistemic AF with multi-agent belief states",
+    )
+    @_jvm_required
+    def analyze_epistemic_framework(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
+        from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = EAFHandler(initializer)
+        result = handler.analyze_epistemic_framework(
+            arguments=params.get("arguments", []),
+            attacks=params.get("attacks", []),
+            epistemic_beliefs=params.get("epistemic_beliefs"),
+            semantics=params.get("semantics", "grounded"),
+        )
+        return json.dumps(result, default=str)
+
+    @kernel_function(
+        name="analyze_delp",
+        description="Analyze a Defeasible Logic Program with dialectical trees",
+    )
+    @_jvm_required
+    def analyze_delp(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"program": input})
+        from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = DeLPHandler(initializer)
+        result = handler.analyze_delp(
+            program_text=params.get("program", input),
+            queries=params.get("queries", []),
+            criterion=params.get("criterion", "generalized_specificity"),
+        )
+        return json.dumps(result, default=str)
+
+    @kernel_function(
+        name="check_qbf",
+        description="Check validity of a Quantified Boolean Formula",
+    )
+    @_jvm_required
+    def check_qbf(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"formula": input, "quantifiers": []})
+        from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = QBFHandler(initializer)
+        result = handler.analyze_qbf(
+            quantifiers=params.get("quantifiers", []),
+            formula_str=params.get("formula", input),
+        )
+        return json.dumps(result, default=str)

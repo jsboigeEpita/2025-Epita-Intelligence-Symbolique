@@ -570,6 +570,47 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
     )
 
 
+# --- EAF / DeLP / QBF invoke functions (#88, #89, #90) ---
+
+
+async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Epistemic AF handler (#88)."""
+    from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = EAFHandler(initializer)
+    args = context.get("arguments", [])
+    attacks = context.get("attacks", [])
+    beliefs = context.get("epistemic_beliefs")
+    semantics = context.get("semantics", "grounded")
+    return await asyncio.to_thread(
+        handler.analyze_epistemic_framework, args, attacks, beliefs, semantics
+    )
+
+
+async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke DeLP handler (#89)."""
+    from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = DeLPHandler(initializer)
+    program_text = context.get("program", input_text)
+    queries = context.get("queries", [])
+    criterion = context.get("criterion", "generalized_specificity")
+    return await asyncio.to_thread(handler.analyze_delp, program_text, queries, criterion)
+
+
+async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke QBF handler (#90)."""
+    from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = QBFHandler(initializer)
+    quantifiers = context.get("quantifiers", [])
+    formula = context.get("formula", input_text)
+    return await asyncio.to_thread(handler.analyze_qbf, quantifiers, formula)
+
+
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
 
 
@@ -1381,6 +1422,42 @@ def _write_social_to_state(output, state, ctx) -> None:
     )
 
 
+def _write_eaf_to_state(output, state, ctx) -> None:
+    """Write EAF results to UnifiedAnalysisState (#88)."""
+    if not output or not isinstance(output, dict):
+        return
+    state.add_dung_framework(
+        name=f"eaf_{output.get('semantics', 'grounded')}",
+        arguments=output.get("arguments", []),
+        attacks=[a for a in output.get("attacks", []) if isinstance(a, list)],
+        extensions={"eaf_extensions": output.get("extensions", [])},
+    )
+
+
+def _write_delp_to_state(output, state, ctx) -> None:
+    """Write DeLP results to UnifiedAnalysisState (#89)."""
+    if not output or not isinstance(output, dict):
+        return
+    query_results = output.get("query_results", [])
+    state.add_dung_framework(
+        name="delp_analysis",
+        arguments=[],
+        attacks=[],
+        extensions={"delp_query_results": query_results},
+    )
+
+
+def _write_qbf_to_state(output, state, ctx) -> None:
+    """Write QBF results to UnifiedAnalysisState (#90)."""
+    if not output or not isinstance(output, dict):
+        return
+    state.add_propositional_analysis_result(
+        formulas=[f"QBF: {output.get('formula', '')}"],
+        satisfiable=output.get("valid", False),
+        model={},
+    )
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -1411,6 +1488,9 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "setaf_reasoning": _write_setaf_to_state,
     "weighted_argumentation": _write_weighted_to_state,
     "social_argumentation": _write_social_to_state,
+    "epistemic_argumentation": _write_eaf_to_state,
+    "defeasible_logic": _write_delp_to_state,
+    "qbf_reasoning": _write_qbf_to_state,
 }
 
 
@@ -1725,6 +1805,13 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
          "Weighted Argumentation Frameworks (attack weights)", _invoke_weighted),
         ("social_handler", ["social_argumentation"],
          "Social Abstract Argumentation (voting + attacks)", _invoke_social),
+        # New handlers (#88, #89, #90)
+        ("eaf_handler", ["epistemic_argumentation"],
+         "Epistemic AF (belief-aware multi-agent argumentation)", _invoke_eaf),
+        ("delp_handler", ["defeasible_logic"],
+         "Defeasible Logic Programming (dialectical trees)", _invoke_delp),
+        ("qbf_handler", ["qbf_reasoning"],
+         "Quantified Boolean Formulas (∀/∃ over PL)", _invoke_qbf),
     ]
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:

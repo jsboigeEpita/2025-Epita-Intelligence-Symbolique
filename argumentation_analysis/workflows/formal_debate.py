@@ -62,7 +62,14 @@ def build_formal_debate_workflow() -> WorkflowDefinition:
             capability="ranking_semantics",
             depends_on=["structured_dialogue"],
         )
-        # Phase 4b: Social AF for voting-based ranking (optional, #87)
+        # Phase 4b: Epistemic AF for belief-aware debate (optional, #88)
+        .add_phase(
+            "epistemic_analysis",
+            capability="epistemic_argumentation",
+            optional=True,
+            depends_on=["strength_ranking"],
+        )
+        # Phase 4c: Social AF for voting-based ranking (optional, #87)
         .add_phase(
             "social_ranking",
             capability="social_argumentation",

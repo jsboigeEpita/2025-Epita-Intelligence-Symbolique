@@ -61,7 +61,7 @@ class TestBuildFormalDebateWorkflow:
 
     def test_phase_count(self):
         wf = build_formal_debate_workflow()
-        assert len(wf.phases) == 7  # 5 original + 2 optional (ABA #85, Social #87)
+        assert len(wf.phases) == 8  # 5 original + 3 optional (ABA #85, Social #87, EAF #88)
 
     def test_required_capabilities(self):
         wf = build_formal_debate_workflow()
@@ -73,6 +73,7 @@ class TestBuildFormalDebateWorkflow:
         assert "governance_simulation" in caps
         assert "aba_reasoning" in caps  # #85
         assert "social_argumentation" in caps  # #87
+        assert "epistemic_argumentation" in caps  # #88
 
     def test_execution_order(self):
         wf = build_formal_debate_workflow()
@@ -92,7 +93,7 @@ class TestBuildFormalDebateWorkflow:
         wf = build_formal_debate_workflow()
         phases = wf.phases if isinstance(wf.phases, list) else list(wf.phases.values())
         optional_names = {p.name for p in phases if p.optional}
-        assert optional_names == {"aba_formalization", "social_ranking"}  # #85, #87
+        assert optional_names == {"aba_formalization", "social_ranking", "epistemic_analysis"}  # #85, #87, #88
 
 
 class TestFormalDebateExecution:
