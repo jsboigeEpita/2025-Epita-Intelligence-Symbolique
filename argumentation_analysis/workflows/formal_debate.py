@@ -43,6 +43,13 @@ def build_formal_debate_workflow() -> WorkflowDefinition:
             capability="aspic_plus_reasoning",
             depends_on=["quality_baseline"],
         )
+        # Phase 2b: ABA alternative formalization (optional, #85)
+        .add_phase(
+            "aba_formalization",
+            capability="aba_reasoning",
+            depends_on=["quality_baseline"],
+            optional=True,
+        )
         # Phase 3: Structured dialogue protocol
         .add_phase(
             "structured_dialogue",

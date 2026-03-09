@@ -456,6 +456,74 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
     )
 
 
+async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Description Logic handler (#86)."""
+    from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = DLHandler(initializer)
+    tbox = context.get("tbox", [])
+    abox_concepts = context.get("abox_concepts", [])
+    abox_roles = context.get("abox_roles", [])
+    kb = await asyncio.to_thread(
+        handler.create_knowledge_base, tbox, abox_concepts, abox_roles
+    )
+    consistent, msg = await asyncio.to_thread(handler.is_consistent, kb)
+    return {
+        "consistent": consistent,
+        "message": msg,
+        "tbox_size": len(tbox),
+        "abox_size": len(abox_concepts) + len(abox_roles),
+        "statistics": {"handler": "DLHandler", "reasoner": "NaiveDlReasoner"},
+    }
+
+
+async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Conditional Logic handler (#86)."""
+    from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = CLHandler(initializer)
+    conditionals = context.get("conditionals", [])
+    query_conclusion = context.get("query_conclusion")
+    query_premise = context.get("query_premise")
+    kb = await asyncio.to_thread(handler.create_knowledge_base, conditionals)
+    if query_conclusion:
+        entailed, msg = await asyncio.to_thread(
+            handler.query, kb, query_conclusion, query_premise
+        )
+    else:
+        entailed, msg = True, "No query specified — KB constructed."
+    return {
+        "entailed": entailed,
+        "message": msg,
+        "num_conditionals": len(conditionals),
+        "statistics": {"handler": "CLHandler", "reasoner": "SimpleCReasoner"},
+    }
+
+
+async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke SAT solver handler (#86)."""
+    from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
+    handler = SATHandler(context.get("solver", "cadical195"))
+    formulas = context.get("formulas", [input_text] if input_text else [])
+    mode = context.get("sat_mode", "solve")  # solve, maxsat, mus
+    if mode == "mus":
+        mus_list = await asyncio.to_thread(handler.find_mus, formulas)
+        return {
+            "mode": "mus",
+            "mus_count": len(mus_list),
+            "mus_subsets": mus_list,
+            "statistics": {"handler": "SATHandler", "backend": "Z3-MARCO"},
+        }
+    is_sat, model, stats = await asyncio.to_thread(handler.solve_formulas, formulas)
+    return {
+        "satisfiable": is_sat,
+        "model": model,
+        "statistics": stats,
+    }
+
+
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
 
 
@@ -1175,6 +1243,56 @@ def _write_formal_synthesis_to_state(output, state, ctx) -> None:
     state.add_formal_synthesis_report(summary, phase_results, float(overall_validity))
 
 
+def _write_dl_to_state(output, state, ctx) -> None:
+    """Write Description Logic results to UnifiedAnalysisState (#86)."""
+    if not output or not isinstance(output, dict):
+        return
+    consistent = output.get("consistent", False)
+    message = str(output.get("message", ""))
+    state.add_fol_analysis_result(
+        formulas=[f"DL: {message}"],
+        consistent=bool(consistent),
+        inferences=[],
+        confidence=1.0 if consistent else 0.0,
+    )
+
+
+def _write_cl_to_state(output, state, ctx) -> None:
+    """Write Conditional Logic results to UnifiedAnalysisState (#86)."""
+    if not output or not isinstance(output, dict):
+        return
+    entailed = output.get("entailed", False)
+    message = str(output.get("message", ""))
+    num = output.get("num_conditionals", 0)
+    state.add_propositional_analysis_result(
+        formulas=[f"CL({num} conditionals): {message}"],
+        satisfiable=bool(entailed),
+        model={},
+    )
+
+
+def _write_sat_to_state(output, state, ctx) -> None:
+    """Write SAT solver results to UnifiedAnalysisState (#86)."""
+    if not output or not isinstance(output, dict):
+        return
+    is_sat = output.get("satisfiable", False)
+    model = output.get("model") or {}
+    mode = output.get("mode", "solve")
+    if mode == "mus":
+        mus_count = output.get("mus_count", 0)
+        state.add_propositional_analysis_result(
+            formulas=[f"SAT/MUS: {mus_count} minimal unsatisfiable subsets"],
+            satisfiable=False,
+            model={},
+        )
+    else:
+        state.add_propositional_analysis_result(
+            formulas=[f"SAT: {'SAT' if is_sat else 'UNSAT'}"],
+            satisfiable=bool(is_sat),
+            model=model if isinstance(model, dict) else {},
+        )
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -1199,6 +1317,9 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "dung_extensions": _write_dung_extensions_to_state,
     "formal_synthesis": _write_formal_synthesis_to_state,
     "hierarchical_fallacy_detection": _write_hierarchical_fallacy_to_state,
+    "description_logic": _write_dl_to_state,
+    "conditional_logic": _write_cl_to_state,
+    "sat_solving": _write_sat_to_state,
 }
 
 
@@ -1423,6 +1544,24 @@ def setup_registry(
     # --- Declare unfilled slots for future Tweety extensions ---
     _declare_tweety_slots(registry)
 
+    # --- TweetyLogicPlugin: SK wrapper for all handlers (#91) ---
+    try:
+        from argumentation_analysis.plugins.tweety_logic_plugin import TweetyLogicPlugin
+        registry.register_plugin(
+            name="tweety_logic_plugin",
+            plugin_class=TweetyLogicPlugin,
+            capabilities=["tweety_logic"],
+            metadata={
+                "description": (
+                    "SK plugin exposing all Tweety logic handlers as "
+                    "@kernel_function methods for LLM agents (#91)"
+                )
+            },
+        )
+        registered.append("tweety_logic_plugin")
+    except ImportError as e:
+        skipped.append(("tweety_logic_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         ("fact_extraction_service", ["fact_extraction"],
@@ -1437,6 +1576,9 @@ def setup_registry(
          "Dung AF extension computation via AFHandler", _invoke_dung_extensions),
         ("formal_synthesis_service", ["formal_synthesis"],
          "Aggregate formal analysis into unified report", _invoke_formal_synthesis),
+        # SAT handler — no JVM dependency, uses PySAT+Z3 (#86)
+        ("sat_handler", ["sat_solving"],
+         "SAT/MaxSAT/MUS solver (PySAT + Z3)", _invoke_sat),
     ]
     for name, caps, desc, invoke_fn in logic_capabilities:
         try:
@@ -1462,7 +1604,7 @@ def setup_registry(
 
 
 def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
-    """Register Tweety handler capabilities (Track A #55-#62)."""
+    """Register Tweety handler capabilities (Track A #55-#62, #85-#86)."""
     tweety_handlers = [
         ("ranking_semantics_handler", ["ranking_semantics"],
          "Qualitative argument ranking (Categoriser, Burden)", _invoke_ranking),
@@ -1480,6 +1622,11 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
          "Probabilistic argument acceptance", _invoke_probabilistic),
         ("dialogue_handler", ["dialogue_protocols"],
          "Agent dialogue and negotiation protocols", _invoke_dialogue),
+        # New handlers (#86)
+        ("dl_handler", ["description_logic"],
+         "ALC Description Logic (TBox/ABox reasoning)", _invoke_dl),
+        ("cl_handler", ["conditional_logic"],
+         "Conditional Logic (System Z, non-monotonic)", _invoke_cl),
     ]
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:

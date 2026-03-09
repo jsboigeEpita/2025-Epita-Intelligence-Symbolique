@@ -42,6 +42,13 @@ def build_argument_strength_workflow() -> WorkflowDefinition:
             capability="ranking_semantics",
             depends_on=["quality_baseline"],
         )
+        # Phase 2b: Bipolar AF for support+attack analysis (optional, #85)
+        .add_phase(
+            "bipolar_strength",
+            capability="bipolar_argumentation",
+            optional=True,
+            depends_on=["formal_ranking"],
+        )
         # Phase 3: Optional probabilistic analysis
         .add_phase(
             "uncertainty_analysis",

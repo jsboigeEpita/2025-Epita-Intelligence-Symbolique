@@ -1,7 +1,7 @@
 """
 Formal Verification Workflow (#71) — Full pipeline using all logic agents + Tweety handlers.
 
-10-phase pipeline:
+14-phase pipeline (4 optional):
   1. Extraction: heuristic claim extraction from text
   2. PL Analysis: propositional logic satisfiability check
   3. FOL Analysis: first-order logic consistency check (parallel with PL)
@@ -9,9 +9,13 @@ Formal Verification Workflow (#71) — Full pipeline using all logic agents + Tw
   5. Dung Extensions: argument framework + extension computation
   6. ASPIC+ Analysis: structured argumentation via ASPIC+
   7. Ranking: formal argument ranking semantics
-  8. JTMS Tracking: belief maintenance for consistency monitoring
-  9. Belief Revision: AGM-style revision if inconsistency detected (conditional)
- 10. Formal Synthesis: aggregate all formal results into unified validity report
+  8. ADF Analysis: abstract dialectical frameworks (optional, #85)
+  9. Bipolar Analysis: bipolar AF with support relations (optional, #85)
+ 10. DL Analysis: description logic ontological reasoning (optional, #86)
+ 11. CL Analysis: conditional logic non-monotonic reasoning (optional, #86)
+ 12. JTMS Tracking: belief maintenance for consistency monitoring
+ 13. Belief Revision: AGM-style revision if inconsistency detected (conditional)
+ 14. Formal Synthesis: aggregate all formal results into unified validity report
 
 Use cases: legal contract analysis, formal spec verification, scientific reasoning audit.
 """
@@ -98,6 +102,34 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             capability="ranking_semantics",
             depends_on=["dung_analysis"],
         )
+        # ADF generalizes Dung AF with acceptance conditions (#85)
+        .add_phase(
+            "adf_analysis",
+            capability="adf_reasoning",
+            depends_on=["dung_analysis"],
+            optional=True,
+        )
+        # Bipolar AF adds support relations alongside attacks (#85)
+        .add_phase(
+            "bipolar_analysis",
+            capability="bipolar_argumentation",
+            depends_on=["dung_analysis"],
+            optional=True,
+        )
+        # Description Logic for ontological consistency (#86)
+        .add_phase(
+            "dl_analysis",
+            capability="description_logic",
+            depends_on=["fol_analysis"],
+            optional=True,
+        )
+        # Conditional Logic for non-monotonic reasoning (#86)
+        .add_phase(
+            "cl_analysis",
+            capability="conditional_logic",
+            depends_on=["pl_analysis"],
+            optional=True,
+        )
         .add_phase(
             "jtms_tracking",
             capability="belief_maintenance",
@@ -112,7 +144,11 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
         .add_phase(
             "formal_synthesis",
             capability="formal_synthesis",
-            depends_on=["ranking", "aspic_analysis", "belief_revision"],
+            depends_on=[
+                "ranking", "aspic_analysis", "belief_revision",
+                "adf_analysis", "bipolar_analysis",
+                "dl_analysis", "cl_analysis",
+            ],
         )
         .set_metadata("domain", "formal_verification")
         .set_metadata("version", "1.0")
