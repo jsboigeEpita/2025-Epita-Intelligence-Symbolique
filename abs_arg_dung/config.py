@@ -36,9 +36,16 @@ RANDOM_GENERATION_CONFIG = {
 }
 
 # Configuration TweetyProject
+# Version is read from central settings when available, fallback to discovery
+try:
+    from argumentation_analysis.config.settings import settings as _app_settings
+    _TWEETY_VERSION = _app_settings.jvm.tweety_version
+except ImportError:
+    _TWEETY_VERSION = "1.29"  # fallback
+
 TWEETY_CONFIG = {
     "jar_files": [
-        "tweety-full-1.28.jar",
+        f"tweety-full-{_TWEETY_VERSION}.jar",
         "dung-1.27.jar",
         "commons-1.27.jar",
         "graphs-1.27.jar",

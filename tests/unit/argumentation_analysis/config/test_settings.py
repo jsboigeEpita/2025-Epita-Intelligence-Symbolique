@@ -217,7 +217,7 @@ class TestJVMSettings:
 
     def test_tweety_settings(self):
         s = JVMSettings()
-        assert s.tweety_version == "1.28"
+        assert s.tweety_version == "1.29"
         assert isinstance(s.tweety_libs_dir, Path)
         assert isinstance(s.native_libs_dir, Path)
 

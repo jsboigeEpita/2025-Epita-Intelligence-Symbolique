@@ -114,8 +114,8 @@ class TestRealTweetyIntegration:
             pytest.skip("jpype not available")
 
         # Vérifier l'existence du JAR Tweety
-        tweety_jar_paths = [
-            "libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+        tweety_jar_globs = list(Path(".").glob("libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"))
+        tweety_jar_paths = [str(p) for p in tweety_jar_globs] + [
             "libs/tweety.jar",
             "services/tweety/tweety.jar",
             os.getenv("TWEETY_JAR_PATH", ""),
@@ -199,8 +199,8 @@ class TestRealTweetyIntegration:
                 return False
         except ImportError:
             return False
-        jar_paths = [
-            "libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+        jar_globs = list(Path(".").glob("libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"))
+        jar_paths = [str(p) for p in jar_globs] + [
             "libs/tweety.jar",
             "services/tweety/tweety.jar",
         ]

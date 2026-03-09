@@ -97,7 +97,7 @@ class JVMSettings(BaseSettings):
         "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
     )
     # Configuration des librairies Java (Tweety)
-    tweety_version: str = "1.28"
+    tweety_version: str = "1.29"
     tweety_libs_dir: Path = Path("libs/tweety")
     native_libs_dir: Path = Path("libs/native")
 

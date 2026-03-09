@@ -138,18 +138,16 @@ class TestAuthenticTweetyIntegration:
     def test_real_tweety_jar_availability(self):
         """Test de disponibilité du JAR Tweety authentique."""
         # Chemins possibles pour le JAR Tweety
-        possible_jar_paths = [
-            "libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
-            "libs/tweety-full.jar",
-            "libs/tweety.jar",
+        possible_jar_paths = list(PROJECT_ROOT.glob("libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar")) + [
+            PROJECT_ROOT / "libs/tweety-full.jar",
+            PROJECT_ROOT / "libs/tweety.jar",
         ]
 
         jar_found = False
         for jar_path in possible_jar_paths:
-            full_path = PROJECT_ROOT / jar_path
-            if full_path.exists():
+            if jar_path.exists():
                 jar_found = True
-                assert full_path.stat().st_size > 1000000  # JAR > 1MB
+                assert jar_path.stat().st_size > 1000000  # JAR > 1MB
                 break
 
         if not jar_found:

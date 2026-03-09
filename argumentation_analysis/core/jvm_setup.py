@@ -56,6 +56,7 @@ try:
     PROJ_ROOT = get_project_root_robust()
     LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
     TWEETY_VERSION = settings.jvm.tweety_version
+    TWEETY_JAR_FILENAME = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
     MIN_JAVA_VERSION = settings.jvm.min_java_version
     JDK_VERSION = settings.jvm.jdk_version
     JDK_BUILD = settings.jvm.jdk_build
