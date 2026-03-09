@@ -192,9 +192,9 @@ class AnalysisState:
 
     def to_rhetorical_state(self) -> "RhetoricalAnalysisState":
         """Convertit vers RhetoricalAnalysisState pour compatibilité."""
-        # Implementation simplifiée - peut être étendue selon besoins
-        state = RhetoricalAnalysisState()
-        state.processing_state = "completed" if self.completed else "active"
+        state = RhetoricalAnalysisState(initial_text="")
+        if self.completed:
+            state.final_conclusion = f"Analysis completed with score {self.score:.2f}"
         return state
 
 

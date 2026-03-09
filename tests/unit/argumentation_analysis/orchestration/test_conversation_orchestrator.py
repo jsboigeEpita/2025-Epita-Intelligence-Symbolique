@@ -136,21 +136,17 @@ class TestAnalysisState:
     def test_to_rhetorical_state_completed(self):
         state = AnalysisState()
         state.completed = True
-        try:
-            rs = state.to_rhetorical_state()
-            from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-            assert isinstance(rs, RhetoricalAnalysisState)
-        except TypeError:
-            pytest.skip("RhetoricalAnalysisState Pydantic model doesn't support direct attr assignment")
+        rs = state.to_rhetorical_state()
+        from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+        assert isinstance(rs, RhetoricalAnalysisState)
+        assert rs.final_conclusion is not None
 
     def test_to_rhetorical_state_active(self):
         state = AnalysisState()
-        try:
-            rs = state.to_rhetorical_state()
-            from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-            assert isinstance(rs, RhetoricalAnalysisState)
-        except TypeError:
-            pytest.skip("RhetoricalAnalysisState Pydantic model doesn't support direct attr assignment")
+        rs = state.to_rhetorical_state()
+        from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+        assert isinstance(rs, RhetoricalAnalysisState)
+        assert rs.final_conclusion is None
 
     def test_agent_results_stored(self):
         state = AnalysisState()
