@@ -1,0 +1,591 @@
+/* ── Governance Dashboard Layout ── */
+
+.governance-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dashboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-toolbar h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.new-proposal-btn {
+  padding: 8px 16px;
+  background: #0275d8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.new-proposal-btn:hover {
+  background: #025aa5;
+}
+
+/* ── Proposal Form ── */
+
+.proposal-form {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proposal-form input,
+.proposal-form textarea {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.proposal-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row input {
+  flex: 1;
+}
+
+.proposal-form button[type="submit"] {
+  padding: 8px 16px;
+  background: #5cb85c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.form-error {
+  color: #d9534f;
+  font-size: 0.85rem;
+}
+
+/* ── Dashboard Grid ── */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Proposal List ── */
+
+.proposal-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.proposal-list-header h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.status-filter {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.refresh-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.proposal-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proposal-item {
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.proposal-item:hover {
+  border-color: #0275d8;
+}
+
+.proposal-item.selected {
+  border-color: #0275d8;
+  background: #f0f7ff;
+}
+
+.proposal-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.vote-count {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.proposal-item-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.proposal-item-meta {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.loading-msg, .empty-msg {
+  color: #888;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.error-msg {
+  color: #d9534f;
+  font-size: 0.9rem;
+}
+
+/* ── Proposal Detail ── */
+
+.proposal-detail {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.proposal-detail.empty {
+  text-align: center;
+  color: #888;
+  padding: 60px 20px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.detail-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.detail-status {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  background: #eee;
+  border-radius: 12px;
+}
+
+.detail-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-tags {
+  display: flex;
+  gap: 4px;
+}
+
+.tag {
+  background: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.detail-text {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* ── Vote Bars ── */
+
+.detail-votes-section {
+  margin-bottom: 20px;
+}
+
+.detail-votes-section h3 {
+  margin-bottom: 8px;
+}
+
+.vote-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.vote-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+}
+
+.vote-label {
+  width: 80px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.vote-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 2px;
+  transition: width 0.3s;
+}
+
+.vote-num {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 24px;
+}
+
+/* ── Consensus Gauge ── */
+
+.consensus-gauge {
+  margin: 12px 0;
+}
+
+.gauge-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gauge-bar {
+  height: 12px;
+  background: #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s;
+}
+
+.gauge-value {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* ── Voting Panel ── */
+
+.voting-panel {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.voting-panel h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.voter-input {
+  margin-bottom: 8px;
+}
+
+.voter-input input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.vote-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.vote-btn:hover:not(:disabled) {
+  background: #f0f7ff;
+}
+
+.vote-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vote-result {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.vote-result.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.vote-result.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ── Conflict Map ── */
+
+.conflict-map {
+  margin-bottom: 16px;
+}
+
+.conflict-map h4 {
+  margin: 0 0 8px 0;
+}
+
+.conflict-bar {
+  display: flex;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.conflict-pour, .conflict-contre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: width 0.3s;
+}
+
+.conflict-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.conflict-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── Decision Timeline ── */
+
+.decision-timeline {
+  margin-bottom: 16px;
+}
+
+.decision-timeline h4 {
+  margin: 0 0 12px 0;
+}
+
+.timeline-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-left: 2px solid #ddd;
+  padding-left: 16px;
+  margin-left: 8px;
+}
+
+.timeline-event {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 16px;
+  position: relative;
+}
+
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  left: -21px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  background: #0275d8;
+  border-radius: 50%;
+}
+
+.timeline-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.timeline-detail {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.timeline-time {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+/* ── Dashboard Extras ── */
+
+.dashboard-extras {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 800px) {
+  .dashboard-extras {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Deliberation ── */
+
+.detail-deliberation {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.detail-deliberation h3 {
+  margin: 0 0 8px 0;
+}
+
+.delib-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delib-btn {
+  padding: 6px 14px;
+  background: #5bc0de;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.delib-btn:hover:not(:disabled) {
+  background: #31b0d5;
+}
+
+.delib-btn:disabled {
+  opacity: 0.5;
+}
+
+.delib-status {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: #d9edf7;
+}
+
+.delib-status.failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.delib-error {
+  color: #d9534f;
+}
+
+/* ── Analysis Results ── */
+
+.detail-analysis {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.analysis-json {
+  background: #272822;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  max-height: 300px;
+}
