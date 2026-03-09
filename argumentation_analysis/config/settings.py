@@ -101,6 +101,10 @@ class JVMSettings(BaseSettings):
     tweety_libs_dir: Path = Path("libs/tweety")
     native_libs_dir: Path = Path("libs/native")
 
+    # External tools
+    ext_tools_dir: Path = Path("ext_tools")
+    clingo_version: str = "5.4.0"
+
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
     model_config = SettingsConfigDict(env_prefix="JVM_")
 

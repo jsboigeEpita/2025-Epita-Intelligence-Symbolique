@@ -61,6 +61,8 @@ try:
     JDK_VERSION = settings.jvm.jdk_version
     JDK_BUILD = settings.jvm.jdk_build
     JDK_URL_TEMPLATE = settings.jvm.jdk_url_template
+    EXT_TOOLS_DIR = PROJ_ROOT / settings.jvm.ext_tools_dir
+    CLINGO_VERSION = settings.jvm.clingo_version
 except Exception as e:
     logger.critical(
         f"CRASH POTENTIEL: Échec lors de la lecture de 'settings' pour définir les constantes globales. Erreur: {e}",
@@ -199,6 +201,177 @@ def download_tweety_jars(
         )
     logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
     return success
+
+
+def download_clingo(
+    version: str = None, target_dir: Optional[Path] = None
+) -> bool:
+    """
+    Download Clingo ASP solver binary for the current platform.
+    Inspired by CoursIA download_tweety_tools.py.
+
+    Clingo is needed by Tweety's ClingoSolver.setPathToClingo() for ASP reasoning.
+    The Python `clingo` package is separate and doesn't provide the standalone binary
+    that Tweety's Java code expects.
+    """
+    version = version or CLINGO_VERSION
+    clingo_dir = (target_dir or EXT_TOOLS_DIR) / "clingo"
+    clingo_dir.mkdir(parents=True, exist_ok=True)
+
+    exe_suffix = ".exe" if platform.system() == "Windows" else ""
+    clingo_exe = clingo_dir / f"clingo{exe_suffix}"
+
+    if clingo_exe.exists():
+        logger.info(f"Clingo binary already present: {clingo_exe}")
+        return True
+
+    # Check if available in system PATH
+    system_clingo = shutil.which("clingo") or shutil.which("clingo.exe")
+    if system_clingo:
+        logger.info(f"Clingo found in system PATH: {system_clingo}")
+        return True
+
+    logger.info(f"Downloading Clingo {version} for {platform.system()}...")
+    base_url = f"https://github.com/potassco/clingo/releases/download/v{version}"
+
+    if platform.system() == "Windows":
+        archive_name = f"clingo-{version}-win64.zip"
+        archive_url = f"{base_url}/{archive_name}"
+        archive_path = clingo_dir / archive_name
+
+        success, _ = download_file(archive_url, archive_path, description=f"Clingo {version}")
+        if not success:
+            logger.error(f"Failed to download Clingo from {archive_url}")
+            return False
+
+        try:
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                zf.extractall(clingo_dir)
+            # Find and move clingo.exe to the expected location
+            for exe in clingo_dir.rglob("clingo.exe"):
+                if exe != clingo_exe:
+                    shutil.move(str(exe), str(clingo_exe))
+                    break
+            archive_path.unlink(missing_ok=True)
+            # Clean up extracted subdirectories
+            for d in clingo_dir.glob(f"clingo-{version}*"):
+                if d.is_dir():
+                    shutil.rmtree(d, ignore_errors=True)
+            logger.info(f"Clingo installed: {clingo_exe}")
+            return True
+        except Exception as e:
+            logger.error(f"Error extracting Clingo: {e}")
+            return False
+
+    elif platform.system() == "Linux":
+        import tarfile
+        archive_name = f"clingo-{version}-linux-x86_64.tar.gz"
+        archive_url = f"{base_url}/{archive_name}"
+        archive_path = clingo_dir / archive_name
+
+        success, _ = download_file(archive_url, archive_path, description=f"Clingo {version}")
+        if not success:
+            return False
+
+        try:
+            with tarfile.open(archive_path, "r:gz") as tf:
+                tf.extractall(clingo_dir)
+            for exe in clingo_dir.rglob("clingo"):
+                if exe != clingo_exe and exe.is_file():
+                    shutil.move(str(exe), str(clingo_exe))
+                    os.chmod(str(clingo_exe), 0o755)
+                    break
+            archive_path.unlink(missing_ok=True)
+            for d in clingo_dir.glob(f"clingo-{version}*"):
+                if d.is_dir():
+                    shutil.rmtree(d, ignore_errors=True)
+            logger.info(f"Clingo installed: {clingo_exe}")
+            return True
+        except Exception as e:
+            logger.error(f"Error extracting Clingo: {e}")
+            return False
+    else:
+        logger.warning(f"Automatic Clingo download not available for {platform.system()}")
+        return False
+
+
+def download_native_sat_libs(target_dir: Optional[Path] = None) -> bool:
+    """
+    Download native SAT solver libraries (lingeling, minisat, picosat) for Tweety JNI.
+    These are typically already in libs/native/ but can be fetched from TweetyProject GitHub.
+    """
+    native_dir = target_dir or (PROJ_ROOT / settings.jvm.native_libs_dir)
+    native_dir.mkdir(parents=True, exist_ok=True)
+
+    base_url = "https://raw.githubusercontent.com/TweetyProjectTeam/TweetyProject/main/"
+    suffix = ".dll" if platform.system() == "Windows" else ".so"
+
+    libs = {
+        f"lingeling{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/lingeling{suffix}",
+        f"minisat{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/minisat{suffix}",
+        f"picosat{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/picosat{suffix}",
+    }
+
+    all_ok = True
+    for lib_name, github_path in libs.items():
+        dest = native_dir / lib_name
+        if dest.exists() and dest.stat().st_size > 0:
+            logger.info(f"Native SAT lib already present: {lib_name}")
+            continue
+        url = base_url + github_path
+        success, _ = download_file(url, dest, description=lib_name)
+        if not success:
+            logger.warning(f"Failed to download {lib_name} — not critical if embedded in JAR")
+            all_ok = False
+    return all_ok
+
+
+def download_external_tools() -> Dict[str, bool]:
+    """
+    Download all external tools needed by Tweety reasoners.
+    Inspired by CoursIA download_tweety_tools.py.
+
+    Returns a dict of {tool_name: success_bool}.
+    """
+    results = {}
+
+    # 1. Tweety JAR
+    results["tweety_jar"] = download_tweety_jars()
+
+    # 2. Clingo (ASP solver)
+    results["clingo"] = download_clingo()
+
+    # 3. Native SAT libs
+    results["native_sat"] = download_native_sat_libs()
+
+    # 4. EProver — check presence only (manual install, already committed)
+    eprover_path = EXT_TOOLS_DIR / "EProver" / (
+        "eprover.exe" if platform.system() == "Windows" else "eprover"
+    )
+    results["eprover"] = eprover_path.exists()
+    if results["eprover"]:
+        logger.info(f"EProver found: {eprover_path}")
+    else:
+        logger.warning(f"EProver not found at {eprover_path} — install manually from https://eprover.org/")
+
+    # 5. SPASS — check presence only (manual install on Windows)
+    spass_path = EXT_TOOLS_DIR / "spass" / (
+        "SPASS.exe" if platform.system() == "Windows" else "SPASS"
+    )
+    results["spass"] = spass_path.exists()
+    if results["spass"]:
+        logger.info(f"SPASS found: {spass_path}")
+    else:
+        logger.warning(f"SPASS not found at {spass_path} — install manually from https://www.spass-prover.org/")
+
+    # Summary
+    ok = [k for k, v in results.items() if v]
+    nok = [k for k, v in results.items() if not v]
+    logger.info(f"External tools check: {len(ok)}/{len(results)} OK")
+    if nok:
+        logger.warning(f"  Missing/failed: {nok}")
+
+    return results
 
 
 def unzip_file(zip_path: Path, dest_dir: Path):
@@ -477,16 +650,22 @@ def _configure_external_tools():
     # Clingo — ASP solver (Tweety expects the DIRECTORY containing the binary)
     for candidate in [
         shutil.which("clingo"),
-        str(PROJ_ROOT / f"ext_tools/clingo/clingo{exe_suffix}"),
+        str(EXT_TOOLS_DIR / f"clingo/clingo{exe_suffix}"),
     ]:
         if candidate and Path(candidate).exists():
             tools_found["clingo"] = str(Path(candidate).parent.resolve())
             break
+    else:
+        # Try auto-downloading Clingo if not found
+        if download_clingo():
+            clingo_path = EXT_TOOLS_DIR / f"clingo/clingo{exe_suffix}"
+            if clingo_path.exists():
+                tools_found["clingo"] = str(clingo_path.parent.resolve())
 
     # SPASS — Modal logic theorem prover
     for candidate in [
         shutil.which("SPASS"),
-        str(PROJ_ROOT / f"ext_tools/spass/SPASS{exe_suffix}"),
+        str(EXT_TOOLS_DIR / f"spass/SPASS{exe_suffix}"),
     ]:
         if candidate and Path(candidate).exists():
             tools_found["spass"] = str(Path(candidate).resolve())
@@ -495,7 +674,7 @@ def _configure_external_tools():
     # EProver — FOL theorem prover
     for candidate in [
         shutil.which("eprover"),
-        str(PROJ_ROOT / f"ext_tools/EProver/eprover{exe_suffix}"),
+        str(EXT_TOOLS_DIR / f"EProver/eprover{exe_suffix}"),
     ]:
         if candidate and Path(candidate).exists():
             tools_found["eprover"] = str(Path(candidate).resolve())
@@ -508,7 +687,7 @@ def _configure_external_tools():
         ("marco", "marco.py"),
         ("maxsat_solver", "maxsat_solver.py"),
     ]:
-        tool_path = PROJ_ROOT / "ext_tools" / filename
+        tool_path = EXT_TOOLS_DIR / filename
         if tool_path.exists():
             python_tools[tool_name] = str(tool_path.resolve())
 

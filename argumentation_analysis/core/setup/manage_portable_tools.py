@@ -59,7 +59,7 @@ NODE_CONFIG = {
 # TWEETY_CONFIG = {
 #    "name": "Tweety",
 #    "version": "1.28",
-#    "full_jar_url": "https://tweetyproject.org/builds/1.28/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+#    "full_jar_url": "https://tweetyproject.org/builds/1.29/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
 #    "dir_name_pattern": r"tweety",
 #    "is_multi_file_download": True
 # }
