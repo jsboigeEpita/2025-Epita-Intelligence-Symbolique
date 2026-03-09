@@ -78,7 +78,7 @@ class LLMJudge:
         """
         Evaluate analysis quality using an LLM.
 
-        Uses the OpenAI SDK directly (avoids SK invoke_prompt encoding issues).
+        Uses the OpenAI SDK directly for simplicity (no SK kernel needed).
 
         Args:
             input_text: The original text that was analyzed.

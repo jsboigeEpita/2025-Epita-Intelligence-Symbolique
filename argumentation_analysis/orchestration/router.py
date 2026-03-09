@@ -38,6 +38,7 @@ KNOWN_CAPABILITIES: List[str] = [
     "governance_simulation",
     "belief_maintenance",
     "neural_fallacy_detection",
+    "hierarchical_fallacy_detection",
     "semantic_indexing",
     "speech_transcription",
 ]
@@ -63,6 +64,11 @@ CAPABILITY_DESCRIPTIONS: Dict[str, str] = {
     ),
     "neural_fallacy_detection": (
         "Neural fallacy/sophism detection using transformer models"
+    ),
+    "hierarchical_fallacy_detection": (
+        "Hierarchical taxonomy-guided fallacy detection — iterative deepening "
+        "through 1566-node taxonomy with 8 fallacy families (more precise, "
+        "identifies obscure/specialized fallacies)"
     ),
     "semantic_indexing": (
         "Semantic argument search and indexing for large document collections"
@@ -91,6 +97,10 @@ viewpoints.
 beliefs with justification dependencies.
 - Include neural_fallacy_detection for texts that may contain reasoning errors, \
 sophisms, or manipulative rhetoric.
+- Include hierarchical_fallacy_detection for texts where precise fallacy \
+classification matters — it navigates a detailed taxonomy to find the most \
+specific matching fallacy. Prefer this over neural_fallacy_detection for \
+in-depth analysis.
 - Include semantic_indexing only for long texts (>500 words) needing reference indexing.
 - Include speech_transcription only if the input explicitly mentions audio or \
 transcription needs.
@@ -297,9 +307,19 @@ class TextAnalysisRouter:
         if word_count > 30:
             selected.append("counter_argument_generation")
 
-        # French accent detection → neural fallacy
+        # Fallacy detection — prefer hierarchical for depth, neural for speed
+        fallacy_keywords = {
+            "sophisme", "fallac", "raisonnement", "logique", "argument",
+            "erreur", "manipulation", "rhétorique", "ad hominem",
+        }
         french_chars = set("àâäéèêëïîôùûüçœæ")
-        if any(c in french_chars for c in text_lower):
+        has_french = any(c in french_chars for c in text_lower)
+        has_fallacy_cue = any(kw in text_lower for kw in fallacy_keywords)
+
+        if has_fallacy_cue or (has_french and word_count > 50):
+            if "hierarchical_fallacy_detection" in available_caps:
+                selected.append("hierarchical_fallacy_detection")
+        if has_french:
             if "neural_fallacy_detection" in available_caps:
                 selected.append("neural_fallacy_detection")
 
@@ -375,6 +395,7 @@ class TextAnalysisRouter:
         # Map of remaining capabilities to phase names and their dependency
         optional_phases = [
             ("neural_fallacy_detection", "neural_fallacy", ["quality"]),
+            ("hierarchical_fallacy_detection", "hierarchical_fallacy", ["quality"]),
             ("governance_simulation", "governance", ["quality"]),
             ("adversarial_debate", "debate", [anchor]),
             ("belief_maintenance", "jtms", [anchor]),

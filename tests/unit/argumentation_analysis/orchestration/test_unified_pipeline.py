@@ -1633,14 +1633,18 @@ class TestAdditionalWorkflows:
         assert len(wf.phases) == 2
 
     def test_build_neural_symbolic_fallacy_workflow(self):
-        """Neural-symbolic fallacy workflow has 2 phases."""
+        """Neural-symbolic fallacy workflow has 3 phases (neural + hierarchical + quality)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_neural_symbolic_fallacy_workflow,
         )
 
         wf = build_neural_symbolic_fallacy_workflow()
         assert wf.name == "neural_symbolic_fallacy"
-        assert len(wf.phases) == 2
+        assert len(wf.phases) == 3
+        phase_names = [p.name for p in wf.phases]
+        assert "neural_detect" in phase_names
+        assert "hierarchical_detect" in phase_names
+        assert "quality_baseline" in phase_names
 
     def test_workflow_catalog_includes_extra_workflows(self):
         """Workflow catalog includes quality_gated, debate_governance, etc."""
@@ -1653,6 +1657,7 @@ class TestAdditionalWorkflows:
         assert "debate_governance" in catalog
         assert "jtms_dung" in catalog
         assert "neural_symbolic" in catalog
+        assert "hierarchical_fallacy" in catalog
 
     def test_quality_gate_function_proceeds_when_no_quality(self):
         """Quality gate function returns True when no quality data."""
@@ -1967,3 +1972,245 @@ class TestSetupRegistryErrors:
         # Verify it doesn't crash
         result = setup_registry(include_optional=False)
         assert isinstance(result, CapabilityRegistry)
+
+
+# ============================================================
+# Test: Hierarchical Fallacy Detection Integration (#84 Phase 3)
+# ============================================================
+
+
+class TestHierarchicalFallacyWorkflow:
+    """Tests for hierarchical taxonomy-guided fallacy detection workflow."""
+
+    def test_build_hierarchical_fallacy_workflow(self):
+        """Hierarchical fallacy workflow has 3 phases with correct dependencies."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_hierarchical_fallacy_workflow,
+        )
+
+        wf = build_hierarchical_fallacy_workflow()
+        assert wf.name == "hierarchical_fallacy"
+        assert len(wf.phases) == 3
+        phase_names = [p.name for p in wf.phases]
+        assert "extract" in phase_names
+        assert "hierarchical_fallacy" in phase_names
+        assert "quality" in phase_names
+
+    def test_hierarchical_fallacy_depends_on_extract(self):
+        """Hierarchical fallacy phase depends on extract phase."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_hierarchical_fallacy_workflow,
+        )
+
+        wf = build_hierarchical_fallacy_workflow()
+        hf_phase = wf.get_phase("hierarchical_fallacy")
+        assert "extract" in hf_phase.depends_on
+
+    def test_hierarchical_fallacy_quality_is_optional(self):
+        """Quality phase in hierarchical workflow is optional."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_hierarchical_fallacy_workflow,
+        )
+
+        wf = build_hierarchical_fallacy_workflow()
+        quality_phase = wf.get_phase("quality")
+        assert quality_phase.optional is True
+
+    def test_hierarchical_fallacy_execution_order(self):
+        """Extract runs before hierarchical_fallacy."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_hierarchical_fallacy_workflow,
+        )
+
+        wf = build_hierarchical_fallacy_workflow()
+        order = wf.get_execution_order()
+        flat = [name for level in order for name in level]
+        assert flat.index("extract") < flat.index("hierarchical_fallacy")
+
+    def test_workflow_catalog_includes_hierarchical_fallacy(self):
+        """Workflow catalog contains hierarchical_fallacy workflow."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
+        catalog = get_workflow_catalog()
+        assert "hierarchical_fallacy" in catalog
+
+    def test_registry_includes_hierarchical_fallacy_detector(self):
+        """setup_registry registers hierarchical_fallacy_detector."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=True)
+        providers = registry.find_for_capability("hierarchical_fallacy_detection")
+        assert len(providers) >= 1
+        names = [p.name for p in providers]
+        assert "hierarchical_fallacy_detector" in names
+
+    def test_registry_hierarchical_also_provides_fallacy_detection(self):
+        """Hierarchical detector also provides generic fallacy_detection capability."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        registry = setup_registry(include_optional=True)
+        providers = registry.find_for_capability("fallacy_detection")
+        names = [p.name for p in providers]
+        assert "hierarchical_fallacy_detector" in names
+
+    async def test_invoke_hierarchical_fallacy_no_taxonomy(self):
+        """_invoke_hierarchical_fallacy returns skipped when taxonomy not found."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_hierarchical_fallacy,
+        )
+
+        with patch("os.path.isfile", return_value=False):
+            result = await _invoke_hierarchical_fallacy("text", {})
+        assert result["exploration_method"] == "skipped"
+        assert result["fallacies"] == []
+
+    async def test_invoke_hierarchical_fallacy_no_api_key(self):
+        """_invoke_hierarchical_fallacy returns error when no API key."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_hierarchical_fallacy,
+        )
+
+        with patch("os.path.isfile", return_value=True), \
+             patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+            result = await _invoke_hierarchical_fallacy("text", {})
+        assert result["exploration_method"] == "error"
+        assert result["fallacies"] == []
+
+    async def test_invoke_hierarchical_fallacy_success(self):
+        """_invoke_hierarchical_fallacy returns parsed result on success.
+
+        Tests the full invoke function by mocking SK service + plugin.
+        """
+        import json
+        import sys
+        from unittest.mock import AsyncMock
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_hierarchical_fallacy,
+        )
+        from argumentation_analysis.plugins.identification_models import (
+            FallacyAnalysisResult,
+            IdentifiedFallacy,
+        )
+
+        mock_result = FallacyAnalysisResult(
+            fallacies=[
+                IdentifiedFallacy(
+                    fallacy_type="Ad hominem",
+                    taxonomy_pk="42",
+                    taxonomy_path="1.2.42",
+                    explanation="Attacks the person",
+                    confidence=0.85,
+                    navigation_trace=["1", "1.2", "42"],
+                )
+            ],
+            exploration_method="iterative_deepening",
+            branches_explored=2,
+            total_iterations=5,
+        )
+        mock_result_json = mock_result.model_dump_json(indent=2)
+
+        mock_plugin_instance = MagicMock()
+        mock_plugin_instance.run_guided_analysis = AsyncMock(
+            return_value=mock_result_json
+        )
+        mock_plugin_cls = MagicMock(return_value=mock_plugin_instance)
+        mock_llm_service = MagicMock()
+        mock_kernel_cls = MagicMock()
+
+        with patch("os.path.isfile", return_value=True), \
+             patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False):
+            # Mock at the source modules that the function imports from
+            import argumentation_analysis.plugins.fallacy_workflow_plugin as fwp_mod
+            import semantic_kernel.connectors.ai.open_ai as sk_oai
+            import semantic_kernel.kernel as sk_kernel
+            import openai as openai_mod
+
+            orig_plugin = fwp_mod.FallacyWorkflowPlugin
+            orig_oai = sk_oai.OpenAIChatCompletion
+            orig_kernel = sk_kernel.Kernel
+            orig_async_client = openai_mod.AsyncOpenAI
+            fwp_mod.FallacyWorkflowPlugin = mock_plugin_cls
+            sk_oai.OpenAIChatCompletion = MagicMock(return_value=mock_llm_service)
+            sk_kernel.Kernel = mock_kernel_cls
+            openai_mod.AsyncOpenAI = MagicMock()
+            try:
+                result = await _invoke_hierarchical_fallacy(
+                    "some argument text", {}
+                )
+            finally:
+                fwp_mod.FallacyWorkflowPlugin = orig_plugin
+                sk_oai.OpenAIChatCompletion = orig_oai
+                sk_kernel.Kernel = orig_kernel
+                openai_mod.AsyncOpenAI = orig_async_client
+
+        assert result["extraction_method"] == "iterative_deepening"
+        assert len(result["fallacies"]) == 1
+        assert result["fallacies"][0]["fallacy_type"] == "Ad hominem"
+        assert result["branches_explored"] == 2
+
+    def test_state_writer_hierarchical_fallacy(self):
+        """_write_hierarchical_fallacy_to_state writes fallacies to state."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        output = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Straw man",
+                    "explanation": "Misrepresents position",
+                    "taxonomy_pk": "99",
+                    "confidence": 0.8,
+                    "navigation_trace": ["1", "5", "99"],
+                },
+                {
+                    "fallacy_type": "False cause",
+                    "explanation": "Correlation not causation",
+                    "taxonomy_pk": "55",
+                    "confidence": 0.6,
+                    "navigation_trace": [],
+                },
+            ]
+        }
+        _write_hierarchical_fallacy_to_state(output, state, {})
+        assert len(state.identified_fallacies) == 2
+        # Check that taxonomy info is in the justification
+        fallacy_values = list(state.identified_fallacies.values())
+        assert "[taxonomy:99]" in fallacy_values[0]["justification"]
+        assert "[confidence:0.80]" in fallacy_values[0]["justification"]
+        assert "[trace:1>5>99]" in fallacy_values[0]["justification"]
+
+    def test_state_writer_hierarchical_fallacy_empty(self):
+        """_write_hierarchical_fallacy_to_state handles empty output."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        _write_hierarchical_fallacy_to_state({}, state, {})
+        assert len(state.identified_fallacies) == 0
+
+    def test_state_writer_hierarchical_fallacy_none(self):
+        """_write_hierarchical_fallacy_to_state handles None output."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        _write_hierarchical_fallacy_to_state(None, state, {})
+        assert len(state.identified_fallacies) == 0
+
+    def test_capability_state_writers_includes_hierarchical(self):
+        """CAPABILITY_STATE_WRITERS has an entry for hierarchical_fallacy_detection."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        assert "hierarchical_fallacy_detection" in CAPABILITY_STATE_WRITERS

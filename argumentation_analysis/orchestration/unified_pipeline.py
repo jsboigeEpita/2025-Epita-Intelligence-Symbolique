@@ -456,6 +456,82 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
     )
 
 
+# --- Hierarchical taxonomy-guided fallacy detection (#84) ---
+
+
+async def _invoke_hierarchical_fallacy(
+    input_text: str, context: Dict[str, Any]
+) -> Dict:
+    """Invoke hierarchical taxonomy-guided fallacy detection.
+
+    Uses FallacyWorkflowPlugin with iterative deepening (master-slave kernel)
+    and one-shot fallback. Requires a Semantic Kernel service + taxonomy CSV.
+    Falls back to heuristic extraction if SK/API is unavailable.
+    """
+    import os
+
+    taxonomy_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data",
+        "argumentum_fallacies_taxonomy.csv",
+    )
+    if not os.path.isfile(taxonomy_path):
+        logger.warning(
+            "Taxonomy CSV not found at %s — hierarchical fallacy detection skipped",
+            taxonomy_path,
+        )
+        return {
+            "fallacies": [],
+            "exploration_method": "skipped",
+            "reason": "taxonomy file not found",
+        }
+
+    try:
+        from openai import AsyncOpenAI
+        from semantic_kernel.kernel import Kernel
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+            FallacyWorkflowPlugin,
+        )
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            raise RuntimeError("No OPENAI_API_KEY available")
+
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
+        async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        llm_service = OpenAIChatCompletion(
+            ai_model_id=model_id,
+            async_client=async_client,
+        )
+        master_kernel = Kernel()
+        master_kernel.add_service(llm_service)
+
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=master_kernel,
+            llm_service=llm_service,
+            taxonomy_file_path=taxonomy_path,
+        )
+
+        result_json = await plugin.run_guided_analysis(argument_text=input_text)
+        result = json.loads(result_json)
+        result["extraction_method"] = result.get("exploration_method", "unknown")
+        return result
+
+    except Exception as e:
+        logger.warning(
+            "Hierarchical fallacy detection failed, returning empty: %s", e
+        )
+        return {
+            "fallacies": [],
+            "exploration_method": "error",
+            "error": str(e),
+            "extraction_method": "error",
+        }
+
+
 # --- Invoke callables for logic agent capabilities (#71 Formal Verification) ---
 
 
@@ -816,6 +892,31 @@ def _write_camembert_to_state(output, state, ctx) -> None:
         )
 
 
+def _write_hierarchical_fallacy_to_state(output, state, ctx) -> None:
+    """Write hierarchical taxonomy-guided fallacy results to UnifiedAnalysisState."""
+    if not output or not isinstance(output, dict):
+        return
+    fallacies = output.get("fallacies", [])
+    if not isinstance(fallacies, list):
+        return
+    for f in fallacies:
+        if not isinstance(f, dict):
+            continue
+        fallacy_type = f.get("fallacy_type", "unknown")
+        justification = f.get("explanation", "")
+        taxonomy_pk = f.get("taxonomy_pk", "")
+        confidence = f.get("confidence", 0.0)
+        trace = f.get("navigation_trace", [])
+        full_justification = justification
+        if taxonomy_pk:
+            full_justification += f" [taxonomy:{taxonomy_pk}]"
+        if confidence:
+            full_justification += f" [confidence:{confidence:.2f}]"
+        if trace:
+            full_justification += f" [trace:{'>'.join(trace)}]"
+        state.add_fallacy(fallacy_type=fallacy_type, justification=full_justification)
+
+
 def _write_semantic_index_to_state(output, state, ctx) -> None:
     """Write semantic index results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
@@ -1097,6 +1198,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "modal_logic": _write_modal_to_state,
     "dung_extensions": _write_dung_extensions_to_state,
     "formal_synthesis": _write_formal_synthesis_to_state,
+    "hierarchical_fallacy_detection": _write_hierarchical_fallacy_to_state,
 }
 
 
@@ -1258,6 +1360,31 @@ def setup_registry(
             registered.append("camembert_fallacy_detector")
         except ImportError as e:
             skipped.append(("camembert_fallacy_detector", str(e)))
+
+        # Hierarchical taxonomy-guided fallacy detection (#84)
+        try:
+            from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+                FallacyWorkflowPlugin,
+            )
+
+            registry.register_service(
+                name="hierarchical_fallacy_detector",
+                service_class=FallacyWorkflowPlugin,
+                capabilities=[
+                    "hierarchical_fallacy_detection",
+                    "fallacy_detection",
+                ],
+                metadata={
+                    "description": (
+                        "Hierarchical taxonomy-guided fallacy detection "
+                        "with iterative deepening and one-shot fallback (#84)"
+                    )
+                },
+                invoke=_invoke_hierarchical_fallacy,
+            )
+            registered.append("hierarchical_fallacy_detector")
+        except ImportError as e:
+            skipped.append(("hierarchical_fallacy_detector", str(e)))
 
         # Semantic index service (Arg_Semantic_Index)
         try:
@@ -1558,7 +1685,13 @@ def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
 
 
 def build_neural_symbolic_fallacy_workflow() -> WorkflowDefinition:
-    """Neural-Symbolic fallacy fusion loop (Loop 4). PARTIAL."""
+    """Neural-Symbolic-Hierarchical fallacy fusion (Loop 4).
+
+    Three complementary fallacy detection approaches:
+    - Neural: CamemBERT French NLP classifier (fast, pattern-based)
+    - Hierarchical: Taxonomy-guided iterative deepening (precise, explainable)
+    - Quality baseline: argument quality evaluation for context
+    """
     return (
         WorkflowBuilder("neural_symbolic_fallacy")
         .add_phase(
@@ -1566,7 +1699,38 @@ def build_neural_symbolic_fallacy_workflow() -> WorkflowDefinition:
             capability="neural_fallacy_detection",
             optional=True,
         )
+        .add_phase(
+            "hierarchical_detect",
+            capability="hierarchical_fallacy_detection",
+            optional=True,
+        )
         .add_phase("quality_baseline", capability="argument_quality")
+        .build()
+    )
+
+
+def build_hierarchical_fallacy_workflow() -> WorkflowDefinition:
+    """Hierarchical taxonomy-guided fallacy detection workflow (#84).
+
+    Dedicated workflow for the master-slave iterative deepening approach:
+    1. Extract facts/arguments (provides context for fallacy detection)
+    2. Hierarchical fallacy detection via taxonomy navigation
+    3. Quality evaluation for cross-validation
+    """
+    return (
+        WorkflowBuilder("hierarchical_fallacy")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase(
+            "hierarchical_fallacy",
+            capability="hierarchical_fallacy_detection",
+            depends_on=["extract"],
+        )
+        .add_phase(
+            "quality",
+            capability="argument_quality",
+            depends_on=["extract"],
+            optional=True,
+        )
         .build()
     )
 
@@ -1586,6 +1750,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "debate_governance": build_debate_governance_loop_workflow(),
             "jtms_dung": build_jtms_dung_loop_workflow(),
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
+            "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
         }
         # Macro workflows (Track D)
         try:
