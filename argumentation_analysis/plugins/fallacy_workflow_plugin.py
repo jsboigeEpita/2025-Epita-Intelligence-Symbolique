@@ -59,6 +59,7 @@ class FallacyWorkflowPlugin:
 
     MAX_DEPTH_PER_BRANCH = 5
     MAX_BRANCHES = 4
+    MIN_CONFIRM_DEPTH = 2  # Don't accept confirmations at depth < 2 (too generic)
 
     def __init__(
         self,
@@ -170,8 +171,13 @@ class FallacyWorkflowPlugin:
                 plugin = slave_kernel.plugins.get("Exploration")
                 if plugin and short_name in plugin:
                     func = plugin[short_name]
-                    result = func(**arguments)
-                    result_str = str(result)
+                    # Call the underlying Python method directly to avoid
+                    # SK 1.40's KernelFunction.__call__ requiring kernel arg
+                    method = getattr(self.exploration_plugin, short_name, None)
+                    if method is not None:
+                        result_str = str(method(**arguments))
+                    else:
+                        result_str = str(func(slave_kernel, **arguments))
                 else:
                     result_str = json.dumps({"error": f"Unknown function: {func_name}"})
             except Exception as e:
@@ -317,10 +323,25 @@ class FallacyWorkflowPlugin:
                 func_name = result.get("function_name", "")
 
                 if func_name == "confirm_fallacy" and result.get("confirmed"):
-                    node = self.taxonomy_navigator.get_node(result.get("pk", ""))
+                    confirmed_pk = result.get("pk", "")
+                    confirmed_node = self.taxonomy_navigator.get_node(confirmed_pk)
+                    confirmed_depth = int(confirmed_node.get("depth", 0)) if confirmed_node else 0
+
+                    # Reject too-shallow confirmations — force deeper exploration
+                    if confirmed_depth < self.MIN_CONFIRM_DEPTH and children:
+                        self.logger.info(
+                            f"  Confirmation at depth {confirmed_depth} rejected "
+                            f"(min={self.MIN_CONFIRM_DEPTH}), forcing deeper exploration"
+                        )
+                        # Pick the first child as default deeper path
+                        first_child = children[0]
+                        current_pk = first_child.get("PK", "")
+                        navigation_trace.append(current_pk)
+                        break  # continue outer loop with new current_pk
+
                     return IdentifiedFallacy(
                         fallacy_type=result.get("name_fr", result.get("pk", "")),
-                        taxonomy_pk=result.get("pk", ""),
+                        taxonomy_pk=confirmed_pk,
                         taxonomy_path=result.get("path", ""),
                         explanation=result.get("justification", ""),
                         confidence=result.get("confidence", 0.7),
@@ -508,19 +529,35 @@ class FallacyWorkflowPlugin:
                 self.logger.removeHandler(file_handler)
                 file_handler.close()
 
+    def _build_compact_taxonomy(self, max_depth: int = 4) -> str:
+        """Build a compact taxonomy representation (PK + name + path) to fit in context."""
+        lines = []
+        for node in self.taxonomy_navigator.taxonomy_data:
+            depth = int(node.get("depth", 0))
+            if depth > max_depth:
+                continue
+            pk = node.get("PK", "")
+            name = node.get("text_fr", node.get("nom_vulgarisé", ""))
+            path = node.get("path", "")
+            if name and pk:
+                indent = "  " * depth
+                lines.append(f"{indent}PK={pk} [{path}] {name}")
+        return "\n".join(lines)
+
     async def _run_one_shot(self, argument_text: str) -> str:
-        """Fallback one-shot analysis — sends full taxonomy to LLM."""
+        """Fallback one-shot analysis — sends compact taxonomy to LLM."""
         self.logger.info("Running one-shot fallback analysis")
 
         kernel, settings = self._create_one_shot_kernel()
-        full_taxonomy_json = self.taxonomy_navigator.get_taxonomy_as_json()
+        # Use compact taxonomy (depth ≤ 4) to stay within token limits
+        compact_taxonomy = self._build_compact_taxonomy(max_depth=4)
 
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", "confidence": 0.0-1.0}\n\n'
-            f"--- TAXONOMY ---\n{full_taxonomy_json}\n--- END ---"
+            f"--- TAXONOMY ---\n{compact_taxonomy}\n--- END ---"
         )
 
         history = ChatHistory(
