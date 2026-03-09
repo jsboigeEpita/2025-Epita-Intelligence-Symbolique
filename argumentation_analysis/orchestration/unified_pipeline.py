@@ -524,6 +524,52 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict:
     }
 
 
+# --- SetAF / Weighted AF / Social AF invoke functions (#87) ---
+
+
+async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Set Argumentation Framework handler (#87)."""
+    from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = SetAFHandler(initializer)
+    args = context.get("arguments", [])
+    attacks = context.get("set_attacks", [])  # [{attackers: [...], target: "..."}]
+    semantics = context.get("semantics", "grounded")
+    return await asyncio.to_thread(handler.analyze_setaf, args, attacks, semantics)
+
+
+async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Weighted AF handler (#87)."""
+    from argumentation_analysis.agents.core.logic.weighted_handler import WeightedHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = WeightedHandler(initializer)
+    args = context.get("arguments", [])
+    attacks = context.get("weighted_attacks", [])  # [(src, tgt, weight), ...]
+    semantics = context.get("semantics", "grounded")
+    return await asyncio.to_thread(
+        handler.analyze_weighted_framework, args, attacks, semantics
+    )
+
+
+async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke Social AF handler (#87)."""
+    from argumentation_analysis.agents.core.logic.social_handler import SocialHandler
+    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    initializer = TweetyInitializer()
+    handler = SocialHandler(initializer)
+    args = context.get("arguments", [])
+    attacks = context.get("attacks", [])
+    votes = context.get("votes", {})
+    # Convert votes from {"a": [3, 1]} to {"a": (3, 1)} if needed
+    if votes:
+        votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
+    return await asyncio.to_thread(
+        handler.analyze_social_framework, args, attacks, votes
+    )
+
+
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
 
 
@@ -1293,6 +1339,48 @@ def _write_sat_to_state(output, state, ctx) -> None:
         )
 
 
+def _write_setaf_to_state(output, state, ctx) -> None:
+    """Write SetAF results to UnifiedAnalysisState (#87)."""
+    if not output or not isinstance(output, dict):
+        return
+    state.add_dung_framework(
+        name=f"setaf_{output.get('semantics', 'grounded')}",
+        arguments=output.get("arguments", []),
+        attacks=[],  # set attacks don't map to binary attacks
+        extensions={"setaf_extensions": output.get("extensions", [])},
+    )
+
+
+def _write_weighted_to_state(output, state, ctx) -> None:
+    """Write Weighted AF results to UnifiedAnalysisState (#87)."""
+    if not output or not isinstance(output, dict):
+        return
+    state.add_dung_framework(
+        name=f"weighted_{output.get('semantics', 'grounded')}",
+        arguments=output.get("arguments", []),
+        attacks=[
+            [a.get("source", ""), a.get("target", "")]
+            for a in output.get("attacks", [])
+            if isinstance(a, dict)
+        ],
+        extensions={"weighted_extensions": output.get("extensions", [])},
+    )
+
+
+def _write_social_to_state(output, state, ctx) -> None:
+    """Write Social AF results to UnifiedAnalysisState (#87)."""
+    if not output or not isinstance(output, dict):
+        return
+    ranking = output.get("ranking", [])
+    scores = output.get("scores", {})
+    state.add_dung_framework(
+        name="social_af",
+        arguments=output.get("arguments", []),
+        attacks=output.get("attacks", []),
+        extensions={"social_ranking": ranking, "social_scores": scores},
+    )
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -1320,6 +1408,9 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "description_logic": _write_dl_to_state,
     "conditional_logic": _write_cl_to_state,
     "sat_solving": _write_sat_to_state,
+    "setaf_reasoning": _write_setaf_to_state,
+    "weighted_argumentation": _write_weighted_to_state,
+    "social_argumentation": _write_social_to_state,
 }
 
 
@@ -1627,6 +1718,13 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
          "ALC Description Logic (TBox/ABox reasoning)", _invoke_dl),
         ("cl_handler", ["conditional_logic"],
          "Conditional Logic (System Z, non-monotonic)", _invoke_cl),
+        # AF variants (#87)
+        ("setaf_handler", ["setaf_reasoning"],
+         "Set Argumentation Frameworks (collective attacks)", _invoke_setaf),
+        ("weighted_handler", ["weighted_argumentation"],
+         "Weighted Argumentation Frameworks (attack weights)", _invoke_weighted),
+        ("social_handler", ["social_argumentation"],
+         "Social Abstract Argumentation (voting + attacks)", _invoke_social),
     ]
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:

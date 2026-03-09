@@ -116,6 +116,13 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             depends_on=["dung_analysis"],
             optional=True,
         )
+        # SetAF for collective attacks analysis (#87)
+        .add_phase(
+            "setaf_analysis",
+            capability="setaf_reasoning",
+            depends_on=["dung_analysis"],
+            optional=True,
+        )
         # Description Logic for ontological consistency (#86)
         .add_phase(
             "dl_analysis",
@@ -146,7 +153,7 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             capability="formal_synthesis",
             depends_on=[
                 "ranking", "aspic_analysis", "belief_revision",
-                "adf_analysis", "bipolar_analysis",
+                "adf_analysis", "bipolar_analysis", "setaf_analysis",
                 "dl_analysis", "cl_analysis",
             ],
         )

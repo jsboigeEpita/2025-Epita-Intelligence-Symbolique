@@ -434,3 +434,60 @@ class TweetyLogicPlugin:
             "model": model,
             "statistics": stats,
         }, default=str)
+
+    @kernel_function(
+        name="analyze_setaf",
+        description="Analyze a Set Argumentation Framework with collective attacks",
+    )
+    @_jvm_required
+    def analyze_setaf(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"arguments": [], "set_attacks": []})
+        from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = SetAFHandler(initializer)
+        result = handler.analyze_setaf(
+            arguments=params.get("arguments", []),
+            attacks=params.get("set_attacks", []),
+            semantics=params.get("semantics", "grounded"),
+        )
+        return json.dumps(result, default=str)
+
+    @kernel_function(
+        name="analyze_weighted_framework",
+        description="Analyze a Weighted AF with numeric attack weights",
+    )
+    @_jvm_required
+    def analyze_weighted_framework(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"arguments": [], "weighted_attacks": []})
+        from argumentation_analysis.agents.core.logic.weighted_handler import WeightedHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = WeightedHandler(initializer)
+        result = handler.analyze_weighted_framework(
+            arguments=params.get("arguments", []),
+            attacks=params.get("weighted_attacks", []),
+            semantics=params.get("semantics", "grounded"),
+        )
+        return json.dumps(result, default=str)
+
+    @kernel_function(
+        name="analyze_social_framework",
+        description="Analyze a Social AF with voting and attack structure",
+    )
+    @_jvm_required
+    def analyze_social_framework(self, input: str) -> str:
+        params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
+        from argumentation_analysis.agents.core.logic.social_handler import SocialHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        initializer = TweetyInitializer()
+        handler = SocialHandler(initializer)
+        votes = params.get("votes", {})
+        if votes:
+            votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
+        result = handler.analyze_social_framework(
+            arguments=params.get("arguments", []),
+            attacks=params.get("attacks", []),
+            votes=votes,
+        )
+        return json.dumps(result, default=str)

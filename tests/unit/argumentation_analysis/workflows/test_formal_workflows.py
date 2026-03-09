@@ -61,7 +61,7 @@ class TestBuildFormalDebateWorkflow:
 
     def test_phase_count(self):
         wf = build_formal_debate_workflow()
-        assert len(wf.phases) == 6  # 5 original + 1 optional ABA (#85)
+        assert len(wf.phases) == 7  # 5 original + 2 optional (ABA #85, Social #87)
 
     def test_required_capabilities(self):
         wf = build_formal_debate_workflow()
@@ -72,6 +72,7 @@ class TestBuildFormalDebateWorkflow:
         assert "ranking_semantics" in caps
         assert "governance_simulation" in caps
         assert "aba_reasoning" in caps  # #85
+        assert "social_argumentation" in caps  # #87
 
     def test_execution_order(self):
         wf = build_formal_debate_workflow()
@@ -91,7 +92,7 @@ class TestBuildFormalDebateWorkflow:
         wf = build_formal_debate_workflow()
         phases = wf.phases if isinstance(wf.phases, list) else list(wf.phases.values())
         optional_names = {p.name for p in phases if p.optional}
-        assert optional_names == {"aba_formalization"}  # #85
+        assert optional_names == {"aba_formalization", "social_ranking"}  # #85, #87
 
 
 class TestFormalDebateExecution:
@@ -254,7 +255,7 @@ class TestBuildArgumentStrengthWorkflow:
 
     def test_phase_count(self):
         wf = build_argument_strength_workflow()
-        assert len(wf.phases) == 5  # 4 original + 1 optional bipolar (#85)
+        assert len(wf.phases) == 6  # 4 original + 2 optional (bipolar #85, weighted #87)
 
     def test_required_capabilities(self):
         wf = build_argument_strength_workflow()
@@ -263,6 +264,7 @@ class TestBuildArgumentStrengthWorkflow:
         assert "ranking_semantics" in caps
         assert "counter_argument_generation" in caps
         assert "bipolar_argumentation" in caps  # #85
+        assert "weighted_argumentation" in caps  # #87
 
     def test_uncertainty_is_optional(self):
         wf = build_argument_strength_workflow()

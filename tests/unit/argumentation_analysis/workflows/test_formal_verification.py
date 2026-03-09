@@ -63,7 +63,7 @@ class TestBuildFormalVerificationWorkflow:
 
     def test_phase_count(self):
         wf = build_formal_verification_workflow()
-        assert len(wf.phases) == 14  # 10 original + 4 new optional (#85/#86)
+        assert len(wf.phases) == 15  # 10 original + 5 new optional (#85/#86/#87)
 
     def test_required_capabilities(self):
         wf = build_formal_verification_workflow()
@@ -79,9 +79,10 @@ class TestBuildFormalVerificationWorkflow:
             "belief_maintenance",
             "belief_revision",
             "formal_synthesis",
-            # New optional capabilities (#85/#86)
+            # New optional capabilities (#85/#86/#87)
             "adf_reasoning",
             "bipolar_argumentation",
+            "setaf_reasoning",
             "description_logic",
             "conditional_logic",
         }
@@ -504,7 +505,7 @@ class TestCatalogRegistration:
         from argumentation_analysis.orchestration.unified_pipeline import get_workflow_catalog
         catalog = get_workflow_catalog()
         wf = catalog["formal_verification"]
-        assert len(wf.phases) == 14  # 10 original + 4 new optional (#85/#86)
+        assert len(wf.phases) == 15  # 10 original + 5 new optional (#85/#86/#87)
 
 
 # =====================================================================

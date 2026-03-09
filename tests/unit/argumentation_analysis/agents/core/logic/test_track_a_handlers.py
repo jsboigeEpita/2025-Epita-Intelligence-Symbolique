@@ -501,7 +501,7 @@ class TestTrackARegistration:
         _declare_tweety_slots(mock_registry)
 
         # Should call register_service for each handler
-        assert mock_registry.register_service.call_count == 10
+        assert mock_registry.register_service.call_count == 13
 
         # Check capability names
         registered_caps = set()
@@ -515,6 +515,7 @@ class TestTrackARegistration:
             "adf_reasoning", "aspic_plus_reasoning", "belief_revision",
             "probabilistic_argumentation", "dialogue_protocols",
             "description_logic", "conditional_logic",
+            "setaf_reasoning", "weighted_argumentation", "social_argumentation",
         }
         assert registered_caps == expected_caps
 

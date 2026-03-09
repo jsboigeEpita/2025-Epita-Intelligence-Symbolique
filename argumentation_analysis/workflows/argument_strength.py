@@ -49,6 +49,13 @@ def build_argument_strength_workflow() -> WorkflowDefinition:
             optional=True,
             depends_on=["formal_ranking"],
         )
+        # Phase 2c: Weighted AF for quantitative strength (optional, #87)
+        .add_phase(
+            "weighted_strength",
+            capability="weighted_argumentation",
+            optional=True,
+            depends_on=["formal_ranking"],
+        )
         # Phase 3: Optional probabilistic analysis
         .add_phase(
             "uncertainty_analysis",
