@@ -1,0 +1,403 @@
+/* ── Debate Arena ── */
+
+.debate-arena {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.arena-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.arena-header h2 { margin: 0; }
+
+.demo-btn {
+  padding: 6px 14px;
+  background: #5bc0de;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.demo-btn:hover { background: #31b0d5; }
+
+/* ── Input ── */
+
+.arena-input {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.arena-input textarea {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 50px;
+  resize: vertical;
+  font-size: 0.9rem;
+}
+
+.arena-input button {
+  padding: 8px 16px;
+  background: #0275d8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.arena-input button:disabled { opacity: 0.5; }
+
+.arena-error {
+  color: #d9534f;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+
+.arena-topic {
+  background: #f0f7ff;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.arena-topic h3 { margin: 0; }
+
+.arena-empty {
+  text-align: center;
+  color: #888;
+  padding: 60px 20px;
+}
+
+/* ── Agent Panel ── */
+
+.agent-panel { margin-bottom: 16px; }
+.agent-panel h4 { margin: 0 0 8px 0; }
+
+.agent-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 250px;
+  align-items: center;
+}
+
+.agent-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0275d8;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.agent-info { flex: 1; }
+.agent-name { font-weight: 600; font-size: 1rem; }
+.agent-personality { font-size: 0.8rem; color: #666; }
+.agent-strategy { font-size: 0.8rem; color: #444; margin-top: 2px; }
+
+.agent-score {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.score-value {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #0275d8;
+}
+
+.score-label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+/* ── Strategy Indicator ── */
+
+.strategy-indicator { margin-bottom: 16px; }
+.strategy-indicator h4 { margin: 0 0 8px 0; }
+
+.strategy-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.strategy-card {
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.strategy-agent { font-weight: 600; }
+.strategy-name { font-size: 0.85rem; color: #555; margin: 4px 0; }
+
+.strategy-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* ── View Tabs ── */
+
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0;
+}
+
+.view-tab {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: -2px;
+}
+
+.view-tab.active {
+  color: #0275d8;
+  border-bottom-color: #0275d8;
+  font-weight: 600;
+}
+
+.view-tab:hover { color: #333; }
+
+/* ── Debate Timeline ── */
+
+.debate-timeline h4 { margin: 0 0 12px 0; }
+
+.debate-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.debate-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.entry-round {
+  width: 50px;
+  font-size: 0.75rem;
+  color: #888;
+  text-align: center;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.entry-marker {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.entry-body { flex: 1; }
+
+.entry-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.entry-agent { font-weight: 600; }
+
+.entry-type {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.entry-score {
+  font-size: 0.8rem;
+  color: #666;
+  margin-left: auto;
+}
+
+.entry-text {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #333;
+}
+
+.entry-time {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* ── Argument Tree ── */
+
+.argument-tree { position: relative; }
+.argument-tree h4 { margin: 0 0 12px 0; }
+.argument-tree.empty { color: #888; font-style: italic; }
+
+.tree-canvas {
+  position: relative;
+  min-height: 200px;
+}
+
+.tree-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tree-nodes {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tree-node {
+  padding: 10px 14px;
+  border: 3px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.node-type {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.node-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.node-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.node-target {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* ── Score Board ── */
+
+.score-board { overflow-x: auto; }
+.score-board h4 { margin: 0 0 8px 0; }
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.score-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid #ddd;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.score-table td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.agent-cell { font-weight: 600; }
+.score-cell { color: #0275d8; }
+
+.metric-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.metric-fill {
+  display: inline-block;
+  height: 6px;
+  background: #0275d8;
+  border-radius: 3px;
+  min-width: 2px;
+}
+
+.metric-value {
+  font-size: 0.75rem;
+  color: #666;
+  min-width: 24px;
+}
+
+/* ── Raw Results ── */
+
+.arena-raw {
+  margin-top: 16px;
+}
+
+.arena-raw h4 { margin: 0 0 8px 0; }
+
+.arena-raw pre {
+  background: #272822;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  max-height: 300px;
+}
