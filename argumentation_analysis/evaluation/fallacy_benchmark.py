@@ -438,12 +438,46 @@ class FallacyBenchmarkRunner:
             raw_response=str(result)[:500],
         )
 
+    async def _run_single(
+        self, case: dict, mode: str, runner, semaphore: asyncio.Semaphore,
+    ) -> DetectionResult:
+        """Run a single case+mode with concurrency control."""
+        async with semaphore:
+            logger.info(
+                f"Running {case['id']} mode={mode} "
+                f"(expected: {case['expected_name']})"
+            )
+            start = time.time()
+            try:
+                result = await runner(case["text"])
+            except Exception as e:
+                result = {"error": str(e)}
+                logger.warning(f"  {mode} failed: {e}")
+            duration = time.time() - start
+
+            detection = self._score_result(case, mode, result, duration)
+            logger.info(
+                f"  {mode}: pk={detection.detected_pk} "
+                f"exact={detection.exact_pk_match} "
+                f"family={detection.family_match} "
+                f"conf={detection.confidence:.2f} "
+                f"({duration:.1f}s)"
+            )
+            return detection
+
     async def run_benchmark(
         self,
         cases: Optional[List[dict]] = None,
         modes: Optional[List[str]] = None,
+        concurrency: int = 1,
     ) -> BenchmarkReport:
-        """Run the full comparative benchmark."""
+        """Run the full comparative benchmark.
+
+        Args:
+            cases: Test cases (default: BENCHMARK_CASES)
+            modes: Detection modes (default: all three)
+            concurrency: Max parallel LLM tasks (1=sequential, 3+ for parallel)
+        """
         cases = cases or BENCHMARK_CASES
         modes = modes or ["free", "one_shot", "constrained"]
         report = BenchmarkReport()
@@ -454,30 +488,30 @@ class FallacyBenchmarkRunner:
             "constrained": self.run_mode_c_constrained,
         }
 
-        for case in cases:
-            for mode in modes:
-                runner = mode_runners[mode]
-                logger.info(
-                    f"Running {case['id']} mode={mode} "
-                    f"(expected: {case['expected_name']})"
-                )
-                start = time.time()
-                try:
-                    result = await runner(case["text"])
-                except Exception as e:
-                    result = {"error": str(e)}
-                    logger.warning(f"  {mode} failed: {e}")
-                duration = time.time() - start
+        semaphore = asyncio.Semaphore(concurrency)
 
-                detection = self._score_result(case, mode, result, duration)
-                report.results.append(detection)
-                logger.info(
-                    f"  {mode}: pk={detection.detected_pk} "
-                    f"exact={detection.exact_pk_match} "
-                    f"family={detection.family_match} "
-                    f"conf={detection.confidence:.2f} "
-                    f"({duration:.1f}s)"
-                )
+        if concurrency > 1:
+            # Parallel execution
+            tasks = []
+            for case in cases:
+                for mode in modes:
+                    runner = mode_runners[mode]
+                    tasks.append(self._run_single(case, mode, runner, semaphore))
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for r in results:
+                if isinstance(r, Exception):
+                    logger.error(f"Task failed: {r}")
+                elif isinstance(r, DetectionResult):
+                    report.results.append(r)
+        else:
+            # Sequential execution (original behavior)
+            for case in cases:
+                for mode in modes:
+                    runner = mode_runners[mode]
+                    detection = await self._run_single(
+                        case, mode, runner, semaphore
+                    )
+                    report.results.append(detection)
 
         report.compute_scores()
 

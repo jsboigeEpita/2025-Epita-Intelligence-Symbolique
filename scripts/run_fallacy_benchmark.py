@@ -3,10 +3,12 @@
 
 Usage:
     conda run -n projet-is-roo-new --no-capture-output python scripts/run_fallacy_benchmark.py
+    conda run -n projet-is-roo-new --no-capture-output python scripts/run_fallacy_benchmark.py --parallel 3
 
 Runs 10 test cases × 3 detection modes = 30 LLM calls.
 Saves JSON report + prints summary table.
 """
+import argparse
 import asyncio
 import logging
 import os
@@ -32,11 +34,19 @@ logging.basicConfig(
 
 
 async def main():
+    parser = argparse.ArgumentParser(description="Fallacy detection benchmark")
+    parser.add_argument("--parallel", type=int, default=1,
+                        help="Max concurrent LLM tasks (1=sequential, 3+=parallel)")
+    parser.add_argument("--modes", nargs="+", default=["free", "one_shot", "constrained"],
+                        help="Detection modes to run")
+    args = parser.parse_args()
+
     print("=" * 70)
     print("  Fallacy Detection Comparative Benchmark (#84 Phase 4)")
     print(f"  Model: {os.environ.get('OPENAI_CHAT_MODEL_ID', 'gpt-5-mini')}")
     print(f"  Cases: {len(BENCHMARK_CASES)}")
-    print(f"  Modes: free, one_shot, constrained")
+    print(f"  Modes: {', '.join(args.modes)}")
+    print(f"  Concurrency: {args.parallel}")
     print("=" * 70)
 
     runner = FallacyBenchmarkRunner()
@@ -46,7 +56,9 @@ async def main():
         sys.exit(1)
     print(f"  Taxonomy: {len(runner.taxonomy_data)} nodes loaded\n")
 
-    report = await runner.run_benchmark()
+    report = await runner.run_benchmark(
+        modes=args.modes, concurrency=args.parallel
+    )
 
     # Print results table
     print("\n" + "=" * 70)
