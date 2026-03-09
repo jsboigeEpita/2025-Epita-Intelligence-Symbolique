@@ -2,6 +2,7 @@ import glob
 import logging
 from .factory import create_app
 from .endpoints import router as api_router, framework_router, informal_router
+from .proposal_endpoints import proposal_router
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 # --- Gestion du cycle de vie de la JVM et des services ---
@@ -41,6 +42,7 @@ app = create_app(
 app.include_router(api_router, prefix="/api")
 app.include_router(framework_router)
 app.include_router(informal_router)
+app.include_router(proposal_router, prefix="/api")
 
 
 @app.get("/")
