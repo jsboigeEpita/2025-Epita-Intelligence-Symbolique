@@ -3,6 +3,14 @@
     "argumentation_analysis_mcp": {
       "type": "streamable-http",
       "url": "http://127.0.0.1:8000/mcp"
+    },
+    "roo-state-manager": {
+      "command": "node",
+      "args": ["D:\\roo-extensions\\mcps\\internal\\servers\\roo-state-manager\\build\\index.js"],
+      "env": {
+        "ROOSYNC_MACHINE_ID": "myia-ai-01",
+        "ROOSYNC_SHARED_PATH": "G:/Mon Drive/Synchronisation/RooSync/.shared-state"
+      }
     }
   }
 }

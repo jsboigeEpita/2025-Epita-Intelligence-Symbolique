@@ -35,7 +35,7 @@ Respond with ONLY a JSON object:
   "reasoning": "<brief explanation of scores>"
 }"""
 
-JUDGE_USER_TEMPLATE = """## Input Text (first 2000 chars)
+JUDGE_USER_TEMPLATE = """## Input Text (excerpt)
 {input_text}
 
 ## Workflow Used
@@ -44,7 +44,7 @@ JUDGE_USER_TEMPLATE = """## Input Text (first 2000 chars)
 ## Analysis Results
 {analysis_results}
 
-Please evaluate the quality of this analysis."""
+Please evaluate the quality of this analysis. Note: results may be summarized for brevity — evaluate based on the depth and quality of what is shown, not on apparent truncation."""
 
 
 @dataclass
@@ -89,10 +89,12 @@ class LLMJudge:
         from openai import AsyncOpenAI
         import os
 
-        # Prepare the prompt
-        results_str = json.dumps(analysis_results, indent=2, ensure_ascii=False, default=str)
-        if len(results_str) > 4000:
-            results_str = results_str[:4000] + "\n... [truncated]"
+        # Prepare the prompt with smart summarization
+        prepared = self._prepare_results_for_judge(analysis_results)
+        results_str = json.dumps(prepared, indent=2, ensure_ascii=False, default=str)
+        # Budget: 12000 chars for results (gpt-5-mini has 128k context)
+        if len(results_str) > 12000:
+            results_str = results_str[:12000] + "\n... [summarized]"
 
         user_msg = JUDGE_USER_TEMPLATE.format(
             input_text=input_text[:2000],
@@ -148,6 +150,49 @@ class LLMJudge:
         finally:
             if saved_env and model_registry:
                 model_registry.restore_env(saved_env)
+
+    @staticmethod
+    def _prepare_results_for_judge(results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Prepare analysis results for the judge by stripping redundant data
+        and summarizing large collections.
+
+        The raw state_snapshot often includes raw_text (already in input_text)
+        and full lists of arguments/beliefs/etc. that blow the char budget.
+        This method keeps the structure informative while fitting in ~12k chars.
+        """
+        # Keys whose content duplicates the input text
+        TEXT_KEYS = {"raw_text", "raw_text_snippet"}
+        # Max items to show from any list
+        MAX_LIST_ITEMS = 5
+        # Max string length for individual values
+        MAX_VALUE_LEN = 500
+
+        def _trim(obj: Any, depth: int = 0) -> Any:
+            if depth > 6:
+                return "..."
+            if isinstance(obj, dict):
+                trimmed = {}
+                for k, v in obj.items():
+                    if k in TEXT_KEYS:
+                        # Replace raw text with a short snippet
+                        if isinstance(v, str) and len(v) > 100:
+                            trimmed[k] = v[:100] + f"... ({len(v)} chars total)"
+                        else:
+                            trimmed[k] = v
+                    else:
+                        trimmed[k] = _trim(v, depth + 1)
+                return trimmed
+            elif isinstance(obj, list):
+                if len(obj) > MAX_LIST_ITEMS:
+                    shown = [_trim(item, depth + 1) for item in obj[:MAX_LIST_ITEMS]]
+                    return shown + [f"... and {len(obj) - MAX_LIST_ITEMS} more (total: {len(obj)})"]
+                return [_trim(item, depth + 1) for item in obj]
+            elif isinstance(obj, str) and len(obj) > MAX_VALUE_LEN:
+                return obj[:MAX_VALUE_LEN] + f"... ({len(obj)} chars)"
+            return obj
+
+        return _trim(results)
 
     def _parse_json_response(self, raw: str) -> Dict[str, Any]:
         """Extract JSON from LLM response, handling markdown code blocks."""

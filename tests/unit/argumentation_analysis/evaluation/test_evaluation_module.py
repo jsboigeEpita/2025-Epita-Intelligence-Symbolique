@@ -347,3 +347,37 @@ class TestLLMJudge:
             )
         assert score.overall == 0
         assert "failed" in score.reasoning.lower()
+
+    def test_prepare_results_strips_raw_text(self):
+        judge = LLMJudge()
+        results = {
+            "raw_text": "A" * 5000,
+            "identified_arguments": [{"text": "arg1"}, {"text": "arg2"}],
+        }
+        prepared = judge._prepare_results_for_judge(results)
+        # raw_text should be truncated with char count
+        assert "chars total" in prepared["raw_text"]
+        assert len(prepared["raw_text"]) < 200
+        # arguments preserved (< MAX_LIST_ITEMS)
+        assert len(prepared["identified_arguments"]) == 2
+
+    def test_prepare_results_trims_long_lists(self):
+        judge = LLMJudge()
+        results = {
+            "beliefs": [{"id": i} for i in range(30)],
+        }
+        prepared = judge._prepare_results_for_judge(results)
+        # 5 items + 1 summary string
+        assert len(prepared["beliefs"]) == 6
+        assert "25 more" in prepared["beliefs"][-1]
+
+    def test_prepare_results_handles_nested(self):
+        judge = LLMJudge()
+        results = {
+            "phases": {
+                "phase1": {"raw_text": "B" * 300, "output": "ok"},
+            }
+        }
+        prepared = judge._prepare_results_for_judge(results)
+        assert "chars total" in prepared["phases"]["phase1"]["raw_text"]
+        assert prepared["phases"]["phase1"]["output"] == "ok"
