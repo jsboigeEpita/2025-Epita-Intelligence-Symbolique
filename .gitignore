@@ -142,3 +142,9 @@ _temp_downloads/
 scripts/fix_f821_missing_imports.py
 scripts/add_f821_noqa_tests.py
 scripts/check_f821_remaining.py
+
+libs/node-v20.14.0-win-x64/
+libs/portable_jdk/jdk-17.0.11+9/
+libs/portable_octave/octave-10.1.0-w64/
+
+node-v20.14.0-win-x64/
