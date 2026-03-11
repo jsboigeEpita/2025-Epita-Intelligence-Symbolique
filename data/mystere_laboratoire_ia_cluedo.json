@@ -1,0 +1,79 @@
+{
+  "cas_original": "Le Mystère du Laboratoire d'IA",
+  "description": "Un chercheur en intelligence artificielle a été retrouvé inconscient dans son laboratoire. Ses notes sur une découverte révolutionnaire ont disparu.",
+  "personnages": [
+    {
+      "nom": "Dr. Alexandria Cipher",
+      "role": "Directrice du laboratoire IA",
+      "motif": "Jalousie professionnelle - la victime allait publier avant elle",
+      "alibi": "Réunion avec les investisseurs de 14h à 16h",
+      "indices": "Empreintes sur le serveur principal"
+    },
+    {
+      "nom": "Prof. Marcus Logic",
+      "role": "Spécialiste en logique formelle",
+      "motif": "Vol de propriété intellectuelle - algorithme qu'il a co-développé",
+      "alibi": "Cours magistral devant 200 étudiants",
+      "indices": "Son badge d'accès utilisé à 15h30"
+    },
+    {
+      "nom": "Dr. Sophia Neural",
+      "role": "Experte en réseaux de neurones",
+      "motif": "Chantage - la victime avait découvert sa falsification de données",
+      "alibi": "Télétravail depuis chez elle toute la journée",
+      "indices": "Traces de son code dans les fichiers supprimés"
+    }
+  ],
+  "lieux": [
+    {
+      "nom": "Salle des Serveurs",
+      "description": "Centre névralgique avec supercalculateurs",
+      "indices_trouves": "Câble ethernet débranché, logs d'accès modifiés"
+    },
+    {
+      "nom": "Bureau Principal",
+      "description": "Bureau de la victime avec tableau blanc couvert d'équations",
+      "indices_trouves": "Tasse de café encore chaude, notes déchirées dans la corbeille"
+    },
+    {
+      "nom": "Laboratoire de Tests",
+      "description": "Zone d'expérimentation avec robots et prototypes",
+      "indices_trouves": "Robot déplacé, caméra de surveillance désactivée"
+    }
+  ],
+  "armes": [
+    {
+      "nom": "Décharge Électrique",
+      "description": "Surcharge du circuit principal",
+      "traces": "Odeur d'ozone, disjoncteur sauté"
+    },
+    {
+      "nom": "Gaz Soporifique",
+      "description": "Bonbonne de gaz anesthésiant du labo médical",
+      "traces": "Légère odeur sucrée, ventilation forcée activée"
+    },
+    {
+      "nom": "Attaque Cybernétique",
+      "description": "Virus informatique causant un choc électromagnétique",
+      "traces": "Écrans clignotants, tous les appareils redémarrés"
+    }
+  ],
+  "indices_contradictoires": [
+    "Badge de Marcus utilisé alors qu'il était en cours",
+    "Sophia prétend être en télétravail mais son ordinateur n'a pas été allumé",
+    "Alexandria en réunion mais son téléphone géolocalisé au laboratoire",
+    "Caméras désactivées mais sauvegarde automatique vers serveur externe",
+    "Victime trouvée dans le bureau mais traces de lutte dans la salle serveurs"
+  ],
+  "solution_secrete": {
+    "coupable": "Dr. Sophia Neural",
+    "arme": "Gaz Soporifique",
+    "lieu": "Bureau Principal",
+    "methode": "Accès via tunnel de maintenance, utilisation du badge volé de Marcus, déplacement de la victime après empoisonnement"
+  },
+  "temoignages_complexes": {
+    "gardien_securite": "J'ai vu Dr. Cipher partir vers 15h45, mais elle est revenue 20 minutes plus tard...",
+    "etudiant_stagiaire": "Prof. Logic m'a demandé son badge ce matin, il l'avait oublié chez lui...",
+    "technicien_maintenance": "Les tunnels de ventilation ont été nettoyés ce matin, quelqu'un y a laissé des traces de pas..."
+  }
+}

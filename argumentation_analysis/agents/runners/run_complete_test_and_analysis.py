@@ -25,6 +25,7 @@ import logging
 import subprocess
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # Ajouter le répertoire racine au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -40,6 +41,7 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("RunCompleteTestAndAnalysis")
+
 
 
 async def run_orchestration_test() -> Optional[str]:

@@ -1,4 +1,4 @@
-﻿# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
+# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
 """
 Orchestrateur pour workflow Cluedo étendu avec 3 agents : Sherlock → Watson → Moriarty.
 
@@ -8,6 +8,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+import warnings
 from inspect import isawaitable
 from typing import List, Dict, Any, Optional
 from datetime import datetime

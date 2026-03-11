@@ -1,0 +1,130 @@
+- family: "authority_popularity"
+  name_fr: "Sophismes d'appel à l'autorité et à la popularité"
+  name_en: "Authority and Popularity Fallacies"
+  description: "Sophismes basés sur l'invocation d'autorités non qualifiées ou sur la popularité."
+  keywords: ["autorité", "expert", "tout le monde", "popularité", "tradition", "nouveauté"]
+  severity_weight: 0.7
+  common_contexts: ["politique", "publicité", "débat public"]
+  patterns:
+    - "ad verecundiam"
+    - "appel à l'autorité"
+    - "ad populum"
+    - "appel à la popularité"
+    - "argumentum ad antiquitatem"
+    - "tradition"
+    - "argumentum ad novitatem"
+    - "nouveauté"
+
+- family: "emotional_appeals"
+  name_fr: "Sophismes d'appel aux émotions"
+  name_en: "Emotional Appeal Fallacies"
+  description: "Sophismes utilisant les émotions pour persuader plutôt que la logique."
+  keywords: ["peur", "pitié", "honte", "colère", "espoir", "flatterie"]
+  severity_weight: 0.8
+  common_contexts: ["politique", "marketing", "plaidoyer"]
+  patterns:
+    - "ad metum"
+    - "appel à la peur"
+    - "ad misericordiam"
+    - "appel à la pitié"
+    - "ad captandum"
+    - "flatterie"
+    - "ad pudorem"
+    - "honte"
+    - "appel aux émotions"
+
+- family: "generalization_causality"
+  name_fr: "Sophismes de généralisation et de causalité"
+  name_en: "Generalization and Causality Fallacies"
+  description: "Erreurs de raisonnement sur les généralisations et relations causales."
+  keywords: ["tous", "toujours", "jamais", "cause", "conséquence", "corrélation"]
+  severity_weight: 0.9
+  common_contexts: ["scientifique", "statistique", "recherche"]
+  patterns:
+    - "généralisation hâtive"
+    - "secundum quid"
+    - "post hoc"
+    - "pente glissante"
+    - "composition"
+    - "division"
+    - "causalité"
+    - "corrélation"
+
+- family: "diversion_attack"
+  name_fr: "Sophismes de diversion et d'attaque"
+  name_en: "Diversion and Attack Fallacies"
+  description: "Tactiques pour détourner l'attention ou attaquer la personne."
+  keywords: ["personnellement", "attaque", "hypocrite", "diversion", "hors-sujet"]
+  severity_weight: 0.6
+  common_contexts: ["débat", "politique", "controverse"]
+  patterns:
+    - "ad hominem"
+    - "homme de paille"
+    - "straw man"
+    - "tu quoque"
+    - "hareng rouge"
+    - "red herring"
+    - "diversion"
+
+- family: "false_dilemma_simplification"
+  name_fr: "Sophismes de faux dilemme et de simplification"
+  name_en: "False Dilemma and Simplification Fallacies"
+  description: "Présentation de choix artificiellement limités ou simplifications excessives."
+  keywords: ["soit", "ou bien", "seulement deux", "simple", "complexe"]
+  severity_weight: 0.7
+  common_contexts: ["politique", "éthique", "choix stratégiques"]
+  patterns:
+    - "faux dilemme"
+    - "false dilemma"
+    - "vrai écossais"
+    - "no true scotsman"
+    - "ad ignorantiam"
+    - "appel à l'ignorance"
+    - "petitio principii"
+    - "circulaire"
+
+- family: "language_ambiguity"
+  name_fr: "Sophismes de langage et d'ambiguïté"
+  name_en: "Language and Ambiguity Fallacies"
+  description: "Utilisation trompeuse du langage et créations d'ambiguïtés."
+  keywords: ["équivoque", "ambiguïté", "double sens", "jeu de mots"]
+  severity_weight: 0.5
+  common_contexts: ["rhétorique", "légal", "littéraire"]
+  patterns:
+    - "équivocation"
+    - "amphibologie"
+    - "accent"
+    - "composition lexicale"
+    - "ambiguïté"
+    - "double sens"
+
+- family: "statistical_probabilistic"
+  name_fr: "Sophismes statistiques et probabilistes"
+  name_en: "Statistical and Probabilistic Fallacies"
+  description: "Erreurs dans l'interprétation des statistiques et probabilités."
+  keywords: ["statistique", "pourcentage", "probabilité", "échantillon", "corrélation"]
+  severity_weight: 0.9
+  common_contexts: ["scientifique", "médical", "économique"]
+  patterns:
+    - "sophisme du joueur"
+    - "gambler's fallacy"
+    - "biais de confirmation"
+    - "base rate fallacy"
+    - "échantillon biaisé"
+    - "statistique"
+
+- family: "audio_oral_context"
+  name_fr: "Sophismes spécifiques au contexte audio/oral"
+  name_en: "Audio/Oral Context Fallacies"
+  description: "Sophismes spécifiques aux communications orales et audio."
+  keywords: ["interruption", "intimidation", "volume", "débit", "intonation"]
+  severity_weight: 0.4
+  common_contexts: ["débat oral", "interview", "présentation"]
+  patterns:
+    - "interruption"
+    - "intimidation"
+    - "volume"
+    - "débit rapide"
+    - "manipulation"
+    - "intonation"
+    - "oral"

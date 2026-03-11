@@ -1,0 +1,39 @@
+{
+  "total_errors_baseline": 669,
+  "target_errors_phase1e": 0,
+  "reduction_potential_pct": 0.0,
+  "errors_by_code": {
+    "W293": {
+      "count": 0,
+      "description": "blank line contains whitespace",
+      "files": [],
+      "errors": []
+    },
+    "E128": {
+      "count": 0,
+      "description": "continuation line under-indented for visual indent",
+      "files": [],
+      "errors": []
+    },
+    "E999": {
+      "count": 0,
+      "description": "SyntaxError",
+      "files": [],
+      "errors": []
+    },
+    "E117": {
+      "count": 0,
+      "description": "over-indented",
+      "files": [],
+      "errors": []
+    },
+    "E265": {
+      "count": 0,
+      "description": "block comment should start with '# '",
+      "files": [],
+      "errors": []
+    }
+  },
+  "hot_spots": [],
+  "e999_critical": []
+}

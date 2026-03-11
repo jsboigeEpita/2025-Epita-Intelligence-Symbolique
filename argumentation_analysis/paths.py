@@ -62,6 +62,11 @@ PORTABLE_JDK_PARENT_DIR_FROM_PATHS = PROJECT_ROOT_DIR / "portable_jdk"
 TEMP_DIR_FROM_PATHS = PROJECT_ROOT_DIR / "_temp"
 
 
+def get_project_root() -> Path:
+    """Retourne le chemin racine du projet."""
+    return PROJECT_ROOT_DIR
+
+
 # Assurer que les répertoires existent
 def ensure_directories_exist():
     """Crée les répertoires nécessaires s'ils n'existent pas."""
