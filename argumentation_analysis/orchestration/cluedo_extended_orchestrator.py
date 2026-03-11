@@ -1,7 +1,8 @@
+# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
 """
 Orchestrateur pour workflow Cluedo étendu avec 3 agents : Sherlock → Watson → Moriarty.
 
-Ce module implémente l'orchestration avancée pour le workflow3-agents avec agent Oracle,
+Ce module implémente l'orchestration avancée pour le workflow 3-agents avec agent Oracle,
 incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec CluedoOracleState.
 """
 
@@ -20,6 +21,8 @@ from argumentation_analysis.orchestration.base import (
     TerminationStrategy,
 )
 from semantic_kernel.agents import Agent
+
+# from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 
@@ -60,12 +63,15 @@ from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.streaming_chat_message_content import (
     StreamingChatMessageContent,
 )
+
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
 try:
     from semantic_kernel.functions.kernel_function_context import (
         KernelFunctionContext as FunctionInvocationContext,
     )
     from semantic_kernel.functions.kernel_function_context import KernelFunctionContext
+
+    FILTERS_AVAILABLE = True
 except ImportError:
     # Fallbacks pour compatibilité
     class KernelFunctionContext:
@@ -130,6 +136,7 @@ class CyclicSelectionStrategy(SelectionStrategy):
         self.__dict__["adaptive_selection"] = adaptive_selection
         self.__dict__["turn_count"] = 0
         self.__dict__["oracle_state"] = oracle_state  # PHASE C: Accès au contexte
+
         self.__dict__["_logger"] = logging.getLogger(self.__class__.__name__)
         self._logger.info(
             f"CyclicSelectionStrategy initialisée avec ordre: {self.agent_order}"
@@ -309,6 +316,7 @@ class OracleTerminationStrategy(TerminationStrategy):
 
         solution_proposee = self.oracle_state.final_solution
         solution_correcte = self.oracle_state.get_solution_secrete()
+
         if solution_proposee == solution_correcte:
             self._logger.info(f"Solution correcte: {solution_proposee}")
             return True
@@ -403,14 +411,6 @@ class CluedoExtendedOrchestrator:
             oracle_strategy: Stratégie Oracle ("cooperative", "competitive", "balanced", "progressive")
             adaptive_selection: Active la sélection adaptative (Phase 2)
         """
-        warnings.warn(
-            "`CluedoExtendedOrchestrator` is deprecated and will be removed in a future version. "
-            "It is maintained for backward compatibility only. "
-            "Please use new agent group chat architecture for new implementations.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-
         self.kernel = kernel
         self.settings = settings
         self.max_turns = max_turns
@@ -517,7 +517,7 @@ class CluedoExtendedOrchestrator:
 
         # Création de l'orchestration avec GroupChatOrchestration (système original qui fonctionne)
         self.orchestration = GroupChatOrchestration()
-        
+
         # Configuration des agents
         agent_dict = {
             getattr(agent, "name", getattr(agent, "id", str(agent))): agent
@@ -530,7 +530,7 @@ class CluedoExtendedOrchestrator:
         self.selection_strategy = selection_strategy
         self.termination_strategy = termination_strategy
 
-        # Initialisation du runtime - Module non disponible
+        # # Initialisation du runtime - Module non disponible
         # self.runtime = InProcessRuntime()
         # self.runtime.start()
 
@@ -539,6 +539,7 @@ class CluedoExtendedOrchestrator:
             f"Solution secrète: {self.oracle_state.get_solution_secrete()}"
         )
         self._logger.info(f"Cartes Moriarty: {self.oracle_state.get_moriarty_cards()}")
+
         return self.oracle_state
 
     async def execute_workflow(
@@ -569,6 +570,7 @@ class CluedoExtendedOrchestrator:
 
         # Boucle principale d'orchestration
         self._logger.info("Début de la boucle d'orchestration 3-agents...")
+
         try:
             fake_initial_agent = self.sherlock_agent
             while not await self.termination_strategy.should_terminate(
@@ -604,7 +606,6 @@ class CluedoExtendedOrchestrator:
                 agent_response_stream = next_agent.invoke(
                     input=history_to_send, arguments=KernelArguments()
                 )
-
                 # Gérer les réponses streamées et non-streamées (mock)
                 # Correction pour invoke qui peut retourner un awaitable ou un itérateur
                 if hasattr(agent_response_stream, "__await__"):
@@ -708,14 +709,16 @@ class CluedoExtendedOrchestrator:
                 # Gérer le cas où un ChatMessageContent se retrouve dans la liste
                 elif isinstance(chunk, ChatMessageContent):
                     full_content += str(chunk.content or "")
-            # Cas 2: La réponse est un objet de streaming unique
+
+        # Cas 2: La réponse est un objet de streaming unique
         elif isinstance(response_raw, StreamingChatMessageContent):
             for part in response_raw.items:
                 if hasattr(part, "text"):
                     full_content += part.text
-            # Cas 3: C'est déjà un ChatMessageContent (potentiellement avec un contenu complexe)
+
+        # Cas 3: C'est déjà un ChatMessageContent (potentiellement avec un contenu complexe)
         elif isinstance(response_raw, ChatMessageContent):
-            # Extraire le contenu texte, peu importe Comment il est encapsulé
+            # Extraire le contenu texte, peu importe comment il est encapsulé
             content_obj = response_raw.content
             if hasattr(content_obj, "text"):
                 full_content = content_obj.text
@@ -724,7 +727,8 @@ class CluedoExtendedOrchestrator:
             else:
                 full_content = str(content_obj or "")
             role = response_raw.role
-            # Cas 4: C'est juste un string ou un autre type de base
+
+        # Cas 4: C'est juste un string ou un autre type de base
         else:
             full_content = str(response_raw or "")
 
@@ -809,6 +813,7 @@ class CluedoExtendedOrchestrator:
 
         proposed = self.oracle_state.final_solution
         correct = self.oracle_state.get_solution_secrete()
+
         success = proposed == correct
 
         return {
@@ -885,11 +890,12 @@ class CluedoExtendedOrchestrator:
 
         return {
             "expected_turns_per_agent": expected_per_agent,
-            "balance_score": 1.0,  # À améliorer avec tracking réel par Agent
+            "balance_score": 1.0,  # À améliorer avec tracking réel par agent
             "note": "Équilibre cyclique théorique - à améliorer avec métriques réelles",
         }
 
     # PHASE C: Méthodes d'analyse contextuelle pour fluidité
+
     def _detect_message_type(self, content: str) -> str:
         """
         Détecte le type de message basé sur son contenu.
@@ -930,6 +936,11 @@ class CluedoExtendedOrchestrator:
     ) -> None:
         """
         Analyse les éléments contextuels d'un message et enregistre les références/réactions.
+
+        Args:
+            agent_name: Nom de l'agent qui parle
+            content: Contenu du message
+            history: Historique des messages
         """
         content_lower = content.lower()
 
@@ -967,6 +978,14 @@ class CluedoExtendedOrchestrator:
     ) -> List[Dict[str, str]]:
         """
         Détecte les réactions émotionnelles spécifiques à chaque agent.
+
+        Args:
+            agent_name: Nom de l'agent
+            content: Contenu du message
+            history: Historique des messages
+
+        Returns:
+            Liste des réactions détectées
         """
         reactions = []
         content_lower = content.lower()
@@ -975,11 +994,18 @@ class CluedoExtendedOrchestrator:
         return reactions
 
     # CORRECTIF ORACLE: Méthodes pour détection et révélation automatique
+
     def _extract_cluedo_suggestion(
         self, message_content: str
     ) -> Optional[Dict[str, str]]:
         """
         Extrait une suggestion Cluedo d'un message (suspect, arme, lieu).
+
+        Args:
+            message_content: Contenu du message à analyser
+
+        Returns:
+            Dict avec suspect/arme/lieu ou None si pas de suggestion détectée
         """
         content_lower = message_content.lower()
 
@@ -992,7 +1018,6 @@ class CluedoExtendedOrchestrator:
             "suspect",
             "suppose",
         ]
-
         if not any(keyword in content_lower for keyword in suggestion_keywords):
             return None
 
@@ -1041,6 +1066,13 @@ class CluedoExtendedOrchestrator:
     ) -> Optional[Dict[str, Any]]:
         """
         Force Moriarty à révéler ses cartes pour une suggestion donnée.
+
+        Args:
+            suggestion: Dict avec suspect/arme/lieu
+            suggesting_agent: Nom de l'agent qui fait la suggestion
+
+        Returns:
+            Réponse Oracle de Moriarty ou None si erreur
         """
         try:
             self._logger.info(
@@ -1063,12 +1095,14 @@ class CluedoExtendedOrchestrator:
             ):
                 # Moriarty peut réfuter - révèle ses cartes
                 revealed_cards = oracle_result.revealed_information or []
+
                 moriarty_responses = [
                     f"*sourire énigmatique* Ah, {suggesting_agent}... Je possède {', '.join(revealed_cards)} ! Votre théorie s'effondre.",
-                    f"*regard perçant* Hélas... {', '.join(revealed_cards)} repose dans ma Main. Réfléchissez encore.",
-                    f"*tiens, tiens... {', '.join(revealed_cards)} me permet de contrarier vos plans, {suggesting_agent}.",
+                    f"*regard perçant* Hélas... {', '.join(revealed_cards)} repose dans ma main. Réfléchissez encore.",
+                    f"Tiens, tiens... {', '.join(revealed_cards)} me permet de contrarier vos plans, {suggesting_agent}.",
                     f"*applaudit* Magnifique tentative ! Mais j'ai {', '.join(revealed_cards)}. Continuez à chercher.",
                 ]
+
                 content = moriarty_responses[
                     len(revealed_cards) % len(moriarty_responses)
                 ]
@@ -1086,8 +1120,9 @@ class CluedoExtendedOrchestrator:
                     f"*silence inquiétant* Intéressant, {suggesting_agent}... Je ne peux rien révéler sur cette suggestion.",
                     f"*sourire mystérieux* Voilà qui est... troublant. Aucune carte à révéler, {suggesting_agent}.",
                     f"*regard intense* Cette combinaison me laisse sans réponse... Serait-ce la vérité ?",
-                    f"*ah... *pause dramatique* Vous touchez peut-être au but, {suggesting_agent}.",
+                    f"Ah... *pause dramatique* Vous touchez peut-être au but, {suggesting_agent}.",
                 ]
+
                 content = warning_responses[0]  # Première réponse par défaut
 
                 return {
@@ -1098,19 +1133,20 @@ class CluedoExtendedOrchestrator:
                     "suggestion": suggestion,
                     "warning": "Suggestion potentiellement correcte",
                 }
+
         except Exception as e:
             self._logger.error(f"❌ Erreur Oracle révélation: {e}", exc_info=True)
 
             # Réponse d'erreur théâtrale
             error_content = f"*confusion momentanée* Pardonnez-moi, {suggesting_agent}... Un mystère technique m'empêche de répondre."
+
             return {
                 "content": error_content,
                 "type": "oracle_error",
                 "revealed_cards": [],
-                    "can_refute": False,
-                    "error": str(e),
-                }
-
+                "can_refute": False,
+                "error": str(e),
+            }
         # Trouver l'agent et le contenu qui ont déclenché la réaction
         trigger_agent = None
         trigger_content = ""
@@ -1123,13 +1159,14 @@ class CluedoExtendedOrchestrator:
         if not trigger_agent or trigger_agent == "System":
             return reactions
 
-        # Patterns de réaction spécifiques par Agent
+        # Patterns de réaction spécifiques par agent
         if agent_name == "Watson":
             watson_reactions = [
                 (["brillant", "exactement", "ça colle parfaitement"], "approval"),
                 (["aha", "intéressant retournement", "ça change la donne"], "surprise"),
                 (["précisément", "logique", "cohérent"], "analysis"),
             ]
+
             for keywords, reaction_type in watson_reactions:
                 if any(keyword in content_lower for keyword in keywords):
                     reactions.append(
@@ -1142,6 +1179,7 @@ class CluedoExtendedOrchestrator:
                         }
                     )
                     break
+
         elif agent_name == "Sherlock":
             sherlock_reactions = [
                 (["précisément watson", "tu vises juste", "c'est noté"], "approval"),
@@ -1151,6 +1189,7 @@ class CluedoExtendedOrchestrator:
                 ),
                 (["intéressant", "fascinant", "remarquable"], "analysis"),
             ]
+
             for keywords, reaction_type in sherlock_reactions:
                 if any(keyword in content_lower for keyword in keywords):
                     reactions.append(
@@ -1163,6 +1202,7 @@ class CluedoExtendedOrchestrator:
                         }
                     )
                     break
+
         elif agent_name == "Moriarty":
             moriarty_reactions = [
                 (["chaud", "très chaud", "vous brûlez"], "encouragement"),
@@ -1170,6 +1210,7 @@ class CluedoExtendedOrchestrator:
                 (["magistral", "vous m'impressionnez", "bien joué"], "excitement"),
                 (["hmm", "attendez"], "suspense"),
             ]
+
             for keywords, reaction_type in moriarty_reactions:
                 if any(keyword in content_lower for keyword in keywords):
                     reactions.append(
@@ -1251,6 +1292,7 @@ async def main():
         print("\n" + "=" * 60)
         print("RÉSULTAT WORKFLOW 3-AGENTS CLUEDO ORACLE")
         print("=" * 60)
+
         print(f"\n🎯 SUCCÈS: {result['solution_analysis']['success']}")
         print(
             f"📊 TOURS: {result['oracle_statistics']['agent_interactions']['total_turns']}"
@@ -1262,16 +1304,21 @@ async def main():
             f"💎 CARTES RÉVÉLÉES: {result['oracle_statistics']['workflow_metrics']['cards_revealed']}"
         )
         print(f"⏱️  TEMPS: {result['workflow_info']['execution_time_seconds']:.2f}s")
+
         if result["solution_analysis"]["success"]:
             print(f"[OK] Solution: {result['final_state']['final_solution']}")
         else:
             print(f"❌ Solution proposée: {result['final_state']['final_solution']}")
-        print(f"🎯 Solution correcte: {result['final_state']['secret_solution']}")
+            print(f"🎯 Solution correcte: {result['final_state']['secret_solution']}")
+
         print("\n" + "=" * 60)
 
     except Exception as e:
         print(f"❌ Erreur durant l'exécution: {e}")
         import traceback
 
-    if __name__ == "__main__":
-        asyncio.run(main())
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

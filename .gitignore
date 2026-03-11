@@ -33,7 +33,7 @@ MANIFEST
 # avant que PyInstaller ne construise l'exe, afin d'
 # y injecter des informations de date/version.
 *.manifest
-.spec
+*.spec
 
 
 # Rapports de test unitaires / couverture
