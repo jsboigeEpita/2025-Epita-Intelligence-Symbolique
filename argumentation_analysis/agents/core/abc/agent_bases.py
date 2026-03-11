@@ -1,7 +1,10 @@
 """
 Fournit les fondations architecturales pour tous les agents du système.
 
-Ce module contient les classes de base abstraites (ABC) qui définissent les contrats et les interfaces pour tous les agents. Il a pour rôle de standardiser le comportement des agents, qu'ils soient basés sur des LLMs, de la logique formelle ou d'autres mécanismes.
+Ce module contient les classes de base abstraites (ABC) qui définissent les
+contrats et les interfaces pour tous les agents. Il a pour rôle de standardiser
+le comportement des agents, qu'ils soient basés sur des LLMs, de la logique
+formelle ou d'autres mécanismes.
 
 - `BaseAgent` : Le contrat fondamental pour tout agent, incluant la gestion
   d'un kernel Semantic Kernel, un cycle de vie d'invocation et des
@@ -13,15 +16,8 @@ Ce module contient les classes de base abstraites (ABC) qui définissent les con
 
 from __future__ import annotations
 
-# Note historique :
-# BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
-# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
-# Cet héritage avait été supprimé (voir commit e9668f26d) mais a été RÉINTRODUIT
-# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).
-# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.
-
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
@@ -33,6 +29,19 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
 )
 from pydantic import PrivateAttr
 
+# Note historique : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
+# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
+# Cet héritage avait été supprimé (voir commit e968f26d) mais a été RÉINTRODUIT
+# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).
+# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.
+from semantic_kernel.contents import ChatHistory
+
+# from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
+# from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread # Commenté, module/classe potentiellement déplacé/supprimé
+
+# Résoudre la dépendance circulaire de Pydantic
+# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté
+
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
     from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
@@ -41,62 +50,55 @@ if TYPE_CHECKING:
     # Si ChatHistoryChannel était utilisé dans le typage, il faudrait aussi le gérer ici.
     # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
-# Résoudre la dépendance circulaire de Pydantic
-# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté
-
 
 class BaseAgent(ChatCompletionAgent, ABC):
-    """Classe de base abstraite (ABC) pour tous les agents du système.
+    """
+    Classe de base abstraite (ABC) pour tous les agents du système.
 
     Cette classe établit un contrat que tous les agents doivent suivre. Elle
     définit l'interface commune pour l'initialisation, la configuration,
     la description des capacités et le cycle d'invocation. Chaque agent
     doit être associé à un `Kernel` de Semantic Kernel.
 
-    Le contrat impose aux classes dérivées d'implémenter des méthodes clés pour la configuration
-    (`setup_agent_components`) et l'exécution de leur logique métier (`invoke_single`).
-
-    Note on Semantic Kernel Agent Inheritance:
-        Cette classe hérite de `semantic_kernel.agents.chat_completion.ChatCompletionAgent`
-        pour compatibilité avec `AgentGroupChat`. L'héritage est REQUIS pour éviter
-        les ValidationError Pydantic dans les agents groups (Mission D3.2).
+    Le contrat impose aux classes dérivées d'implémenter des méthodes
+    clés pour la configuration (`setup_agent_components`) et l'exécution
+    de leur logique métier (`invoke_single`).
 
     Attributes:
         kernel (Kernel): Le kernel Semantic Kernel utilisé par l'agent.
         id (str): L'identifiant unique de l'agent.
         name (str): Le nom de l'agent, alias de `id`.
         instructions (Optional[str]): Le prompt système ou les instructions
-          de haut niveau pour l'agent.
+            de haut niveau pour l'agent.
         description (Optional[str]): Une description textuelle du rôle et
-          des capacités de l'agent.
-        logger (logging.Logger): Une instance de logger pour l'agent.
+            des capacités de l'agent.
+        logger (logging.Logger): Une instance de logger préconfigurée pour
+            cet agent.
         llm_service_id (Optional[str]): L'ID du service LLM configuré
             pour cet agent via `setup_agent_components`.
-
-    Note: Le typage est partiellement appliqué pour éviter les dépendances circulaires.
-    # Les types sont documentés dans les docstrings et les properties.
-    # _tweety_bridge: TweetyBridge
-    # _logic_type_name: str
-    # _syntax_bnf: Optional[str]
-    # _parser: Any
-    # _solver: Any
-    # Ces éléments seront gérés par TweetyBridge
     """
 
-    # Pydantic V2: utiliser PrivateAttr pour les attributs privés
-    _llm_service_id: Optional[str] = PrivateAttr(default=None)
-    _agent_logger: logging.Logger = PrivateAttr(default=None)
+    _agent_logger: logging.Logger = PrivateAttr()
+    _llm_service_id: Optional[str]
 
-    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None, **kwargs):
-        """Initialise une instance de BaseAgent.
+    def __init__(
+        self,
+        kernel: "Kernel",
+        agent_name: str,
+        system_prompt: Optional[str] = None,
+        description: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialise une instance de BaseAgent avec héritage ChatCompletionAgent.
 
         Args:
             kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
             agent_name (str): Le nom unique de l'agent.
-            system_prompt (Optional[str], optional): Le prompt système qui guide
-                le comportement de l'agent. Defaults to None.
-            description (Optional[str], optional): Une description concise du
-                rôle de l'agent. Defaults to None.
+            system_prompt (Optional[str]): Le prompt système qui guide le
+                comportement de l'agent.
+            description (Optional[str]): Une description concise du rôle de l'agent.
+            **kwargs: Arguments optionnels dont llm_service_id.
         """
         # Récupération du service LLM depuis le kernel
         llm_service_id = kwargs.get("llm_service_id", "default")
@@ -166,25 +168,6 @@ class BaseAgent(ChatCompletionAgent, ABC):
         """
         pass
 
-    @abstractmethod
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Configure les composants internes de l'agent.
-
-        Cette méthode abstraite doit être implémentée pour effectuer toute
-        l'initialisation nécessaire après la création de l'agent. Cela inclut
-        typiquement:
-        - L'enregistrement de fonctions sémantiques ou natives dans le kernel.
-        - L'initialisation de clients ou de services externes.
-        - Le stockage de l'ID du service LLM pour les appels futurs.
-
-        Args:
-            llm_service_id (str): L'identifiant du service LLM à utiliser pour
-                les opérations de l'agent.
-        """
-        self._llm_service_id = llm_service_id
-        pass
-
     def get_agent_info(self) -> Dict[str, Any]:
         """
         Retourne un dictionnaire d'informations sur l'agent.
@@ -192,35 +175,55 @@ class BaseAgent(ChatCompletionAgent, ABC):
         Inclut le nom, la classe, le prompt système, l'ID du service LLM
         et les capacités de l'agent.
 
-        Returns:
-            Dict[str, Any]: Un dictionnaire contenant les informations de l'agent.
+        :return: Un dictionnaire contenant les informations de l'agent.
+        :rtype: Dict[str, Any]
         """
         return {
             "name": self.name,
             "class": self.__class__.__name__,
             "system_prompt": self.system_prompt,
             "llm_service_id": self._llm_service_id,
-            "capabilities": self.get_agent_capabilities()
+            "capabilities": self.get_agent_capabilities(),
         }
 
+    # def get_channel_keys(self) -> List[str]:
+    #     """
+    #     Retourne les clés uniques pour identifier le canal de communication de l'agent.
+    #     Cette méthode est requise par AgentGroupChat.
+    #     """
+    #     # Utiliser self.id car il est déjà garanti comme étant unique
+    #     # (initialisé avec agent_name).
+    #     return [self.id]
+
+    # async def create_channel(self) -> ChatHistoryChannel: # ChatHistoryChannel est commenté
+    #     """
+    #     Crée un canal de communication pour l'agent.
+
+    #     Cette méthode est requise par AgentGroupChat pour permettre à l'agent
+    #     de participer à une conversation. Nous utilisons ChatHistoryChannel,
+    #     qui est une implémentation générique basée sur ChatHistory.
+    #     """
+    #     thread = ChatHistoryAgentThread() # ChatHistoryAgentThread est commenté
+    #     return ChatHistoryChannel(thread=thread) # ChatHistoryChannel est commenté
+
     @abstractmethod
-    async def get_response(self, *args, **kwargs) -> Any:
-        """Point d'entrée principal pour l'exécution d'une tâche par l'agent.
+    async def get_response(self, *args, **kwargs):
+        """
+        Point d'entrée principal pour l'exécution d'une tâche par l'agent.
 
         Cette méthode est destinée à être un wrapper de haut niveau autour
         de la logique d'invocation (`invoke` ou `invoke_single`). Les classes filles
         doivent l'implémenter pour définir comment l'agent répond à une sollicitation.
-        Les arguments `*args` et `**kwargs` sont directement transmis à `invoke_single`.
 
         Returns:
-            Any: La réponse de l'agent, au format défini par l'implémentation
-            de `invoke_single`.
+            La réponse de l'agent, dont le format peut varier.
         """
         pass
 
     @abstractmethod
-    async def invoke_single(self, *args, **kwargs) -> Any:
-        """Exécute la logique principale de l'agent et retourne une réponse unique.
+    async def invoke_single(self, *args, **kwargs):
+        """
+        Exécute la logique principale de l'agent et retourne une réponse unique.
 
         C'est ici que le cœur du travail de l'agent doit être implémenté.
         La méthode doit retourner une seule réponse et ne pas utiliser de streaming.
@@ -228,8 +231,7 @@ class BaseAgent(ChatCompletionAgent, ABC):
         nécessaire via la méthode `invoke`.
 
         Returns:
-            Any: La réponse unique résultant de l'invocation. Le type exact
-            dépend de la nature de l'agent.
+            La réponse unique résultant de l'invocation.
         """
         pass
 
@@ -248,6 +250,13 @@ class BaseAgent(ChatCompletionAgent, ABC):
         """
         async for Elt in self.invoke(*args, **kwargs):
             yield Elt
+
+    # Optionnel, à considérer pour une interface d'appel atomique standardisée
+    # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
+    #     if hasattr(self, method_name) and callable(getattr(self, method_name)):
+    #         method_to_call = getattr(self, method_name)
+    #         # Potentiellement vérifier si la méthode est "publique" ou listée dans capabilities
+    #         return method_to_call(**kwargs)
 
 
 class BaseLogicAgent(BaseAgent, ABC):
@@ -269,12 +278,23 @@ class BaseLogicAgent(BaseAgent, ABC):
         syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
     """
 
-    # Pydantic V2: utiliser PrivateAttr pour les attributs privés
-    _tweety_bridge: "TweetyBridge" = PrivateAttr(default=None)
-    _logic_type_name: str = PrivateAttr(default="")
-    _syntax_bnf: Optional[str] = PrivateAttr(default=None)
+    # Annotations de type supprimées au niveau de la classe pour éviter l'évaluation
+    # par Pydantic lors de la construction. Les types sont documentés dans les docstrings
+    # et les properties.
+    # _tweety_bridge: TweetyBridge
+    # _logic_type_name: str
+    # _syntax_bnf: Optional[str]
+    # _parser: Any  # Ces éléments seront gérés par TweetyBridge
+    # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
-    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        kernel: "Kernel",
+        agent_name: str,
+        logic_type_name: str,
+        system_prompt: Optional[str] = None,
+        **kwargs,
+    ):
         """
         Initialise une instance de BaseLogicAgent.
 
@@ -284,20 +304,20 @@ class BaseLogicAgent(BaseAgent, ABC):
             logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL").
             system_prompt (Optional[str]): Le prompt système optionnel.
         """
-        super().__init__(kernel, agent_name, system_prompt, **kwargs)
+        super().__init__(
+            kernel=kernel, agent_name=agent_name, system_prompt=system_prompt, **kwargs
+        )
         self._logic_type_name = logic_type_name
-        # L'instance de TweetyBridge devrait être passée ou créée ici.
-        # Pour l'instant, on suppose qu'elle sera initialisée dans setup_agent_components
-        # ou passée d'une manière ou d'une autre.
-        # self._tweety_bridge = TweetyBridge() # Exemple
-        self._syntax_bnf = None # Pourrait être chargé par le bridge ou la sous-classe
+        self._tweety_bridge = None  # Initialisation explicite à None
+        self._syntax_bnf = None  # Pourrait être chargé par le bridge ou la sous-classe
 
     @property
     def logic_type(self) -> str:
-        """Retourne le nom du type de logique géré par l'agent.
+        """
+        Retourne le nom du type de logique géré par l'agent.
 
-        Returns:
-            str: Le nom du type de logique (ex: "PL", "FOL").
+        :return: Le nom du type de logique (ex: "PL", "FOL").
+        :rtype: str
         """
         return self._logic_type_name
 
@@ -309,20 +329,43 @@ class BaseLogicAgent(BaseAgent, ABC):
         L'instance de `TweetyBridge` est typiquement initialisée lors de l'appel
         à `setup_agent_components` par la classe concrète.
 
-        Raises:
-            RuntimeError: Si `TweetyBridge` n'a pas été initialisé avant son accès.
-        Returns:
-            TweetyBridge: L'instance de `TweetyBridge` configurée pour cet agent.
+        :return: L'instance de `TweetyBridge`.
+        :rtype: TweetyBridge
+        :raises RuntimeError: Si `TweetyBridge` n'a pas été initialisé.
         """
-        if self._tweety_bridge is None:
+        if not hasattr(self, "_tweety_bridge") or self._tweety_bridge is None:
             # Cela suppose que setup_agent_components a été appelé et a initialisé le bridge.
             # Une meilleure approche pourrait être d'injecter TweetyBridge au constructeur
             # ou d'avoir une méthode dédiée pour son initialisation si elle est complexe.
-            raise RuntimeError("TweetyBridge not initialized. Call setup_agent_components or ensure it's injected.")
+            raise RuntimeError(
+                "TweetyBridge not initialized. Call setup_agent_components or ensure it's injected."
+            )
         return self._tweety_bridge
 
+    def setup_agent_components(self, llm_service_id: Optional[str] = None) -> None:
+        """
+        Configure les composants spécifiques de l'agent, comme les fonctions sémantiques.
+
+        Cette méthode peut être surchargée par les classes filles pour des configurations
+        plus complexes. Par défaut, elle s'assure que l'ID du service LLM est défini.
+
+        Args:
+            llm_service_id (Optional[str]): L'ID du service LLM à utiliser.
+        """
+        if llm_service_id:
+            self._llm_service_id = llm_service_id
+            self.logger.info(
+                f"Composants de l'agent configurés pour utiliser le service LLM: {llm_service_id}"
+            )
+        else:
+            self.logger.info(
+                "Aucun service LLM spécifique fourni pour la configuration des composants."
+            )
+
     @abstractmethod
-    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
+    def text_to_belief_set(
+        self, text: str, context: Optional[Dict[str, Any]] = None
+    ) -> Tuple[Optional["BeliefSet"], str]:
         """
         Convertit un texte en langage naturel en un ensemble de croyances formelles.
 
@@ -338,7 +381,12 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
+    def generate_queries(
+        self,
+        text: str,
+        belief_set: "BeliefSet",
+        context: Optional[Dict[str, Any]] = None,
+    ) -> List[str]:
         """
         Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.
 
@@ -354,7 +402,9 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def execute_query(self, belief_set: "BeliefSet", query: str) -> Tuple[Optional[bool], str]:
+    def execute_query(
+        self, belief_set: "BeliefSet", query: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête logique sur un ensemble de croyances.
 
@@ -366,14 +416,20 @@ class BaseLogicAgent(BaseAgent, ABC):
             query (str): La requête logique à exécuter.
 
         Returns:
-            Tuple[Optional[bool], str]: Un tuple contenant le résultat
-            (True, False, ou None si indéterminé) et un message de statut
-            du solveur.
+            Tuple[Optional[bool], str]: Un tuple avec le résultat (True, False,
+            ou None si indéterminé) et un message de statut du solveur.
         """
         pass
 
     @abstractmethod
-    def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
+    def interpret_results(
+        self,
+        text: str,
+        belief_set: "BeliefSet",
+        queries: List[str],
+        results: List[Tuple[Optional[bool], str]],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """
         Interprète les résultats des requêtes logiques en langage naturel.
 
@@ -389,6 +445,10 @@ class BaseLogicAgent(BaseAgent, ABC):
             str: Une synthèse en langage naturel des résultats logiques.
         """
         pass
+
+    # @abstractmethod # Remplacé par l'utilisation directe du bridge
+    # def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> 'BeliefSet':
+    #     pass
 
     @abstractmethod
     def validate_formula(self, formula: str) -> bool:
@@ -421,7 +481,9 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
 
-    def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
+    async def process_task(
+        self, task_id: str, task_description: str, state_manager: Any
+    ) -> Dict[str, Any]:
         """
         Traite une tâche assignée à l'agent logique.
         Migré depuis AbstractLogicAgent pour unifier l'architecture.
@@ -429,16 +491,31 @@ class BaseLogicAgent(BaseAgent, ABC):
         self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")
         state = state_manager.get_current_state_snapshot(summarize=False)
         if "Traduire" in task_description and "Belief Set" in task_description:
-            return self._handle_translation_task(task_id, task_description, state, state_manager)
+            return await self._handle_translation_task(
+                task_id, task_description, state, state_manager
+            )
         elif "Exécuter" in task_description and "Requêtes" in task_description:
-            return self._handle_query_task(task_id, task_description, state, state_manager)
+            return await self._handle_query_task(
+                task_id, task_description, state, state_manager
+            )
         else:
             error_msg = f"Type de tâche non reconnu: {task_description}"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
             return {"status": "error", "message": error_msg}
 
-    def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    async def _handle_translation_task(
+        self,
+        task_id: str,
+        task_description: str,
+        state: Dict[str, Any],
+        state_manager: Any,
+    ) -> Dict[str, Any]:
         """
         Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
         """
@@ -446,22 +523,47 @@ class BaseLogicAgent(BaseAgent, ABC):
         if not raw_text:
             error_msg = "Impossible de trouver le texte source pour la traduction"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
             return {"status": "error", "message": error_msg}
 
-        belief_set, status_msg = self.text_to_belief_set(raw_text)
+        belief_set, status_msg = await self.text_to_belief_set(raw_text)
         if not belief_set:
             error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
             return {"status": "error", "message": error_msg}
 
-        bs_id = state_manager.add_belief_set(logic_type=belief_set.logic_type, content=belief_set.content)
-        answer_text = f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
-        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
+        bs_id = state_manager.add_belief_set(
+            logic_type=belief_set.logic_type, content=belief_set.content
+        )
+        answer_text = (
+            f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
+        )
+        state_manager.add_answer(
+            task_id=task_id,
+            author_agent=self.name,
+            answer_text=answer_text,
+            source_ids=[bs_id],
+        )
         return {"status": "success", "message": answer_text, "belief_set_id": bs_id}
 
-    def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    async def _handle_query_task(
+        self,
+        task_id: str,
+        task_description: str,
+        state: Dict[str, Any],
+        state_manager: Any,
+    ) -> Dict[str, Any]:
         """
         Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
         """
@@ -469,24 +571,39 @@ class BaseLogicAgent(BaseAgent, ABC):
         if not belief_set_id:
             error_msg = "Impossible de trouver l'ID de l'ensemble de croyances dans la description de la tâche"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
             return {"status": "error", "message": error_msg}
 
         belief_sets = state.get("belief_sets", {})
         if belief_set_id not in belief_sets:
             error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
             return {"status": "error", "message": error_msg}
 
         belief_set_data = belief_sets[belief_set_id]
         belief_set = self._create_belief_set_from_data(belief_set_data)
         raw_text = self._extract_source_text(task_description, state)
-        queries = self.generate_queries(raw_text, belief_set)
+        queries = await self.generate_queries(raw_text, belief_set)
         if not queries:
             error_msg = "Aucune requête n'a pu être générée"
             self.logger.error(error_msg)
-            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[belief_set_id])
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[belief_set_id],
+            )
             return {"status": "error", "message": error_msg}
 
         formatted_results = []
@@ -496,12 +613,27 @@ class BaseLogicAgent(BaseAgent, ABC):
             result, result_str = self.execute_query(belief_set, query)
             raw_results.append((result, result_str))
             formatted_results.append(result_str)
-            log_id = state_manager.log_query_result(belief_set_id=belief_set_id, query=query, raw_result=result_str)
+            log_id = state_manager.log_query_result(
+                belief_set_id=belief_set_id, query=query, raw_result=result_str
+            )
             log_ids.append(log_id)
 
-        interpretation = self.interpret_results(raw_text, belief_set, queries, raw_results)
-        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=interpretation, source_ids=[belief_set_id] + log_ids)
-        return {"status": "success", "message": interpretation, "queries": queries, "results": formatted_results, "log_ids": log_ids}
+        interpretation = self.interpret_results(
+            raw_text, belief_set, queries, raw_results
+        )
+        state_manager.add_answer(
+            task_id=task_id,
+            author_agent=self.name,
+            answer_text=interpretation,
+            source_ids=[belief_set_id] + log_ids,
+        )
+        return {
+            "status": "success",
+            "message": interpretation,
+            "queries": queries,
+            "results": formatted_results,
+            "log_ids": log_ids,
+        }
 
     def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:
         """
@@ -527,7 +659,9 @@ class BaseLogicAgent(BaseAgent, ABC):
         return None
 
     @abstractmethod
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
+    def _create_belief_set_from_data(
+        self, belief_set_data: Dict[str, Any]
+    ) -> "BeliefSet":
         """
         Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
         """
