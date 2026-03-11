@@ -1,4 +1,4 @@
-﻿"""
+"""
 Orchestrateur pour workflow Cluedo étendu avec 3 agents : Sherlock → Watson → Moriarty.
 
 Ce module implémente l'orchestration avancée pour le workflow3-agents avec agent Oracle,
@@ -7,6 +7,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+import warnings
 from inspect import isawaitable
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -367,7 +368,6 @@ async def oracle_logging_filter(context: KernelFunctionContext, next):
         and "oracle" in context.function.plugin_name.lower()
     ):
         logger.info(f"🔮 [ORACLE RESULT] {context.result}")
-    )
 
 
 class CluedoExtendedOrchestrator:
@@ -1196,17 +1196,6 @@ async def run_cluedo_oracle_game(
 ) -> Dict[str, Any]:
     """
     Interface simplifiée pour exécuter une partie Cluedo avec Oracle.
-<<<<<<< HEAD
-    """
-    warnings.warn(
-        "`run_cluedo_oracle_game` is deprecated and part of a legacy module. "
-        "It is maintained for backward compatibility only. "
-        "Please use new agent group chat architecture for new implementations.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-
-=======
 
     Args:
         kernel: Kernel Semantic Kernel configuré
@@ -1223,7 +1212,6 @@ async def run_cluedo_oracle_game(
         from argumentation_analysis.config.settings import settings as app_settings
 
         settings = app_settings
->>>>>>> f556fa72260cacb9fbc6db83f10027a3d30811c6
     orchestrator = CluedoExtendedOrchestrator(
         kernel=kernel,
         settings=settings,
