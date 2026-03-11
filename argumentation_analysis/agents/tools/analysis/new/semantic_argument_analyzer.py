@@ -3,6 +3,7 @@ import json
 import semantic_kernel as sk
 from openai import AsyncOpenAI
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult
 from argumentation_analysis.plugins.toulmin_plugin import ToulminPlugin
 
@@ -18,32 +19,26 @@ class SemanticArgumentAnalyzer:
         # Correction: Instancier un client AsyncOpenAI pour configurer l'URL de base
         client = AsyncOpenAI(base_url=api_base_url, api_key="EMPTY")
 
-        # Migration API Semantic Kernel: add_chat_service → add_service
+        # Migration API Semantic Kernel: add_chat_service -> add_service
         service = OpenAIChatCompletion(ai_model_id=model_name, async_client=client)
         self.kernel.add_service(service)
-        self.kernel.import_skill(ToulminPlugin(), skill_name="Toulmin")
+        self.kernel.add_plugin(ToulminPlugin(), plugin_name="Toulmin")
 
-        self.prompt_template = self.kernel.create_semantic_function(
-            "Analyse le texte suivant et utilise l'outil 'Toulmin.analyze_argument' pour extraire les composants.\nTexte : {{$input}}",
+        self.prompt_function = self.kernel.add_function(
             function_name="toulmin_analysis",
-            skill_name="ToulminOrchestrator",
+            plugin_name="ToulminOrchestrator",
+            prompt="Analyse le texte suivant et utilise l'outil 'Toulmin.analyze_argument' pour extraire les composants.\nTexte : {{$input}}",
         )
 
     async def run(self, argument_text: str) -> ToulminAnalysisResult:
-        context = self.kernel.create_new_context()
-        context.variables["input"] = argument_text
-
-        result = await self.kernel.run_async(
-            self.prompt_template,
-            input_context=context,
-            auto_invoke_kernel_functions=True,
+        result = await self.kernel.invoke(
+            self.prompt_function,
+            arguments=KernelArguments(input=argument_text),
         )
 
         # Based on the v3 plan, the native plugin returns a JSON string.
         # The analyzer is responsible for parsing it into the Pydantic model.
-        # Note: The plan is slightly ambiguous. One part says the kernel returns the object,
-        # another part shows the plugin returning a JSON string. We follow the explicit code.
-        result_str = result.result
+        result_str = str(result)
         if isinstance(result_str, str):
             try:
                 analysis_dict = json.loads(result_str)

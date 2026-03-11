@@ -40,9 +40,9 @@ else:
             from .jpype_mock import jpype_mock
 
             sys.modules["jpype"] = jpype_mock
-            sys.modules[
-                "jpype1"
-            ] = jpype_mock  # Assurer la compatibilité pour les deux noms
+            sys.modules["jpype1"] = (
+                jpype_mock  # Assurer la compatibilité pour les deux noms
+            )
             # Enregistrer les sous-modules nécessaires
             if hasattr(jpype_mock, "imports"):
                 sys.modules["jpype.imports"] = jpype_mock.imports

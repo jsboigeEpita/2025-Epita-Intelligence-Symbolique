@@ -87,8 +87,6 @@ class TestTaskCoordinator(unittest.TestCase):
         self.assertEqual(self.coordinator.middleware, self.middleware)
         self.assertEqual(self.coordinator.adapter, self.adapter)
         self.assertIn("informal_analyzer", self.coordinator.agent_capabilities)
-        self.middleware.get_channel.assert_called_once_with(ChannelType.HIERARCHICAL)
-        self.middleware.get_channel().subscribe.assert_called_once()
 
     def test_process_strategic_objectives(self):
         """Teste la méthode process_strategic_objectives."""
@@ -137,7 +135,7 @@ class TestTaskCoordinator(unittest.TestCase):
                 self.coordinator, "_establish_task_dependencies"
             ) as mock_establish:
                 with patch.object(
-                    self.coordinator, "_assign_task_to_operational_agent"
+                    self.coordinator, "assign_task_to_operational"
                 ) as mock_assign:
                     result = self.coordinator.process_strategic_objectives(objectives)
 

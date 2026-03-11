@@ -4,7 +4,7 @@ Test Phase B - Optimisation Naturalité Dialogue
 Script de validation des améliorations conversationnelles après optimisation des prompts.
 
 OBJECTIFS PHASE B :
-- Verbosité : 223 → 80-120 caractères par message  
+- Verbosité : 223 → 80-120 caractères par message
 - Langage : Technique → Conversationnel naturel
 - Répétitions : Éliminer formules mécaniques
 - Score naturalité : 4.0 → 7.0/10

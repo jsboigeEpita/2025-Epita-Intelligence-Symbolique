@@ -17,6 +17,11 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Script execution tests require OPENAI_API_KEY for LLM-based workflows",
+)
+
 # Configuration des chemins
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts" / "sherlock_watson"
@@ -45,6 +50,9 @@ def script_test_environment():
     """Environnement de test pour validation des scripts."""
     env = os.environ.copy()
     env.update(TEST_ENV_BASE)
+    # Remove pytest env vars to prevent subprocess auto-mocking
+    env.pop("PYTEST_CURRENT_TEST", None)
+    env.pop("PYTEST_RUNNING", None)
     return env
 
 
@@ -118,9 +126,11 @@ class ScriptExecutionValidator:
                 "stdout": stdout.decode("utf-8", errors="ignore"),
                 "stderr": stderr.decode("utf-8", errors="ignore"),
                 "execution_time": execution_time,
-                "error": None
-                if process.returncode == 0
-                else stderr.decode("utf-8", errors="ignore"),
+                "error": (
+                    None
+                    if process.returncode == 0
+                    else stderr.decode("utf-8", errors="ignore")
+                ),
             }
 
         except Exception as e:
@@ -144,7 +154,16 @@ class ScriptExecutionValidator:
         }
 
         # Détection d'erreurs et warnings
-        error_indicators = ["error", "exception", "failed", "traceback"]
+        # Use specific Python error patterns to avoid false positives from
+        # LLM output that naturally discusses "errors" in argumentation
+        error_indicators = [
+            "traceback (most recent call last)",
+            "importerror:",
+            "modulenotfounderror:",
+            "syntaxerror:",
+            "runtimeerror:",
+            "fatal error",
+        ]
         warning_indicators = ["warning", "warn", "attention"]
 
         # Exclure les erreurs contrôlées de l'analyse pour éviter les faux positifs
@@ -153,6 +172,12 @@ class ScriptExecutionValidator:
             "",
             output,
             flags=re.DOTALL | re.IGNORECASE,
+        )
+        # Exclure les messages bénins contenant "error" (fallback de services, etc.)
+        clean_output = re.sub(
+            r"(?i)not found, using fallback[^\n]*Error:[^\n]*",
+            "",
+            clean_output,
         )
         output_lower = clean_output.lower()
 
@@ -277,7 +302,7 @@ class TestScriptsExecution:
             script_name="einstein_demo",
             environment=script_test_environment,
             timeout=timeout,
-            additional_args=["--test-mode", "--max-hints", "2"],
+            additional_args=["--integration-test"],
         )
 
         assert result[

@@ -163,9 +163,9 @@ class ExtractRepairPlugin:
                 elif extracts[
                     extract_idx
                 ].template_start:  # Si template_start est None/vide, on efface l'ancien
-                    extracts[
-                        extract_idx
-                    ].template_start = ""  # ou None, selon la définition du modèle
+                    extracts[extract_idx].template_start = (
+                        ""  # ou None, selon la définition du modèle
+                    )
 
                 # Enregistrer les modifications
                 self.repair_results.append(

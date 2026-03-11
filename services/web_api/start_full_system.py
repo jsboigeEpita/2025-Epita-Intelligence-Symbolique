@@ -5,7 +5,7 @@ Script de démarrage complet du système back/front
 ================================================
 
 Utilise l'infrastructure Python existante UnifiedWebOrchestrator
-pour démarrer le backend ServiceManager + frontend React avec 
+pour démarrer le backend ServiceManager + frontend React avec
 gestion du timing et surveillance automatique.
 
 Usage:

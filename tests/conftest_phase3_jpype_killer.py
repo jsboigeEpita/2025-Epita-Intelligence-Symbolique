@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -10,7 +9,6 @@ Mock JPype AVANT tout import pour éviter les problèmes JVM
 """
 import sys
 import os
-
 
 # ============================================================================
 # JPYPE KILLER - Mock au niveau système AVANT tous les imports
@@ -84,9 +82,9 @@ sys.modules["jpype"] = JPYPE_KILLER_MOCK
 sys.modules["jpype1"] = JPYPE_KILLER_MOCK
 sys.modules["jpype._jpype"] = JPYPE_KILLER_MOCK
 sys.modules["jpype.types"] = MagicMock()
-sys.modules[
-    "jpype.imports"
-] = JPYPE_KILLER_MOCK.imports  # CRITIQUE pour conftest.py racine
+sys.modules["jpype.imports"] = (
+    JPYPE_KILLER_MOCK.imports
+)  # CRITIQUE pour conftest.py racine
 
 # Forcer les variables d'environnement
 os.environ.update(

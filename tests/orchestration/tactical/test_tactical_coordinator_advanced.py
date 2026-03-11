@@ -362,8 +362,8 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
         """Teste l'initialisation authentique du coordinateur."""
         # Vérifier que le coordinateur est correctement initialisé
         self.assertIsNotNone(self.coordinator)
-        self.assertIsNotNone(self.coordinator.tactical_state)
-        self.assertIsInstance(self.coordinator.tactical_state, TacticalState)
+        self.assertIsNotNone(self.coordinator.state)
+        self.assertIsInstance(self.coordinator.state, TacticalState)
 
         # Vérifier que l'adaptateur est authentique
         self.assertIsInstance(self.adapter, AuthenticAdapter)
@@ -424,8 +424,8 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
 
         try:
             # Appeler la méthode d'assignation authentique
-            if hasattr(self.coordinator, "_assign_task_to_operational_agent"):
-                self.coordinator._assign_task_to_operational_agent(task)
+            if hasattr(self.coordinator, "assign_task_to_operational"):
+                self.coordinator.assign_task_to_operational(task)
 
                 # Vérifier qu'une tâche a été assignée
                 self.assertGreaterEqual(len(self.adapter.sent_tasks), 0)
@@ -438,9 +438,7 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
 
                 logger.info("Assignation authentique de tâche réussie")
             else:
-                self.skipTest(
-                    "Méthode _assign_task_to_operational_agent non disponible"
-                )
+                self.skipTest("Méthode assign_task_to_operational non disponible")
 
         except Exception as e:
             logger.warning(f"Assignation de tâche échoué: {e}")
@@ -494,7 +492,7 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
                 "id": "authentic-result-1",
                 "task_id": "op-task-1",
                 "tactical_task_id": "authentic-task-result-1",
-                "status": "completed",
+                "completion_status": "completed",
                 "outputs": {
                     "identified_arguments": [
                         {

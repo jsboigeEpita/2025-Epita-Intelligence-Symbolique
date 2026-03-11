@@ -17,6 +17,80 @@ import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
 
+# Apply nest_asyncio early at module level to allow nested event loops
+nest_asyncio.apply()
+
+# Patch backports.asyncio.runner.Runner.run for nest_asyncio compatibility.
+# nest_asyncio patches asyncio.run() and loop.run_until_complete(), but NOT
+# backports.asyncio.runner.Runner.run() which pytest_asyncio uses internally.
+# Without this patch, pytest_asyncio fixtures fail with:
+#   "RuntimeError: Runner.run() cannot be called from a running event loop"
+# when Playwright or other plugins maintain a running event loop.
+try:
+    from backports.asyncio.runner import runner as _br
+    import asyncio.events as _aevt
+
+    _orig_runner_run = _br.Runner.run
+
+    def _patched_runner_run(self, coro, *, context=None):
+        # Only suppress _get_running_loop for the initial guard check inside
+        # Runner.run (which raises "cannot be called from a running event loop").
+        # We must NOT keep _get_running_loop patched during actual coroutine
+        # execution, because asyncio.Event/Lock/Condition rely on it to bind
+        # to the running loop (Python 3.10+ _LoopBoundMixin).
+        _saved = _aevt._get_running_loop
+        _aevt._get_running_loop = lambda: None
+        try:
+            self._lazy_init()
+        finally:
+            _aevt._get_running_loop = _saved
+
+        # Now run the coroutine with the real _get_running_loop restored.
+        # We replicate the core of Runner.run but skip the guard check.
+        import asyncio
+        import contextvars
+        import functools
+        import signal
+        import threading
+        from asyncio import coroutines, exceptions
+
+        if context is None:
+            context = self._context
+
+        task = self._loop.create_task(coro)
+
+        if (
+            threading.current_thread() is threading.main_thread()
+            and signal.getsignal(signal.SIGINT) is signal.default_int_handler
+        ):
+            sigint_handler = functools.partial(self._on_sigint, main_task=task)
+            try:
+                signal.signal(signal.SIGINT, sigint_handler)
+            except ValueError:
+                sigint_handler = None
+        else:
+            sigint_handler = None
+
+        self._interrupt_count = 0
+        try:
+            return self._loop.run_until_complete(task)
+        except exceptions.CancelledError:
+            if self._interrupt_count > 0:
+                uncancel = getattr(task, "uncancel", None)
+                if uncancel is not None and uncancel() == 0:
+                    raise KeyboardInterrupt()
+            raise
+        finally:
+            if (
+                sigint_handler is not None
+                and signal.getsignal(signal.SIGINT) is sigint_handler
+            ):
+                signal.signal(signal.SIGINT, signal.default_int_handler)
+
+    _br.Runner.run = _patched_runner_run
+except (ImportError, AttributeError):
+    pass
+
 # --- Mocking global pour les tests E2E ---
 # Si --disable-jvm-session est présent, on mocke jpype AVANT toute autre importation.
 _disable_jvm_early_check = any(arg == "--disable-jvm-session" for arg in sys.argv)
@@ -210,6 +284,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: marks tests as end-to-end tests")
     config.addinivalue_line("markers", "api: marks tests related to the API")
     config.addinivalue_line(
+        "markers", "timeout: marks tests with a timeout guard (seconds)"
+    )
+    config.addinivalue_line(
         "markers", "real_llm: marks tests that require a real LLM service"
     )
     config.addinivalue_line(
@@ -247,7 +324,9 @@ def pytest_collection_finish(session):
     Hook exécuté après la collecte des tests.
     Détecte si des tests E2E sont présents et stocke le résultat dans le cache.
     """
-    is_e2e_session = any(item.get_closest_marker("e2e") is not None for item in session.items)
+    is_e2e_session = any(
+        item.get_closest_marker("e2e") is not None for item in session.items
+    )
     session.config.cache.set("is_e2e_session", is_e2e_session)
     if is_e2e_session:
         logger.warning(
@@ -258,49 +337,51 @@ def pytest_collection_finish(session):
 @pytest.fixture
 def mock_chat_completion_service():
     """Mock LLM service compatible Pydantic ChatCompletionAgent.
-    
+
     Utilise MagicMock avec spec=ChatCompletionClientBase pour passer
     validation Pydantic lors de l'initialisation de BaseAgent héritant
     ChatCompletionAgent (correction Mission D3.2 Phase B).
-    
+
     Returns:
         MagicMock: Service mock avec spec ChatCompletionClientBase
     """
-    from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+    from semantic_kernel.connectors.ai.chat_completion_client_base import (
+        ChatCompletionClientBase,
+    )
     from semantic_kernel.contents import ChatMessageContent
     from unittest.mock import MagicMock, AsyncMock
-    
+
     # Mock avec spec pour validation Pydantic
     mock_service = MagicMock(spec=ChatCompletionClientBase)
     mock_service.service_id = "test_llm_service"
     mock_service.ai_model_id = "test-model"
-    
+
     # Mock méthode get_chat_message_contents (async)
     async def mock_get_chat_message_contents(*args, **kwargs):
         return [ChatMessageContent(role="assistant", content="Mock response")]
-    
+
     mock_service.get_chat_message_contents = AsyncMock(
         side_effect=mock_get_chat_message_contents
     )
-    
+
     return mock_service
 
 
 @pytest.fixture
 def mock_kernel_with_llm(mock_chat_completion_service):
     """Kernel avec service LLM mock Pydantic-compatible pré-configuré.
-    
+
     Utilise mock_chat_completion_service pour garantir compatibilité
     avec BaseAgent héritant ChatCompletionAgent (Mission D3.2 Phase B).
-    
+
     Args:
         mock_chat_completion_service: Fixture service mock Pydantic-compatible
-        
+
     Returns:
         Kernel: Instance Kernel avec service LLM mock ajouté
     """
     from semantic_kernel import Kernel
-    
+
     kernel = Kernel()
     kernel.add_service(mock_chat_completion_service)
     return kernel
@@ -393,22 +474,11 @@ def setup_test_environment():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées.
-    Cette fixture est maintenant en `autouse=True` pour s'assurer qu'elle s'exécute tôt.
+    Ensures nest_asyncio is applied. The actual apply() call is done at module
+    level (top of this file) for earliest possible initialization. This fixture
+    exists for backward compatibility and logging.
     """
-    try:
-        import nest_asyncio
-
-        nest_asyncio.apply()
-        logger.info("nest_asyncio.apply() has been called.")
-    except ImportError:
-        logger.error(
-            "`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`."
-        )
-        pytest.fail(
-            "Missing dependency: nest_asyncio is required for running async tests with Playwright.",
-            pytrace=False,
-        )
+    logger.info("nest_asyncio.apply() was called at module level (early init).")
     yield
 
 
@@ -442,8 +512,28 @@ def jvm_session(request):
             "Saut du test car l'initialisation de la JVM a échoué dans pytest_sessionstart."
         )
 
-    # La JVM est prête, le test peut s'exécuter.
-    yield
+    # Double-check: verify JVM is actually functional (cache may say True
+    # even when JVM crashed with a Windows access violation during startup)
+    import jpype
+
+    if not jpype.isJVMStarted():
+        pytest.skip(
+            "Saut du test car la JVM n'est pas réellement démarrée (jpype.isJVMStarted() = False)."
+        )
+
+    # Health check: try a simple Java operation to confirm JVM is not corrupted
+    try:
+        _str_class = jpype.JClass("java.lang.String")
+        _test = _str_class("jvm_health_check")
+        assert str(_test) == "jvm_health_check"
+    except Exception:
+        pytest.skip(
+            "Saut du test car la JVM est démarrée mais non fonctionnelle (JClass health check échoué)."
+        )
+
+    # La JVM est prête — yield le module jpype pour que les fixtures
+    # puissent utiliser jvm_session.JClass(), etc.
+    yield jpype
 
 
 # La fixture jvm_fixture est supprimée car elle est la source des conflits.
@@ -528,42 +618,42 @@ def check_mock_llm_is_forced(request, monkeypatch):
         monkeypatch.setattr(settings, "use_mock_llm", True)
         yield
 
+
 def pytest_collection_modifyitems(config, items):
     """
     Auto-marque les tests utilisant semantic_kernel avec marker llm_integration.
-    
+
     Résout régression: Introduction markers llm_* sans migration complète.
     Restaure centaines tests semantic_kernel désactivés depuis juin 2025.
-    
+
     Mission D3.2 - Réincorporation Tests LLM Baseline Niveau 2
     """
     import os
-    
+
     for item in items:
         # Récupérer fichier source du test
         test_file = str(item.fspath)
-        
+
         # Vérifier si test a déjà un marker llm_*
         has_llm_marker = any(
-            marker.name in {'llm_light', 'llm_integration', 'llm_critical'}
+            marker.name in {"llm_light", "llm_integration", "llm_critical"}
             for marker in item.iter_markers()
         )
-        
+
         # Si pas de marker llm_*, vérifier imports semantic_kernel
         if not has_llm_marker and os.path.exists(test_file):
             try:
-                with open(test_file, 'r', encoding='utf-8') as f:
+                with open(test_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                
+
                 # Détection imports semantic_kernel
-                if 'semantic_kernel' in content or 'from semantic_kernel' in content:
+                if "semantic_kernel" in content or "from semantic_kernel" in content:
                     # Auto-marquer avec llm_integration par défaut
                     item.add_marker(pytest.mark.llm_integration)
-                    
+
             except Exception as e:
                 # En cas d'erreur lecture, ignorer silencieusement
                 pass
-
 
 
 @pytest.fixture(scope="session")

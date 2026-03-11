@@ -459,7 +459,7 @@ def generate_markdown_report_for_corpus(
 
 
 def generate_overall_summary_markdown(
-    all_average_scores: Dict[str, Dict[str, float]]
+    all_average_scores: Dict[str, Dict[str, float]],
 ) -> List[str]:
     """
     Crée une section de résumé global au format Markdown.

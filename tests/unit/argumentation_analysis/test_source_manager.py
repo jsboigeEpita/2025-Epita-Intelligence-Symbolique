@@ -5,6 +5,7 @@ Ce module teste toutes les fonctionnalités du gestionnaire de sources,
 y compris le chargement de sources simples et complexes, la gestion
 du chiffrement et les fonctionnalités de nettoyage.
 """
+
 from unittest.mock import patch, mock_open
 import pytest
 import os

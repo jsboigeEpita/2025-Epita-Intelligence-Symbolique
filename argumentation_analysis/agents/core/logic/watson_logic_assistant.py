@@ -369,7 +369,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             instructions=actual_system_prompt,
             service_id=service_id,
         )
-        
+
         # Ensure kernel is accessible as instance attribute (fix for AttributeError: 'WatsonLogicAssistant' object has no attribute 'kernel')
         self.kernel = kernel
 
@@ -492,9 +492,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             prompt_config.add_execution_settings(
                 OpenAIPromptExecutionSettings(
                     service_id=self._llm_service_id,
-                    max_tokens=200,
-                    temperature=0.6,
-                    top_p=0.7,
+                    max_completion_tokens=200,
                 )
             )
 

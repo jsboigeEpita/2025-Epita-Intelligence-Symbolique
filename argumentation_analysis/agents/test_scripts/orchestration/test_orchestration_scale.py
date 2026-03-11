@@ -112,7 +112,9 @@ async def run_orchestration_test():
         end_time = asyncio.get_event_loop().time()
         duration = end_time - start_time
 
-        logger.info(f"🏁 Orchestration terminée avec succès en {duration:.2f} secondes.")
+        logger.info(
+            f"🏁 Orchestration terminée avec succès en {duration:.2f} secondes."
+        )
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'orchestration: {e}", exc_info=True)
 

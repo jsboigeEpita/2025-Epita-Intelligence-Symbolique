@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -12,6 +11,7 @@ Tests avancés pour le module orchestration.hierarchical.tactical.monitor.
 """
 
 import unittest
+from unittest.mock import patch
 
 import sys
 import os

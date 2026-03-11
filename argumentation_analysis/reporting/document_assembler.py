@@ -29,7 +29,9 @@ class ReportMetadata:
     generator: str = (
         "UnifiedReportGeneration"  # Peut être ajusté si ce module devient le générateur
     )
-    format_type: str = "markdown"  # Ce champ est dans ReportMetadata mais semble plus lié à la config du template
+    format_type: str = (
+        "markdown"  # Ce champ est dans ReportMetadata mais semble plus lié à la config du template
+    )
     template_name: str = "default"  # Idem
 
 
@@ -449,7 +451,9 @@ class UnifiedReportTemplate:
                 if "queries" in formal and formal["queries"]:
                     lines.append("\n### Requêtes logiques exécutées")
                     for query in formal["queries"]:
-                        result_icon = "✅" if query.get("result") == "Entailed" else "❌"
+                        result_icon = (
+                            "✅" if query.get("result") == "Entailed" else "❌"
+                        )
                         lines.append(
                             f"- {result_icon} `{query.get('query', 'N/A')}` → {query.get('result', 'N/A')}"
                         )

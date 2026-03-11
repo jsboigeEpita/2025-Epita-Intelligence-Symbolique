@@ -3,6 +3,7 @@ import logging
 from typing import Optional, Tuple
 
 from .tweety_initializer import TweetyInitializer
+from argumentation_analysis.core.config import settings, ModalSolverChoice
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,9 @@ logger = logging.getLogger(__name__)
 class ModalHandler:
     """
     Handles Modal Logic operations using TweetyProject.
-    Relies on TweetyInitializer for JVM and Modal Logic component setup.
+    Supports two reasoners:
+    - SimpleMlReasoner (default, pure Tweety)
+    - SPASSMlReasoner (backed by external SPASS binary, more powerful)
     """
 
     def __init__(self, initializer_instance: TweetyInitializer):
@@ -18,10 +21,9 @@ class ModalHandler:
         Initializes the ModalHandler.
         """
         self._initializer_instance = initializer_instance
-        # Placeholder names for Tweety's modal logic components.
-        # These will need to be confirmed from TweetyProject's source or documentation.
-        self._modal_parser = TweetyInitializer.get_modal_parser()
-        self._modal_reasoner = TweetyInitializer.get_modal_reasoner()
+        self._modal_parser = initializer_instance.get_modal_parser()
+        self._modal_reasoner = initializer_instance.get_modal_reasoner()
+        self._spass_reasoner = None  # Lazy-loaded
 
         if self._modal_parser is None or self._modal_reasoner is None:
             logger.error(
@@ -30,6 +32,28 @@ class ModalHandler:
             raise RuntimeError(
                 "ModalHandler initialized before TweetyInitializer completed Modal Logic setup."
             )
+
+    def _get_spass_reasoner(self):
+        """Lazy-load SPASSMlReasoner if available."""
+        if self._spass_reasoner is None:
+            try:
+                SPASSMlReasoner = jpype.JClass(
+                    "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
+                )
+                self._spass_reasoner = SPASSMlReasoner()
+                logger.info("SPASSMlReasoner loaded successfully.")
+            except Exception as e:
+                logger.warning(f"Failed to load SPASSMlReasoner: {e}")
+                raise RuntimeError(
+                    f"SPASS reasoner not available: {e}"
+                ) from e
+        return self._spass_reasoner
+
+    def _get_active_reasoner(self):
+        """Returns the active reasoner based on configuration."""
+        if settings.modal_solver == ModalSolverChoice.SPASS:
+            return self._get_spass_reasoner()
+        return self._modal_reasoner
 
     def validate_modal_formula(self, formula_str: str) -> Tuple[bool, str]:
         """
@@ -54,8 +78,11 @@ class ModalHandler:
     def execute_modal_query(self, belief_set_content: str, query_string: str) -> str:
         """
         Executes a modal logic query against a given belief set.
+        Uses the configured reasoner (SimpleMlReasoner or SPASSMlReasoner).
         """
-        logger.debug(f"Executing modal query '{query_string}'")
+        reasoner = self._get_active_reasoner()
+        reasoner_name = type(reasoner).__name__ if hasattr(reasoner, '__class__') else settings.modal_solver.value
+        logger.debug(f"Executing modal query '{query_string}' with {reasoner_name}")
         try:
             StringReader = jpype.JClass("java.io.StringReader")
 
@@ -69,16 +96,15 @@ class ModalHandler:
             )
 
             # Execute query
-            result = self._modal_reasoner.query(belief_set, query_formula)
+            result = reasoner.query(belief_set, query_formula)
 
-            # The result is typically a boolean. We format it for consistency.
             if bool(result):
                 return (
-                    f"Tweety Result: Modal Query '{query_string}' is ACCEPTED (True)."
+                    f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is ACCEPTED (True)."
                 )
             else:
                 return (
-                    f"Tweety Result: Modal Query '{query_string}' is REJECTED (False)."
+                    f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is REJECTED (False)."
                 )
 
         except jpype.JException as e:
@@ -95,17 +121,16 @@ class ModalHandler:
     def is_modal_kb_consistent(self, belief_set_content: str) -> Tuple[bool, str]:
         """
         Checks if a modal logic knowledge base is consistent.
+        Uses the configured reasoner (SimpleMlReasoner or SPASSMlReasoner).
         """
-        logger.debug("Checking modal knowledge base consistency.")
+        reasoner = self._get_active_reasoner()
+        logger.debug(f"Checking modal KB consistency with {settings.modal_solver.value}.")
         try:
             StringReader = jpype.JClass("java.io.StringReader")
             belief_set_reader = StringReader(belief_set_content)
             belief_set = self._modal_parser.parseBeliefBase(belief_set_reader)
 
-            # A common way to check consistency is to see if it entails a contradiction.
-            # Tweety's reasoners often have a specific method for this.
-            # Assuming a method 'isConsistent' exists on the reasoner.
-            is_consistent = self._modal_reasoner.isConsistent(belief_set)
+            is_consistent = reasoner.isConsistent(belief_set)
 
             message = (
                 "Knowledge base is consistent."
@@ -115,7 +140,6 @@ class ModalHandler:
             return bool(is_consistent), message
 
         except jpype.JException as e:
-            # If a method is not found, it will raise a JException.
             if "no method found" in str(e).lower():
                 logger.warning(
                     "The 'isConsistent' method might not be available on the ModalReasoner. Returning default."

@@ -1,7 +1,6 @@
 import asyncio
 from unittest.mock import patch
 
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin

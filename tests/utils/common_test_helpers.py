@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -22,7 +21,6 @@ import tempfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
-
 
 # Configurer le logging
 logging.basicConfig(

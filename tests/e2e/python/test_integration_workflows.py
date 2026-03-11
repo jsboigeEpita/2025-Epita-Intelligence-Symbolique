@@ -128,19 +128,31 @@ class IntegrationWorkflowHelpers:
             f'nav a[class*="{tab_name}"]',
             f'nav [role="tab"][class*="{tab_name}"]',
             f'[role="tab"]:has-text("{tab_name}")',
-            "nav button:nth-child(1)"
-            if tab_name == "analyzer"
-            else "nav button:nth-child(2)"
-            if tab_name == "fallacy_detector"
-            else "nav button:nth-child(3)"
-            if tab_name == "reconstructor"
-            else "nav button:nth-child(4)"
-            if tab_name == "logic_graph"
-            else "nav button:nth-child(5)"
-            if tab_name == "validation"
-            else "nav button:nth-child(6)"
-            if tab_name == "framework"
-            else "nav button",
+            (
+                "nav button:nth-child(1)"
+                if tab_name == "analyzer"
+                else (
+                    "nav button:nth-child(2)"
+                    if tab_name == "fallacy_detector"
+                    else (
+                        "nav button:nth-child(3)"
+                        if tab_name == "reconstructor"
+                        else (
+                            "nav button:nth-child(4)"
+                            if tab_name == "logic_graph"
+                            else (
+                                "nav button:nth-child(5)"
+                                if tab_name == "validation"
+                                else (
+                                    "nav button:nth-child(6)"
+                                    if tab_name == "framework"
+                                    else "nav button"
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
         ]
 
         # Essayer de trouver l'onglet avec différents sélecteurs

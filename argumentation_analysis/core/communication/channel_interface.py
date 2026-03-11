@@ -13,7 +13,6 @@ from .message import Message, MessageType, MessagePriority
 
 from argumentation_analysis.paths import DATA_DIR
 
-
 logger_channel = logging.getLogger(__name__)  # Logger pour ce module
 
 
@@ -55,12 +54,12 @@ class Channel(abc.ABC):
         self.id = channel_id
         self.type = channel_type
         self.config = config or {}
-        self.subscribers: Dict[
-            str, Dict[str, Any]
-        ] = {}  # subscriber_id -> {"callback": callback, "filter": filter}
-        self._message_queue: List[
-            Message
-        ] = []  # Simple file d'attente en mémoire pour LocalChannel
+        self.subscribers: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # subscriber_id -> {"callback": callback, "filter": filter}
+        self._message_queue: List[Message] = (
+            []
+        )  # Simple file d'attente en mémoire pour LocalChannel
 
     @abc.abstractmethod
     def send_message(self, message: Message) -> bool:

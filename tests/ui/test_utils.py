@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -16,7 +15,6 @@ import gzip
 import logging  # Ajout de l'import manquant
 from pathlib import Path
 from unittest.mock import patch, MagicMock, ANY
-
 
 # sys.path est géré par la configuration pytest (ex: pytest.ini, conftest.py)
 
@@ -38,7 +36,6 @@ from argumentation_analysis.core.utils.crypto_utils import (
     decrypt_data_with_fernet,
 )
 import base64  # Ajouté pour la fixture test_key
-
 
 # --- Fixtures ---
 
@@ -227,9 +224,9 @@ def test_get_full_text_jina(
     temp_download_dir,
 ):
     mock_fetch_jina.return_value = "Jina content"
-    app_config_override[
-        "TEMP_DOWNLOAD_DIR"
-    ] = temp_download_dir  # S'assurer que tmp_path est utilisé
+    app_config_override["TEMP_DOWNLOAD_DIR"] = (
+        temp_download_dir  # S'assurer que tmp_path est utilisé
+    )
 
     result = aa_utils.get_full_text_for_source(
         sample_source_info_jina, app_config=app_config_override
@@ -342,9 +339,9 @@ def test_get_full_text_unknown_source_type(
 ):
     source_info_unknown = sample_source_info_direct.copy()
     source_info_unknown["source_type"] = "unknown_type"
-    source_info_unknown[
-        "fetch_method"
-    ] = "unknown_type"  # Assumons que fetch_method est aussi mis à jour
+    source_info_unknown["fetch_method"] = (
+        "unknown_type"  # Assumons que fetch_method est aussi mis à jour
+    )
     with patch("argumentation_analysis.ui.utils.load_from_cache", return_value=None):
         result = aa_utils.get_full_text_for_source(source_info_unknown)
     assert result is None

@@ -116,9 +116,9 @@ class OracleEnhancedCompatibilityTester:
 
             if found_terms:
                 result["success"] = True
-                result[
-                    "details"
-                ] = f"Références Oracle trouvées: {', '.join(found_terms[:5])}{'...' if len(found_terms) > 5 else ''}"
+                result["details"] = (
+                    f"Références Oracle trouvées: {', '.join(found_terms[:5])}{'...' if len(found_terms) > 5 else ''}"
+                )
             else:
                 result["details"] = "Aucune référence Oracle/Sherlock trouvée"
 
@@ -162,13 +162,13 @@ class OracleEnhancedCompatibilityTester:
 
             if modern_found > 0 and deprecated_found == 0:
                 result["success"] = True
-                result[
-                    "details"
-                ] = f"Imports modernisés détectés: {modern_found} patterns modernes, {deprecated_found} patterns obsolètes"
+                result["details"] = (
+                    f"Imports modernisés détectés: {modern_found} patterns modernes, {deprecated_found} patterns obsolètes"
+                )
             else:
-                result[
-                    "details"
-                ] = f"Modernisation incomplète: {modern_found} modernes, {deprecated_found} obsolètes"
+                result["details"] = (
+                    f"Modernisation incomplète: {modern_found} modernes, {deprecated_found} obsolètes"
+                )
 
         except Exception as e:
             result["details"] = f"Erreur lors de l'analyse: {e}"

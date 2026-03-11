@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -132,7 +131,7 @@ async def test_run_text_analysis_pipeline_analysis_failure(
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_storage_failure(
     mock_initialize_services,
-    mock_perform_analysis
+    mock_perform_analysis,
     # mock_store_results n'est plus utilisé ici car le stockage n'est plus géré par le pipeline de cette manière
 ):
     """

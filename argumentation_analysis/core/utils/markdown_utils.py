@@ -2,6 +2,7 @@
 """
 Utilitaires pour la manipulation de Markdown et sa conversion en HTML.
 """
+
 from pathlib import Path
 from typing import Optional
 import logging

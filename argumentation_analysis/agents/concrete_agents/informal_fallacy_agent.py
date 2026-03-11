@@ -70,7 +70,9 @@ class InformalFallacyAgent(BaseAgent):
             )
         if config_name in ["workflow_only", "full"]:
             try:
-                module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+                module = importlib.import_module(
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin"
+                )
                 FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
                 self.kernel.add_plugin(
                     FallacyWorkflowPlugin(
@@ -125,7 +127,10 @@ class InformalFallacyAgent(BaseAgent):
             f'{self.system_prompt}\n\nTexte à analyser:\n"""\n{text_to_analyze}\n"""'
         )
 
-        arguments = KernelArguments(history=history)
+        # Convert ChatHistory to string to avoid SK 1.37 encoding error
+        # (ChatHistory objects don't support automatic encoding as template variables)
+        history_str = str(history) if history else ""
+        arguments = KernelArguments(history=history_str)
 
         execution_settings = OpenAIChatPromptExecutionSettings(
             tool_choice="auto" if auto_invoke_kernel_functions else "none"
@@ -134,5 +139,5 @@ class InformalFallacyAgent(BaseAgent):
         return await self.kernel.invoke_prompt(
             prompt=final_prompt,
             arguments=arguments,
-            settings=execution_settings,  # ceci devrait être passé comme settings ou dans les arguments
+            settings=execution_settings,
         )

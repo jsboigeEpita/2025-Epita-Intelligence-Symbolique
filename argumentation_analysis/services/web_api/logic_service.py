@@ -199,11 +199,13 @@ class LogicService:
                     query=request.query,
                     result=result,
                     formatted_result=formatted_result,
-                    explanation=self._generate_explanation(
-                        belief_set, request.query, result, formatted_result
-                    )
-                    if request.options and request.options.include_explanation
-                    else None,
+                    explanation=(
+                        self._generate_explanation(
+                            belief_set, request.query, result, formatted_result
+                        )
+                        if request.options and request.options.include_explanation
+                        else None
+                    ),
                 ),
                 processing_time=time.time() - start_time,
                 query_options=request.options.dict() if request.options else {},

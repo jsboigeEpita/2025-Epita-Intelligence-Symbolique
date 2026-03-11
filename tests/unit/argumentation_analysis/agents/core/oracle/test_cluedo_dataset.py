@@ -94,12 +94,16 @@ class TestCluedoDataset:
         # Utiliser une carte que Moriarty possède
         moriarty_card = cluedo_dataset.get_moriarty_cards()[0]
         suggestion = CluedoSuggestion(
-            suspect=moriarty_card
-            if moriarty_card in ["Colonel Moutarde", "Professeur Violet"]
-            else "Professeur Violet",
-            arme=moriarty_card
-            if moriarty_card in ["Poignard", "Chandelier"]
-            else "Chandelier",
+            suspect=(
+                moriarty_card
+                if moriarty_card in ["Colonel Moutarde", "Professeur Violet"]
+                else "Professeur Violet"
+            ),
+            arme=(
+                moriarty_card
+                if moriarty_card in ["Poignard", "Chandelier"]
+                else "Chandelier"
+            ),
             lieu=moriarty_card if moriarty_card in ["Salon", "Cuisine"] else "Cuisine",
             suggested_by="TestAgent",
         )
@@ -131,15 +135,19 @@ class TestCluedoDataset:
 
         refutable_cards = cluedo_dataset.can_refute_suggestion(
             CluedoSuggestion(
-                suspect=moriarty_card
-                if moriarty_card in ["Colonel Moutarde", "Professeur Violet"]
-                else "Colonel Moutarde",
-                arme=moriarty_card
-                if moriarty_card in ["Poignard", "Chandelier"]
-                else "Poignard",
-                lieu=moriarty_card
-                if moriarty_card in ["Salon", "Cuisine"]
-                else "Salon",
+                suspect=(
+                    moriarty_card
+                    if moriarty_card in ["Colonel Moutarde", "Professeur Violet"]
+                    else "Colonel Moutarde"
+                ),
+                arme=(
+                    moriarty_card
+                    if moriarty_card in ["Poignard", "Chandelier"]
+                    else "Poignard"
+                ),
+                lieu=(
+                    moriarty_card if moriarty_card in ["Salon", "Cuisine"] else "Salon"
+                ),
                 suggested_by="TestAgent",
             )
         )

@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -77,8 +76,10 @@ class TestNewOrchestrator:
     ):
         """Vérifie que le nouvel orchestrateur s'exécute sans erreur."""
         kernel_instance = await mock_kernel
+        mock_settings = Mock()
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel_instance,
+            settings=mock_settings,
             max_turns=3,
             max_cycles=1,
             oracle_strategy="cooperative",

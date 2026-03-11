@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -23,6 +22,7 @@ import os
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+from unittest.mock import Mock
 from concurrent.futures import ThreadPoolExecutor
 
 # Imports Semantic Kernel pour tests réels
@@ -38,7 +38,6 @@ from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
     MoriartyInterrogatorAgent,
 )
-
 
 # Configuration pour tests de performance
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -149,7 +148,7 @@ def performance_profiler():
 def real_gpt_kernel_performance():
     """
     Kernel optimisé pour tests de performance.
-    
+
     Note: Les tests utilisant cette fixture DOIVENT être marqués avec
     @pytest.mark.requires_openai pour un skip cohérent en l'absence de clé API.
     """
@@ -213,9 +212,7 @@ class TestOracleResponseTimePerformance:
         try:
             from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-            settings = OpenAIChatPromptExecutionSettings(
-                max_tokens=100, temperature=0.1
-            )
+            settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=100)
 
             messages = [
                 ChatMessageContent(
@@ -264,7 +261,7 @@ class TestOracleResponseTimePerformance:
         try:
             from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-            settings = OpenAIChatPromptExecutionSettings(max_tokens=50, temperature=0.1)
+            settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=50)
 
             for i in range(num_calls):
                 start_time = time.time()
@@ -328,6 +325,7 @@ class TestOracleResponseTimePerformance:
         try:
             orchestrator = CluedoExtendedOrchestrator(
                 kernel=real_gpt_kernel_performance,
+                settings=Mock(),
                 max_turns=4,
                 max_cycles=2,
                 oracle_strategy="enhanced_auto_reveal",

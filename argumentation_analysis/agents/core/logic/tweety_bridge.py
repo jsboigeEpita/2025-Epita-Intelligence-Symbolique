@@ -30,8 +30,15 @@ from .pl_handler import PLHandler as PropositionalLogicHandler
 from .fol_handler import FOLHandler as FirstOrderLogicHandler
 from .modal_handler import ModalHandler
 from .af_handler import AFHandler as ArgumentationFrameworkHandler
+from .ranking_handler import RankingHandler
+from .bipolar_handler import BipolarHandler
+from .aba_handler import ABAHandler
+from .adf_handler import ADFHandler
+from .aspic_handler import ASPICHandler
+from .belief_revision_handler import BeliefRevisionHandler
+from .probabilistic_handler import ProbabilisticHandler
+from .dialogue_handler import DialogueHandler
 from .tweety_initializer import TweetyInitializer
-
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +59,15 @@ class TweetyBridge:
     _af_handler: Optional[ArgumentationFrameworkHandler] = None
     _fol_handler: Optional[FirstOrderLogicHandler] = None
     _modal_handler: Optional[ModalHandler] = None
+    # Track A handlers (lazy-loaded)
+    _ranking_handler: Optional[RankingHandler] = None
+    _bipolar_handler: Optional[BipolarHandler] = None
+    _aba_handler: Optional[ABAHandler] = None
+    _adf_handler: Optional[ADFHandler] = None
+    _aspic_handler: Optional[ASPICHandler] = None
+    _belief_revision_handler: Optional[BeliefRevisionHandler] = None
+    _probabilistic_handler: Optional[ProbabilisticHandler] = None
+    _dialogue_handler: Optional[DialogueHandler] = None
 
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
@@ -136,6 +152,7 @@ class TweetyBridge:
     def initializer(self) -> TweetyInitializer:
         """Retourne l'initialiseur Tweety, qui gère le chargement des classes Java."""
         return self._initializer
+
     @property
     def fol_handler(self) -> FirstOrderLogicHandler:
         """Retourne le handler pour la logique du premier ordre, en l'initialisant si nécessaire."""
@@ -147,6 +164,74 @@ class TweetyBridge:
             logger.debug("Chargement paresseux (lazy-loading) du FOLHandler.")
             self._fol_handler = FirstOrderLogicHandler(self._initializer)
         return self._fol_handler
+
+    # ============================================================================
+    # Track A handlers — lazy-loaded properties
+    # ============================================================================
+
+    @property
+    def ranking_handler(self) -> RankingHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._ranking_handler is None:
+            self._ranking_handler = RankingHandler(self._initializer)
+        return self._ranking_handler
+
+    @property
+    def bipolar_handler(self) -> BipolarHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._bipolar_handler is None:
+            self._bipolar_handler = BipolarHandler(self._initializer)
+        return self._bipolar_handler
+
+    @property
+    def aba_handler(self) -> ABAHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._aba_handler is None:
+            self._aba_handler = ABAHandler(self._initializer)
+        return self._aba_handler
+
+    @property
+    def adf_handler(self) -> ADFHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._adf_handler is None:
+            self._adf_handler = ADFHandler(self._initializer)
+        return self._adf_handler
+
+    @property
+    def aspic_handler(self) -> ASPICHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._aspic_handler is None:
+            self._aspic_handler = ASPICHandler(self._initializer)
+        return self._aspic_handler
+
+    @property
+    def belief_revision_handler(self) -> BeliefRevisionHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._belief_revision_handler is None:
+            self._belief_revision_handler = BeliefRevisionHandler(self._initializer)
+        return self._belief_revision_handler
+
+    @property
+    def probabilistic_handler(self) -> ProbabilisticHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._probabilistic_handler is None:
+            self._probabilistic_handler = ProbabilisticHandler(self._initializer)
+        return self._probabilistic_handler
+
+    @property
+    def dialogue_handler(self) -> DialogueHandler:
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._dialogue_handler is None:
+            self._dialogue_handler = DialogueHandler(self._initializer)
+        return self._dialogue_handler
 
     # ============================================================================
     # Compatibility wrappers for backward compatibility with agents
@@ -163,11 +248,15 @@ class TweetyBridge:
         """Backward compatibility wrapper for execute_fol_query."""
         return self.fol_handler.execute_fol_query(belief_set, query)
 
-    def execute_modal_query(self, belief_set: str, query: str, logic_type: str = "K") -> Tuple[bool, str]:
+    def execute_modal_query(
+        self, belief_set: str, query: str, logic_type: str = "K"
+    ) -> Tuple[bool, str]:
         """Backward compatibility wrapper for execute_modal_query."""
         return self.modal_handler.execute_modal_query(belief_set, query, logic_type)
 
-    def check_consistency(self, belief_set: str, logic_type: str = "propositional") -> Tuple[bool, str]:
+    def check_consistency(
+        self, belief_set: str, logic_type: str = "propositional"
+    ) -> Tuple[bool, str]:
         """Backward compatibility wrapper for check_consistency."""
         if logic_type == "propositional":
             return self.pl_handler.check_consistency(belief_set)
@@ -177,7 +266,6 @@ class TweetyBridge:
             return self.modal_handler.check_consistency(belief_set, logic_type)
         else:
             return False, f"Unknown logic type: {logic_type}"
-
 
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""

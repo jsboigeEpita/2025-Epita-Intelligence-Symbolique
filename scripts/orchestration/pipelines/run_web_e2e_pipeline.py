@@ -30,7 +30,6 @@ from argumentation_analysis.webapp.orchestrator import (
     UnifiedWebOrchestrator,
 )  # Utiliser l'orchestrateur centralisé
 
-
 # Configuration du logging
 log_dir = project_root / "logs"
 log_dir.mkdir(exist_ok=True)

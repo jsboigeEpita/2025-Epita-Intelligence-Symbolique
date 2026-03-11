@@ -221,7 +221,9 @@ if __name__ == "__main__":
                 self.validation_log.append("✅ Test fonctionnel Oracle réussi")
                 print("🎯 Test fonctionnel: OK")
             else:
-                self.validation_log.append(f"❌ Échec test fonctionnel: {result.stderr}")
+                self.validation_log.append(
+                    f"❌ Échec test fonctionnel: {result.stderr}"
+                )
 
         except Exception as e:
             self.validation_log.append(f"❌ Exception test fonctionnel: {e}")

@@ -4,6 +4,7 @@
 """
 Service d'analyse complète utilisant le moteur d'analyse argumentative.
 """
+
 import time
 import logging
 import asyncio

@@ -5,7 +5,7 @@
 Module de gestion unifiée des sources - Composant Core Réutilisable.
 
 Ce module centralise et unifie l'accès à toutes les sources de données du système :
-- Sources simples (démo/test) 
+- Sources simples (démo/test)
 - Corpus complexe chiffré (recherche)
 - Fichiers .enc personnalisés
 - Fichiers texte locaux

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -253,7 +252,7 @@ class TestConfigurationCLI:
     def test_cli_arguments_parsing(self):
         """Test de parsing des nouveaux arguments CLI."""
         try:
-            from argumentation_analysis.utils.core_utils.cli_utils import (
+            from argumentation_analysis.core.utils.cli_utils import (
                 parse_extended_args,
             )
 
@@ -279,7 +278,7 @@ class TestConfigurationCLI:
     def test_cli_validation_invalid_combinations(self):
         """Test de validation CLI avec combinaisons invalides."""
         try:
-            from argumentation_analysis.utils.core_utils.cli_utils import (
+            from argumentation_analysis.core.utils.cli_utils import (
                 validate_cli_args,
             )
             import argparse
@@ -301,7 +300,7 @@ class TestConfigurationCLI:
     def test_cli_default_values(self):
         """Test des valeurs par défaut CLI."""
         try:
-            from argumentation_analysis.utils.core_utils.cli_utils import (
+            from argumentation_analysis.core.utils.cli_utils import (
                 get_default_cli_config,
             )
 

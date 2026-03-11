@@ -166,9 +166,9 @@ def generate_rhetorical_analysis_for_extract(
     results["analyses"]["fallacy_count"] = total_fallacies
     results["analyses"]["coherence_evaluation"] = generate_coherence_evaluation()
     results["analyses"]["metrics"] = {
-        "fallacy_density": round(total_fallacies / len(arguments), 2)
-        if arguments
-        else 0,
+        "fallacy_density": (
+            round(total_fallacies / len(arguments), 2) if arguments else 0
+        ),
         "persuasiveness_score": round(random.uniform(0.3, 0.9), 2),
         "clarity_score": round(random.uniform(0.4, 0.9), 2),
         "overall_quality": round(random.uniform(0.4, 0.9), 2),
@@ -260,18 +260,20 @@ def generate_markdown_summary_for_analysis(
     content += "## Métriques d'analyse\n\n"
     content += "| Métrique | Valeur | Interprétation |\n|----------|--------|----------------|\n"
     metric_interpretations = {
-        "fallacy_density": lambda v: "Faible"
-        if v < 0.2
-        else ("Modérée" if v < 0.5 else "Forte") + " présence de sophismes",
-        "persuasiveness_score": lambda v: "Peu"
-        if v < 0.4
-        else ("Modérément" if v < 0.7 else "Très") + " persuasif",
-        "clarity_score": lambda v: "Peu"
-        if v < 0.4
-        else ("Modérément" if v < 0.7 else "Très") + " clair",
-        "overall_quality": lambda v: "Faible"
-        if v < 0.4
-        else ("Moyenne" if v < 0.7 else "Élevée") + " qualité",
+        "fallacy_density": lambda v: (
+            "Faible"
+            if v < 0.2
+            else ("Modérée" if v < 0.5 else "Forte") + " présence de sophismes"
+        ),
+        "persuasiveness_score": lambda v: (
+            "Peu" if v < 0.4 else ("Modérément" if v < 0.7 else "Très") + " persuasif"
+        ),
+        "clarity_score": lambda v: (
+            "Peu" if v < 0.4 else ("Modérément" if v < 0.7 else "Très") + " clair"
+        ),
+        "overall_quality": lambda v: (
+            "Faible" if v < 0.4 else ("Moyenne" if v < 0.7 else "Élevée") + " qualité"
+        ),
     }
     for name, value in metrics.items():
         interp_func = metric_interpretations.get(name, lambda v: "Non spécifiée")

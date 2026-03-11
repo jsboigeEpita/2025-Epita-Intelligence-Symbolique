@@ -17,6 +17,9 @@ import ast
 from pathlib import Path
 from typing import List, Dict, Any
 
+# Anchor all paths to the project root (CWD-independent)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 # Configuration des chemins récupérés
 RECOVERED_PATHS = {
     "scripts/maintenance": ["update_test_coverage.py", "validate_oracle_coverage.py"],
@@ -40,12 +43,14 @@ class TestRecoveredCodeValidation:
 
         for base_path, files in RECOVERED_PATHS.items():
             for file_name in files:
-                file_path = Path(base_path) / file_name
+                file_path = PROJECT_ROOT / base_path / file_name
                 if file_path.exists():
                     with open(file_path, "r", encoding="utf-8") as f:
                         content = f.read()
 
-                    files_info[str(file_path)] = {
+                    # Store with relative key for backward-compatible assertions
+                    relative_key = str(Path(base_path) / file_name)
+                    files_info[relative_key] = {
                         "path": file_path,
                         "content": content,
                         "lines": len(content.splitlines()),

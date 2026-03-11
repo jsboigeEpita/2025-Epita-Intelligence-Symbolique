@@ -220,10 +220,13 @@ class OrchestrationServiceManager:
 
         # Kernel Semantic Kernel et service LLM principal
         self.kernel: Optional[sk.Kernel] = None
-        self.llm_service_id: Optional[
-            str
-        ] = "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
+        self.llm_service_id: Optional[str] = (
+            "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
+        )
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
+
+        # Unified analysis state (Lego architecture — issue #64)
+        self._unified_state = None
 
         # État d'initialisation
         self._initialized = False
@@ -234,6 +237,41 @@ class OrchestrationServiceManager:
         )
 
     # La méthode _get_default_config est supprimée car la configuration est gérée par `settings`.
+
+    @property
+    def unified_state(self):
+        """Get the current unified analysis state, if one exists."""
+        return self._unified_state
+
+    def create_unified_state(self, text: str):
+        """Create a new UnifiedAnalysisState for an analysis session.
+
+        Args:
+            text: The input text being analyzed.
+
+        Returns:
+            UnifiedAnalysisState instance.
+        """
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        self._unified_state = UnifiedAnalysisState(text)
+        self.logger.info(
+            f"Created UnifiedAnalysisState for session {self.state.session_id}"
+        )
+        return self._unified_state
+
+    def get_unified_state_snapshot(self, summarize: bool = True):
+        """Get a JSON-serializable snapshot of the unified state.
+
+        Args:
+            summarize: If True, return counts instead of full data.
+
+        Returns:
+            Dict snapshot, or None if no state exists.
+        """
+        if self._unified_state is None:
+            return None
+        return self._unified_state.get_state_snapshot(summarize=summarize)
 
     def _setup_logging(self, log_level: int):
         """Configure le système de logging."""
@@ -415,9 +453,9 @@ class OrchestrationServiceManager:
                 exc_info=True,
             )
             # Optionnellement, remettre les managers à None pour indiquer un état d'échec partiel
-            self.strategic_manager = (
-                self.tactical_manager
-            ) = self.operational_manager = None
+            self.strategic_manager = self.tactical_manager = (
+                self.operational_manager
+            ) = None
 
     async def _initialize_specialized_orchestrators(self):
         """Initialise les orchestrateurs spécialisés."""
@@ -429,9 +467,9 @@ class OrchestrationServiceManager:
                 self.logger.info("CluedoOrchestrator initialisé")
 
             if ConversationOrchestrator:
-                # Supposons qu'il puisse aussi bénéficier du kernel ou d'un llm_service
-                # Pour l'instant, on garde son initialisation simple.
-                self.conversation_orchestrator = ConversationOrchestrator()
+                self.conversation_orchestrator = ConversationOrchestrator(
+                    mode="demo", kernel=self.kernel
+                )
                 self.logger.info("ConversationOrchestrator initialisé")
 
             if RealLLMOrchestrator:
@@ -588,9 +626,9 @@ class OrchestrationServiceManager:
                 request = FactCheckingRequest(
                     text=text,
                     analysis_depth=AnalysisDepth.STANDARD,
-                    enable_fact_checking=options.get("enable_fact_checking", True)
-                    if options
-                    else True,
+                    enable_fact_checking=(
+                        options.get("enable_fact_checking", True) if options else True
+                    ),
                     api_config=options.get("api_config") if options else None,
                     context=options.get("context") if options else None,
                 )
@@ -961,7 +999,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 "fact_checking_orchestrator": self.fact_checking_orchestrator
                 is not None,
                 "middleware": self.middleware is not None,
-            }
+            },
             # 'config' est obsolète, les paramètres sont dans `settings`
         }
 
@@ -1196,7 +1234,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
 
 
 async def create_service_manager(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> OrchestrationServiceManager:
     """
     Crée et initialise un OrchestrationServiceManager.

@@ -398,9 +398,11 @@ class RhetoricalSystemValidator:
                     test_result = {
                         "test_name": f"fetch_url_{i}",
                         "url": url,
-                        "status": "expected_network_error"
-                        if is_network_error
-                        else "unexpected_error",
+                        "status": (
+                            "expected_network_error"
+                            if is_network_error
+                            else "unexpected_error"
+                        ),
                         "error_type": type(e).__name__,
                         "is_network_error": is_network_error,
                         "error_message": str(e)[:100],  # Tronquer le message d'erreur
@@ -504,12 +506,16 @@ class RhetoricalSystemValidator:
             "total_operations": total_operations,
             "mock_operations": total_mock_usages,
             "real_operations": total_real_processing,
-            "mock_percentage": (total_mock_usages / total_operations * 100)
-            if total_operations > 0
-            else 0,
-            "real_percentage": (total_real_processing / total_operations * 100)
-            if total_operations > 0
-            else 0,
+            "mock_percentage": (
+                (total_mock_usages / total_operations * 100)
+                if total_operations > 0
+                else 0
+            ),
+            "real_percentage": (
+                (total_real_processing / total_operations * 100)
+                if total_operations > 0
+                else 0
+            ),
         }
 
         # Évaluer la robustesse du système

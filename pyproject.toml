@@ -2,6 +2,24 @@
 requires = ["setuptools>=61.0", "PyYAML", "psutil", "requests", "pydantic-settings"]
 build-backend = "setuptools.build_meta"
 
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310']
+extend-exclude = '''
+# Exclude student project directories and files with syntax errors
+/(
+    1\.4\.1-JTMS
+    | 1_2_7_argumentation_dialogique
+    | 2\.1\.6_multiagent_governance_prototype
+    | 2\.3\.2-detection-sophismes
+    | 2\.3\.3-generation-contre-argument
+    | 2\.3\.5_argument_quality
+    | 2\.3\.6_local_llm
+    | 3\.1\.5_Interface_Mobile
+    | documentation_system
+)/
+'''
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q -p no:faulthandler"
@@ -106,6 +124,25 @@ dependencies = [
     "python-dotenv",
     "pytest-playwright"
 ]
+
+[tool.coverage.run]
+source = ["argumentation_analysis"]
+omit = [
+    "argumentation_analysis/**/tests/*",
+    "argumentation_analysis/agents/runners/*",
+    "argumentation_analysis/agents/test_scripts/*",
+    "argumentation_analysis/scripts/*",
+    "argumentation_analysis/ui/*",
+    "argumentation_analysis/examples/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
 
 [tool.setuptools.packages.find]
 where = ["."]

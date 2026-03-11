@@ -62,10 +62,12 @@ def run_test():
         logger.info("✅ Kernel créé avec succès.")
 
         # 3. Instancier l'orchestrateur
+        from unittest.mock import Mock
+
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel,
+            settings=Mock(),
             max_turns=10,  # Limiter le nombre de tours pour le test
-            service_id="gpt-5-mini-authentic",  # Utiliser le service ID correct
         )
         logger.info("✅ Orchestrateur instancié.")
 

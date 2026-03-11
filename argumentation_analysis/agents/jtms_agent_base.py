@@ -361,6 +361,21 @@ class JTMSAgentBase(ABC):
     def agent_name(self) -> str:
         return self._agent_name
 
+    @property
+    def name(self) -> str:
+        """Alias pour agent_name pour compatibilité avec BaseAgent."""
+        return self._agent_name
+
+    @property
+    def logger(self):
+        """Expose le logger pour compatibilité avec BaseAgent."""
+        return self._logger
+
+    @property
+    def kernel(self) -> Kernel:
+        """Retourne le kernel Semantic Kernel associé à l'agent."""
+        return self._kernel
+
     # === MÉTHODES PRINCIPALES JTMS ===
 
     def add_belief(

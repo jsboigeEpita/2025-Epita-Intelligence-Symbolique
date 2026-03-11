@@ -257,9 +257,7 @@ async def comprehensive_health_check(detailed=False):
     analyzers_symbol = (
         "[OK]"
         if available_analyzers == total_analyzers
-        else "⚠️"
-        if available_analyzers > 0
-        else "[FAIL]"
+        else "⚠️" if available_analyzers > 0 else "[FAIL]"
     )
     print(
         f"{analyzers_symbol} Analyseurs de sophismes: {available_analyzers}/{total_analyzers} disponibles"
@@ -282,11 +280,11 @@ async def comprehensive_health_check(detailed=False):
         "healthy_endpoints": total_endpoints_healthy,
         "service_manager_available": sm_health["available"],
         "fallacy_analyzers_available": available_analyzers,
-        "overall_status": "healthy"
-        if total_services > 0 and sm_health["available"]
-        else "degraded"
-        if total_services > 0
-        else "critical",
+        "overall_status": (
+            "healthy"
+            if total_services > 0 and sm_health["available"]
+            else "degraded" if total_services > 0 else "critical"
+        ),
     }
 
     print("\n" + "=" * 50)

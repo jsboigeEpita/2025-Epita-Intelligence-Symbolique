@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -17,7 +16,6 @@ et leurs adaptateurs.
 import pytest
 import os
 import sys
-
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 # sys.path.append(os.path.abspath('../..'))

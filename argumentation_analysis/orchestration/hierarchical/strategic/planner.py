@@ -292,17 +292,17 @@ class StrategicPlanner:
             else:
                 # Critères par défaut basés sur le nom de la phase
                 if "préliminaire" in phase["name"].lower():
-                    success_criteria[
-                        phase_id
-                    ] = "Identification d'au moins 80% des éléments clés"
+                    success_criteria[phase_id] = (
+                        "Identification d'au moins 80% des éléments clés"
+                    )
                 elif "approfondie" in phase["name"].lower():
-                    success_criteria[
-                        phase_id
-                    ] = "Analyse détaillée d'au moins 70% des arguments"
+                    success_criteria[phase_id] = (
+                        "Analyse détaillée d'au moins 70% des arguments"
+                    )
                 elif "synthèse" in phase["name"].lower():
-                    success_criteria[
-                        phase_id
-                    ] = "Évaluation cohérente de l'argumentation globale"
+                    success_criteria[phase_id] = (
+                        "Évaluation cohérente de l'argumentation globale"
+                    )
                 else:
                     success_criteria[phase_id] = "Complétion satisfaisante de la phase"
 

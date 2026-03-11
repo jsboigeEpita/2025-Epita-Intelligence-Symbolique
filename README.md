@@ -101,8 +101,8 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 | :------------------------- | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
 | **2. Démos de Raisonnement Logique** | Passionnés d'IA, logique, multi-agents    | Lancez des scénarios d'investigation complexes (Cluedo, Einstein) avec le système d'agents logiques unifié. | [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md) |
-| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
-| **4. Application Web**      | Développeurs Web, testeurs UI               | **Guide de Démarrage :** Lancer et interagir avec l'écosystème complet des applications et services web.     | [`docs/entry_points/ep2_web_applications.md`](docs/entry_points/ep2_web_applications.md) |
+| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/integration/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
+| **4. Application Web**      | Développeurs Web, testeurs UI               | **Guide de Démarrage :** Lancer et interagir avec l'écosystème complet des applications et services web.     | [`docs/technical/ep2_web_applications.md`](docs/technical/ep2_web_applications.md) |
 | **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
 
 ### **Accès et Commandes Principales par Point d'Entrée :**
@@ -133,7 +133,7 @@ Accédez directement aux capacités d'analyse d'arguments du projet.
     ```bash
     python argumentation_analysis/demos/rhetorical_analysis/run_demo.py
     ```
-*   Pour comprendre l'architecture : **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)**.
+*   Pour comprendre l'architecture : **[Cartographie du Système](docs/integration/rhetorical_analysis_map.md)**.
 
 #### **4. 🌐 Application et Services Web**
 Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS).
@@ -142,10 +142,10 @@ Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS
     # Depuis la racine du projet (PowerShell)
     ./start_webapp.ps1
     ```
-*   Pour les détails : **[Consultez le Guide de Démarrage des Applications Web](docs/entry_points/ep2_web_applications.md)**
+*   Pour les détails : **[Consultez le Guide de Démarrage des Applications Web](docs/technical/ep2_web_applications.md)**
 
 #### **5. 🧪 Suite de Tests Complète**
-Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.
+Validez l'intégrité et le bon fonctionnement du projet avec plus de 2200 tests.
 *   **Lancer tous les tests Python (Pytest) :**
     ```powershell
     # Depuis la racine du projet (PowerShell)
@@ -249,7 +249,7 @@ Cette **séparation en couches** assure :
 - **[Architecture Hiérarchique Complète](docs/architecture/architecture_hierarchique.md)** - Conception détaillée des 3 niveaux avec diagrammes
 - **[Guide Technique d'Implémentation](docs/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md)** - API, patterns de communication, exemples de code  
 - **[Communication Inter-Agents](docs/architecture/communication_agents.md)** - Mécanismes de communication, protocoles, formats de messages
-- **[Agents Spécialisés](docs/composants/agents_specialistes.md)** - Documentation détaillée de chaque agent opérationnel
+- **[Agents Spécialisés](docs/technical/agents_specialistes.md)** - Documentation détaillée de chaque agent opérationnel
 ---
 
 ## 🛠️ Environnement de Développement : Prérequis et Configuration
@@ -276,7 +276,7 @@ Le bon fonctionnement des tests d'intégration dépend de la capacité du projet
 ### **📖 Guides et Tutoriels**
 - **[Guide d'Installation Étudiants](docs/guides/GUIDE_INSTALLATION_ETUDIANTS.md)** - Configuration environnement détaillée (Windows/Linux/macOS)
 - **[Guides d'Utilisation](docs/guides/)** - Conventions de code, bonnes pratiques, workflows recommandés
-- **[Série de Tutoriels Progressifs](tutorials/)** - Apprentissage pas-à-pas des concepts clés du système
+- **[Série de Tutoriels Progressifs](docs/guides/tutorials/)** - Apprentissage pas-à-pas des concepts clés du système
 - **[Guide JTMS pour EPITA](docs/guides/GUIDE_UTILISATION_JTMS_EPITA.md)** - Introduction au système de maintenance de vérité
 
 ### **💾 Exemples et Données de Test**
@@ -287,13 +287,13 @@ Le bon fonctionnement des tests d'intégration dépend de la capacité du projet
 
 ### **🏗️ Documentation Technique Détaillée**
 - **[Architecture du Système](docs/architecture/)** - Conception complète multi-niveaux, diagrammes, flux de données
-- **[Composants et Agents](docs/composants/)** - Documentation détaillée de chaque agent spécialisé, API interne  
+- **[Composants et Agents](docs/technical/)** - Documentation détaillée de chaque agent spécialisé, API interne
 - **[Référence API Complète](docs/reference/)** - API orchestration, agents, services partagés
 - **[Rapports Techniques](docs/reports/)** - Analyses de performance, validations, groundings SDDD
 - **[Standards de Documentation](docs/standards_documentation.md)** - Conventions projet, structure attendue
 
 ### **🗺️ Ressources Développeurs**
-- **[Cartographie du Système](docs/mapping/)** - Vues d'ensemble, relations entre composants, diagrammes de dépendances
+- **[Cartographie du Système](docs/integration/)** - Vues d'ensemble, relations entre composants, diagrammes de dépendances
 - **[Structure Documentation](docs/STRUCTURE.md)** - Organisation de `docs/`, comment naviguer
 - **[FAQ Développement](docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md)** - Questions fréquentes et solutions
 - **[Troubleshooting Avancé](docs/troubleshooting.md)** - Guide de dépannage complet par catégories
@@ -492,26 +492,26 @@ Le workflow CI s'exécute automatiquement sur chaque commit et Pull Request vers
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** : Guide détaillé pour les contributeurs avec processus complet
 - **[Architecture CI/CD](docs/architecture/ci_secrets_strategy.md)** : Stratégie complète des secrets et architecture extensible
-- **[Rapports de Mission](docs/mission_reports/)** : Historique détaillé des améliorations CI/CD par phase
+- **[Rapports de Mission](docs/reports/)** : Historique détaillé des améliorations CI/CD par phase
 
 ### 🏗️ Architecture Technique & Évolution
 
 Le pipeline CI a été stabilisé et optimisé à travers **6 phases majeures** :
 
 - **Phase 1 (D-CI-01)** : Gestion conditionnelle des secrets pour support des forks
-  - [📄 Rapport détaillé](docs/mission_reports/D-CI-01_rapport_stabilisation_pipeline_ci.md)
+  - [📄 Rapport détaillé](docs/reports/D-CI-01_rapport_stabilisation_pipeline_ci.md)
   
 - **Phase 2 (D-CI-02)** : Correction configuration Miniconda (Python 3.10)
-  - [📄 Rapport détaillé](docs/mission_reports/D-CI-02_rapport_resolution_setup_miniconda.md)
+  - [📄 Rapport détaillé](docs/reports/D-CI-02_rapport_resolution_setup_miniconda.md)
   
 - **Phase 3 (D-CI-03)** : Ajout des outils de qualité de code (Black, Flake8, Isort)
-  - [📄 Rapport détaillé](docs/mission_reports/D-CI-03_rapport_installation_outils_qualite.md)
+  - [📄 Rapport détaillé](docs/reports/D-CI-03_rapport_installation_outils_qualite.md)
   
 - **Phase 4 (D-CI-04)** : Application du formatage Black + fix environnement
-  - [📄 Rapport détaillé](docs/mission_reports/D-CI-04_rapport_resolution_env_ci.md)
+  - [📄 Rapport détaillé](docs/reports/D-CI-04_rapport_resolution_env_ci.md)
   
 - **Phase 5 (D-CI-05)** : Architecture extensible pour futurs secrets
-  - [📄 Rapport détaillé](docs/mission_reports/D-CI-05_rapport_strategie_secrets_ci.md)
+  - [📄 Rapport détaillé](docs/reports/D-CI-05_rapport_strategie_secrets_ci.md)
   - [🏛️ Architecture complète](docs/architecture/ci_secrets_strategy.md)
   
 - **Phase 6 (D-CI-05-IMPL-P1)** : Optimisation des secrets existants (Phase 1 - en cours)
@@ -529,10 +529,10 @@ Pour contribuer aux améliorations du pipeline CI :
 
 - **Durée moyenne du pipeline** : ~12-15 minutes (optimisé)
 - **Taux de réussite** : >95% (post-stabilisation Phase 1-6)
-- **Tests couverts** : ~165 tests totaux
-  - ~142 tests exécutables sans secrets
-  - ~23 tests nécessitant des API keys (skipped sur forks)
-- **Coverage** : Variable selon disponibilité des secrets (70-85%)
+- **Tests couverts** : ~2300 tests totaux
+  - ~2230 tests exécutables sans secrets
+  - ~67 tests skipped (JVM-dependent, e2e, infrastructure)
+- **Coverage** : Variable selon disponibilité des secrets et JVM mode
 
 ### 🔧 Configuration CI
 

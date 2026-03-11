@@ -3,6 +3,7 @@
 """
 Tests pour les utilitaires d'estimation des taux d'erreur de argumentation_analysis.utils.error_estimation.
 """
+
 import pytest
 from pathlib import Path  # Non utilisé directement mais bonne pratique
 from typing import List, Dict, Any
@@ -156,7 +157,7 @@ def test_estimate_false_positives_negatives_rates_success(
 
 @pytest.mark.use_real_numpy
 def test_estimate_false_positives_negatives_rates_no_common_extracts(
-    sample_base_results_for_error_rates: List[Dict[str, Any]]
+    sample_base_results_for_error_rates: List[Dict[str, Any]],
 ):
     no_common_advanced_results = [
         {"source_name": "SourceX", "extract_name": "NoMatch1", "analyses": {}},

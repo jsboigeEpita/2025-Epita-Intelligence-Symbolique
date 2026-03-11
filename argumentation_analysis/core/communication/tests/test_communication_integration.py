@@ -18,7 +18,6 @@ from argumentation_analysis.core.communication.hierarchical_channel import (
 )
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 
-
 # Configuration du logger
 logging.basicConfig(
     level=logging.INFO,

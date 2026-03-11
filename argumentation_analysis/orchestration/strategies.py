@@ -123,8 +123,8 @@ class CyclicSelectionStrategy(SelectionStrategy):
 
     def reset(self) -> None:
         """Remet à zéro la stratégie de sélection."""
-        self.current_index = 0
-        self.turn_count = 0
+        object.__setattr__(self, "current_index", 0)
+        object.__setattr__(self, "turn_count", 0)
         self._logger.info("Stratégie de sélection cyclique remise à zéro")
 
 
@@ -248,8 +248,8 @@ class OracleTerminationStrategy(TerminationStrategy):
             "max_turns": self.max_turns,
             "max_cycles": self.max_cycles,
             "is_solution_found": self.is_solution_found,
-            "solution_proposed": self.oracle_state.is_solution_proposed
-            if self.oracle_state
-            else False,
+            "solution_proposed": (
+                self.oracle_state.is_solution_proposed if self.oracle_state else False
+            ),
             "elimination_possible": self._check_elimination_complete(),
         }

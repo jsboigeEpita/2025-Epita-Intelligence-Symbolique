@@ -72,9 +72,9 @@ def mock_analysis_service():
                 coherence_score=0.7,
                 fallacy_count=0,
                 processing_time=0.1,
-                analysis_options=analysis_request.options.dict()
-                if analysis_request.options
-                else {},
+                analysis_options=(
+                    analysis_request.options.dict() if analysis_request.options else {}
+                ),
             )
 
         mock.analyze_text.side_effect = dynamic_analyze_text

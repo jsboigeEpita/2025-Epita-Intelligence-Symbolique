@@ -42,9 +42,9 @@ def test_jvm_stability_logic():
         )
 
     full_jar_path = (
-        libs_dir / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+        next(libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None)
     )
-    if not full_jar_path.exists():
+    if not full_jar_path or not full_jar_path.exists():
         raise FileNotFoundError(
             f"Le JAR complet 'tweety-full' n'a pas été trouvé dans {libs_dir}"
         )

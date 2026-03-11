@@ -623,9 +623,11 @@ class OrchestrateurPedagogiqueEpita:
                 progression[etudiant.nom] = {
                     "score_actuel": score_moyen,
                     "niveau_adapte": nouveau_niveau,
-                    "progression": score_moyen - etudiant.historique_progression[-1]
-                    if etudiant.historique_progression
-                    else 0.0,
+                    "progression": (
+                        score_moyen - etudiant.historique_progression[-1]
+                        if etudiant.historique_progression
+                        else 0.0
+                    ),
                 }
 
                 etudiant.score_actuel = score_moyen
@@ -646,9 +648,11 @@ class OrchestrateurPedagogiqueEpita:
         metriques = {
             "utilisation_llm_reel": {
                 "total_analyses_llm": len(self.session_active.traces_llm_authentiques),
-                "modele_utilise": self.professeur.llm_service.ai_model_id
-                if self.professeur.llm_service
-                else "Non disponible",
+                "modele_utilise": (
+                    self.professeur.llm_service.ai_model_id
+                    if self.professeur.llm_service
+                    else "Non disponible"
+                ),
                 "authenticite_validee": True,
             },
             "detection_sophismes": {
@@ -657,13 +661,13 @@ class OrchestrateurPedagogiqueEpita:
                     for arg in arguments
                     if arg.sophismes_detectes
                 ),
-                "taux_detection": len(
-                    [arg for arg in arguments if arg.sophismes_detectes]
-                )
-                / len(arguments)
-                * 100
-                if arguments
-                else 0,
+                "taux_detection": (
+                    len([arg for arg in arguments if arg.sophismes_detectes])
+                    / len(arguments)
+                    * 100
+                    if arguments
+                    else 0
+                ),
                 "types_detectes": list(
                     set(
                         s
@@ -674,10 +678,11 @@ class OrchestrateurPedagogiqueEpita:
                 ),
             },
             "qualite_argumentaire": {
-                "score_moyen": sum(arg.score_qualite for arg in arguments)
-                / len(arguments)
-                if arguments
-                else 0,
+                "score_moyen": (
+                    sum(arg.score_qualite for arg in arguments) / len(arguments)
+                    if arguments
+                    else 0
+                ),
                 "distribution_scores": self._calculer_distribution_scores(arguments),
                 "arguments_haute_qualite": len(
                     [arg for arg in arguments if arg.score_qualite > 0.7]
@@ -695,19 +700,22 @@ class OrchestrateurPedagogiqueEpita:
                     self.session_active.progression_adaptive
                 )
                 > 0,
-                "moyenne_progression": sum(
-                    data["progression"]
-                    for data in self.session_active.progression_adaptive.values()
-                )
-                / len(self.session_active.progression_adaptive)
-                if self.session_active.progression_adaptive
-                else 0,
+                "moyenne_progression": (
+                    sum(
+                        data["progression"]
+                        for data in self.session_active.progression_adaptive.values()
+                    )
+                    / len(self.session_active.progression_adaptive)
+                    if self.session_active.progression_adaptive
+                    else 0
+                ),
             },
             "engagement_pedagogique": {
-                "arguments_par_etudiant": len(arguments)
-                / len(self.session_active.etudiants_profiles)
-                if self.session_active.etudiants_profiles
-                else 0,
+                "arguments_par_etudiant": (
+                    len(arguments) / len(self.session_active.etudiants_profiles)
+                    if self.session_active.etudiants_profiles
+                    else 0
+                ),
                 "diversite_positions": len(set(arg.position for arg in arguments)),
                 "feedback_personnalise": len(
                     [arg for arg in arguments if arg.feedback_pedagogique]

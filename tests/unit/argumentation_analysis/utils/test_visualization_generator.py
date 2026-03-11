@@ -3,11 +3,11 @@
 """
 Tests pour les utilitaires de génération de visualisations de argumentation_analysis.utils.visualization_generator.
 """
+
 import pytest
 from pathlib import Path
 from typing import Dict, Any
 from unittest.mock import MagicMock
-
 
 # Ajuster le PYTHONPATH pour les tests
 import sys

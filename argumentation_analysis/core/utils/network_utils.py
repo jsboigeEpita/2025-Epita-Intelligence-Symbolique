@@ -7,6 +7,7 @@ principalement le téléchargement de fichiers depuis des URLs.
 Il gère les exceptions courantes et permet de vérifier l'intégrité
 des fichiers téléchargés via leur taille.
 """
+
 import logging
 import os
 from pathlib import Path

@@ -88,8 +88,7 @@ class AuthenticAPITester:
                     },
                     {"role": "user", "content": unique_prompt},
                 ],
-                max_tokens=1500,
-                temperature=0.7,
+                max_completion_tokens=1500,
             )
 
             end_time = time.time()
@@ -142,11 +141,13 @@ class AuthenticAPITester:
                 "authenticity_score": sum(authenticity_markers.values()),
                 "authenticity_markers": authenticity_markers,
                 "trace": api_trace,
-                "authenticity": "AUTHENTIC"
-                if latency_ms > 500
-                and response.usage.total_tokens > 0
-                and authenticity_markers["mentions_test_id"]
-                else "SUSPICIOUS",
+                "authenticity": (
+                    "AUTHENTIC"
+                    if latency_ms > 500
+                    and response.usage.total_tokens > 0
+                    and authenticity_markers["mentions_test_id"]
+                    else "SUSPICIOUS"
+                ),
             }
 
         except Exception as e:
@@ -259,11 +260,13 @@ class AuthenticAPITester:
                 "conversation_turns": len(history) if history else 0,
                 "conversation_analysis": conversation_analysis,
                 "final_state_available": final_state is not None,
-                "authenticity": "AUTHENTIC"
-                if execution_time > 5
-                and (len(history) if history else 0) > 1
-                and conversation_analysis["mentions_test_id"]
-                else "SUSPICIOUS",
+                "authenticity": (
+                    "AUTHENTIC"
+                    if execution_time > 5
+                    and (len(history) if history else 0) > 1
+                    and conversation_analysis["mentions_test_id"]
+                    else "SUSPICIOUS"
+                ),
                 "test_scenario": {
                     "test_id": self.test_id,
                     "unique_question_hash": hashlib.sha256(

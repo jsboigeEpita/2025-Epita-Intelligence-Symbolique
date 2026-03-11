@@ -130,9 +130,9 @@ def generate_mock_rhetorical_analysis(
     analysis_result = {
         "extract_name": extract_name,
         "source_name": source_name,
-        "original_text_snippet": text_snippet[:200] + "..."
-        if len(text_snippet) > 200
-        else text_snippet,
+        "original_text_snippet": (
+            text_snippet[:200] + "..." if len(text_snippet) > 200 else text_snippet
+        ),
         "fallacies_detected": fallacies,
         "coherence_evaluation": coherence,
         "rhetorical_devices": rhetorical_devices_detected,

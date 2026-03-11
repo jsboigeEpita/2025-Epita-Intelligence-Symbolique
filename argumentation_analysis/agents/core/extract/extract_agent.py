@@ -104,7 +104,7 @@ class ExtractAgent(BaseAgent):
     EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
     VALIDATE_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "validate_extract_semantic"
     NATIVE_PLUGIN_NAME: ClassVar[str] = "ExtractNativePlugin"
-    logger: Optional[logging.Logger] = Field(None, exclude=True)
+    # logger inherited from BaseAgent (read-only @property over _agent_logger PrivateAttr)
 
     def __init__(
         self,
@@ -122,17 +122,24 @@ class ExtractAgent(BaseAgent):
             plugins = [ExtractAgentPlugin()]
 
         super().__init__(kernel=kernel, agent_name=agent_name)
-        self.logger = logging.getLogger(agent_name)
-        self.kernel = kernel
-        self._llm_service_id = llm_service_id
-        self.llm_service = None
+        # Use BaseAgent's logger property (self.logger) instead of setting a new one
+        object.__setattr__(self, "_llm_service_id", llm_service_id)
+        object.__setattr__(self, "llm_service", None)
         if llm_service_id:
-            self.llm_service = self.kernel.get_service(llm_service_id)
+            object.__setattr__(
+                self, "llm_service", self.kernel.get_service(llm_service_id)
+            )
 
-        self._find_similar_text_func = find_similar_text_func or find_similar_text
-        self._extract_text_func = extract_text_func or extract_text_with_markers
-        self._native_extract_plugin = next(
-            (p for p in plugins if isinstance(p, ExtractAgentPlugin)), None
+        object.__setattr__(
+            self, "_find_similar_text_func", find_similar_text_func or find_similar_text
+        )
+        object.__setattr__(
+            self, "_extract_text_func", extract_text_func or extract_text_with_markers
+        )
+        object.__setattr__(
+            self,
+            "_native_extract_plugin",
+            next((p for p in plugins if isinstance(p, ExtractAgentPlugin)), None),
         )
 
         if not llm_service_id:
@@ -178,9 +185,9 @@ class ExtractAgent(BaseAgent):
             execution_settings=execution_settings,
         )
         self.kernel.add_function(
-            self.EXTRACT_SEMANTIC_FUNCTION_NAME,
-            extract_prompt_template_config,
             plugin_name=self.name,
+            function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
+            prompt_template_config=extract_prompt_template_config,
         )
         self.logger.info(
             f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'."
@@ -231,9 +238,9 @@ class ExtractAgent(BaseAgent):
             execution_settings=execution_settings,
         )
         self.kernel.add_function(
-            self.VALIDATE_SEMANTIC_FUNCTION_NAME,
-            validate_prompt_template_config,
             plugin_name=self.name,
+            function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
+            prompt_template_config=validate_prompt_template_config,
         )
         self.logger.info(
             f"Fonction sémantique '{self.VALIDATE_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'."

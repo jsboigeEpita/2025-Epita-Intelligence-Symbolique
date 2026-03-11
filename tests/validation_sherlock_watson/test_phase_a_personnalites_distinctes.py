@@ -449,16 +449,18 @@ class CluedoPersonalityTestRunner:
                         distinctiveness_success,
                     ]
                 ),
-                "prochaine_etape": "Phase B - Naturalité du dialogue"
-                if all(
-                    [
-                        watson_proactive_success,
-                        moriarty_theatrical_success,
-                        sherlock_leadership_success,
-                        distinctiveness_success,
-                    ]
-                )
-                else "Ajustements Phase A nécessaires",
+                "prochaine_etape": (
+                    "Phase B - Naturalité du dialogue"
+                    if all(
+                        [
+                            watson_proactive_success,
+                            moriarty_theatrical_success,
+                            sherlock_leadership_success,
+                            distinctiveness_success,
+                        ]
+                    )
+                    else "Ajustements Phase A nécessaires"
+                ),
             },
         }
 

@@ -42,9 +42,9 @@ def test_minimal_startup_logic():
     # vers un JAR connu et non corrompu si on veut tester le chargement.
     # Pour rester minimal, on utilise que le JAR 'tweety-full'.
     full_jar_path = (
-        libs_dir / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+        next(libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None)
     )
-    if not full_jar_path.exists():
+    if not full_jar_path or not full_jar_path.exists():
         # On ne peut pas continuer sans le jar.
         print(
             f"ERREUR: Le JAR Tweety est introuvable à {full_jar_path}", file=sys.stderr

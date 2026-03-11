@@ -45,10 +45,7 @@ current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
-# Activation automatique de l'environnement
-from argumentation_analysis.core.environment import ensure_env
-
-# ensure_env() # Désactivé pour les tests
+# Note: ensure_env() n'est plus nécessaire ici — le bootstrap/settings charge .env
 
 
 def setup_logging():
@@ -111,7 +108,6 @@ async def main():
 
     # 3. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
-    from argumentation_analysis.paths import LIBS_DIR
 
     logging.info("Tentative d'initialisation de la JVM...")
     # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs

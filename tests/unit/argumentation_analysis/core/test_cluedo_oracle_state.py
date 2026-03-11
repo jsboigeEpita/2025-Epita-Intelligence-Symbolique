@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -497,9 +496,7 @@ class TestCluedoOracleStateIntegration:
             query_type = (
                 "card_inquiry"
                 if agent == "Sherlock"
-                else "logical_validation"
-                if agent == "Watson"
-                else "progressive_hint"
+                else "logical_validation" if agent == "Watson" else "progressive_hint"
             )
             result = await state.query_oracle(
                 agent_name=agent,

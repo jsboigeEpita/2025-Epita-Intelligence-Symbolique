@@ -8,7 +8,7 @@ Tests d'intégration utilisant les VRAIES classes du système, pas de fausses cl
 Phase 3A CORRIGÉE - Utilise les vraies classes Semantic Kernel existantes.
 
 Tests avec:
-- VRAIE classe SherlockEnqueteAgent 
+- VRAIE classe SherlockEnqueteAgent
 - VRAIE classe WatsonLogicAssistant
 - VRAIS composants Semantic Kernel
 - VRAIE orchestration système
@@ -109,14 +109,14 @@ class TestCluedoOrchestrationRealIntegration:
 
         # Création du VRAI agent Sherlock via la factory
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock_Real_Test")
 
         # Vérifications que c'est bien la vraie classe
         assert isinstance(sherlock_agent, SherlockEnqueteAgent)
         assert sherlock_agent.name == "Sherlock_Real_Test"
-        assert hasattr(sherlock_agent, "_kernel")  # Attribut réel de la vraie classe
-        assert sherlock_agent._kernel is not None
+        assert hasattr(sherlock_agent, "kernel")  # Attribut réel de la vraie classe
+        assert sherlock_agent.kernel is not None
 
         logger.info("✅ VRAI agent Sherlock créé avec succès")
 
@@ -133,14 +133,14 @@ class TestCluedoOrchestrationRealIntegration:
 
         # Création du VRAI agent Watson via la factory
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         watson_agent = factory.create_watson_agent(agent_name="Watson_Real_Test")
 
         # Vérifications que c'est bien la vraie classe
         assert isinstance(watson_agent, WatsonLogicAssistant)
         assert watson_agent.name == "Watson_Real_Test"
-        assert hasattr(watson_agent, "_kernel")  # Attribut réel de la vraie classe
-        assert watson_agent._kernel is not None
+        assert hasattr(watson_agent, "kernel")  # Attribut réel de la vraie classe
+        assert watson_agent.kernel is not None
 
         logger.info("✅ VRAI agent Watson créé avec succès")
 
@@ -157,7 +157,7 @@ class TestCluedoOrchestrationRealIntegration:
         try:
             # Création des VRAIS agents via la factory
             settings = AppSettings()
-            factory = AgentFactory(real_kernel, settings)
+            factory = AgentFactory(real_kernel, "chat_completion")
             sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
             watson_agent = factory.create_watson_agent(agent_name="Watson")
 
@@ -215,7 +215,7 @@ class TestCluedoOrchestrationRealIntegration:
 
         # Test VRAI agent Sherlock
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Methods_Test")
 
         # Vérifier les vraies méthodes de la vraie classe
@@ -226,14 +226,14 @@ class TestCluedoOrchestrationRealIntegration:
 
         # Test VRAI agent Watson
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         watson = factory.create_watson_agent(agent_name="Watson_Methods_Test")
 
         # Vérifier les vraies méthodes de la vraie classe
-        assert hasattr(watson, "analyze_text")
-        assert hasattr(watson, "get_belief_set_content")
-        assert callable(getattr(watson, "analyze_text"))
-        assert callable(getattr(watson, "get_belief_set_content"))
+        assert hasattr(watson, "text_to_belief_set")
+        assert hasattr(watson, "get_agent_belief_set_content")
+        assert callable(getattr(watson, "text_to_belief_set"))
+        assert callable(getattr(watson, "get_agent_belief_set_content"))
 
         logger.info("✅ VRAIES méthodes des agents disponibles")
 
@@ -249,7 +249,7 @@ class TestCluedoOrchestrationRealIntegration:
             pytest.skip("Cannot create real kernel")
 
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Case_Test")
 
         try:
@@ -289,7 +289,7 @@ class TestCluedoOrchestrationRealIntegration:
             pytest.skip("Cannot create real kernel")
 
         settings = AppSettings()
-        factory = AgentFactory(real_kernel, settings)
+        factory = AgentFactory(real_kernel, "chat_completion")
         watson = factory.create_watson_agent(agent_name="Watson_Analysis_Test")
 
         try:
@@ -336,7 +336,7 @@ def test_full_real_cluedo_integration():
 
         # VRAIS agents via la factory
         settings = AppSettings()
-        factory = AgentFactory(kernel, settings)
+        factory = AgentFactory(kernel, "chat_completion")
         sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Integration")
         watson = factory.create_watson_agent(agent_name="Watson_Integration")
 

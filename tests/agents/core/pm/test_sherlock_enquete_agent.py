@@ -10,6 +10,7 @@ from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
 )
+from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
@@ -107,17 +108,16 @@ class TestSherlockEnqueteAgentAuthentic:
     async def test_agent_instantiation(self, sherlock_agent):
         """Test l'instanciation basique de l'agent."""
         agent = sherlock_agent
-        assert isinstance(agent, SherlockEnqueteAgent)
+        assert isinstance(agent, SherlockJTMSAgent)
         assert agent.name == TEST_AGENT_NAME
-        assert hasattr(agent, "_kernel")
-        assert agent._kernel is not None
-        assert isinstance(agent._kernel, Kernel)
+        assert hasattr(agent, "kernel")
+        assert agent.kernel is not None
+        assert isinstance(agent.kernel, Kernel)
 
     async def test_agent_inheritance(self, sherlock_agent):
         """Test que l'agent hérite correctement."""
         agent = sherlock_agent
-        assert isinstance(agent, SherlockEnqueteAgent)
-        assert isinstance(agent, BaseAgent)
+        assert isinstance(agent, SherlockJTMSAgent)
         assert hasattr(agent, "logger")
         assert hasattr(agent, "name")
         assert len(agent.name) > 0
@@ -143,38 +143,27 @@ class TestSherlockEnqueteAgentAuthentic:
         assert agent.name == TEST_AGENT_NAME
         assert agent.system_prompt == custom_prompt
 
-    async def test_get_current_case_description_real(self, sherlock_agent):
-        """Test authentique de récupération de description d'affaire."""
+    async def test_jtms_add_belief(self, sherlock_agent):
+        """Test JTMS add_belief (replaces old get_current_case_description test)."""
         agent = sherlock_agent
-        try:
-            description = await agent.get_current_case_description()
+        # SherlockJTMSAgent inherits add_belief from JTMSAgentBase
+        agent.add_belief("Le gardien était absent", "TRUE")
+        beliefs = agent.get_all_beliefs()
+        assert any(
+            "gardien" in str(name).lower() for name in beliefs.keys()
+        ), f"Belief not found in {beliefs}"
 
-            if description is not None:
-                assert isinstance(description, str)
-            else:
-                print("Description retournée: None (normal sans plugin configuré)")
-
-        except Exception as e:
-            assert "Erreur:" in str(e) or "Plugin" in str(e)
-            print(f"Exception attendue sans plugin: {e}")
-
-    async def test_add_new_hypothesis_real(self, sherlock_agent):
-        """Test authentique d'ajout d'hypothèse."""
+    async def test_jtms_formulate_hypothesis(self, sherlock_agent):
+        """Test formulate_hypothesis (replaces old add_new_hypothesis test)."""
         agent = sherlock_agent
-        hypothesis_text = "Le coupable est le Colonel Moutarde."
-        confidence_score = 0.75
-
-        try:
-            result = await agent.add_new_hypothesis(hypothesis_text, confidence_score)
-
-            if result is not None:
-                assert isinstance(result, (dict, str))
-            else:
-                print("Hypothèse retournée: None (normal sans plugin configuré)")
-
-        except Exception as e:
-            assert "Erreur:" in str(e) or "Plugin" in str(e)
-            print(f"Exception attendue sans plugin: {e}")
+        context = "Un vol a eu lieu au musée. Le gardien était absent."
+        result = await agent.formulate_hypothesis(context=context)
+        assert isinstance(result, dict)
+        assert (
+            "hypothesis" in result
+            or "hypothesis_id" in result
+            or "confidence" in result
+        )
 
     async def test_agent_error_handling(self, sherlock_agent):
         """Test la gestion d'erreur authentique de l'agent."""
@@ -189,7 +178,7 @@ class TestSherlockEnqueteAgentAuthentic:
     async def test_agent_configuration_validation(self, sherlock_agent):
         """Test la validation de la configuration de l'agent."""
         agent = sherlock_agent
-        assert hasattr(agent, "_kernel")
+        assert hasattr(agent, "kernel")
         assert hasattr(agent, "name")
         assert hasattr(agent, "system_prompt")
         assert hasattr(agent, "logger")
@@ -197,7 +186,7 @@ class TestSherlockEnqueteAgentAuthentic:
         assert isinstance(agent.name, str)
         assert len(agent.name) > 0
 
-        assert agent._kernel is not None
+        assert agent.kernel is not None
         assert agent.logger is not None
 
 
@@ -211,7 +200,7 @@ def test_sherlock_agent_integration_real(agent_factory):
         )
 
         assert agent is not None
-        assert isinstance(agent, SherlockEnqueteAgent)
+        assert isinstance(agent, (SherlockEnqueteAgent, SherlockJTMSAgent))
         assert agent.name == "IntegrationTestAgent"
 
         print("✅ Test d'intégration authentique via factory réussi")

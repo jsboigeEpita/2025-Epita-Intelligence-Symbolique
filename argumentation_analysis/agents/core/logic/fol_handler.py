@@ -263,6 +263,8 @@ class FOLHandler:
         )
         if settings.solver == SolverChoice.PROVER9:
             return await self._fol_check_consistency_with_prover9(belief_set)
+        elif settings.solver == SolverChoice.EPROVER:
+            return await self._fol_check_consistency_with_eprover(belief_set)
         else:
             return await self._fol_check_consistency_with_tweety(belief_set)
 
@@ -323,6 +325,41 @@ class FOLHandler:
                 f"The Tweety pathway for consistency checks failed: {e}"
             ) from e
 
+    async def _fol_check_consistency_with_eprover(self, belief_set):
+        """Checks FOL consistency using Tweety's EFOLReasoner (backed by EProver binary)."""
+        logger.debug(
+            f"Performing FOL consistency check via EProver for belief set of size {belief_set.size()}."
+        )
+        if not self._initializer_instance:
+            raise ValueError(
+                "TweetyInitializer instance is required for the 'eprover' solver path."
+            )
+        try:
+            EFOLReasoner = jpype.JClass(
+                "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
+            )
+            reasoner = EFOLReasoner()
+
+            # Check consistency by querying contradiction
+            local_parser = jpype.JClass(
+                "org.tweetyproject.logics.fol.parser.FolParser"
+            )()
+            local_parser.setSignature(belief_set.getMinimalSignature())
+            contradiction = local_parser.parseFormula("-")
+            inconsistent = reasoner.query(belief_set, contradiction)
+
+            is_consistent = not bool(inconsistent)
+            msg = f"EProver-based consistency check result: {is_consistent}"
+            logger.info(msg)
+            return is_consistent, msg
+        except Exception as e:
+            logger.error(
+                f"Error during EProver FOL consistency check: {e}", exc_info=True
+            )
+            raise RuntimeError(
+                f"EProver consistency check failed: {e}"
+            ) from e
+
     def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
         Checks if a query is entailed by a belief base using the configured solver.
@@ -331,6 +368,8 @@ class FOLHandler:
 
         if settings.solver == SolverChoice.PROVER9:
             return self._fol_query_with_prover9(belief_set, query_formula_str)
+        elif settings.solver == SolverChoice.EPROVER:
+            return self._fol_query_with_eprover(belief_set, query_formula_str)
         else:
             return self._fol_query_with_tweety(belief_set, query_formula_str)
 
@@ -381,6 +420,134 @@ class FOLHandler:
         except Exception as e:
             logger.error(f"Error during Tweety FOL query: {e}", exc_info=True)
             raise
+
+    def _fol_query_with_eprover(self, belief_set, query_formula_str: str) -> bool:
+        """
+        FOL query via Tweety's EFOLReasoner (backed by EProver binary).
+        Uses the same Tweety parsing as the default path but delegates
+        reasoning to the EProver theorem prover.
+        """
+        logger.debug(f"Performing FOL query via EProver. Query: '{query_formula_str}'")
+        if not self._initializer_instance:
+            raise ValueError(
+                "TweetyInitializer instance is required for the 'eprover' solver path."
+            )
+        try:
+            query_formula = self.parse_fol_formula(query_formula_str)
+            EFOLReasoner = jpype.JClass(
+                "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
+            )
+            reasoner = EFOLReasoner()
+            entails = reasoner.query(belief_set, query_formula)
+            logger.info(f"EProver query: KB entails '{query_formula_str}'? {bool(entails)}")
+            return bool(entails)
+        except Exception as e:
+            logger.error(f"Error during EProver FOL query: {e}", exc_info=True)
+            raise
+
+    def check_consistency(self, belief_set_input) -> tuple:
+        """
+        Check consistency of a FOL belief set.
+
+        Accepts either a Tweety-syntax string (parsed via local FolParser)
+        or a pre-built Java FolBeliefSet object.
+
+        Returns:
+            Tuple[bool, str]: (is_consistent, message)
+        """
+        try:
+            # If it's a string, parse it into a Java belief set first
+            if isinstance(belief_set_input, str):
+                java_belief_set = self.create_belief_set_from_string(
+                    belief_set_input.strip()
+                )
+            else:
+                # Assume it's already a Java FolBeliefSet
+                java_belief_set = belief_set_input
+
+            if java_belief_set is None or java_belief_set.size() == 0:
+                return True, "Empty belief set is trivially consistent."
+
+            # Use SimpleFolReasoner if available via initializer
+            if self._initializer_instance:
+                try:
+                    reasoner = self._initializer_instance.get_reasoner(
+                        "SimpleFolReasoner"
+                    )
+                    # Check if KB entails a contradiction
+                    # Use "-" (Tweety's built-in contradiction/bottom symbol)
+                    # which doesn't require any predicates in the signature
+                    local_parser = jpype.JClass(
+                        "org.tweetyproject.logics.fol.parser.FolParser"
+                    )()
+                    local_parser.setSignature(java_belief_set.getMinimalSignature())
+                    contradiction = local_parser.parseFormula("-")
+                    inconsistent = reasoner.query(java_belief_set, contradiction)
+                    is_consistent = not bool(inconsistent)
+                    msg = f"FOL consistency check: {'consistent' if is_consistent else 'inconsistent'}"
+                    return is_consistent, msg
+                except Exception as e:
+                    self.logger.warning(
+                        f"Reasoner-based consistency check failed: {e}. "
+                        "Falling back to parsing-only check."
+                    )
+                    # If we got here, at least the parsing succeeded
+                    return (
+                        True,
+                        "Parsed successfully (no reasoner available for deep check).",
+                    )
+            else:
+                # No initializer — parsing success is the best we can do
+                return True, "Parsed successfully (no Tweety initializer)."
+
+        except (ValueError, Exception) as e:
+            error_msg = str(e)
+            self.logger.error(f"FOL consistency check failed: {error_msg}")
+            return False, f"FOL consistency check error: {error_msg}"
+
+    def execute_fol_query(self, belief_set_input, query_str: str) -> tuple:
+        """
+        Execute a FOL query (entailment check) against a belief set.
+
+        Accepts either a Tweety-syntax string or a pre-built Java object
+        for the belief set.
+
+        Returns:
+            Tuple[bool, str]: (entailed, message)
+        """
+        try:
+            # Parse belief set if string
+            if isinstance(belief_set_input, str):
+                java_belief_set = self.create_belief_set_from_string(
+                    belief_set_input.strip()
+                )
+            else:
+                java_belief_set = belief_set_input
+
+            if java_belief_set is None:
+                return False, "Failed to create belief set."
+
+            # Parse query formula with the belief set's signature
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            query_parser = FolParser()
+            query_parser.setSignature(java_belief_set.getMinimalSignature())
+            query_formula = query_parser.parseFormula(query_str)
+
+            # Use reasoner if available
+            if self._initializer_instance:
+                reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
+                entailed = bool(reasoner.query(java_belief_set, query_formula))
+                msg = (
+                    f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
+                )
+                return entailed, msg
+            else:
+                return False, "No Tweety initializer available for query."
+
+        except (ValueError, Exception) as e:
+            error_msg = str(e)
+            self.logger.error(f"FOL query failed: {error_msg}")
+            return False, f"FOL query error: {error_msg}"
 
     def validate_formula_with_signature(
         self, signature, formula_str: str

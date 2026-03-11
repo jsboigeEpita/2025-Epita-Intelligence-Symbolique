@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -19,7 +18,6 @@ import pytest
 import os
 import sys
 from pathlib import Path
-
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 # Importer les modèles nécessaires pour les tests

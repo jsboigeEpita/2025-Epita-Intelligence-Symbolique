@@ -9,9 +9,9 @@ class BaseWorkflowState:
         self.initial_context: dict = initial_context
         self.tasks: List[Dict] = []  # Voir Section 5 pour la structure
         self.results: List[Dict] = []  # Voir Section 5
-        self.log_messages: List[
-            Dict
-        ] = []  # {timestamp, agent_source, message_type, content}
+        self.log_messages: List[Dict] = (
+            []
+        )  # {timestamp, agent_source, message_type, content}
         self.final_output: Dict = {}  # Voir Section 5
         self._next_agent_designated: Optional[str] = None  # Utilisé par l'orchestrateur
 
@@ -119,9 +119,9 @@ class EnquetePoliciereState(BaseWorkflowState):
     ):
         super().__init__(initial_context, workflow_id)
         self.description_cas: str = description_cas
-        self.elements_identifies: List[
-            Dict
-        ] = []  # {element_id, type, description, source}
+        self.elements_identifies: List[Dict] = (
+            []
+        )  # {element_id, type, description, source}
         self.belief_sets: Dict[str, str] = {}  # {belief_set_id: serialized_content}
         self.query_log: List[Dict] = []  # Voir Section 5
         self.hypotheses_enquete: List[Dict] = []  # Voir Section 5
@@ -302,13 +302,13 @@ class EnqueteCluedoState(EnquetePoliciereState):
         else:
             raise ValueError("Une solution secrète doit être fournie ou auto-générée.")
 
-        self.indices_distribues_cluedo: List[
-            Dict
-        ] = []  # Liste d'éléments qui ne sont PAS la solution
+        self.indices_distribues_cluedo: List[Dict] = (
+            []
+        )  # Liste d'éléments qui ne sont PAS la solution
         self.main_cluedo_bs_id: str = f"cluedo_bs_{self.workflow_id}"
-        self.belief_set_initial_watson: Dict[
-            str, List[str]
-        ] = {}  # Initialisation de l'attribut
+        self.belief_set_initial_watson: Dict[str, List[str]] = (
+            {}
+        )  # Initialisation de l'attribut
         self.is_solution_proposed: bool = False
         self.final_solution: Optional[Dict[str, str]] = None
         self.suggestions_historique: List[Dict] = []

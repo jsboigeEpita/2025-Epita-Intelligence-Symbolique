@@ -10,24 +10,13 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
 NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
 
-# Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
+# Inclure tous les JARs du répertoire libs, en préférant le JAR with-dependencies
 all_jars_in_libs = [
     os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")
 ]
-TWEETY_JARS = [
-    jar
-    for jar in all_jars_in_libs
-    if "tweety-full-1.28.jar" != os.path.basename(jar)
-    or "with-dependencies" in os.path.basename(jar)
-]
-jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
-jar_with_deps = os.path.join(
-    LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-)
-
-if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
-    TWEETY_JARS.remove(jar_simple)
-    print(f"Removed {jar_simple} to avoid conflict with {jar_with_deps}")
+_with_deps = [j for j in all_jars_in_libs if "with-dependencies" in os.path.basename(j)]
+_simple = [j for j in all_jars_in_libs if "tweety-full" in os.path.basename(j) and "with-dependencies" not in os.path.basename(j)]
+TWEETY_JARS = _with_deps if _with_deps else _simple if _simple else all_jars_in_libs
 
 print(f"Dynamically included JARS for test_list_models: {TWEETY_JARS}")
 

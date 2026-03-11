@@ -2,6 +2,7 @@
 """
 Utilitaires pour la sauvegarde de fichiers dans différents formats.
 """
+
 import json
 from pathlib import Path
 from typing import Any, Optional, List, Dict

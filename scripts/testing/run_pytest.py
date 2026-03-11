@@ -3,6 +3,7 @@
 """
 Lanceur de tests pytest dédié et robuste pour cet environnement complexe.
 """
+
 import sys
 import pytest
 import os

@@ -5,6 +5,7 @@ Ce module fournit une classe de base `BaseAnalysisTool` que les outils d'analyse
 spécifiques peuvent hériter. Il définit une interface commune pour l'initialisation,
 l'analyse, la validation des entrées et la récupération des résultats.
 """
+
 from argumentation_analysis.paths import RESULTS_DIR
 
 # Template d'outil d'analyse pour l'architecture hiérarchique

@@ -13,6 +13,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 )
 from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
+from semantic_kernel.prompt_template.input_variable import InputVariable
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
@@ -222,6 +223,7 @@ class SherlockEnqueteAgent(BaseAgent):
     """
 
     _service_id: str
+
     def __init__(
         self,
         kernel: Kernel,
@@ -244,7 +246,7 @@ class SherlockEnqueteAgent(BaseAgent):
         )
         self.kernel = kernel
         self.instructions = system_prompt or SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
-        self.logger = logging.getLogger(agent_name)
+        object.__setattr__(self, "_agent_logger", logging.getLogger(agent_name))
         self._service_id = service_id
 
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
@@ -253,13 +255,19 @@ class SherlockEnqueteAgent(BaseAgent):
 
         # Création de la fonction agent principale
         execution_settings = OpenAIPromptExecutionSettings(
-            service_id=self._service_id, max_tokens=2000, temperature=0.7, top_p=0.8
+            service_id=self._service_id, max_completion_tokens=2000
         )
 
         prompt_template_config = PromptTemplateConfig(
             template="{{$chat_history}}",
             description="Chat with Sherlock, the master detective.",
             template_format="semantic-kernel",
+            input_variables=[
+                InputVariable(
+                    name="chat_history",
+                    allow_dangerously_set_content=True,
+                )
+            ],
             execution_settings={self._service_id: execution_settings},
         )
 

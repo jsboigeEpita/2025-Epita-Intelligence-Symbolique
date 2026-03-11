@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -24,7 +23,7 @@ from argumentation_analysis.mocks.advanced_tools import (
     MockEnhancedRhetoricalResultAnalyzer,
 )
 
-from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 
 
 @pytest.fixture

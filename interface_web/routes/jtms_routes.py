@@ -7,7 +7,7 @@ Routes spécialisées pour l'interface JTMS interactive.
 Intégration avec le système d'argumentation existant.
 
 Version: 1.0.0
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 11/06/2025
 """
 

@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -113,9 +112,7 @@ def test_verify_extracts_integration(mocker, integration_services, tmp_path):
     Voici un marqueur de fin: FIN_EXTRAIT
     
     Et voici la suite du texte après l'extrait.
-    """.encode(
-        "utf-8"
-    )
+    """.encode("utf-8")
 
     def raise_for_status():
         pass

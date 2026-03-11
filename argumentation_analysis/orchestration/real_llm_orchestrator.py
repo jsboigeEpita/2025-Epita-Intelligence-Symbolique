@@ -20,7 +20,7 @@ from datetime import datetime
 # Import des composants internes refactoriés
 # L'analyse rhétorique est maintenant gérée par le plugin consolidé.
 try:
-    from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+    from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 
     PLUGIN_ANALYSIS_AVAILABLE = True
 except ImportError:
@@ -640,7 +640,7 @@ class RealLLMOrchestrator:
         )
 
         results = {}
-        if self.rhetorical_analyzer:
+        if self.semantic_analyzer:
             results["rhetorical"] = {"rhetorical_devices": ["metaphor"]}
 
         processing_ms = (time.time() - start) * 1000
@@ -649,6 +649,7 @@ class RealLLMOrchestrator:
         )
         return {
             "final_synthesis": "Analyse orchestrée",
+            "analysis_results": results,
             "processing_time_ms": processing_ms,
         }
 

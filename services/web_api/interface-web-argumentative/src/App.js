@@ -6,6 +6,8 @@ import FallacyDetector from './components/FallacyDetector';
 import FrameworkBuilder from './components/FrameworkBuilder';
 import LogicGraph from './components/LogicGraph';
 import ValidationForm from './components/ValidationForm';
+import GovernanceDashboard from './components/governance/GovernanceDashboard';
+import DebateArena from './components/debate/DebateArena';
 import { checkAPIHealth } from './services/api';
 
 function App() {
@@ -25,7 +27,9 @@ function App() {
     { id: 'reconstructor', label: '🔄 Reconstructeur', component: ArgumentReconstructor },
     { id: 'logic-graph', label: '📊 Graphe Logique', component: LogicGraph },
     { id: 'validation', label: '✅ Validation', component: ValidationForm },
-    { id: 'framework', label: '🏗️ Framework', component: FrameworkBuilder }
+    { id: 'framework', label: '🏗️ Framework', component: FrameworkBuilder },
+    { id: 'governance', label: '🏛️ Gouvernance', component: GovernanceDashboard },
+    { id: 'debate', label: '⚔️ Débat', component: DebateArena }
   ];
 
   const renderActiveComponent = () => {

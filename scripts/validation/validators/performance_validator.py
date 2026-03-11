@@ -162,9 +162,9 @@ async def _benchmark_throughput(test_texts: List[str]) -> Dict[str, Any]:
         )
         if not texts_for_benchmark:
             throughput_results["status"] = "skipped"
-            throughput_results[
-                "reason"
-            ] = "Aucun texte de test fourni pour le benchmark de throughput."
+            throughput_results["reason"] = (
+                "Aucun texte de test fourni pour le benchmark de throughput."
+            )
             logger.info("  Benchmark de throughput sauté: aucun texte de test.")
             return throughput_results
 

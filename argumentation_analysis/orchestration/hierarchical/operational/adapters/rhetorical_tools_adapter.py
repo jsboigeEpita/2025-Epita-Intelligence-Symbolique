@@ -22,7 +22,7 @@ from argumentation_analysis.core.bootstrap import ProjectContext
 
 # Importe le plugin consolidé qui remplace les outils individuels.
 try:
-    from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+    from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 
     PLUGIN_ANALYSIS_AVAILABLE = True
 except ImportError:

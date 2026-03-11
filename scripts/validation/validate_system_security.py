@@ -7,6 +7,7 @@ Script de validation de la sécurité du système de basculement.
 Ce script valide que le système de basculement entre sources simples et complexes
 fonctionne correctement et que la sécurité des données politiques est préservée.
 """
+
 import argumentation_analysis.core.environment
 
 import os
@@ -62,9 +63,9 @@ class SystemSecurityValidator:
                 checks = {
                     "sources_loaded": extract_definitions is not None,
                     "status_success": "succès" in status.lower(),
-                    "sources_count": len(extract_definitions.sources)
-                    if extract_definitions
-                    else 0,
+                    "sources_count": (
+                        len(extract_definitions.sources) if extract_definitions else 0
+                    ),
                     "text_selection": False,
                     "anonymization_active": source_manager.config.anonymize_logs,
                     "auto_cleanup": source_manager.config.auto_cleanup,

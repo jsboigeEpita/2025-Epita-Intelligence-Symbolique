@@ -1,6 +1,5 @@
 from unittest.mock import Mock, AsyncMock
 
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -15,7 +14,6 @@ Test simple pour identifier les problèmes des 4 derniers tests du Groupe 3.
 import sys
 import asyncio
 import traceback
-
 
 # Imports du système Oracle
 sys.path.append(".")

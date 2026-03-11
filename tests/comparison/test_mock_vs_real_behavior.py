@@ -1,11 +1,5 @@
 # Fichier adapté pour Oracle Enhanced v2.1.0
 
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 """
 Tests comparatifs Mock vs Réel pour Oracle Enhanced.
 
@@ -77,6 +71,7 @@ class BehaviorComparator:
             if ORACLE_SYSTEM_AVAILABLE:
                 orchestrator = CluedoExtendedOrchestrator(
                     kernel=mock_kernel,
+                    settings=Mock(),
                     max_turns=test_scenario.get("max_turns", 3),
                     max_cycles=test_scenario.get("max_cycles", 2),
                     oracle_strategy="enhanced_auto_reveal",
@@ -135,6 +130,7 @@ class BehaviorComparator:
             if ORACLE_SYSTEM_AVAILABLE:
                 orchestrator = CluedoExtendedOrchestrator(
                     kernel=real_kernel,
+                    settings=Mock(),
                     max_turns=test_scenario.get("max_turns", 3),
                     max_cycles=test_scenario.get("max_cycles", 2),
                     oracle_strategy="enhanced_auto_reveal",
@@ -337,7 +333,7 @@ class BehaviorComparator:
         """Exécution basique avec GPT réel."""
         chat_service = kernel.get_service("comparison-real-gpt")
 
-        settings = OpenAIChatPromptExecutionSettings(max_tokens=150, temperature=0.3)
+        settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=150)
 
         prompt = scenario.get("prompt", "Test de comparaison")
         messages = [ChatMessageContent(role="user", content=prompt)]
@@ -470,21 +466,6 @@ class BehaviorComparator:
             return "cost_consideration_needed"
         else:
             return "balanced_tradeoff"
-
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
 
 
 @pytest.fixture

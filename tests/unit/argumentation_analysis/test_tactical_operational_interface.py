@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -69,8 +68,8 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.mock_operational_adapter.send_result = MagicMock()
 
         # Configurer le mock du middleware pour retourner les adaptateurs mockés
-        self.mock_middleware.get_adapter.side_effect = (
-            lambda agent_id, level: self.mock_tactical_adapter
+        self.mock_middleware.get_adapter.side_effect = lambda agent_id, level: (
+            self.mock_tactical_adapter
             if level == AgentLevel.TACTICAL
             else self.mock_operational_adapter
         )

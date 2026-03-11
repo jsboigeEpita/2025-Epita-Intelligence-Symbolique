@@ -205,9 +205,9 @@ class CluedoDataset:
 
         # Prendre le premier disponible pour chaque catégorie (ou une stratégie cohérente)
         return {
-            "suspect": available_suspects[0]
-            if available_suspects
-            else "Colonel Moutarde",
+            "suspect": (
+                available_suspects[0] if available_suspects else "Colonel Moutarde"
+            ),
             "arme": available_weapons[0] if available_weapons else "Poignard",
             "lieu": available_rooms[0] if available_rooms else "Salon",
         }

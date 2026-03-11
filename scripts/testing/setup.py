@@ -76,9 +76,11 @@ setup(
     author="Votre Nom ou Nom de l'Équipe",
     author_email="votre.email@example.com",
     description="Un projet d'analyse d'argumentation",
-    long_description=open("README.md", encoding="utf-8").read()
-    if os.path.exists("README.md")
-    else "",
+    long_description=(
+        open("README.md", encoding="utf-8").read()
+        if os.path.exists("README.md")
+        else ""
+    ),
     long_description_content_type="text/markdown",
     url="https://github.com/votre_nom/votre_projet",
     packages=find_packages(

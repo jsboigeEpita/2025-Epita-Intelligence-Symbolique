@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -174,9 +173,7 @@ class GPTTestSession:
                 if not chat_service:
                     return False
 
-                settings = OpenAIChatPromptExecutionSettings(
-                    max_tokens=20, temperature=0.1
-                )
+                settings = OpenAIChatPromptExecutionSettings(max_completion_tokens=20)
 
                 messages = [ChatMessageContent(role="user", content="Test connection")]
 
@@ -324,8 +321,11 @@ def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
     if not ORACLE_SYSTEM_AVAILABLE:
         pytest.skip("Système Oracle non disponible")
 
+    from unittest.mock import Mock
+
     orchestrator = CluedoExtendedOrchestrator(
         kernel=validated_gpt_kernel,
+        settings=Mock(),
         max_turns=5,
         max_cycles=2,
         oracle_strategy="enhanced_auto_reveal",
@@ -347,12 +347,15 @@ def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
 @pytest.fixture
 def mock_enhanced_orchestrator(mock_gpt_kernel, oracle_test_elements):
     """Orchestrateur Enhanced avec kernel mocké."""
+    from unittest.mock import Mock
+
     if not ORACLE_SYSTEM_AVAILABLE:
         pytest.skip("Système Oracle non disponible")
 
     # Oracle Enhanced v2.1.0: Configuration orchestrateur mocké
     orchestrator = CluedoExtendedOrchestrator(
         kernel=mock_gpt_kernel,
+        settings=Mock(),
         max_turns=5,
         max_cycles=2,
         oracle_strategy="enhanced_auto_reveal",
@@ -436,7 +439,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def create_test_oracle_state(
-    elements_jeu: Dict[str, Any]
+    elements_jeu: Dict[str, Any],
 ) -> Optional[CluedoOracleState]:
     """Crée un état Oracle pour tests."""
     if not ORACLE_SYSTEM_AVAILABLE:

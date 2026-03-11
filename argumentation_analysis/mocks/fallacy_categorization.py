@@ -44,9 +44,9 @@ class MockFallacyCategorizer:
         self.type_to_category_map: Dict[str, str] = {}
         for category, types in self.fallacy_categories.items():
             for f_type in types:
-                self.type_to_category_map[
-                    f_type.lower()
-                ] = category  # Stocker en minuscules pour la recherche insensible à la casse
+                self.type_to_category_map[f_type.lower()] = (
+                    category  # Stocker en minuscules pour la recherche insensible à la casse
+                )
 
         logger.info(
             "MockFallacyCategorizer initialisé avec config: %s (catégories: %d)",

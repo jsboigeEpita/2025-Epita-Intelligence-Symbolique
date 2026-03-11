@@ -1,6 +1,7 @@
 """
 Mock pour la bibliothèque matplotlib.
 """
+
 from unittest.mock import MagicMock
 
 # Mock pour matplotlib.pyplot

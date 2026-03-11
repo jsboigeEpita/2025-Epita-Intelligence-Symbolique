@@ -1,16 +1,33 @@
 import jpype
 import logging
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 
 from .tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
 
 
+# Mapping from semantics name to Tweety reasoner class path
+SEMANTICS_REASONERS = {
+    "preferred": "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner",
+    "grounded": "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner",
+    "stable": "org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner",
+    "complete": "org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner",
+    "admissible": "org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner",
+    "conflict_free": "org.tweetyproject.arg.dung.reasoner.SimpleConflictFreeReasoner",
+    "semi_stable": "org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner",
+    "stage": "org.tweetyproject.arg.dung.reasoner.SimpleStageReasoner",
+    "cf2": "org.tweetyproject.arg.dung.reasoner.CF2Reasoner",
+    "ideal": "org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner",
+    "naive": "org.tweetyproject.arg.dung.reasoner.SimpleNaiveReasoner",
+}
+
+
 class AFHandler:
     """
-    Handles Abstract Argumentation Framework (AF) operations using TweetyProject,
-    specifically for Dung's semantics.
+    Handles Abstract Argumentation Framework (AF) operations using TweetyProject.
+    Supports multiple Dung semantics: preferred, grounded, stable, complete,
+    admissible, conflict-free, semi-stable, stage, CF2, ideal, naive.
     """
 
     def __init__(self, initializer_instance: TweetyInitializer):
@@ -18,14 +35,83 @@ class AFHandler:
         if not self._initializer_instance.is_jvm_ready():
             raise RuntimeError("AFHandler instantiated before JVM is ready.")
 
-        # Import Java classes needed for this handler
+        # Core Java classes
         self.DungTheory = jpype.JClass("org.tweetyproject.arg.dung.syntax.DungTheory")
         self.Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self.Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+        self.Extension = jpype.JClass("org.tweetyproject.arg.dung.semantics.Extension")
+
+        # Legacy alias
         self.SimplePreferredReasoner = jpype.JClass(
             "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner"
         )
-        self.Extension = jpype.JClass("org.tweetyproject.arg.dung.semantics.Extension")
+
+        # Reasoner cache
+        self._reasoner_cache: Dict[str, Any] = {}
+
+    @staticmethod
+    def supported_semantics() -> List[str]:
+        """Returns list of supported semantics names."""
+        return list(SEMANTICS_REASONERS.keys())
+
+    def _get_reasoner(self, semantics: str):
+        """
+        Gets or creates a reasoner instance for the given semantics.
+        Caches reasoner instances for reuse.
+        """
+        semantics_key = semantics.lower().replace("-", "_")
+        if semantics_key not in SEMANTICS_REASONERS:
+            raise ValueError(
+                f"Unsupported semantics: '{semantics}'. "
+                f"Supported: {', '.join(SEMANTICS_REASONERS.keys())}"
+            )
+
+        if semantics_key not in self._reasoner_cache:
+            class_path = SEMANTICS_REASONERS[semantics_key]
+            try:
+                reasoner_cls = jpype.JClass(class_path)
+                self._reasoner_cache[semantics_key] = reasoner_cls()
+                logger.debug(f"Loaded reasoner for '{semantics_key}': {class_path}")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load reasoner for '{semantics_key}' ({class_path}): {e}"
+                )
+                raise RuntimeError(
+                    f"Reasoner for '{semantics}' not available: {e}"
+                ) from e
+
+        return self._reasoner_cache[semantics_key]
+
+    def _build_framework(
+        self, arguments: List[str], attacks: List[List[str]]
+    ) -> tuple:
+        """
+        Builds a DungTheory from argument names and attack pairs.
+        Returns (dung_theory, arg_map).
+        """
+        dung_theory = self.DungTheory()
+        arg_map = {arg_name: self.Argument(arg_name) for arg_name in arguments}
+        for arg_obj in arg_map.values():
+            dung_theory.add(arg_obj)
+
+        for source_name, target_name in attacks:
+            if source_name in arg_map and target_name in arg_map:
+                attack = self.Attack(arg_map[source_name], arg_map[target_name])
+                dung_theory.add(attack)
+            else:
+                logger.warning(
+                    f"Skipping invalid attack from '{source_name}' to '{target_name}'."
+                )
+
+        return dung_theory, arg_map
+
+    def _extensions_to_python(self, extensions_java) -> List[List[str]]:
+        """Converts Java Extension collection to sorted Python list of lists."""
+        result = []
+        for ext_java in extensions_java:
+            extension_args = [str(arg.getName()) for arg in ext_java]
+            result.append(sorted(extension_args))
+        return sorted(result)
 
     def analyze_dung_framework(
         self,
@@ -37,78 +123,109 @@ class AFHandler:
         Analyzes a Dung-style abstract argumentation framework.
 
         Args:
-            arguments (List[str]): A list of argument names.
-            attacks (List[List[str]]): A list of attacks, where each attack is a list [source, target].
-            semantics (str): The semantics to use (e.g., "preferred"). Currently only supports preferred.
+            arguments: A list of argument names.
+            attacks: A list of attacks [source, target].
+            semantics: The semantics to use. Supported: preferred, grounded, stable,
+                      complete, admissible, conflict_free, semi_stable, stage, cf2,
+                      ideal, naive.
 
         Returns:
-            Dict[str, Any]: A dictionary containing the analysis results.
+            Dict with keys: semantics, extensions, statistics.
         """
+        semantics_key = semantics.lower().replace("-", "_")
         logger.info(
-            f"Analyzing Dung framework with {len(arguments)} arguments and {len(attacks)} attacks for '{semantics}' semantics."
+            f"Analyzing Dung framework with {len(arguments)} arguments and "
+            f"{len(attacks)} attacks for '{semantics_key}' semantics."
         )
 
-        if semantics.lower() != "preferred":
-            raise NotImplementedError(
-                "Only 'preferred' semantics are currently supported."
-            )
-
         try:
-            # 1. Create the DungTheory (the argumentation framework)
-            dung_theory = self.DungTheory()
+            dung_theory, arg_map = self._build_framework(arguments, attacks)
+            reasoner = self._get_reasoner(semantics_key)
 
-            # 2. Add arguments
-            arg_map = {arg_name: self.Argument(arg_name) for arg_name in arguments}
-            for arg_obj in arg_map.values():
-                dung_theory.add(arg_obj)
+            extensions_java = reasoner.getModels(dung_theory)
+            extensions = self._extensions_to_python(extensions_java)
 
-            # 3. Add attacks
-            for source_name, target_name in attacks:
-                if source_name in arg_map and target_name in arg_map:
-                    attack = self.Attack(arg_map[source_name], arg_map[target_name])
-                    dung_theory.add(attack)
-                else:
-                    logger.warning(
-                        f"Skipping invalid attack from '{source_name}' to '{target_name}' as one or both arguments do not exist."
-                    )
-
-            # 4. Initialize the reasoner and compute extensions
-            reasoner = self.SimplePreferredReasoner()
-            extensions_java = reasoner.getModels(
-                dung_theory
-            )  # This returns a Collection<Extension>
-
-            # 5. Convert Java Extensions to Python list of lists
-            preferred_extensions = []
-            for ext_java in extensions_java:
-                extension_args = [str(arg.getName()) for arg in ext_java]
-                preferred_extensions.append(sorted(extension_args))
-
-            # 6. Format the result
             result = {
-                "semantics": "preferred",
-                "extensions": {
-                    "preferred": sorted(
-                        preferred_extensions
-                    )  # Sort for predictable output
-                },
+                "semantics": semantics_key,
+                "extensions": {semantics_key: extensions},
                 "statistics": {
                     "arguments_count": len(arguments),
                     "attacks_count": len(attacks),
-                    "extensions_count": len(preferred_extensions),
+                    "extensions_count": len(extensions),
                 },
             }
             logger.info(
-                f"Analysis successful. Found {len(preferred_extensions)} preferred extensions."
+                f"Analysis successful. Found {len(extensions)} {semantics_key} extensions."
             )
             return result
 
         except jpype.JException as e:
             logger.error(
-                f"A Java exception occurred during Dung framework analysis: {e.stacktrace()}",
+                f"Java exception during Dung framework analysis: {e.stacktrace()}",
                 exc_info=True,
             )
             raise RuntimeError(f"Error during framework analysis: {e}") from e
         except Exception as e:
-            logger.error(f"An unexpected Python exception occurred: {e}", exc_info=True)
+            logger.error(f"Unexpected error: {e}", exc_info=True)
             raise
+
+    def analyze_multi_semantics(
+        self,
+        arguments: List[str],
+        attacks: List[List[str]],
+        semantics_list: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Analyzes a framework under multiple semantics at once.
+
+        Args:
+            arguments: Argument names.
+            attacks: Attack pairs.
+            semantics_list: List of semantics to compute. Defaults to
+                           ["grounded", "preferred", "stable", "complete"].
+
+        Returns:
+            Dict with all requested semantics results.
+        """
+        if semantics_list is None:
+            semantics_list = ["grounded", "preferred", "stable", "complete"]
+
+        try:
+            dung_theory, arg_map = self._build_framework(arguments, attacks)
+            all_extensions = {}
+            statistics = {
+                "arguments_count": len(arguments),
+                "attacks_count": len(attacks),
+            }
+
+            for sem in semantics_list:
+                sem_key = sem.lower().replace("-", "_")
+                try:
+                    reasoner = self._get_reasoner(sem_key)
+                    extensions_java = reasoner.getModels(dung_theory)
+                    extensions = self._extensions_to_python(extensions_java)
+                    all_extensions[sem_key] = extensions
+                    statistics[f"{sem_key}_count"] = len(extensions)
+                except Exception as e:
+                    logger.warning(f"Failed to compute {sem_key} semantics: {e}")
+                    all_extensions[sem_key] = {"error": str(e)}
+
+            return {
+                "semantics": semantics_list,
+                "extensions": all_extensions,
+                "statistics": statistics,
+            }
+
+        except jpype.JException as e:
+            raise RuntimeError(f"Error building framework: {e}") from e
+
+    def get_grounded_extension(
+        self, arguments: List[str], attacks: List[List[str]]
+    ) -> List[str]:
+        """
+        Convenience method: returns the unique grounded extension.
+        The grounded extension is always unique (skeptical semantics).
+        """
+        result = self.analyze_dung_framework(arguments, attacks, "grounded")
+        extensions = result["extensions"].get("grounded", [])
+        return extensions[0] if extensions else []

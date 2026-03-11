@@ -1,5 +1,6 @@
 # tests/integration/logical_agents/test_logic_puzzles.py
 
+import os
 import pytest
 import json
 from pathlib import Path
@@ -9,11 +10,24 @@ import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.config.settings import AppSettings
 
+pytestmark = pytest.mark.skipif(
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Tests require OPENAI_API_KEY for agent logic puzzle solving",
+)
 
-# Fixture to create a mock kernel for the agent
+
+# Fixture to create a kernel with LLM service for the agent
 @pytest.fixture
 def kernel():
-    return sk.Kernel()
+    k = sk.Kernel()
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    chat_service = OpenAIChatCompletion(
+        service_id="default", ai_model_id="gpt-5-mini", api_key=api_key
+    )
+    k.add_service(chat_service)
+    return k
 
 
 # Fixture to load scenarios from JSON files
@@ -41,15 +55,15 @@ class TestLogicalAgentHardening:
         # The `async def` was likely a leftover.
         # 1. Initialize the agent
         settings = AppSettings()
-        agent = SherlockJTMSAgent(
-            kernel, settings, agent_name="test_contradiction_agent"
-        )
+        agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
 
-        # 2. Add a single fact
+        # 2. Add a single fact and declare it as true in JTMS
         fact_description = load_scenario["facts"][0]
         fact_id = agent._evidence_manager.add_evidence(
             {"description": fact_description}
         )
+        # The fact must be declared as TRUE in JTMS for contradiction detection to fire
+        agent.set_fact(fact_id, True)
 
         # 3. Create a direct contradiction by stating a fact is also false.
         # A justification where a node supports its own negation is a fundamental contradiction.
@@ -101,17 +115,24 @@ class TestLogicalAgentHardening:
                 "Mme. Pervenche est la coupable."
             )
 
-            # 4. Link evidence to support each hypothesis
-            # The first half of the evidence supports Moutarde
+            # 4. Link evidence to support each hypothesis AND contradict the other
+            # Evidence supporting one hypothesis should weaken the other
+            # The first half supports Moutarde and contradicts Pervenche
             for ev_id in evidence_ids[: len(evidence_ids) // 2]:
                 agent._hypothesis_tracker.link_evidence_to_hypothesis(
                     hypothesis1_id, ev_id, "positive"
                 )
+                agent._hypothesis_tracker.link_evidence_to_hypothesis(
+                    hypothesis2_id, ev_id, "negative"
+                )
 
-            # The second half supports Pervenche
+            # The second half supports Pervenche and contradicts Moutarde
             for ev_id in evidence_ids[len(evidence_ids) // 2 :]:
                 agent._hypothesis_tracker.link_evidence_to_hypothesis(
                     hypothesis2_id, ev_id, "positive"
+                )
+                agent._hypothesis_tracker.link_evidence_to_hypothesis(
+                    hypothesis1_id, ev_id, "negative"
                 )
 
             # 5. Attempt to deduce a solution

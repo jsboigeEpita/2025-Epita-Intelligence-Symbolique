@@ -288,12 +288,16 @@ class RhetoricalAnalysisState:
                 self.raw_text[:50] + "..." if len(self.raw_text) > 50 else self.raw_text
             )
             return {
-                "raw_text": self.raw_text[:150] + "..."
-                if len(self.raw_text) > 150
-                else self.raw_text,
-                "raw_text_snippet": self.raw_text[:150] + "..."
-                if len(self.raw_text) > 150
-                else self.raw_text,
+                "raw_text": (
+                    self.raw_text[:150] + "..."
+                    if len(self.raw_text) > 150
+                    else self.raw_text
+                ),
+                "raw_text_snippet": (
+                    self.raw_text[:150] + "..."
+                    if len(self.raw_text) > 150
+                    else self.raw_text
+                ),
                 "task_count": len(self.analysis_tasks),
                 "tasks_defined": list(self.analysis_tasks.keys()),
                 "argument_count": len(self.identified_arguments),
@@ -350,6 +354,416 @@ class RhetoricalAnalysisState:
             f"Instance RhetoricalAnalysisState créée depuis dict (id: {id(state)})."
         )
         return state
+
+
+class UnifiedAnalysisState(RhetoricalAnalysisState):
+    """Extended state encompassing all integrated student project dimensions.
+
+    Adds fields for counter-arguments, argument quality, JTMS beliefs,
+    Dung frameworks, governance decisions, debate transcripts, transcription
+    segments, semantic index references, and neural fallacy scores.
+    """
+
+    def __init__(self, initial_text: str):
+        super().__init__(initial_text)
+        # Counter-argument generation (2.3.3)
+        self.counter_arguments: List[Dict[str, Any]] = []
+        # Argument quality evaluation (2.3.5)
+        self.argument_quality_scores: Dict[str, Dict[str, Any]] = {}
+        # JTMS belief network (1.4.1)
+        self.jtms_beliefs: Dict[str, Dict[str, Any]] = {}
+        # Dung abstract argumentation frameworks (abs_arg_dung)
+        self.dung_frameworks: Dict[str, Dict[str, Any]] = {}
+        # Governance decisions and votes (2.1.6)
+        self.governance_decisions: List[Dict[str, Any]] = []
+        # Debate transcripts (1.2.7)
+        self.debate_transcripts: List[Dict[str, Any]] = []
+        # Speech transcription segments (speech-to-text)
+        self.transcription_segments: List[Dict[str, Any]] = []
+        # Semantic index references (Arg_Semantic_Index)
+        self.semantic_index_refs: List[Dict[str, Any]] = []
+        # Neural fallacy detection scores (2.3.2 CamemBERT)
+        self.neural_fallacy_scores: List[Dict[str, Any]] = []
+        # Track A: Tweety handler results (#55-#62)
+        self.ranking_results: List[Dict[str, Any]] = []
+        self.aspic_results: List[Dict[str, Any]] = []
+        self.belief_revision_results: List[Dict[str, Any]] = []
+        self.dialogue_results: List[Dict[str, Any]] = []
+        self.probabilistic_results: List[Dict[str, Any]] = []
+        self.bipolar_results: List[Dict[str, Any]] = []
+        # Logic agent analysis results (#71 formal verification)
+        self.fol_analysis_results: List[Dict[str, Any]] = []
+        self.propositional_analysis_results: List[Dict[str, Any]] = []
+        self.modal_analysis_results: List[Dict[str, Any]] = []
+        self.formal_synthesis_reports: List[Dict[str, Any]] = []
+        # Workflow execution results
+        self.workflow_results: Dict[str, Any] = {}
+
+    def add_counter_argument(
+        self, original_arg: str, counter_content: str, strategy: str, score: float
+    ) -> str:
+        """Add a counter-argument result."""
+        ca_id = self._generate_id("ca", self.counter_arguments)
+        entry = {
+            "id": ca_id,
+            "original_argument": original_arg,
+            "counter_content": counter_content,
+            "strategy": strategy,
+            "score": score,
+        }
+        self.counter_arguments.append(entry)
+        state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
+        return ca_id
+
+    def add_quality_score(
+        self, arg_id: str, scores: Dict[str, float], overall: float
+    ) -> None:
+        """Add quality evaluation scores for an argument."""
+        self.argument_quality_scores[arg_id] = {
+            "scores": scores,
+            "overall": overall,
+        }
+        state_logger.info(f"Quality score added for {arg_id}: {overall:.2f}")
+
+    def add_jtms_belief(
+        self, name: str, valid: Optional[bool], justifications: List[str]
+    ) -> str:
+        """Add a JTMS belief to the network."""
+        belief_id = self._generate_id("jtms", self.jtms_beliefs)
+        self.jtms_beliefs[belief_id] = {
+            "name": name,
+            "valid": valid,
+            "justifications": justifications,
+        }
+        state_logger.info(f"JTMS belief added: {belief_id} ({name}, valid={valid})")
+        return belief_id
+
+    def add_dung_framework(
+        self,
+        name: str,
+        arguments: List[str],
+        attacks: List[List[str]],
+        extensions: Optional[Dict[str, List]] = None,
+    ) -> str:
+        """Add a Dung argumentation framework."""
+        df_id = self._generate_id("dung", self.dung_frameworks)
+        self.dung_frameworks[df_id] = {
+            "name": name,
+            "arguments": arguments,
+            "attacks": attacks,
+            "extensions": extensions or {},
+        }
+        state_logger.info(
+            f"Dung framework added: {df_id} ({len(arguments)} args, {len(attacks)} attacks)"
+        )
+        return df_id
+
+    def add_governance_decision(
+        self, method: str, winner: str, scores: Dict[str, float]
+    ) -> str:
+        """Add a governance voting decision."""
+        gd_id = self._generate_id("gov", self.governance_decisions)
+        entry = {
+            "id": gd_id,
+            "method": method,
+            "winner": winner,
+            "scores": scores,
+        }
+        self.governance_decisions.append(entry)
+        state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
+        return gd_id
+
+    def add_debate_transcript(
+        self, topic: str, exchanges: List[Dict[str, str]], winner: Optional[str] = None
+    ) -> str:
+        """Add a debate transcript."""
+        dt_id = self._generate_id("debate", self.debate_transcripts)
+        entry = {
+            "id": dt_id,
+            "topic": topic,
+            "exchanges": exchanges,
+            "winner": winner,
+        }
+        self.debate_transcripts.append(entry)
+        state_logger.info(f"Debate transcript added: {dt_id} (topic: {topic[:50]})")
+        return dt_id
+
+    def add_neural_fallacy_score(
+        self,
+        text_segment: str,
+        label: str,
+        confidence: float,
+        detector: str = "camembert",
+    ) -> str:
+        """Add a neural fallacy detection score."""
+        nf_id = self._generate_id("nf", self.neural_fallacy_scores)
+        entry = {
+            "id": nf_id,
+            "text_segment": text_segment,
+            "label": label,
+            "confidence": confidence,
+            "detector": detector,
+        }
+        self.neural_fallacy_scores.append(entry)
+        state_logger.info(
+            f"Neural fallacy score added: {nf_id} ({label}: {confidence:.2f})"
+        )
+        return nf_id
+
+    def add_transcription_segment(
+        self,
+        start_time: float,
+        end_time: float,
+        text: str,
+        speaker: Optional[str] = None,
+    ) -> str:
+        """Add a speech transcription segment."""
+        ts_id = self._generate_id("ts", self.transcription_segments)
+        entry = {
+            "id": ts_id,
+            "start_time": start_time,
+            "end_time": end_time,
+            "text": text,
+            "speaker": speaker,
+        }
+        self.transcription_segments.append(entry)
+        state_logger.info(
+            f"Transcription segment added: {ts_id} ({start_time:.1f}s-{end_time:.1f}s)"
+        )
+        return ts_id
+
+    def add_semantic_index_ref(
+        self,
+        query: str,
+        document_id: str,
+        score: float,
+        snippet: Optional[str] = None,
+    ) -> str:
+        """Add a semantic index search reference."""
+        si_id = self._generate_id("si", self.semantic_index_refs)
+        entry = {
+            "id": si_id,
+            "query": query,
+            "document_id": document_id,
+            "score": score,
+            "snippet": snippet,
+        }
+        self.semantic_index_refs.append(entry)
+        state_logger.info(
+            f"Semantic index ref added: {si_id} (doc: {document_id}, score: {score:.2f})"
+        )
+        return si_id
+
+    def add_ranking_result(
+        self, method: str, arguments: List[str], comparisons: List[Dict[str, Any]]
+    ) -> str:
+        """Add a ranking semantics result."""
+        rk_id = self._generate_id("rank", self.ranking_results)
+        entry = {
+            "id": rk_id,
+            "method": method,
+            "arguments": arguments,
+            "comparisons": comparisons,
+        }
+        self.ranking_results.append(entry)
+        state_logger.info(f"Ranking result added: {rk_id} (method: {method})")
+        return rk_id
+
+    def add_aspic_result(
+        self, reasoner_type: str, extensions: List[Any], statistics: Dict[str, Any]
+    ) -> str:
+        """Add an ASPIC+ analysis result."""
+        as_id = self._generate_id("aspic", self.aspic_results)
+        entry = {
+            "id": as_id,
+            "reasoner_type": reasoner_type,
+            "extensions": extensions,
+            "statistics": statistics,
+        }
+        self.aspic_results.append(entry)
+        state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
+        return as_id
+
+    def add_belief_revision_result(
+        self, method: str, original: List[str], revised: List[str]
+    ) -> str:
+        """Add a belief revision result."""
+        br_id = self._generate_id("brevision", self.belief_revision_results)
+        entry = {
+            "id": br_id,
+            "method": method,
+            "original": original,
+            "revised": revised,
+        }
+        self.belief_revision_results.append(entry)
+        state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
+        return br_id
+
+    def add_dialogue_result(
+        self, topic: str, outcome: str, trace: List[Dict[str, Any]]
+    ) -> str:
+        """Add a dialogue protocol result."""
+        dl_id = self._generate_id("dialogue", self.dialogue_results)
+        entry = {
+            "id": dl_id,
+            "topic": topic,
+            "outcome": outcome,
+            "trace": trace,
+        }
+        self.dialogue_results.append(entry)
+        state_logger.info(f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})")
+        return dl_id
+
+    def add_probabilistic_result(
+        self, arguments: List[str], acceptance_probs: Dict[str, float]
+    ) -> str:
+        """Add a probabilistic argumentation result."""
+        pr_id = self._generate_id("prob", self.probabilistic_results)
+        entry = {
+            "id": pr_id,
+            "arguments": arguments,
+            "acceptance_probabilities": acceptance_probs,
+        }
+        self.probabilistic_results.append(entry)
+        state_logger.info(f"Probabilistic result added: {pr_id} ({len(arguments)} args)")
+        return pr_id
+
+    def add_bipolar_result(
+        self, framework_type: str, arguments: List[str], supports: List[List[str]]
+    ) -> str:
+        """Add a bipolar argumentation framework result."""
+        bp_id = self._generate_id("bipolar", self.bipolar_results)
+        entry = {
+            "id": bp_id,
+            "framework_type": framework_type,
+            "arguments": arguments,
+            "supports": supports,
+        }
+        self.bipolar_results.append(entry)
+        state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
+        return bp_id
+
+    def add_fol_analysis_result(
+        self, formulas: List[str], consistent: bool, inferences: List[str],
+        confidence: float = 0.0,
+    ) -> str:
+        """Add a first-order logic analysis result."""
+        fol_id = self._generate_id("fol", self.fol_analysis_results)
+        entry = {
+            "id": fol_id,
+            "formulas": formulas,
+            "consistent": consistent,
+            "inferences": inferences,
+            "confidence": confidence,
+        }
+        self.fol_analysis_results.append(entry)
+        state_logger.info(f"FOL analysis added: {fol_id} (consistent={consistent})")
+        return fol_id
+
+    def add_propositional_analysis_result(
+        self, formulas: List[str], satisfiable: bool, model: Optional[Dict[str, bool]] = None,
+    ) -> str:
+        """Add a propositional logic analysis result."""
+        pl_id = self._generate_id("pl", self.propositional_analysis_results)
+        entry = {
+            "id": pl_id,
+            "formulas": formulas,
+            "satisfiable": satisfiable,
+            "model": model or {},
+        }
+        self.propositional_analysis_results.append(entry)
+        state_logger.info(f"PL analysis added: {pl_id} (satisfiable={satisfiable})")
+        return pl_id
+
+    def add_modal_analysis_result(
+        self, formulas: List[str], valid: bool, modalities: List[str],
+    ) -> str:
+        """Add a modal logic analysis result."""
+        ml_id = self._generate_id("modal", self.modal_analysis_results)
+        entry = {
+            "id": ml_id,
+            "formulas": formulas,
+            "valid": valid,
+            "modalities": modalities,
+        }
+        self.modal_analysis_results.append(entry)
+        state_logger.info(f"Modal analysis added: {ml_id} (valid={valid})")
+        return ml_id
+
+    def add_formal_synthesis_report(
+        self, summary: str, phase_results: Dict[str, Any], overall_validity: float,
+    ) -> str:
+        """Add a formal synthesis report aggregating all logic analyses."""
+        fs_id = self._generate_id("fsyn", self.formal_synthesis_reports)
+        entry = {
+            "id": fs_id,
+            "summary": summary,
+            "phase_results": phase_results,
+            "overall_validity": overall_validity,
+        }
+        self.formal_synthesis_reports.append(entry)
+        state_logger.info(f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})")
+        return fs_id
+
+    def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
+        """Store workflow execution results."""
+        self.workflow_results[workflow_name] = results
+        state_logger.info(f"Workflow results stored for '{workflow_name}'")
+
+    def get_state_snapshot(self, summarize: bool = False) -> Dict[str, Any]:
+        """Extended snapshot including all unified dimensions."""
+        base = super().get_state_snapshot(summarize=summarize)
+        if summarize:
+            base.update(
+                {
+                    "counter_argument_count": len(self.counter_arguments),
+                    "quality_scores_count": len(self.argument_quality_scores),
+                    "jtms_belief_count": len(self.jtms_beliefs),
+                    "dung_framework_count": len(self.dung_frameworks),
+                    "governance_decision_count": len(self.governance_decisions),
+                    "debate_transcript_count": len(self.debate_transcripts),
+                    "transcription_segment_count": len(self.transcription_segments),
+                    "semantic_index_ref_count": len(self.semantic_index_refs),
+                    "neural_fallacy_score_count": len(self.neural_fallacy_scores),
+                    "ranking_result_count": len(self.ranking_results),
+                    "aspic_result_count": len(self.aspic_results),
+                    "belief_revision_result_count": len(self.belief_revision_results),
+                    "dialogue_result_count": len(self.dialogue_results),
+                    "probabilistic_result_count": len(self.probabilistic_results),
+                    "bipolar_result_count": len(self.bipolar_results),
+                    "fol_analysis_count": len(self.fol_analysis_results),
+                    "propositional_analysis_count": len(self.propositional_analysis_results),
+                    "modal_analysis_count": len(self.modal_analysis_results),
+                    "formal_synthesis_count": len(self.formal_synthesis_reports),
+                    "workflow_results_count": len(self.workflow_results),
+                }
+            )
+        else:
+            base.update(
+                {
+                    "counter_arguments": self.counter_arguments,
+                    "argument_quality_scores": self.argument_quality_scores,
+                    "jtms_beliefs": self.jtms_beliefs,
+                    "dung_frameworks": self.dung_frameworks,
+                    "governance_decisions": self.governance_decisions,
+                    "debate_transcripts": self.debate_transcripts,
+                    "transcription_segments": self.transcription_segments,
+                    "semantic_index_refs": self.semantic_index_refs,
+                    "neural_fallacy_scores": self.neural_fallacy_scores,
+                    "ranking_results": self.ranking_results,
+                    "aspic_results": self.aspic_results,
+                    "belief_revision_results": self.belief_revision_results,
+                    "dialogue_results": self.dialogue_results,
+                    "probabilistic_results": self.probabilistic_results,
+                    "bipolar_results": self.bipolar_results,
+                    "fol_analysis_results": self.fol_analysis_results,
+                    "propositional_analysis_results": self.propositional_analysis_results,
+                    "modal_analysis_results": self.modal_analysis_results,
+                    "formal_synthesis_reports": self.formal_synthesis_reports,
+                    "workflow_results": self.workflow_results,
+                }
+            )
+        return base
 
 
 # Optionnel : Ajouter un log à la fin du fichier pour confirmer le chargement du module

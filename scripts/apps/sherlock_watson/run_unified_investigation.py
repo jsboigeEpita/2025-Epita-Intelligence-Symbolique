@@ -4,7 +4,7 @@
 SCRIPT D'EXÉCUTION SIMPLIFIÉ POUR LA DÉMONSTRATION SHERLOCK-WATSON (CLUEDO)
 =========================================================================
 
-Ce script sert de point d'entrée unique et simplifié pour lancer 
+Ce script sert de point d'entrée unique et simplifié pour lancer
 une démonstration du système d'enquête Cluedo.
 
 Il utilise CluedoExtendedOrchestrator pour gérer la logique de l'enquête.

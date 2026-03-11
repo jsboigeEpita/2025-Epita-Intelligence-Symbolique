@@ -67,9 +67,9 @@ class MockJClassCore:
                     return self._jclass_provider("java.lang.ClassLoader")
                 return MockJClassCore("java.lang.ClassLoader")
 
-            self._static_attributes[
-                "getSystemClassLoader"
-            ] = mock_get_system_class_loader
+            self._static_attributes["getSystemClassLoader"] = (
+                mock_get_system_class_loader
+            )
             mock_logger.debug(
                 f"Méthode statique 'getSystemClassLoader' configurée pour java.lang.ClassLoader."
             )
@@ -231,14 +231,18 @@ class MockJClassCore:
         )
 
         instance_mock.__eq__ = MagicMock(
-            side_effect=lambda other: instance_mock.equals(other)
-            if hasattr(instance_mock, "equals")
-            else NotImplemented
+            side_effect=lambda other: (
+                instance_mock.equals(other)
+                if hasattr(instance_mock, "equals")
+                else NotImplemented
+            )
         )
         instance_mock.__hash__ = MagicMock(
-            side_effect=lambda: instance_mock.hashCode()
-            if hasattr(instance_mock, "hashCode")
-            else object.__hash__(instance_mock)
+            side_effect=lambda: (
+                instance_mock.hashCode()
+                if hasattr(instance_mock, "hashCode")
+                else object.__hash__(instance_mock)
+            )
         )
 
         dung_theory_instance_arg = args[0] if args else None

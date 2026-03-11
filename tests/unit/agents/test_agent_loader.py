@@ -1,5 +1,5 @@
 import pytest
-from src.agents.agent_loader import AgentLoader
+from argumentation_analysis.plugin_framework.agents.agent_loader import AgentLoader
 
 
 def test_agent_loader_can_be_imported():

@@ -120,12 +120,20 @@ class LogicAgentFactory:
         )
         cls._agent_classes[logic_type.lower().strip()] = agent_class
 
+    # Handler-only types (no full agent, but handler available via TweetyBridge)
+    _handler_types: List[str] = [
+        "description_logic", "dl",
+        "conditional_logic", "cl",
+        "sat",
+    ]
+
     @classmethod
     def get_supported_logic_types(cls) -> List[str]:
         """
         Retourne la liste des types de logique actuellement supportés par la factory.
+        Includes both full agent types and handler-only types.
 
         :return: Une liste des noms des types de logique enregistrés.
         :rtype: List[str]
         """
-        return list(cls._agent_classes.keys())
+        return list(cls._agent_classes.keys()) + cls._handler_types

@@ -7,7 +7,7 @@ Oracle pour les catégoriser précisément selon leur utilité et leur statut.
 
 Categories:
 - Code actif (utilisé dans le système)
-- Tests orphelins (anciens tests non intégrés)  
+- Tests orphelins (anciens tests non intégrés)
 - Scripts temporaires (scripts de développement)
 - Documentation obsolète (guides/rapports anciens)
 - Fichiers de configuration (cache, environnement)

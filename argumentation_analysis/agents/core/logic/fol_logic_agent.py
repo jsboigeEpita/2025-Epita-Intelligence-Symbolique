@@ -18,6 +18,7 @@ Fonctionnalités :
 
 import logging
 import asyncio
+import inspect
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
 from pydantic import PrivateAttr
@@ -106,6 +107,84 @@ class FOLAnalysisResult:
     reasoning_steps: List[str] = field(default_factory=list)
 
 
+class BeliefSetBuilderPlugin:
+    """
+    Plugin for programmatically building FOL belief sets.
+
+    Accumulates sort/predicate/constant/formula declarations,
+    then builds a Tweety FolBeliefSet via create_belief_set_programmatically().
+    """
+
+    def __init__(self):
+        self._sorts: Dict[str, List[str]] = {}  # sort_name -> [constants]
+        self._predicates: Dict[str, List[str]] = {}  # pred_name -> [arg_sort_names]
+        self._formulas: List[str] = []
+
+    def reset(self):
+        """Clear all accumulated declarations."""
+        self._sorts.clear()
+        self._predicates.clear()
+        self._formulas.clear()
+
+    def add_sort(self, sort_name: str):
+        """Declare a sort (type/domain)."""
+        if sort_name not in self._sorts:
+            self._sorts[sort_name] = []
+
+    def add_constant_to_sort(self, const_name: str, sort_name: str):
+        """Add a constant to a sort."""
+        if sort_name not in self._sorts:
+            self._sorts[sort_name] = []
+        if const_name not in self._sorts[sort_name]:
+            self._sorts[sort_name].append(const_name)
+
+    def add_predicate_schema(self, pred_name: str, arg_sorts: List[str]):
+        """Declare a predicate with its argument sorts."""
+        self._predicates[pred_name] = list(arg_sorts)
+
+    def add_atomic_fact(self, pred_name: str, args: List[str]):
+        """Add an atomic formula: pred(arg1, arg2, ...)."""
+        args_str = ", ".join(args)
+        self._formulas.append(f"{pred_name}({args_str})")
+
+    def add_negated_atomic_fact(self, pred_name: str, args: List[str]):
+        """Add a negated atomic formula: !pred(arg1, arg2, ...)."""
+        args_str = ", ".join(args)
+        self._formulas.append(f"!{pred_name}({args_str})")
+
+    def add_universal_implication(
+        self, antecedent_pred: str, consequent_pred: str, sort_name: str
+    ):
+        """Add forall X: (antecedent(X) => consequent(X))."""
+        self._formulas.append(
+            f"forall X: ({antecedent_pred}(X) => {consequent_pred}(X))"
+        )
+
+    def add_existential_conjunction(self, pred1: str, pred2: str, sort_name: str):
+        """Add exists X: (pred1(X) && pred2(X))."""
+        self._formulas.append(f"exists X: ({pred1}(X) && {pred2}(X))")
+
+    def build_tweety_belief_set(self, tweety_bridge):
+        """
+        Build a Tweety FolBeliefSet from accumulated declarations.
+
+        Args:
+            tweety_bridge: TweetyBridge instance with fol_handler.
+
+        Returns:
+            Java FolBeliefSet object.
+        """
+        builder_data = {
+            "_sorts": dict(self._sorts),
+            "_predicates": dict(self._predicates),
+            "_formulas": list(self._formulas),
+        }
+        belief_set, _signature = (
+            tweety_bridge.fol_handler.create_belief_set_programmatically(builder_data)
+        )
+        return belief_set
+
+
 class FOLLogicAgent(BaseLogicAgent):
     """
     Agent de logique du premier ordre utilisant TweetyProject.
@@ -113,7 +192,7 @@ class FOLLogicAgent(BaseLogicAgent):
     Conçu comme alternative fiable à ModalLogicAgent pour éviter
     les échecs fréquents tout en maintenant une analyse formelle authentique.
     """
-    
+
     # Attributs privés Pydantic V2 pour éviter ValidationError
     _analysis_cache: Dict[str, "FOLAnalysisResult"] = PrivateAttr(default_factory=dict)
     _conversion_prompt: str = PrivateAttr(default="")
@@ -152,29 +231,30 @@ class FOLLogicAgent(BaseLogicAgent):
         logger.info(f"Agent {agent_name} initialisé avec logique FOL")
 
     def _create_fol_conversion_prompt(self) -> str:
-        """Crée le prompt de conversion vers FOL."""
+        """Crée le prompt de conversion vers FOL (Tweety ASCII syntax)."""
         return """
 Tu es un expert en logique du premier ordre (FOL). Convertis le texte naturel suivant en formules FOL valides.
 
-RÈGLES DE CONVERSION FOL :
-1. Utilise des prédicats clairs : P(x), Q(x,y), etc.
-2. Quantificateurs : ∀x (pour tout x), ∃x (il existe x)
-3. Connecteurs logiques : ∧ (et), ∨ (ou), → (implique), ¬ (non), ↔ (équivalent)
-4. Variables : x, y, z pour objets ; a, b, c pour constantes
-5. Prédicats significatifs basés sur le contexte
+IMPORTANT: Utilise la syntaxe ASCII compatible TweetyProject :
+- Quantificateurs : forall X: (...) et exists X: (...)
+- Connecteurs : && (et), || (ou), => (implique), ! (non), <=> (équivalent)
+- Variables en MAJUSCULES : X, Y, Z
+- Constantes en minuscules : socrate, marie
+- Prédicats avec majuscule initiale : Homme(X), Mortel(X)
 
 EXEMPLE :
 Texte: "Tous les hommes sont mortels. Socrate est un homme."
-FOL: ∀x(Homme(x) → Mortel(x)) ∧ Homme(socrate)
+FOL: forall X: (Homme(X) => Mortel(X))
+     Homme(socrate)
 
 ANALYSE LE TEXTE SUIVANT :
 {text}
 
 RÉPONDS EN FORMAT JSON :
 {
-    "formulas": ["formule1", "formule2", ...],
-    "predicates": {"nom": "description", ...},
-    "variables": {"nom": "type", ...},
+    "formulas": ["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"],
+    "predicates": {"Homme": "est un homme", "Mortel": "est mortel"},
+    "variables": {"X": "thing"},
     "reasoning": "explication de la conversion"
 }
 """
@@ -215,9 +295,10 @@ RÉPONDS EN FORMAT JSON :
         """
         try:
             # Initialisation du pont Tweety pour FOL
-            if not self.tweety_bridge:
-                self.tweety_bridge = TweetyBridge()
-                await self.tweety_bridge.initialize_fol_reasoner()
+            if not getattr(self, "_tweety_bridge", None):
+                self._tweety_bridge = TweetyBridge()
+                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
+                    await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL initialisé")
 
             # Configuration des fonctions sémantiques FOL
@@ -269,6 +350,11 @@ RÉPONDS EN FORMAT JSON :
         logger.info(f"🔍 Début analyse FOL pour texte de {len(text)} caractères")
 
         try:
+            # 0. Lazy setup: register semantic functions if not done yet
+            if not getattr(self, "_components_initialized", False):
+                await self.setup_agent_components()
+                object.__setattr__(self, "_components_initialized", True)
+
             # 1. Vérification du cache
             cache_key = self._generate_cache_key(text, context)
             if cache_key in self._analysis_cache:
@@ -334,6 +420,9 @@ RÉPONDS EN FORMAT JSON :
                 parsed = json.loads(str(result))
                 formulas = parsed.get("formulas", [])
 
+                # Convert any Unicode FOL to ASCII for Tweety compatibility
+                formulas = [self.unicode_to_ascii_fol(f) for f in formulas]
+
                 logger.info(f"✅ Conversion LLM: {len(formulas)} formules générées")
                 return formulas
 
@@ -346,43 +435,89 @@ RÉPONDS EN FORMAT JSON :
             logger.error(f"❌ Erreur conversion FOL: {e}")
             return self._basic_fol_conversion(text)
 
+    @staticmethod
+    def unicode_to_ascii_fol(formula: str) -> str:
+        """
+        Convert Unicode FOL symbols to Tweety-compatible ASCII syntax.
+
+        Tweety's FolParser only accepts ASCII operators:
+        - forall/exists (NOT ∀/∃)
+        - &&, ||, =>, !, <=>, ^^  (NOT ∧, ∨, →, ¬, ↔)
+
+        See issue #23 and CoursIA tweety_fol_bnf.md for reference.
+        """
+        replacements = {
+            "∀": "forall ",
+            "∃": "exists ",
+            "∧": "&&",
+            "∨": "||",
+            "→": "=>",
+            "¬": "!",
+            "↔": "<=>",
+            "⊥": "+",  # Tweety contradiction
+            "⊤": "-",  # Tweety tautology
+        }
+        for unicode_char, ascii_equiv in replacements.items():
+            formula = formula.replace(unicode_char, ascii_equiv)
+        return formula
+
     def _basic_fol_conversion(self, text: str) -> List[str]:
         """
         Conversion FOL basique par règles heuristiques.
+
+        Produces Tweety-compatible ASCII FOL with sort/type declarations.
 
         Args:
             text: Texte à convertir
 
         Returns:
-            List[str]: Formules FOL simples
+            List[str]: Formules FOL simples (Tweety ASCII syntax)
         """
         formulas = []
         sentences = text.split(".")
+
+        # Collect predicates and constants for sort/type declarations
+        predicates = set()
+        predicate_count = 0
 
         for i, sentence in enumerate(sentences):
             sentence = sentence.strip()
             if not sentence:
                 continue
 
-            # Règles de conversion simples
+            # Règles de conversion simples — ASCII syntax for Tweety
             if "tous" in sentence.lower() or "chaque" in sentence.lower():
-                formulas.append(f"∀x(P{i}(x) → Q{i}(x))")
+                predicates.add(f"P{i}")
+                predicates.add(f"Q{i}")
+                formulas.append(f"forall X: (P{i}(X) => Q{i}(X))")
+                predicate_count += 1
             elif "il existe" in sentence.lower() or "certains" in sentence.lower():
-                formulas.append(f"∃x(P{i}(x) ∧ Q{i}(x))")
+                predicates.add(f"P{i}")
+                predicates.add(f"Q{i}")
+                formulas.append(f"exists X: (P{i}(X) && Q{i}(X))")
+                predicate_count += 1
             elif "si" in sentence.lower() and "alors" in sentence.lower():
-                formulas.append(f"P{i}(x) → Q{i}(x)")
+                predicates.add(f"P{i}")
+                predicates.add(f"Q{i}")
+                formulas.append(f"forall X: (P{i}(X) => Q{i}(X))")
+                predicate_count += 1
             else:
+                predicates.add(f"P{i}")
                 formulas.append(f"P{i}(a)")
 
-        return formulas
+        # Prepend Tweety sort/type declarations (required by FolParser BNF)
+        declarations = []
+        declarations.append("thing = {a}")  # Default sort with constant
+        for pred in sorted(predicates):
+            declarations.append(f"type({pred}(thing))")
+
+        # Combine declarations + empty line + formulas (Tweety BNF: SORTSDEC DECLAR FORMULAS)
+        return declarations + [""] + formulas
 
     def _validate_fol_formula(self, formula: str) -> bool:
-        """Validation basique syntaxe FOL."""
-        # Caractères FOL attendus
-        fol_chars = ["∀", "∃", "→", "∧", "∨", "¬", "↔"]
-
+        """Validation basique syntaxe FOL (accepts both Unicode and ASCII)."""
         # Vérifications de base
-        has_quantifier = any(q in formula for q in ["∀", "∃"])
+        has_quantifier = any(q in formula for q in ["∀", "∃", "forall", "exists"])
         has_predicate = "(" in formula and ")" in formula
         balanced_parens = formula.count("(") == formula.count(")")
 
@@ -404,29 +539,41 @@ RÉPONDS EN FORMAT JSON :
         """
         result = FOLAnalysisResult(formulas=formulas)
 
-        if not self.tweety_bridge:
+        bridge = getattr(self, "_tweety_bridge", None)
+        if not bridge:
             logger.warning("⚠️ TweetyBridge non initialisé - analyse limitée")
             result.consistency_check = True  # Assume consistent si pas de vérification
             result.confidence_score = 0.5
             return result
 
         try:
-            # Test de cohérence
-            is_consistent = await self.tweety_bridge.check_consistency(formulas)
+            # Test de cohérence — handle both sync and async bridges
+            content_str = "\n".join(formulas)
+            raw = bridge.check_consistency(content_str, "first_order")
+            if inspect.isawaitable(raw):
+                raw = await raw
+            is_consistent = raw[0] if isinstance(raw, tuple) else raw
             result.consistency_check = is_consistent
 
             # Calcul d'inférences
-            if is_consistent:
-                inferences = await self.tweety_bridge.derive_inferences(formulas)
-                result.inferences = inferences
+            if is_consistent and hasattr(bridge, "derive_inferences"):
+                raw_inf = bridge.derive_inferences(formulas)
+                if inspect.isawaitable(raw_inf):
+                    raw_inf = await raw_inf
+                result.inferences = raw_inf
                 result.confidence_score = 0.9
+            elif is_consistent:
+                result.confidence_score = 0.8
             else:
                 result.validation_errors.append("Formules incohérentes détectées")
                 result.confidence_score = 0.3
 
             # Génération d'interprétations
-            interpretations = await self.tweety_bridge.generate_models(formulas)
-            result.interpretations = interpretations
+            if hasattr(bridge, "generate_models"):
+                raw_models = bridge.generate_models(formulas)
+                if inspect.isawaitable(raw_models):
+                    raw_models = await raw_models
+                result.interpretations = raw_models
 
         except Exception as e:
             logger.error(f"❌ Erreur analyse Tweety: {e}")
@@ -541,23 +688,40 @@ RÉPONDS EN FORMAT JSON :
 
         content = text + str(context) if context else text
         return hashlib.md5(content.encode()).hexdigest()
+
     # ==================== PROPERTIES BACKWARD COMPATIBILITY ====================
-    
+
     @property
     def analysis_cache(self) -> Dict[str, "FOLAnalysisResult"]:
         """Expose _analysis_cache for backward compatibility."""
         return self._analysis_cache
-    
+
     @property
     def conversion_prompt(self) -> str:
         """Expose _conversion_prompt for backward compatibility."""
         return self._conversion_prompt
-    
+
     @property
     def analysis_prompt(self) -> str:
         """Expose _analysis_prompt for backward compatibility."""
         return self._analysis_prompt
 
+    @property
+    def tweety_bridge(self):
+        """Expose _tweety_bridge for programmatic belief set construction."""
+        return self._tweety_bridge
+
+    @property
+    def _builder_plugin(self) -> "BeliefSetBuilderPlugin":
+        """Lazy-initialized BeliefSetBuilderPlugin for programmatic FOL construction."""
+        if (
+            not hasattr(self, "_builder_plugin_instance")
+            or self._builder_plugin_instance is None
+        ):
+            object.__setattr__(
+                self, "_builder_plugin_instance", BeliefSetBuilderPlugin()
+            )
+        return self._builder_plugin_instance
 
     # ==================== IMPLÉMENTATION MÉTHODES ABSTRAITES ====================
 
@@ -565,7 +729,7 @@ RÉPONDS EN FORMAT JSON :
         """Décrit les capacités de l'agent FOL."""
         return {
             "logic_type": "first_order",
-            "syntax_support": ["∀", "∃", "→", "∧", "∨", "¬", "↔"],
+            "syntax_support": ["forall", "exists", "=>", "&&", "||", "!", "<=>"],
             "predicates": True,
             "quantifiers": True,
             "tweety_integration": True,
@@ -585,9 +749,10 @@ RÉPONDS EN FORMAT JSON :
                 super().setup_agent_components(llm_service_id)
 
             # Initialisation TweetyBridge si pas déjà fait
-            if not self.tweety_bridge:
-                self.tweety_bridge = TweetyBridge()
-                await self.tweety_bridge.initialize_fol_reasoner()
+            if not getattr(self, "_tweety_bridge", None):
+                self._tweety_bridge = TweetyBridge()
+                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
+                    await self._tweety_bridge.initialize_fol_reasoner()
                 logger.info("✅ TweetyBridge FOL configuré")
 
             # Configuration des fonctions sémantiques
@@ -596,7 +761,7 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             logger.warning(f"⚠️ Configuration composants FOL partielle: {e}")
 
-    def text_to_belief_set(
+    async def text_to_belief_set(
         self, text: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Optional[BeliefSet], str]:
         """Convertit texte en ensemble de croyances FOL."""
@@ -617,7 +782,7 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             return None, f"Conversion error: {str(e)}"
 
-    def generate_queries(
+    async def generate_queries(
         self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None
     ) -> List[str]:
         """Génère requêtes FOL pertinentes."""
@@ -630,10 +795,10 @@ RÉPONDS EN FORMAT JSON :
         if "donc" in text.lower() or "alors" in text.lower():
             queries.append("derive_conclusions")
 
-        if "tous" in text.lower() or "∀" in text:
+        if "tous" in text.lower() or "∀" in text or "forall" in text.lower():
             queries.append("universal_instances")
 
-        if "il existe" in text.lower() or "∃" in text:
+        if "il existe" in text.lower() or "∃" in text or "exists" in text.lower():
             queries.append("existential_witnesses")
 
         return queries
@@ -641,28 +806,55 @@ RÉPONDS EN FORMAT JSON :
     async def execute_query(
         self, belief_set: BeliefSet, query: str
     ) -> Tuple[Optional[bool], str]:
-        """Exécute requête sur ensemble de croyances."""
+        """Exécute requête sur ensemble de croyances.
+
+        Supports both command queries ("consistency_check", "derive_conclusions")
+        and formula-based queries (e.g., "Mortal(socrate)") for entailment checking.
+        """
         try:
-            formulas = [b.content for b in belief_set.beliefs]
+            bridge = getattr(self, "_tweety_bridge", None)
 
             if query == "consistency_check":
-                # Test cohérence
-                if self.tweety_bridge:
-                    is_consistent = await self.tweety_bridge.check_consistency(formulas)
-                    return is_consistent, f"Consistency: {is_consistent}"
-                else:
-                    return True, "Consistency assumed (no Tweety)"
+                return await self.is_consistent(belief_set)
 
             elif query == "derive_conclusions":
                 # Dérivation d'inférences
-                if self.tweety_bridge:
-                    inferences = await self.tweety_bridge.derive_inferences(formulas)
-                    return len(inferences) > 0, f"Inferences: {inferences}"
+                formulas = [
+                    f.strip() for f in belief_set.content.split("\n") if f.strip()
+                ]
+                if bridge and hasattr(bridge, "derive_inferences"):
+                    result = bridge.derive_inferences(formulas)
+                    if inspect.isawaitable(result):
+                        result = await result
+                    return len(result) > 0, f"Inferences: {result}"
                 else:
                     return True, "Inferences simulated"
 
             else:
-                return None, f"Query {query} not implemented"
+                # Treat as a formula-based entailment query
+                if bridge and hasattr(bridge, "fol_handler"):
+                    java_obj = getattr(belief_set, "java_object", None)
+                    if java_obj is not None:
+                        raw = bridge.fol_handler.execute_fol_query(java_obj, query)
+                    else:
+                        raw = bridge.fol_handler.execute_fol_query(
+                            belief_set.content, query
+                        )
+                    if inspect.isawaitable(raw):
+                        raw = await raw
+                    if isinstance(raw, tuple):
+                        return raw[0], raw[1]
+                    return raw, f"Query result: {raw}"
+                elif bridge:
+                    # Try execute_fol_query on bridge directly
+                    raw = bridge.execute_fol_query(belief_set.content, query)
+                    if inspect.isawaitable(raw):
+                        raw = await raw
+                    if isinstance(raw, tuple):
+                        return raw[0], raw[1]
+                    return raw, f"Query result: {raw}"
+                else:
+                    return None, f"No Tweety bridge available for query: {query}"
 
         except Exception as e:
             return False, f"Query execution error: {str(e)}"
@@ -708,11 +900,21 @@ RÉPONDS EN FORMAT JSON :
     async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """Vérifie cohérence ensemble de croyances."""
         try:
-            formulas = [b.content for b in belief_set.beliefs]
-
-            if self.tweety_bridge:
-                is_consistent = await self.tweety_bridge.check_consistency(formulas)
-                return is_consistent, f"Tweety consistency check: {is_consistent}"
+            bridge = getattr(self, "_tweety_bridge", None)
+            if bridge:
+                # Prefer java_object if available (from programmatic construction)
+                java_obj = getattr(belief_set, "java_object", None)
+                if java_obj is not None and hasattr(bridge, "fol_handler"):
+                    # Direct path: pass Java object to FOL handler
+                    raw = bridge.fol_handler.check_consistency(java_obj)
+                else:
+                    # String path: TweetyBridge parses the content
+                    raw = bridge.check_consistency(belief_set.content, "first_order")
+                if inspect.isawaitable(raw):
+                    raw = await raw
+                if isinstance(raw, tuple):
+                    return raw[0], f"Tweety consistency check: {raw[1]}"
+                return raw, f"Tweety consistency check: {raw}"
             else:
                 # Vérification heuristique basique
                 return True, "Basic consistency assumed"

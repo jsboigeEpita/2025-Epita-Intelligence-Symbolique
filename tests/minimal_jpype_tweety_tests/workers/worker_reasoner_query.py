@@ -3,6 +3,7 @@
 """
 Worker pour le test de requête sur un raisonneur (test_reasoner_query).
 """
+
 import os
 import sys
 import jpype

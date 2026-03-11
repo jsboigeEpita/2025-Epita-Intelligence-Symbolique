@@ -4,6 +4,7 @@
 Worker pour le test de listage de modèles (test_list_models).
 Ce script est exécuté dans un sous-processus avec une JVM dédiée.
 """
+
 import os
 import sys
 import jpype

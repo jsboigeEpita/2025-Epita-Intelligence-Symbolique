@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -12,7 +6,7 @@ Tests de migration Modal Logic → FOL pour FOLLogicAgent.
 
 Ce module valide que l'agent FOL peut remplacer Modal Logic avec :
 ✅ Remplacement fonctionnel complet
-✅ Amélioration de la stabilité (moins d'erreurs)  
+✅ Amélioration de la stabilité (moins d'erreurs)
 ✅ Rétrocompatibilité avec sophismes existants
 ✅ Performance équivalente ou meilleure
 ✅ Intégration transparente avec orchestrations
@@ -24,11 +18,27 @@ Tests de régression et comparaison :
 - Migration transparente via configuration
 """
 
+import os
+import sys
 import pytest
 import asyncio
 import time
 import logging
 from typing import Dict, List, Any, Optional, Tuple
+from unittest.mock import MagicMock
+
+_jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
+
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Tests require OPENAI_API_KEY for FOL/Modal logic agent migration validation",
+    ),
+    pytest.mark.skipif(
+        _jpype_is_mocked,
+        reason="FOL migration tests require real JVM (jpype mocked by --disable-jvm-session)",
+    ),
+]
 
 import statistics
 
@@ -192,6 +202,7 @@ class TestModalToFOLInterface:
             mock_level=MockLevel.PARTIAL,
             require_real_gpt=False,
             require_real_tweety=False,
+            require_full_taxonomy=False,
         )
 
         # La config devrait fonctionner (même si agents différents)
@@ -252,9 +263,9 @@ class TestFunctionalReplacement:
 
                 # Vérifications fonctionnelles
                 checks = {
-                    "has_formulas": len(result.formulas) > 0
-                    if expected["has_formulas"]
-                    else True,
+                    "has_formulas": (
+                        len(result.formulas) > 0 if expected["has_formulas"] else True
+                    ),
                     "confidence_acceptable": result.confidence_score
                     >= expected["min_confidence"],
                     "no_critical_errors": len(
@@ -466,6 +477,7 @@ class TestOrchestrationIntegration:
             mock_level=MockLevel.PARTIAL,
             require_real_gpt=False,
             require_real_tweety=False,
+            require_full_taxonomy=False,
         )
 
         # La configuration doit être valide (même si différente)

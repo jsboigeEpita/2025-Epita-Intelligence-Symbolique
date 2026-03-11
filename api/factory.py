@@ -43,6 +43,8 @@ def create_app(
         "http://localhost:3001",
         "http://127.0.0.1:3000",
         "http://localhost:3000",
+        "http://localhost:8081",  # Expo dev server
+        "http://127.0.0.1:8081",
     ]
 
     app.add_middleware(

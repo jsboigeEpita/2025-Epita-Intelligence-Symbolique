@@ -73,9 +73,7 @@ class InformalAnalysisAgent(BaseAgent):
         "max_fallacies": 5,
         "include_context": False,
     }
-    logger: Optional[logging.Logger] = Field(
-        default_factory=lambda: logging.getLogger(__name__)
-    )
+    # logger inherited from BaseAgent (read-only @property over _agent_logger PrivateAttr)
     _taxonomy_file_path: Optional[str] = PrivateAttr(default=None)
 
     def __init__(
@@ -761,9 +759,7 @@ class InformalAnalysisAgent(BaseAgent):
             language = (
                 "fr"
                 if french_count > english_count
-                else "en"
-                if english_count > 0
-                else "unknown"
+                else "en" if english_count > 0 else "unknown"
             )
 
             # Calculer la complexité (mots par phrase)
@@ -778,11 +774,11 @@ class InformalAnalysisAgent(BaseAgent):
                 "paragraph_count": paragraph_count,
                 "language": language,
                 "avg_words_per_sentence": round(avg_words_per_sentence, 2),
-                "complexity": "high"
-                if avg_words_per_sentence > 20
-                else "medium"
-                if avg_words_per_sentence > 10
-                else "low",
+                "complexity": (
+                    "high"
+                    if avg_words_per_sentence > 20
+                    else "medium" if avg_words_per_sentence > 10 else "low"
+                ),
             }
 
             self.logger.info(

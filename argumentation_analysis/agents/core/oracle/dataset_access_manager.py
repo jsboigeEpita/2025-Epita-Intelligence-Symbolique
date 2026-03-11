@@ -176,9 +176,9 @@ class QueryCache:
             "expired_entries": expired_count,
             "cache_size_limit": self.max_size,
             "ttl_seconds": self.ttl_seconds,
-            "utilization": len(self._cache) / self.max_size
-            if self.max_size > 0
-            else 0.0,
+            "utilization": (
+                len(self._cache) / self.max_size if self.max_size > 0 else 0.0
+            ),
         }
 
 
@@ -554,16 +554,20 @@ class DatasetAccessManager:
                 "successful_queries": self.successful_queries,
                 "denied_queries": self.denied_queries,
                 "cached_queries": self.cached_queries,
-                "success_rate": self.successful_queries / self.total_queries
-                if self.total_queries > 0
-                else 0.0,
-                "cache_hit_rate": self.cached_queries / self.total_queries
-                if self.total_queries > 0
-                else 0.0,
+                "success_rate": (
+                    self.successful_queries / self.total_queries
+                    if self.total_queries > 0
+                    else 0.0
+                ),
+                "cache_hit_rate": (
+                    self.cached_queries / self.total_queries
+                    if self.total_queries > 0
+                    else 0.0
+                ),
                 "uptime_seconds": uptime,
-                "queries_per_second": self.total_queries / uptime
-                if uptime > 0
-                else 0.0,
+                "queries_per_second": (
+                    self.total_queries / uptime if uptime > 0 else 0.0
+                ),
             },
             "cache_stats": self.query_cache.get_stats(),
             "dataset_stats": getattr(self.dataset, "get_statistics", lambda: {})(),

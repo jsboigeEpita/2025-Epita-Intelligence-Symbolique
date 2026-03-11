@@ -103,7 +103,8 @@ class HypothesisTracker:
             strength_score = supporting_count / (supporting_count + contradicting_count)
 
         # Vérifier le statut JTMS
-        belief_valid = self.jtms_session.jtms.beliefs.get(hypothesis_id, {}).valid
+        belief = self.jtms_session.jtms.beliefs.get(hypothesis_id)
+        belief_valid = belief.valid if belief is not None else None
 
         return {
             "hypothesis_id": hypothesis_id,
@@ -111,11 +112,11 @@ class HypothesisTracker:
             "supporting_evidence_count": supporting_count,
             "contradicting_evidence_count": contradicting_count,
             "jtms_validity": belief_valid,
-            "status": "strong"
-            if strength_score > 0.7
-            else "weak"
-            if strength_score < 0.3
-            else "moderate",
+            "status": (
+                "strong"
+                if strength_score > 0.7
+                else "weak" if strength_score < 0.3 else "moderate"
+            ),
         }
 
 
@@ -217,6 +218,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
         # Note: le system_prompt custom n'est plus directement passé ici,
         # la factory utilise le prompt standardisé.
         # Pour une customisation, il faudrait étendre la factory.
+        self._system_prompt = system_prompt or self._get_default_system_prompt()
 
         # Gestionnaires spécialisés JTMS
         self._hypothesis_tracker = HypothesisTracker(self._jtms_session)
@@ -227,6 +229,18 @@ class SherlockJTMSAgent(JTMSAgentBase):
         self._max_concurrent_hypotheses = 5
 
         self._logger.info(f"SherlockJTMSAgent initialisé avec JTMS intégré")
+
+    @property
+    def system_prompt(self) -> str:
+        """Retourne le prompt système de l'agent."""
+        return self._system_prompt
+
+    def _get_default_system_prompt(self) -> str:
+        """Retourne le prompt système par défaut pour Sherlock Holmes."""
+        return """Vous êtes Sherlock Holmes, le célèbre détective consultant.
+Votre rôle est d'analyser les situations avec une logique déductive implacable,
+de formuler des hypothèses basées sur les faits observables, et de tirer
+des conclusions rationnelles à partir des preuves disponibles."""
 
     # === MÉTHODES SPÉCIALISÉES SHERLOCK ===
 

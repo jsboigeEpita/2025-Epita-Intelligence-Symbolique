@@ -30,20 +30,22 @@ try:
     if not api_key or len(api_key) < 20:
         API_ENVIRONMENT_AVAILABLE = False
         API_ENVIRONMENT_ERROR = "OPENAI_API_KEY non configurée ou invalide"
-    
+
     # Vérifier fichiers API
     missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
     if missing_files:
         API_ENVIRONMENT_AVAILABLE = False
         API_ENVIRONMENT_ERROR = f"Fichiers API manquants: {', '.join(missing_files)}"
-    
+
     # Vérifier disponibilité PyTorch (requis pour démarrage API via spacy/thinc)
     if sys.platform == "win32":
         try:
             import torch
         except (ImportError, OSError) as e:
             API_ENVIRONMENT_AVAILABLE = False
-            API_ENVIRONMENT_ERROR = f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
+            API_ENVIRONMENT_ERROR = (
+                f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
+            )
 except Exception as e:
     API_ENVIRONMENT_AVAILABLE = False
     API_ENVIRONMENT_ERROR = str(e)
@@ -51,7 +53,7 @@ except Exception as e:
 
 @pytest.mark.skipif(
     not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}"
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
 )
 def test_environment_setup():
     """Test 1: Vérification environnement."""
@@ -74,7 +76,7 @@ def test_environment_setup():
 
 @pytest.mark.skipif(
     not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}"
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
 )
 def test_api_startup_and_basic_functionality():
     """Test 2: Démarrage API et fonctionnalité de base."""

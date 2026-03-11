@@ -1,50 +1,51 @@
 """
 Fournit les fondations architecturales pour tous les agents du système.
 
-Ce module contient les classes de base abstraites (ABC) qui définissent les contrats et les interfaces pour tous les agents. Il a pour rôle de standardiser le comportement des agents, qu'ils soient basés sur des LLMs, de la logique formelle ou d'autres mécanismes.        
+Ce module contient les classes de base abstraites (ABC) qui définissent les contrats et les interfaces pour tous les agents. Il a pour rôle de standardiser le comportement des agents, qu'ils soient basés sur des LLMs, de la logique formelle ou d'autres mécanismes.
 
-- `BaseAgent` : Le contrat fondamental pour tout agent, incluant la gestion d'un kernel Semantic Kernel, un cycle d'invocation et des mécanismes de description de capacités.
-- `BaseLogicAgent` : Une spécialisation pour les agents qui interagissent avec des systèmes de raisonnement logique formel, ajoutant des abstractions pour la manipulation de croyances et l'exécution de requêtes.  
+- `BaseAgent` : Le contrat fondamental pour tout agent, incluant la gestion
+  d'un kernel Semantic Kernel, un cycle de vie d'invocation et des
+  mécanismes de description de capacités.
+- `BaseLogicAgent` : Une spécialisation pour les agents qui interagissent avec
+  des systèmes de raisonnement logique formel, ajoutant des abstractions pour
+  la manipulation de croyances et l'exécution de requêtes.
+"""
 
-# Note historique : 
-# BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,      
-# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent. 
-# Cet héritage avait été supprimé (voir commit e9668f26d) mais a été RÉINTRODUIT 
-# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).    
-# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.  
-from __future__ import annotations      
+from __future__ import annotations
 
-from abc import ABC, abstractmethod     
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine   
-import logging      
+# Note historique :
+# BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
+# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
+# Cet héritage avait été supprimé (voir commit e9668f26d) mais a été RÉINTRODUIT
+# pour résoudre ValidationError Pydantic dans AgentGroupChat (Mission D3.2).
+# L'héritage ChatCompletionAgent est REQUIS pour compatibilité AgentGroupChat.
 
-from semantic_kernel import Kernel      
-from semantic_kernel.contents import ChatHistory  
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
+import logging
 
-# Import paresseux pour éviter le cycle d'import - uniquement pour le typage    
-if TYPE_CHECKING:   
-    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet   
-    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge       
+from semantic_kernel import Kernel
+from semantic_kernel.agents.chat_completion.chat_completion_agent import (
+    ChatCompletionAgent,
+)
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+from pydantic import PrivateAttr
 
-    # Si ChatHistoryChannel était utilisé dans le typage, il faudrait aussi le gérer ici. 
-    # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.    
+# Import paresseux pour éviter le cycle d'import - uniquement pour le typage
+if TYPE_CHECKING:
+    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
-# Résoudre la dépendance circulaire de Pydantic   
-# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté    
+    # Si ChatHistoryChannel était utilisé dans le typage, il faudrait aussi le gérer ici.
+    # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
-# Import paresseux pour éviter le cycle d'import - uniquement pour le typage    
-if TYPE_CHECKING:   
-    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet   
-    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge       
-
-    # Si ChatHistoryChannel était utilisé dans le typage, il faudrait aussi le gérer ici. 
-    # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.    
-
-# Résoudre la dépendance circulaire de Pydantic   
-# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté    
+# Résoudre la dépendance circulaire de Pydantic
+# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté
 
 
-class BaseAgent(ABC):
+class BaseAgent(ChatCompletionAgent, ABC):
     """Classe de base abstraite (ABC) pour tous les agents du système.
 
     Cette classe établit un contrat que tous les agents doivent suivre. Elle
@@ -52,43 +53,41 @@ class BaseAgent(ABC):
     la description des capacités et le cycle d'invocation. Chaque agent
     doit être associé à un `Kernel` de Semantic Kernel.
 
-    Le contrat impose aux classes dérivées d'implémenter des méthodes clés pour la configuration n (`setup_agent_components`) et t l'exécution        
-    de leur logique métier (`invoke_single`).     
+    Le contrat impose aux classes dérivées d'implémenter des méthodes clés pour la configuration
+    (`setup_agent_components`) et l'exécution de leur logique métier (`invoke_single`).
 
     Note on Semantic Kernel Agent Inheritance:
-        Cette classe n'hérite plus directement de `semantic_kernel.agents.Agent`
-        (ou de ses successeurs comme `ChatCompletionAgent`) pour découpler
-        notre architecture de l'implémentation spécifique de SK, qui a beaucoup
-        évolué. Si une intégration future avec des composants comme
-        `AgentGroupChat` s'avère difficile, il pourrait être nécessaire de
-        réintroduire un héritage ciblé.
+        Cette classe hérite de `semantic_kernel.agents.chat_completion.ChatCompletionAgent`
+        pour compatibilité avec `AgentGroupChat`. L'héritage est REQUIS pour éviter
+        les ValidationError Pydantic dans les agents groups (Mission D3.2).
 
     Attributes:
         kernel (Kernel): Le kernel Semantic Kernel utilisé par l'agent.
         id (str): L'identifiant unique de l'agent.
-        name (str): Le nom de l'agent, alias de `id`.       
-        instructions (Optional[str]): Le prompt système ou les instructions          
-          de haut niveau pour l'agent.       
-        description (Optional[str]): Une description textuelle du rôle et       
-          des capacités de l'agent.   
-        logger (logging.Logger): Une instance de logger pour l'agent.   
+        name (str): Le nom de l'agent, alias de `id`.
+        instructions (Optional[str]): Le prompt système ou les instructions
+          de haut niveau pour l'agent.
+        description (Optional[str]): Une description textuelle du rôle et
+          des capacités de l'agent.
+        logger (logging.Logger): Une instance de logger pour l'agent.
         llm_service_id (Optional[str]): L'ID du service LLM configuré
             pour cet agent via `setup_agent_components`.
 
-    Note: Le typage est partiellement appliqué pour éviter les dépendances circulaires.    
-    # Les types sont documentés dans les docstrings et les properties.      
-    # _tweety_bridge: TweetyBridge      
-    # _logic_type_name: str      
-    # _syntax_bnf: Optional[str]        
-    # _parser: Any        
-    # _solver: Any        
-    # Ces éléments seront gérés par TweetyBridge        
-    """     
+    Note: Le typage est partiellement appliqué pour éviter les dépendances circulaires.
+    # Les types sont documentés dans les docstrings et les properties.
+    # _tweety_bridge: TweetyBridge
+    # _logic_type_name: str
+    # _syntax_bnf: Optional[str]
+    # _parser: Any
+    # _solver: Any
+    # Ces éléments seront gérés par TweetyBridge
+    """
 
-    _logger: logging.Logger
-    _llm_service_id: Optional[str]
+    # Pydantic V2: utiliser PrivateAttr pour les attributs privés
+    _llm_service_id: Optional[str] = PrivateAttr(default=None)
+    _agent_logger: logging.Logger = PrivateAttr(default=None)
 
-    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None, **kwargs):
         """Initialise une instance de BaseAgent.
 
         Args:
@@ -99,19 +98,53 @@ class BaseAgent(ABC):
             description (Optional[str], optional): Une description concise du
                 rôle de l'agent. Defaults to None.
         """
-        self._kernel = kernel
-        self.id = agent_name
-        self.name = agent_name
-        self.instructions = system_prompt
-        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
-        
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
-        self._llm_service_id = None  # Sera défini par setup_agent_components
+        # Récupération du service LLM depuis le kernel
+        llm_service_id = kwargs.get("llm_service_id", "default")
+        try:
+            llm_service = kernel.get_service(llm_service_id)
+        except Exception as e:
+            # Fallback: utiliser le premier service disponible
+            services = kernel.services
+            if services:
+                llm_service = list(services.values())[0]
+                logging.getLogger(f"agent.{self.__class__.__name__}").warning(
+                    f"Service '{llm_service_id}' not found, using fallback: {llm_service.service_id}. Error: {e}"
+                )
+            else:
+                raise ValueError(
+                    f"No LLM service found in kernel for id '{llm_service_id}'. Error: {e}"
+                )
+
+        # Appel du constructeur parent ChatCompletionAgent
+        super().__init__(
+            kernel=kernel,
+            service=llm_service,
+            name=agent_name,
+            instructions=system_prompt or "",
+            description=description
+            or (system_prompt if system_prompt else f"Agent {agent_name}"),
+        )
+
+        # Propriétés spécifiques à BaseAgent (backward compatibility)
+        self.id = agent_name  # Alias pour compatibilité avec ancien code
+        self._llm_service_id = llm_service_id
+
+    def model_post_init(self, __context) -> None:
+        """Initialisation post-construction Pydantic V2."""
+        super().model_post_init(__context)
+        self._agent_logger = logging.getLogger(
+            f"agent.{self.__class__.__name__}.{self.name}"
+        )
 
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""
-        return self._logger
+        return self._agent_logger
+
+    @property
+    def agent_name(self) -> str:
+        """Retourne le nom de l'agent (alias pour self.name)."""
+        return self.name
 
     @property
     def system_prompt(self) -> Optional[str]:
@@ -158,7 +191,7 @@ class BaseAgent(ABC):
 
         Inclut le nom, la classe, le prompt système, l'ID du service LLM
         et les capacités de l'agent.
-        
+
         Returns:
             Dict[str, Any]: Un dictionnaire contenant les informations de l'agent.
         """
@@ -173,7 +206,7 @@ class BaseAgent(ABC):
     @abstractmethod
     async def get_response(self, *args, **kwargs) -> Any:
         """Point d'entrée principal pour l'exécution d'une tâche par l'agent.
-        
+
         Cette méthode est destinée à être un wrapper de haut niveau autour
         de la logique d'invocation (`invoke` ou `invoke_single`). Les classes filles
         doivent l'implémenter pour définir comment l'agent répond à une sollicitation.
@@ -235,13 +268,13 @@ class BaseLogicAgent(BaseAgent, ABC):
         logic_type_name (str): Le nom de la logique formelle utilisée (ex: "PL", "FOL").
         syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
     """
-    _tweety_bridge: "TweetyBridge"
-    _logic_type_name: str
-    _syntax_bnf: Optional[str]
-    # _parser: Any  # Ces éléments seront gérés par TweetyBridge
-    # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
-    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None):
+    # Pydantic V2: utiliser PrivateAttr pour les attributs privés
+    _tweety_bridge: "TweetyBridge" = PrivateAttr(default=None)
+    _logic_type_name: str = PrivateAttr(default="")
+    _syntax_bnf: Optional[str] = PrivateAttr(default=None)
+
+    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None, **kwargs):
         """
         Initialise une instance de BaseLogicAgent.
 
@@ -251,7 +284,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL").
             system_prompt (Optional[str]): Le prompt système optionnel.
         """
-        super().__init__(kernel, agent_name, system_prompt)
+        super().__init__(kernel, agent_name, system_prompt, **kwargs)
         self._logic_type_name = logic_type_name
         # L'instance de TweetyBridge devrait être passée ou créée ici.
         # Pour l'instant, on suppose qu'elle sera initialisée dans setup_agent_components
@@ -281,7 +314,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         Returns:
             TweetyBridge: L'instance de `TweetyBridge` configurée pour cet agent.
         """
-        if not hasattr(self, '_tweety_bridge') or self._tweety_bridge is None:
+        if self._tweety_bridge is None:
             # Cela suppose que setup_agent_components a été appelé et a initialisé le bridge.
             # Une meilleure approche pourrait être d'injecter TweetyBridge au constructeur
             # ou d'avoir une méthode dédiée pour son initialisation si elle est complexe.
@@ -415,14 +448,14 @@ class BaseLogicAgent(BaseAgent, ABC):
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-        
+
         belief_set, status_msg = self.text_to_belief_set(raw_text)
         if not belief_set:
             error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-        
+
         bs_id = state_manager.add_belief_set(logic_type=belief_set.logic_type, content=belief_set.content)
         answer_text = f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
         state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
@@ -438,14 +471,14 @@ class BaseLogicAgent(BaseAgent, ABC):
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-        
+
         belief_sets = state.get("belief_sets", {})
         if belief_set_id not in belief_sets:
             error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-        
+
         belief_set_data = belief_sets[belief_set_id]
         belief_set = self._create_belief_set_from_data(belief_set_data)
         raw_text = self._extract_source_text(task_description, state)
@@ -455,7 +488,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[belief_set_id])
             return {"status": "error", "message": error_msg}
-        
+
         formatted_results = []
         log_ids = []
         raw_results = []

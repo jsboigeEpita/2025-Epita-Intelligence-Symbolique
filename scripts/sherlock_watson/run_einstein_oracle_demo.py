@@ -167,13 +167,9 @@ class EinsteinOracleOrchestrator:
         from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
             SherlockEnqueteAgent,
         )
-        from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
-            WatsonLogicAssistant,
-        )
         from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
         self.SherlockEnqueteAgent = SherlockEnqueteAgent
-        self.WatsonLogicAssistant = WatsonLogicAssistant
         self.CluedoOracleState = CluedoOracleState
 
         self.agents = {}
@@ -185,13 +181,6 @@ class EinsteinOracleOrchestrator:
 
         # Création d'un état Oracle factice pour les agents (ils en ont besoin techniquement)
         elements = {"suspects": ["Einstein"], "armes": ["Logique"], "lieux": ["Puzzle"]}
-
-        # Import nécessaire pour CluedoDataset
-        from argumentation_analysis.agents.core.oracle.cluedo_dataset import (
-            CluedoDataset,
-        )
-
-        dummy_dataset = CluedoDataset(elements)
 
         self.dummy_oracle_state = self.CluedoOracleState(
             nom_enquete_cluedo="Puzzle Einstein Oracle Demo",
@@ -205,22 +194,26 @@ class EinsteinOracleOrchestrator:
         )
 
         # Création des agents adaptés pour Einstein
-        self.agents["sherlock"] = self.SherlockEnqueteAgent(
-            kernel=self.kernel,
-            agent_name="Sherlock",
-            system_prompt="""Tu es Sherlock Holmes face au puzzle d'Einstein.
-            Ton objectif : déterminer QUI POSSÈDE LE POISSON en utilisant les indices de Moriarty.
-            Analyse logiquement chaque indice, fais des déductions méthodiques.
-            Quand tu penses connaître la réponse, dis clairement : 'Je conclus que [PERSONNE] possède le poisson'.""",
-        )
+        # En mode integration_test, les agents ne sont pas utilisés (réponses scriptées)
+        if not self.integration_test:
+            self.agents["sherlock"] = self.SherlockEnqueteAgent(
+                kernel=self.kernel,
+                agent_name="Sherlock",
+                system_prompt="""Tu es Sherlock Holmes face au puzzle d'Einstein.
+                Ton objectif : déterminer QUI POSSÈDE LE POISSON en utilisant les indices de Moriarty.
+                Analyse logiquement chaque indice, fais des déductions méthodiques.
+                Quand tu penses connaître la réponse, dis clairement : 'Je conclus que [PERSONNE] possède le poisson'.""",
+            )
 
-        self.agents["watson"] = self.WatsonLogicAssistant(
-            kernel=self.kernel,
-            agent_name="Watson",
-            system_prompt="""Tu es Watson, assistant logique de Holmes pour le puzzle Einstein.
-            Aide Sherlock en organisant les informations, en proposant des grilles logiques,
-            et en vérifiant les déductions. Tu peux aussi proposer des solutions intermédiaires.""",
-        )
+            # Watson n'a pas besoin de Tweety pour Einstein (texte seulement),
+            # donc on utilise SherlockEnqueteAgent comme base pour éviter la dépendance JVM
+            self.agents["watson"] = self.SherlockEnqueteAgent(
+                kernel=self.kernel,
+                agent_name="Watson",
+                system_prompt="""Tu es Watson, assistant logique de Holmes pour le puzzle Einstein.
+                Aide Sherlock en organisant les informations, en proposant des grilles logiques,
+                et en vérifiant les déductions. Tu peux aussi proposer des solutions intermédiaires.""",
+            )
 
         logger.info("✅ Workflow Einstein configuré")
         logger.info(f"🎯 Solution secrète: L'Allemand possède le poisson (maison 4)")
@@ -312,32 +305,54 @@ class EinsteinOracleOrchestrator:
         return response
 
     async def _sherlock_analyze(self, round_num: int) -> Dict[str, Any]:
-        """Sherlock analyse les indices"""
-        # Construction du contexte avec tous les indices révélés
+        """Sherlock analyse les indices (LLM réel ou scripted selon le mode)"""
         all_indices = self.einstein_oracle.get_all_revealed_indices()
-        context = "Indices révélés :\n" + "\n".join(
-            f"- {indice}" for indice in all_indices
-        )
 
-        # Simulation de réponse Sherlock (dans un vrai système, appel agent)
-        sherlock_analyses = [
-            "Intéressant... Je note cette contrainte sur ma grille logique.",
-            "Cette information élimine plusieurs possibilités. La déduction progresse.",
-            "Ah ! Ces indices commencent à former un pattern logique.",
-            "Watson, organisez ces données. Une solution émerge.",
-            "Les contraintes se précisent... Je vois la structure du puzzle.",
-            "Fascinant ! Ce nouvel indice confirme mes hypothèses précédentes.",
-            "La logique devient claire. Position par position, tout s'assemble.",
-            "Excellent ! Je commence à entrevoir qui possède le poisson...",
-            "Les dernières pièces du puzzle... La solution est proche !",
-            "Je conclus que l'Allemand possède le poisson ! Il vit dans la maison verte (4e position).",
-        ]
-
-        # Choix de réponse selon le round
-        if round_num >= 9:  # Solution proche
-            analysis = "Je conclus que l'Allemand possède le poisson ! Il vit dans la maison verte (4e position)."
+        if self.integration_test:
+            # Mode test: réponses déterministes (pas d'appel LLM)
+            scripted = [
+                "Intéressant... Je note cette contrainte sur ma grille logique.",
+                "Cette information élimine plusieurs possibilités. La déduction progresse.",
+                "Ah ! Ces indices commencent à former un pattern logique.",
+                "Watson, organisez ces données. Une solution émerge.",
+                "Les contraintes se précisent... Je vois la structure du puzzle.",
+                "Fascinant ! Ce nouvel indice confirme mes hypothèses précédentes.",
+                "La logique devient claire. Position par position, tout s'assemble.",
+                "Excellent ! Je commence à entrevoir qui possède le poisson...",
+                "Les dernières pièces du puzzle... La solution est proche !",
+                "Je conclus que l'Allemand possède le poisson ! Il vit dans la maison verte (4e position).",
+            ]
+            if round_num >= 9:
+                analysis = scripted[-1]
+            else:
+                analysis = scripted[min(round_num - 1, len(scripted) - 2)]
         else:
-            analysis = sherlock_analyses[min(round_num - 1, len(sherlock_analyses) - 2)]
+            # Mode normal: appel LLM réel
+            indices_text = "\n".join(
+                f"  {i+1}. {idx}" for i, idx in enumerate(all_indices)
+            )
+            prompt = (
+                f"Puzzle Einstein - Round {round_num}.\n"
+                f"5 maisons (positions 1-5), 5 nationalités (Anglais, Suédois, Danois, Norvégien, Allemand), "
+                f"5 couleurs (Rouge, Verte, Bleue, Jaune, Blanche), 5 boissons (Thé, Café, Lait, Bière, Eau), "
+                f"5 cigarettes (Pall Mall, Dunhill, Blend, Blue Master, Prince), 5 animaux (Chien, Chat, Oiseau, Cheval, Poisson).\n\n"
+                f"Indices révélés jusqu'ici :\n{indices_text}\n\n"
+                f"Question : Qui possède le poisson ?\n"
+                f"Analyse les indices disponibles et fais des déductions logiques. "
+                f"Si tu peux déduire la réponse, dis clairement : 'Je conclus que [PERSONNE] possède le poisson'."
+            )
+            try:
+                response_messages = await self.agents["sherlock"].invoke(prompt)
+                analysis = str(
+                    response_messages[0].content
+                    if hasattr(response_messages[0], "content")
+                    else response_messages[0]
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Invocation Sherlock non disponible (round {round_num}): {e}"
+                )
+                analysis = f"[Sherlock réfléchit aux {len(all_indices)} indices disponibles...]"
 
         response = {
             "round": round_num + 0.1,
@@ -348,22 +363,57 @@ class EinsteinOracleOrchestrator:
         }
 
         self.conversation_history.append(response)
-        logger.info(f"🕵️ [Sherlock]: {analysis}")
-        print(f"🕵️ [Sherlock]: {analysis}")
+        logger.info(f"🕵️ [Sherlock]: {analysis[:200]}")
+        print(f"🕵️ [Sherlock]: {analysis[:300]}")
 
         return response
 
     async def _watson_assist(self, round_num: int) -> Dict[str, Any]:
-        """Watson aide à l'organisation logique"""
-        watson_assists = [
-            "Holmes, j'organise les contraintes dans un tableau logique...",
-            "Analysons méthodiquement : nationalités, couleurs, positions...",
-            "Je propose de vérifier nos déductions avec les nouvelles contraintes.",
-            "Excellent travail ! Notre grille logique se complète progressivement.",
-            "Les connexions deviennent évidentes avec cette approche méthodique.",
-        ]
+        """Watson aide à l'organisation logique (LLM réel ou scripted selon le mode)"""
+        all_indices = self.einstein_oracle.get_all_revealed_indices()
 
-        assist = watson_assists[min((round_num // 2) - 1, len(watson_assists) - 1)]
+        if self.integration_test:
+            # Mode test: réponses déterministes
+            scripted = [
+                "Holmes, j'organise les contraintes dans un tableau logique...",
+                "Analysons méthodiquement : nationalités, couleurs, positions...",
+                "Je propose de vérifier nos déductions avec les nouvelles contraintes.",
+                "Excellent travail ! Notre grille logique se complète progressivement.",
+                "Les connexions deviennent évidentes avec cette approche méthodique.",
+            ]
+            assist = scripted[min((round_num // 2) - 1, len(scripted) - 1)]
+        else:
+            # Mode normal: appel LLM réel
+            indices_text = "\n".join(
+                f"  {i+1}. {idx}" for i, idx in enumerate(all_indices)
+            )
+            sherlock_last = ""
+            for msg in reversed(self.conversation_history):
+                if msg["agent"] == "Sherlock":
+                    sherlock_last = msg["message"][:200]
+                    break
+
+            prompt = (
+                f"Puzzle Einstein - Round {round_num}. Tu aides Sherlock Holmes.\n"
+                f"Indices révélés :\n{indices_text}\n\n"
+                f"Dernière analyse de Sherlock : {sherlock_last}\n\n"
+                f"Organise les contraintes logiques, propose une grille de déduction, "
+                f"et aide Sherlock à progresser vers la solution (qui possède le poisson ?)."
+            )
+            try:
+                response_messages = await self.agents["watson"].invoke(prompt)
+                assist = str(
+                    response_messages[0].content
+                    if hasattr(response_messages[0], "content")
+                    else response_messages[0]
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Invocation Watson non disponible (round {round_num}): {e}"
+                )
+                assist = (
+                    f"[Watson organise les {len(all_indices)} contraintes logiques...]"
+                )
 
         response = {
             "round": round_num + 0.2,
@@ -373,8 +423,8 @@ class EinsteinOracleOrchestrator:
         }
 
         self.conversation_history.append(response)
-        logger.info(f"🔬 [Watson]: {assist}")
-        print(f"🔬 [Watson]: {assist}")
+        logger.info(f"🔬 [Watson]: {assist[:200]}")
+        print(f"🔬 [Watson]: {assist[:300]}")
 
         return response
 
@@ -452,18 +502,29 @@ async def run_einstein_oracle_demo(integration_test=False):
     print("🕵️ SHERLOCK/WATSON: Déduisent la solution logiquement")
     print()
 
-    # Configuration Semantic Kernel
-    import semantic_kernel as sk
-    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    # Configuration du kernel selon le mode
+    if integration_test:
+        # Mode test: kernel léger sans bootstrap complet
+        import semantic_kernel as sk
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    kernel = sk.Kernel()
+        kernel = sk.Kernel()
+        api_key = os.getenv("OPENAI_API_KEY", "test-key")
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        chat_service = OpenAIChatCompletion(
+            service_id="chat_completion", ai_model_id=model_id, api_key=api_key
+        )
+        kernel.add_service(chat_service)
+    else:
+        # Mode normal: bootstrap complet avec LLM réel
+        from argumentation_analysis.core.bootstrap import initialize_project_environment
 
-    # Service de simulation pour la démo
-    api_key = os.getenv("OPENAI_API_KEY", "demo-key-simulation")
-    chat_service = OpenAIChatCompletion(
-        service_id="einstein_demo_chat", ai_model_id="gpt-4", api_key=api_key
-    )
-    kernel.add_service(chat_service)
+        environment_context = initialize_project_environment()
+        kernel = environment_context.kernel
+        if not kernel:
+            raise ValueError(
+                "Le kernel sémantique n'a pas été trouvé dans le contexte."
+            )
 
     # Exécution de la démo Einstein
     orchestrator = EinsteinOracleOrchestrator(
@@ -538,7 +599,9 @@ def display_einstein_results(result: Dict[str, Any]):
     print(f"   Indices donnés: {len(oracle_perf.get('indices_progression', []))}")
 
     print(f"\n🎉 SUCCÈS DÉMO:")
-    print(f"   Puzzle complété: {'✅' if demo_success.get('puzzle_completed') else '❌'}")
+    print(
+        f"   Puzzle complété: {'✅' if demo_success.get('puzzle_completed') else '❌'}"
+    )
     print(f"   Moriarty Oracle: {demo_success.get('moriarty_as_oracle', 'N/A')}")
     print(f"   Déduction agents: {demo_success.get('agents_deduction', 'N/A')}")
 
@@ -569,17 +632,6 @@ async def main():
     )
     args = parser.parse_args()
 
-    # En mode test d'intégration, on s'assure d'initialiser notre propre JVM
-    if args.integration_test:
-        from argumentation_analysis.core.jvm_setup import (
-            initialize_jvm,
-            shutdown_jvm,
-            is_jvm_started,
-        )
-
-        if not is_jvm_started():
-            initialize_jvm()
-
     try:
         result = await run_einstein_oracle_demo(integration_test=args.integration_test)
         if not args.integration_test:
@@ -588,15 +640,6 @@ async def main():
     except Exception as e:
         logger.error(f"❌ Erreur critique: {e}", exc_info=True)
         print(f"\n❌ ERREUR CRITIQUE: {e}")
-    finally:
-        if args.integration_test:
-            from argumentation_analysis.core.jvm_setup import (
-                shutdown_jvm,
-                is_jvm_started,
-            )
-
-            if is_jvm_started():
-                shutdown_jvm()
 
 
 if __name__ == "__main__":

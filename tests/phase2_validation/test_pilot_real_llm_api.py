@@ -49,7 +49,7 @@ class TestPilotRealLLMAPI:
     async def test_pilot_minimal_real_api_call(self):
         """
         TEST PILOTE CRITIQUE : Appel API OpenAI minimal
-        
+
         Ce test DOIT prouver qu'un appel API réel est effectué.
         Si ce test passe en < 0.5s, c'est un mock résiduel.
         """
@@ -64,50 +64,50 @@ class TestPilotRealLLMAPI:
 
         # ÉTAPE 1: Création service LLM authentique
         logger.info("📝 Étape 1/4 : Création service LLM authentique...")
-        
+
         service = create_llm_service(
             service_id="pilot_test",
             model_id="gpt-4o-mini",  # Modèle RÉEL qui existe
-            force_authentic=True
+            force_authentic=True,
         )
-        
+
         assert service is not None, "Service LLM non créé"
-        assert isinstance(service, OpenAIChatCompletion), f"Type incorrect: {type(service)}"
-        
+        assert isinstance(
+            service, OpenAIChatCompletion
+        ), f"Type incorrect: {type(service)}"
+
         logger.info(f"✅ Service créé: {type(service).__name__}")
 
         # ÉTAPE 2: Préparation appel API
         logger.info("📝 Étape 2/4 : Préparation appel API minimal...")
-        
+
         # Chat history minimal
         chat_history = ChatHistory()
         chat_history.add_user_message("Réponds uniquement: TEST-OK")
-        
+
         # Settings minimaux pour réduire coût
         settings = OpenAIChatPromptExecutionSettings(
-            max_tokens=10,  # Minimal
-            temperature=0,  # Déterministe
+            max_completion_tokens=10,  # Minimal
         )
-        
-        logger.info("✅ Paramètres configurés (max_tokens=10, temperature=0)")
+
+        logger.info("✅ Paramètres configurés (max_completion_tokens=10)")
 
         # ÉTAPE 3: APPEL API RÉEL (CRITIQUE)
         logger.info("📝 Étape 3/4 : 🚀 APPEL API OPENAI RÉEL EN COURS...")
         logger.info("⏱️  Mesure de la latence réseau + traitement LLM...")
-        
+
         start_time = time.time()
-        
+
         try:
             # APPEL CRITIQUE - Doit contacter OpenAI
             response = await service.get_chat_message_contents(
-                chat_history=chat_history,
-                settings=settings
+                chat_history=chat_history, settings=settings
             )
-            
+
             duration = time.time() - start_time
-            
+
             logger.info(f"✅ Appel terminé en {duration:.3f}s")
-            
+
         except Exception as e:
             duration = time.time() - start_time
             logger.error(f"❌ ÉCHEC appel API après {duration:.3f}s: {e}")
@@ -115,28 +115,32 @@ class TestPilotRealLLMAPI:
 
         # ÉTAPE 4: VALIDATION CRITÈRES AUTHENTICITÉ
         logger.info("📝 Étape 4/4 : Validation critères authenticité...")
-        
+
         # CRITÈRE 1: Durée minimale (preuve latence réseau)
+        # Note: avec max_completion_tokens=10 et une bonne connexion, OpenAI peut répondre en < 0.5s
+        # Le seuil de 0.1s suffit à prouver qu'il y a un appel réseau (un mock serait < 0.01s)
         logger.info(f"🔍 Critère 1/5 : Durée = {duration:.3f}s")
-        assert duration > 0.5, (
-            f"❌ ÉCHEC CRITIQUE : Durée trop courte ({duration:.3f}s < 0.5s)\n"
+        assert duration > 0.1, (
+            f"❌ ÉCHEC CRITIQUE : Durée trop courte ({duration:.3f}s < 0.1s)\n"
             f"   → PREUVE de mock résiduel ou cache\n"
-            f"   → Un appel API réel prend minimum 0.5-1s (latence réseau)"
+            f"   → Un appel API réel prend minimum 0.1s (latence réseau)"
         )
-        logger.info(f"✅ Durée acceptable ({duration:.3f}s > 0.5s) - Latence réseau confirmée")
-        
+        logger.info(
+            f"✅ Durée acceptable ({duration:.3f}s > 0.1s) - Latence réseau confirmée"
+        )
+
         # CRITÈRE 2: Réponse non vide
         logger.info(f"🔍 Critère 2/5 : Réponse reçue")
         assert response is not None, "❌ Aucune réponse reçue"
         assert len(response) > 0, "❌ Réponse vide"
         logger.info(f"✅ Réponse reçue ({len(response)} message(s))")
-        
+
         # CRITÈRE 3: Contenu réponse
         content = str(response[0].content) if response else ""
         logger.info(f"🔍 Critère 3/5 : Contenu = '{content[:100]}'")
         assert len(content) > 0, "❌ Contenu vide"
         logger.info(f"✅ Contenu présent ({len(content)} caractères)")
-        
+
         # CRITÈRE 4: Pas de pattern mock
         logger.info(f"🔍 Critère 4/5 : Détection patterns mock")
         mock_patterns = ["mock", "fake", "stub", "test_response", "simulated"]
@@ -147,17 +151,19 @@ class TestPilotRealLLMAPI:
                 f"   → Réponse: {content}"
             )
         logger.info("✅ Aucun pattern mock détecté")
-        
+
         # CRITÈRE 5: Métadonnées OpenAI
         logger.info(f"🔍 Critère 5/5 : Métadonnées OpenAI")
         first_message = response[0]
-        
+
         # Vérifier metadata (si disponible)
-        if hasattr(first_message, 'metadata') and first_message.metadata:
-            logger.info(f"✅ Métadonnées présentes: {list(first_message.metadata.keys())}")
+        if hasattr(first_message, "metadata") and first_message.metadata:
+            logger.info(
+                f"✅ Métadonnées présentes: {list(first_message.metadata.keys())}"
+            )
         else:
             logger.warning("⚠️ Métadonnées non disponibles (peut être normal)")
-        
+
         # RAPPORT FINAL
         logger.info("=" * 80)
         logger.info("🎉 TEST PILOTE RÉUSSI - PREUVE APPEL API RÉEL")
@@ -172,52 +178,47 @@ class TestPilotRealLLMAPI:
         logger.info("✅ VALIDATION: L'API OpenAI est fonctionnelle et accessible")
         logger.info("✅ VALIDATION: Les appels LLM réels sont opérationnels")
         logger.info("=" * 80)
-        
+
     @pytest.mark.llm_light
     @pytest.mark.asyncio
     @pytest.mark.requires_api
     async def test_pilot_kernel_invoke_real(self):
         """
-        TEST PILOTE ALTERNATIF : Via Kernel.invoke() 
-        
-        Test alternatif utilisant l'API Kernel pour appel LLM.
+        TEST PILOTE ALTERNATIF : Via Kernel.invoke_prompt()
+
+        Test alternatif utilisant l'API Kernel pour appel LLM direct.
         """
-        logger.info("🎯 TEST PILOTE ALTERNATIF : Via Kernel.invoke()")
-        
+        logger.info("🎯 TEST PILOTE ALTERNATIF : Via Kernel.invoke_prompt()")
+
         # Configuration
         config = UnifiedConfig(
-            mock_level=MockLevel.NONE,
-            use_authentic_llm=True,
-            require_real_gpt=True
+            mock_level=MockLevel.NONE, use_authentic_llm=True, require_real_gpt=True
         )
-        
+
         # Création kernel
         kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
         assert kernel is not None
-        
-        # Fonction simple
-        @kernel.function(name="test_func", description="Test function")
-        def simple_test(input: str) -> str:
-            """Simple echo function"""
-            return f"Echo: {input}"
-        
+
         # Mesure durée
         start = time.time()
-        
+
         try:
-            # Appel via kernel (devrait utiliser LLM si configuré)
-            result = await kernel.invoke(
-                function=simple_test,
-                input="test"
+            # Appel direct via invoke_prompt (SK 1.37 API)
+            from semantic_kernel.functions import KernelArguments
+
+            result = await kernel.invoke_prompt(
+                prompt="Respond with exactly: Echo test OK",
+                arguments=KernelArguments(),
             )
-            
+
             duration = time.time() - start
-            
-            # Note: kernel.invoke avec function peut ne pas utiliser LLM
-            # C'est surtout un test de configuration
-            logger.info(f"✅ Kernel.invoke terminé en {duration:.3f}s")
-            logger.info(f"✅ Résultat: {result}")
-            
+
+            content = str(result).strip()
+            assert len(content) > 0, "La réponse du kernel est vide"
+
+            logger.info(f"✅ Kernel.invoke_prompt terminé en {duration:.3f}s")
+            logger.info(f"✅ Résultat: {content}")
+
         except Exception as e:
             logger.error(f"❌ Erreur: {e}")
             raise
@@ -227,16 +228,15 @@ class TestPilotRealLLMAPI:
 if __name__ == "__main__":
     print("🚀 Exécution Test Pilote - Validation API OpenAI Réelle")
     print("=" * 60)
-    
+
     # Configuration logging
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s"
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
     )
-    
+
     # Exécution test principal
     test_instance = TestPilotRealLLMAPI()
-    
+
     try:
         asyncio.run(test_instance.test_pilot_minimal_real_api_call())
         print("\n✅ TEST PILOTE RÉUSSI - API OpenAI Fonctionnelle")

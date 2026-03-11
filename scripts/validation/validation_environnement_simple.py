@@ -4,7 +4,7 @@ Script de validation d'environnement simplifie
 ==============================================
 
 Validation rapide de l'environnement Intelligence Symbolique :
-- Environnement conda 'projet-is' 
+- Environnement conda 'projet-is'
 - Variables .env (OPENAI_API_KEY, etc.)
 - Configuration Java JDK17
 - Test gpt-5-mini

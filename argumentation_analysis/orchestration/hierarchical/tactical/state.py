@@ -35,14 +35,14 @@ class TacticalState:
         self.task_assignments: Dict[str, str] = {}  # task_id -> agent_id
 
         # Dépendances entre tâches
-        self.task_dependencies: Dict[
-            str, List[str]
-        ] = {}  # task_id -> [dependent_task_ids]
+        self.task_dependencies: Dict[str, List[str]] = (
+            {}
+        )  # task_id -> [dependent_task_ids]
 
         # Progression des tâches
-        self.task_progress: Dict[
-            str, float
-        ] = {}  # task_id -> completion_rate (0.0 to 1.0)
+        self.task_progress: Dict[str, float] = (
+            {}
+        )  # task_id -> completion_rate (0.0 to 1.0)
 
         # Résultats intermédiaires
         self.intermediate_results: Dict[str, Any] = {}
@@ -476,9 +476,13 @@ class TacticalState:
             "task_dependencies": self.task_dependencies,
             "task_progress": self.task_progress,
             "intermediate_results": {
-                k: str(v)
-                if not isinstance(v, (dict, list, str, int, float, bool, type(None)))
-                else v
+                k: (
+                    str(v)
+                    if not isinstance(
+                        v, (dict, list, str, int, float, bool, type(None))
+                    )
+                    else v
+                )
                 for k, v in self.intermediate_results.items()
             },
             "identified_conflicts": self.identified_conflicts,
@@ -536,6 +540,65 @@ class TacticalState:
             state.tactical_actions_log = state_dict["tactical_actions_log"]
 
         return state
+
+    def get_objective_for_task(self, task_id: str) -> Optional[str]:
+        """
+        Retourne l'identifiant de l'objectif auquel une tâche appartient.
+
+        Args:
+            task_id: Identifiant de la tâche
+
+        Returns:
+            L'identifiant de l'objectif parent ou None si non trouvé
+        """
+        for status, tasks in self.tasks.items():
+            for task in tasks:
+                if task["id"] == task_id:
+                    return task.get("objective_id")
+        return None
+
+    def are_all_tasks_for_objective_done(self, objective_id: str) -> bool:
+        """
+        Vérifie si toutes les tâches associées à un objectif sont terminées.
+
+        Args:
+            objective_id: Identifiant de l'objectif
+
+        Returns:
+            True si toutes les tâches sont dans 'completed' ou 'failed', False sinon
+        """
+        has_tasks = False
+        for status, tasks in self.tasks.items():
+            for task in tasks:
+                if task.get("objective_id") == objective_id:
+                    has_tasks = True
+                    if status in ("pending", "in_progress"):
+                        return False
+        return has_tasks
+
+    def get_status_summary(self) -> Dict[str, Any]:
+        """
+        Retourne un résumé de l'état tactique pour le reporting au niveau stratégique.
+
+        Returns:
+            Un dictionnaire contenant un résumé de l'état actuel
+        """
+        total_tasks = sum(len(tasks) for tasks in self.tasks.values())
+        return {
+            "total_tasks": total_tasks,
+            "pending": len(self.tasks["pending"]),
+            "in_progress": len(self.tasks["in_progress"]),
+            "completed": len(self.tasks["completed"]),
+            "failed": len(self.tasks["failed"]),
+            "completion_rate": self.tactical_metrics["task_completion_rate"],
+            "objectives_count": len(self.assigned_objectives),
+            "conflicts": {
+                "total": len(self.identified_conflicts),
+                "resolved": sum(
+                    1 for c in self.identified_conflicts if c.get("resolved", False)
+                ),
+            },
+        }
 
     def get_objective_results(self, objective_id: str) -> Dict[str, Any]:
         """

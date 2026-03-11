@@ -2,7 +2,7 @@
 """
 Version corrigée de ModalLogicAgent avec mécanisme de retry automatique fonctionnel.
 
-Cette version corrige le problème où le retry automatique de Semantic Kernel 
+Cette version corrige le problème où le retry automatique de Semantic Kernel
 ne se déclenche pas pour les erreurs de syntaxe TweetyProject.
 
 CORRECTIONS APPORTÉES :
@@ -14,7 +14,6 @@ CORRECTIONS APPORTÉES :
 import logging
 import re
 import json
-import jpype
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 
 from semantic_kernel import Kernel
@@ -397,7 +396,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
     def _extract_json_block(self, text: str) -> str:
         # Normalize text to string if it's a list (fix for AttributeError: 'list' object has no attribute 'find')
         if isinstance(text, list):
-            text = ' '.join(str(item) for item in text)
+            text = " ".join(str(item) for item in text)
         """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
         start_index = text.find("{")
         if start_index == -1:
@@ -540,7 +539,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             )
             return belief_set_obj, "Conversion réussie"
 
-        except (json.JSONDecodeError, ValueError, jpype.JException) as e:
+        except (json.JSONDecodeError, ValueError) as e:
             # MODIFICATION CRITIQUE : Ne plus gérer le retry manuellement
             # Laisser l'erreur remonter pour que SK puisse faire le retry automatique
             error_msg = f"Erreur de conversion/validation: {e}"
@@ -557,6 +556,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                 raise
 
         except Exception as e:
+            # Catches jpype.JException and any other unexpected errors
             error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg

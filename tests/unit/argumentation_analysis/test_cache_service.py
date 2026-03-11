@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -20,7 +19,6 @@ import sys
 import shutil
 from pathlib import Path
 import logging
-
 
 logger = logging.getLogger(__name__)
 

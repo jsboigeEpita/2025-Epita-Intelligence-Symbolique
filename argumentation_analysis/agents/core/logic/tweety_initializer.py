@@ -4,6 +4,7 @@ Gestionnaire d'initialisation pour les composants Tweety.
 Ce module suppose que la JVM a déjà été démarrée et configurée par un
 gestionnaire externe (ex: une fixture pytest de session).
 """
+
 import jpype
 import logging
 import os
@@ -329,6 +330,31 @@ class TweetyInitializer:
         if not TweetyInitializer._modal_reasoner:
             raise RuntimeError("Modal Reasoner not initialized.")
         return TweetyInitializer._modal_reasoner
+
+    @staticmethod
+    def get_reasoner(reasoner_name: str):
+        """
+        Returns a Tweety reasoner instance by name.
+
+        Supported names: SimpleFolReasoner, SimplePlReasoner
+        """
+        if not TweetyInitializer._classes_loaded:
+            raise RuntimeError("Tweety classes not loaded. Ensure JVM is initialized.")
+        try:
+            if reasoner_name == "SimpleFolReasoner":
+                ReasonerClass = jpype.JClass(
+                    "org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner"
+                )
+            elif reasoner_name == "SimplePlReasoner":
+                ReasonerClass = jpype.JClass(
+                    "org.tweetyproject.logics.pl.reasoner.SimplePlReasoner"
+                )
+            else:
+                raise ValueError(f"Unknown reasoner: {reasoner_name}")
+            return ReasonerClass()
+        except Exception as e:
+            logger.error(f"Failed to create reasoner '{reasoner_name}': {e}")
+            raise
 
     @staticmethod
     def is_jvm_ready() -> bool:

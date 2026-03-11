@@ -15,6 +15,7 @@ permettant une utilisation flexible même si l'une des bibliothèques n'est pas
 installée (bien que cela lèvera une `ImportError` si le modèle correspondant
 est sollicité).
 """
+
 import json
 from pathlib import Path
 from typing import Dict, Any

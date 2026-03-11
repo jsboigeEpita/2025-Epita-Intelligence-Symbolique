@@ -3,6 +3,7 @@
 """
 Tests pour les utilitaires d'agrégation de métriques de argumentation_analysis.utils.metrics_aggregation.
 """
+
 import pytest
 from pathlib import Path  # Non utilisé directement mais bonne pratique
 from typing import List, Dict, Any

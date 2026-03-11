@@ -100,10 +100,12 @@ class OrphanFilesProcessor:
                 "modified": orphan["modified"].isoformat(),
                 "content_analysis": content_analysis,
                 "action": "move",
-                "priority": "high"
-                if content_analysis.get("has_oracle")
-                or content_analysis.get("has_sherlock")
-                else "medium",
+                "priority": (
+                    "high"
+                    if content_analysis.get("has_oracle")
+                    or content_analysis.get("has_sherlock")
+                    else "medium"
+                ),
             }
 
             move_plan["operations"].append(operation)

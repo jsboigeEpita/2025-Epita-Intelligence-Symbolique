@@ -240,12 +240,16 @@ class Topic:
                 "ttl": self.ttl,
                 "subscriber_count": len(self.subscribers),
                 "message_count": len(self.messages),
-                "created_at": self.messages[0]["published_at"].isoformat()
-                if self.messages
-                else None,
-                "last_message_at": self.messages[-1]["published_at"].isoformat()
-                if self.messages
-                else None,
+                "created_at": (
+                    self.messages[0]["published_at"].isoformat()
+                    if self.messages
+                    else None
+                ),
+                "last_message_at": (
+                    self.messages[-1]["published_at"].isoformat()
+                    if self.messages
+                    else None
+                ),
             }
 
 

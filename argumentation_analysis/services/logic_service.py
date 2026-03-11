@@ -517,9 +517,9 @@ class LogicService:
 
         if not self._fallback_enabled:
             fallback_result["success"] = False
-            fallback_result[
-                "interpretation"
-            ] = "Service indisponible et fallback désactivé"
+            fallback_result["interpretation"] = (
+                "Service indisponible et fallback désactivé"
+            )
 
         return fallback_result
 
@@ -538,9 +538,11 @@ class LogicService:
             circuit_breaker_status = {
                 "is_open": self._is_circuit_breaker_open(),
                 "failures_count": self._circuit_breaker["failures"],
-                "last_failure": self._circuit_breaker["last_failure"].isoformat()
-                if self._circuit_breaker["last_failure"]
-                else None,
+                "last_failure": (
+                    self._circuit_breaker["last_failure"].isoformat()
+                    if self._circuit_breaker["last_failure"]
+                    else None
+                ),
                 "max_failures_threshold": self._circuit_breaker["max_failures"],
             }
 

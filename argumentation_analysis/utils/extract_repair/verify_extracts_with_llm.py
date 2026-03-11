@@ -41,7 +41,7 @@ from semantic_kernel.contents import ChatMessageContent
 
 # from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
+from ag2.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 
 try:
     # Import relatif depuis le package utils
@@ -375,9 +375,11 @@ async def evaluate_extract(
             "coherence": int(coherence_match.group(1)) if coherence_match else 0,
             "relevance": int(relevance_match.group(1)) if relevance_match else 0,
             "integrity": int(integrity_match.group(1)) if integrity_match else 0,
-            "comments": comments_match.group(1)
-            if comments_match
-            else "Commentaires non disponibles",
+            "comments": (
+                comments_match.group(1)
+                if comments_match
+                else "Commentaires non disponibles"
+            ),
         }
 
     # Récupérer les résultats de l'évaluation

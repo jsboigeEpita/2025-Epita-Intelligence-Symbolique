@@ -306,9 +306,9 @@ Modes de compatibilité:
                 output_format=args.format,
                 template_name=args.template,
                 output_mode=args.output_mode,
-                output_directory=Path(args.output_path).parent
-                if args.output_path
-                else None,
+                output_directory=(
+                    Path(args.output_path).parent if args.output_path else None
+                ),
             )
 
             report_content = generator.generate_unified_report(

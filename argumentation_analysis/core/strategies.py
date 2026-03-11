@@ -327,9 +327,9 @@ class BalancedParticipationStrategy(SelectionStrategy):
                     if name_key == default_agent_name:
                         self._target_participation[name_key] = pm_share
                     else:
-                        self._target_participation[
-                            name_key
-                        ] = individual_remaining_share
+                        self._target_participation[name_key] = (
+                            individual_remaining_share
+                        )
 
         self._imbalance_budget = {agent.name: 0.0 for agent in agents}
 

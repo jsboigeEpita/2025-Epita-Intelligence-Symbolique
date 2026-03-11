@@ -9,7 +9,7 @@ def test_api_connectivity():
     """
     Vérifie la connectivité aux APIs OpenRouter et OpenAI.
     Ce test utilise les clés API stockées dans les variables d'environnement.
-    
+
     Note: Ce test adapte son comportement selon les clés API disponibles:
     - Teste OpenRouter si OPENROUTER_API_KEY est configurée
     - Teste OpenAI si OPENAI_API_KEY est configurée
@@ -65,7 +65,7 @@ def test_api_connectivity():
             client_openai_direct.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": "Bonjour!"}],
-                max_tokens=5,
+                max_completion_tokens=5,
             )
             print("  Connexion directe à OpenAI (GPT-4o-mini) réussie.")
         except Exception as e:

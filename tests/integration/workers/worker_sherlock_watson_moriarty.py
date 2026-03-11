@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # tests/integration/workers/worker_sherlock_watson_moriarty.py
 """
 Worker pour les tests d'intégration avec GPT-4o-mini réel pour Sherlock/Watson/Moriarty.
@@ -24,6 +18,7 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.functions import KernelArguments
+from unittest.mock import Mock
 
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     CluedoExtendedOrchestrator,
@@ -38,7 +33,6 @@ from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
     MoriartyInterrogatorAgent,
 )
-
 
 # Configuration pour tests réels GPT-4o-mini
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -95,26 +89,8 @@ def rate_limiter():
     return _rate_limit
 
 
-# Tests d'intégration corrigés
-@pytest.mark.skip(
-    reason="Legacy tests for old orchestrator, disabling to fix collection."
-)
+# Tests d'intégration with real GPT-4o-mini
 class TestRealGPTIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests d'intégration avec GPT-4o-mini réel - Corrigés."""
 
     @pytest.mark.asyncio
@@ -128,7 +104,7 @@ class TestRealGPTIntegration:
         assert chat_service is not None
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.1
+            max_completion_tokens=100
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory au lieu d'une liste simple
@@ -156,7 +132,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -191,7 +170,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -229,7 +211,10 @@ class TestRealGPTIntegration:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=10, oracle_strategy="enhanced_auto_reveal"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=10,
+            oracle_strategy="enhanced_auto_reveal",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -313,7 +298,7 @@ class TestRealGPTPerformance:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=50, temperature=0.0
+            max_completion_tokens=50
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -340,7 +325,7 @@ class TestRealGPTPerformance:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.0
+            max_completion_tokens=100
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -372,7 +357,7 @@ class TestRealGPTErrorHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=50, temperature=0.0
+            max_completion_tokens=50
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -410,7 +395,7 @@ class TestRealGPTErrorHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=30, temperature=0.0
+            max_completion_tokens=30
         )
 
         # ✅ CORRECTION: Utiliser ChatHistory
@@ -457,7 +442,7 @@ class TestRealGPTAuthenticity:
         )
 
         settings = real_chat_service.get_prompt_execution_settings_class()(
-            max_tokens=100, temperature=0.5
+            max_completion_tokens=100
         )
 
         test_question = "Qu'est-ce qui rend Sherlock Holmes unique comme détective ?"
@@ -493,7 +478,10 @@ class TestRealGPTAuthenticity:
         await rate_limiter()
 
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=real_gpt_kernel, max_turns=5, oracle_strategy="balanced"
+            kernel=real_gpt_kernel,
+            settings=Mock(),
+            max_turns=5,
+            oracle_strategy="balanced",
         )
 
         oracle_state = await orchestrator.setup_workflow(
@@ -530,7 +518,7 @@ class TestRealGPTLoadHandling:
         )
 
         settings = chat_service.get_prompt_execution_settings_class()(
-            max_tokens=30, temperature=0.0
+            max_completion_tokens=30
         )
 
         results = []

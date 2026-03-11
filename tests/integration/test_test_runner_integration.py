@@ -11,4 +11,5 @@ Ils causaient une `ImportError` lors de la collecte des tests. En attendant
 de réécrire des tests d'intégration pertinents pour la nouvelle structure,
 ce fichier est neutralisé pour permettre à la suite de tests de s'exécuter.
 """
+
 pass

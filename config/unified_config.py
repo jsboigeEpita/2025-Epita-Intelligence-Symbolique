@@ -330,7 +330,9 @@ class UnifiedConfig:
         logger.info(
             f"✅ Kernel authentique créé - Service: {type(llm_service).__name__}"
         )
-        logger.info(f"✅ Model: {self.default_model}, Provider: {self.default_provider}")
+        logger.info(
+            f"✅ Model: {self.default_model}, Provider: {self.default_provider}"
+        )
         logger.info(
             f"✅ MockLevel: {self.mock_level.value}, Authentique: {self.use_authentic_llm}"
         )
@@ -343,9 +345,11 @@ class UnifiedConfig:
             "logic_type": self.logic_type.value,
             "agents": [agent.value for agent in self.agents],
             "orchestration": {
-                "type": self.orchestration_type.value
-                if hasattr(self.orchestration_type, "value")
-                else self.orchestration_type,
+                "type": (
+                    self.orchestration_type.value
+                    if hasattr(self.orchestration_type, "value")
+                    else self.orchestration_type
+                ),
                 "manual_mode": self.manual_mode,
             },
             "mock_level": self.mock_level.value,

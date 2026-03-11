@@ -13,10 +13,10 @@ from typing import Dict, List, Any, Optional
 # Imports du moteur d'analyse
 try:
     # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
-    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import (
+    from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
         EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer,
     )
-    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import (
+    from argumentation_analysis.plugins.analysis_tools.logic.fallacy_severity_evaluator import (
         EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator,
     )
 
@@ -524,12 +524,16 @@ class FallacyService:
                             description=fallacy_info["description"],
                             severity=fallacy_info["severity"],
                             confidence=0.6,
-                            location={"start": position, "end": position + len(pattern)}
-                            if position >= 0
-                            else None,
-                            context=self._extract_context(text, position)
-                            if position >= 0
-                            else None,
+                            location=(
+                                {"start": position, "end": position + len(pattern)}
+                                if position >= 0
+                                else None
+                            ),
+                            context=(
+                                self._extract_context(text, position)
+                                if position >= 0
+                                else None
+                            ),
                             explanation=f"Pattern détecté: {pattern}",
                         )
                         fallacies.append(fallacy)

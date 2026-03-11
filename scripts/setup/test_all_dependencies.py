@@ -7,6 +7,7 @@ Script amélioré pour vérifier que toutes les dépendances sont correctement i
 Ce script teste toutes les dépendances nécessaires pour le projet, y compris numpy, pandas, jpype,
 cryptography, pytest et leurs plugins.
 """
+
 import argumentation_analysis.core.environment
 
 import sys

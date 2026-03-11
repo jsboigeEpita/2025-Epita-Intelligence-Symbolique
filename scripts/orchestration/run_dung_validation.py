@@ -4,6 +4,7 @@ Script pour lancer la validation complète du projet abs_arg_dung
 dans l'environnement conda projet-is.
 Ce script DOIT être lancé via le wrapper `scripts/env/activate_project_env.ps1`.
 """
+
 import os
 import sys
 import subprocess

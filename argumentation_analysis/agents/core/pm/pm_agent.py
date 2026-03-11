@@ -17,7 +17,6 @@ from .pm_definitions import (
 from .prompts import prompt_define_tasks_v15, prompt_write_conclusion_v7
 from argumentation_analysis.config.settings import AppSettings
 
-
 # Supposons que StateManagerPlugin est importable si nécessaire
 # from ...services.state_manager_plugin import StateManagerPlugin # Exemple
 
@@ -29,9 +28,7 @@ class ProjectManagerAgent(BaseAgent):
     en fournissant des instructions à un orchestrateur externe pour l'exécution.
     """
 
-    logger: Optional[logging.Logger] = Field(
-        default_factory=lambda: logging.getLogger(__name__)
-    )
+    # logger inherited from BaseAgent (read-only @property over _agent_logger PrivateAttr)
 
     def __init__(
         self,
@@ -54,7 +51,7 @@ class ProjectManagerAgent(BaseAgent):
             "define_tasks_and_delegate": "Defines analysis tasks and delegates them to specialist agents.",
             "synthesize_results": "Synthesizes results from specialist agents (implicite via conclusion).",
             "write_conclusion": "Writes the final conclusion of the analysis.",
-            "coordinate_analysis_flow": "Manages the overall workflow of the argumentation analysis based on the current state."
+            "coordinate_analysis_flow": "Manages the overall workflow of the argumentation analysis based on the current state.",
             # Ajouter d'autres capacités si pertinent, ex: gestion d'état spécifique si le PM interagit directement avec.
         }
 

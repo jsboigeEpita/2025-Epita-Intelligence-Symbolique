@@ -2,6 +2,7 @@
 Test script for fallacy analysis integration
 This script tests the integration between speech-to-text and fallacy detection
 """
+
 import sys
 from pathlib import Path
 import json

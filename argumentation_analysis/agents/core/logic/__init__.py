@@ -6,9 +6,11 @@ Ce package contient les implémentations des agents logiques pour différents ty
 - Logique propositionnelle
 - Logique du premier ordre
 - Logique modale
+- Description Logic (ALC ontological reasoning)
+- Conditional Logic (non-monotonic reasoning)
 
-Il fournit également une factory pour créer les agents appropriés et des utilitaires
-pour gérer les ensembles de croyances et exécuter des requêtes logiques.
+It also provides handlers for SAT solving, Dung argumentation frameworks,
+and a factory for creating appropriate agents.
 """
 
 from .propositional_logic_agent import PropositionalLogicAgent
@@ -33,4 +35,16 @@ __all__ = [
     "FirstOrderBeliefSet",
     "ModalBeliefSet",
     "QueryExecutor",
+    "DLHandler",
+    "CLHandler",
 ]
+
+# Lazy imports for handlers requiring JVM (avoid import errors when JVM not started)
+def __getattr__(name):
+    if name == "DLHandler":
+        from .dl_handler import DLHandler
+        return DLHandler
+    if name == "CLHandler":
+        from .cl_handler import CLHandler
+        return CLHandler
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

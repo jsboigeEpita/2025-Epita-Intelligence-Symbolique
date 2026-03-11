@@ -8,11 +8,12 @@ Ce module fournit des fonctions pour calculer des statistiques descriptives
 métriques (par exemple, confiance, richesse contextuelle) pour des ensembles
 de résultats groupés, typiquement par corpus.
 """
+
 from typing import Dict, List, Any, Tuple
 
 
 def calculate_average_scores(
-    grouped_results: Dict[str, List[Dict[str, Any]]]
+    grouped_results: Dict[str, List[Dict[str, Any]]],
 ) -> Dict[str, Dict[str, float]]:
     """
     Calcule les scores moyens pour chaque corpus à partir des résultats groupés.
@@ -71,12 +72,12 @@ def calculate_average_scores(
             average_scores_by_corpus[corpus_name] = {}
             continue
 
-        score_sums: Dict[
-            str, float
-        ] = {}  # Pour stocker la somme des scores pour chaque métrique
-        score_counts: Dict[
-            str, int
-        ] = {}  # Pour compter le nombre d'occurrences de chaque métrique
+        score_sums: Dict[str, float] = (
+            {}
+        )  # Pour stocker la somme des scores pour chaque métrique
+        score_counts: Dict[str, int] = (
+            {}
+        )  # Pour compter le nombre d'occurrences de chaque métrique
 
         # Itération sur chaque élément de résultat (par exemple, analyse d'un document) dans le corpus
         for result_item in results_list:

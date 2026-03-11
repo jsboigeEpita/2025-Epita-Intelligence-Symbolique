@@ -40,9 +40,9 @@ async def validate_ecosystem(
         )
 
         # Validation de l'orchestration
-        ecosystem_results[
-            "orchestration_capabilities"
-        ] = await _validate_orchestration_modes(available_components)
+        ecosystem_results["orchestration_capabilities"] = (
+            await _validate_orchestration_modes(available_components)
+        )
 
         # Validation de la verbosité
         ecosystem_results["verbosity_capabilities"] = await _validate_verbosity_levels()
@@ -68,7 +68,7 @@ async def validate_ecosystem(
 
 
 async def _validate_source_management(
-    available_components: Dict[str, bool]
+    available_components: Dict[str, bool],
 ) -> Dict[str, Any]:
     """Validates all source management capabilities."""
     logger.info("📁 Validation de la gestion des sources...")
@@ -142,7 +142,7 @@ async def _validate_source_management(
 
 
 async def _validate_orchestration_modes(
-    available_components: Dict[str, bool]
+    available_components: Dict[str, bool],
 ) -> Dict[str, Any]:
     """Validates all orchestration modes."""
     logger.info("🎭 Validation des modes d'orchestration...")

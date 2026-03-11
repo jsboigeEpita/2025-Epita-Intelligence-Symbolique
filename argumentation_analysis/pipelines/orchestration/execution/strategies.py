@@ -186,9 +186,9 @@ async def execute_hierarchical_full_orchestration(
             )
 
         # Synthèse hiérarchique
-        results[
-            "hierarchical_coordination"
-        ] = await pipeline._synthesize_hierarchical_results(results)
+        results["hierarchical_coordination"] = (
+            await pipeline._synthesize_hierarchical_results(results)
+        )
 
     except Exception as e:
         logger.error(f"[HIERARCHICAL] Erreur dans l'orchestration hiérarchique: {e}")

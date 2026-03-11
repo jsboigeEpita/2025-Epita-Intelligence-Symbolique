@@ -410,7 +410,7 @@ class TestServiceIntegration:
                 AnalysisService(),
                 ValidationService(logic_service=mock_logic_service),
                 FallacyService(),
-                FrameworkService()
+                FrameworkService(),
                 # On n'a pas besoin d'ajouter le LogicService lui-même ici
             ]
 

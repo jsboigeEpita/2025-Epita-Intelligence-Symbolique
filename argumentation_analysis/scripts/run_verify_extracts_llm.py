@@ -123,9 +123,9 @@ async def main():
         extract_definitions_data, error_message = load_extract_definitions_safely(
             str(input_file_path),  # S'assurer que c'est une string
             ENCRYPTION_KEY,
-            str(fallback_file_path)
-            if fallback_file_path
-            else None,  # S'assurer que c'est une string
+            (
+                str(fallback_file_path) if fallback_file_path else None
+            ),  # S'assurer que c'est une string
         )
         if error_message:
             logger.error(

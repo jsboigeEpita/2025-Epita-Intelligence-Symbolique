@@ -166,9 +166,9 @@ def compare_rhetorical_analyses(
         "base_fallacy_count": base_fallacy_count if base_results is not None else None,
         "difference": adv_fallacy_count - base_fallacy_count if base_results else None,
         "advanced_fallacy_types": sorted(list(adv_fallacy_types)),
-        "base_fallacy_types": sorted(list(base_fallacy_types))
-        if base_results
-        else None,
+        "base_fallacy_types": (
+            sorted(list(base_fallacy_types)) if base_results else None
+        ),
         "newly_identified_in_advanced": newly_identified_fallacies,
         "missing_from_advanced_vs_base": missing_in_advanced if base_results else None,
         "common_fallacies": common_fallacies if base_results else None,
@@ -240,9 +240,11 @@ def compare_rhetorical_analyses(
 
     comparison["overall_comparison"] = {
         "advanced_analysis_depth": adv_overall_analysis.get("analysis_depth", "Élevée"),
-        "base_analysis_depth": base_analyses.get("analysis_depth", "Modérée")
-        if base_results is not None
-        else None,
+        "base_analysis_depth": (
+            base_analyses.get("analysis_depth", "Modérée")
+            if base_results is not None
+            else None
+        ),
         "advanced_quality_score": adv_quality,
         "key_improvements_with_advanced": [
             "Détection potentielle de sophismes plus complexes ou contextuels.",

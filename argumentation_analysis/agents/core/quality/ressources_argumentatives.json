@@ -1,0 +1,45 @@
+{
+  "connecteurs_pertinence": [
+    "parce que", "car", "donc", "ainsi", "puisque", "cependant", "néanmoins", "en effet",
+    "en conséquence", "par conséquent", "c’est pourquoi", "de ce fait", "en raison de", "étant donné que",
+    "du fait que", "alors", "mais", "toutefois", "or", "quoique", "bien que", "si bien que",
+    "dès lors", "d’une part", "d’autre part", "au contraire", "à cause de", "grâce à"
+  ],
+  "citation_patterns": [
+    "\\(.*?\\d{4}\\)",
+    "\\[\\d+\\]",
+    "selon .*?\\b",
+    "d’après .*?\\b",
+    "comme le montre .*?\\b",
+    "comme indiqué par .*?\\b",
+    "conformément à .*?\\b",
+    "rapporté par .*?\\b",
+    "publié dans .*?\\b",
+    "source : .*?\\b",
+    "étude menée par .*?\\b",
+    "enquête de .*?\\b"
+  ],
+  "marqueurs_refutation": [
+    "certains pensent que", "on pourrait objecter", "il est vrai que", "on pourrait dire",
+    "d’aucuns avancent que", "un argument contraire serait", "bien que certains affirment que",
+    "toutefois", "cependant", "néanmoins", "il est souvent soutenu que", "on entend parfois que",
+    "on pourrait croire que", "malgré le fait que", "il est souvent avancé que"
+  ],
+  "connecteurs_structure_logique": [
+    "car", "donc", "ainsi", "en conséquence", "par conséquent", "de ce fait", "dès lors",
+    "c’est pourquoi", "du fait que", "puisque", "étant donné que", "en effet", "alors", "parce que",
+    "à cause de", "cependant", "mais", "toutefois", "néanmoins", "bien que", "quoique"
+  ],
+  "patterns_analogies": [
+    "comme si", "tel que", "à l’instar de", "similaire à", "pareil à", "ressemble à",
+    "comparable à", "analogue à", "équivalent à", "comme", "à la manière de", "à l’image de",
+    "tout comme", "de la même manière que"
+  ],
+  "credible_sources": [
+    "OMS", "INSEE", "UNESCO", "ONU", "CNRS", "INSERM", "ANSES", "OCDE", "FAO", "UNICEF",
+    ".gouv.fr", ".gov", ".org", "le monde", "l’observateur", "libération", "science.org",
+    "nature.com", "sciencedirect.com", "who.int", "data.gouv.fr", "journal officiel",
+    "lefigaro.fr", "inrs", "IPCC", "banque mondiale", "wikidata", "institut pasteur",
+    "université de", "étude publiée dans", "rapport de", "revue scientifique"
+  ]
+}

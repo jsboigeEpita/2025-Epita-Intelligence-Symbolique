@@ -374,9 +374,9 @@ class ComprehensiveDocumentationFixer:
             "files_analyzed": len(set(issue.file_path for issue in all_issues)),
             "total_issues": len(all_issues),
             "fixes_applied": len(applied_fixes),
-            "success_rate": (len(applied_fixes) / len(all_issues)) * 100
-            if all_issues
-            else 0,
+            "success_rate": (
+                (len(applied_fixes) / len(all_issues)) * 100 if all_issues else 0
+            ),
             "files_modified": list(set(r.file_path for r in applied_fixes)),
         }
 

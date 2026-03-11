@@ -3,6 +3,7 @@
 """
 Worker pour l'exécution des tests d'intégration "durcis" dans un sous-processus.
 """
+
 import pytest
 import logging
 import os

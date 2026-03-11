@@ -12,7 +12,7 @@ Valide le comportement Oracle et l'intégration avec le moteur de jeu RÉELS.
 Tests couverts:
 - État Oracle 100% authentique
 - Validation suggestions automatique RÉELLE
-- Révélations forcées AUTHENTIQUES  
+- Révélations forcées AUTHENTIQUES
 - Moteur de jeu complet SANS SIMULATION
 - Statistiques Oracle VRAIES
 - Intégration Semantic Kernel AUTHENTIQUE
@@ -307,9 +307,9 @@ class AuthenticGameEngineFallback:
             "authentic": True,
             "simulation_used": False,
             "final_solution": self.oracle.solution_secrete if self.oracle else {},
-            "oracle_statistics": self.oracle.get_oracle_statistics()
-            if self.oracle
-            else {},
+            "oracle_statistics": (
+                self.oracle.get_oracle_statistics() if self.oracle else {}
+            ),
             "investigation_complete": True,
         }
 

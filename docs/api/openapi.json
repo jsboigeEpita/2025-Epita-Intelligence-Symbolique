@@ -1,0 +1,3353 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Argumentation Analysis API",
+    "description": "API d'analyse argumentative multi-agents avec intégration Java/Tweety, composants Lego (CapabilityRegistry), et pipelines unifiés. Supporte l'analyse Dung, Toulmin, ASPIC+, détection de sophismes, et orchestration de débats.",
+    "version": "2.1.0",
+    "x-integration-status": {
+      "registered_capabilities": 25,
+      "integrated_projects": 10,
+      "architecture": "Lego (CapabilityRegistry + Semantic Kernel plugins)"
+    }
+  },
+  "paths": {
+    "/api/analyze": {
+      "post": {
+        "summary": "Analyze Text Endpoint",
+        "description": "Analyse un texte donné pour en extraire la structure argumentative.",
+        "operationId": "analyze_text_endpoint_api_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "summary": "Status Endpoint",
+        "description": "Checks the status of the analysis service.\nReturns the operational status and service details.",
+        "operationId": "status_endpoint_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/examples": {
+      "get": {
+        "summary": "Get Examples Endpoint",
+        "description": "Route pour obtenir des exemples de textes d'analyse.\nRetourne une liste d'exemples prédéfinis pour faciliter les tests.",
+        "operationId": "get_examples_endpoint_api_examples_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExampleResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health Check Endpoint",
+        "description": "Simple health check endpoint.\nReturns operational status.",
+        "operationId": "health_check_endpoint_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/endpoints": {
+      "get": {
+        "summary": "List Endpoints Endpoint",
+        "description": "Lists available API endpoints.\nDynamically introspects routes from the FastAPI application.",
+        "operationId": "list_endpoints_endpoint_api_endpoints_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndpointsListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/framework/analyze": {
+      "post": {
+        "tags": [
+          "Dung's Argumentation Framework"
+        ],
+        "summary": "Analyze Framework Endpoint",
+        "description": "Analyse un framework d'argumentation de Dung.\n\n- **arguments**: Une liste de chaînes représentant les noms des arguments.\n- **attacks**: Une liste de paires (listes) représentant les attaques,\n  ex: `[[\"a\", \"b\"]]` signifie que `a` attaque `b`.\n\nRetourne une analyse sémantique complète, le statut de chaque argument, et les\npropriétés structurelles du graphe.",
+        "operationId": "analyze_framework_endpoint_api_v1_framework_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrameworkAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameworkAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/informal/analyze": {
+      "post": {
+        "tags": [
+          "Informal Fallacy Analysis"
+        ],
+        "summary": "Analyze Informal Fallacy",
+        "description": "Analyzes a given text to extract its argumentative structure using the Toulmin model.\n\nThis endpoint leverages a semantic analysis service to identify the core\ncomponents of an argument:\n- **Claim**: The main point the arguer is trying to make.\n- **Data**: The evidence or facts used to support the claim.\n- **Warrant**: The underlying assumption that connects the data to the claim.\n- **Backing**: Additional support for the warrant.\n- **Rebuttal**: Counter-arguments or exceptions to the claim.\n- **Qualifier**: The degree of certainty of the claim (e.g., 'probably', 'certainly').\n\nArgs:\n    request (InformalAnalysisRequest): The request body containing the text to analyze.\n\nReturns:\n    ToulminAnalysisResult: A Pydantic model containing the structured components of the argument.",
+        "operationId": "analyze_informal_fallacy_api_v1_informal_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InformalAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToulminAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/beliefs": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Créer une nouvelle croyance",
+        "description": "Crée une nouvelle croyance (noeud) dans une instance JTMS.\n\n- Si `session_id` ou `instance_id` ne sont pas fournis, ils sont créés automatiquement.\n- `initial_value` peut être \"true\", \"false\", ou \"unknown\".",
+        "operationId": "create_belief_jtms_beliefs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBeliefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateBeliefResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erreur lors de la création de la croyance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JTMSError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/justifications": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Ajouter une justification",
+        "description": "Ajoute une règle de déduction (justification) qui lie des croyances entre elles.\n\n- Une justification est de la forme: `in_beliefs & NOT out_beliefs -> conclusion`.\n- Crée la session/instance si nécessaire.",
+        "operationId": "add_justification_jtms_justifications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddJustificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddJustificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erreur lors de l'ajout de la justification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JTMSError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/beliefs/validity": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Modifier la validité d'une croyance",
+        "description": "Force la validité d'une croyance et propage les conséquences à travers le réseau de justifications.",
+        "operationId": "set_belief_validity_jtms_beliefs_validity_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetBeliefValidityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetBeliefValidityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erreur lors de la mise à jour de la validité.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JTMSError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/beliefs/explain": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Explain Belief",
+        "description": "Génère une explication détaillée pour une croyance donnée.\n\nRetourne le statut actuel de la croyance et la liste des justifications\nqui la supportent ou l'invalident.",
+        "operationId": "explain_belief_jtms_beliefs_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplainBeliefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainBeliefResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/beliefs/query": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Query Beliefs",
+        "description": "Interroge et filtre les croyances au sein d'une instance JTMS selon leur statut.\nLes filtres valides sont \"valid\", \"invalid\", \"unknown\", \"non_monotonic\", \"all\".",
+        "operationId": "query_beliefs_jtms_beliefs_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryBeliefsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryBeliefsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/state": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Get Jtms State",
+        "description": "Récupère l'état complet d'une instance JTMS, avec la possibilité d'inclure\nle graphe de justifications et des statistiques détaillées.",
+        "operationId": "get_jtms_state_jtms_state_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetJTMSStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetJTMSStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sessions": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Create Session",
+        "description": "Crée une nouvelle session de travail pour un agent, qui peut contenir\nplusieurs instances JTMS.",
+        "operationId": "create_session_jtms_sessions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "List Sessions",
+        "description": "Liste toutes les sessions existantes, avec la possibilité de filtrer par\nagent_id et par statut.",
+        "operationId": "list_sessions_jtms_sessions_get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "status_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Filter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sessions/checkpoints": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Create Checkpoint",
+        "description": "Crée un checkpoint pour une session.",
+        "operationId": "create_checkpoint_jtms_sessions_checkpoints_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckpointRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCheckpointResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sessions/restore": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Restore Checkpoint",
+        "description": "Restaure une session à partir d'un checkpoint.",
+        "operationId": "restore_checkpoint_jtms_sessions_restore_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreCheckpointRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreCheckpointResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/export": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Export Jtms State",
+        "description": "Exporte l'état d'une instance JTMS.",
+        "operationId": "export_jtms_state_jtms_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportJTMSRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJTMSResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/import": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Import Jtms State",
+        "description": "Importe un état JTMS dans une session.",
+        "operationId": "import_jtms_state_jtms_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportJTMSRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJTMSResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/plugin/status": {
+      "get": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Get Plugin Status",
+        "description": "Vérifie et retourne le statut du plugin JTMSSemanticKernelPlugin.\n\nIndique si le kernel, le service JTMS et le gestionnaire de session sont actifs,\net liste les fonctions disponibles.",
+        "operationId": "get_plugin_status_jtms_plugin_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sk/create_belief": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Sk Create Belief",
+        "description": "Endpoint de convenance pour la fonction SK create_belief.",
+        "operationId": "sk_create_belief_jtms_sk_create_belief_post",
+        "parameters": [
+          {
+            "name": "belief_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Belief Name"
+            }
+          },
+          {
+            "name": "initial_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "unknown",
+              "title": "Initial Value"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "api_client",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sk/add_justification": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Sk Add Justification",
+        "description": "Endpoint de convenance pour la fonction SK add_justification.",
+        "operationId": "sk_add_justification_jtms_sk_add_justification_post",
+        "parameters": [
+          {
+            "name": "in_beliefs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "In Beliefs"
+            }
+          },
+          {
+            "name": "out_beliefs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Out Beliefs"
+            }
+          },
+          {
+            "name": "conclusion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Conclusion"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "api_client",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sk/explain_belief": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Sk Explain Belief",
+        "description": "Endpoint de convenance pour la fonction SK explain_belief.",
+        "operationId": "sk_explain_belief_jtms_sk_explain_belief_post",
+        "parameters": [
+          {
+            "name": "belief_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Belief Name"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "api_client",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sk/query_beliefs": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Sk Query Beliefs",
+        "description": "Endpoint de convenance pour la fonction SK query_beliefs.",
+        "operationId": "sk_query_beliefs_jtms_sk_query_beliefs_post",
+        "parameters": [
+          {
+            "name": "filter_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Filter Status"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "api_client",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jtms/sk/get_jtms_state": {
+      "post": {
+        "tags": [
+          "JTMS"
+        ],
+        "summary": "Sk Get Jtms State",
+        "description": "Endpoint de convenance pour la fonction SK get_jtms_state.",
+        "operationId": "sk_get_jtms_state_jtms_sk_get_jtms_state_post",
+        "parameters": [
+          {
+            "name": "include_graph",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "true",
+              "title": "Include Graph"
+            }
+          },
+          {
+            "name": "include_statistics",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "true",
+              "title": "Include Statistics"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "instance_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Instance Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "api_client",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddJustificationRequest": {
+        "properties": {
+          "in_beliefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "In Beliefs",
+            "description": "Liste des croyances positives",
+            "default": []
+          },
+          "out_beliefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Out Beliefs",
+            "description": "Liste des croyances négatives",
+            "default": []
+          },
+          "conclusion": {
+            "type": "string",
+            "title": "Conclusion",
+            "description": "Croyance conclusion"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent créateur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conclusion"
+        ],
+        "title": "AddJustificationRequest",
+        "description": "Requête d'ajout de justification."
+      },
+      "AddJustificationResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "justification": {
+            "$ref": "#/components/schemas/JustificationInfo",
+            "description": "Informations sur la justification ajoutée"
+          },
+          "conclusion_status": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion Status",
+            "description": "Nouveau statut de la conclusion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp",
+          "justification"
+        ],
+        "title": "AddJustificationResponse",
+        "description": "Réponse d'ajout de justification."
+      },
+      "AnalysisRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "AnalysisRequest"
+      },
+      "ArgumentStatus": {
+        "properties": {
+          "credulously_accepted": {
+            "type": "boolean",
+            "title": "Credulously Accepted"
+          },
+          "skeptically_accepted": {
+            "type": "boolean",
+            "title": "Skeptically Accepted"
+          },
+          "grounded_accepted": {
+            "type": "boolean",
+            "title": "Grounded Accepted"
+          },
+          "stable_accepted": {
+            "type": "boolean",
+            "title": "Stable Accepted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credulously_accepted",
+          "skeptically_accepted",
+          "grounded_accepted",
+          "stable_accepted"
+        ],
+        "title": "ArgumentStatus",
+        "description": "Statut d'un argument individuel."
+      },
+      "BeliefInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Nom unique de la croyance"
+          },
+          "valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid",
+            "description": "Statut de validité (true/false/null)"
+          },
+          "non_monotonic": {
+            "type": "boolean",
+            "title": "Non Monotonic",
+            "description": "Indique si la croyance est non-monotone",
+            "default": false
+          },
+          "justifications_count": {
+            "type": "integer",
+            "title": "Justifications Count",
+            "description": "Nombre de justifications",
+            "default": 0
+          },
+          "implications_count": {
+            "type": "integer",
+            "title": "Implications Count",
+            "description": "Nombre d'implications",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "BeliefInfo",
+        "description": "Informations sur une croyance."
+      },
+      "CreateBeliefRequest": {
+        "properties": {
+          "belief_name": {
+            "type": "string",
+            "title": "Belief Name",
+            "description": "Nom unique de la croyance"
+          },
+          "initial_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Value",
+            "description": "Valeur initiale: 'true', 'false', ou 'unknown'",
+            "default": "unknown"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent créateur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "belief_name"
+        ],
+        "title": "CreateBeliefRequest",
+        "description": "Requête de création de croyance."
+      },
+      "CreateBeliefResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "belief": {
+            "$ref": "#/components/schemas/BeliefInfo",
+            "description": "Informations sur la croyance créée"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp",
+          "belief"
+        ],
+        "title": "CreateBeliefResponse",
+        "description": "Réponse de création de croyance."
+      },
+      "CreateCheckpointRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Description du checkpoint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "CreateCheckpointRequest",
+        "description": "Requête de création de checkpoint."
+      },
+      "CreateCheckpointResponse": {
+        "properties": {
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id",
+            "description": "ID du checkpoint créé"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description du checkpoint"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Date de création"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checkpoint_id",
+          "session_id",
+          "description",
+          "created_at"
+        ],
+        "title": "CreateCheckpointResponse",
+        "description": "Réponse de création de checkpoint."
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "session_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Name",
+            "description": "Nom descriptif de la session"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata",
+            "description": "Métadonnées additionnelles",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id"
+        ],
+        "title": "CreateSessionRequest",
+        "description": "Requête de création de session."
+      },
+      "CreateSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session créée"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "session_name": {
+            "type": "string",
+            "title": "Session Name",
+            "description": "Nom de la session"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Date de création"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "agent_id",
+          "session_name",
+          "created_at"
+        ],
+        "title": "CreateSessionResponse",
+        "description": "Réponse de création de session."
+      },
+      "EndpointDetail": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Methods"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "methods"
+        ],
+        "title": "EndpointDetail"
+      },
+      "EndpointsListResponse": {
+        "properties": {
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointDetail"
+            },
+            "type": "array",
+            "title": "Endpoints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoints"
+        ],
+        "title": "EndpointsListResponse"
+      },
+      "Example": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "text",
+          "type"
+        ],
+        "title": "Example"
+      },
+      "ExampleResponse": {
+        "properties": {
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/Example"
+            },
+            "type": "array",
+            "title": "Examples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "examples"
+        ],
+        "title": "ExampleResponse"
+      },
+      "ExplainBeliefRequest": {
+        "properties": {
+          "belief_name": {
+            "type": "string",
+            "title": "Belief Name",
+            "description": "Nom de la croyance à expliquer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent demandeur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "belief_name"
+        ],
+        "title": "ExplainBeliefRequest",
+        "description": "Requête d'explication de croyance."
+      },
+      "ExplainBeliefResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "belief_name": {
+            "type": "string",
+            "title": "Belief Name",
+            "description": "Nom de la croyance expliquée"
+          },
+          "current_status": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Status",
+            "description": "Statut actuel"
+          },
+          "non_monotonic": {
+            "type": "boolean",
+            "title": "Non Monotonic",
+            "description": "Indique si non-monotone",
+            "default": false
+          },
+          "justifications": {
+            "items": {
+              "$ref": "#/components/schemas/JustificationInfo"
+            },
+            "type": "array",
+            "title": "Justifications",
+            "description": "Liste des justifications",
+            "default": []
+          },
+          "explanation_text": {
+            "type": "string",
+            "title": "Explanation Text",
+            "description": "Explication textuelle",
+            "default": ""
+          },
+          "natural_language_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Natural Language Summary",
+            "description": "Résumé en langage naturel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp",
+          "belief_name"
+        ],
+        "title": "ExplainBeliefResponse",
+        "description": "Réponse d'explication de croyance."
+      },
+      "ExportJTMSRequest": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format d'export: 'json', 'graphml', 'dot'",
+            "default": "json"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent demandeur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "title": "ExportJTMSRequest",
+        "description": "Requête d'export JTMS."
+      },
+      "ExportJTMSResponse": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session exporté"
+          },
+          "instance_id": {
+            "type": "string",
+            "title": "Instance Id",
+            "description": "ID d'instance exporté"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format d'export utilisé"
+          },
+          "exported_data": {
+            "type": "string",
+            "title": "Exported Data",
+            "description": "Données exportées"
+          },
+          "export_timestamp": {
+            "type": "string",
+            "title": "Export Timestamp",
+            "description": "Horodatage de l'export"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instance_id",
+          "format",
+          "exported_data",
+          "export_timestamp"
+        ],
+        "title": "ExportJTMSResponse",
+        "description": "Réponse d'export JTMS."
+      },
+      "Extensions": {
+        "properties": {
+          "grounded": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Grounded"
+          },
+          "preferred": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Preferred"
+          },
+          "stable": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Stable"
+          },
+          "complete": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Complete"
+          },
+          "admissible": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Admissible"
+          },
+          "ideal": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ideal"
+          },
+          "semi_stable": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Semi Stable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grounded",
+          "preferred",
+          "stable",
+          "complete",
+          "admissible",
+          "ideal",
+          "semi_stable"
+        ],
+        "title": "Extensions",
+        "description": "Conteneur pour toutes les extensions sémantiques."
+      },
+      "FrameworkAnalysisOptions": {
+        "properties": {
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "default": "preferred"
+          },
+          "compute_extensions": {
+            "type": "boolean",
+            "title": "Compute Extensions",
+            "default": true
+          },
+          "include_visualization": {
+            "type": "boolean",
+            "title": "Include Visualization",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "FrameworkAnalysisOptions",
+        "description": "Options pour l'analyse du framework."
+      },
+      "FrameworkAnalysisRequest": {
+        "properties": {
+          "arguments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Arguments"
+          },
+          "attacks": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Attacks"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameworkAnalysisOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "arguments",
+          "attacks"
+        ],
+        "title": "FrameworkAnalysisRequest",
+        "description": "Modèle de requête pour l'analyse d'un framework d'argumentation."
+      },
+      "FrameworkAnalysisResponse": {
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/FrameworkAnalysisResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "analysis"
+        ],
+        "title": "FrameworkAnalysisResponse",
+        "description": "Modèle de réponse pour l'analyse complète du framework, enveloppé dans une clé 'analysis'."
+      },
+      "FrameworkAnalysisResult": {
+        "properties": {
+          "extensions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Extensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "argument_status": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ArgumentStatus"
+            },
+            "type": "object",
+            "title": "Argument Status"
+          },
+          "graph_properties": {
+            "$ref": "#/components/schemas/GraphProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "argument_status",
+          "graph_properties"
+        ],
+        "title": "FrameworkAnalysisResult",
+        "description": "Contient les résultats détaillés de l'analyse du framework."
+      },
+      "GetJTMSStateRequest": {
+        "properties": {
+          "include_graph": {
+            "type": "boolean",
+            "title": "Include Graph",
+            "description": "Inclure le graphe de justifications",
+            "default": true
+          },
+          "include_statistics": {
+            "type": "boolean",
+            "title": "Include Statistics",
+            "description": "Inclure les statistiques",
+            "default": true
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent demandeur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "title": "GetJTMSStateRequest",
+        "description": "Requête d'état complet JTMS."
+      },
+      "GetJTMSStateResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "beliefs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Beliefs",
+            "description": "État des croyances",
+            "default": {}
+          },
+          "justifications_graph": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/JustificationInfo"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justifications Graph",
+            "description": "Graphe de justifications"
+          },
+          "statistics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JTMSStatistics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Statistiques du système"
+          },
+          "session_info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Informations de session"
+          },
+          "natural_language_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Natural Language Summary",
+            "description": "Résumé en langage naturel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp"
+        ],
+        "title": "GetJTMSStateResponse",
+        "description": "Réponse d'état complet JTMS."
+      },
+      "GraphProperties": {
+        "properties": {
+          "num_arguments": {
+            "type": "integer",
+            "title": "Num Arguments"
+          },
+          "num_attacks": {
+            "type": "integer",
+            "title": "Num Attacks"
+          },
+          "has_cycles": {
+            "type": "boolean",
+            "title": "Has Cycles"
+          },
+          "cycles": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Cycles"
+          },
+          "self_attacking_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Self Attacking Nodes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "num_arguments",
+          "num_attacks",
+          "has_cycles",
+          "cycles",
+          "self_attacking_nodes"
+        ],
+        "title": "GraphProperties",
+        "description": "Propriétés structurelles du graphe d'argumentation."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImportJTMSRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de session de destination"
+          },
+          "state_data": {
+            "type": "string",
+            "title": "State Data",
+            "description": "Données d'état sérialisées"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format des données: 'json'",
+            "default": "json"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent importateur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "state_data"
+        ],
+        "title": "ImportJTMSRequest",
+        "description": "Requête d'import JTMS."
+      },
+      "ImportJTMSResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de session de destination"
+          },
+          "new_instance_id": {
+            "type": "string",
+            "title": "New Instance Id",
+            "description": "ID de la nouvelle instance créée"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format des données importées"
+          },
+          "beliefs_imported": {
+            "type": "integer",
+            "title": "Beliefs Imported",
+            "description": "Nombre de croyances importées",
+            "default": 0
+          },
+          "justifications_imported": {
+            "type": "integer",
+            "title": "Justifications Imported",
+            "description": "Nombre de justifications importées",
+            "default": 0
+          },
+          "import_timestamp": {
+            "type": "string",
+            "title": "Import Timestamp",
+            "description": "Horodatage de l'import"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "new_instance_id",
+          "format",
+          "import_timestamp"
+        ],
+        "title": "ImportJTMSResponse",
+        "description": "Réponse d'import JTMS."
+      },
+      "InformalAnalysisRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "InformalAnalysisRequest",
+        "description": "Modèle de requête pour le service d'analyse de sophismes informels."
+      },
+      "JTMSError": {
+        "properties": {
+          "error_type": {
+            "type": "string",
+            "title": "Error Type",
+            "description": "Type d'erreur"
+          },
+          "error_message": {
+            "type": "string",
+            "title": "Error Message",
+            "description": "Message d'erreur"
+          },
+          "error_details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Details",
+            "description": "Détails additionnels"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation",
+            "description": "Opération qui a échoué"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session concerné"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance concerné"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'erreur"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error_type",
+          "error_message",
+          "timestamp"
+        ],
+        "title": "JTMSError",
+        "description": "Modèle d'erreur JTMS."
+      },
+      "JTMSStatistics": {
+        "properties": {
+          "total_beliefs": {
+            "type": "integer",
+            "title": "Total Beliefs",
+            "description": "Nombre total de croyances",
+            "default": 0
+          },
+          "valid_beliefs": {
+            "type": "integer",
+            "title": "Valid Beliefs",
+            "description": "Croyances vraies",
+            "default": 0
+          },
+          "invalid_beliefs": {
+            "type": "integer",
+            "title": "Invalid Beliefs",
+            "description": "Croyances fausses",
+            "default": 0
+          },
+          "unknown_beliefs": {
+            "type": "integer",
+            "title": "Unknown Beliefs",
+            "description": "Croyances indéterminées",
+            "default": 0
+          },
+          "non_monotonic_beliefs": {
+            "type": "integer",
+            "title": "Non Monotonic Beliefs",
+            "description": "Croyances non-monotones",
+            "default": 0
+          },
+          "total_justifications": {
+            "type": "integer",
+            "title": "Total Justifications",
+            "description": "Nombre total de justifications",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "JTMSStatistics",
+        "description": "Statistiques du système JTMS."
+      },
+      "JustificationInfo": {
+        "properties": {
+          "in_beliefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "In Beliefs",
+            "description": "Croyances positives (prémisses)",
+            "default": []
+          },
+          "out_beliefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Out Beliefs",
+            "description": "Croyances négatives (contraintes)",
+            "default": []
+          },
+          "conclusion": {
+            "type": "string",
+            "title": "Conclusion",
+            "description": "Croyance conclusion"
+          },
+          "is_valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Valid",
+            "description": "Validité de la justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conclusion"
+        ],
+        "title": "JustificationInfo",
+        "description": "Informations sur une justification."
+      },
+      "PluginStatusResponse": {
+        "properties": {
+          "plugin_name": {
+            "type": "string",
+            "title": "Plugin Name",
+            "description": "Nom du plugin"
+          },
+          "semantic_kernel_available": {
+            "type": "boolean",
+            "title": "Semantic Kernel Available",
+            "description": "Semantic Kernel disponible"
+          },
+          "functions_count": {
+            "type": "integer",
+            "title": "Functions Count",
+            "description": "Nombre de fonctions disponibles"
+          },
+          "functions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Functions",
+            "description": "Liste des fonctions"
+          },
+          "jtms_service_active": {
+            "type": "boolean",
+            "title": "Jtms Service Active",
+            "description": "Service JTMS actif"
+          },
+          "session_manager_active": {
+            "type": "boolean",
+            "title": "Session Manager Active",
+            "description": "Gestionnaire de sessions actif"
+          },
+          "default_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Session Id",
+            "description": "Session par défaut"
+          },
+          "default_instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Instance Id",
+            "description": "Instance par défaut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plugin_name",
+          "semantic_kernel_available",
+          "functions_count",
+          "functions",
+          "jtms_service_active",
+          "session_manager_active"
+        ],
+        "title": "PluginStatusResponse",
+        "description": "Réponse du statut du plugin."
+      },
+      "QueryBeliefsRequest": {
+        "properties": {
+          "filter_status": {
+            "type": "string",
+            "title": "Filter Status",
+            "description": "Filtre: 'valid', 'invalid', 'unknown', 'non_monotonic', 'all'",
+            "default": "all"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent demandeur",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "title": "QueryBeliefsRequest",
+        "description": "Requête d'interrogation de croyances."
+      },
+      "QueryBeliefsResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "total_beliefs": {
+            "type": "integer",
+            "title": "Total Beliefs",
+            "description": "Nombre total de croyances",
+            "default": 0
+          },
+          "filtered_count": {
+            "type": "integer",
+            "title": "Filtered Count",
+            "description": "Nombre de croyances filtrées",
+            "default": 0
+          },
+          "filter_applied": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filter Applied",
+            "description": "Filtre appliqué"
+          },
+          "beliefs": {
+            "items": {
+              "$ref": "#/components/schemas/BeliefInfo"
+            },
+            "type": "array",
+            "title": "Beliefs",
+            "description": "Liste des croyances",
+            "default": []
+          },
+          "natural_language_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Natural Language Summary",
+            "description": "Résumé en langage naturel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp"
+        ],
+        "title": "QueryBeliefsResponse",
+        "description": "Réponse d'interrogation de croyances."
+      },
+      "RestoreCheckpointRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id",
+            "description": "ID du checkpoint à restaurer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "checkpoint_id"
+        ],
+        "title": "RestoreCheckpointRequest",
+        "description": "Requête de restauration de checkpoint."
+      },
+      "RestoreCheckpointResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id",
+            "description": "ID du checkpoint restauré"
+          },
+          "restored_at": {
+            "type": "string",
+            "title": "Restored At",
+            "description": "Date de restauration"
+          },
+          "instances_restored": {
+            "type": "integer",
+            "title": "Instances Restored",
+            "description": "Nombre d'instances restaurées",
+            "default": 0
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération",
+            "default": "success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "checkpoint_id",
+          "restored_at"
+        ],
+        "title": "RestoreCheckpointResponse",
+        "description": "Réponse de restauration de checkpoint."
+      },
+      "SessionInfo": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "ID de la session"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent propriétaire"
+          },
+          "session_name": {
+            "type": "string",
+            "title": "Session Name",
+            "description": "Nom de la session"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Date de création"
+          },
+          "last_accessed": {
+            "type": "string",
+            "title": "Last Accessed",
+            "description": "Dernier accès"
+          },
+          "checkpoint_count": {
+            "type": "integer",
+            "title": "Checkpoint Count",
+            "description": "Nombre de checkpoints",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "agent_id",
+          "session_name",
+          "created_at",
+          "last_accessed"
+        ],
+        "title": "SessionInfo",
+        "description": "Informations sur une session."
+      },
+      "SessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionInfo"
+            },
+            "type": "array",
+            "title": "Sessions",
+            "description": "Liste des sessions",
+            "default": []
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "description": "Nombre total de sessions",
+            "default": 0
+          },
+          "agent_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Filter",
+            "description": "Filtre agent appliqué"
+          },
+          "status_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Filter",
+            "description": "Filtre statut appliqué"
+          }
+        },
+        "type": "object",
+        "title": "SessionListResponse",
+        "description": "Réponse de liste de sessions."
+      },
+      "SetBeliefValidityRequest": {
+        "properties": {
+          "belief_name": {
+            "type": "string",
+            "title": "Belief Name",
+            "description": "Nom de la croyance"
+          },
+          "validity": {
+            "type": "boolean",
+            "title": "Validity",
+            "description": "Nouvelle valeur de validité"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session (optionnel)"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance JTMS (optionnel)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent",
+            "default": "api_client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "belief_name",
+          "validity"
+        ],
+        "title": "SetBeliefValidityRequest",
+        "description": "Requête de modification de validité."
+      },
+      "SetBeliefValidityResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Statut de l'opération"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type d'opération effectuée"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "ID de session utilisé"
+          },
+          "instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Id",
+            "description": "ID d'instance utilisé"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "ID de l'agent"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Horodatage de l'opération"
+          },
+          "belief_name": {
+            "type": "string",
+            "title": "Belief Name",
+            "description": "Nom de la croyance modifiée"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value",
+            "description": "Ancienne valeur"
+          },
+          "new_value": {
+            "type": "boolean",
+            "title": "New Value",
+            "description": "Nouvelle valeur"
+          },
+          "propagation_occurred": {
+            "type": "boolean",
+            "title": "Propagation Occurred",
+            "description": "Indique si propagation effectuée",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "operation",
+          "agent_id",
+          "timestamp",
+          "belief_name",
+          "new_value"
+        ],
+        "title": "SetBeliefValidityResponse",
+        "description": "Réponse de modification de validité."
+      },
+      "StatusResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "service_status": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Service Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service_status"
+        ],
+        "title": "StatusResponse"
+      },
+      "ToulminAnalysisResult": {
+        "properties": {
+          "claim": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToulminComponent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "La thèse principale de l'argument."
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ToulminComponent"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "Les données, faits ou preuves soutenant la thèse."
+          },
+          "warrant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToulminComponent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Le lien logique ou la garantie qui connecte les données à la thèse."
+          },
+          "backing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToulminComponent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Le fondement ou le support pour la garantie."
+          },
+          "qualifier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToulminComponent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Le modalisateur qui nuance la force de la thèse (ex: 'probablement', 'certainement')."
+          },
+          "rebuttal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToulminComponent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "La réfutation ou les conditions d'exception à la thèse."
+          }
+        },
+        "type": "object",
+        "title": "ToulminAnalysisResult",
+        "description": "Structure de données pour le résultat de l'analyse de Toulmin."
+      },
+      "ToulminComponent": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Le fragment de texte exact identifié comme composant."
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score",
+            "description": "Score de confiance (entre 0 et 1) que le texte correspond bien au composant."
+          },
+          "source_sentences": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Source Sentences",
+            "description": "Liste des indices des phrases d'origine."
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "confidence_score",
+          "source_sentences"
+        ],
+        "title": "ToulminComponent",
+        "description": "Représente un composant identifié du modèle de Toulmin."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development"
+    }
+  ]
+}

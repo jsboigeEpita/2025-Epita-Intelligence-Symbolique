@@ -2,6 +2,7 @@
 """
 Ce module gère la configuration des mocks pour les classes d'agents Tweety.
 """
+
 import logging
 import sys
 from unittest.mock import MagicMock
@@ -148,18 +149,18 @@ def _configure_Dialogue(jclass_instance: "MockJClassCore"):
 
 # Enregistrement des configurateurs
 # Les noms de classes doivent correspondre exactement à ceux utilisés par Tweety.
-_agent_class_configs[
-    "org.tweetyproject.agents.ArgumentationAgent"
-] = _configure_ArgumentationAgent
-_agent_class_configs[
-    "org.tweetyproject.agents.OpponentModel"
-] = _configure_OpponentModel
-_agent_class_configs[
-    "org.tweetyproject.agents.PersuasionProtocol"
-] = _configure_PersuasionProtocol
-_agent_class_configs[
-    "org.tweetyproject.agents.dialogues.Dialogue"
-] = _configure_Dialogue
+_agent_class_configs["org.tweetyproject.agents.ArgumentationAgent"] = (
+    _configure_ArgumentationAgent
+)
+_agent_class_configs["org.tweetyproject.agents.OpponentModel"] = (
+    _configure_OpponentModel
+)
+_agent_class_configs["org.tweetyproject.agents.PersuasionProtocol"] = (
+    _configure_PersuasionProtocol
+)
+_agent_class_configs["org.tweetyproject.agents.dialogues.Dialogue"] = (
+    _configure_Dialogue
+)
 # Ajouter d'autres classes d'agents ici au besoin
 
 tweety_agents_logger.info(

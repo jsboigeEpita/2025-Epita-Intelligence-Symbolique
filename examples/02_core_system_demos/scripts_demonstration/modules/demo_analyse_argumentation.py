@@ -4,6 +4,7 @@ Module de démonstration : Analyse d'Arguments & Sophismes
 Ce module utilise la AgentFactory pour instancier dynamiquement un agent
 d'analyse en fonction des paramètres fournis.
 """
+
 import asyncio
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAITextCompletion

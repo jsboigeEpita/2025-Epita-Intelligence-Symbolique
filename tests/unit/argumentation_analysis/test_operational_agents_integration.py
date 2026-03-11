@@ -1,9 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests d'intégration pour les agents opérationnels dans l'architecture hiérarchique.
@@ -62,33 +56,7 @@ from argumentation_analysis.paths import RESULTS_DIR
 logging.basicConfig(level=logging.ERROR)
 
 
-@pytest.mark.skip(
-    reason="Provoque un crash systematique en l'absence de JVM, probablement dans la fixture"
-)
 class TestOperationalAgentsIntegration:
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-
-        async def _run():
-            return await config.get_kernel_with_gpt4o_mini()
-
-        return asyncio.run(_run())
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _run():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_run())
-
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture(scope="function")
@@ -183,7 +151,7 @@ class TestOperationalAgentsIntegration:
         assert "informal" in registry.agents
         assert "pl" in registry.agents
 
-    @pytest.mark.skip(reason="Ce test semble causer un blocage.")
+    @pytest.mark.timeout(30)
     async def test_extract_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction, avec le mock centralisé."""
         manager = operational_components["manager"]
@@ -217,7 +185,7 @@ class TestOperationalAgentsIntegration:
         )
         assert saved_output["outputs"]["extracted_segments"] == "segments extraits"
 
-    @pytest.mark.skip(reason="Ce test semble causer un blocage.")
+    @pytest.mark.timeout(30)
     async def test_informal_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent informel."""
         manager = operational_components["manager"]
@@ -251,7 +219,7 @@ class TestOperationalAgentsIntegration:
         )
         assert saved_output["outputs"]["identified_arguments"] == "args identifiés"
 
-    @pytest.mark.skip(reason="Ce test semble causer un blocage.")
+    @pytest.mark.timeout(30)
     async def test_pl_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent de logique propositionnelle."""
         manager = operational_components["manager"]
@@ -361,7 +329,7 @@ class TestOperationalAgentsIntegration:
         assert retrieved_metrics is not None
         assert retrieved_metrics["execution_time"] == 1.0
 
-    @pytest.mark.skip(reason="Ce test semble causer un blocage.")
+    @pytest.mark.timeout(30)
     async def test_end_to_end_task_processing(self, operational_components):
         """Teste le traitement complet d'une tâche, en s'assurant que l'agent est correctement sélectionné et le mock appelé."""
         manager = operational_components["manager"]

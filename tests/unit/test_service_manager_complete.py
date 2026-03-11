@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -21,7 +20,6 @@ import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import psutil
-
 
 # Ajouter project_core au path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "project_core"))

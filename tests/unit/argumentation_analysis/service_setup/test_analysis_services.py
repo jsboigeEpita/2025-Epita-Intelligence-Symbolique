@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -14,7 +13,6 @@ Tests unitaires pour le module analysis_services.py.
 import pytest
 import logging
 from unittest.mock import patch, MagicMock
-
 
 # Chemins pour le patching
 SETTINGS_PATH = "argumentation_analysis.service_setup.analysis_services.settings"

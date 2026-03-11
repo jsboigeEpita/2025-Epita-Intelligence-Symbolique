@@ -360,10 +360,10 @@ Votre mission : Fasciner par votre mystère élégant."""
         object.__setattr__(self, "cards_revealed_by_agent", {})
         object.__setattr__(self, "suggestion_history", [])
 
-        self._logger.info(
+        self.logger.info(
             f"MoriartyInterrogatorAgent '{agent_name}' initialisé avec stratégie: {game_strategy}"
         )
-        self._logger.info(
+        self.logger.info(
             f"Cartes Moriarty: {dataset_manager.dataset.get_moriarty_cards()}"
         )
 
@@ -375,15 +375,17 @@ Votre mission : Fasciner par votre mystère élégant."""
             "balanced": RevealPolicy.BALANCED,
             "progressive": RevealPolicy.PROGRESSIVE,
             "enhanced_auto_reveal": RevealPolicy.PROGRESSIVE,
+            "enhanced_progressive": RevealPolicy.PROGRESSIVE,
+            "standard": RevealPolicy.BALANCED,
         }
 
         if strategy in strategy_mapping:
             dataset.reveal_policy = strategy_mapping[strategy]
-            self._logger.info(
+            self.logger.info(
                 f"Stratégie configurée: {strategy} -> {dataset.reveal_policy}"
             )
         else:
-            self._logger.warning(
+            self.logger.warning(
                 f"Stratégie inconnue '{strategy}', utilisation de 'balanced'"
             )
             dataset.reveal_policy = RevealPolicy.BALANCED
@@ -416,7 +418,7 @@ Votre mission : Fasciner par votre mystère élégant."""
                 response.message = f"Un sourire énigmatique se dessine. C'est un jeu fascinant, n'est-ce pas ? Hélas, votre théorie sur '{suspect}' se heurte à un petit obstacle : j'ai la carte '{revealed_card}'."
             else:
                 # Ceci est un état incohérent: can_refute est True mais aucune carte n'est révélée.
-                self._logger.error(
+                self.logger.error(
                     f"État incohérent détecté : can_refute est True, mais revealed_information est vide pour la suggestion de {suggesting_agent} sur ({suspect}, {arme}, {lieu})."
                 )
                 response.message = f"*semble momentanément confus* Un détail m'échappe... Votre suggestion sur '{suspect}' est... intéressante, mais je dois garder mes cartes pour moi pour l'instant."
@@ -475,9 +477,9 @@ Votre mission : Fasciner par votre mystère élégant."""
             "total_cards_revealed": sum(
                 len(cards) for cards in self.cards_revealed_by_agent.values()
             ),
-            "recent_suggestions": self.suggestion_history[-5:]
-            if self.suggestion_history
-            else [],
+            "recent_suggestions": (
+                self.suggestion_history[-5:] if self.suggestion_history else []
+            ),
         }
 
         # Merge avec les stats de base
@@ -552,7 +554,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         self.reset_oracle_state()
         self.cards_revealed_by_agent.clear()
         self.suggestion_history.clear()
-        self._logger.info(f"État de jeu Moriarty remis à zéro")
+        self.logger.info(f"État de jeu Moriarty remis à zéro")
 
     async def invoke(
         self, input: Union[str, List[ChatMessageContent]], **kwargs
@@ -561,7 +563,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
         Gère à la fois une chaîne simple et un historique de conversation pour la compatibilité.
         """
-        self._logger.info(f"[{self.name}] Invoke called with input type: {type(input)}")
+        self.logger.info(f"[{self.name}] Invoke called with input type: {type(input)}")
 
         history = ChatHistory()
         if isinstance(input, str):
@@ -575,7 +577,7 @@ Votre mission : Fasciner par votre mystère élégant."""
                     # On le convertit simplement en string et l'ajoute à un nouveau message plus simple.
                     history.add_message(message)
                 else:
-                    self._logger.warning(
+                    self.logger.warning(
                         f"Message non-conforme ou vide dans l'historique: {type(message)}. Ignoré."
                     )
 
@@ -591,7 +593,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         if not history:
             history = kwargs.get("history", ChatHistory())
 
-        self._logger.info(
+        self.logger.info(
             f"[{self.name}] Invocation Oracle avec {len(history)} messages."
         )
 
@@ -608,7 +610,7 @@ Votre mission : Fasciner par votre mystère élégant."""
                 role="assistant", content="*Silence énigmatique*", name=self.name
             )
 
-        self._logger.debug(
+        self.logger.debug(
             f"Moriarty a trouvé le dernier message de l'interlocuteur: {last_user_message}"
         )
         if not last_user_message:

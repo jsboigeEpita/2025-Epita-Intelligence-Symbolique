@@ -4,7 +4,7 @@
 """
 Service Manager Core Module for the Orchestration Pipeline.
 
-This module centralizes the logic for initializing and using the 
+This module centralizes the logic for initializing and using the
 OrchestrationServiceManager.
 """
 

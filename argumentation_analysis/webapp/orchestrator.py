@@ -642,9 +642,9 @@ class UnifiedWebOrchestrator:
         self.backend_manager = MinimalBackendManager(
             self.config.get("backend", {}), self.logger
         )
-        self.frontend_manager: Optional[
-            MinimalFrontendManager
-        ] = None  # Sera instancié plus tard
+        self.frontend_manager: Optional[MinimalFrontendManager] = (
+            None  # Sera instancié plus tard
+        )
 
         playwright_config = self.config.get("playwright", {})
         # Le timeout CLI surcharge la config YAML
@@ -1363,9 +1363,11 @@ class UnifiedWebOrchestrator:
 
             launch_options = {
                 "headless": self.headless,
-                "slow_mo": playwright_config.get("slow_timeout_ms", 0)
-                if not self.headless
-                else 0,
+                "slow_mo": (
+                    playwright_config.get("slow_timeout_ms", 0)
+                    if not self.headless
+                    else 0
+                ),
             }
             self.browser = await browser_type.launch(**launch_options)
             self.add_trace("[OK] NAVIGATEUR PRÊT", "Playwright est initialisé.")

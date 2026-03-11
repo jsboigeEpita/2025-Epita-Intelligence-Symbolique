@@ -865,9 +865,11 @@ class CompleteAuthenticValidator:
             },
             "authenticity_summary": {
                 "oracle_system": {
-                    "status": "100% AUTHENTIQUE"
-                    if all(r.success for r in oracle_results)
-                    else "BESOINS_CORRECTION",
+                    "status": (
+                        "100% AUTHENTIQUE"
+                        if all(r.success for r in oracle_results)
+                        else "BESOINS_CORRECTION"
+                    ),
                     "tests_passed": len([r for r in oracle_results if r.success]),
                     "total_tests": len(oracle_results),
                     "real_api_calls": sum(r.real_api_calls for r in oracle_results),
@@ -878,18 +880,22 @@ class CompleteAuthenticValidator:
                     ],
                 },
                 "workflow_cluedo": {
-                    "status": "100% AUTHENTIQUE"
-                    if all(r.success for r in workflow_results)
-                    else "BESOINS_CORRECTION",
+                    "status": (
+                        "100% AUTHENTIQUE"
+                        if all(r.success for r in workflow_results)
+                        else "BESOINS_CORRECTION"
+                    ),
                     "tests_passed": len([r for r in workflow_results if r.success]),
                     "total_tests": len(workflow_results),
                     "real_api_calls": sum(r.real_api_calls for r in workflow_results),
                     "improvements": ["Workflow réel", "API authentiques", "zéro mock"],
                 },
                 "agents_logiques": {
-                    "status": "100% AUTHENTIQUE"
-                    if all(r.success for r in agents_results)
-                    else "BESOINS_CORRECTION",
+                    "status": (
+                        "100% AUTHENTIQUE"
+                        if all(r.success for r in agents_results)
+                        else "BESOINS_CORRECTION"
+                    ),
                     "tests_passed": len([r for r in agents_results if r.success]),
                     "total_tests": len(agents_results),
                     "real_api_calls": sum(r.real_api_calls for r in agents_results),
@@ -900,9 +906,11 @@ class CompleteAuthenticValidator:
                     ],
                 },
                 "einstein_complex": {
-                    "status": "100% AUTHENTIQUE"
-                    if all(r.success for r in einstein_results)
-                    else "BESOINS_CORRECTION",
+                    "status": (
+                        "100% AUTHENTIQUE"
+                        if all(r.success for r in einstein_results)
+                        else "BESOINS_CORRECTION"
+                    ),
                     "tests_passed": len([r for r in einstein_results if r.success]),
                     "total_tests": len(einstein_results),
                     "real_api_calls": sum(r.real_api_calls for r in einstein_results),
@@ -937,13 +945,15 @@ class CompleteAuthenticValidator:
                     and self.global_stats["simulations_detected"] == 0
                     and total_api_calls > 0
                 ),
-                "recommendation": "PRODUCTION_DEPLOY"
-                if (
-                    self.global_stats["tests_failed"] == 0
-                    and self.global_stats["simulations_detected"] == 0
-                    and total_api_calls > 0
-                )
-                else "ADDITIONAL_AUTHENTICITY_WORK_NEEDED",
+                "recommendation": (
+                    "PRODUCTION_DEPLOY"
+                    if (
+                        self.global_stats["tests_failed"] == 0
+                        and self.global_stats["simulations_detected"] == 0
+                        and total_api_calls > 0
+                    )
+                    else "ADDITIONAL_AUTHENTICITY_WORK_NEEDED"
+                ),
             },
             "phase3a_compliance": {
                 "authentic_tests_completed": self.global_stats["tests_executed"],

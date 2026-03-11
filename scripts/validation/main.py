@@ -13,7 +13,7 @@ import argumentation_analysis.core.environment
 
 Fichiers sources consolidés :
 - scripts/validate_authentic_system.py
-- scripts/validate_complete_ecosystem.py  
+- scripts/validate_complete_ecosystem.py
 - scripts/validate_unified_orchestrations.py
 - scripts/validate_unified_orchestrations_simple.py
 """
@@ -270,19 +270,19 @@ class UnifiedValidationSystem:
 
             if self.config.mode == ValidationMode.SIMPLE:
                 # Le validateur simple peut avoir besoin d'une configuration spécifique ou utiliser des valeurs par défaut
-                self.report.ecosystem_results[
-                    "simple_validation"
-                ] = await simple_validator.validate_simple(
-                    self.report.errors,
-                    self.available_components,  # Pass config if needed by simple_validator
+                self.report.ecosystem_results["simple_validation"] = (
+                    await simple_validator.validate_simple(
+                        self.report.errors,
+                        self.available_components,  # Pass config if needed by simple_validator
+                    )
                 )
 
             if self.config.mode == ValidationMode.EPITA_DIAGNOSTIC:
-                self.report.ecosystem_results[
-                    "epita_diagnostic"
-                ] = await epita_diagnostic_validator.validate_epita_diagnostic(
-                    self.report.errors,
-                    self.available_components,  # Pass config if needed
+                self.report.ecosystem_results["epita_diagnostic"] = (
+                    await epita_diagnostic_validator.validate_epita_diagnostic(
+                        self.report.errors,
+                        self.available_components,  # Pass config if needed
+                    )
                 )
 
             # Génération du résumé

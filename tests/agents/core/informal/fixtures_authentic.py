@@ -252,9 +252,9 @@ class AuthenticRhetoricalAnalyzer:
 
         return {
             "tone": dominant_tone,
-            "style": "émotionnel"
-            if tone_scores.get("emotionnel", 0) > 0.3
-            else "rationnel",
+            "style": (
+                "émotionnel" if tone_scores.get("emotionnel", 0) > 0.3 else "rationnel"
+            ),
             "techniques": techniques_detected,
             "effectiveness": min(effectiveness, 1.0),
             "tone_scores": tone_scores,

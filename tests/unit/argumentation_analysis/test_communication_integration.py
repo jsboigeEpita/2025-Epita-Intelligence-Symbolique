@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -44,7 +43,6 @@ from argumentation_analysis.core.communication.operational_adapter import (
 )
 
 from argumentation_analysis.paths import DATA_DIR
-
 
 # Configuration du logger
 logging.basicConfig(
@@ -885,8 +883,10 @@ def async_test_environment():
     logger.info("Async test environment teardown complete")
 
 
-@pytest.mark.skip(
-    reason="Désactivation temporaire pour débloquer la suite de tests, fusion des raisons."
+@pytest.mark.xfail(
+    reason="Async request-response: responder_agent's response is not received "
+    "by requester (response=None). Likely a timing issue in the middleware.",
+    strict=False,
 )
 def test_async_request_response(async_test_environment):
     """Test de la communication asynchrone par requête-réponse (version simplifiée)."""
@@ -974,7 +974,7 @@ def test_async_request_response(async_test_environment):
     asyncio.run(run_test())
 
 
-@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
+@pytest.mark.timeout(30)
 def test_async_parallel_requests(async_test_environment):
     """Test de l'envoi parallèle de requêtes asynchrones (version simplifiée)."""
 

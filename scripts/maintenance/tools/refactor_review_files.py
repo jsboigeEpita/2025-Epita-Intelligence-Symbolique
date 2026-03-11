@@ -5,9 +5,10 @@ Tâche 4/6 : Refactorisation manuelle des 3 fichiers identifiés
 
 Traite les fichiers Oracle/Sherlock prioritaires avec erreurs de syntaxe :
 1. scripts/maintenance/recovered/test_oracle_behavior_demo.py
-2. scripts/maintenance/recovered/test_oracle_behavior_simple.py  
+2. scripts/maintenance/recovered/test_oracle_behavior_simple.py
 3. scripts/maintenance/recovered/update_test_coverage.py
 """
+
 import argumentation_analysis.core.environment
 
 import os

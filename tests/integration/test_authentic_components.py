@@ -5,7 +5,7 @@ Tests d'intégration pour composants authentiques
 
 Suite de tests pour valider l'intégration complète avec :
 - GPT-4o-mini réel
-- Tweety JAR authentique  
+- Tweety JAR authentique
 - Taxonomie 1408 sophismes
 - Pipeline 100% authentique
 """
@@ -62,8 +62,17 @@ class TestAuthenticGPTIntegration:
                 force_authentic=True,
             )
 
-            # Test de réponse authentique
-            response = asyncio.run(llm_service.generate_response(self.test_prompt))
+            # Test de réponse authentique via SK 1.37 API
+            from semantic_kernel.contents import ChatHistory
+
+            chat_history = ChatHistory()
+            chat_history.add_user_message(self.test_prompt)
+            results = asyncio.run(
+                llm_service.get_chat_message_contents(
+                    chat_history=chat_history, settings=None
+                )
+            )
+            response = str(results[0]) if results else ""
 
             # Validations de qualité
             assert isinstance(response, str)
@@ -116,9 +125,7 @@ class TestAuthenticTweetyIntegration:
         self.authentic_config = PresetConfigs.authentic_fol()
         self.test_formula = "∀x(Politician(x) → Lies(x))"
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_tweety_jar_configuration(self):
         """Test de configuration Tweety JAR authentique."""
         tweety_config = self.authentic_config.get_tweety_config()
@@ -127,70 +134,56 @@ class TestAuthenticTweetyIntegration:
         assert tweety_config["require_real_jar"] is True
         assert tweety_config["logic_type"] == "fol"
 
-        # Vérifier les variables d'environnement
-        assert os.getenv("USE_REAL_JPYPE") is not None
-
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_tweety_jar_availability(self):
         """Test de disponibilité du JAR Tweety authentique."""
         # Chemins possibles pour le JAR Tweety
-        possible_jar_paths = [
-            "libs/tweety-full.jar",
-            "libs/tweety.jar",
-            "portable_jdk/tweety-full.jar",
+        possible_jar_paths = list(PROJECT_ROOT.glob("libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar")) + [
+            PROJECT_ROOT / "libs/tweety-full.jar",
+            PROJECT_ROOT / "libs/tweety.jar",
         ]
 
         jar_found = False
         for jar_path in possible_jar_paths:
-            full_path = PROJECT_ROOT / jar_path
-            if full_path.exists():
+            if jar_path.exists():
                 jar_found = True
-                assert full_path.stat().st_size > 1000000  # JAR > 1MB
+                assert jar_path.stat().st_size > 1000000  # JAR > 1MB
                 break
 
         if not jar_found:
             pytest.skip("JAR Tweety authentique non trouvé")
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_fol_logic_agent_initialization(self):
         """Test d'initialisation agent logique FOL avec Tweety réel."""
         try:
-            fol_agent = FOLLogicAgent(
-                enable_jvm=True, use_real_tweety=True, logic_type="fol"
-            )
+            config = UnifiedConfig()
+            kernel = config.get_kernel_with_gpt4o_mini()
+            fol_agent = FOLLogicAgent(kernel=kernel)
 
             # Vérifier l'initialisation
-            assert hasattr(fol_agent, "enable_jvm")
-            assert fol_agent.enable_jvm is True
+            assert hasattr(fol_agent, "analyze")
+            assert hasattr(fol_agent, "logic_type")
             assert not hasattr(fol_agent, "_is_mock")
 
         except Exception as e:
             pytest.skip(f"Agent FOL réel non disponible: {e}")
 
-    @pytest.mark.skipif(
-        not os.getenv("USE_REAL_JPYPE"), reason="Tweety JAR réel requis"
-    )
+    @pytest.mark.jpype
     def test_real_tweety_formula_parsing(self):
         """Test de parsing de formule avec Tweety authentique."""
         try:
-            fol_agent = FOLLogicAgent(enable_jvm=True, use_real_tweety=True)
+            config = UnifiedConfig()
+            kernel = config.get_kernel_with_gpt4o_mini()
+            fol_agent = FOLLogicAgent(kernel=kernel)
 
-            # Test de parsing de formule réelle
-            result = asyncio.run(fol_agent.parse_formula(self.test_formula))
+            # Test analyse with a real formula
+            result = asyncio.run(fol_agent.analyze(self.test_formula))
 
             # Validations
-            assert isinstance(result, dict)
-            assert "parsed" in result or "formula" in result
-            assert "error" not in result or result.get("error") is None
-
-            # Vérifier que ce n'est pas un résultat mock
-            result_str = str(result).lower()
-            assert "mock" not in result_str
-            assert "fake" not in result_str
+            assert result is not None
+            assert hasattr(result, "formulas")
+            assert hasattr(result, "confidence_score")
 
         except Exception as e:
             pytest.skip(f"Tweety réel non disponible: {e}")
@@ -298,9 +291,10 @@ class TestAuthenticPipelineIntegration:
         """
 
     @pytest.mark.skipif(
-        not all([os.getenv("OPENAI_API_KEY"), os.getenv("USE_REAL_JPYPE")]),
-        reason="Composants authentiques requis",
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Clé API OpenAI requise",
     )
+    @pytest.mark.jpype
     def test_full_authentic_pipeline_execution(self):
         """Test d'exécution pipeline complet 100% authentique."""
         try:

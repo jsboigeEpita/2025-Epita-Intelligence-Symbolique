@@ -129,12 +129,12 @@ class EpitaDemoConsolidator:
                     "success": success,
                     "execution_time": execution_time,
                     "returncode": result.returncode,
-                    "output_lines": len(result.stdout.split("\n"))
-                    if result.stdout
-                    else 0,
-                    "error_lines": len(result.stderr.split("\n"))
-                    if result.stderr
-                    else 0,
+                    "output_lines": (
+                        len(result.stdout.split("\n")) if result.stdout else 0
+                    ),
+                    "error_lines": (
+                        len(result.stderr.split("\n")) if result.stderr else 0
+                    ),
                 }
 
                 if success:
@@ -278,9 +278,9 @@ class EpitaDemoConsolidator:
             dossier_path = base_path / dossier
             architecture["validation"][dossier] = {
                 "existe": dossier_path.exists(),
-                "nb_fichiers": len(list(dossier_path.glob("*")))
-                if dossier_path.exists()
-                else 0,
+                "nb_fichiers": (
+                    len(list(dossier_path.glob("*"))) if dossier_path.exists() else 0
+                ),
             }
 
         return architecture

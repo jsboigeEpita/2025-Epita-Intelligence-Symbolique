@@ -2,6 +2,7 @@
 """
 Script de validation d'authenticité du système. (Placeholder)
 """
+
 import argparse
 import json
 import sys

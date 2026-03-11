@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -20,7 +19,6 @@ import json
 import gzip
 import os
 import sys
-
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

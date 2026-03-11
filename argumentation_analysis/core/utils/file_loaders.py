@@ -2,6 +2,7 @@
 """
 Utilitaires pour le chargement de fichiers de différents formats.
 """
+
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
@@ -190,7 +191,9 @@ def load_document_content(file_path: Path) -> Optional[str]:
         f"Tentative de chargement du contenu du document depuis {file_path}"
     )
     if not file_path.is_file():
-        loaders_logger.error(f"❌ Le chemin spécifié n'est pas un fichier : {file_path}")
+        loaders_logger.error(
+            f"❌ Le chemin spécifié n'est pas un fichier : {file_path}"
+        )
         return None
 
     file_extension = file_path.suffix.lower()

@@ -476,7 +476,9 @@ async def main():
 
         print(f"\n🏁 RÉSULTAT GLOBAL")
         print("=" * 50)
-        print(f"📊 Catégories de test réussies: {success_count}/{total_test_categories}")
+        print(
+            f"📊 Catégories de test réussies: {success_count}/{total_test_categories}"
+        )
         print(f"📈 Taux de succès global: {success_rate:.1f}%")
 
         if success_rate >= 75:

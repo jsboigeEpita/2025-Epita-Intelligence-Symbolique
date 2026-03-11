@@ -344,9 +344,7 @@ class JTMSSemanticKernelPlugin:
             status_text = (
                 "vraie"
                 if result["current_status"] is True
-                else "fausse"
-                if result["current_status"] is False
-                else "inconnue"
+                else "fausse" if result["current_status"] is False else "inconnue"
             )
 
             if result["non_monotonic"]:

@@ -73,8 +73,8 @@ def sherlock_agent(mock_kernel, mock_settings):
             "updated_strength": {"strength_score": 0.9},
         }
     )
-    agent._kernel.invoke = AsyncMock(side_effect=side_effect)
-    agent._kernel.invoke_prompt = AsyncMock(side_effect=side_effect)
+    agent.kernel.invoke = AsyncMock(side_effect=side_effect)
+    agent.kernel.invoke_prompt = AsyncMock(side_effect=side_effect)
     return agent
 
 

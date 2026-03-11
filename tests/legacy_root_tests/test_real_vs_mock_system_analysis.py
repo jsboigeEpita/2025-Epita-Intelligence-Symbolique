@@ -505,11 +505,11 @@ class SystemAnalyzer:
             status = (
                 "RÉEL"
                 if analysis.is_real_implementation
-                else "MOCK"
-                if analysis.is_mock_simulation
-                else "HYBRIDE"
-                if analysis.is_hybrid
-                else "INDÉTERMINÉ"
+                else (
+                    "MOCK"
+                    if analysis.is_mock_simulation
+                    else "HYBRIDE" if analysis.is_hybrid else "INDÉTERMINÉ"
+                )
             )
             print(
                 f"  {component.name}: {status} (confiance: {analysis.confidence_level:.2f})"
@@ -605,13 +605,15 @@ class SystemAnalyzer:
                 {
                     "name": c.component_name,
                     "path": c.file_path,
-                    "type": "real"
-                    if c.is_real_implementation
-                    else "mock"
-                    if c.is_mock_simulation
-                    else "hybrid"
-                    if c.is_hybrid
-                    else "unknown",
+                    "type": (
+                        "real"
+                        if c.is_real_implementation
+                        else (
+                            "mock"
+                            if c.is_mock_simulation
+                            else "hybrid" if c.is_hybrid else "unknown"
+                        )
+                    ),
                     "confidence": c.confidence_level,
                     "evidence": c.evidence,
                     "recommendations": c.recommendations,
@@ -624,11 +626,11 @@ class SystemAnalyzer:
                 "system_uses_real_reasoning": real_percentage > 50,
                 "system_uses_mock_simulation": mock_percentage > 50,
                 "system_is_hybrid": hybrid_percentage > 30,
-                "improvement_priority": "High"
-                if mock_percentage > 60
-                else "Medium"
-                if real_percentage < 50
-                else "Low",
+                "improvement_priority": (
+                    "High"
+                    if mock_percentage > 60
+                    else "Medium" if real_percentage < 50 else "Low"
+                ),
             },
         }
 

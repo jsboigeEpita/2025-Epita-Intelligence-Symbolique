@@ -1,4 +1,5 @@
 import re
+import socket
 import pytest
 import logging
 import json
@@ -15,6 +16,30 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _is_backend_reachable(host="localhost", port=8095, timeout=2):
+    """Check if the backend server is reachable."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
+
+_backend_available = _is_backend_reachable()
+skip_no_backend = pytest.mark.skipif(
+    not _backend_available, reason="Backend server not running on localhost:8095"
+)
+
+
+@pytest.fixture(scope="session")
+def frontend_url(request) -> str:
+    """Fixture to get the frontend URL from the --frontend-url pytest option."""
+    return request.config.getoption("--frontend-url", default="http://localhost:8085")
+
+
 def test_dummy_health_check_to_isolate_playwright():
     """
     A simple, dependency-free test to ensure the pytest runner itself is working.
@@ -23,6 +48,7 @@ def test_dummy_health_check_to_isolate_playwright():
     assert True
 
 
+@skip_no_backend
 @pytest.mark.playwright
 def test_health_check_endpoint(playwright: Playwright, backend_url: str):
     """
@@ -72,6 +98,7 @@ def test_health_check_endpoint(playwright: Playwright, backend_url: str):
     logger.info("--- FIN test_health_check_endpoint ---")
 
 
+@skip_no_backend
 @pytest.mark.playwright
 def test_malformed_analyze_request_returns_400(
     playwright: Playwright, backend_url: str
@@ -109,6 +136,7 @@ def test_malformed_analyze_request_returns_400(
     logger.info("--- FIN test_malformed_analyze_request_returns_400 ---")
 
 
+@skip_no_backend
 @pytest.mark.playwright
 def test_successful_simple_argument_analysis(playwright: Playwright, backend_url: str):
     """
@@ -147,22 +175,23 @@ def test_successful_simple_argument_analysis(playwright: Playwright, backend_url
             f"CORPS COMPLET DE LA REPONSE API /api/analyze:\n{json.dumps(response_body, indent=2, ensure_ascii=False)}"
         )
 
+        # API returns "success": true (not "status": "success")
+        # and data is at top level (not nested in "results")
         assert (
-            response_body.get("status") == "success"
-        ), "Le champ 'status' de la reponse n'est pas 'success'."
+            response_body.get("success") is True
+        ), "Le champ 'success' de la reponse n'est pas True."
 
-        results = response_body.get("results", {})
         assert (
-            "fallacies" in results
-        ), "La clé 'fallacies' est absente de l'objet 'results'."
+            "fallacies" in response_body
+        ), "La clé 'fallacies' est absente de la reponse."
         assert (
-            "argument_structure" in results
-        ), "La clé 'argument_structure' est absente de l'objet 'results'."
+            "argument_structure" in response_body
+        ), "La clé 'argument_structure' est absente de la reponse."
         assert (
-            results.get("fallacy_count") == 0
-        ), f"Compte de sophismes attendu: 0, obtenu: {results.get('fallacy_count')}"
+            response_body.get("fallacy_count") == 0
+        ), f"Compte de sophismes attendu: 0, obtenu: {response_body.get('fallacy_count')}"
 
-        structure = results.get("argument_structure")
+        structure = response_body.get("argument_structure")
         assert structure is not None, "La structure de l'argument est nulle."
 
         # NOTE: La reconstruction de l'argument retourne actuellement une liste vide.
@@ -179,6 +208,7 @@ def test_successful_simple_argument_analysis(playwright: Playwright, backend_url
         pytest.fail(f"Une exception inattendue s'est produite: {e}")
 
 
+@skip_no_backend
 @pytest.mark.playwright
 def test_empty_argument_submission_displays_error(page: Page, frontend_url: str):
     """
@@ -201,6 +231,7 @@ def test_empty_argument_submission_displays_error(page: Page, frontend_url: str)
     expect(submit_button).to_be_disabled()
 
 
+@skip_no_backend
 @pytest.mark.playwright
 def test_reset_button_clears_input_and_results(page: Page, frontend_url: str):
     """

@@ -2,6 +2,7 @@
 """
 Tests pour l'interface entre les niveaux stratégique et tactique.
 """
+
 from unittest.mock import MagicMock
 import pytest  # Ajout de pytest
 
@@ -107,7 +108,7 @@ class TestStrategicTacticalInterface:
 
     def test_translate_objectives_to_directives(self, interface_components):
         """Teste la traduction des objectifs stratégiques en directives tactiques."""
-        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
         # Définir les objectifs à traduire
         objectives = [
             {
@@ -218,7 +219,7 @@ class TestStrategicTacticalInterface:
 
     def test_determine_phase_for_objective(self, interface_components):
         """Teste la détermination de la phase pour un objectif."""
-        (interface, _, _, _, _, _) = interface_components
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -244,7 +245,7 @@ class TestStrategicTacticalInterface:
 
     def test_find_related_objectives(self, interface_components):
         """Teste la recherche d'objectifs liés."""
-        (interface, _, _, _, _, _) = interface_components
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -279,7 +280,7 @@ class TestStrategicTacticalInterface:
 
     def test_translate_priority(self, interface_components):
         """Teste la traduction de la priorité stratégique."""
-        (interface, _, _, _, _, _) = interface_components
+        interface, _, _, _, _, _ = interface_components
         # Tester avec différentes priorités
         high_result = interface._translate_priority("high")
         medium_result = interface._translate_priority("medium")
@@ -301,7 +302,7 @@ class TestStrategicTacticalInterface:
 
     def test_extract_success_criteria(self, interface_components):
         """Teste l'extraction des critères de succès."""
-        (interface, _, _, _, _, _) = interface_components
+        interface, _, _, _, _, _ = interface_components
         # Définir un objectif
         objective = {
             "id": "obj-1",
@@ -334,7 +335,7 @@ class TestStrategicTacticalInterface:
 
     def test_determine_current_phase(self, interface_components):
         """Teste la détermination de la phase actuelle."""
-        (interface, mock_strategic_state, _, _, _, _) = interface_components
+        interface, mock_strategic_state, _, _, _, _ = interface_components
         # Configurer le mock pour différentes valeurs de progression
 
         # Phase initiale (progress < 0.3)
@@ -354,7 +355,7 @@ class TestStrategicTacticalInterface:
 
     def test_determine_primary_focus(self, interface_components):
         """Teste la détermination du focus principal."""
-        (interface, mock_strategic_state, _, _, _, _) = interface_components
+        interface, mock_strategic_state, _, _, _, _ = interface_components
         # Le focus devrait être déterminé en fonction des objectifs
         result = interface._determine_primary_focus()
 
@@ -385,7 +386,7 @@ class TestStrategicTacticalInterface:
 
     def test_request_tactical_status(self, interface_components):
         """Teste la demande de statut tactique."""
-        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
         # Configurer le mock pour request_tactical_info (corrigé)
         expected_response = {"status": "ok", "progress": 0.5}
         mock_strategic_adapter.request_tactical_info.return_value = (
@@ -408,7 +409,7 @@ class TestStrategicTacticalInterface:
 
     def test_send_strategic_adjustment(self, interface_components):
         """Teste l'envoi d'un ajustement stratégique."""
-        (interface, _, _, _, mock_strategic_adapter, _) = interface_components
+        interface, _, _, _, mock_strategic_adapter, _ = interface_components
         # Définir un ajustement
         adjustment = {"plan_updates": {"phase-1": {"priority": "high"}}, "urgent": True}
 
@@ -433,7 +434,7 @@ class TestStrategicTacticalInterface:
 
     def test_map_priority_to_enum(self, interface_components):
         """Teste la conversion de priorité textuelle en énumération."""
-        (interface, _, _, _, _, _) = interface_components
+        interface, _, _, _, _, _ = interface_components
         # Tester avec différentes priorités
         assert interface._map_priority_to_enum("high") == MessagePriority.HIGH
         assert interface._map_priority_to_enum("medium") == MessagePriority.NORMAL

@@ -3,6 +3,7 @@
 """
 Worker pour l'exécution du test d'exemple JVM dans un sous-processus.
 """
+
 import logging
 import pytest
 import jpype

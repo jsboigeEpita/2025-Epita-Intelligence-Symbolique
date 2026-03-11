@@ -198,9 +198,9 @@ class TweetyBridgeSK(TweetyBridge):
             }
 
             if invalid_queries:
-                result[
-                    "warnings"
-                ] = f"{len(invalid_queries)} requêtes invalides ignorées"
+                result["warnings"] = (
+                    f"{len(invalid_queries)} requêtes invalides ignorées"
+                )
                 result["invalid_queries"] = invalid_queries
 
             return json.dumps(result)

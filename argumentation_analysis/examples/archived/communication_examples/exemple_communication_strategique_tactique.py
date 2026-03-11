@@ -161,9 +161,11 @@ def main():
                 directive_type=directive["directive_type"],
                 parameters=directive["parameters"],
                 recipient_id="tactical-agent-1",
-                priority=MessagePriority.HIGH
-                if directive["objective_id"] == "obj-1"
-                else MessagePriority.NORMAL,
+                priority=(
+                    MessagePriority.HIGH
+                    if directive["objective_id"] == "obj-1"
+                    else MessagePriority.NORMAL
+                ),
             )
 
         # Recevoir et traiter les rapports

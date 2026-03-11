@@ -1,4 +1,3 @@
-# Authentic gpt-5-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
@@ -330,7 +329,7 @@ class TestAuthenticityMetrics:
         """Test de calcul du score d'authenticité global du système."""
 
         def calculate_system_authenticity(
-            components: Dict[str, bool]
+            components: Dict[str, bool],
         ) -> Dict[str, Any]:
             """Calcule les métriques d'authenticité du système."""
             total_components = len(components)

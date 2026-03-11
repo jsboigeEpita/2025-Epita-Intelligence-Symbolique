@@ -335,9 +335,9 @@ class UnifiedAnalysisPipeline:
             "authentic": False,
             "model_used": "mock",
             "timestamp": datetime.now().isoformat(),
-            "fallacies_detected": ["mock_fallacy"]
-            if mode == AnalysisMode.FALLACIES
-            else [],
+            "fallacies_detected": (
+                ["mock_fallacy"] if mode == AnalysisMode.FALLACIES else []
+            ),
             "confidence": 0.85,
         }
 
@@ -449,9 +449,9 @@ class UnifiedAnalysisPipeline:
             "total_analyses": total_analyses,
             "successful_analyses": successful_analyses,
             "failed_analyses": failed_analyses,
-            "success_rate": successful_analyses / total_analyses
-            if total_analyses > 0
-            else 0,
+            "success_rate": (
+                successful_analyses / total_analyses if total_analyses > 0 else 0
+            ),
             "total_execution_time": total_time,
             "average_execution_time": avg_time,
             "analysis_modes": [mode.value for mode in self.config.analysis_modes],

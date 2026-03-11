@@ -109,11 +109,15 @@ class ComplexArgumentationDataGenerator:
 
         # Chiffrement Caesar simple (clé = 7)
         encrypted_text = "".join(
-            chr((ord(char) - ord("a") + 7) % 26 + ord("a"))
-            if char.islower()
-            else chr((ord(char) - ord("A") + 7) % 26 + ord("A"))
-            if char.isupper()
-            else char
+            (
+                chr((ord(char) - ord("a") + 7) % 26 + ord("a"))
+                if char.islower()
+                else (
+                    chr((ord(char) - ord("A") + 7) % 26 + ord("A"))
+                    if char.isupper()
+                    else char
+                )
+            )
             for char in original_text
         )
 

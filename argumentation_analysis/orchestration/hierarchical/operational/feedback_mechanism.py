@@ -332,13 +332,15 @@ class RhetoricalToolsFeedback:
                 "negative": negative_feedbacks,
                 "neutral": neutral_feedbacks,
             },
-            "overall_satisfaction_rate": positive_feedbacks / total_feedbacks
-            if total_feedbacks > 0
-            else 0,
+            "overall_satisfaction_rate": (
+                positive_feedbacks / total_feedbacks if total_feedbacks > 0 else 0
+            ),
             "tool_statistics": tool_stats,
-            "recent_feedbacks": self.feedback_history[-10:]
-            if len(self.feedback_history) > 10
-            else self.feedback_history,
+            "recent_feedbacks": (
+                self.feedback_history[-10:]
+                if len(self.feedback_history) > 10
+                else self.feedback_history
+            ),
         }
 
         return report

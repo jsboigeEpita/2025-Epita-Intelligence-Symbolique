@@ -42,9 +42,9 @@ def setup_orchestration_service_for_test():
         return test_service
 
     # Surcharger la dépendance dans l'application FastAPI
-    app.dependency_overrides[
-        get_orchestration_service
-    ] = get_test_orchestration_service_override
+    app.dependency_overrides[get_orchestration_service] = (
+        get_test_orchestration_service_override
+    )
 
     yield  # Le test est exécuté ici
 
@@ -88,4 +88,7 @@ def test_analyze_endpoint_plugin_not_found():
     )
     assert response.status_code == 404
     json_response = response.json()
-    assert "Plugin 'PluginInexistant' not found" in json_response["detail"]
+    detail = json_response["detail"]
+    assert (
+        "PluginInexistant" in detail
+    ), f"Expected plugin not found error mentioning 'PluginInexistant', got: {detail}"

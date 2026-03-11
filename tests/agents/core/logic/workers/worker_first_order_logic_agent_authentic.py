@@ -3,6 +3,7 @@
 """
 Worker pour l'exécution des tests de FOLLogicAgent dans un sous-processus JVM isolé.
 """
+
 import pytest
 import sys
 import os

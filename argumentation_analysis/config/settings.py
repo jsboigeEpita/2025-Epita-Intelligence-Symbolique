@@ -49,7 +49,9 @@ class NetworkSettings(BaseSettings):
     retry_wait_multiplier: int = 1
     retry_wait_min: int = 2
     retry_wait_max: int = 10
-    default_timeout: float = 90.0  # Increased from 15.0s to 90.0s for gpt-5-mini compatibility (D3.1.1)
+    default_timeout: float = (
+        90.0  # Increased from 15.0s to 90.0s for gpt-5-mini compatibility (D3.1.1)
+    )
     model_config = SettingsConfigDict(env_prefix="NETWORK_")
 
 
@@ -91,11 +93,17 @@ class JVMSettings(BaseSettings):
     # Configuration JDK portable
     jdk_version: str = "17.0.12"
     jdk_build: str = "7"
-    jdk_url_template: str = "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
+    jdk_url_template: str = (
+        "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
+    )
     # Configuration des librairies Java (Tweety)
-    tweety_version: str = "1.28"
+    tweety_version: str = "1.29"
     tweety_libs_dir: Path = Path("libs/tweety")
     native_libs_dir: Path = Path("libs/native")
+
+    # External tools
+    ext_tools_dir: Path = Path("ext_tools")
+    clingo_version: str = "5.4.0"
 
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
     model_config = SettingsConfigDict(env_prefix="JVM_")

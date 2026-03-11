@@ -11,7 +11,7 @@ après la suppression des fichiers redondants (Phase 2).
 import argumentation_analysis.core.environment
 Fichiers consolidés à valider :
 1. demos/demo_unified_system.py
-2. scripts/maintenance/unified_maintenance.py  
+2. scripts/maintenance/unified_maintenance.py
 3. scripts/validation/unified_validation.py
 4. scripts/unified_utilities.py
 5. docs/UNIFIED_SYSTEM_GUIDE.md
@@ -366,9 +366,11 @@ class ConsolidatedSystemValidator:
 
             self.log_result(
                 "Maintenance System Functions",
-                ValidationStatus.SUCCESS
-                if found_functions
-                else ValidationStatus.WARNING,
+                (
+                    ValidationStatus.SUCCESS
+                    if found_functions
+                    else ValidationStatus.WARNING
+                ),
                 f"Fonctions maintenance détectées ({len(found_functions)})",
                 details,
                 (datetime.now() - start_time).total_seconds(),
@@ -427,9 +429,11 @@ class ConsolidatedSystemValidator:
 
             self.log_result(
                 "Utilities System Functions",
-                ValidationStatus.SUCCESS
-                if found_functions
-                else ValidationStatus.WARNING,
+                (
+                    ValidationStatus.SUCCESS
+                    if found_functions
+                    else ValidationStatus.WARNING
+                ),
                 f"Utilitaires détectés ({len(found_functions)})",
                 details,
                 (datetime.now() - start_time).total_seconds(),
@@ -489,9 +493,11 @@ class ConsolidatedSystemValidator:
 
             self.log_result(
                 "Documentation Completeness",
-                ValidationStatus.SUCCESS
-                if len(found_sections) >= 3
-                else ValidationStatus.WARNING,
+                (
+                    ValidationStatus.SUCCESS
+                    if len(found_sections) >= 3
+                    else ValidationStatus.WARNING
+                ),
                 f"Documentation analysée ({len(found_sections)}/{len(critical_sections)} sections critiques)",
                 details,
                 (datetime.now() - start_time).total_seconds(),
@@ -557,9 +563,11 @@ class ConsolidatedSystemValidator:
             "Configuration Files",
             ValidationStatus.SUCCESS if config_files else ValidationStatus.WARNING,
             f"Fichiers configuration trouvés: {len(config_files)}",
-            f"Fichiers: {[f.name for f in config_files]}"
-            if config_files
-            else "Aucun fichier de configuration",
+            (
+                f"Fichiers: {[f.name for f in config_files]}"
+                if config_files
+                else "Aucun fichier de configuration"
+            ),
             (datetime.now() - start_time).total_seconds(),
         )
 

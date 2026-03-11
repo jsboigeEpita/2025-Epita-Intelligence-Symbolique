@@ -38,7 +38,6 @@ from argumentation_analysis.core.communication.operational_adapter import (
 
 from argumentation_analysis.paths import DATA_DIR
 
-
 logger = logging.getLogger(__name__)
 
 

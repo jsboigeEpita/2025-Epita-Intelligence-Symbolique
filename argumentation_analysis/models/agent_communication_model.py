@@ -135,9 +135,9 @@ class MessageMetadata:
             "reply_to": self.reply_to,
             "correlation_id": self.correlation_id,
             "requires_response": self.requires_response,
-            "response_timeout": self.response_timeout.total_seconds()
-            if self.response_timeout
-            else None,
+            "response_timeout": (
+                self.response_timeout.total_seconds() if self.response_timeout else None
+            ),
             "max_retries": self.max_retries,
             "retry_count": self.retry_count,
             "delivery_status": self.delivery_status,
@@ -519,9 +519,11 @@ class CommunicationProtocol:
             metrics_collection=data.get("metrics_collection", {}),
             is_active=data.get("is_active", True),
             created_at=datetime.fromisoformat(data["created_at"]),
-            last_used=datetime.fromisoformat(data["last_used"])
-            if data.get("last_used")
-            else None,
+            last_used=(
+                datetime.fromisoformat(data["last_used"])
+                if data.get("last_used")
+                else None
+            ),
         )
 
 

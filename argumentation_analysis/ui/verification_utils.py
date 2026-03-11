@@ -1,6 +1,7 @@
 """
 Utilitaires de vérification des définitions d'extraits pour l'interface utilisateur.
 """
+
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
