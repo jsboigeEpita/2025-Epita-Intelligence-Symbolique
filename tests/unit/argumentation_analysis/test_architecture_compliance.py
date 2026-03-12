@@ -174,7 +174,12 @@ class TestPluginCompliance:
         plugin = GovernancePlugin()
         result = plugin.list_governance_methods()
         methods = json.loads(result)
-        assert "majority" in methods
+        # The methods are nested under 'agent_based' and 'social_choice'
+        assert "agent_based" in methods
+        assert "social_choice" in methods
+        # Check that 'majority' is in one of the method lists
+        all_method_names = methods["agent_based"] + methods["social_choice"]
+        assert "majority" in all_method_names
 
     def test_plugins_can_register_with_kernel(self, mock_kernel):
         """All plugins can be registered with a kernel."""

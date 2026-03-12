@@ -412,7 +412,8 @@ class TestEnhancedRealTimeTraceAnalyzer:
         assert "ORCHESTRATION" in content
 
     def test_save_report_invalid_path(self, analyzer):
-        assert analyzer.save_enhanced_report("/nonexistent/path/report.md") is False
+        # Use a truly non-existent path (Windows drive that doesn't exist)
+        assert analyzer.save_enhanced_report("Z:\\this_drive_does_not_exist\\path\\report.md") is False
 
 
 # ============================================================
