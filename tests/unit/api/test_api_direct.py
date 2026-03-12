@@ -145,9 +145,16 @@ def test_api_startup_and_basic_functionality():
             try:
                 response = requests.get(f"{api_url}/health", timeout=3)
                 if response.status_code == 200:
-                    api_ready = True
-                    print(f"✓ API prête après {wait_time}s")
-                    break
+                    # Verify the response body is valid JSON with expected content
+                    try:
+                        data = response.json()
+                        if data.get("status") == "healthy":
+                            api_ready = True
+                            print(f"✓ API prête après {wait_time}s")
+                            break
+                    except requests.exceptions.JSONDecodeError:
+                        # Response body not ready yet, continue waiting
+                        pass
             except (requests.ConnectionError, requests.Timeout):
                 pass
 

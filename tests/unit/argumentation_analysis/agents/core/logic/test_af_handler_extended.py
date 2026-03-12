@@ -44,13 +44,21 @@ def mock_jpype():
 
         mock_argument_cls = MagicMock(side_effect=make_arg)
 
+        # Make Attack a proper constructor that returns a mock attack object
+        def make_attack(source, target):
+            attack = MagicMock()
+            attack.getAttacker.return_value = source
+            attack.getAttacked.return_value = target
+            return attack
+        mock_attack_cls = MagicMock(side_effect=make_attack)
+
         def jclass_side_effect(class_name):
             if "DungTheory" in class_name:
                 return MagicMock  # Constructor
             elif "Argument" in class_name and "syntax" in class_name:
                 return mock_argument_cls
             elif "Attack" in class_name:
-                return MagicMock
+                return mock_attack_cls
             elif "Extension" in class_name:
                 return mock_extension
             elif "Reasoner" in class_name:
