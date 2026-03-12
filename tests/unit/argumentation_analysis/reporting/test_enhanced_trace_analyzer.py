@@ -3,6 +3,7 @@
 
 import time
 import pytest
+from unittest.mock import patch
 
 from argumentation_analysis.reporting.enhanced_real_time_trace_analyzer import (
     ConversationMessage,
@@ -447,10 +448,12 @@ class TestEnhancedRealTimeTraceAnalyzer:
         assert "Test" in content
 
     def test_save_report_bad_path(self, analyzer):
+        """Test que save_enhanced_report retourne False si l'écriture échoue."""
         analyzer.start_capture()
         analyzer.start_pm_phase("p1", "Test", ["A"])
         analyzer.stop_capture()
-        result = analyzer.save_enhanced_report("/nonexistent/path/report.md")
+        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+            result = analyzer.save_enhanced_report("/nonexistent/path/report.md")
         assert result is False
 
     def test_metadata_updates(self, analyzer):

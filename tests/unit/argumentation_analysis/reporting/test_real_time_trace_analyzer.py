@@ -398,7 +398,9 @@ class TestRealTimeTraceAnalyzer:
         assert "RAPPORT" in content
 
     def test_save_report_invalid_path(self, analyzer):
-        result = analyzer.save_conversation_report("/nonexistent/path/report.md")
+        """Test que save_conversation_report retourne False si l'écriture échoue."""
+        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+            result = analyzer.save_conversation_report("/nonexistent/path/report.md")
         assert result is False
 
 
