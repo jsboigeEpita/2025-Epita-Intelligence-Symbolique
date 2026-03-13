@@ -1,0 +1,154 @@
+{
+  "corpus_name": "capability_evaluation_baseline_v1",
+  "corpus_version": "1.0",
+  "created_date": "2026-03-13",
+  "description": "Corpus de test pour l'évaluation baseline des capacités d'analyse d'argumentation",
+  "documents": [
+    {
+      "id": "corpus_001",
+      "text": "Monsieur le Président, je vous demande de bien vouloir agir. La situation est intolérable. Les citoyens souffrent, et votre gouvernement reste silencieux. Il est temps de prendre des mesures décisives pour remédier à cette crise qui nous préoccupe tous.\n\nNous ne pouvons plus tolérer cette inaction. Chaque jour qui passe aggrave la situation. Les gens perdent confiance, et c'est votre responsabilité de réagir maintenant.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "easy",
+      "description": "Argument politique simple, structure claire, pas de sophisme évident",
+      "argument_count": 3,
+      "complexity_factors": []
+    },
+    {
+      "id": "corpus_002",
+      "text": "Je ne comprends pas pourquoi on refuse d'adopter cette politique économique. Vous savez, c'est exactement ce que proposait ce grand économiste russe, et on sait tous ce que pense ce pays de nos libertés. Vraiment, je m'étonne qu'on puisse écouter de telles idées.\n\nC'est comme ce politicien qui voulait nous faire croire que l'impôt est un bon outil. On sait où il va chercher ses arguments...",
+      "expected_fallacies": ["ad_hominem", "guilt_by_association"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "medium",
+      "description": "Contient des attaques ad hominem et une association fallacieuse (Russie)",
+      "argument_count": 2,
+      "complexity_factors": ["implicit_stereotypes", "association_fallacy"]
+    },
+    {
+      "id": "corpus_003",
+      "text": "Si nous autorisons les élèves à utiliser des calculatrices en classe, bientôt ils voudront utiliser leurs téléphones portables. Et après, pourquoi pas des ordinateurs ? Et finalement, ils ne feront plus aucun calcul mental et deviendront totalement dépendants de la technologie. C'est la porte ouverte à la paresse intellectuelle.\n\nC'est la même logique que ceux qui disent qu'on peut être un peu enceinte. Soit on l'est, soit on ne l'est pas !",
+      "expected_fallacies": ["slippery_slope", "false_dilemma"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "medium",
+      "description": "Pente savonneuse et faux dilemme",
+      "argument_count": 2,
+      "complexity_factors": ["exaggeration_cascade", "binary_thinking"]
+    },
+    {
+      "id": "corpus_004",
+      "text": "La réforme des retraites est nécessaire. Premièrement, la démographie montre une augmentation constante du ratio retraités/actifs. Deuxièmement, le système actuel creuse un déficit structurel depuis dix ans. Troisièmement, tous les économistes s'accordent sur l'urgence d'une réforme.\n\nPar conséquent, nous devons agir maintenant. Les alternatives proposées par l'opposition ne permettent pas de résoudre le problème démographique fondamental.",
+      "expected_fallacies": ["appeal_to_authority"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "medium",
+      "description": "Argument structuré avec prémisses explicites mais contient un appel à l'autorité ('tous les économistes')",
+      "argument_count": 4,
+      "complexity_factors": ["multi_premise", "appeal_to_expertise"]
+    },
+    {
+      "id": "corpus_005",
+      "text": "Mon cher ami, je vous ai connu bien plus raisonnable que cela. Votre position sur ce sujet me surprend. Vous qui avez toujours prôné la prudence et la réflexion, comment pouvez-vous soutenir une pareille insanité ?\n\nRegardez plutôt ce que pense votre propre famille. Votre mère vous l'a dit assez clairement : on ne change pas une équipe qui gagne. Alors suivez son conseil, elle qui a tant d'expérience.",
+      "expected_fallacies": ["ad_hominem", "appeal_to_emotion", "appeal_to_tradition"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "medium",
+      "description": "Multi-fallacies : ad hominem, appel à l'émotion et à la tradition",
+      "argument_count": 2,
+      "complexity_factors": ["personal_attack", "emotional_manipulation"]
+    },
+    {
+      "id": "corpus_006",
+      "text": "Je propose que nous investissions dans l'éducation. Cela réduira le chômage à long terme. En effet, une population mieux formée s'adapte plus facilement aux mutations économiques. De plus, des travailleurs qualifiés attirent les entreprises innovantes. Les entreprises innovantes créent des emplois stables et bien rémunérés. Les emplois stables et bien rémunérés stimulent la consommation. Et la consommation stimule la croissance.\n\nPar conséquent, l'investissement dans l'éducation crée un cercle vertueux de croissance et d'emploi.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "hard",
+      "description": "Argument complexe multi-prémisses avec chaîne causale déductive",
+      "argument_count": 1,
+      "complexity_factors": ["causal_chain", "multi_step_reasoning"]
+    },
+    {
+      "id": "corpus_007",
+      "text": "Cette mesure est absolument indispensable ! Tout le monde sait que les scientifiques sont unanimes sur ce sujet. Des milliers d'études le prouvent. Comment pouvez-vous encore douter ?\n\nC'est un fait établi. Ceux qui nient l'évidence sont soit ignorants, soit de mauvaise foi. La science a parlé, le débat est clos.",
+      "expected_fallacies": ["appeal_to_popularity", "appeal_to_authority", "poisoning_the_well"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "easy",
+      "description": "Sophismes multiples mais très évidents",
+      "argument_count": 1,
+      "complexity_factors": ["authoritarian_argument", "discredit_opponents"]
+    },
+    {
+      "id": "corpus_008",
+      "text": "Je ne comprends pas pourquoi on hésite à adopter cette loi. Regardez ce qui s'est passé dans le pays voisin quand ils ont fait la même chose. Tout le monde s'accorde à dire que c'était un succès total. Les chiffres sont là, indiscutables.\n\nPourquoi refuserions-nous une politique qui a fait ses preuves ailleurs ? Ce serait de l'inconséquence.",
+      "expected_fallacies": ["hasty_generalization", "false_analogy"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "medium",
+      "description": "Généralisation hâtive et fausse analogie (pays voisin ≠ même contexte)",
+      "argument_count": 2,
+      "complexity_factors": ["cross_context_comparison", "selective_evidence"]
+    },
+    {
+      "id": "corpus_009",
+      "text": "Si nous ne gérons pas correctement nos ressources financières actuelles, il est rationnel de conclure que nous devrons augmenter nos revenus. Nos ressources financières actuelles ne sont pas gérées correctement, comme le montre la déficit budgétaire croissant. La seule façon d'augmenter nos revenus est soit d'augmenter la productivité, soit de réduire les coûts inutiles. Mais réduire les coûts inutiles ne suffit pas à compenser le déficit. Donc, nous devons augmenter la productivité. Or, la productivité ne peut augmenter sans investissement dans la formation. Il s'ensuit que nous devons investir dans la formation.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [5, 7],
+      "difficulty": "hard",
+      "description": "Argument déductif complexe avec raisonnement conditionnel en chaîne (modus ponens)",
+      "argument_count": 1,
+      "complexity_factors": ["conditional_reasoning", "logical_deduction_chain"]
+    },
+    {
+      "id": "corpus_010",
+      "text": "C'est une honte, vraiment une honte ! Comment peut-on proposer une telle chose ? C'est contre nos valeurs, contre notre histoire, contre tout ce que nous chérons.\n\nCes gens veulent détruire notre mode de vie. Ils sont dangereux. Ne les écoutez pas. Ils disent vouloir le progrès, mais en réalité ils veulent nous ramener à l'âge de pierre.",
+      "expected_fallacies": ["appeal_to_emotion", "straw_man", "loaded_language"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "easy",
+      "description": "Argument purement émotionnel avec langage chargé et homme de paille",
+      "argument_count": 1,
+      "complexity_factors": ["emotional_appeal", "misrepresentation"]
+    },
+    {
+      "id": "corpus_011",
+      "text": "On nous dit que cette politique est bonne pour l'économie. Mais réfléchissons un instant. Qui en profite vraiment ? Les grandes entreprises, bien sûr. Et qui dirige ces grandes entreprises ? Des gens qui n'ont jamais connu la précarité. Comment pourraient-ils comprendre les problèmes des travailleurs ?\n\nC'est toujours la même histoire. Les riches font les règles pour les riches. Et les pauvres paient. Cette soi-disant politique 'économique' n'est qu'un cadeau aux entreprises.",
+      "expected_fallacies": ["red_herring", "ad_hominem_circumstantial"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "medium",
+      "description": "Détournement du sujet (red herring) et attaque ad hominem circonstancielle",
+      "argument_count": 2,
+      "complexity_factors": ["conspiracy_thinking", "class_conflict_frame"]
+    },
+    {
+      "id": "corpus_012",
+      "text": "P : Il pleut.\nQ : Si tu sors sans parapluie, tu seras mouillé.\nR : Tu ne veux pas être mouillé.\nConclusion : Tu ne devrais pas sortir sans parapluie.\n\nC'est un raisonnement valide. La prémisse P établit le fait qu'il pleut. La prémisse Q établit une relation conditionnelle : sortir sans parapluie implique être mouillé. La prémisse R exprime une préférence : ne pas être mouillé. La conclusion découle logiquement : étant donné P et Q et R, ne pas sortir sans parapluie est la conclusion rationnelle.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [4, 6],
+      "difficulty": "hard",
+      "description": "Argument formel explicite avec méta-analyse du raisonnement",
+      "argument_count": 1,
+      "complexity_factors": ["formal_logic", "meta_reasoning"]
+    }
+  ],
+  "metadata": {
+    "total_documents": 12,
+    "difficulty_distribution": {
+      "easy": 3,
+      "medium": 6,
+      "hard": 3
+    },
+    "expected_fallacy_coverage": [
+      "ad_hominem",
+      "appeal_to_authority",
+      "appeal_to_emotion",
+      "appeal_to_popularity",
+      "appeal_to_tradition",
+      "false_analogy",
+      "false_dilemma",
+      "guilt_by_association",
+      "hasty_generalization",
+      "loaded_language",
+      "poisoning_the_well",
+      "red_herring",
+      "slippery_slope",
+      "straw_man"
+    ],
+    "language": "french",
+    "target_use_case": "baseline_capability_evaluation"
+  }
+}
