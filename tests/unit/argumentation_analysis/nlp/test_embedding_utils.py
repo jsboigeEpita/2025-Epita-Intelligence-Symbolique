@@ -1,8 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -228,7 +223,7 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     output_file = tmp_path / "embeddings_io_error.json"
 
     with patch(MKDIR_PATH), patch(OPEN_BUILTIN_PATH, mock_open()), patch(
-        "json.dump", side_effect=IOError("Test IOError")
+        "argumentation_analysis.nlp.embedding_utils.json.dump", side_effect=IOError("Test IOError")
     ):
         success = save_embeddings_data(sample_embeddings_data, output_file)
 
@@ -242,7 +237,7 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     output_file = tmp_path / "embeddings_other_error.json"
 
     with patch(MKDIR_PATH), patch(OPEN_BUILTIN_PATH, mock_open()), patch(
-        "json.dump", side_effect=Exception("Test Generic Exception")
+        "argumentation_analysis.nlp.embedding_utils.json.dump", side_effect=Exception("Test Generic Exception")
     ):
         success = save_embeddings_data(sample_embeddings_data, output_file)
 
