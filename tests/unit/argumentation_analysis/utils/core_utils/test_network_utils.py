@@ -219,7 +219,7 @@ def test_download_file_handles_os_error_on_remove_after_exception(tmp_path, capl
     with patch(
         "requests.get", side_effect=requests.exceptions.Timeout("Simulated timeout")
     ), patch.object(Path, "exists", return_value=True), patch(
-        "os.remove", side_effect=OSError("Simulated permission error on remove")
+        "argumentation_analysis.core.utils.network_utils.os.remove", side_effect=OSError("Simulated permission error on remove")
     ):
         with pytest.raises(tenacity.RetryError):
             download_file(url, dest_path)

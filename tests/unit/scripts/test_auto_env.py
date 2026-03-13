@@ -31,29 +31,39 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
     La nouvelle version se base sur la variable d'environnement `CONDA_DEFAULT_ENV`.
     """
 
-    @patch.dict(
-        "os.environ",
-        {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true"},
-        clear=True,
-    )
+    def setUp(self):
+        """Sauvegarde l'environnement original avant chaque test."""
+        self.original_env = os.environ.copy()
+
+    def tearDown(self):
+        """Nettoie l'environnement après chaque test."""
+        # Vider l'environnement et ne garder que les variables essentielles
+        essential_vars = ["PATH", "SYSTEMROOT", "PATHEXT", "TEMP", "TMP", "PYTEST_RUNNING", "IS_PYTEST_RUNNING"]
+        to_keep = {k: v for k, v in os.environ.items() if k in essential_vars}
+        os.environ.clear()
+        os.environ.update(to_keep)
+        # S'assurer que E2E_TESTING_MODE est désactivé
+        os.environ.pop("E2E_TESTING_MODE", None)
+
+    @patch.dict("os.environ", {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true"})
     def test_ensure_env_correct_environment(self):
         """
         Vérifie que ensure_env() réussit si 'CONDA_DEFAULT_ENV' correspond à
         l'environnement attendu.
         """
+        # S'assurer que E2E_TESTING_MODE est désactivé pour ce test
+        os.environ.pop("E2E_TESTING_MODE", None)
         result = ensure_env(env_name="projet-is", silent=True)
         self.assertTrue(result)
 
-    @patch.dict(
-        "os.environ",
-        {"CONDA_DEFAULT_ENV": "wrong-env", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
-        clear=True,
-    )
+    @patch.dict("os.environ", {"CONDA_DEFAULT_ENV": "wrong-env", "IS_PYTEST_RUNNING": "true"})
     def test_ensure_env_incorrect_environment_raises_error(self):
         """
         Vérifie que ensure_env() lève une RuntimeError si 'CONDA_DEFAULT_ENV'
         est incorrect.
         """
+        # S'assurer que E2E_TESTING_MODE est désactivé pour ce test
+        os.environ.pop("E2E_TESTING_MODE", None)
         with self.assertRaises(RuntimeError) as cm:
             ensure_env(
                 env_name="projet-is", silent=False
@@ -67,16 +77,14 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
             "Environnement détecté (CONDA_DEFAULT_ENV) : 'wrong-env'", exception_message
         )
 
-    @patch.dict(
-        "os.environ",
-        {"CONDA_DEFAULT_ENV": "base", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
-        clear=True,
-    )
+    @patch.dict("os.environ", {"CONDA_DEFAULT_ENV": "base", "IS_PYTEST_RUNNING": "true"})
     def test_ensure_env_base_environment_raises_error(self):
         """
         Vérifie que ensure_env() lève une RuntimeError si 'CONDA_DEFAULT_ENV'
         est défini sur 'base'.
         """
+        # S'assurer que E2E_TESTING_MODE est désactivé pour ce test
+        os.environ.pop("E2E_TESTING_MODE", None)
         with self.assertRaises(RuntimeError) as cm:
             ensure_env(env_name="projet-is", silent=False)
 
@@ -88,13 +96,11 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
             "Environnement détecté (CONDA_DEFAULT_ENV) : 'base'", exception_message
         )
 
-    @patch.dict(
-        "os.environ",
-        {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
-        clear=True,
-    )
+    @patch.dict("os.environ", {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true"})
     def test_ensure_env_silent_mode(self):
         """Vérifie le mode silencieux et non silencieux."""
+        # S'assurer que E2E_TESTING_MODE est désactivé pour ce test
+        os.environ.pop("E2E_TESTING_MODE", None)
         # En mode non silencieux, on s'attend à un print
         with patch("builtins.print") as mock_print:
             ensure_env(env_name="projet-is", silent=False)
