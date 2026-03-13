@@ -450,7 +450,8 @@ class TestEnhancedRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_pm_phase("p1", "Test", ["A"])
         analyzer.stop_capture()
-        result = analyzer.save_enhanced_report("/nonexistent/path/report.md")
+        # Use a truly non-existent path (Windows drive that doesn't exist)
+        result = analyzer.save_enhanced_report("Z:\\this_drive_does_not_exist\\path\\report.md")
         assert result is False
 
     def test_metadata_updates(self, analyzer):

@@ -398,7 +398,8 @@ class TestRealTimeTraceAnalyzer:
         assert "RAPPORT" in content
 
     def test_save_report_invalid_path(self, analyzer):
-        result = analyzer.save_conversation_report("/nonexistent/path/report.md")
+        # Use a truly non-existent path (Windows drive that doesn't exist)
+        result = analyzer.save_conversation_report("Z:\\this_drive_does_not_exist\\path\\report.md")
         assert result is False
 
 

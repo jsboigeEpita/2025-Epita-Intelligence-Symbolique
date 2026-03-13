@@ -93,10 +93,15 @@ class TestKeyManagement:
         assert loaded == key
 
     def test_save_key_bad_path(self, svc, key):
-        assert svc.save_key(key, "/nonexistent/path/key.bin") is False
+        # Use a truly non-existent path - Windows UNC path to non-existent server
+        # (or use a drive letter that's unlikely to exist)
+        bad_path = "Z:\\this_drive_does_not_exist\\path\\key.bin"
+        assert svc.save_key(key, bad_path) is False
 
     def test_load_key_nonexistent(self, svc):
-        assert svc.load_key("/nonexistent/path/key.bin") is None
+        # Use a truly non-existent path
+        bad_path = "Z:\\this_drive_does_not_exist\\path\\key.bin"
+        assert svc.load_key(bad_path) is None
 
 
 # ── Encrypt / Decrypt ──
