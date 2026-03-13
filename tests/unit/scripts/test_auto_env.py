@@ -46,7 +46,7 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
 
     @patch.dict(
         "os.environ",
-        {"CONDA_DEFAULT_ENV": "wrong-env", "IS_PYTEST_RUNNING": "true"},
+        {"CONDA_DEFAULT_ENV": "wrong-env", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
         clear=True,
     )
     def test_ensure_env_incorrect_environment_raises_error(self):
@@ -69,7 +69,7 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
 
     @patch.dict(
         "os.environ",
-        {"CONDA_DEFAULT_ENV": "base", "IS_PYTEST_RUNNING": "true"},
+        {"CONDA_DEFAULT_ENV": "base", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
         clear=True,
     )
     def test_ensure_env_base_environment_raises_error(self):
@@ -90,7 +90,7 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
 
     @patch.dict(
         "os.environ",
-        {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true"},
+        {"CONDA_DEFAULT_ENV": "projet-is", "IS_PYTEST_RUNNING": "true", "E2E_TESTING_MODE": ""},
         clear=True,
     )
     def test_ensure_env_silent_mode(self):

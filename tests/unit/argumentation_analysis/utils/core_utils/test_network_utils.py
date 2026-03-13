@@ -91,7 +91,7 @@ def test_download_file_http_error(mock_requests_get, tmp_path, caplog):
 
     # Après une écriture ratée, on suppose que le fichier partiel existe.
     # La logique de cleanup dans `except RequestException` sera appelée à chaque nouvelle tentative.
-    with patch("os.remove") as mock_remove, patch.object(
+    with patch("argumentation_analysis.core.utils.network_utils.os.remove") as mock_remove, patch.object(
         Path, "exists", return_value=True
     ):
         with pytest.raises(tenacity.RetryError):
@@ -118,7 +118,7 @@ def test_download_file_size_mismatch(mock_requests_get, tmp_path, caplog):
     # mkdir doit être patché pour éviter FileExistsError de tmp_path
     with patch("builtins.open", mock_open()), patch.object(Path, "mkdir"), patch.object(
         Path, "stat"
-    ) as mock_stat, patch("os.remove") as mock_remove:
+    ) as mock_stat, patch("argumentation_analysis.core.utils.network_utils.os.remove") as mock_remove:
         mock_stat.return_value.st_mode = stat.S_IFREG
         mock_stat.return_value.st_size = actual_size
 
@@ -173,7 +173,7 @@ def test_download_file_cleans_up_partial_on_request_exception(tmp_path, caplog):
     with patch(
         "requests.get",
         side_effect=requests.exceptions.ConnectionError("Simulated network error"),
-    ), patch("os.remove") as mock_remove, patch.object(
+    ), patch("argumentation_analysis.core.utils.network_utils.os.remove") as mock_remove, patch.object(
         Path, "exists", return_value=True
     ):
         with pytest.raises(tenacity.RetryError):
@@ -197,7 +197,7 @@ def test_download_file_cleans_up_partial_on_unexpected_exception(
         "Unexpected error during iteration"
     )
 
-    with patch("os.remove") as mock_remove, patch.object(
+    with patch("argumentation_analysis.core.utils.network_utils.os.remove") as mock_remove, patch.object(
         Path, "exists", return_value=True
     ):
         with pytest.raises(ValueError, match="Unexpected error during iteration"):
