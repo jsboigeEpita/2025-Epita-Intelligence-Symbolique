@@ -53,7 +53,8 @@ class BenchmarkRunner:
     def load_dataset_unencrypted(self, path: str) -> List[Dict[str, Any]]:
         """Load the unencrypted dataset JSON."""
         with open(path, "r", encoding="utf-8") as f:
-            self._dataset = json.load(f)
+            data = json.load(f)
+        self._dataset = data.get("documents", [])
         logger.info(f"Loaded {len(self._dataset)} documents from {path}")
         return self._dataset
 
@@ -76,7 +77,8 @@ class BenchmarkRunner:
             raise ValueError("Decryption failed — wrong passphrase?")
 
         json_data = gzip.decompress(dec_data)
-        self._dataset = json.loads(json_data)
+        data = json.loads(json_data)
+        self._dataset = data.get("documents", [])
         logger.info(f"Loaded {len(self._dataset)} documents from encrypted {path}")
         return self._dataset
 
