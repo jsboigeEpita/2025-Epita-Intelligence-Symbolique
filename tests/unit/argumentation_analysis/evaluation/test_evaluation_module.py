@@ -550,3 +550,250 @@ class TestBaselineCorpus:
         assert doc_002["difficulty"] == "medium"
         assert "ad_hominem" in doc_002["expected_fallacies"]
         assert "guilt_by_association" in doc_002["expected_fallacies"]
+
+
+# =====================================================================
+# SynergyAnalyzer Tests
+# =====================================================================
+
+
+class TestSynergyAnalyzer:
+    """Tests for the synergy analyzer module."""
+
+    def test_analyzer_initialization(self, tmp_path):
+        """Verify analyzer can be initialized with custom results directory."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        assert analyzer.results_dir == tmp_path
+
+    def test_analyzer_load_corpus(self, tmp_path):
+        """Verify corpus loading works."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        corpus = analyzer.load_corpus()
+
+        assert isinstance(corpus, dict)
+        assert "corpus_name" in corpus
+        assert corpus["corpus_name"] == "capability_evaluation_baseline_v1"
+
+    def test_get_document_metadata(self, tmp_path):
+        """Verify document metadata retrieval."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+
+        # Test valid document index
+        meta = analyzer.get_document_metadata(0)
+        assert meta["id"] == "corpus_001"
+        assert meta["difficulty"] == "easy"
+        assert isinstance(meta["expected_fallacies"], list)
+
+        # Test out of range index
+        meta_invalid = analyzer.get_document_metadata(999)
+        assert meta_invalid["difficulty"] == "unknown"
+
+    def test_analyze_workflow_performance_empty_results(self, tmp_path):
+        """Verify analysis handles empty results gracefully."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        metrics = analyzer.analyze_workflow_performance()
+
+        assert metrics == {}
+
+    def test_analyze_workflow_performance_with_results(self, tmp_path):
+        """Verify workflow metrics are computed correctly."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Create sample results
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.5,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=1,
+            document_name="corpus_002",
+            success=False,
+            duration_seconds=0.5,
+            phases_completed=1,
+            phases_total=3,
+            phases_failed=1,
+            phases_skipped=0,
+            error="Test error",
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        metrics = analyzer.analyze_workflow_performance()
+
+        assert "light" in metrics
+        assert metrics["light"].total_runs == 2
+        assert metrics["light"].success_rate == 0.5
+        assert metrics["light"].avg_duration == 1.5
+        assert metrics["light"].completion_ratio == 1.0
+
+    def test_compare_workflows(self, tmp_path):
+        """Verify workflow comparison generates proper structure."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        comparison = analyzer.compare_workflows()
+
+        assert "workflows" in comparison
+        assert "best_by_success_rate" in comparison
+        assert "best_by_speed" in comparison
+        assert "best_by_completion" in comparison
+        assert "summary" in comparison
+        assert comparison["summary"]["total_workflows_analyzed"] == 1
+
+    def test_generate_recommendations_empty(self, tmp_path):
+        """Verify recommendations handle empty results."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        recommendations = analyzer.generate_recommendations()
+
+        assert recommendations == []
+
+    def test_generate_recommendations_with_data(self, tmp_path):
+        """Verify recommendations are generated from results."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Create results for multiple workflows
+        collector = ResultCollector(tmp_path)
+        for idx in range(3):
+            collector.save(BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=idx,
+                document_name=f"corpus_00{idx+1}",
+                success=True,
+                duration_seconds=1.0,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            ))
+        for idx in range(3):
+            collector.save(BenchmarkResult(
+                workflow_name="standard",
+                model_name="test",
+                document_index=idx,
+                document_name=f"corpus_00{idx+1}",
+                success=True,
+                duration_seconds=2.5,
+                phases_completed=5,
+                phases_total=6,
+                phases_failed=0,
+                phases_skipped=1,
+            ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        recommendations = analyzer.generate_recommendations()
+
+        assert len(recommendations) > 0
+        # Check recommendation structure
+        rec = recommendations[0]
+        assert hasattr(rec, "use_case")
+        assert hasattr(rec, "recommended_workflow")
+        assert hasattr(rec, "confidence")
+        assert hasattr(rec, "reasoning")
+        assert 0.0 <= rec.confidence <= 1.0
+
+    def test_generate_report(self, tmp_path):
+        """Verify report generation creates valid JSON."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+        import json
+
+        # Add sample data
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        report_path = analyzer.generate_report()
+
+        assert report_path.exists()
+        with open(report_path, "r", encoding="utf-8") as f:
+            report = json.load(f)
+
+        assert "comparison" in report
+        assert "recommendations" in report
+        assert "workflow_phases" in report
+
+    def test_export_markdown_report(self, tmp_path):
+        """Verify markdown report generation."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Add sample data
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        report_path = analyzer.export_markdown_report()
+
+        assert report_path.exists()
+        content = report_path.read_text(encoding="utf-8")
+
+        assert "# Synergy Analysis Report" in content
+        assert "## Executive Summary" in content
+        assert "## Workflow Comparison" in content
+        assert "## Recommendations" in content
+        assert "## Workflow Phases" in content
