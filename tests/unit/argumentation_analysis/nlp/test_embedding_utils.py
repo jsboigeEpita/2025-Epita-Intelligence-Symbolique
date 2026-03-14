@@ -206,7 +206,7 @@ def test_save_embeddings_data_success(tmp_path, sample_embeddings_data):
         # ou utiliser un mock plus sophistiqué pour json.dump.
         # Ici, on vérifie au moins que le fichier a été ouvert en écriture.
         # Pour une vérification plus poussée de json.dump:
-        with patch("json.dump") as mock_json_dump:
+        with patch("argumentation_analysis.nlp.embedding_utils.json.dump") as mock_json_dump:
             save_embeddings_data(
                 sample_embeddings_data, output_file
             )  # Appeler à nouveau avec le mock json.dump

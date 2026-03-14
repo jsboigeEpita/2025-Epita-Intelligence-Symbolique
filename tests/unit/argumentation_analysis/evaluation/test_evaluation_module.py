@@ -381,3 +381,419 @@ class TestLLMJudge:
         prepared = judge._prepare_results_for_judge(results)
         assert "chars total" in prepared["phases"]["phase1"]["raw_text"]
         assert prepared["phases"]["phase1"]["output"] == "ok"
+
+
+# =====================================================================
+# Baseline Corpus Tests
+# =====================================================================
+
+
+class TestBaselineCorpus:
+    """Tests for the baseline capability evaluation corpus."""
+
+    @property
+    def corpus_path(self) -> Path:
+        """Path to the baseline corpus file."""
+        return Path(__file__).parent.parent.parent.parent.parent / (
+            "argumentation_analysis/evaluation/corpus/baseline_corpus_v1.json"
+        )
+
+    def test_corpus_file_exists(self):
+        """Verify the baseline corpus file exists."""
+        assert self.corpus_path.exists(), f"Corpus file not found at {self.corpus_path}"
+
+    def test_corpus_loads_valid_json(self):
+        """Verify the corpus file is valid JSON."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            # Strip BOM if present before parsing
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            data = json.loads(content)
+        assert isinstance(data, dict)
+
+    def test_corpus_has_required_metadata(self):
+        """Verify the corpus has all required metadata fields."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        assert "corpus_name" in corpus
+        assert "corpus_version" in corpus
+        assert "created_date" in corpus
+        assert "description" in corpus
+        assert "documents" in corpus
+        assert "metadata" in corpus
+
+    def test_corpus_metadata_valid(self):
+        """Verify corpus metadata contains expected values."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        assert corpus["corpus_name"] == "capability_evaluation_baseline_v1"
+        assert corpus["corpus_version"] == "1.0"
+        assert corpus["metadata"]["language"] == "french"
+        assert corpus["metadata"]["total_documents"] == 12
+
+    def test_corpus_documents_structure(self):
+        """Verify each document has the required structure."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        documents = corpus["documents"]
+        assert len(documents) == 12
+
+        for doc in documents:
+            assert "id" in doc, f"Document missing 'id' field: {doc}"
+            assert "text" in doc, f"Document {doc.get('id')} missing 'text' field"
+            assert "expected_fallacies" in doc
+            assert "expected_quality_score_range" in doc
+            assert "difficulty" in doc
+            assert isinstance(doc["expected_fallacies"], list)
+            assert isinstance(doc["expected_quality_score_range"], list)
+            assert len(doc["expected_quality_score_range"]) == 2
+            assert doc["difficulty"] in ["easy", "medium", "hard"]
+
+    def test_corpus_document_ids_unique(self):
+        """Verify all document IDs are unique."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        ids = [doc["id"] for doc in corpus["documents"]]
+        assert len(ids) == len(set(ids)), "Document IDs are not unique"
+
+    def test_corpus_difficulty_distribution(self):
+        """Verify the corpus has documents from all difficulty levels."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        difficulties = [doc["difficulty"] for doc in corpus["documents"]]
+        assert "easy" in difficulties
+        assert "medium" in difficulties
+        assert "hard" in difficulties
+
+        expected_dist = corpus["metadata"]["difficulty_distribution"]
+        assert expected_dist["easy"] == 3
+        assert expected_dist["medium"] == 6
+        assert expected_dist["hard"] == 3
+
+    def test_corpus_fallacy_coverage(self):
+        """Verify the corpus covers the expected fallacies."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        expected_fallacies = corpus["metadata"]["expected_fallacy_coverage"]
+        assert len(expected_fallacies) >= 14  # Should cover common fallacies
+
+        # Verify at least some documents have expected fallacies
+        docs_with_fallacies = [
+            doc for doc in corpus["documents"]
+            if doc["expected_fallacies"]
+        ]
+        assert len(docs_with_fallacies) >= 8
+
+    def test_corpus_text_not_empty(self):
+        """Verify all documents have non-empty text."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        for doc in corpus["documents"]:
+            assert doc["text"].strip(), f"Document {doc['id']} has empty text"
+
+    def test_corpus_sample_document_content(self):
+        """Verify a sample document has expected content."""
+        import json
+        with open(self.corpus_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            if content.startswith("\ufeff"):
+                content = content[1:]
+            corpus = json.loads(content)
+
+        # Find corpus_001 (simple political argument, no fallacies)
+        doc_001 = next((d for d in corpus["documents"] if d["id"] == "corpus_001"), None)
+        assert doc_001 is not None
+        assert doc_001["difficulty"] == "easy"
+        assert len(doc_001["expected_fallacies"]) == 0
+        assert "Monsieur le Président" in doc_001["text"]
+
+        # Find corpus_002 (ad hominem, guilt by association)
+        doc_002 = next((d for d in corpus["documents"] if d["id"] == "corpus_002"), None)
+        assert doc_002 is not None
+        assert doc_002["difficulty"] == "medium"
+        assert "ad_hominem" in doc_002["expected_fallacies"]
+        assert "guilt_by_association" in doc_002["expected_fallacies"]
+
+
+# =====================================================================
+# SynergyAnalyzer Tests
+# =====================================================================
+
+
+class TestSynergyAnalyzer:
+    """Tests for the synergy analyzer module."""
+
+    def test_analyzer_initialization(self, tmp_path):
+        """Verify analyzer can be initialized with custom results directory."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        assert analyzer.results_dir == tmp_path
+
+    def test_analyzer_load_corpus(self, tmp_path):
+        """Verify corpus loading works."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        corpus = analyzer.load_corpus()
+
+        assert isinstance(corpus, dict)
+        assert "corpus_name" in corpus
+        assert corpus["corpus_name"] == "capability_evaluation_baseline_v1"
+
+    def test_get_document_metadata(self, tmp_path):
+        """Verify document metadata retrieval."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+
+        # Test valid document index
+        meta = analyzer.get_document_metadata(0)
+        assert meta["id"] == "corpus_001"
+        assert meta["difficulty"] == "easy"
+        assert isinstance(meta["expected_fallacies"], list)
+
+        # Test out of range index
+        meta_invalid = analyzer.get_document_metadata(999)
+        assert meta_invalid["difficulty"] == "unknown"
+
+    def test_analyze_workflow_performance_empty_results(self, tmp_path):
+        """Verify analysis handles empty results gracefully."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        metrics = analyzer.analyze_workflow_performance()
+
+        assert metrics == {}
+
+    def test_analyze_workflow_performance_with_results(self, tmp_path):
+        """Verify workflow metrics are computed correctly."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Create sample results
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.5,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=1,
+            document_name="corpus_002",
+            success=False,
+            duration_seconds=0.5,
+            phases_completed=1,
+            phases_total=3,
+            phases_failed=1,
+            phases_skipped=0,
+            error="Test error",
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        metrics = analyzer.analyze_workflow_performance()
+
+        assert "light" in metrics
+        assert metrics["light"].total_runs == 2
+        assert metrics["light"].success_rate == 0.5
+        assert metrics["light"].avg_duration == 1.5
+        assert metrics["light"].completion_ratio == 1.0
+
+    def test_compare_workflows(self, tmp_path):
+        """Verify workflow comparison generates proper structure."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        comparison = analyzer.compare_workflows()
+
+        assert "workflows" in comparison
+        assert "best_by_success_rate" in comparison
+        assert "best_by_speed" in comparison
+        assert "best_by_completion" in comparison
+        assert "summary" in comparison
+        assert comparison["summary"]["total_workflows_analyzed"] == 1
+
+    def test_generate_recommendations_empty(self, tmp_path):
+        """Verify recommendations handle empty results."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        recommendations = analyzer.generate_recommendations()
+
+        assert recommendations == []
+
+    def test_generate_recommendations_with_data(self, tmp_path):
+        """Verify recommendations are generated from results."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Create results for multiple workflows
+        collector = ResultCollector(tmp_path)
+        for idx in range(3):
+            collector.save(BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=idx,
+                document_name=f"corpus_00{idx+1}",
+                success=True,
+                duration_seconds=1.0,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            ))
+        for idx in range(3):
+            collector.save(BenchmarkResult(
+                workflow_name="standard",
+                model_name="test",
+                document_index=idx,
+                document_name=f"corpus_00{idx+1}",
+                success=True,
+                duration_seconds=2.5,
+                phases_completed=5,
+                phases_total=6,
+                phases_failed=0,
+                phases_skipped=1,
+            ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        recommendations = analyzer.generate_recommendations()
+
+        assert len(recommendations) > 0
+        # Check recommendation structure
+        rec = recommendations[0]
+        assert hasattr(rec, "use_case")
+        assert hasattr(rec, "recommended_workflow")
+        assert hasattr(rec, "confidence")
+        assert hasattr(rec, "reasoning")
+        assert 0.0 <= rec.confidence <= 1.0
+
+    def test_generate_report(self, tmp_path):
+        """Verify report generation creates valid JSON."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+        import json
+
+        # Add sample data
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        report_path = analyzer.generate_report()
+
+        assert report_path.exists()
+        with open(report_path, "r", encoding="utf-8") as f:
+            report = json.load(f)
+
+        assert "comparison" in report
+        assert "recommendations" in report
+        assert "workflow_phases" in report
+
+    def test_export_markdown_report(self, tmp_path):
+        """Verify markdown report generation."""
+        from argumentation_analysis.evaluation.synergy_analyzer import SynergyAnalyzer
+        from argumentation_analysis.evaluation.result_collector import ResultCollector
+        from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
+
+        # Add sample data
+        collector = ResultCollector(tmp_path)
+        collector.save(BenchmarkResult(
+            workflow_name="light",
+            model_name="test",
+            document_index=0,
+            document_name="corpus_001",
+            success=True,
+            duration_seconds=1.0,
+            phases_completed=3,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=0,
+        ))
+
+        analyzer = SynergyAnalyzer(tmp_path)
+        report_path = analyzer.export_markdown_report()
+
+        assert report_path.exists()
+        content = report_path.read_text(encoding="utf-8")
+
+        assert "# Synergy Analysis Report" in content
+        assert "## Executive Summary" in content
+        assert "## Workflow Comparison" in content
+        assert "## Recommendations" in content
+        assert "## Workflow Phases" in content
