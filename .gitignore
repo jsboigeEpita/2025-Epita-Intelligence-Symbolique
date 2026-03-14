@@ -104,6 +104,7 @@ _temp_downloads/
 portable_jdk/
 libs/jdk-*/
 libs/octave-*/
+libs/portable_octave/
 libs/node-v*/
 
 # Generated configs & caches

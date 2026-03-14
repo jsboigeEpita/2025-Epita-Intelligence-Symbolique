@@ -3,8 +3,6 @@ Test Playwright simple et robuste pour validation de la démo.
 """
 
 import pytest
-
-pytest.mark.skip(reason="Skipping entire file to debug test suite hang")
 from playwright.sync_api import Page, expect
 
 
