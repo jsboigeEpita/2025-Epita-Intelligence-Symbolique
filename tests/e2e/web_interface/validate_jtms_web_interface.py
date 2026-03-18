@@ -23,7 +23,7 @@ from typing import Dict, Any, List
 
 # Import du runner JavaScript non-bloquant
 from tests.e2e.runners.playwright_js_runner import PlaywrightJSRunner
-from scripts.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
 
 
 class JTMSWebValidator:
