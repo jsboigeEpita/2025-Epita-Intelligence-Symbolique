@@ -86,6 +86,7 @@ package-lock.json
 # === Playwright ===
 playwright-report/
 playwright/.cache/
+playwright-timeout-screenshot-*.png
 
 # === Project-Specific ===
 # Data & outputs
@@ -105,12 +106,52 @@ portable_jdk/
 libs/jdk-*/
 libs/octave-*/
 libs/node-v*/
+libs/portable_octave/
+libs/tweety/
+libs/*.jar
 
 # Generated configs & caches
 .claude/code-history/
+.claude/memory/
 .benchmarks/
 
-# Archives
+# Generated outputs & reports
+outputs/
+reports/
+backend_info.json
+build_cache_logs*.txt
+tree.txt
+*.png
+!argumentation_analysis/demos/**/*.png
+
+# Runtime artifacts
+config/.port_lock
+config/environments/
+
+# MCP debugging artifacts
+mcp-debugging/
+
+# Archived / legacy
+archived_root/
 _archives/
 archived_artefacts/
 results_archive/
+
+# Temp files (dotted)
+.temp/
+
+# Generated demo outputs
+demos/validation_*.json
+
+# Test artifacts
+tests/e2e/test-results/
+tests/unit/all_tests.txt
+tests/unit/targeted_test_list.txt
+
+# Misc generated docs
+docs/reports/ARBRE_*
+docs/reports/CLEANUP_LOG.md
+docs/reports/CORRECTIONS_PATCHES_*
+docs/reports/CORRECTION_ANALYSE_*
+docs/reports/ORGANISATION_WORKSPACE.md
+docs/reports/test-hierarchy-data/
