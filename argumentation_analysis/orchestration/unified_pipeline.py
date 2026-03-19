@@ -2318,6 +2318,15 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             )
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
+        # Comprehensive analysis (LLM-only, benchmark-optimized)
+        try:
+            from argumentation_analysis.workflows.comprehensive_analysis import (
+                build_comprehensive_analysis_workflow,
+            )
+
+            WORKFLOW_CATALOG["comprehensive"] = build_comprehensive_analysis_workflow()
+        except Exception as e:
+            logger.warning(f"Comprehensive workflow not registered: {e}")
     return WORKFLOW_CATALOG
 
 

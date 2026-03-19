@@ -9,8 +9,13 @@ Provides pre-built end-to-end pipelines:
 - Belief Dynamics: adversarial testing with AGM belief revision
 - Argument Strength: formal ranking + probabilistic evaluation
 - Formal Verification: 10-phase pipeline using all logic agents + Tweety
+- Comprehensive Analysis: 8-phase LLM-only pipeline (no JVM required)
 """
 
+from argumentation_analysis.workflows.comprehensive_analysis import (
+    build_comprehensive_analysis_workflow,
+    run_comprehensive_analysis,
+)
 from argumentation_analysis.workflows.democratech import (
     build_democratech_workflow,
     run_deliberation,
@@ -41,6 +46,8 @@ from argumentation_analysis.workflows.formal_verification import (
 )
 
 __all__ = [
+    "build_comprehensive_analysis_workflow",
+    "run_comprehensive_analysis",
     "build_democratech_workflow",
     "run_deliberation",
     "build_debate_tournament_workflow",
