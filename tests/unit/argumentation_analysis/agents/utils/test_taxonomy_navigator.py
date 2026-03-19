@@ -8,22 +8,71 @@ import pytest
 import json
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 
-
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def sample_taxonomy_data():
     """A small taxonomy tree for testing."""
     return [
-        {"PK": "1", "path": "1", "depth": "1", "nom_vulgarisé": "Logique", "text_fr": "Logique", "desc_fr": "La logique formelle"},
-        {"PK": "1.1", "path": "1.1", "depth": "2", "nom_vulgarisé": "Déduction", "text_fr": "Déduction", "desc_fr": "Raisonnement déductif"},
-        {"PK": "1.2", "path": "1.2", "depth": "2", "nom_vulgarisé": "Induction", "text_fr": "Induction", "desc_fr": "Raisonnement inductif"},
-        {"PK": "1.1.1", "path": "1.1.1", "depth": "3", "nom_vulgarisé": "Modus Ponens", "text_fr": "Modus Ponens", "desc_fr": "Si P alors Q"},
-        {"PK": "1.1.2", "path": "1.1.2", "depth": "3", "nom_vulgarisé": "Modus Tollens", "text_fr": "Modus Tollens", "desc_fr": "Si P alors Q, non Q"},
-        {"PK": "2", "path": "2", "depth": "1", "nom_vulgarisé": "Rhétorique", "text_fr": "Rhétorique", "desc_fr": "L'art de la persuasion"},
-        {"PK": "2.1", "path": "2.1", "depth": "2", "nom_vulgarisé": "Ethos", "text_fr": "Ethos", "desc_fr": "Appel à la crédibilité"},
+        {
+            "PK": "1",
+            "path": "1",
+            "depth": "1",
+            "nom_vulgarisé": "Logique",
+            "text_fr": "Logique",
+            "desc_fr": "La logique formelle",
+        },
+        {
+            "PK": "1.1",
+            "path": "1.1",
+            "depth": "2",
+            "nom_vulgarisé": "Déduction",
+            "text_fr": "Déduction",
+            "desc_fr": "Raisonnement déductif",
+        },
+        {
+            "PK": "1.2",
+            "path": "1.2",
+            "depth": "2",
+            "nom_vulgarisé": "Induction",
+            "text_fr": "Induction",
+            "desc_fr": "Raisonnement inductif",
+        },
+        {
+            "PK": "1.1.1",
+            "path": "1.1.1",
+            "depth": "3",
+            "nom_vulgarisé": "Modus Ponens",
+            "text_fr": "Modus Ponens",
+            "desc_fr": "Si P alors Q",
+        },
+        {
+            "PK": "1.1.2",
+            "path": "1.1.2",
+            "depth": "3",
+            "nom_vulgarisé": "Modus Tollens",
+            "text_fr": "Modus Tollens",
+            "desc_fr": "Si P alors Q, non Q",
+        },
+        {
+            "PK": "2",
+            "path": "2",
+            "depth": "1",
+            "nom_vulgarisé": "Rhétorique",
+            "text_fr": "Rhétorique",
+            "desc_fr": "L'art de la persuasion",
+        },
+        {
+            "PK": "2.1",
+            "path": "2.1",
+            "depth": "2",
+            "nom_vulgarisé": "Ethos",
+            "text_fr": "Ethos",
+            "desc_fr": "Appel à la crédibilité",
+        },
     ]
 
 
@@ -45,6 +94,7 @@ def none_navigator():
 # ============================================================
 # Initialization
 # ============================================================
+
 
 class TestTaxonomyNavigatorInit:
     def test_init_with_data(self, navigator, sample_taxonomy_data):
@@ -84,6 +134,7 @@ class TestTaxonomyNavigatorInit:
 # get_node
 # ============================================================
 
+
 class TestGetNode:
     def test_existing_node(self, navigator):
         node = navigator.get_node("1")
@@ -107,6 +158,7 @@ class TestGetNode:
 # get_node_by_path
 # ============================================================
 
+
 class TestGetNodeByPath:
     def test_existing_path(self, navigator):
         node = navigator.get_node_by_path("1.1")
@@ -125,6 +177,7 @@ class TestGetNodeByPath:
 # ============================================================
 # get_root_nodes
 # ============================================================
+
 
 class TestGetRootNodes:
     def test_root_nodes(self, navigator):
@@ -150,6 +203,7 @@ class TestGetRootNodes:
 # ============================================================
 # get_children
 # ============================================================
+
 
 class TestGetChildren:
     def test_children_of_root(self, navigator):
@@ -181,6 +235,7 @@ class TestGetChildren:
 # get_parent
 # ============================================================
 
+
 class TestGetParent:
     def test_parent_of_child(self, navigator):
         parent = navigator.get_parent("1.1")
@@ -203,6 +258,7 @@ class TestGetParent:
 # is_leaf
 # ============================================================
 
+
 class TestIsLeaf:
     def test_leaf_node(self, navigator):
         assert navigator.is_leaf("1.1.1") is True
@@ -222,6 +278,7 @@ class TestIsLeaf:
 # ============================================================
 # get_branch_as_str
 # ============================================================
+
 
 class TestGetBranchAsStr:
     def test_branch_with_children(self, navigator):
@@ -255,6 +312,7 @@ class TestGetBranchAsStr:
 # get_taxonomy_preview
 # ============================================================
 
+
 class TestGetTaxonomyPreview:
     def test_preview_depth_1(self, navigator):
         preview = navigator.get_taxonomy_preview(depth=1)
@@ -286,12 +344,15 @@ class TestGetTaxonomyPreview:
         assert "ID:" not in preview
 
     def test_preview_empty(self, empty_navigator):
-        assert empty_navigator.get_taxonomy_preview() == "Taxonomy data is not available."
+        assert (
+            empty_navigator.get_taxonomy_preview() == "Taxonomy data is not available."
+        )
 
 
 # ============================================================
 # get_taxonomy_as_json
 # ============================================================
+
 
 class TestGetTaxonomyAsJson:
     def test_json_output(self, navigator, sample_taxonomy_data):

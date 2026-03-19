@@ -10,8 +10,8 @@ from argumentation_analysis.orchestration.engine.main_orchestrator import (
 from argumentation_analysis.orchestration.engine.strategy import OrchestrationStrategy
 from argumentation_analysis.orchestration.engine.config import OrchestrationConfig
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_kernel():
@@ -60,7 +60,9 @@ def orchestrator(mock_config, mock_kernel):
 
 
 @pytest.fixture
-def full_orchestrator(mock_config, mock_kernel, mock_strategic, mock_tactical, mock_operational):
+def full_orchestrator(
+    mock_config, mock_kernel, mock_strategic, mock_tactical, mock_operational
+):
     """MainOrchestrator with all managers configured."""
     with patch(
         "argumentation_analysis.orchestration.engine.main_orchestrator.DirectOperationalExecutor",
@@ -87,6 +89,7 @@ def full_orchestrator(mock_config, mock_kernel, mock_strategic, mock_tactical, m
 
 # ── __init__ ────────────────────────────────────────────────────────────
 
+
 class TestMainOrchestratorInit:
     """Tests for MainOrchestrator.__init__."""
 
@@ -101,7 +104,9 @@ class TestMainOrchestratorInit:
         assert orchestrator.tactical_coordinator is None
         assert orchestrator.operational_manager is None
 
-    def test_managers_stored(self, full_orchestrator, mock_strategic, mock_tactical, mock_operational):
+    def test_managers_stored(
+        self, full_orchestrator, mock_strategic, mock_tactical, mock_operational
+    ):
         assert full_orchestrator.strategic_manager is mock_strategic
         assert full_orchestrator.tactical_coordinator is mock_tactical
         assert full_orchestrator.operational_manager is mock_operational
@@ -112,35 +117,47 @@ class TestMainOrchestratorInit:
 
 # ── run_analysis ────────────────────────────────────────────────────────
 
+
 class TestRunAnalysis:
     """Tests for run_analysis() strategy dispatch."""
 
-    @pytest.mark.parametrize("strategy,method_name", [
-        (OrchestrationStrategy.HIERARCHICAL_FULL, "_execute_hierarchical_full"),
-        (OrchestrationStrategy.STRATEGIC_ONLY, "_execute_strategic_only"),
-        (OrchestrationStrategy.TACTICAL_COORDINATION, "_execute_tactical_coordination"),
-        (OrchestrationStrategy.OPERATIONAL_DIRECT, "_execute_operational_direct"),
-        (OrchestrationStrategy.SPECIALIZED_DIRECT, "_execute_specialized_direct"),
-        (OrchestrationStrategy.HYBRID, "_execute_hybrid"),
-        (OrchestrationStrategy.SERVICE_MANAGER, "_execute_service_manager"),
-        (OrchestrationStrategy.FALLBACK, "_execute_fallback"),
-        (OrchestrationStrategy.COMPLEX_PIPELINE, "_execute_complex_pipeline"),
-        (OrchestrationStrategy.MANUAL_SELECTION, "_execute_manual_selection"),
-    ])
-    async def test_dispatches_to_correct_method(self, orchestrator, strategy, method_name):
+    @pytest.mark.parametrize(
+        "strategy,method_name",
+        [
+            (OrchestrationStrategy.HIERARCHICAL_FULL, "_execute_hierarchical_full"),
+            (OrchestrationStrategy.STRATEGIC_ONLY, "_execute_strategic_only"),
+            (
+                OrchestrationStrategy.TACTICAL_COORDINATION,
+                "_execute_tactical_coordination",
+            ),
+            (OrchestrationStrategy.OPERATIONAL_DIRECT, "_execute_operational_direct"),
+            (OrchestrationStrategy.SPECIALIZED_DIRECT, "_execute_specialized_direct"),
+            (OrchestrationStrategy.HYBRID, "_execute_hybrid"),
+            (OrchestrationStrategy.SERVICE_MANAGER, "_execute_service_manager"),
+            (OrchestrationStrategy.FALLBACK, "_execute_fallback"),
+            (OrchestrationStrategy.COMPLEX_PIPELINE, "_execute_complex_pipeline"),
+            (OrchestrationStrategy.MANUAL_SELECTION, "_execute_manual_selection"),
+        ],
+    )
+    async def test_dispatches_to_correct_method(
+        self, orchestrator, strategy, method_name
+    ):
         expected = {"status": "success", "test": True}
         with patch(
             "argumentation_analysis.orchestration.engine.main_orchestrator.select_strategy",
             new_callable=AsyncMock,
             return_value=strategy,
         ):
-            with patch.object(orchestrator, method_name, new_callable=AsyncMock, return_value=expected) as mock_method:
+            with patch.object(
+                orchestrator, method_name, new_callable=AsyncMock, return_value=expected
+            ) as mock_method:
                 result = await orchestrator.run_analysis("sample text")
                 mock_method.assert_called_once_with("sample text")
                 assert result == expected
 
 
 # ── _execute_fallback ───────────────────────────────────────────────────
+
 
 class TestExecuteFallback:
     """Tests for _execute_fallback()."""
@@ -163,6 +180,7 @@ class TestExecuteFallback:
 
 # ── _execute_complex_pipeline ───────────────────────────────────────────
 
+
 class TestExecuteComplexPipeline:
     """Tests for _execute_complex_pipeline()."""
 
@@ -174,6 +192,7 @@ class TestExecuteComplexPipeline:
 
 # ── _execute_manual_selection ───────────────────────────────────────────
 
+
 class TestExecuteManualSelection:
     """Tests for _execute_manual_selection()."""
 
@@ -184,6 +203,7 @@ class TestExecuteManualSelection:
 
 
 # ── _synthesize_hierarchical_results ────────────────────────────────────
+
 
 class TestSynthesizeHierarchicalResults:
     """Tests for _synthesize_hierarchical_results()."""
@@ -215,7 +235,9 @@ class TestSynthesizeHierarchicalResults:
 
     async def test_overall_score_average(self, orchestrator):
         results = {
-            "strategic_analysis": {"objectives": ["o1", "o2", "o3", "o4"]},  # alignment=1.0
+            "strategic_analysis": {
+                "objectives": ["o1", "o2", "o3", "o4"]
+            },  # alignment=1.0
             "tactical_coordination": {"tasks_created": 10},  # efficiency=1.0
             "operational_results": {"summary": {"success_rate": 1.0}},  # success=1.0
         }
@@ -256,6 +278,7 @@ class TestSynthesizeHierarchicalResults:
 
 # ── _execute_operational_tasks ──────────────────────────────────────────
 
+
 class TestExecuteOperationalTasks:
     """Tests for _execute_operational_tasks()."""
 
@@ -266,13 +289,15 @@ class TestExecuteOperationalTasks:
         assert result["tasks_executed"] == 0
 
     async def test_delegates_to_executor(self, full_orchestrator):
-        result = await full_orchestrator._execute_operational_tasks("text", {"tasks": []})
+        result = await full_orchestrator._execute_operational_tasks(
+            "text", {"tasks": []}
+        )
         full_orchestrator.direct_operational_executor.execute_operational_pipeline.assert_called_once()
         assert result["status"] == "success"
 
     async def test_executor_exception(self, full_orchestrator):
-        full_orchestrator.direct_operational_executor.execute_operational_pipeline = AsyncMock(
-            side_effect=RuntimeError("executor crashed")
+        full_orchestrator.direct_operational_executor.execute_operational_pipeline = (
+            AsyncMock(side_effect=RuntimeError("executor crashed"))
         )
         result = await full_orchestrator._execute_operational_tasks("text", {})
         assert result["status"] == "error"
@@ -280,6 +305,7 @@ class TestExecuteOperationalTasks:
 
 
 # ── _execute_hierarchical_full ──────────────────────────────────────────
+
 
 class TestExecuteHierarchicalFull:
     """Tests for _execute_hierarchical_full()."""
@@ -313,6 +339,7 @@ class TestExecuteHierarchicalFull:
 
 # ── _execute_strategic_only ─────────────────────────────────────────────
 
+
 class TestExecuteStrategicOnly:
     """Tests for _execute_strategic_only()."""
 
@@ -337,6 +364,7 @@ class TestExecuteStrategicOnly:
 
 
 # ── _execute_tactical_coordination ──────────────────────────────────────
+
 
 class TestExecuteTacticalCoordination:
     """Tests for _execute_tactical_coordination()."""
@@ -367,6 +395,7 @@ class TestExecuteTacticalCoordination:
 
 # ── _execute_operational_direct ─────────────────────────────────────────
 
+
 class TestExecuteOperationalDirect:
     """Tests for _execute_operational_direct()."""
 
@@ -386,6 +415,7 @@ class TestExecuteOperationalDirect:
 
 
 # ── _execute_service_manager ────────────────────────────────────────────
+
 
 class TestExecuteServiceManager:
     """Tests for _execute_service_manager()."""
@@ -414,35 +444,61 @@ class TestExecuteServiceManager:
 
 # ── _execute_hybrid ─────────────────────────────────────────────────────
 
+
 class TestExecuteHybrid:
     """Tests for _execute_hybrid()."""
 
     async def test_both_succeed(self, orchestrator):
-        with patch.object(orchestrator, "_execute_tactical_coordination", new_callable=AsyncMock,
-                          return_value={"status": "success"}):
-            with patch.object(orchestrator, "_execute_specialized_direct", new_callable=AsyncMock,
-                              return_value={"status": "success"}):
+        with patch.object(
+            orchestrator,
+            "_execute_tactical_coordination",
+            new_callable=AsyncMock,
+            return_value={"status": "success"},
+        ):
+            with patch.object(
+                orchestrator,
+                "_execute_specialized_direct",
+                new_callable=AsyncMock,
+                return_value={"status": "success"},
+            ):
                 result = await orchestrator._execute_hybrid("text")
                 assert result["status"] == "success"
 
     async def test_one_fails_partial(self, orchestrator):
-        with patch.object(orchestrator, "_execute_tactical_coordination", new_callable=AsyncMock,
-                          return_value={"status": "error", "error_message": "fail"}):
-            with patch.object(orchestrator, "_execute_specialized_direct", new_callable=AsyncMock,
-                              return_value={"status": "success"}):
+        with patch.object(
+            orchestrator,
+            "_execute_tactical_coordination",
+            new_callable=AsyncMock,
+            return_value={"status": "error", "error_message": "fail"},
+        ):
+            with patch.object(
+                orchestrator,
+                "_execute_specialized_direct",
+                new_callable=AsyncMock,
+                return_value={"status": "success"},
+            ):
                 result = await orchestrator._execute_hybrid("text")
                 assert result["status"] == "partial_failure"
 
     async def test_both_fail(self, orchestrator):
-        with patch.object(orchestrator, "_execute_tactical_coordination", new_callable=AsyncMock,
-                          return_value={"status": "error", "error_message": "f1"}):
-            with patch.object(orchestrator, "_execute_specialized_direct", new_callable=AsyncMock,
-                              return_value={"status": "error", "error_message": "f2"}):
+        with patch.object(
+            orchestrator,
+            "_execute_tactical_coordination",
+            new_callable=AsyncMock,
+            return_value={"status": "error", "error_message": "f1"},
+        ):
+            with patch.object(
+                orchestrator,
+                "_execute_specialized_direct",
+                new_callable=AsyncMock,
+                return_value={"status": "error", "error_message": "f2"},
+            ):
                 result = await orchestrator._execute_hybrid("text")
                 assert result["status"] == "error"
 
 
 # ── _select_specialized_orchestrator ────────────────────────────────────
+
 
 class TestSelectSpecializedOrchestrator:
     """Tests for _select_specialized_orchestrator()."""
@@ -462,10 +518,19 @@ class TestSelectSpecializedOrchestrator:
 
     async def test_filters_by_analysis_type(self, orchestrator):
         from argumentation_analysis.core.enums import AnalysisType
+
         orchestrator.config.analysis_type_enum = AnalysisType.LOGICAL
         orchestrator.specialized_orchestrators_map = {
-            "logic": {"priority": 2, "orchestrator": MagicMock(), "types": [AnalysisType.LOGICAL]},
-            "other": {"priority": 1, "orchestrator": MagicMock(), "types": [AnalysisType.RHETORICAL]},
+            "logic": {
+                "priority": 2,
+                "orchestrator": MagicMock(),
+                "types": [AnalysisType.LOGICAL],
+            },
+            "other": {
+                "priority": 1,
+                "orchestrator": MagicMock(),
+                "types": [AnalysisType.RHETORICAL],
+            },
         }
         name, data = await orchestrator._select_specialized_orchestrator()
         assert name == "logic"
@@ -473,28 +538,43 @@ class TestSelectSpecializedOrchestrator:
 
 # ── _execute_specialized_direct ─────────────────────────────────────────
 
+
 class TestExecuteSpecializedDirect:
     """Tests for _execute_specialized_direct()."""
 
     async def test_no_orchestrator_selected(self, orchestrator):
-        with patch.object(orchestrator, "_select_specialized_orchestrator", new_callable=AsyncMock, return_value=None):
+        with patch.object(
+            orchestrator,
+            "_select_specialized_orchestrator",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
             result = await orchestrator._execute_specialized_direct("text")
             assert result["status"] == "no_orchestrator_selected"
 
     async def test_missing_orchestrator_instance(self, orchestrator):
-        with patch.object(orchestrator, "_select_specialized_orchestrator", new_callable=AsyncMock,
-                          return_value=("test", {"orchestrator": None, "priority": 1})):
+        with patch.object(
+            orchestrator,
+            "_select_specialized_orchestrator",
+            new_callable=AsyncMock,
+            return_value=("test", {"orchestrator": None, "priority": 1}),
+        ):
             result = await orchestrator._execute_specialized_direct("text")
             assert result["status"] == "error"
 
     async def test_exception_handled(self, orchestrator):
-        with patch.object(orchestrator, "_select_specialized_orchestrator", new_callable=AsyncMock,
-                          side_effect=RuntimeError("boom")):
+        with patch.object(
+            orchestrator,
+            "_select_specialized_orchestrator",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("boom"),
+        ):
             result = await orchestrator._execute_specialized_direct("text")
             assert result["status"] == "error"
 
 
 # ── _run_logic_complex_analysis ─────────────────────────────────────────
+
 
 class TestRunLogicComplexAnalysis:
     """Tests for _run_logic_complex_analysis()."""
@@ -502,19 +582,28 @@ class TestRunLogicComplexAnalysis:
     async def test_no_method(self, orchestrator):
         mock_orch = MagicMock(spec=[])
         # LogiqueComplexeOrchestrator might not be available
-        with patch("argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator", None):
+        with patch(
+            "argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator",
+            None,
+        ):
             result = await orchestrator._run_logic_complex_analysis("text", mock_orch)
             assert result["status"] == "limited"
 
     async def test_exception(self, orchestrator):
         mock_orch = MagicMock()
-        mock_orch.analyze_complex_logic = AsyncMock(side_effect=Exception("logic error"))
-        with patch("argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator", type(mock_orch)):
+        mock_orch.analyze_complex_logic = AsyncMock(
+            side_effect=Exception("logic error")
+        )
+        with patch(
+            "argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator",
+            type(mock_orch),
+        ):
             result = await orchestrator._run_logic_complex_analysis("text", mock_orch)
             assert result["status"] == "error"
 
 
 # ── Integration scenarios ───────────────────────────────────────────────
+
 
 class TestMainOrchestratorScenarios:
     """Integration scenarios."""

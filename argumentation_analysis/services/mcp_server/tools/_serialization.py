@@ -17,7 +17,5 @@ def safe_serialize(obj: Any) -> Any:
     if isinstance(obj, Enum):
         return obj.value
     if hasattr(obj, "__dataclass_fields__"):
-        return {
-            k: safe_serialize(getattr(obj, k)) for k in obj.__dataclass_fields__
-        }
+        return {k: safe_serialize(getattr(obj, k)) for k in obj.__dataclass_fields__}
     return str(obj)

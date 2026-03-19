@@ -36,9 +36,7 @@ class TestRunShellCommand:
         assert "error msg" in stderr
 
     def test_command_not_found(self):
-        code, stdout, stderr = run_shell_command(
-            ["nonexistent_command_12345"]
-        )
+        code, stdout, stderr = run_shell_command(["nonexistent_command_12345"])
         assert code == -1
 
     def test_capture_output_false(self):
@@ -57,15 +55,22 @@ class TestRunShellCommand:
         )
         assert code == 0
         # Output should contain the tmp_path
-        assert str(tmp_path).replace("\\", "/") in stdout.replace("\\", "/") or \
-               tmp_path.name in stdout
+        assert (
+            str(tmp_path).replace("\\", "/") in stdout.replace("\\", "/")
+            or tmp_path.name in stdout
+        )
 
     def test_custom_env(self):
         import os
+
         env = os.environ.copy()
         env["TEST_VAR_SHELL_UTILS"] = "custom_value"
         code, stdout, stderr = run_shell_command(
-            [sys.executable, "-c", "import os; print(os.environ.get('TEST_VAR_SHELL_UTILS', ''))"],
+            [
+                sys.executable,
+                "-c",
+                "import os; print(os.environ.get('TEST_VAR_SHELL_UTILS', ''))",
+            ],
             env=env,
         )
         assert code == 0
@@ -81,9 +86,7 @@ class TestRunShellCommand:
 
     def test_default_description_string(self):
         # Verify it doesn't crash with auto-generated description
-        code, stdout, stderr = run_shell_command(
-            [sys.executable, "-c", "pass"]
-        )
+        code, stdout, stderr = run_shell_command([sys.executable, "-c", "pass"])
         assert code == 0
 
     def test_default_description_long_command(self):
@@ -94,9 +97,7 @@ class TestRunShellCommand:
         assert code == 0
 
     def test_return_types(self):
-        code, stdout, stderr = run_shell_command(
-            [sys.executable, "-c", "pass"]
-        )
+        code, stdout, stderr = run_shell_command([sys.executable, "-c", "pass"])
         assert isinstance(code, int)
         assert isinstance(stdout, str)
         assert isinstance(stderr, str)

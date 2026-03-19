@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 _JVM_AVAILABLE = False
 try:
     import jpype
+
     _JVM_AVAILABLE = jpype.isJVMStarted()
 except ImportError:
     pass
@@ -48,6 +49,7 @@ def _check_jvm() -> bool:
         return True
     try:
         import jpype as jp
+
         if jp.isJVMStarted():
             _JVM_AVAILABLE = True
             return True
@@ -58,13 +60,17 @@ def _check_jvm() -> bool:
 
 def _jvm_required(func):
     """Decorator that checks JVM availability before calling handler."""
+
     def wrapper(self, *args, **kwargs):
         if not _check_jvm():
-            return json.dumps({
-                "error": "JVM not available",
-                "message": "Tweety requires JVM. Start it via jvm_setup.initialize_jvm().",
-            })
+            return json.dumps(
+                {
+                    "error": "JVM not available",
+                    "message": "Tweety requires JVM. Start it via jvm_setup.initialize_jvm().",
+                }
+            )
         return func(self, *args, **kwargs)
+
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     return wrapper
@@ -96,6 +102,7 @@ class TweetyLogicPlugin:
     def analyze_dung_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
+
         handler = AFHandler()
         args = params.get("arguments", [])
         attacks = params.get("attacks", [])
@@ -117,6 +124,7 @@ class TweetyLogicPlugin:
     def check_propositional_consistency(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formulas": [input]})
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge()
         formulas = params.get("formulas", [input])
         kb_str = "\n".join(formulas)
@@ -137,6 +145,7 @@ class TweetyLogicPlugin:
     def check_fol_consistency(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formulas": [input]})
         from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
+
         handler = FOLHandler()
         formulas = params.get("formulas", [input])
         result = handler.check_consistency(formulas)
@@ -156,6 +165,7 @@ class TweetyLogicPlugin:
     def check_modal_satisfiability(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formula": input})
         from argumentation_analysis.agents.core.logic.modal_handler import ModalHandler
+
         handler = ModalHandler()
         formula = params.get("formula", input)
         logic_type = params.get("logic_type", "S5")
@@ -176,7 +186,10 @@ class TweetyLogicPlugin:
     @_jvm_required
     def rank_arguments(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
-        from argumentation_analysis.agents.core.logic.ranking_handler import RankingHandler
+        from argumentation_analysis.agents.core.logic.ranking_handler import (
+            RankingHandler,
+        )
+
         handler = RankingHandler()
         args = params.get("arguments", [])
         attacks = params.get("attacks", [])
@@ -198,7 +211,10 @@ class TweetyLogicPlugin:
     @_jvm_required
     def analyze_bipolar_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
-        from argumentation_analysis.agents.core.logic.bipolar_handler import BipolarHandler
+        from argumentation_analysis.agents.core.logic.bipolar_handler import (
+            BipolarHandler,
+        )
+
         handler = BipolarHandler()
         result = handler.analyze_bipolar_framework(
             params.get("arguments", []),
@@ -223,6 +239,7 @@ class TweetyLogicPlugin:
     def analyze_aba(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
+
         handler = ABAHandler()
         result = handler.analyze_aba_framework(
             params.get("assumptions", []),
@@ -247,6 +264,7 @@ class TweetyLogicPlugin:
     def analyze_adf(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
+
         handler = ADFHandler()
         result = handler.analyze_adf(
             params.get("statements", []),
@@ -269,6 +287,7 @@ class TweetyLogicPlugin:
     def analyze_aspic(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
+
         handler = ASPICHandler()
         result = handler.analyze_aspic_framework(
             params.get("strict_rules", []),
@@ -290,7 +309,10 @@ class TweetyLogicPlugin:
     @_jvm_required
     def revise_beliefs(self, input: str) -> str:
         params = _parse_json_or_default(input, {"belief_set": [], "new_belief": input})
-        from argumentation_analysis.agents.core.logic.belief_revision_handler import BeliefRevisionHandler
+        from argumentation_analysis.agents.core.logic.belief_revision_handler import (
+            BeliefRevisionHandler,
+        )
+
         handler = BeliefRevisionHandler()
         result = handler.revise(
             params.get("belief_set", []),
@@ -313,7 +335,10 @@ class TweetyLogicPlugin:
     @_jvm_required
     def analyze_probabilistic(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
-        from argumentation_analysis.agents.core.logic.probabilistic_handler import ProbabilisticHandler
+        from argumentation_analysis.agents.core.logic.probabilistic_handler import (
+            ProbabilisticHandler,
+        )
+
         handler = ProbabilisticHandler()
         result = handler.analyze_probabilistic_framework(
             params.get("arguments", []),
@@ -336,7 +361,10 @@ class TweetyLogicPlugin:
     @_jvm_required
     def execute_dialogue(self, input: str) -> str:
         params = _parse_json_or_default(input, {"topic": input})
-        from argumentation_analysis.agents.core.logic.dialogue_handler import DialogueHandler
+        from argumentation_analysis.agents.core.logic.dialogue_handler import (
+            DialogueHandler,
+        )
+
         handler = DialogueHandler()
         result = handler.execute_dialogue(
             params.get("proponent_args", []),
@@ -363,7 +391,10 @@ class TweetyLogicPlugin:
     def check_dl_consistency(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = DLHandler(initializer)
         kb = handler.create_knowledge_base(
@@ -389,7 +420,10 @@ class TweetyLogicPlugin:
     def query_conditional_logic(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = CLHandler(initializer)
         kb = handler.create_knowledge_base(
@@ -397,7 +431,9 @@ class TweetyLogicPlugin:
         )
         query_conclusion = params.get("query_conclusion")
         if query_conclusion:
-            entailed, msg = handler.query(kb, query_conclusion, params.get("query_premise"))
+            entailed, msg = handler.query(
+                kb, query_conclusion, params.get("query_premise")
+            )
         else:
             entailed, msg = True, "KB constructed, no query specified."
         return json.dumps({"entailed": entailed, "message": msg})
@@ -425,15 +461,20 @@ class TweetyLogicPlugin:
         if mode == "mus":
             try:
                 mus = handler.find_mus(formulas)
-                return json.dumps({"mode": "mus", "mus_count": len(mus), "subsets": mus})
+                return json.dumps(
+                    {"mode": "mus", "mus_count": len(mus), "subsets": mus}
+                )
             except RuntimeError as e:
                 return json.dumps({"error": str(e)})
         is_sat, model, stats = handler.solve_formulas(formulas)
-        return json.dumps({
-            "satisfiable": is_sat,
-            "model": model,
-            "statistics": stats,
-        }, default=str)
+        return json.dumps(
+            {
+                "satisfiable": is_sat,
+                "model": model,
+                "statistics": stats,
+            },
+            default=str,
+        )
 
     @kernel_function(
         name="analyze_setaf",
@@ -443,7 +484,10 @@ class TweetyLogicPlugin:
     def analyze_setaf(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "set_attacks": []})
         from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = SetAFHandler(initializer)
         result = handler.analyze_setaf(
@@ -459,9 +503,16 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_weighted_framework(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"arguments": [], "weighted_attacks": []})
-        from argumentation_analysis.agents.core.logic.weighted_handler import WeightedHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        params = _parse_json_or_default(
+            input, {"arguments": [], "weighted_attacks": []}
+        )
+        from argumentation_analysis.agents.core.logic.weighted_handler import (
+            WeightedHandler,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = WeightedHandler(initializer)
         result = handler.analyze_weighted_framework(
@@ -478,13 +529,20 @@ class TweetyLogicPlugin:
     @_jvm_required
     def analyze_social_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
-        from argumentation_analysis.agents.core.logic.social_handler import SocialHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.social_handler import (
+            SocialHandler,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = SocialHandler(initializer)
         votes = params.get("votes", {})
         if votes:
-            votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
+            votes = {
+                k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()
+            }
         result = handler.analyze_social_framework(
             arguments=params.get("arguments", []),
             attacks=params.get("attacks", []),
@@ -500,7 +558,10 @@ class TweetyLogicPlugin:
     def analyze_epistemic_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
         from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = EAFHandler(initializer)
         result = handler.analyze_epistemic_framework(
@@ -519,7 +580,10 @@ class TweetyLogicPlugin:
     def analyze_delp(self, input: str) -> str:
         params = _parse_json_or_default(input, {"program": input})
         from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = DeLPHandler(initializer)
         result = handler.analyze_delp(
@@ -537,7 +601,10 @@ class TweetyLogicPlugin:
     def check_qbf(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formula": input, "quantifiers": []})
         from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
         initializer = TweetyInitializer()
         handler = QBFHandler(initializer)
         result = handler.analyze_qbf(

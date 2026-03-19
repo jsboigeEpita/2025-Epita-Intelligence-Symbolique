@@ -12,10 +12,10 @@ from argumentation_analysis.agents.tools.support.shared_services import (
     ConfigManager,
 )
 
-
 # ============================================================
 # get_configured_logger
 # ============================================================
+
 
 class TestGetConfiguredLogger:
     def test_returns_logger(self):
@@ -41,6 +41,7 @@ class TestGetConfiguredLogger:
 # ============================================================
 # ServiceRegistry
 # ============================================================
+
 
 class TestServiceRegistry:
     def setup_method(self):
@@ -90,6 +91,7 @@ class TestServiceRegistry:
 # ============================================================
 # ConfigManager
 # ============================================================
+
 
 class TestConfigManager:
     def setup_method(self):

@@ -19,7 +19,6 @@ from argumentation_analysis.core.capability_registry import (
     ComponentType,
 )
 
-
 # --- Build tests ---
 
 
@@ -84,17 +83,33 @@ class TestDebateScoreConverged:
     """Test _debate_score_converged function."""
 
     def test_stable_scores_converge(self):
-        prev = {"logical_coherence": 0.8, "evidence_quality": 0.7,
-                "relevance_score": 0.75, "persuasiveness": 0.8}
-        curr = {"logical_coherence": 0.81, "evidence_quality": 0.71,
-                "relevance_score": 0.76, "persuasiveness": 0.8}
+        prev = {
+            "logical_coherence": 0.8,
+            "evidence_quality": 0.7,
+            "relevance_score": 0.75,
+            "persuasiveness": 0.8,
+        }
+        curr = {
+            "logical_coherence": 0.81,
+            "evidence_quality": 0.71,
+            "relevance_score": 0.76,
+            "persuasiveness": 0.8,
+        }
         assert _debate_score_converged(prev, curr) is True
 
     def test_changing_scores_not_converged(self):
-        prev = {"logical_coherence": 0.5, "evidence_quality": 0.4,
-                "relevance_score": 0.3, "persuasiveness": 0.4}
-        curr = {"logical_coherence": 0.8, "evidence_quality": 0.7,
-                "relevance_score": 0.75, "persuasiveness": 0.8}
+        prev = {
+            "logical_coherence": 0.5,
+            "evidence_quality": 0.4,
+            "relevance_score": 0.3,
+            "persuasiveness": 0.4,
+        }
+        curr = {
+            "logical_coherence": 0.8,
+            "evidence_quality": 0.7,
+            "relevance_score": 0.75,
+            "persuasiveness": 0.8,
+        }
         assert _debate_score_converged(prev, curr) is False
 
     def test_non_dict_inputs(self):

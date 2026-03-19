@@ -44,6 +44,7 @@ def _setup_tools():
         def wrapper(fn):
             tools[fn.__name__] = fn
             return fn
+
         return wrapper
 
     mcp_mock.tool = fake_tool
@@ -57,16 +58,21 @@ class TestEvaluateQuality:
     async def test_success(self):
         mcp_mock, tools = _setup_tools()
         invoke_fn = AsyncMock(return_value={"overall_score": 0.82, "virtues": {}})
-        registry = _make_registry([
-            MockComponentRegistration(
-                "quality", MockComponentType.AGENT,
-                ["argument_quality"], invoke=invoke_fn,
-            )
-        ])
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "quality",
+                    MockComponentType.AGENT,
+                    ["argument_quality"],
+                    invoke=invoke_fn,
+                )
+            ]
+        )
 
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["evaluate_quality"](text="This is a strong argument.")
@@ -81,6 +87,7 @@ class TestEvaluateQuality:
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["evaluate_quality"](text="Test")
@@ -94,22 +101,33 @@ class TestGenerateCounterArgument:
     @pytest.mark.asyncio
     async def test_success(self):
         mcp_mock, tools = _setup_tools()
-        invoke_fn = AsyncMock(return_value={
-            "counter_arguments": [{"strategy": "reductio", "text": "If we accept..."}]
-        })
-        registry = _make_registry([
-            MockComponentRegistration(
-                "counter_arg", MockComponentType.AGENT,
-                ["counter_argument_generation"], invoke=invoke_fn,
-            )
-        ])
+        invoke_fn = AsyncMock(
+            return_value={
+                "counter_arguments": [
+                    {"strategy": "reductio", "text": "If we accept..."}
+                ]
+            }
+        )
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "counter_arg",
+                    MockComponentType.AGENT,
+                    ["counter_argument_generation"],
+                    invoke=invoke_fn,
+                )
+            ]
+        )
 
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
-        result = await tools["generate_counter_argument"](text="Climate change is fake.")
+        result = await tools["generate_counter_argument"](
+            text="Climate change is fake."
+        )
         assert result["tool"] == "generate_counter_argument"
         assert "counter_arguments" in result["result"]
 
@@ -121,6 +139,7 @@ class TestGenerateCounterArgument:
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["generate_counter_argument"](text="Test")
@@ -134,16 +153,21 @@ class TestRunDebateAnalysis:
     async def test_success(self):
         mcp_mock, tools = _setup_tools()
         invoke_fn = AsyncMock(return_value={"debate_score": 0.7})
-        registry = _make_registry([
-            MockComponentRegistration(
-                "debate", MockComponentType.AGENT,
-                ["adversarial_debate"], invoke=invoke_fn,
-            )
-        ])
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "debate",
+                    MockComponentType.AGENT,
+                    ["adversarial_debate"],
+                    invoke=invoke_fn,
+                )
+            ]
+        )
 
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["run_debate_analysis"](text="Should we ban AI?")
@@ -153,16 +177,21 @@ class TestRunDebateAnalysis:
     @pytest.mark.asyncio
     async def test_no_invoke(self):
         mcp_mock, tools = _setup_tools()
-        registry = _make_registry([
-            MockComponentRegistration(
-                "debate", MockComponentType.AGENT,
-                ["adversarial_debate"], invoke=None,
-            )
-        ])
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "debate",
+                    MockComponentType.AGENT,
+                    ["adversarial_debate"],
+                    invoke=None,
+                )
+            ]
+        )
 
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["run_debate_analysis"](text="Test")
@@ -177,19 +206,26 @@ class TestRunGovernanceAnalysis:
     async def test_success(self):
         mcp_mock, tools = _setup_tools()
         invoke_fn = AsyncMock(return_value={"consensus": 0.65, "method": "borda"})
-        registry = _make_registry([
-            MockComponentRegistration(
-                "governance", MockComponentType.AGENT,
-                ["governance_simulation"], invoke=invoke_fn,
-            )
-        ])
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "governance",
+                    MockComponentType.AGENT,
+                    ["governance_simulation"],
+                    invoke=invoke_fn,
+                )
+            ]
+        )
 
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
-        result = await tools["run_governance_analysis"](text="Proposal: increase budget")
+        result = await tools["run_governance_analysis"](
+            text="Proposal: increase budget"
+        )
         assert result["tool"] == "run_governance_analysis"
         assert result["result"]["consensus"] == 0.65
 
@@ -201,6 +237,7 @@ class TestRunGovernanceAnalysis:
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         register_specialized_tools(mcp_mock, lambda: registry)
 
         result = await tools["run_governance_analysis"](text="Test")

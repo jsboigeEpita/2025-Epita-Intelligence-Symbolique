@@ -60,6 +60,7 @@ def _setup_tools():
         def wrapper(fn):
             tools[fn.__name__] = fn
             return fn
+
         return wrapper
 
     mcp_mock.tool = fake_tool
@@ -106,6 +107,7 @@ class TestStartConversation:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: mock_registry, lambda: sm)
 
         patches = _make_conversation_patches(catalog, mock_strategy)
@@ -125,9 +127,7 @@ class TestStartConversation:
         mock_registry = MagicMock()
 
         catalog = {
-            "full": MockWorkflowDefinition(
-                "full", [MockWorkflowPhase("p1", "quality")]
-            )
+            "full": MockWorkflowDefinition("full", [MockWorkflowPhase("p1", "quality")])
         }
 
         mock_strategy = MagicMock()
@@ -136,6 +136,7 @@ class TestStartConversation:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: mock_registry, lambda: sm)
 
         patches = _make_conversation_patches(catalog, mock_strategy)
@@ -172,13 +173,12 @@ class TestContinueConversation:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: mock_registry, lambda: sm)
 
         patches = _make_conversation_patches(catalog, mock_strategy)
         with patches[0], patches[1], patches[2]:
-            result = await tools["continue_conversation"](
-                session_id=session.session_id
-            )
+            result = await tools["continue_conversation"](session_id=session.session_id)
 
         assert result["status"] == "active"
         assert result["round"] == 2
@@ -191,6 +191,7 @@ class TestContinueConversation:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: MagicMock(), lambda: sm)
 
         result = await tools["continue_conversation"](session_id="nonexistent")
@@ -207,11 +208,10 @@ class TestContinueConversation:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: MagicMock(), lambda: sm)
 
-        result = await tools["continue_conversation"](
-            session_id=session.session_id
-        )
+        result = await tools["continue_conversation"](session_id=session.session_id)
         assert result["status"] == "max_rounds_reached"
 
 
@@ -223,16 +223,17 @@ class TestGetConversationStatus:
         mcp_mock, tools = _setup_tools()
         sm = SessionManager()
         session = sm.create_session("Test", workflow_name="full")
-        sm.update_session(session.session_id, {"status": "completed", "confidence": 0.8})
+        sm.update_session(
+            session.session_id, {"status": "completed", "confidence": 0.8}
+        )
 
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: MagicMock(), lambda: sm)
 
-        result = await tools["get_conversation_status"](
-            session_id=session.session_id
-        )
+        result = await tools["get_conversation_status"](session_id=session.session_id)
         assert result["workflow"] == "full"
         assert result["rounds_completed"] == 1
 
@@ -244,6 +245,7 @@ class TestGetConversationStatus:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         register_conversation_tools(mcp_mock, lambda: MagicMock(), lambda: sm)
 
         result = await tools["get_conversation_status"](session_id="missing")

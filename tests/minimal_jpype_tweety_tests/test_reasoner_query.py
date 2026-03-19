@@ -12,12 +12,18 @@ NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
 
 # Inclure tous les JARs du répertoire libs, en préférant le JAR with-dependencies
 import glob as _glob
+
 all_jars_in_libs = [
     os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")
 ]
 # Prefer the uber-JAR (with-dependencies), exclude the simple one if both exist
 _with_deps = [j for j in all_jars_in_libs if "with-dependencies" in os.path.basename(j)]
-_simple = [j for j in all_jars_in_libs if "tweety-full" in os.path.basename(j) and "with-dependencies" not in os.path.basename(j)]
+_simple = [
+    j
+    for j in all_jars_in_libs
+    if "tweety-full" in os.path.basename(j)
+    and "with-dependencies" not in os.path.basename(j)
+]
 TWEETY_JARS = _with_deps if _with_deps else _simple if _simple else all_jars_in_libs
 
 print(f"Dynamically included JARS for test_reasoner_query: {TWEETY_JARS}")

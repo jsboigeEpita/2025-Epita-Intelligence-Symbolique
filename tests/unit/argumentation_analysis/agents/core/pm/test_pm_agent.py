@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
@@ -294,7 +296,10 @@ class TestProjectManagerAgentInvocation:
 
         # Patch at CLASS level to bypass Pydantic V2 instance-level restrictions
         with patch.object(
-            ProjectManagerAgent, "invoke_single", new_callable=AsyncMock, return_value=[mock_response]
+            ProjectManagerAgent,
+            "invoke_single",
+            new_callable=AsyncMock,
+            return_value=[mock_response],
         ):
             messages = [ChatMessageContent(role=AuthorRole.USER, content="Test")]
             result = await agent.invoke_single(messages)
@@ -321,7 +326,9 @@ class TestProjectManagerAgentInvocation:
         async for item in stream:
             results.append(item)
 
-        assert len(results) == 1  # invoke_stream wraps invoke in a single-item generator
+        assert (
+            len(results) == 1
+        )  # invoke_stream wraps invoke in a single-item generator
 
 
 # =====================================================================

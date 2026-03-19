@@ -42,9 +42,7 @@ class CLHandler:
             self._Conditional = jpype.JClass(f"{cl_pkg}.Conditional")
             self._ClBeliefSet = jpype.JClass(f"{cl_pkg}.ClBeliefSet")
 
-            self._ClParser = jpype.JClass(
-                "org.tweetyproject.logics.cl.parser.ClParser"
-            )
+            self._ClParser = jpype.JClass("org.tweetyproject.logics.cl.parser.ClParser")
             self._SimpleCReasoner = jpype.JClass(
                 "org.tweetyproject.logics.cl.reasoner.SimpleCReasoner"
             )
@@ -163,7 +161,9 @@ class CLHandler:
 
     # ── Reasoning ────────────────────────────────────────────────────
 
-    def query(self, kb, conclusion_str: str, premise_str: Optional[str] = None) -> Tuple[bool, str]:
+    def query(
+        self, kb, conclusion_str: str, premise_str: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """Query a conditional from the knowledge base.
 
         Args:
@@ -185,7 +185,9 @@ class CLHandler:
 
             result = reasoner.query(kb, cond)
             entailed = bool(result)
-            query_repr = f"({conclusion_str} | {premise_str})" if premise_str else conclusion_str
+            query_repr = (
+                f"({conclusion_str} | {premise_str})" if premise_str else conclusion_str
+            )
             msg = f"CL query {query_repr}: {'ACCEPTED' if entailed else 'REJECTED'}"
             return entailed, msg
         except jpype.JException as e:

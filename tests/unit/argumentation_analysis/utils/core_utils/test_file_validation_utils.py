@@ -11,8 +11,8 @@ from argumentation_analysis.core.utils.file_validation_utils import (
     check_markdown_file_readable_and_basic_structure,
 )
 
-
 # ── check_text_file_readable_and_not_empty ──
+
 
 class TestCheckTextFile:
     def test_valid_file(self, tmp_path):
@@ -59,6 +59,7 @@ class TestCheckTextFile:
 
 # ── check_json_file_valid ──
 
+
 class TestCheckJsonFile:
     def test_valid_json_dict(self, tmp_path):
         f = tmp_path / "data.json"
@@ -69,20 +70,20 @@ class TestCheckJsonFile:
 
     def test_valid_json_list(self, tmp_path):
         f = tmp_path / "data.json"
-        f.write_text('[1, 2, 3]', encoding="utf-8")
+        f.write_text("[1, 2, 3]", encoding="utf-8")
         valid, msg = check_json_file_valid(f)
         assert valid is True
 
     def test_empty_dict(self, tmp_path):
         f = tmp_path / "data.json"
-        f.write_text('{}', encoding="utf-8")
+        f.write_text("{}", encoding="utf-8")
         valid, msg = check_json_file_valid(f)
         assert valid is False
         assert "vide" in msg
 
     def test_empty_list(self, tmp_path):
         f = tmp_path / "data.json"
-        f.write_text('[]', encoding="utf-8")
+        f.write_text("[]", encoding="utf-8")
         valid, msg = check_json_file_valid(f)
         assert valid is False
 
@@ -106,6 +107,7 @@ class TestCheckJsonFile:
 
 
 # ── check_markdown_file_readable_and_basic_structure ──
+
 
 class TestCheckMarkdownFile:
     def test_valid_markdown(self, tmp_path):

@@ -35,9 +35,7 @@ def register_with_capability_registry(registry):
     """Register governance capabilities with the Lego registry."""
     registry.register_plugin(
         name="governance",
-        plugin_class=type(
-            "GovernanceMethods", (), {"methods": GOVERNANCE_METHODS}
-        ),
+        plugin_class=type("GovernanceMethods", (), {"methods": GOVERNANCE_METHODS}),
         capabilities=[
             "collective_decision_making",
             "voting_methods",

@@ -60,6 +60,7 @@ def rich_data(basic_data):
 
 # ── __init__ ──
 
+
 class TestInit:
     def test_default_config(self):
         t = UnifiedReportTemplate({})
@@ -68,17 +69,20 @@ class TestInit:
         assert t.sections == []
 
     def test_custom_config(self):
-        t = UnifiedReportTemplate({
-            "name": "custom",
-            "format": "json",
-            "sections": ["s1"],
-            "metadata": {"key": "val"},
-        })
+        t = UnifiedReportTemplate(
+            {
+                "name": "custom",
+                "format": "json",
+                "sections": ["s1"],
+                "metadata": {"key": "val"},
+            }
+        )
         assert t.name == "custom"
         assert t.format_type == "json"
 
 
 # ── render ──
+
 
 class TestRender:
     def test_render_markdown(self, metadata, basic_data):
@@ -112,6 +116,7 @@ class TestRender:
 
 
 # ── _render_markdown ──
+
 
 class TestRenderMarkdown:
     def test_contains_title(self, metadata, basic_data):
@@ -167,7 +172,9 @@ class TestRenderMarkdown:
             "orchestration_results": {
                 "execution_plan": {
                     "strategy": "sequential",
-                    "steps": [{"agent": "FallacyAgent", "description": "Detect fallacies"}],
+                    "steps": [
+                        {"agent": "FallacyAgent", "description": "Detect fallacies"}
+                    ],
                 },
                 "agent_results": {
                     "FallacyAgent": {
@@ -190,6 +197,7 @@ class TestRenderMarkdown:
 
 
 # ── _render_console ──
+
 
 class TestRenderConsole:
     def test_compact_format(self, metadata, basic_data):
@@ -227,6 +235,7 @@ class TestRenderConsole:
 
 # ── _render_json ──
 
+
 class TestRenderJson:
     def test_valid_json(self, metadata, rich_data):
         t = UnifiedReportTemplate({"format": "json"})
@@ -244,6 +253,7 @@ class TestRenderJson:
 
 
 # ── _render_html ──
+
 
 class TestRenderHtml:
     def test_html_structure(self, metadata, basic_data):
@@ -267,6 +277,7 @@ class TestRenderHtml:
 
 
 # ── Edge Cases ──
+
 
 class TestEdgeCases:
     def test_empty_data(self, metadata):

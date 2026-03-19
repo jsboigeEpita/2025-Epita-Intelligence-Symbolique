@@ -82,9 +82,7 @@ class AFHandler:
 
         return self._reasoner_cache[semantics_key]
 
-    def _build_framework(
-        self, arguments: List[str], attacks: List[List[str]]
-    ) -> tuple:
+    def _build_framework(self, arguments: List[str], attacks: List[List[str]]) -> tuple:
         """
         Builds a DungTheory from argument names and attack pairs.
         Returns (dung_theory, arg_map).

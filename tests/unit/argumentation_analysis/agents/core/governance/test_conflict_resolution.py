@@ -11,8 +11,8 @@ from argumentation_analysis.agents.core.governance.conflict_resolution import (
     compromise_mediation,
 )
 
-
 # ── detect_conflicts ──
+
 
 class TestDetectConflicts:
     def test_no_conflicts_same_positions(self):
@@ -66,6 +66,7 @@ class TestDetectConflicts:
 
 # ── resolve_conflict ──
 
+
 class TestResolveConflict:
     @pytest.fixture
     def conflict(self):
@@ -103,6 +104,7 @@ class TestResolveConflict:
 
 # ── Individual mediation functions ──
 
+
 class TestMediationStrategies:
     @pytest.fixture
     def conflict(self):
@@ -127,12 +129,20 @@ class TestMediationStrategies:
         assert "middle ground" in result["details"]
 
     def test_all_results_have_agents(self, conflict):
-        for fn in [collaborative_mediation, competitive_mediation, compromise_mediation]:
+        for fn in [
+            collaborative_mediation,
+            competitive_mediation,
+            compromise_mediation,
+        ]:
             result = fn(conflict)
             assert result["agents"] == ["X", "Y"]
 
     def test_all_results_have_details(self, conflict):
-        for fn in [collaborative_mediation, competitive_mediation, compromise_mediation]:
+        for fn in [
+            collaborative_mediation,
+            competitive_mediation,
+            compromise_mediation,
+        ]:
             result = fn(conflict)
             assert isinstance(result["details"], str)
             assert len(result["details"]) > 0
@@ -145,6 +155,7 @@ class TestMediationStrategies:
 
 
 # ── Integration ──
+
 
 class TestConflictResolutionIntegration:
     def test_detect_then_resolve(self):

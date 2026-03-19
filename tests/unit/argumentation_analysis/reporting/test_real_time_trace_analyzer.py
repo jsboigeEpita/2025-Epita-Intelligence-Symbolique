@@ -20,10 +20,10 @@ from argumentation_analysis.reporting.real_time_trace_analyzer import (
     get_conversation_report,
 )
 
-
 # ============================================================
 # RealToolCall — formatting
 # ============================================================
+
 
 class TestRealToolCall:
     def _make_call(self, **overrides):
@@ -175,6 +175,7 @@ class TestRealToolCall:
 # AgentConversationBlock
 # ============================================================
 
+
 class TestAgentConversationBlock:
     def test_init(self):
         block = AgentConversationBlock(agent_name="Agent1")
@@ -185,8 +186,13 @@ class TestAgentConversationBlock:
     def test_add_tool_call(self):
         block = AgentConversationBlock(agent_name="Agent1")
         call = RealToolCall(
-            agent_name="Agent1", tool_name="t", arguments={},
-            result=None, timestamp=0, execution_time_ms=0, success=True,
+            agent_name="Agent1",
+            tool_name="t",
+            arguments={},
+            result=None,
+            timestamp=0,
+            execution_time_ms=0,
+            success=True,
         )
         block.add_tool_call(call)
         assert len(block.tool_calls) == 1
@@ -206,8 +212,13 @@ class TestAgentConversationBlock:
     def test_conversation_format_with_calls(self):
         block = AgentConversationBlock(agent_name="Agent1")
         call = RealToolCall(
-            agent_name="Agent1", tool_name="search", arguments={"q": "test"},
-            result="found", timestamp=0, execution_time_ms=10.0, success=True,
+            agent_name="Agent1",
+            tool_name="search",
+            arguments={"q": "test"},
+            result="found",
+            timestamp=0,
+            execution_time_ms=10.0,
+            success=True,
         )
         block.add_tool_call(call)
         output = block.to_conversation_format()
@@ -217,6 +228,7 @@ class TestAgentConversationBlock:
 # ============================================================
 # RealTimeTraceAnalyzer
 # ============================================================
+
 
 class TestRealTimeTraceAnalyzer:
     @pytest.fixture
@@ -262,8 +274,11 @@ class TestRealTimeTraceAnalyzer:
 
     def test_record_tool_call_disabled(self, analyzer):
         analyzer.record_tool_call(
-            agent_name="A", tool_name="t", arguments={},
-            result=None, execution_time_ms=0,
+            agent_name="A",
+            tool_name="t",
+            arguments={},
+            result=None,
+            execution_time_ms=0,
         )
         assert analyzer.total_tool_calls == 0
 
@@ -272,8 +287,11 @@ class TestRealTimeTraceAnalyzer:
         # Pre-create block to avoid nested lock (source code uses non-reentrant Lock)
         analyzer.start_agent_block("Agent1")
         analyzer.record_tool_call(
-            agent_name="Agent1", tool_name="search", arguments={"q": "test"},
-            result="found", execution_time_ms=15.0,
+            agent_name="Agent1",
+            tool_name="search",
+            arguments={"q": "test"},
+            result="found",
+            execution_time_ms=15.0,
         )
         assert analyzer.total_tool_calls == 1
         assert len(analyzer.conversation_blocks) == 1
@@ -284,14 +302,20 @@ class TestRealTimeTraceAnalyzer:
         # Pre-create blocks to avoid nested lock deadlock
         analyzer.start_agent_block("A1")
         analyzer.record_tool_call(
-            agent_name="A1", tool_name="t1", arguments={},
-            result=None, execution_time_ms=0,
+            agent_name="A1",
+            tool_name="t1",
+            arguments={},
+            result=None,
+            execution_time_ms=0,
         )
         # Switch agent — pre-create block
         analyzer.start_agent_block("A2")
         analyzer.record_tool_call(
-            agent_name="A2", tool_name="t2", arguments={},
-            result=None, execution_time_ms=0,
+            agent_name="A2",
+            tool_name="t2",
+            arguments={},
+            result=None,
+            execution_time_ms=0,
         )
         assert len(analyzer.conversation_blocks) == 2
 
@@ -299,12 +323,18 @@ class TestRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_agent_block("A1")
         analyzer.record_tool_call(
-            agent_name="A1", tool_name="t1", arguments={},
-            result=None, execution_time_ms=0,
+            agent_name="A1",
+            tool_name="t1",
+            arguments={},
+            result=None,
+            execution_time_ms=0,
         )
         analyzer.record_tool_call(
-            agent_name="A1", tool_name="t2", arguments={},
-            result=None, execution_time_ms=0,
+            agent_name="A1",
+            tool_name="t2",
+            arguments={},
+            result=None,
+            execution_time_ms=0,
         )
         assert len(analyzer.conversation_blocks) == 1
         assert len(analyzer.conversation_blocks[0].tool_calls) == 2
@@ -313,9 +343,13 @@ class TestRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_agent_block("A1")
         analyzer.record_tool_call(
-            agent_name="A1", tool_name="fail_tool", arguments={},
-            result=None, execution_time_ms=5.0,
-            success=False, error_message="timeout",
+            agent_name="A1",
+            tool_name="fail_tool",
+            arguments={},
+            result=None,
+            execution_time_ms=5.0,
+            success=False,
+            error_message="timeout",
         )
         call = analyzer.conversation_blocks[0].tool_calls[0]
         assert call.success is False
@@ -343,8 +377,10 @@ class TestRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_agent_block("Sherlock")
         analyzer.record_tool_call(
-            agent_name="Sherlock", tool_name="investigate",
-            arguments={"clue": "footprint"}, result="suspect found",
+            agent_name="Sherlock",
+            tool_name="investigate",
+            arguments={"clue": "footprint"},
+            result="suspect found",
             execution_time_ms=100.0,
         )
         analyzer.stop_capture()
@@ -386,8 +422,11 @@ class TestRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_agent_block("A")
         analyzer.record_tool_call(
-            agent_name="A", tool_name="t", arguments={},
-            result="ok", execution_time_ms=1.0,
+            agent_name="A",
+            tool_name="t",
+            arguments={},
+            result="ok",
+            execution_time_ms=1.0,
         )
         analyzer.stop_capture()
         filepath = str(tmp_path / "report.md")
@@ -399,7 +438,9 @@ class TestRealTimeTraceAnalyzer:
 
     def test_save_report_invalid_path(self, analyzer):
         # Use a truly non-existent path (Windows drive that doesn't exist)
-        result = analyzer.save_conversation_report("Z:\\this_drive_does_not_exist\\path\\report.md")
+        result = analyzer.save_conversation_report(
+            "Z:\\this_drive_does_not_exist\\path\\report.md"
+        )
         assert result is False
 
 
@@ -407,9 +448,11 @@ class TestRealTimeTraceAnalyzer:
 # tool_call_tracer decorator
 # ============================================================
 
+
 class TestToolCallTracer:
     def test_decorator_when_disabled(self):
         """When capture is disabled, function runs normally."""
+
         @tool_call_tracer("Agent", "tool")
         def my_func(x):
             return x * 2
@@ -442,6 +485,7 @@ class TestToolCallTracer:
 # ============================================================
 # Module-level functions
 # ============================================================
+
 
 class TestModuleFunctions:
     def test_start_stop_capture(self):

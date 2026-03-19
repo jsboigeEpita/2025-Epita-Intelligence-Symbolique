@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import dataclass
 from enum import Enum
 
-
 # --- Helpers for building mock registries and workflows ---
+
 
 class MockPhaseStatus(Enum):
     COMPLETED = "completed"
@@ -91,6 +91,7 @@ class TestListWorkflows:
             def wrapper(fn):
                 tools_registered[fn.__name__] = fn
                 return fn
+
             return wrapper
 
         mcp_mock.tool = fake_tool
@@ -98,6 +99,7 @@ class TestListWorkflows:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         register_workflow_tools(mcp_mock, lambda: MagicMock())
 
         assert "list_workflows" in tools_registered
@@ -125,6 +127,7 @@ class TestRunWorkflow:
             def wrapper(fn):
                 tools_registered[fn.__name__] = fn
                 return fn
+
             return wrapper
 
         mcp_mock.tool = fake_tool
@@ -133,12 +136,15 @@ class TestRunWorkflow:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         register_workflow_tools(mcp_mock, lambda: mock_registry)
 
         mock_result = {
             "workflow_name": "standard",
             "phases": {
-                "p1": MockPhaseResult("p1", MockPhaseStatus.COMPLETED, "argument_quality"),
+                "p1": MockPhaseResult(
+                    "p1", MockPhaseStatus.COMPLETED, "argument_quality"
+                ),
             },
             "summary": {"completed": 1, "failed": 0, "skipped": 0},
             "capabilities_used": ["argument_quality"],
@@ -167,6 +173,7 @@ class TestRunWorkflow:
             def wrapper(fn):
                 tools_registered[fn.__name__] = fn
                 return fn
+
             return wrapper
 
         mcp_mock.tool = fake_tool
@@ -174,6 +181,7 @@ class TestRunWorkflow:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         register_workflow_tools(mcp_mock, lambda: MagicMock())
 
         with patch(
@@ -200,6 +208,7 @@ class TestGetWorkflowDetails:
             def wrapper(fn):
                 tools_registered[fn.__name__] = fn
                 return fn
+
             return wrapper
 
         mcp_mock.tool = fake_tool
@@ -207,6 +216,7 @@ class TestGetWorkflowDetails:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         register_workflow_tools(mcp_mock, lambda: MagicMock())
 
         with patch(
@@ -230,6 +240,7 @@ class TestGetWorkflowDetails:
             def wrapper(fn):
                 tools_registered[fn.__name__] = fn
                 return fn
+
             return wrapper
 
         mcp_mock.tool = fake_tool
@@ -237,6 +248,7 @@ class TestGetWorkflowDetails:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         register_workflow_tools(mcp_mock, lambda: MagicMock())
 
         with patch(

@@ -45,9 +45,7 @@ class DeLPHandler:
         self._DelpAnswer = jpype.JClass(f"{pkg}.semantics.DelpAnswer")
 
         # FOL classes for queries
-        self._FolParser = jpype.JClass(
-            "org.tweetyproject.logics.fol.parser.FolParser"
-        )
+        self._FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
 
         logger.info("DeLP classes loaded successfully.")
 
@@ -140,11 +138,13 @@ class DeLPHandler:
             if queries:
                 for q in queries:
                     answer, msg = self.query(program, q, criterion)
-                    results.append({
-                        "query": q,
-                        "answer": answer,
-                        "message": msg,
-                    })
+                    results.append(
+                        {
+                            "query": q,
+                            "answer": answer,
+                            "message": msg,
+                        }
+                    )
 
             return {
                 "program": program_text,

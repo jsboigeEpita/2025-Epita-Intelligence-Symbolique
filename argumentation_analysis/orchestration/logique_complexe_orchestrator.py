@@ -90,7 +90,7 @@ class LogiqueComplexeOrchestrator:
             "It is maintained for backward compatibility only. "
             "Please use the new agent group chat architecture for new implementations.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         self._logger = logging.getLogger(self.__class__.__name__)
         self.kernel = kernel

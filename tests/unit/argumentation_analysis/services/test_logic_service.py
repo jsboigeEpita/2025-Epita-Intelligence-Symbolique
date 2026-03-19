@@ -21,6 +21,7 @@ def initialized_service(service):
 
 # ── __init__ ──
 
+
 class TestInit:
     def test_initial_state(self, service):
         assert service.active_sessions == {}
@@ -32,6 +33,7 @@ class TestInit:
 
 
 # ── initialize_logic_agents ──
+
 
 class TestInitializeLogicAgents:
     def test_default_config(self, service):
@@ -50,6 +52,7 @@ class TestInitializeLogicAgents:
 
 
 # ── analyze_text_logic ──
+
 
 class TestAnalyzeTextLogic:
     def test_propositional_analysis(self, initialized_service):
@@ -94,6 +97,7 @@ class TestAnalyzeTextLogic:
 
 # ── validate_formula ──
 
+
 class TestValidateFormula:
     def test_propositional(self, service):
         valid, msg = service.validate_formula("p => q", "propositional")
@@ -114,6 +118,7 @@ class TestValidateFormula:
 
 
 # ── execute_query ──
+
 
 class TestExecuteQuery:
     def test_propositional_query(self, service):
@@ -143,6 +148,7 @@ class TestExecuteQuery:
 
 # ── get_service_status ──
 
+
 class TestGetServiceStatus:
     def test_initial_status(self, service):
         status = service.get_service_status()
@@ -162,6 +168,7 @@ class TestGetServiceStatus:
 
 # ── clear_cache ──
 
+
 class TestClearCache:
     def test_clears_cache(self, initialized_service):
         initialized_service.analyze_text_logic("text", "propositional")
@@ -172,6 +179,7 @@ class TestClearCache:
 
 
 # ── Circuit Breaker ──
+
 
 class TestCircuitBreaker:
     def test_initially_closed(self, service):
@@ -198,6 +206,7 @@ class TestCircuitBreaker:
 
 # ── Fallback ──
 
+
 class TestFallback:
     def test_fallback_result(self, service):
         result = service._get_fallback_analysis_result("text", "propositional")
@@ -205,7 +214,9 @@ class TestFallback:
         assert result["success"] is True
 
     def test_fallback_with_error(self, service):
-        result = service._get_fallback_analysis_result("text", "propositional", "test error")
+        result = service._get_fallback_analysis_result(
+            "text", "propositional", "test error"
+        )
         assert result["error"] == "test error"
 
     def test_fallback_disabled(self, service):
@@ -223,6 +234,7 @@ class TestFallback:
 
 # ── analyze_text_logic_async ──
 
+
 class TestAnalyzeTextLogicAsync:
     def test_async_with_circuit_breaker_open(self, service):
         for _ in range(5):
@@ -238,6 +250,7 @@ class TestAnalyzeTextLogicAsync:
 
 # ── execute_multiple_queries_async ──
 
+
 class TestExecuteMultipleQueriesAsync:
     def test_multiple_queries(self, service):
         queries = [
@@ -249,6 +262,7 @@ class TestExecuteMultipleQueriesAsync:
 
 
 # ── validate_and_sanitize_input ──
+
 
 class TestValidateAndSanitizeInput:
     def test_valid_input(self, service):
@@ -272,35 +286,44 @@ class TestValidateAndSanitizeInput:
 
     def test_text_truncated(self, service):
         long_text = "A" * 20000
-        valid, text, lt = service.validate_and_sanitize_input(long_text, "propositional")
+        valid, text, lt = service.validate_and_sanitize_input(
+            long_text, "propositional"
+        )
         assert valid is True
         assert len(text) == 10000
 
     def test_text_stripped(self, service):
-        valid, text, lt = service.validate_and_sanitize_input("  hello  ", "propositional")
+        valid, text, lt = service.validate_and_sanitize_input(
+            "  hello  ", "propositional"
+        )
         assert text == "hello"
 
 
 # ── _determine_logic_type ──
 
+
 class TestDetermineLogicType:
-    @pytest.mark.parametrize("text,expected", [
-        ("forall x P(x)", "first_order"),
-        ("exists y Q(y)", "first_order"),
-        ("∀x P(x)", "first_order"),
-        ("∃y Q(y)", "first_order"),
-        ("necessarily p", "modal"),
-        ("possibly q", "modal"),
-        ("□p", "modal"),
-        ("◇q", "modal"),
-        ("simple text", "propositional"),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("forall x P(x)", "first_order"),
+            ("exists y Q(y)", "first_order"),
+            ("∀x P(x)", "first_order"),
+            ("∃y Q(y)", "first_order"),
+            ("necessarily p", "modal"),
+            ("possibly q", "modal"),
+            ("□p", "modal"),
+            ("◇q", "modal"),
+            ("simple text", "propositional"),
+        ],
+    )
     def test_detection(self, service, text, expected):
         result = service._determine_logic_type(text)
         assert result == expected
 
 
 # ── shutdown ──
+
 
 class TestShutdown:
     def test_shutdown_clears_state(self, initialized_service):
@@ -313,6 +336,7 @@ class TestShutdown:
 
 
 # ── Integration ──
+
 
 class TestLogicServiceIntegration:
     def test_full_workflow(self, service):

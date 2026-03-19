@@ -19,7 +19,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     PhaseStatus,
 )
 
-
 # ============================================================
 # Basic invoke callable dispatch
 # ============================================================
@@ -43,7 +42,9 @@ class TestInvokeCallableDispatch:
             invoke=fake_invoke,
         )
 
-        workflow = WorkflowBuilder("test").add_phase("p1", capability="test_cap").build()
+        workflow = (
+            WorkflowBuilder("test").add_phase("p1", capability="test_cap").build()
+        )
         executor = WorkflowExecutor(registry)
         results = await executor.execute(workflow, "hello world")
 
@@ -170,9 +171,7 @@ class TestInvokeErrorHandling:
             invoke=bad_invoke,
         )
 
-        workflow = (
-            WorkflowBuilder("test").add_phase("p1", capability="bad_cap").build()
-        )
+        workflow = WorkflowBuilder("test").add_phase("p1", capability="bad_cap").build()
         executor = WorkflowExecutor(registry)
         results = await executor.execute(workflow, "test")
 
@@ -195,7 +194,9 @@ class TestContextChaining:
 
         async def phase_b_invoke(text, ctx):
             upstream = ctx.get("phase_a_output", {})
-            score = upstream.get("quality_score", 0) if isinstance(upstream, dict) else 0
+            score = (
+                upstream.get("quality_score", 0) if isinstance(upstream, dict) else 0
+            )
             return {"counter_based_on": score}
 
         registry = CapabilityRegistry()
@@ -366,10 +367,16 @@ class TestMultiPhaseWorkflow:
 
         registry = CapabilityRegistry()
         registry.register(
-            "extractor", ComponentType.AGENT, capabilities=["extract"], invoke=extract_invoke
+            "extractor",
+            ComponentType.AGENT,
+            capabilities=["extract"],
+            invoke=extract_invoke,
         )
         registry.register(
-            "analyzer", ComponentType.AGENT, capabilities=["analyze"], invoke=analyze_invoke
+            "analyzer",
+            ComponentType.AGENT,
+            capabilities=["analyze"],
+            invoke=analyze_invoke,
         )
         registry.register(
             "synthesizer",
@@ -392,7 +399,9 @@ class TestMultiPhaseWorkflow:
         assert results["analyze"].status == PhaseStatus.COMPLETED
         assert results["synthesize"].status == PhaseStatus.COMPLETED
         assert results["extract"].output["claims"][0] == "Claim one"
-        assert results["analyze"].output["claim_count"] >= 3  # 3 claims + possible empty trailing
+        assert (
+            results["analyze"].output["claim_count"] >= 3
+        )  # 3 claims + possible empty trailing
 
     @pytest.mark.asyncio
     async def test_mixed_invoke_and_none(self):
@@ -445,7 +454,8 @@ class TestRealComponentIntegration:
         )
         executor = WorkflowExecutor(registry)
         results = await executor.execute(
-            workflow, "Les vaccins sont efficaces car les études scientifiques le montrent."
+            workflow,
+            "Les vaccins sont efficaces car les études scientifiques le montrent.",
         )
 
         assert results["quality"].status == PhaseStatus.COMPLETED
@@ -488,7 +498,8 @@ class TestRealComponentIntegration:
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
         results = await executor.execute(
-            workflow, "La peine de mort devrait être abolie car elle ne dissuade pas le crime."
+            workflow,
+            "La peine de mort devrait être abolie car elle ne dissuade pas le crime.",
         )
 
         assert results["quality"].status == PhaseStatus.COMPLETED

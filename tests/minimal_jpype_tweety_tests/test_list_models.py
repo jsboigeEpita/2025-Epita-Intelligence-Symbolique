@@ -15,7 +15,12 @@ all_jars_in_libs = [
     os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")
 ]
 _with_deps = [j for j in all_jars_in_libs if "with-dependencies" in os.path.basename(j)]
-_simple = [j for j in all_jars_in_libs if "tweety-full" in os.path.basename(j) and "with-dependencies" not in os.path.basename(j)]
+_simple = [
+    j
+    for j in all_jars_in_libs
+    if "tweety-full" in os.path.basename(j)
+    and "with-dependencies" not in os.path.basename(j)
+]
 TWEETY_JARS = _with_deps if _with_deps else _simple if _simple else all_jars_in_libs
 
 print(f"Dynamically included JARS for test_list_models: {TWEETY_JARS}")

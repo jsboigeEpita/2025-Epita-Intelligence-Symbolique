@@ -27,7 +27,6 @@ from argumentation_analysis.core.capability_registry import (
     ComponentType,
 )
 
-
 # =====================================================================
 # Helper
 # =====================================================================
@@ -63,7 +62,9 @@ class TestBuildFormalVerificationWorkflow:
 
     def test_phase_count(self):
         wf = build_formal_verification_workflow()
-        assert len(wf.phases) == 17  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
+        assert (
+            len(wf.phases) == 17
+        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
 
     def test_required_capabilities(self):
         wf = build_formal_verification_workflow()
@@ -198,7 +199,9 @@ class TestFormalVerificationExecution:
         executor = WorkflowExecutor(registry)
         results = await executor.execute(wf, "Test argument for verification.")
         assert results is not None
-        completed = [name for name, r in results.items() if r.status == PhaseStatus.COMPLETED]
+        completed = [
+            name for name, r in results.items() if r.status == PhaseStatus.COMPLETED
+        ]
         # At least extraction + synthesis should complete
         assert len(completed) >= 2
 
@@ -211,8 +214,12 @@ class TestFormalVerificationExecution:
         registry = _make_registry(*caps_without_modal)
         executor = WorkflowExecutor(registry)
         results = await executor.execute(wf, "Test text.")
-        completed_names = [name for name, r in results.items() if r.status == PhaseStatus.COMPLETED]
-        skipped_names = [name for name, r in results.items() if r.status == PhaseStatus.SKIPPED]
+        completed_names = [
+            name for name, r in results.items() if r.status == PhaseStatus.COMPLETED
+        ]
+        skipped_names = [
+            name for name, r in results.items() if r.status == PhaseStatus.SKIPPED
+        ]
         assert "modal_analysis" in skipped_names
         assert "extraction" in completed_names
 
@@ -233,7 +240,10 @@ class TestRunFormalVerification:
             return_value={"status": "ok"},
         ) as mock_run:
             # Re-import to pick up the patch (lazy import in function body)
-            from argumentation_analysis.workflows.formal_verification import run_formal_verification as rfv
+            from argumentation_analysis.workflows.formal_verification import (
+                run_formal_verification as rfv,
+            )
+
             result = await rfv("Test text")
             mock_run.assert_called_once()
             assert mock_run.call_args[1]["workflow_name"] == "formal_verification"
@@ -250,7 +260,10 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_fact_extraction(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_fact_extraction
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fact_extraction,
+        )
+
         result = await _invoke_fact_extraction(
             "This is a long claim about logic. Another important assertion here. A third point.",
             {},
@@ -261,13 +274,19 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_fact_extraction_short_text(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_fact_extraction
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fact_extraction,
+        )
+
         result = await _invoke_fact_extraction("Hi.", {})
         assert result["claim_count"] == 0  # Too short
 
     @pytest.mark.asyncio
     async def test_invoke_propositional_logic_error_fallback(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_propositional_logic
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_propositional_logic,
+        )
+
         # Without JVM, should return error dict
         result = await _invoke_propositional_logic("a && b", {})
         assert "logic_type" in result
@@ -275,26 +294,38 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_fol_reasoning_error_fallback(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_fol_reasoning
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_fol_reasoning,
+        )
+
         result = await _invoke_fol_reasoning("forall x: P(x)", {})
         assert result["logic_type"] == "first_order"
 
     @pytest.mark.asyncio
     async def test_invoke_modal_logic_error_fallback(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_modal_logic
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_modal_logic,
+        )
+
         result = await _invoke_modal_logic("[]p => p", {})
         # Should either succeed or return error dict
         assert "logic_type" in result or "formulas" in result
 
     @pytest.mark.asyncio
     async def test_invoke_dung_extensions_error_fallback(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_dung_extensions
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
         result = await _invoke_dung_extensions("test", {"arguments": ["a", "b"]})
         assert "semantics" in result or "error" in result
 
     @pytest.mark.asyncio
     async def test_invoke_formal_synthesis_aggregates(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_formal_synthesis
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
         ctx = {
             "phase_fol_analysis_output": {"consistent": True},
             "phase_pl_analysis_output": {"satisfiable": False},
@@ -308,7 +339,10 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_formal_synthesis_empty_context(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _invoke_formal_synthesis
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_formal_synthesis,
+        )
+
         result = await _invoke_formal_synthesis("test", {})
         assert result["overall_validity"] == 0.5
         assert result["phase_count"] == 0
@@ -324,23 +358,33 @@ class TestStateWriters:
 
     def _make_state(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         return UnifiedAnalysisState("test text")
 
     def test_write_fact_extraction_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_fact_extraction_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
         state = self._make_state()
         output = {"claims": ["Claim one here", "Claim two here"]}
         _write_fact_extraction_to_state(output, state, {})
         assert len(state.extracts) == 2
 
     def test_write_fact_extraction_none(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_fact_extraction_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
         state = self._make_state()
         _write_fact_extraction_to_state(None, state, {})
         assert len(state.extracts) == 0
 
     def test_write_propositional_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_propositional_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_propositional_to_state,
+        )
+
         state = self._make_state()
         output = {"formulas": ["a && b"], "satisfiable": True, "model": {"a": True}}
         _write_propositional_to_state(output, state, {})
@@ -348,16 +392,27 @@ class TestStateWriters:
         assert state.propositional_analysis_results[0]["satisfiable"] is True
 
     def test_write_fol_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_fol_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fol_to_state,
+        )
+
         state = self._make_state()
-        output = {"formulas": ["forall x: P(x)"], "consistent": True, "inferences": ["P(a)"], "confidence": 0.9}
+        output = {
+            "formulas": ["forall x: P(x)"],
+            "consistent": True,
+            "inferences": ["P(a)"],
+            "confidence": 0.9,
+        }
         _write_fol_to_state(output, state, {})
         assert len(state.fol_analysis_results) == 1
         assert state.fol_analysis_results[0]["consistent"] is True
         assert state.fol_analysis_results[0]["confidence"] == 0.9
 
     def test_write_modal_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_modal_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_modal_to_state,
+        )
+
         state = self._make_state()
         output = {"formulas": ["[]p"], "valid": True, "modalities": ["necessity"]}
         _write_modal_to_state(output, state, {})
@@ -365,7 +420,10 @@ class TestStateWriters:
         assert state.modal_analysis_results[0]["valid"] is True
 
     def test_write_dung_extensions_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_dung_extensions_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_dung_extensions_to_state,
+        )
+
         state = self._make_state()
         output = {
             "semantics": "preferred",
@@ -378,7 +436,10 @@ class TestStateWriters:
         assert fw["name"] == "verification_preferred"
 
     def test_write_formal_synthesis_to_state(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_formal_synthesis_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_formal_synthesis_to_state,
+        )
+
         state = self._make_state()
         output = {
             "summary": "All consistent",
@@ -390,7 +451,10 @@ class TestStateWriters:
         assert state.formal_synthesis_reports[0]["overall_validity"] == 0.85
 
     def test_write_formal_synthesis_none(self):
-        from argumentation_analysis.orchestration.unified_pipeline import _write_formal_synthesis_to_state
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_formal_synthesis_to_state,
+        )
+
         state = self._make_state()
         _write_formal_synthesis_to_state(None, state, {})
         assert len(state.formal_synthesis_reports) == 0
@@ -406,39 +470,48 @@ class TestUnifiedAnalysisStateNewFields:
 
     def test_fol_analysis_field_exists(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         assert hasattr(state, "fol_analysis_results")
         assert state.fol_analysis_results == []
 
     def test_propositional_analysis_field_exists(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         assert hasattr(state, "propositional_analysis_results")
         assert state.propositional_analysis_results == []
 
     def test_modal_analysis_field_exists(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         assert hasattr(state, "modal_analysis_results")
         assert state.modal_analysis_results == []
 
     def test_formal_synthesis_field_exists(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         assert hasattr(state, "formal_synthesis_reports")
         assert state.formal_synthesis_reports == []
 
     def test_add_fol_analysis_result(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         fol_id = state.add_fol_analysis_result(
-            formulas=["forall x: P(x)"], consistent=True, inferences=["P(a)"], confidence=0.9
+            formulas=["forall x: P(x)"],
+            consistent=True,
+            inferences=["P(a)"],
+            confidence=0.9,
         )
         assert fol_id.startswith("fol_")
         assert len(state.fol_analysis_results) == 1
 
     def test_add_propositional_analysis_result(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         pl_id = state.add_propositional_analysis_result(
             formulas=["a && b"], satisfiable=True, model={"a": True, "b": True}
@@ -448,6 +521,7 @@ class TestUnifiedAnalysisStateNewFields:
 
     def test_add_modal_analysis_result(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         ml_id = state.add_modal_analysis_result(
             formulas=["[]p"], valid=True, modalities=["necessity"]
@@ -457,6 +531,7 @@ class TestUnifiedAnalysisStateNewFields:
 
     def test_add_formal_synthesis_report(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         fs_id = state.add_formal_synthesis_report(
             summary="All consistent", phase_results={"fol": {}}, overall_validity=0.9
@@ -466,6 +541,7 @@ class TestUnifiedAnalysisStateNewFields:
 
     def test_snapshot_summarize_includes_new_fields(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         state.add_fol_analysis_result(["f"], True, [], 0.8)
         state.add_propositional_analysis_result(["a"], True)
@@ -477,6 +553,7 @@ class TestUnifiedAnalysisStateNewFields:
 
     def test_snapshot_full_includes_new_fields(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         state = UnifiedAnalysisState("test")
         state.add_modal_analysis_result(["[]p"], True, ["necessity"])
         snapshot = state.get_state_snapshot(summarize=False)
@@ -493,21 +570,32 @@ class TestCatalogRegistration:
     """Test that formal_verification workflow is in the catalog."""
 
     def test_formal_verification_in_catalog(self):
-        from argumentation_analysis.orchestration.unified_pipeline import get_workflow_catalog
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
         catalog = get_workflow_catalog()
         assert "formal_verification" in catalog
 
     def test_catalog_total_count(self):
-        from argumentation_analysis.orchestration.unified_pipeline import get_workflow_catalog
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
         catalog = get_workflow_catalog()
         # 7 built-in + 3 macro + 3 formal + 1 formal_verification = 14
         assert len(catalog) >= 14
 
     def test_formal_verification_phase_count_in_catalog(self):
-        from argumentation_analysis.orchestration.unified_pipeline import get_workflow_catalog
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
         catalog = get_workflow_catalog()
         wf = catalog["formal_verification"]
-        assert len(wf.phases) == 17  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
+        assert (
+            len(wf.phases) == 17
+        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
 
 
 # =====================================================================
@@ -520,6 +608,7 @@ class TestLogicCapabilityRegistration:
 
     def test_logic_capabilities_registered(self):
         from argumentation_analysis.orchestration.unified_pipeline import setup_registry
+
         registry = setup_registry()
         all_caps = registry.get_all_capabilities()
         for cap in [
@@ -535,6 +624,7 @@ class TestLogicCapabilityRegistration:
 
     def test_logic_services_have_invoke(self):
         from argumentation_analysis.orchestration.unified_pipeline import setup_registry
+
         registry = setup_registry()
         for name in [
             "fact_extraction_service",

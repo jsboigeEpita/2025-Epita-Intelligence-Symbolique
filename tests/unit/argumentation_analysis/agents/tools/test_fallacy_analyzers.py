@@ -12,10 +12,10 @@ Issue: #36 (test coverage)
 import pytest
 from unittest.mock import patch, MagicMock
 
-
 # ---------------------------------------------------------------------------
 # Fixtures to isolate singleton state between tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def _reset_singletons():
@@ -24,6 +24,7 @@ def _reset_singletons():
         ServiceRegistry,
         ConfigManager,
     )
+
     old_services = ServiceRegistry._services.copy()
     old_configs = ConfigManager._configs.copy()
     yield
@@ -44,6 +45,7 @@ class TestFallacySeverityEvaluator:
         from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import (
             FallacySeverityEvaluator,
         )
+
         return FallacySeverityEvaluator()
 
     # --- _determine_severity_level ---
@@ -72,10 +74,15 @@ class TestFallacySeverityEvaluator:
 
     def test_context_type_politique(self, evaluator):
         assert evaluator._determine_context_type("discours politique") == "politique"
-        assert evaluator._determine_context_type("élection présidentielle") == "politique"
+        assert (
+            evaluator._determine_context_type("élection présidentielle") == "politique"
+        )
 
     def test_context_type_scientifique(self, evaluator):
-        assert evaluator._determine_context_type("recherche scientifique") == "scientifique"
+        assert (
+            evaluator._determine_context_type("recherche scientifique")
+            == "scientifique"
+        )
         assert evaluator._determine_context_type("étude clinique") == "scientifique"
 
     def test_context_type_commercial(self, evaluator):
@@ -98,39 +105,29 @@ class TestFallacySeverityEvaluator:
     def test_visibility_known_type_with_keywords(self, evaluator):
         score = evaluator._calculate_visibility(
             "Appel à l'autorité",
-            "Les experts unanimes affirment que cette étude scientifique prouve tout."
+            "Les experts unanimes affirment que cette étude scientifique prouve tout.",
         )
         assert 0.0 < score <= 1.0
 
     def test_visibility_known_type_no_keywords(self, evaluator):
         score = evaluator._calculate_visibility(
-            "Appel à l'autorité",
-            "Le chat dort sur le canapé."
+            "Appel à l'autorité", "Le chat dort sur le canapé."
         )
         assert score == 0.0
 
     def test_visibility_unknown_type(self, evaluator):
-        score = evaluator._calculate_visibility(
-            "Type Inconnu",
-            "N'importe quel texte."
-        )
+        score = evaluator._calculate_visibility("Type Inconnu", "N'importe quel texte.")
         assert score == 0.5  # default for unknown types
 
     # --- _calculate_impact ---
 
     def test_impact_known_type(self, evaluator):
-        score = evaluator._calculate_impact(
-            "Ad hominem",
-            "Texte court."
-        )
+        score = evaluator._calculate_impact("Ad hominem", "Texte court.")
         assert score > 0.0
         assert score <= 1.0
 
     def test_impact_unknown_type(self, evaluator):
-        score = evaluator._calculate_impact(
-            "Type Inconnu",
-            "Un argument quelconque."
-        )
+        score = evaluator._calculate_impact("Type Inconnu", "Un argument quelconque.")
         assert score == 0.5
 
     def test_impact_long_argument_reduces_modifier(self, evaluator):
@@ -142,8 +139,15 @@ class TestFallacySeverityEvaluator:
     # --- _generate_explanation ---
 
     def test_generate_explanation_all_levels(self, evaluator):
-        for score, level_kw in [(0.1, "limité"), (0.4, "modéré"), (0.7, "important"), (0.9, "critique")]:
-            explanation = evaluator._generate_explanation("Ad hominem", "politique", score)
+        for score, level_kw in [
+            (0.1, "limité"),
+            (0.4, "modéré"),
+            (0.7, "important"),
+            (0.9, "critique"),
+        ]:
+            explanation = evaluator._generate_explanation(
+                "Ad hominem", "politique", score
+            )
             assert isinstance(explanation, str)
             assert len(explanation) > 10
 
@@ -187,7 +191,7 @@ class TestFallacySeverityEvaluator:
         result = evaluator.evaluate_severity(
             "Appel à l'autorité",
             "Les experts unanimes confirment cette recherche scientifique.",
-            "discours commercial"
+            "discours commercial",
         )
         assert "fallacy_type" in result
         assert "context_type" in result
@@ -218,7 +222,7 @@ class TestFallacySeverityEvaluator:
         result = evaluator.evaluate_severity(
             "Ad hominem",
             "personne caractère intégrité moralité crédibilité",
-            "politique"
+            "politique",
         )
         assert result["final_score"] <= 1.0
 
@@ -247,7 +251,7 @@ class TestFallacySeverityEvaluator:
             {
                 "fallacy_type": "Appel à l'autorité",
                 "argument": "Les experts disent que...",
-                "context": "scientifique"
+                "context": "scientifique",
             }
         ]
         ranked = evaluator.rank_fallacies(fallacies)
@@ -261,9 +265,7 @@ class TestFallacySeverityEvaluator:
 
     def test_evaluate_impact_returns_complete_result(self, evaluator):
         result = evaluator.evaluate_impact(
-            "Faux dilemme",
-            "Soit vous acceptez, soit vous perdez tout.",
-            "commercial"
+            "Faux dilemme", "Soit vous acceptez, soit vous perdez tout.", "commercial"
         )
         assert "fallacy_type" in result
         assert "severity" in result
@@ -287,6 +289,7 @@ class TestContextualFallacyAnalyzer:
         from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
             ContextualFallacyAnalyzer,
         )
+
         return ContextualFallacyAnalyzer()
 
     # --- _determine_context_type ---
@@ -347,9 +350,7 @@ class TestContextualFallacyAnalyzer:
         assert "Pente glissante" in types
 
     def test_identify_no_fallacies_clean_text(self, analyzer):
-        fallacies = analyzer._identify_potential_fallacies(
-            "Le chat dort paisiblement."
-        )
+        fallacies = analyzer._identify_potential_fallacies("Le chat dort paisiblement.")
         assert len(fallacies) == 0
 
     def test_identify_multiple_fallacies(self, analyzer):
@@ -360,9 +361,7 @@ class TestContextualFallacyAnalyzer:
         assert len(types) >= 2
 
     def test_fallacy_has_expected_fields(self, analyzer):
-        fallacies = analyzer._identify_potential_fallacies(
-            "Les experts sont unanimes."
-        )
+        fallacies = analyzer._identify_potential_fallacies("Les experts sont unanimes.")
         assert len(fallacies) > 0
         f = fallacies[0]
         assert "fallacy_type" in f
@@ -390,7 +389,9 @@ class TestContextualFallacyAnalyzer:
         ]
         filtered = analyzer._filter_by_context(fallacies, "politique")
         ad_hominem = [f for f in filtered if f["fallacy_type"] == "Ad hominem"][0]
-        tradition = [f for f in filtered if f["fallacy_type"] == "Appel à la tradition"][0]
+        tradition = [
+            f for f in filtered if f["fallacy_type"] == "Appel à la tradition"
+        ][0]
         # Ad hominem is relevant in political context
         assert ad_hominem["confidence"] == 0.8
         assert ad_hominem["contextual_relevance"] == "Élevée"
@@ -417,7 +418,7 @@ class TestContextualFallacyAnalyzer:
         with patch.object(analyzer, "_get_taxonomy_df", return_value=MagicMock()):
             result = analyzer.analyze_context(
                 "Les experts unanimes disent que tout le monde est d'accord.",
-                "politique"
+                "politique",
             )
             assert "context_type" in result
             assert "potential_fallacies_count" in result
@@ -430,8 +431,7 @@ class TestContextualFallacyAnalyzer:
     def test_identify_contextual_fallacies_filters_by_confidence(self, analyzer):
         with patch.object(analyzer, "_get_taxonomy_df", return_value=MagicMock()):
             fallacies = analyzer.identify_contextual_fallacies(
-                "Les experts unanimes affirment que c'est vrai.",
-                "général"
+                "Les experts unanimes affirment que c'est vrai.", "général"
             )
             # All returned fallacies should have confidence >= 0.5
             for f in fallacies:
@@ -440,8 +440,7 @@ class TestContextualFallacyAnalyzer:
     def test_identify_contextual_fallacies_empty_text(self, analyzer):
         with patch.object(analyzer, "_get_taxonomy_df", return_value=MagicMock()):
             fallacies = analyzer.identify_contextual_fallacies(
-                "Le chat dort.",
-                "général"
+                "Le chat dort.", "général"
             )
             assert isinstance(fallacies, list)
 
@@ -463,9 +462,7 @@ class TestContextualFallacyAnalyzer:
         assert "Aucun exemple" in examples[0]
 
     def test_examples_unknown_type(self, analyzer):
-        examples = analyzer.get_contextual_fallacy_examples(
-            "Type Inconnu", "politique"
-        )
+        examples = analyzer.get_contextual_fallacy_examples("Type Inconnu", "politique")
         assert isinstance(examples, list)
         assert "Aucun exemple" in examples[0]
 
@@ -502,6 +499,7 @@ class TestComplexFallacyAnalyzer:
         from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import (
             FallacySeverityEvaluator,
         )
+
         # Pre-populate ServiceRegistry with mocks
         ServiceRegistry._services[ContextualFallacyAnalyzer] = mock_contextual
         ServiceRegistry._services[FallacySeverityEvaluator] = mock_severity
@@ -509,6 +507,7 @@ class TestComplexFallacyAnalyzer:
         from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
             ComplexFallacyAnalyzer,
         )
+
         return ComplexFallacyAnalyzer()
 
     # --- _detect_contradictions ---
@@ -547,19 +546,23 @@ class TestComplexFallacyAnalyzer:
         assert circles == []
 
     def test_circular_arguments_no_keywords(self, analyzer):
-        circles = analyzer._detect_circular_arguments([
-            "Le chat dort.",
-            "Le chien mange.",
-            "L'oiseau chante.",
-        ])
+        circles = analyzer._detect_circular_arguments(
+            [
+                "Le chat dort.",
+                "Le chien mange.",
+                "L'oiseau chante.",
+            ]
+        )
         assert circles == []
 
     def test_circular_arguments_detected_with_keywords(self, analyzer):
-        circles = analyzer._detect_circular_arguments([
-            "A est vrai, donc B est vrai.",
-            "B est vrai, donc C est vrai.",
-            "C est vrai, donc A est vrai.",
-        ])
+        circles = analyzer._detect_circular_arguments(
+            [
+                "A est vrai, donc B est vrai.",
+                "B est vrai, donc C est vrai.",
+                "C est vrai, donc A est vrai.",
+            ]
+        )
         assert len(circles) > 0
         for circle in circles:
             assert len(circle["involved_arguments"]) == 3
@@ -579,7 +582,9 @@ class TestComplexFallacyAnalyzer:
         result = analyzer.identify_combined_fallacies("Un texte.")
         assert result == []
 
-    def test_combined_matching_combination(self, analyzer, mock_contextual, mock_severity):
+    def test_combined_matching_combination(
+        self, analyzer, mock_contextual, mock_severity
+    ):
         """When both components of a known combination are present, it's detected."""
         mock_contextual.identify_contextual_fallacies.return_value = [
             {"fallacy_type": "Appel à l'autorité", "confidence": 0.6},
@@ -594,7 +599,9 @@ class TestComplexFallacyAnalyzer:
         assert result[0]["severity"] <= 1.0
         assert "component_fallacies" in result[0]
 
-    def test_combined_severity_capped_at_1(self, analyzer, mock_contextual, mock_severity):
+    def test_combined_severity_capped_at_1(
+        self, analyzer, mock_contextual, mock_severity
+    ):
         mock_contextual.identify_contextual_fallacies.return_value = [
             {"fallacy_type": "Ad hominem", "confidence": 0.95},
             {"fallacy_type": "Généralisation hâtive", "confidence": 0.95},
@@ -678,8 +685,14 @@ class TestComplexFallacyAnalyzer:
     def test_escalation_detected(self, analyzer):
         # Escalation order: Appel à la tradition < Appel à la popularité < Ad hominem
         paragraphs = [
-            {"paragraph_index": 0, "fallacies": [{"fallacy_type": "Appel à la tradition"}]},
-            {"paragraph_index": 1, "fallacies": [{"fallacy_type": "Appel à la popularité"}]},
+            {
+                "paragraph_index": 0,
+                "fallacies": [{"fallacy_type": "Appel à la tradition"}],
+            },
+            {
+                "paragraph_index": 1,
+                "fallacies": [{"fallacy_type": "Appel à la popularité"}],
+            },
             {"paragraph_index": 2, "fallacies": [{"fallacy_type": "Ad hominem"}]},
         ]
         result = analyzer._detect_escalation_patterns(paragraphs)
@@ -693,8 +706,14 @@ class TestComplexFallacyAnalyzer:
         # Reverse order should not be detected as escalation
         paragraphs = [
             {"paragraph_index": 0, "fallacies": [{"fallacy_type": "Ad hominem"}]},
-            {"paragraph_index": 1, "fallacies": [{"fallacy_type": "Appel à la popularité"}]},
-            {"paragraph_index": 2, "fallacies": [{"fallacy_type": "Appel à la tradition"}]},
+            {
+                "paragraph_index": 1,
+                "fallacies": [{"fallacy_type": "Appel à la popularité"}],
+            },
+            {
+                "paragraph_index": 2,
+                "fallacies": [{"fallacy_type": "Appel à la tradition"}],
+            },
         ]
         result = analyzer._detect_escalation_patterns(paragraphs)
         assert result == []
@@ -724,6 +743,7 @@ class TestComplexFallacyAnalyzer:
     def test_fallacy_patterns_returns_pattern_dicts(self, analyzer, mock_contextual):
         # Simulate alternation pattern detection
         call_count = [0]
+
         def side_effect(argument, context):
             call_count[0] += 1
             if call_count[0] % 2 == 1:
@@ -750,7 +770,9 @@ class TestSharedServices:
     """Tests for the shared_services infrastructure used by analyzers."""
 
     def test_service_registry_creates_singleton(self):
-        from argumentation_analysis.agents.tools.support.shared_services import ServiceRegistry
+        from argumentation_analysis.agents.tools.support.shared_services import (
+            ServiceRegistry,
+        )
 
         class DummyService:
             pass
@@ -760,9 +782,12 @@ class TestSharedServices:
         assert instance1 is instance2
 
     def test_config_manager_caches_config(self):
-        from argumentation_analysis.agents.tools.support.shared_services import ConfigManager
+        from argumentation_analysis.agents.tools.support.shared_services import (
+            ConfigManager,
+        )
 
         call_count = [0]
+
         def loader():
             call_count[0] += 1
             return {"key": "value"}
@@ -773,9 +798,12 @@ class TestSharedServices:
         assert call_count[0] == 1  # only called once
 
     def test_config_manager_force_reload(self):
-        from argumentation_analysis.agents.tools.support.shared_services import ConfigManager
+        from argumentation_analysis.agents.tools.support.shared_services import (
+            ConfigManager,
+        )
 
         call_count = [0]
+
         def loader():
             call_count[0] += 1
             return {"version": call_count[0]}
@@ -786,7 +814,9 @@ class TestSharedServices:
         assert result["version"] == 2
 
     def test_get_configured_logger(self):
-        from argumentation_analysis.agents.tools.support.shared_services import get_configured_logger
+        from argumentation_analysis.agents.tools.support.shared_services import (
+            get_configured_logger,
+        )
         import logging
 
         logger = get_configured_logger("TestLogger")

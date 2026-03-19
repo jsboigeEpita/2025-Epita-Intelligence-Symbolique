@@ -11,8 +11,8 @@ from argumentation_analysis.core.utils.json_utils import (
     filter_list_in_json_data,
 )
 
-
 # ── load_json_from_file ──
+
 
 class TestLoadJsonFromFile:
     def test_load_dict(self, tmp_path):
@@ -23,7 +23,7 @@ class TestLoadJsonFromFile:
 
     def test_load_list(self, tmp_path):
         f = tmp_path / "test.json"
-        f.write_text('[1, 2, 3]', encoding="utf-8")
+        f.write_text("[1, 2, 3]", encoding="utf-8")
         result = load_json_from_file(f)
         assert result == [1, 2, 3]
 
@@ -50,6 +50,7 @@ class TestLoadJsonFromFile:
 
 
 # ── save_json_to_file ──
+
 
 class TestSaveJsonToFile:
     def test_save_dict(self, tmp_path):
@@ -97,6 +98,7 @@ class TestSaveJsonToFile:
 
 
 # ── filter_list_in_json_data ──
+
 
 class TestFilterListInJsonData:
     def test_filter_root_list(self):

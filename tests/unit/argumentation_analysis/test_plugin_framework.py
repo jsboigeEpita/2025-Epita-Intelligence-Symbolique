@@ -39,7 +39,6 @@ from argumentation_analysis.plugin_framework.benchmarking.benchmark_service impo
 )
 from argumentation_analysis.plugin_framework.agents.agent_loader import AgentLoader
 
-
 # ============================================================================
 # contracts.py — OrchestrationRequest
 # ============================================================================
@@ -118,9 +117,7 @@ class TestOrchestrationResponse:
     """Tests for OrchestrationResponse Pydantic model."""
 
     def test_success_response(self):
-        resp = OrchestrationResponse(
-            status="success", result={"output": "data"}
-        )
+        resp = OrchestrationResponse(status="success", result={"output": "data"})
         assert resp.status == "success"
         assert resp.result == {"output": "data"}
         assert resp.error_message is None
@@ -362,7 +359,9 @@ class TestBenchmarkSuiteResult:
             results=[
                 BenchmarkResult(request_id="r1", is_success=True, duration_ms=30.0),
                 BenchmarkResult(request_id="r2", is_success=True, duration_ms=50.0),
-                BenchmarkResult(request_id="r3", is_success=False, duration_ms=20.0, error="e"),
+                BenchmarkResult(
+                    request_id="r3", is_success=False, duration_ms=20.0, error="e"
+                ),
             ],
         )
         assert sr.total_runs == 3
@@ -454,11 +453,15 @@ class TestPluginLoader:
         # Make inspect.getmembers find our class
         fake_module.FakePlugin = FakePlugin
 
-        with patch("argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module") as mock_import:
+        with patch(
+            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
+        ) as mock_import:
             mock_import.return_value = fake_module
 
             # We need inspect.getmembers to work on our mock module
-            with patch("argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers") as mock_members:
+            with patch(
+                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
+            ) as mock_members:
                 mock_members.return_value = [("FakePlugin", FakePlugin)]
 
                 loader = PluginLoader([str(tmp_path)])
@@ -474,9 +477,13 @@ class TestPluginLoader:
 
         fake_module = MagicMock()
 
-        with patch("argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module") as mock_import:
+        with patch(
+            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
+        ) as mock_import:
             mock_import.return_value = fake_module
-            with patch("argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers") as mock_members:
+            with patch(
+                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
+            ) as mock_members:
                 # Return BasePlugin itself — should be filtered out
                 bp = BasePlugin
                 bp.__module__ = "src.core.plugins.standard.base_mod"
@@ -516,8 +523,12 @@ class TestPluginLoader:
         FakePlugin2.__name__ = "FakePlugin"
         FakePlugin2.__module__ = "src.core.plugins.standard.plug2"
 
-        with patch("argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module") as mock_import:
-            with patch("argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers") as mock_members:
+        with patch(
+            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
+        ) as mock_import:
+            with patch(
+                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
+            ) as mock_members:
                 call_count = [0]
 
                 def side_effect_import(name):
@@ -573,9 +584,7 @@ class TestOrchestrationService:
         plugin.do_thing.return_value = {"ok": True}
         svc = self._make_service(p=plugin)
 
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="p.do_thing"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="p.do_thing")
         resp = svc.handle_request(req)
 
         assert resp.status == "success"
@@ -583,9 +592,7 @@ class TestOrchestrationService:
 
     def test_workflow_execution_not_supported(self):
         svc = self._make_service()
-        req = OrchestrationRequest(
-            mode="workflow_execution", target="wf1"
-        )
+        req = OrchestrationRequest(mode="workflow_execution", target="wf1")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -593,9 +600,7 @@ class TestOrchestrationService:
 
     def test_missing_plugin_error(self):
         svc = self._make_service()
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="nonexistent.func"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="nonexistent.func")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -605,9 +610,7 @@ class TestOrchestrationService:
         plugin = MagicMock(spec=[])  # Empty spec -> no attributes
         svc = self._make_service(p=plugin)
 
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="p.missing_func"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="p.missing_func")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -615,9 +618,7 @@ class TestOrchestrationService:
 
     def test_target_without_dot_separator_error(self):
         svc = self._make_service()
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="no_dot_here"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="no_dot_here")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -625,9 +626,7 @@ class TestOrchestrationService:
 
     def test_target_with_multiple_dots_error(self):
         svc = self._make_service()
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="a.b.c"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="a.b.c")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -638,9 +637,7 @@ class TestOrchestrationService:
         plugin.crash.side_effect = RuntimeError("boom")
         svc = self._make_service(my=plugin)
 
-        req = OrchestrationRequest(
-            mode="direct_plugin_call", target="my.crash"
-        )
+        req = OrchestrationRequest(mode="direct_plugin_call", target="my.crash")
         resp = svc.handle_request(req)
 
         assert resp.status == "error"
@@ -853,10 +850,14 @@ class TestBenchmarkService:
         )
         bench = BenchmarkService(orch)
 
-        result = bench.run_suite("myplugin", "analyze", [
-            {"text": "hello"},
-            {"text": "world"},
-        ])
+        result = bench.run_suite(
+            "myplugin",
+            "analyze",
+            [
+                {"text": "hello"},
+                {"text": "world"},
+            ],
+        )
 
         assert isinstance(result, BenchmarkSuiteResult)
         assert result.plugin_name == "myplugin"
@@ -927,7 +928,8 @@ class TestBenchmarkService:
         # The custom_metrics dict itself is cleared
         # But the result's custom_metrics comes from what was recorded DURING the run
         assert all(
-            "stale" not in r.custom_metrics for r in bench.run_suite("p", "c", [{"x": 1}]).results
+            "stale" not in r.custom_metrics
+            for r in bench.run_suite("p", "c", [{"x": 1}]).results
         )
 
     def test_run_suite_request_ids_sequential(self):

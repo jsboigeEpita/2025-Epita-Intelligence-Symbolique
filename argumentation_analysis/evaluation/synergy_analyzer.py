@@ -23,7 +23,17 @@ logger = logging.getLogger("evaluation.synergy_analyzer")
 WORKFLOW_PHASES = {
     "light": ["extract", "quality", "counter"],
     "standard": ["extract", "quality", "counter", "jtms", "governance", "debate"],
-    "full": ["transcribe", "extract", "quality", "neural_fallacy", "counter", "jtms", "governance", "debate", "index"],
+    "full": [
+        "transcribe",
+        "extract",
+        "quality",
+        "neural_fallacy",
+        "counter",
+        "jtms",
+        "governance",
+        "debate",
+        "index",
+    ],
 }
 
 # Document difficulty levels
@@ -51,6 +61,7 @@ FALLACY_CATEGORIES = [
 @dataclass
 class WorkflowMetrics:
     """Performance metrics for a workflow."""
+
     workflow_name: str
     total_runs: int = 0
     success_rate: float = 0.0
@@ -65,6 +76,7 @@ class WorkflowMetrics:
 @dataclass
 class SynergyRecommendation:
     """Recommendation for optimal workflow configuration."""
+
     use_case: str
     recommended_workflow: str
     confidence: float  # 0.0 - 1.0
@@ -77,7 +89,10 @@ class SynergyAnalyzer:
     """Analyze workflow and agent combination performance from benchmark results."""
 
     def __init__(self, results_dir: Optional[Path] = None):
-        from argumentation_analysis.evaluation.result_collector import ResultCollector, DEFAULT_RESULTS_DIR
+        from argumentation_analysis.evaluation.result_collector import (
+            ResultCollector,
+            DEFAULT_RESULTS_DIR,
+        )
 
         self.results_dir = results_dir or DEFAULT_RESULTS_DIR
         self.collector = ResultCollector(self.results_dir)
@@ -111,10 +126,18 @@ class SynergyAnalyzer:
             return {"difficulty": "unknown", "expected_fallacies": []}
 
         return {
-            "id": corpus["documents"][document_index].get("id", f"doc_{document_index}"),
-            "difficulty": corpus["documents"][document_index].get("difficulty", "unknown"),
-            "expected_fallacies": corpus["documents"][document_index].get("expected_fallacies", []),
-            "expected_quality_score_range": corpus["documents"][document_index].get("expected_quality_score_range", [0, 10]),
+            "id": corpus["documents"][document_index].get(
+                "id", f"doc_{document_index}"
+            ),
+            "difficulty": corpus["documents"][document_index].get(
+                "difficulty", "unknown"
+            ),
+            "expected_fallacies": corpus["documents"][document_index].get(
+                "expected_fallacies", []
+            ),
+            "expected_quality_score_range": corpus["documents"][document_index].get(
+                "expected_quality_score_range", [0, 10]
+            ),
         }
 
     def analyze_workflow_performance(self) -> Dict[str, WorkflowMetrics]:
@@ -138,9 +161,21 @@ class SynergyAnalyzer:
                 workflow_name=workflow,
                 total_runs=len(wf_results),
                 success_rate=len(successful) / len(wf_results) if wf_results else 0.0,
-                avg_duration=np.mean([r["duration_seconds"] for r in successful]) if successful else 0.0,
-                avg_phases_completed=np.mean([r["phases_completed"] for r in successful]) if successful else 0.0,
-                avg_phases_total=np.mean([r["phases_total"] for r in successful]) if successful else 0.0,
+                avg_duration=(
+                    np.mean([r["duration_seconds"] for r in successful])
+                    if successful
+                    else 0.0
+                ),
+                avg_phases_completed=(
+                    np.mean([r["phases_completed"] for r in successful])
+                    if successful
+                    else 0.0
+                ),
+                avg_phases_total=(
+                    np.mean([r["phases_total"] for r in successful])
+                    if successful
+                    else 0.0
+                ),
             )
             workflow_metric.completion_ratio = (
                 workflow_metric.avg_phases_completed / workflow_metric.avg_phases_total
@@ -151,15 +186,21 @@ class SynergyAnalyzer:
             # By difficulty
             for difficulty in DIFFICULTY_LEVELS:
                 diff_results = [
-                    r for r in wf_results
-                    if self.get_document_metadata(r["document_index"])["difficulty"] == difficulty
+                    r
+                    for r in wf_results
+                    if self.get_document_metadata(r["document_index"])["difficulty"]
+                    == difficulty
                 ]
                 diff_successful = [r for r in diff_results if r["success"]]
                 if diff_results:
                     workflow_metric.by_difficulty[difficulty] = {
                         "count": len(diff_results),
                         "success_rate": len(diff_successful) / len(diff_results),
-                        "avg_duration": np.mean([r["duration_seconds"] for r in diff_successful]) if diff_successful else 0.0,
+                        "avg_duration": (
+                            np.mean([r["duration_seconds"] for r in diff_successful])
+                            if diff_successful
+                            else 0.0
+                        ),
                     }
 
             metrics[workflow] = workflow_metric
@@ -220,10 +261,16 @@ class SynergyAnalyzer:
         all_completion_ratios = [m.completion_ratio for m in metrics.values()]
 
         comparison["summary"] = {
-            "avg_success_rate": float(np.mean(all_success_rates)) if all_success_rates else 0.0,
-            "std_success_rate": float(np.std(all_success_rates)) if all_success_rates else 0.0,
+            "avg_success_rate": (
+                float(np.mean(all_success_rates)) if all_success_rates else 0.0
+            ),
+            "std_success_rate": (
+                float(np.std(all_success_rates)) if all_success_rates else 0.0
+            ),
             "avg_duration": float(np.mean(all_durations)) if all_durations else 0.0,
-            "avg_completion_ratio": float(np.mean(all_completion_ratios)) if all_completion_ratios else 0.0,
+            "avg_completion_ratio": (
+                float(np.mean(all_completion_ratios)) if all_completion_ratios else 0.0
+            ),
             "total_workflows_analyzed": len(metrics),
         }
 
@@ -244,28 +291,41 @@ class SynergyAnalyzer:
             default=None,
         )
         if fastest:
-            recommendations.append(SynergyRecommendation(
-                use_case="quick_assessment",
-                recommended_workflow=fastest[0],
-                confidence=0.9 if fastest[1].success_rate > 0.8 else 0.7,
-                reasoning=f"Fastest workflow with {fastest[1].avg_duration:.1f}s average duration and {fastest[1].success_rate*100:.1f}% success rate",
-                alternative_workflows=[k for k in metrics.keys() if k != fastest[0]],
-                expected_metrics={"avg_duration": fastest[1].avg_duration, "success_rate": fastest[1].success_rate},
-            ))
+            recommendations.append(
+                SynergyRecommendation(
+                    use_case="quick_assessment",
+                    recommended_workflow=fastest[0],
+                    confidence=0.9 if fastest[1].success_rate > 0.8 else 0.7,
+                    reasoning=f"Fastest workflow with {fastest[1].avg_duration:.1f}s average duration and {fastest[1].success_rate*100:.1f}% success rate",
+                    alternative_workflows=[
+                        k for k in metrics.keys() if k != fastest[0]
+                    ],
+                    expected_metrics={
+                        "avg_duration": fastest[1].avg_duration,
+                        "success_rate": fastest[1].success_rate,
+                    },
+                )
+            )
 
         # 2. High accuracy recommendation (for thorough analysis)
-        most_accurate = max(metrics.items(), key=lambda x: x[1].completion_ratio * x[1].success_rate)
-        recommendations.append(SynergyRecommendation(
-            use_case="thorough_analysis",
-            recommended_workflow=most_accurate[0],
-            confidence=0.85,
-            reasoning=f"Highest completion ratio ({most_accurate[1].completion_ratio:.2f}) with good success rate ({most_accurate[1].success_rate*100:.1f}%)",
-            alternative_workflows=[k for k in metrics.keys() if k != most_accurate[0]],
-            expected_metrics={
-                "completion_ratio": most_accurate[1].completion_ratio,
-                "success_rate": most_accurate[1].success_rate,
-            },
-        ))
+        most_accurate = max(
+            metrics.items(), key=lambda x: x[1].completion_ratio * x[1].success_rate
+        )
+        recommendations.append(
+            SynergyRecommendation(
+                use_case="thorough_analysis",
+                recommended_workflow=most_accurate[0],
+                confidence=0.85,
+                reasoning=f"Highest completion ratio ({most_accurate[1].completion_ratio:.2f}) with good success rate ({most_accurate[1].success_rate*100:.1f}%)",
+                alternative_workflows=[
+                    k for k in metrics.keys() if k != most_accurate[0]
+                ],
+                expected_metrics={
+                    "completion_ratio": most_accurate[1].completion_ratio,
+                    "success_rate": most_accurate[1].success_rate,
+                },
+            )
+        )
 
         # 3. Easy documents recommendation
         easy_performance = {}
@@ -276,14 +336,18 @@ class SynergyAnalyzer:
 
         if easy_performance:
             best_for_easy = max(easy_performance.items(), key=lambda x: x[1])
-            recommendations.append(SynergyRecommendation(
-                use_case="easy_documents",
-                recommended_workflow=best_for_easy[0],
-                confidence=0.8,
-                reasoning=f"Best performance on easy documents ({best_for_easy[1]*100:.1f}% success rate)",
-                alternative_workflows=[k for k in easy_performance.keys() if k != best_for_easy[0]],
-                expected_metrics={"easy_success_rate": best_for_easy[1]},
-            ))
+            recommendations.append(
+                SynergyRecommendation(
+                    use_case="easy_documents",
+                    recommended_workflow=best_for_easy[0],
+                    confidence=0.8,
+                    reasoning=f"Best performance on easy documents ({best_for_easy[1]*100:.1f}% success rate)",
+                    alternative_workflows=[
+                        k for k in easy_performance.keys() if k != best_for_easy[0]
+                    ],
+                    expected_metrics={"easy_success_rate": best_for_easy[1]},
+                )
+            )
 
         # 4. Hard documents recommendation
         hard_performance = {}
@@ -294,14 +358,18 @@ class SynergyAnalyzer:
 
         if hard_performance:
             best_for_hard = max(hard_performance.items(), key=lambda x: x[1])
-            recommendations.append(SynergyRecommendation(
-                use_case="complex_documents",
-                recommended_workflow=best_for_hard[0],
-                confidence=0.75,
-                reasoning=f"Best performance on hard/complex documents ({best_for_hard[1]*100:.1f}% success rate)",
-                alternative_workflows=[k for k in hard_performance.keys() if k != best_for_hard[0]],
-                expected_metrics={"hard_success_rate": best_for_hard[1]},
-            ))
+            recommendations.append(
+                SynergyRecommendation(
+                    use_case="complex_documents",
+                    recommended_workflow=best_for_hard[0],
+                    confidence=0.75,
+                    reasoning=f"Best performance on hard/complex documents ({best_for_hard[1]*100:.1f}% success rate)",
+                    alternative_workflows=[
+                        k for k in hard_performance.keys() if k != best_for_hard[0]
+                    ],
+                    expected_metrics={"hard_success_rate": best_for_hard[1]},
+                )
+            )
 
         return recommendations
 
@@ -355,38 +423,48 @@ class SynergyAnalyzer:
 
         if "summary" in comparison:
             summary = comparison["summary"]
-            lines.extend([
-                f"- **Total Workflows Analyzed**: {summary.get('total_workflows_analyzed', 0)}",
-                f"- **Average Success Rate**: {summary.get('avg_success_rate', 0)*100:.1f}%",
-                f"- **Average Duration**: {summary.get('avg_duration', 0):.1f}s",
-                f"- **Average Completion Ratio**: {summary.get('avg_completion_ratio', 0)*100:.1f}%",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"- **Total Workflows Analyzed**: {summary.get('total_workflows_analyzed', 0)}",
+                    f"- **Average Success Rate**: {summary.get('avg_success_rate', 0)*100:.1f}%",
+                    f"- **Average Duration**: {summary.get('avg_duration', 0):.1f}s",
+                    f"- **Average Completion Ratio**: {summary.get('avg_completion_ratio', 0)*100:.1f}%",
+                    "",
+                ]
+            )
 
         if "best_by_success_rate" in comparison and comparison["best_by_success_rate"]:
             best = comparison["best_by_success_rate"]
-            lines.extend([
-                f"**Best Success Rate**: {best['workflow']} ({best['rate']*100:.1f}%)",
-            ])
+            lines.extend(
+                [
+                    f"**Best Success Rate**: {best['workflow']} ({best['rate']*100:.1f}%)",
+                ]
+            )
         if "best_by_speed" in comparison and comparison["best_by_speed"]:
             best = comparison["best_by_speed"]
-            lines.extend([
-                f"**Fastest Workflow**: {best['workflow']} ({best['avg_duration']:.1f}s)",
-            ])
+            lines.extend(
+                [
+                    f"**Fastest Workflow**: {best['workflow']} ({best['avg_duration']:.1f}s)",
+                ]
+            )
         if "best_by_completion" in comparison and comparison["best_by_completion"]:
             best = comparison["best_by_completion"]
-            lines.extend([
-                f"**Best Completion**: {best['workflow']} ({best['ratio']*100:.1f}%)",
-            ])
+            lines.extend(
+                [
+                    f"**Best Completion**: {best['workflow']} ({best['ratio']*100:.1f}%)",
+                ]
+            )
         lines.append("")
 
         # Workflow comparison table
-        lines.extend([
-            "## Workflow Comparison",
-            "",
-            "| Workflow | Success Rate | Avg Duration | Completion Ratio | Total Runs |",
-            "|----------|--------------|--------------|------------------|------------|",
-        ])
+        lines.extend(
+            [
+                "## Workflow Comparison",
+                "",
+                "| Workflow | Success Rate | Avg Duration | Completion Ratio | Total Runs |",
+                "|----------|--------------|--------------|------------------|------------|",
+            ]
+        )
 
         if "workflows" in comparison:
             for workflow, data in comparison["workflows"].items():
@@ -399,54 +477,62 @@ class SynergyAnalyzer:
         lines.append("")
 
         # Recommendations
-        lines.extend([
-            "## Recommendations",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Recommendations",
+                "",
+            ]
+        )
 
         for rec in recommendations:
-            lines.extend([
-                f"### {rec.use_case.replace('_', ' ').title()}",
-                "",
-                f"**Recommended**: `{rec.recommended_workflow}`",
-                f"**Confidence**: {rec.confidence*100:.0f}%",
-                "",
-                f"{rec.reasoning}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"### {rec.use_case.replace('_', ' ').title()}",
+                    "",
+                    f"**Recommended**: `{rec.recommended_workflow}`",
+                    f"**Confidence**: {rec.confidence*100:.0f}%",
+                    "",
+                    f"{rec.reasoning}",
+                    "",
+                ]
+            )
             if rec.alternative_workflows:
-                lines.append(f"**Alternatives**: {', '.join(f'`{w}`' for w in rec.alternative_workflows)}")
+                lines.append(
+                    f"**Alternatives**: {', '.join(f'`{w}`' for w in rec.alternative_workflows)}"
+                )
                 lines.append("")
 
         # Workflow phases
-        lines.extend([
-            "## Workflow Phases",
-            "",
-            "### Light",
-            "1. extract (fact extraction)",
-            "2. quality (argument quality)",
-            "3. counter (counter-argument generation)",
-            "",
-            "### Standard",
-            "1. extract (fact extraction)",
-            "2. quality (argument quality)",
-            "3. counter (counter-argument generation)",
-            "4. jtms (belief maintenance, optional)",
-            "5. governance (governance simulation, optional)",
-            "6. debate (adversarial debate, optional)",
-            "",
-            "### Full",
-            "1. transcribe (speech transcription, optional)",
-            "2. extract (fact extraction)",
-            "3. quality (argument quality)",
-            "4. neural_fallacy (neural fallacy detection, optional)",
-            "5. counter (counter-argument generation)",
-            "6. jtms (belief maintenance, optional)",
-            "7. governance (governance simulation, optional)",
-            "8. debate (adversarial debate, optional)",
-            "9. index (semantic indexing, optional)",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Workflow Phases",
+                "",
+                "### Light",
+                "1. extract (fact extraction)",
+                "2. quality (argument quality)",
+                "3. counter (counter-argument generation)",
+                "",
+                "### Standard",
+                "1. extract (fact extraction)",
+                "2. quality (argument quality)",
+                "3. counter (counter-argument generation)",
+                "4. jtms (belief maintenance, optional)",
+                "5. governance (governance simulation, optional)",
+                "6. debate (adversarial debate, optional)",
+                "",
+                "### Full",
+                "1. transcribe (speech transcription, optional)",
+                "2. extract (fact extraction)",
+                "3. quality (argument quality)",
+                "4. neural_fallacy (neural fallacy detection, optional)",
+                "5. counter (counter-argument generation)",
+                "6. jtms (belief maintenance, optional)",
+                "7. governance (governance simulation, optional)",
+                "8. debate (adversarial debate, optional)",
+                "9. index (semantic indexing, optional)",
+                "",
+            ]
+        )
 
         with open(output, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))

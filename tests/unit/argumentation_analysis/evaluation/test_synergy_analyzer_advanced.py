@@ -91,7 +91,9 @@ class TestWorkflowMetrics:
                     document_index=i,
                     document_name=f"{workflow}_doc{i}.txt",
                     success=True,
-                    duration_seconds=workflow_durations[workflow],  # Different durations per workflow
+                    duration_seconds=workflow_durations[
+                        workflow
+                    ],  # Different durations per workflow
                     phases_completed=len(WORKFLOW_PHASES[workflow]),
                     phases_total=len(WORKFLOW_PHASES[workflow]),
                     phases_failed=0,
@@ -292,7 +294,9 @@ class TestRecommendations:
         recommendations = analyzer.generate_recommendations()
 
         # Should have at least quick_assessment recommendation
-        quick_rec = next((r for r in recommendations if r.use_case == "quick_assessment"), None)
+        quick_rec = next(
+            (r for r in recommendations if r.use_case == "quick_assessment"), None
+        )
         assert quick_rec is not None
         assert quick_rec.recommended_workflow == "light"
         assert quick_rec.confidence > 0
@@ -345,7 +349,9 @@ class TestRecommendations:
         recommendations = analyzer.generate_recommendations()
 
         # Should have thorough_analysis recommendation
-        thorough_rec = next((r for r in recommendations if r.use_case == "thorough_analysis"), None)
+        thorough_rec = next(
+            (r for r in recommendations if r.use_case == "thorough_analysis"), None
+        )
         assert thorough_rec is not None
         assert thorough_rec.recommended_workflow == "standard"
         assert "completion" in thorough_rec.reasoning.lower()

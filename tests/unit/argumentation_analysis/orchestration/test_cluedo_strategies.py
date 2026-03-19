@@ -10,10 +10,10 @@ Covers:
 import pytest
 from unittest.mock import MagicMock, AsyncMock, PropertyMock
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_agent(name: str, has_context_enhanced=False):
     """Create a minimal mock Agent with a .name attribute."""
@@ -36,7 +36,9 @@ def _make_oracle_state(**overrides):
     state.is_solution_proposed = overrides.get("is_solution_proposed", False)
     state.final_solution = overrides.get("final_solution", None)
     state.get_solution_secrete = MagicMock(
-        return_value=overrides.get("secret", {"suspect": "Moutarde", "arme": "Chandelier", "lieu": "Salon"})
+        return_value=overrides.get(
+            "secret", {"suspect": "Moutarde", "arme": "Chandelier", "lieu": "Salon"}
+        )
     )
     state.is_game_solvable_by_elimination = MagicMock(
         return_value=overrides.get("solvable_by_elimination", False)
@@ -51,6 +53,7 @@ def _make_oracle_state(**overrides):
 # CyclicSelectionStrategy
 # ============================================================================
 
+
 class TestCyclicSelectionStrategy:
     """Tests for CyclicSelectionStrategy."""
 
@@ -58,6 +61,7 @@ class TestCyclicSelectionStrategy:
         from argumentation_analysis.orchestration.cluedo_components.strategies import (
             CyclicSelectionStrategy,
         )
+
         if agents is None:
             agents = _make_agents()
         return CyclicSelectionStrategy(
@@ -171,7 +175,10 @@ class TestCyclicSelectionStrategy:
         selected = await strategy.next(agents, [])
         # get_contextual_prompt_addition called but returned "", so no _current_context set
         state.get_contextual_prompt_addition.assert_called_once_with("Sherlock")
-        assert not hasattr(selected, "_current_context") or getattr(selected, "_current_context", None) != ""
+        assert (
+            not hasattr(selected, "_current_context")
+            or getattr(selected, "_current_context", None) != ""
+        )
 
     # -- next() with adaptive selection --
 
@@ -190,6 +197,7 @@ class TestCyclicSelectionStrategy:
         from argumentation_analysis.orchestration.cluedo_components.strategies import (
             CyclicSelectionStrategy,
         )
+
         agents = _make_agents()
         strategy = self._make_strategy(agents=agents)
         default = agents[0]
@@ -230,6 +238,7 @@ class TestCyclicSelectionStrategy:
 # OracleTerminationStrategy
 # ============================================================================
 
+
 class TestOracleTerminationStrategy:
     """Tests for OracleTerminationStrategy."""
 
@@ -237,6 +246,7 @@ class TestOracleTerminationStrategy:
         from argumentation_analysis.orchestration.cluedo_components.strategies import (
             OracleTerminationStrategy,
         )
+
         return OracleTerminationStrategy(
             max_turns=max_turns,
             max_cycles=max_cycles,
@@ -336,7 +346,9 @@ class TestOracleTerminationStrategy:
             final_solution=wrong,
             secret=secret,
         )
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -345,7 +357,9 @@ class TestOracleTerminationStrategy:
 
     async def test_does_not_terminate_when_solution_not_proposed(self):
         state = _make_oracle_state(is_solution_proposed=False)
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -355,7 +369,9 @@ class TestOracleTerminationStrategy:
 
     async def test_terminates_when_elimination_complete(self):
         state = _make_oracle_state(solvable_by_elimination=True)
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -363,7 +379,9 @@ class TestOracleTerminationStrategy:
 
     async def test_does_not_terminate_when_elimination_incomplete(self):
         state = _make_oracle_state(solvable_by_elimination=False)
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -390,14 +408,18 @@ class TestOracleTerminationStrategy:
 
     def test_check_solution_correct(self):
         secret = {"suspect": "X", "arme": "Y", "lieu": "Z"}
-        state = _make_oracle_state(is_solution_proposed=True, final_solution=secret, secret=secret)
+        state = _make_oracle_state(
+            is_solution_proposed=True, final_solution=secret, secret=secret
+        )
         strategy = self._make_strategy(oracle_state=state)
         assert strategy._check_solution_found() is True
 
     def test_check_solution_incorrect(self):
         secret = {"suspect": "X", "arme": "Y", "lieu": "Z"}
         wrong = {"suspect": "A", "arme": "B", "lieu": "C"}
-        state = _make_oracle_state(is_solution_proposed=True, final_solution=wrong, secret=secret)
+        state = _make_oracle_state(
+            is_solution_proposed=True, final_solution=wrong, secret=secret
+        )
         strategy = self._make_strategy(oracle_state=state)
         assert strategy._check_solution_found() is False
 
@@ -457,7 +479,9 @@ class TestOracleTerminationStrategy:
             final_solution=secret,
             secret=secret,
         )
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -467,7 +491,9 @@ class TestOracleTerminationStrategy:
     async def test_termination_priority_elimination_before_timeout(self):
         """Elimination complete should terminate before hitting timeout."""
         state = _make_oracle_state(solvable_by_elimination=True)
-        strategy = self._make_strategy(max_turns=100, max_cycles=100, oracle_state=state)
+        strategy = self._make_strategy(
+            max_turns=100, max_cycles=100, oracle_state=state
+        )
         agent = _make_mock_agent("Watson")
 
         result = await strategy.should_terminate(agent, [])
@@ -482,7 +508,7 @@ class TestOracleTerminationStrategy:
         moriarty = _make_mock_agent("Moriarty")
 
         await strategy.should_terminate(sherlock, [])  # cycle 1, turn 1
-        await strategy.should_terminate(watson, [])    # turn 2
+        await strategy.should_terminate(watson, [])  # turn 2
         await strategy.should_terminate(moriarty, [])  # turn 3
         await strategy.should_terminate(sherlock, [])  # cycle 2, turn 4
 

@@ -43,6 +43,7 @@ def _make_msg(
 
 # ── ChannelType ──
 
+
 class TestChannelType:
     def test_all_values(self):
         assert ChannelType.HIERARCHICAL.value == "hierarchical"
@@ -58,6 +59,7 @@ class TestChannelType:
 
 
 # ── Exception hierarchy ──
+
 
 class TestExceptions:
     def test_channel_exception_is_exception(self):
@@ -85,6 +87,7 @@ class TestExceptions:
 
 # ── matches_filter ──
 
+
 class TestMatchesFilter:
     @pytest.fixture
     def channel(self):
@@ -108,11 +111,15 @@ class TestMatchesFilter:
 
     def test_message_type_list_match(self, channel):
         msg = _make_msg(msg_type=MessageType.EVENT)
-        assert channel.matches_filter(msg, {"message_type": ["command", "event"]}) is True
+        assert (
+            channel.matches_filter(msg, {"message_type": ["command", "event"]}) is True
+        )
 
     def test_message_type_list_no_match(self, channel):
         msg = _make_msg(msg_type=MessageType.RESPONSE)
-        assert channel.matches_filter(msg, {"message_type": ["command", "event"]}) is False
+        assert (
+            channel.matches_filter(msg, {"message_type": ["command", "event"]}) is False
+        )
 
     def test_sender_single_match(self, channel):
         msg = _make_msg(sender="sherlock")
@@ -152,7 +159,10 @@ class TestMatchesFilter:
 
     def test_sender_level_list_match(self, channel):
         msg = _make_msg(sender_level=AgentLevel.TACTICAL)
-        assert channel.matches_filter(msg, {"sender_level": ["tactical", "strategic"]}) is True
+        assert (
+            channel.matches_filter(msg, {"sender_level": ["tactical", "strategic"]})
+            is True
+        )
 
     def test_content_filter_match(self, channel):
         msg = _make_msg(content={"info_type": "result", "value": 42})
@@ -160,11 +170,15 @@ class TestMatchesFilter:
 
     def test_content_filter_no_match(self, channel):
         msg = _make_msg(content={"info_type": "status"})
-        assert channel.matches_filter(msg, {"content": {"info_type": "result"}}) is False
+        assert (
+            channel.matches_filter(msg, {"content": {"info_type": "result"}}) is False
+        )
 
     def test_content_filter_missing_key(self, channel):
         msg = _make_msg(content={"other": "val"})
-        assert channel.matches_filter(msg, {"content": {"info_type": "result"}}) is False
+        assert (
+            channel.matches_filter(msg, {"content": {"info_type": "result"}}) is False
+        )
 
     def test_multiple_criteria_all_match(self, channel):
         msg = _make_msg(
@@ -186,6 +200,7 @@ class TestMatchesFilter:
 
 
 # ── LocalChannel ──
+
 
 class TestLocalChannel:
     @pytest.fixture

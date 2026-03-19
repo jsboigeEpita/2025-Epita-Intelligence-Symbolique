@@ -15,8 +15,8 @@ from argumentation_analysis.core.communication.message import (
     EventMessage,
 )
 
-
 # ── Enums ──
+
 
 class TestMessageType:
     def test_all_values(self):
@@ -56,6 +56,7 @@ class TestAgentLevel:
 
 
 # ── Message ──
+
 
 class TestMessage:
     @pytest.fixture
@@ -136,26 +137,66 @@ class TestMessage:
 
     def test_eq_different_id(self):
         ts = datetime(2026, 1, 1)
-        m1 = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {}, message_id="id1", timestamp=ts)
-        m2 = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {}, message_id="id2", timestamp=ts)
+        m1 = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            message_id="id1",
+            timestamp=ts,
+        )
+        m2 = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            message_id="id2",
+            timestamp=ts,
+        )
         assert m1 != m2
 
     # -- Ordering --
     def test_lt_higher_priority_first(self):
         ts = datetime(2026, 1, 1)
-        m_high = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                         priority=MessagePriority.HIGH, message_id="h", timestamp=ts)
-        m_low = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                        priority=MessagePriority.LOW, message_id="l", timestamp=ts)
+        m_high = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            priority=MessagePriority.HIGH,
+            message_id="h",
+            timestamp=ts,
+        )
+        m_low = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            priority=MessagePriority.LOW,
+            message_id="l",
+            timestamp=ts,
+        )
         assert m_high < m_low  # Higher priority is "less" (comes first)
 
     def test_lt_same_priority_older_first(self):
-        m_old = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                        priority=MessagePriority.NORMAL, message_id="o",
-                        timestamp=datetime(2026, 1, 1))
-        m_new = Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                        priority=MessagePriority.NORMAL, message_id="n",
-                        timestamp=datetime(2026, 1, 2))
+        m_old = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            priority=MessagePriority.NORMAL,
+            message_id="o",
+            timestamp=datetime(2026, 1, 1),
+        )
+        m_new = Message(
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.SYSTEM,
+            {},
+            priority=MessagePriority.NORMAL,
+            message_id="n",
+            timestamp=datetime(2026, 1, 2),
+        )
         assert m_old < m_new  # Older timestamp comes first
 
     def test_lt_not_message(self, basic_msg):
@@ -185,21 +226,30 @@ class TestMessage:
     # -- is_response_to --
     def test_is_response_to_true(self):
         msg = Message(
-            MessageType.RESPONSE, "b", AgentLevel.OPERATIONAL, {},
+            MessageType.RESPONSE,
+            "b",
+            AgentLevel.OPERATIONAL,
+            {},
             metadata={"reply_to": "req-123"},
         )
         assert msg.is_response_to("req-123") is True
 
     def test_is_response_to_wrong_id(self):
         msg = Message(
-            MessageType.RESPONSE, "b", AgentLevel.OPERATIONAL, {},
+            MessageType.RESPONSE,
+            "b",
+            AgentLevel.OPERATIONAL,
+            {},
             metadata={"reply_to": "req-123"},
         )
         assert msg.is_response_to("req-456") is False
 
     def test_is_response_to_not_response_type(self):
         msg = Message(
-            MessageType.COMMAND, "b", AgentLevel.OPERATIONAL, {},
+            MessageType.COMMAND,
+            "b",
+            AgentLevel.OPERATIONAL,
+            {},
             metadata={"reply_to": "req-123"},
         )
         assert msg.is_response_to("req-123") is False
@@ -207,7 +257,10 @@ class TestMessage:
     # -- requires_acknowledgement --
     def test_requires_ack_true(self):
         msg = Message(
-            MessageType.COMMAND, "a", AgentLevel.STRATEGIC, {},
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.STRATEGIC,
+            {},
             metadata={"requires_ack": True},
         )
         assert msg.requires_acknowledgement() is True
@@ -249,6 +302,7 @@ class TestMessage:
 
 
 # ── CommandMessage ──
+
 
 class TestCommandMessage:
     def test_basic(self):
@@ -299,6 +353,7 @@ class TestCommandMessage:
 
 # ── InformationMessage ──
 
+
 class TestInformationMessage:
     def test_basic(self):
         msg = InformationMessage(
@@ -332,6 +387,7 @@ class TestInformationMessage:
 
 
 # ── RequestMessage ──
+
 
 class TestRequestMessage:
     def test_basic(self):
@@ -386,6 +442,7 @@ class TestRequestMessage:
 
 # ── EventMessage ──
 
+
 class TestEventMessage:
     def test_basic(self):
         msg = EventMessage(
@@ -424,16 +481,38 @@ class TestEventMessage:
 
 # ── Message sorting ──
 
+
 class TestMessageSorting:
     def test_sort_by_priority(self):
         ts = datetime(2026, 1, 1)
         msgs = [
-            Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                    priority=MessagePriority.LOW, message_id="low", timestamp=ts),
-            Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                    priority=MessagePriority.CRITICAL, message_id="crit", timestamp=ts),
-            Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                    priority=MessagePriority.NORMAL, message_id="norm", timestamp=ts),
+            Message(
+                MessageType.COMMAND,
+                "a",
+                AgentLevel.SYSTEM,
+                {},
+                priority=MessagePriority.LOW,
+                message_id="low",
+                timestamp=ts,
+            ),
+            Message(
+                MessageType.COMMAND,
+                "a",
+                AgentLevel.SYSTEM,
+                {},
+                priority=MessagePriority.CRITICAL,
+                message_id="crit",
+                timestamp=ts,
+            ),
+            Message(
+                MessageType.COMMAND,
+                "a",
+                AgentLevel.SYSTEM,
+                {},
+                priority=MessagePriority.NORMAL,
+                message_id="norm",
+                timestamp=ts,
+            ),
         ]
         sorted_msgs = sorted(msgs)
         assert sorted_msgs[0].id == "crit"
@@ -442,12 +521,24 @@ class TestMessageSorting:
 
     def test_sort_same_priority_by_timestamp(self):
         msgs = [
-            Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                    priority=MessagePriority.NORMAL, message_id="new",
-                    timestamp=datetime(2026, 1, 2)),
-            Message(MessageType.COMMAND, "a", AgentLevel.SYSTEM, {},
-                    priority=MessagePriority.NORMAL, message_id="old",
-                    timestamp=datetime(2026, 1, 1)),
+            Message(
+                MessageType.COMMAND,
+                "a",
+                AgentLevel.SYSTEM,
+                {},
+                priority=MessagePriority.NORMAL,
+                message_id="new",
+                timestamp=datetime(2026, 1, 2),
+            ),
+            Message(
+                MessageType.COMMAND,
+                "a",
+                AgentLevel.SYSTEM,
+                {},
+                priority=MessagePriority.NORMAL,
+                message_id="old",
+                timestamp=datetime(2026, 1, 1),
+            ),
         ]
         sorted_msgs = sorted(msgs)
         assert sorted_msgs[0].id == "old"

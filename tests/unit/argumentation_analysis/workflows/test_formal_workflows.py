@@ -25,7 +25,6 @@ from argumentation_analysis.core.capability_registry import (
     ComponentType,
 )
 
-
 # =====================================================================
 # Helper
 # =====================================================================
@@ -61,7 +60,9 @@ class TestBuildFormalDebateWorkflow:
 
     def test_phase_count(self):
         wf = build_formal_debate_workflow()
-        assert len(wf.phases) == 8  # 5 original + 3 optional (ABA #85, Social #87, EAF #88)
+        assert (
+            len(wf.phases) == 8
+        )  # 5 original + 3 optional (ABA #85, Social #87, EAF #88)
 
     def test_required_capabilities(self):
         wf = build_formal_debate_workflow()
@@ -93,7 +94,11 @@ class TestBuildFormalDebateWorkflow:
         wf = build_formal_debate_workflow()
         phases = wf.phases if isinstance(wf.phases, list) else list(wf.phases.values())
         optional_names = {p.name for p in phases if p.optional}
-        assert optional_names == {"aba_formalization", "social_ranking", "epistemic_analysis"}  # #85, #87, #88
+        assert optional_names == {
+            "aba_formalization",
+            "social_ranking",
+            "epistemic_analysis",
+        }  # #85, #87, #88
 
 
 class TestFormalDebateExecution:
@@ -256,7 +261,9 @@ class TestBuildArgumentStrengthWorkflow:
 
     def test_phase_count(self):
         wf = build_argument_strength_workflow()
-        assert len(wf.phases) == 6  # 4 original + 2 optional (bipolar #85, weighted #87)
+        assert (
+            len(wf.phases) == 6
+        )  # 4 original + 2 optional (bipolar #85, weighted #87)
 
     def test_required_capabilities(self):
         wf = build_argument_strength_workflow()
@@ -344,12 +351,14 @@ class TestStateWriters:
 
     def _make_state(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         return UnifiedAnalysisState("Test text")
 
     def test_write_ranking_to_state(self):
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_ranking_to_state,
         )
+
         state = self._make_state()
         output = {"method": "categorizer", "arguments": ["a", "b"], "comparisons": []}
         _write_ranking_to_state(output, state, {})
@@ -360,6 +369,7 @@ class TestStateWriters:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_aspic_to_state,
         )
+
         state = self._make_state()
         output = {"reasoner_type": "simple", "extensions": [["a"]], "statistics": {}}
         _write_aspic_to_state(output, state, {})
@@ -369,6 +379,7 @@ class TestStateWriters:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_belief_revision_to_state,
         )
+
         state = self._make_state()
         output = {"method": "dalal", "original": ["p"], "revised": ["!p"]}
         _write_belief_revision_to_state(output, state, {})
@@ -378,8 +389,13 @@ class TestStateWriters:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_dialogue_to_state,
         )
+
         state = self._make_state()
-        output = {"topic": "AI", "outcome": "accepted", "dialogue_trace": [{"round": 1}]}
+        output = {
+            "topic": "AI",
+            "outcome": "accepted",
+            "dialogue_trace": [{"round": 1}],
+        }
         _write_dialogue_to_state(output, state, {})
         assert len(state.dialogue_results) == 1
         assert state.dialogue_results[0]["outcome"] == "accepted"
@@ -388,8 +404,12 @@ class TestStateWriters:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_probabilistic_to_state,
         )
+
         state = self._make_state()
-        output = {"arguments": ["a", "b"], "acceptance_probabilities": {"a": 0.8, "b": 0.3}}
+        output = {
+            "arguments": ["a", "b"],
+            "acceptance_probabilities": {"a": 0.8, "b": 0.3},
+        }
         _write_probabilistic_to_state(output, state, {})
         assert len(state.probabilistic_results) == 1
 
@@ -397,6 +417,7 @@ class TestStateWriters:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_bipolar_to_state,
         )
+
         state = self._make_state()
         output = {"framework_type": "necessity", "arguments": ["a"], "supports": []}
         _write_bipolar_to_state(output, state, {})
@@ -408,6 +429,7 @@ class TestStateWriters:
             _write_aspic_to_state,
             _write_belief_revision_to_state,
         )
+
         state = self._make_state()
         _write_ranking_to_state(None, state, {})
         _write_aspic_to_state(None, state, {})
@@ -429,6 +451,7 @@ class TestWorkflowCatalog:
         from argumentation_analysis.orchestration.unified_pipeline import (
             get_workflow_catalog,
         )
+
         catalog = get_workflow_catalog()
         assert "formal_debate" in catalog
 
@@ -436,6 +459,7 @@ class TestWorkflowCatalog:
         from argumentation_analysis.orchestration.unified_pipeline import (
             get_workflow_catalog,
         )
+
         catalog = get_workflow_catalog()
         assert "belief_dynamics" in catalog
 
@@ -443,6 +467,7 @@ class TestWorkflowCatalog:
         from argumentation_analysis.orchestration.unified_pipeline import (
             get_workflow_catalog,
         )
+
         catalog = get_workflow_catalog()
         assert "argument_strength" in catalog
 
@@ -450,6 +475,7 @@ class TestWorkflowCatalog:
         from argumentation_analysis.orchestration.unified_pipeline import (
             get_workflow_catalog,
         )
+
         catalog = get_workflow_catalog()
         # 7 core + 3 macro (Track D) + 3 formal = 13
         assert len(catalog) >= 13

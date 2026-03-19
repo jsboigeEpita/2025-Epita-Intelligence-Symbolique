@@ -24,6 +24,7 @@ def svc_no_key():
 
 # ── Init ──
 
+
 class TestInit:
     def test_init_with_key(self, key):
         svc = CryptoService(encryption_key=key)
@@ -47,6 +48,7 @@ class TestInit:
 
 
 # ── Key management ──
+
 
 class TestKeyManagement:
     def test_set_encryption_key(self, svc_no_key, key):
@@ -106,6 +108,7 @@ class TestKeyManagement:
 
 # ── Encrypt / Decrypt ──
 
+
 class TestEncryptDecrypt:
     def test_roundtrip(self, svc):
         data = b"Hello, World!"
@@ -150,6 +153,7 @@ class TestEncryptDecrypt:
 
 
 # ── JSON encrypt/compress ──
+
 
 class TestJsonEncryptCompress:
     def test_roundtrip_dict(self, svc):

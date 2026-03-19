@@ -62,6 +62,7 @@ class TestMonitorPerformance:
 
     def test_logs_execution_even_on_exception(self):
         """The decorator should log timing even when the function fails."""
+
         @monitor_performance()
         def failing():
             raise RuntimeError("error")

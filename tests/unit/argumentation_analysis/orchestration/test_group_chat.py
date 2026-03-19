@@ -7,8 +7,8 @@ from datetime import datetime
 
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def orchestration():
@@ -37,6 +37,7 @@ def active_session(orchestration, mock_agents):
 
 # ── __init__ ────────────────────────────────────────────────────────────
 
+
 class TestGroupChatInit:
     """Tests for GroupChatOrchestration.__init__."""
 
@@ -56,6 +57,7 @@ class TestGroupChatInit:
 
 
 # ── initialize_session ──────────────────────────────────────────────────
+
 
 class TestInitializeSession:
     """Tests for initialize_session()."""
@@ -94,6 +96,7 @@ class TestInitializeSession:
 
 # ── add_message ─────────────────────────────────────────────────────────
 
+
 class TestAddMessage:
     """Tests for add_message()."""
 
@@ -130,6 +133,7 @@ class TestAddMessage:
 
 # ── get_conversation_summary ────────────────────────────────────────────
 
+
 class TestGetConversationSummary:
     """Tests for get_conversation_summary()."""
 
@@ -159,6 +163,7 @@ class TestGetConversationSummary:
 
 # ── _get_agent_type ─────────────────────────────────────────────────────
 
+
 class TestGetAgentType:
     """Tests for _get_agent_type()."""
 
@@ -183,6 +188,7 @@ class TestGetAgentType:
 
 
 # ── coordinate_analysis ─────────────────────────────────────────────────
+
 
 class TestCoordinateAnalysis:
     """Tests for coordinate_analysis()."""
@@ -231,6 +237,7 @@ class TestCoordinateAnalysis:
 
 # ── _consolidate_results ────────────────────────────────────────────────
 
+
 class TestConsolidateResults:
     """Tests for _consolidate_results()."""
 
@@ -270,6 +277,7 @@ class TestConsolidateResults:
 
 # ── get_agent_status ────────────────────────────────────────────────────
 
+
 class TestGetAgentStatus:
     """Tests for get_agent_status()."""
 
@@ -301,6 +309,7 @@ class TestGetAgentStatus:
 
 
 # ── cleanup_session ─────────────────────────────────────────────────────
+
 
 class TestCleanupSession:
     """Tests for cleanup_session()."""
@@ -336,12 +345,15 @@ class TestCleanupSession:
 
     def test_cleanup_async_error_handled(self, active_session):
         active_session.async_manager = MagicMock()
-        active_session.async_manager.cleanup_completed_tasks.side_effect = RuntimeError("boom")
+        active_session.async_manager.cleanup_completed_tasks.side_effect = RuntimeError(
+            "boom"
+        )
         # Should not raise
         assert active_session.cleanup_session() is True
 
 
 # ── _analyze_with_agent ─────────────────────────────────────────────────
+
 
 class TestAnalyzeWithAgent:
     """Tests for _analyze_with_agent()."""
@@ -365,7 +377,10 @@ class TestAnalyzeWithAgent:
         async_agent.analyze_text = MagicMock()
         # Make it look async
         import asyncio
-        async def fake_analyze(t): pass
+
+        async def fake_analyze(t):
+            pass
+
         async_agent.analyze_text = fake_analyze
         active_session.active_agents["async_agent"] = async_agent
 
@@ -388,6 +403,7 @@ class TestAnalyzeWithAgent:
 
 
 # ── coordinate_analysis_async ───────────────────────────────────────────
+
 
 class TestCoordinateAnalysisAsync:
     """Tests for coordinate_analysis_async()."""
@@ -432,7 +448,9 @@ class TestCoordinateAnalysisAsync:
         active_session.async_manager.run_multiple_hybrid.return_value = [
             {"agent_id": "informal_agent", "confidence": 0.9, "findings": []},
         ]
-        with patch.object(active_session, "_consolidate_results_robust", side_effect=Exception("boom")):
+        with patch.object(
+            active_session, "_consolidate_results_robust", side_effect=Exception("boom")
+        ):
             result = active_session.coordinate_analysis_async("txt", ["informal_agent"])
             assert "error" in result["consolidated_analysis"]
 
@@ -457,6 +475,7 @@ class TestCoordinateAnalysisAsync:
 
 # ── _consolidate_results_robust ─────────────────────────────────────────
 
+
 class TestConsolidateResultsRobust:
     """Tests for _consolidate_results_robust()."""
 
@@ -468,7 +487,11 @@ class TestConsolidateResultsRobust:
 
     def test_separates_valid_and_error(self, orchestration):
         results = {
-            "good_agent": {"confidence": 0.9, "findings": ["f1"], "analysis_type": "general_analysis"},
+            "good_agent": {
+                "confidence": 0.9,
+                "findings": ["f1"],
+                "analysis_type": "general_analysis",
+            },
             "bad_agent": {"confidence": 0.0, "findings": [], "error": "timeout"},
         }
         consolidated = orchestration._consolidate_results_robust(results)
@@ -477,8 +500,16 @@ class TestConsolidateResultsRobust:
 
     def test_average_confidence_from_valid_only(self, orchestration):
         results = {
-            "a1": {"confidence": 0.8, "findings": [], "analysis_type": "general_analysis"},
-            "a2": {"confidence": 0.6, "findings": [], "analysis_type": "general_analysis"},
+            "a1": {
+                "confidence": 0.8,
+                "findings": [],
+                "analysis_type": "general_analysis",
+            },
+            "a2": {
+                "confidence": 0.6,
+                "findings": [],
+                "analysis_type": "general_analysis",
+            },
             "bad": {"confidence": 0.0, "findings": [], "error": "err"},
         }
         consolidated = orchestration._consolidate_results_robust(results)
@@ -486,8 +517,16 @@ class TestConsolidateResultsRobust:
 
     def test_weighted_confidence(self, orchestration):
         results = {
-            "logic": {"confidence": 1.0, "findings": [], "analysis_type": "formal_logic"},
-            "extract": {"confidence": 1.0, "findings": [], "analysis_type": "extraction"},
+            "logic": {
+                "confidence": 1.0,
+                "findings": [],
+                "analysis_type": "formal_logic",
+            },
+            "extract": {
+                "confidence": 1.0,
+                "findings": [],
+                "analysis_type": "extraction",
+            },
         }
         consolidated = orchestration._consolidate_results_robust(results)
         # formal_logic weight=1.2, extraction weight=0.8
@@ -496,8 +535,16 @@ class TestConsolidateResultsRobust:
 
     def test_weighted_confidence_different_scores(self, orchestration):
         results = {
-            "logic": {"confidence": 0.5, "findings": [], "analysis_type": "formal_logic"},
-            "informal": {"confidence": 0.5, "findings": [], "analysis_type": "informal_analysis"},
+            "logic": {
+                "confidence": 0.5,
+                "findings": [],
+                "analysis_type": "formal_logic",
+            },
+            "informal": {
+                "confidence": 0.5,
+                "findings": [],
+                "analysis_type": "informal_analysis",
+            },
         }
         consolidated = orchestration._consolidate_results_robust(results)
         # weights: formal_logic=1.2, informal_analysis=1.0
@@ -506,12 +553,23 @@ class TestConsolidateResultsRobust:
 
     def test_key_findings_sorted_by_confidence(self, orchestration):
         results = {
-            "low": {"confidence": 0.3, "findings": ["low_finding"], "analysis_type": "general_analysis"},
-            "high": {"confidence": 0.9, "findings": ["high_finding"], "analysis_type": "general_analysis"},
+            "low": {
+                "confidence": 0.3,
+                "findings": ["low_finding"],
+                "analysis_type": "general_analysis",
+            },
+            "high": {
+                "confidence": 0.9,
+                "findings": ["high_finding"],
+                "analysis_type": "general_analysis",
+            },
         }
         consolidated = orchestration._consolidate_results_robust(results)
         if len(consolidated["key_findings"]) >= 2:
-            assert consolidated["key_findings"][0]["confidence"] >= consolidated["key_findings"][1]["confidence"]
+            assert (
+                consolidated["key_findings"][0]["confidence"]
+                >= consolidated["key_findings"][1]["confidence"]
+            )
 
     def test_key_findings_capped_at_10(self, orchestration):
         results = {}
@@ -537,7 +595,11 @@ class TestConsolidateResultsRobust:
 
     def test_no_errors_empty_summary(self, orchestration):
         results = {
-            "a1": {"confidence": 0.9, "findings": ["f"], "analysis_type": "general_analysis"},
+            "a1": {
+                "confidence": 0.9,
+                "findings": ["f"],
+                "analysis_type": "general_analysis",
+            },
         }
         consolidated = orchestration._consolidate_results_robust(results)
         assert consolidated["error_summary"] == []
@@ -553,8 +615,16 @@ class TestConsolidateResultsRobust:
     def test_consensus_detection(self, orchestration):
         # Two agents with similar first-3-word findings
         results = {
-            "a1": {"confidence": 0.9, "findings": ["argument is valid here"], "analysis_type": "general_analysis"},
-            "a2": {"confidence": 0.8, "findings": ["argument is strong here"], "analysis_type": "general_analysis"},
+            "a1": {
+                "confidence": 0.9,
+                "findings": ["argument is valid here"],
+                "analysis_type": "general_analysis",
+            },
+            "a2": {
+                "confidence": 0.8,
+                "findings": ["argument is strong here"],
+                "analysis_type": "general_analysis",
+            },
         }
         consolidated = orchestration._consolidate_results_robust(results)
         # "argument is valid" vs "argument is strong" share "argument" and "is" = 2 matches
@@ -564,6 +634,7 @@ class TestConsolidateResultsRobust:
 
 
 # ── get_service_health ──────────────────────────────────────────────────
+
 
 class TestGetServiceHealth:
     """Tests for get_service_health()."""
@@ -614,7 +685,9 @@ class TestGetServiceHealth:
 
     def test_error_in_health_check(self, orchestration):
         orchestration.async_manager = MagicMock()
-        orchestration.async_manager.get_performance_stats.side_effect = Exception("bad stats")
+        orchestration.async_manager.get_performance_stats.side_effect = Exception(
+            "bad stats"
+        )
         # Need at least one agent for get_service_health to reach stats
         orchestration.initialize_session("s", {"a": MagicMock()})
         health = orchestration.get_service_health()
@@ -629,6 +702,7 @@ class TestGetServiceHealth:
 
 
 # ── Integration scenarios ───────────────────────────────────────────────
+
 
 class TestGroupChatScenarios:
     """End-to-end scenarios combining multiple methods."""

@@ -15,10 +15,10 @@ from argumentation_analysis.utils.extract_repair.marker_repair_logic import (
     VALIDATION_AGENT_INSTRUCTIONS,
 )
 
-
 # ============================================================
 # Constants
 # ============================================================
+
 
 class TestConstants:
     def test_repair_instructions_not_empty(self):
@@ -28,7 +28,10 @@ class TestConstants:
         assert len(VALIDATION_AGENT_INSTRUCTIONS) > 100
 
     def test_repair_instructions_contain_key_terms(self):
-        assert "réparation" in REPAIR_AGENT_INSTRUCTIONS or "repair" in REPAIR_AGENT_INSTRUCTIONS.lower()
+        assert (
+            "réparation" in REPAIR_AGENT_INSTRUCTIONS
+            or "repair" in REPAIR_AGENT_INSTRUCTIONS.lower()
+        )
 
     def test_validation_instructions_contain_key_terms(self):
         assert "validation" in VALIDATION_AGENT_INSTRUCTIONS
@@ -38,10 +41,16 @@ class TestConstants:
 # generate_report
 # ============================================================
 
+
 class TestGenerateReport:
     def test_generates_html_file(self, tmp_path):
         results = [
-            {"source_name": "S1", "extract_name": "E1", "status": "valid", "message": "OK"},
+            {
+                "source_name": "S1",
+                "extract_name": "E1",
+                "status": "valid",
+                "message": "OK",
+            },
         ]
         output = str(tmp_path / "report.html")
         generate_report(results, output)
@@ -49,11 +58,23 @@ class TestGenerateReport:
 
     def test_html_contains_summary(self, tmp_path):
         results = [
-            {"source_name": "S1", "extract_name": "E1", "status": "valid", "message": "OK"},
-            {"source_name": "S2", "extract_name": "E2", "status": "repaired", "message": "Fixed",
-             "old_start_marker": "ello", "new_start_marker": "Hello",
-             "old_end_marker": "end", "new_end_marker": "end",
-             "old_template_start": "H{0}"},
+            {
+                "source_name": "S1",
+                "extract_name": "E1",
+                "status": "valid",
+                "message": "OK",
+            },
+            {
+                "source_name": "S2",
+                "extract_name": "E2",
+                "status": "repaired",
+                "message": "Fixed",
+                "old_start_marker": "ello",
+                "new_start_marker": "Hello",
+                "old_end_marker": "end",
+                "new_end_marker": "end",
+                "old_template_start": "H{0}",
+            },
         ]
         output = str(tmp_path / "report.html")
         generate_report(results, output)
@@ -63,14 +84,41 @@ class TestGenerateReport:
 
     def test_status_counts(self, tmp_path):
         results = [
-            {"status": "valid", "source_name": "S", "extract_name": "E", "message": "ok"},
-            {"status": "valid", "source_name": "S", "extract_name": "E", "message": "ok"},
-            {"status": "repaired", "source_name": "S", "extract_name": "E", "message": "fixed",
-             "old_start_marker": "x", "new_start_marker": "Xx",
-             "old_end_marker": "y", "new_end_marker": "y",
-             "old_template_start": "X{0}"},
-            {"status": "rejected", "source_name": "S", "extract_name": "E", "message": "bad"},
-            {"status": "error", "source_name": "S", "extract_name": "E", "message": "err"},
+            {
+                "status": "valid",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "ok",
+            },
+            {
+                "status": "valid",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "ok",
+            },
+            {
+                "status": "repaired",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "fixed",
+                "old_start_marker": "x",
+                "new_start_marker": "Xx",
+                "old_end_marker": "y",
+                "new_end_marker": "y",
+                "old_template_start": "X{0}",
+            },
+            {
+                "status": "rejected",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "bad",
+            },
+            {
+                "status": "error",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "err",
+            },
         ]
         output = str(tmp_path / "report.html")
         generate_report(results, output)
@@ -125,7 +173,12 @@ class TestGenerateReport:
 
     def test_html_structure(self, tmp_path):
         results = [
-            {"status": "valid", "source_name": "S", "extract_name": "E", "message": "ok"},
+            {
+                "status": "valid",
+                "source_name": "S",
+                "extract_name": "E",
+                "message": "ok",
+            },
         ]
         output = str(tmp_path / "report.html")
         generate_report(results, output)
@@ -138,6 +191,7 @@ class TestGenerateReport:
 # ============================================================
 # ExtractRepairPlugin
 # ============================================================
+
 
 class TestExtractRepairPlugin:
     @pytest.fixture

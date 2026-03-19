@@ -18,7 +18,6 @@ from argumentation_analysis.core.capability_registry import (
     ComponentType,
 )
 
-
 # --- Build tests ---
 
 
@@ -184,9 +183,7 @@ class TestDemocratechExecution:
     @pytest.mark.asyncio
     async def test_conditional_recheck_triggered(self):
         """Low consensus triggers quality recheck."""
-        low_consensus = AsyncMock(
-            return_value={"consensus": 0.3, "method": "majority"}
-        )
+        low_consensus = AsyncMock(return_value={"consensus": 0.3, "method": "majority"})
         registry = _make_registry(
             "counter_argument_generation",
             "adversarial_debate",
@@ -255,22 +252,26 @@ class TestDemocratechExecution:
         registry = CapabilityRegistry()
         quality_invoke = AsyncMock(return_value={"note_finale": 7.5})
         registry.register(
-            "quality", ComponentType.AGENT,
+            "quality",
+            ComponentType.AGENT,
             capabilities=["argument_quality"],
             invoke=quality_invoke,
         )
         registry.register(
-            "counter", ComponentType.AGENT,
+            "counter",
+            ComponentType.AGENT,
             capabilities=["counter_argument_generation"],
             invoke=capturing_invoke,
         )
         registry.register(
-            "debate", ComponentType.AGENT,
+            "debate",
+            ComponentType.AGENT,
             capabilities=["adversarial_debate"],
             invoke=AsyncMock(return_value={"debate": True}),
         )
         registry.register(
-            "governance", ComponentType.AGENT,
+            "governance",
+            ComponentType.AGENT,
             capabilities=["governance_simulation"],
             invoke=AsyncMock(return_value={"consensus": 0.9}),
         )

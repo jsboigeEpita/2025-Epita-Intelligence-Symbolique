@@ -6,6 +6,7 @@ Validates:
 - Config enum extensions
 - Reasoner lazy-loading and fallback
 """
+
 import pytest
 import importlib
 from unittest.mock import patch, MagicMock, PropertyMock
@@ -21,7 +22,6 @@ from argumentation_analysis.agents.core.logic.modal_handler import ModalHandler
 from argumentation_analysis.agents.core.logic.tweety_initializer import (
     TweetyInitializer,
 )
-
 
 # ──── Config Tests ────
 
@@ -54,10 +54,13 @@ class TestSolverChoiceEnum:
         assert s.modal_solver == ModalSolverChoice.TWEETY
 
     def test_settings_env_override(self):
-        with patch.dict("os.environ", {
-            "ARG_ANALYSIS_SOLVER": "eprover",
-            "ARG_ANALYSIS_MODAL_SOLVER": "spass",
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "ARG_ANALYSIS_SOLVER": "eprover",
+                "ARG_ANALYSIS_MODAL_SOLVER": "spass",
+            },
+        ):
             s = ArgAnalysisSettings()
             assert s.solver == SolverChoice.EPROVER
             assert s.modal_solver == ModalSolverChoice.SPASS
@@ -98,12 +101,17 @@ class TestFOLHandlerEProverDispatch:
             mock_prover9.assert_not_called()
             assert result is True
 
-    @pytest.mark.parametrize("solver,expected_method", [
-        ("tweety", "_fol_query_with_tweety"),
-        ("prover9", "_fol_query_with_prover9"),
-        ("eprover", "_fol_query_with_eprover"),
-    ])
-    def test_fol_query_dispatch_all_solvers(self, solver, expected_method, mock_belief_set):
+    @pytest.mark.parametrize(
+        "solver,expected_method",
+        [
+            ("tweety", "_fol_query_with_tweety"),
+            ("prover9", "_fol_query_with_prover9"),
+            ("eprover", "_fol_query_with_eprover"),
+        ],
+    )
+    def test_fol_query_dispatch_all_solvers(
+        self, solver, expected_method, mock_belief_set
+    ):
         with patch.object(
             FOLHandler, expected_method, return_value=True
         ) as mock_method, patch(
@@ -157,15 +165,18 @@ class TestFOLHandlerEProverDispatch:
             mock_tweety.assert_not_called()
             mock_prover9.assert_not_called()
 
-    @pytest.mark.parametrize("solver,expected_method", [
-        ("tweety", "_fol_check_consistency_with_tweety"),
-        ("prover9", "_fol_check_consistency_with_prover9"),
-        ("eprover", "_fol_check_consistency_with_eprover"),
-    ])
-    async def test_consistency_dispatch_all_solvers(self, solver, expected_method, mock_belief_set):
-        with patch.object(
-            FOLHandler, expected_method
-        ) as mock_method, patch(
+    @pytest.mark.parametrize(
+        "solver,expected_method",
+        [
+            ("tweety", "_fol_check_consistency_with_tweety"),
+            ("prover9", "_fol_check_consistency_with_prover9"),
+            ("eprover", "_fol_check_consistency_with_eprover"),
+        ],
+    )
+    async def test_consistency_dispatch_all_solvers(
+        self, solver, expected_method, mock_belief_set
+    ):
+        with patch.object(FOLHandler, expected_method) as mock_method, patch(
             "argumentation_analysis.agents.core.logic.fol_handler.settings"
         ) as mock_settings:
             mock_settings.solver = SolverChoice(solver)

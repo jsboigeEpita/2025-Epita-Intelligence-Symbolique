@@ -611,7 +611,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "trace": trace,
         }
         self.dialogue_results.append(entry)
-        state_logger.info(f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})")
+        state_logger.info(
+            f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})"
+        )
         return dl_id
 
     def add_probabilistic_result(
@@ -625,7 +627,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "acceptance_probabilities": acceptance_probs,
         }
         self.probabilistic_results.append(entry)
-        state_logger.info(f"Probabilistic result added: {pr_id} ({len(arguments)} args)")
+        state_logger.info(
+            f"Probabilistic result added: {pr_id} ({len(arguments)} args)"
+        )
         return pr_id
 
     def add_bipolar_result(
@@ -644,7 +648,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return bp_id
 
     def add_fol_analysis_result(
-        self, formulas: List[str], consistent: bool, inferences: List[str],
+        self,
+        formulas: List[str],
+        consistent: bool,
+        inferences: List[str],
         confidence: float = 0.0,
     ) -> str:
         """Add a first-order logic analysis result."""
@@ -661,7 +668,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return fol_id
 
     def add_propositional_analysis_result(
-        self, formulas: List[str], satisfiable: bool, model: Optional[Dict[str, bool]] = None,
+        self,
+        formulas: List[str],
+        satisfiable: bool,
+        model: Optional[Dict[str, bool]] = None,
     ) -> str:
         """Add a propositional logic analysis result."""
         pl_id = self._generate_id("pl", self.propositional_analysis_results)
@@ -676,7 +686,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return pl_id
 
     def add_modal_analysis_result(
-        self, formulas: List[str], valid: bool, modalities: List[str],
+        self,
+        formulas: List[str],
+        valid: bool,
+        modalities: List[str],
     ) -> str:
         """Add a modal logic analysis result."""
         ml_id = self._generate_id("modal", self.modal_analysis_results)
@@ -691,7 +704,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return ml_id
 
     def add_formal_synthesis_report(
-        self, summary: str, phase_results: Dict[str, Any], overall_validity: float,
+        self,
+        summary: str,
+        phase_results: Dict[str, Any],
+        overall_validity: float,
     ) -> str:
         """Add a formal synthesis report aggregating all logic analyses."""
         fs_id = self._generate_id("fsyn", self.formal_synthesis_reports)
@@ -702,7 +718,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "overall_validity": overall_validity,
         }
         self.formal_synthesis_reports.append(entry)
-        state_logger.info(f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})")
+        state_logger.info(
+            f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})"
+        )
         return fs_id
 
     def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
@@ -732,7 +750,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "probabilistic_result_count": len(self.probabilistic_results),
                     "bipolar_result_count": len(self.bipolar_results),
                     "fol_analysis_count": len(self.fol_analysis_results),
-                    "propositional_analysis_count": len(self.propositional_analysis_results),
+                    "propositional_analysis_count": len(
+                        self.propositional_analysis_results
+                    ),
                     "modal_analysis_count": len(self.modal_analysis_results),
                     "formal_synthesis_count": len(self.formal_synthesis_reports),
                     "workflow_results_count": len(self.workflow_results),

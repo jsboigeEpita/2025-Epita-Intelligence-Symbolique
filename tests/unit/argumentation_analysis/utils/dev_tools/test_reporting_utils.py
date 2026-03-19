@@ -144,8 +144,16 @@ class TestGenerateCoverageEvolutionReport:
     def test_new_package_in_last_entry(self, tmp_path):
         """Package exists only in last entry (new module)."""
         data = [
-            {"timestamp": "t1", "global_line_rate": 40.0, "packages": {"pkg1": {"line_rate": 30.0}}},
-            {"timestamp": "t2", "global_line_rate": 60.0, "packages": {"pkg1": {"line_rate": 50.0}, "pkg2": {"line_rate": 70.0}}},
+            {
+                "timestamp": "t1",
+                "global_line_rate": 40.0,
+                "packages": {"pkg1": {"line_rate": 30.0}},
+            },
+            {
+                "timestamp": "t2",
+                "global_line_rate": 60.0,
+                "packages": {"pkg1": {"line_rate": 50.0}, "pkg2": {"line_rate": 70.0}},
+            },
         ]
         history = tmp_path / "history.json"
         history.write_text(json.dumps(data), encoding="utf-8")

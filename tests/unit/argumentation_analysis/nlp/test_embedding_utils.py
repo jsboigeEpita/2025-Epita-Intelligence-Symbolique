@@ -206,7 +206,9 @@ def test_save_embeddings_data_success(tmp_path, sample_embeddings_data):
         # ou utiliser un mock plus sophistiqué pour json.dump.
         # Ici, on vérifie au moins que le fichier a été ouvert en écriture.
         # Pour une vérification plus poussée de json.dump:
-        with patch("argumentation_analysis.nlp.embedding_utils.json.dump") as mock_json_dump:
+        with patch(
+            "argumentation_analysis.nlp.embedding_utils.json.dump"
+        ) as mock_json_dump:
             save_embeddings_data(
                 sample_embeddings_data, output_file
             )  # Appeler à nouveau avec le mock json.dump
@@ -223,7 +225,8 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     output_file = tmp_path / "embeddings_io_error.json"
 
     with patch(MKDIR_PATH), patch(OPEN_BUILTIN_PATH, mock_open()), patch(
-        "argumentation_analysis.nlp.embedding_utils.json.dump", side_effect=IOError("Test IOError")
+        "argumentation_analysis.nlp.embedding_utils.json.dump",
+        side_effect=IOError("Test IOError"),
     ):
         success = save_embeddings_data(sample_embeddings_data, output_file)
 
@@ -237,7 +240,8 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     output_file = tmp_path / "embeddings_other_error.json"
 
     with patch(MKDIR_PATH), patch(OPEN_BUILTIN_PATH, mock_open()), patch(
-        "argumentation_analysis.nlp.embedding_utils.json.dump", side_effect=Exception("Test Generic Exception")
+        "argumentation_analysis.nlp.embedding_utils.json.dump",
+        side_effect=Exception("Test Generic Exception"),
     ):
         success = save_embeddings_data(sample_embeddings_data, output_file)
 

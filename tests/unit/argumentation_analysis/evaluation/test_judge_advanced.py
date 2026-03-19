@@ -78,7 +78,7 @@ class TestJSONParsing:
     def test_parse_json_markdown_block(self):
         """Test parsing JSON from markdown code block."""
         judge = LLMJudge()
-        raw = '''```json
+        raw = """```json
 {
   "completeness": 4,
   "accuracy": 4,
@@ -88,7 +88,7 @@ class TestJSONParsing:
   "overall": 4,
   "reasoning": "Good analysis"
 }
-```'''
+```"""
 
         parsed = judge._parse_json_response(raw)
 
@@ -98,12 +98,12 @@ class TestJSONParsing:
     def test_parse_json_markdown_no_language(self):
         """Test parsing JSON from markdown without language specifier."""
         judge = LLMJudge()
-        raw = '''```
+        raw = """```
 {
   "completeness": 5,
   "overall": 5
 }
-```'''
+```"""
 
         parsed = judge._parse_json_response(raw)
 
@@ -113,11 +113,11 @@ class TestJSONParsing:
     def test_parse_json_with_text_before(self):
         """Test parsing JSON when there's text before the JSON."""
         judge = LLMJudge()
-        raw = '''Here's my evaluation:
+        raw = """Here's my evaluation:
 
 {"completeness": 4, "overall": 4, "reasoning": "Test"}
 
-Hope this helps!'''
+Hope this helps!"""
 
         parsed = judge._parse_json_response(raw)
 
@@ -136,10 +136,10 @@ Hope this helps!'''
     def test_parse_malformed_json_fallback(self):
         """Test fallback extraction of JSON from malformed response."""
         judge = LLMJudge()
-        raw = '''The scores are:
+        raw = """The scores are:
 completeness: 4
 accuracy: 3
-{"completeness": 4, "overall": 4}'''
+{"completeness": 4, "overall": 4}"""
 
         parsed = judge._parse_json_response(raw)
 
@@ -258,8 +258,12 @@ class TestLargeResultProcessing:
 
         # Create a large result set
         large_results = {
-            "arguments": [{"id": f"arg_{i}", "text": "Argument text"} for i in range(100)],
-            "fallacies": [{"name": f"fallacy_{i}", "confidence": 0.5} for i in range(50)],
+            "arguments": [
+                {"id": f"arg_{i}", "text": "Argument text"} for i in range(100)
+            ],
+            "fallacies": [
+                {"name": f"fallacy_{i}", "confidence": 0.5} for i in range(50)
+            ],
             "raw_text": "A" * 10000,
         }
 
@@ -275,9 +279,7 @@ class TestLargeResultProcessing:
         judge = LLMJudge()
 
         # Create results that would exceed the limit
-        large_results = {
-            "data": ["item_" + str(i) for i in range(1000)]
-        }
+        large_results = {"data": ["item_" + str(i) for i in range(1000)]}
 
         prepared = judge._prepare_results_for_judge(large_results)
         results_str = json.dumps(prepared, indent=2, ensure_ascii=False, default=str)
@@ -336,7 +338,9 @@ class TestEvaluateMethod:
         # Mock OpenAI client with delay
         async def slow_completion(*args, **kwargs):
             await asyncio.sleep(5)
-            return MagicMock(choices=[MagicMock(message=MagicMock(content='{"overall": 4}') )])
+            return MagicMock(
+                choices=[MagicMock(message=MagicMock(content='{"overall": 4}'))]
+            )
 
         with patch("openai.AsyncOpenAI") as mock_client:
             mock_instance = MagicMock()

@@ -17,8 +17,8 @@ from argumentation_analysis.reporting.trace_analyzer import (
     InformalExploration,
 )
 
-
 # ── ExtractMetadata ──
+
 
 class TestExtractMetadata:
     def test_required_fields(self):
@@ -73,6 +73,7 @@ class TestExtractMetadata:
 
 # ── OrchestrationFlow ──
 
+
 class TestOrchestrationFlow:
     def test_basic(self):
         flow = OrchestrationFlow(
@@ -99,6 +100,7 @@ class TestOrchestrationFlow:
 
 # ── StateEvolution ──
 
+
 class TestStateEvolution:
     def test_basic(self):
         evo = StateEvolution(
@@ -122,6 +124,7 @@ class TestStateEvolution:
 
 # ── QueryResults ──
 
+
 class TestQueryResults:
     def test_basic(self):
         qr = QueryResults(
@@ -137,6 +140,7 @@ class TestQueryResults:
 
 
 # ── ToolCall ──
+
 
 class TestToolCall:
     @pytest.fixture
@@ -228,7 +232,9 @@ class TestToolCall:
         assert "keys" in result
 
     def test_format_args_total_truncation(self):
-        call = ToolCall("t", {f"key_{i}": f"value_{i}" * 10 for i in range(20)}, None, 0, 0, True)
+        call = ToolCall(
+            "t", {f"key_{i}": f"value_{i}" * 10 for i in range(20)}, None, 0, 0, True
+        )
         result = call._format_arguments_intelligently()
         # Very long args string gets truncated to 150 chars
         assert len(result) <= 153  # 150 + "..."
@@ -289,6 +295,7 @@ class TestToolCall:
 
 # ── AgentStep ──
 
+
 class TestAgentStep:
     def test_basic_init(self):
         step = AgentStep(agent_name="sherlock")
@@ -342,6 +349,7 @@ class TestAgentStep:
 
 
 # ── ConversationCapture ──
+
 
 class TestConversationCapture:
     def test_init(self):
@@ -410,6 +418,7 @@ class TestConversationCapture:
 
 # ── InformalExploration ──
 
+
 class TestInformalExploration:
     def test_basic(self):
         exp = InformalExploration(
@@ -450,6 +459,7 @@ class TestInformalExploration:
 
 
 # ── Integration: dataclass serialization ──
+
 
 class TestDataclassSerialization:
     def test_tool_call_roundtrip(self):

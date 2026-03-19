@@ -155,7 +155,9 @@ class GovernancePlugin:
         data = json.loads(input_json)
         winner = condorcet_winner(data["ballots"], data["options"])
         matrix = pairwise_matrix(data["ballots"], data["options"])
-        return json.dumps({
-            "condorcet_winner": winner,
-            "pairwise_matrix": matrix,
-        })
+        return json.dumps(
+            {
+                "condorcet_winner": winner,
+                "pairwise_matrix": matrix,
+            }
+        )

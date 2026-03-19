@@ -74,21 +74,27 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
             # Use extracted arguments from upstream phase if available
             extract_output = context.get("phase_extract_output", {})
             arguments = extract_output.get("arguments", [])
-            args_context = ("\n".join(f"- {a}" for a in arguments)
-                           if arguments else input_text[:1500])
+            args_context = (
+                "\n".join(f"- {a}" for a in arguments)
+                if arguments
+                else input_text[:1500]
+            )
 
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
-                    {"role": "system", "content": (
-                        "You are an expert in argumentation and counter-argument generation. "
-                        "Generate a strong counter-argument using one of: reductio ad absurdum, "
-                        "counter-example, distinction, reformulation, or concession+pivot. "
-                        "Respond with ONLY a JSON object:\n"
-                        '{"counter_argument": "text", "strategy_used": "name", '
-                        '"target_argument": "which argument", "strength": "weak|moderate|strong", '
-                        '"reasoning": "why this works"}'
-                    )},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert in argumentation and counter-argument generation. "
+                            "Generate a strong counter-argument using one of: reductio ad absurdum, "
+                            "counter-example, distinction, reformulation, or concession+pivot. "
+                            "Respond with ONLY a JSON object:\n"
+                            '{"counter_argument": "text", "strategy_used": "name", '
+                            '"target_argument": "which argument", "strength": "weak|moderate|strong", '
+                            '"reasoning": "why this works"}'
+                        ),
+                    },
                     {"role": "user", "content": args_context},
                 ],
             )
@@ -137,23 +143,29 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
             # Use extracted arguments from upstream
             extract_output = context.get("phase_extract_output", {})
             arguments = extract_output.get("arguments", [])
-            args_text = ("\n".join(f"- {a}" for a in arguments)
-                         if arguments else input_text[:1500])
+            args_text = (
+                "\n".join(f"- {a}" for a in arguments)
+                if arguments
+                else input_text[:1500]
+            )
 
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
-                    {"role": "system", "content": (
-                        "You are a debate judge. Analyze the arguments presented, "
-                        "identify the strongest and weakest positions, and assess "
-                        "the overall quality of the argumentation. "
-                        "Respond with ONLY a JSON object:\n"
-                        '{"strongest_argument": "text", "weakest_argument": "text", '
-                        '"winner": "which side/position wins", '
-                        '"debate_quality": 1-5, '
-                        '"key_exchanges": [{"point": "text", "rebuttal": "text"}], '
-                        '"reasoning": "brief assessment"}'
-                    )},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a debate judge. Analyze the arguments presented, "
+                            "identify the strongest and weakest positions, and assess "
+                            "the overall quality of the argumentation. "
+                            "Respond with ONLY a JSON object:\n"
+                            '{"strongest_argument": "text", "weakest_argument": "text", '
+                            '"winner": "which side/position wins", '
+                            '"debate_quality": 1-5, '
+                            '"key_exchanges": [{"point": "text", "rebuttal": "text"}], '
+                            '"reasoning": "brief assessment"}'
+                        ),
+                    },
                     {"role": "user", "content": args_text},
                 ],
             )
@@ -229,8 +241,7 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
             context_parts = []
             if arguments:
                 context_parts.append(
-                    "Arguments identified:\n"
-                    + "\n".join(f"- {a}" for a in arguments)
+                    "Arguments identified:\n" + "\n".join(f"- {a}" for a in arguments)
                 )
             if debate_output.get("llm_debate_assessment"):
                 da = debate_output["llm_debate_assessment"]
@@ -247,35 +258,34 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
             if conflicts:
                 context_parts.append(
                     f"Conflicts detected: {len(conflicts)} between "
-                    + ", ".join(
-                        " vs ".join(c.get("agents", []))
-                        for c in conflicts[:3]
-                    )
+                    + ", ".join(" vs ".join(c.get("agents", [])) for c in conflicts[:3])
                 )
 
             deliberation_input = (
-                "\n\n".join(context_parts) if context_parts
-                else input_text[:2000]
+                "\n\n".join(context_parts) if context_parts else input_text[:2000]
             )
 
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
-                    {"role": "system", "content": (
-                        "You are a governance and collective decision-making analyst. "
-                        "Analyze the arguments, conflicts, and positions presented. "
-                        "Assess which voting/decision method would be most appropriate, "
-                        "evaluate consensus potential, and recommend a governance approach. "
-                        "Available methods: " + ", ".join(available_methods) + ". "
-                        "Respond with ONLY a JSON object:\n"
-                        '{"recommended_method": "method_name", '
-                        '"consensus_potential": 0.0-1.0, '
-                        '"fairness_assessment": "brief text", '
-                        '"conflict_severity": "low|medium|high", '
-                        '"stakeholder_analysis": [{"agent": "name", "position": "summary", "influence": 0.0-1.0}], '
-                        '"recommended_resolution": "collaborative|competitive|compromise", '
-                        '"governance_reasoning": "brief explanation of recommendation"}'
-                    )},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a governance and collective decision-making analyst. "
+                            "Analyze the arguments, conflicts, and positions presented. "
+                            "Assess which voting/decision method would be most appropriate, "
+                            "evaluate consensus potential, and recommend a governance approach. "
+                            "Available methods: " + ", ".join(available_methods) + ". "
+                            "Respond with ONLY a JSON object:\n"
+                            '{"recommended_method": "method_name", '
+                            '"consensus_potential": 0.0-1.0, '
+                            '"fairness_assessment": "brief text", '
+                            '"conflict_severity": "low|medium|high", '
+                            '"stakeholder_analysis": [{"agent": "name", "position": "summary", "influence": 0.0-1.0}], '
+                            '"recommended_resolution": "collaborative|competitive|compromise", '
+                            '"governance_reasoning": "brief explanation of recommendation"}'
+                        ),
+                    },
                     {"role": "user", "content": deliberation_input},
                 ],
             )
@@ -367,6 +377,7 @@ async def _invoke_speech_transcription(
 async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke ranking semantics handler."""
     from argumentation_analysis.agents.core.logic.ranking_handler import RankingHandler
+
     handler = RankingHandler()
     args = context.get("arguments", ["a", "b", "c"])
     attacks = context.get("attacks", [])
@@ -377,6 +388,7 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke bipolar argumentation handler."""
     from argumentation_analysis.agents.core.logic.bipolar_handler import BipolarHandler
+
     handler = BipolarHandler()
     args = context.get("arguments", [])
     attacks = context.get("attacks", [])
@@ -390,6 +402,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke ABA handler."""
     from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
+
     handler = ABAHandler()
     assumptions = context.get("assumptions", [])
     rules = context.get("rules", [])
@@ -403,26 +416,35 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke ADF handler."""
     from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
+
     handler = ADFHandler()
     statements = context.get("statements", [])
     conditions = context.get("acceptance_conditions", {})
     semantics = context.get("semantics", "grounded")
-    return await asyncio.to_thread(handler.analyze_adf, statements, conditions, semantics)
+    return await asyncio.to_thread(
+        handler.analyze_adf, statements, conditions, semantics
+    )
 
 
 async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke ASPIC+ handler."""
     from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
+
     handler = ASPICHandler()
     strict = context.get("strict_rules", [])
     defeasible = context.get("defeasible_rules", [])
     axioms = context.get("axioms")
-    return await asyncio.to_thread(handler.analyze_aspic_framework, strict, defeasible, axioms)
+    return await asyncio.to_thread(
+        handler.analyze_aspic_framework, strict, defeasible, axioms
+    )
 
 
 async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke belief revision handler."""
-    from argumentation_analysis.agents.core.logic.belief_revision_handler import BeliefRevisionHandler
+    from argumentation_analysis.agents.core.logic.belief_revision_handler import (
+        BeliefRevisionHandler,
+    )
+
     handler = BeliefRevisionHandler()
     beliefs = context.get("belief_set", [input_text])
     new_belief = context.get("new_belief", input_text)
@@ -432,7 +454,10 @@ async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> D
 
 async def _invoke_probabilistic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke probabilistic argumentation handler."""
-    from argumentation_analysis.agents.core.logic.probabilistic_handler import ProbabilisticHandler
+    from argumentation_analysis.agents.core.logic.probabilistic_handler import (
+        ProbabilisticHandler,
+    )
+
     handler = ProbabilisticHandler()
     args = context.get("arguments", [])
     attacks = context.get("attacks", [])
@@ -444,7 +469,10 @@ async def _invoke_probabilistic(input_text: str, context: Dict[str, Any]) -> Dic
 
 async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke dialogue protocol handler."""
-    from argumentation_analysis.agents.core.logic.dialogue_handler import DialogueHandler
+    from argumentation_analysis.agents.core.logic.dialogue_handler import (
+        DialogueHandler,
+    )
+
     handler = DialogueHandler()
     pro_args = context.get("proponent_args", [])
     pro_attacks = context.get("proponent_attacks", [])
@@ -459,7 +487,10 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Description Logic handler (#86)."""
     from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = DLHandler(initializer)
     tbox = context.get("tbox", [])
@@ -481,7 +512,10 @@ async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Conditional Logic handler (#86)."""
     from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = CLHandler(initializer)
     conditionals = context.get("conditionals", [])
@@ -505,6 +539,7 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke SAT solver handler (#86)."""
     from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
+
     handler = SATHandler(context.get("solver", "cadical195"))
     formulas = context.get("formulas", [input_text] if input_text else [])
     mode = context.get("sat_mode", "solve")  # solve, maxsat, mus
@@ -530,7 +565,10 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Set Argumentation Framework handler (#87)."""
     from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = SetAFHandler(initializer)
     args = context.get("arguments", [])
@@ -541,8 +579,13 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict:
 
 async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Weighted AF handler (#87)."""
-    from argumentation_analysis.agents.core.logic.weighted_handler import WeightedHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.weighted_handler import (
+        WeightedHandler,
+    )
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = WeightedHandler(initializer)
     args = context.get("arguments", [])
@@ -556,7 +599,10 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Social AF handler (#87)."""
     from argumentation_analysis.agents.core.logic.social_handler import SocialHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = SocialHandler(initializer)
     args = context.get("arguments", [])
@@ -576,7 +622,10 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Epistemic AF handler (#88)."""
     from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = EAFHandler(initializer)
     args = context.get("arguments", [])
@@ -591,19 +640,27 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict:
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke DeLP handler (#89)."""
     from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = DeLPHandler(initializer)
     program_text = context.get("program", input_text)
     queries = context.get("queries", [])
     criterion = context.get("criterion", "generalized_specificity")
-    return await asyncio.to_thread(handler.analyze_delp, program_text, queries, criterion)
+    return await asyncio.to_thread(
+        handler.analyze_delp, program_text, queries, criterion
+    )
 
 
 async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke QBF handler (#90)."""
     from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
-    from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
     initializer = TweetyInitializer()
     handler = QBFHandler(initializer)
     quantifiers = context.get("quantifiers", [])
@@ -676,9 +733,7 @@ async def _invoke_hierarchical_fallacy(
         return result
 
     except Exception as e:
-        logger.warning(
-            "Hierarchical fallacy detection failed, returning empty: %s", e
-        )
+        logger.warning("Hierarchical fallacy detection failed, returning empty: %s", e)
         return {
             "fallacies": [],
             "exploration_method": "error",
@@ -708,15 +763,18 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
-                    {"role": "system", "content": (
-                        "You are an expert argument analyst. Extract the key arguments, "
-                        "claims, and rhetorical strategies from the text. "
-                        "Respond with ONLY a JSON object:\n"
-                        '{"arguments": ["arg1", "arg2", ...], '
-                        '"claims": ["claim1", "claim2", ...], '
-                        '"fallacies": [{"type": "name", "justification": "why"}], '
-                        '"summary": "brief analysis summary"}'
-                    )},
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert argument analyst. Extract the key arguments, "
+                            "claims, and rhetorical strategies from the text. "
+                            "Respond with ONLY a JSON object:\n"
+                            '{"arguments": ["arg1", "arg2", ...], '
+                            '"claims": ["claim1", "claim2", ...], '
+                            '"fallacies": [{"type": "name", "justification": "why"}], '
+                            '"summary": "brief analysis summary"}'
+                        ),
+                    },
                     {"role": "user", "content": input_text[:3000]},
                 ],
             )
@@ -745,7 +803,7 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
         logger.warning(f"LLM fact extraction failed, falling back to heuristic: {e}")
 
     # Heuristic fallback
-    sentences = re.split(r'(?<=[.!?])\s+', input_text.strip())
+    sentences = re.split(r"(?<=[.!?])\s+", input_text.strip())
     claims = [s.strip() for s in sentences if len(s.strip()) > 20]
     return {
         "arguments": [],
@@ -763,6 +821,7 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
     """Invoke propositional logic analysis via TweetyBridge (JVM required)."""
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge()
         formulas = context.get("formulas", [input_text])
         if not isinstance(formulas, list):
@@ -779,13 +838,19 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
             "logic_type": "propositional",
         }
     except Exception as e:
-        return {"error": str(e), "formulas": [], "satisfiable": False, "logic_type": "propositional"}
+        return {
+            "error": str(e),
+            "formulas": [],
+            "satisfiable": False,
+            "logic_type": "propositional",
+        }
 
 
 async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke first-order logic analysis via TweetyBridge (JVM required)."""
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge()
         formulas = context.get("formulas", [input_text])
         if not isinstance(formulas, list):
@@ -803,13 +868,20 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
             "logic_type": "first_order",
         }
     except Exception as e:
-        return {"error": str(e), "formulas": [], "consistent": False, "inferences": [], "confidence": 0.0}
+        return {
+            "error": str(e),
+            "formulas": [],
+            "consistent": False,
+            "inferences": [],
+            "confidence": 0.0,
+        }
 
 
 async def _invoke_modal_logic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke modal logic analysis via TweetyBridge (JVM required)."""
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge()
         formulas = context.get("formulas", [input_text])
         if not isinstance(formulas, list):
@@ -836,6 +908,7 @@ async def _invoke_dung_extensions(input_text: str, context: Dict[str, Any]) -> D
     try:
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
         from argumentation_analysis.core.jvm_setup import TweetyInitializer
+
         initializer = TweetyInitializer()
         handler = AFHandler(initializer)
         arguments = context.get("arguments", [])
@@ -863,8 +936,12 @@ async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> 
     overall_scores = []
 
     for key, val in context.items():
-        if key.startswith("phase_") and key.endswith("_output") and isinstance(val, dict):
-            phase_name = key[len("phase_"):-len("_output")]
+        if (
+            key.startswith("phase_")
+            and key.endswith("_output")
+            and isinstance(val, dict)
+        ):
+            phase_name = key[len("phase_") : -len("_output")]
             phase_results[phase_name] = val
             if "consistent" in val:
                 overall_scores.append(1.0 if val["consistent"] else 0.0)
@@ -873,7 +950,9 @@ async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> 
             if "valid" in val:
                 overall_scores.append(1.0 if val["valid"] else 0.0)
 
-    overall_validity = sum(overall_scores) / len(overall_scores) if overall_scores else 0.5
+    overall_validity = (
+        sum(overall_scores) / len(overall_scores) if overall_scores else 0.5
+    )
     summary_parts = []
     for name, res in phase_results.items():
         if "error" in res:
@@ -883,11 +962,20 @@ async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> 
         elif "satisfiable" in res:
             summary_parts.append(f"{name}: satisfiable={res['satisfiable']}")
         elif "extensions" in res:
-            ext_count = sum(len(v) if isinstance(v, list) else 0 for v in res["extensions"].values()) if isinstance(res.get("extensions"), dict) else 0
+            ext_count = (
+                sum(
+                    len(v) if isinstance(v, list) else 0
+                    for v in res["extensions"].values()
+                )
+                if isinstance(res.get("extensions"), dict)
+                else 0
+            )
             summary_parts.append(f"{name}: {ext_count} extensions")
 
     return {
-        "summary": "; ".join(summary_parts) if summary_parts else "No formal results collected",
+        "summary": (
+            "; ".join(summary_parts) if summary_parts else "No formal results collected"
+        ),
         "phase_results": phase_results,
         "overall_validity": overall_validity,
         "phase_count": len(phase_results),
@@ -952,7 +1040,9 @@ def _write_jtms_to_state(output, state, ctx) -> None:
     if not isinstance(beliefs, dict):
         return
     for name, valid_str in beliefs.items():
-        valid = True if valid_str == "True" else (False if valid_str == "False" else None)
+        valid = (
+            True if valid_str == "True" else (False if valid_str == "False" else None)
+        )
         state.add_jtms_belief(str(name), valid, justifications=[])
 
 
@@ -970,10 +1060,12 @@ def _write_debate_to_state(output, state, ctx) -> None:
         if isinstance(key_exchanges, list):
             for ex in key_exchanges:
                 if isinstance(ex, dict):
-                    exchanges.append({
-                        "point": str(ex.get("point", "")),
-                        "rebuttal": str(ex.get("rebuttal", "")),
-                    })
+                    exchanges.append(
+                        {
+                            "point": str(ex.get("point", "")),
+                            "rebuttal": str(ex.get("rebuttal", "")),
+                        }
+                    )
     state.add_debate_transcript(
         topic=topic,
         exchanges=exchanges,
@@ -1012,7 +1104,9 @@ def _write_governance_to_state(output, state, ctx) -> None:
     if not scores and not has_conflicts and not has_llm:
         return
 
-    recommended = output.get("recommended_method") or llm_gov.get("recommended_method", "majority")
+    recommended = output.get("recommended_method") or llm_gov.get(
+        "recommended_method", "majority"
+    )
 
     # Determine winner from LLM assessment or conflict resolution
     winner = "N/A"
@@ -1281,7 +1375,9 @@ def _write_fol_to_state(output, state, ctx) -> None:
         inferences = []
     if not isinstance(confidence, (int, float)):
         confidence = 0.0
-    state.add_fol_analysis_result(formulas, bool(consistent), inferences, float(confidence))
+    state.add_fol_analysis_result(
+        formulas, bool(consistent), inferences, float(confidence)
+    )
 
 
 def _write_modal_to_state(output, state, ctx) -> None:
@@ -1718,6 +1814,7 @@ def setup_registry(
     # --- TweetyLogicPlugin: SK wrapper for all handlers (#91) ---
     try:
         from argumentation_analysis.plugins.tweety_logic_plugin import TweetyLogicPlugin
+
         registry.register_plugin(
             name="tweety_logic_plugin",
             plugin_class=TweetyLogicPlugin,
@@ -1735,21 +1832,49 @@ def setup_registry(
 
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
-        ("fact_extraction_service", ["fact_extraction"],
-         "Heuristic claim extraction from text", _invoke_fact_extraction),
-        ("propositional_logic_service", ["propositional_logic"],
-         "Propositional logic analysis via Tweety", _invoke_propositional_logic),
-        ("fol_reasoning_service", ["fol_reasoning"],
-         "First-order logic analysis via Tweety", _invoke_fol_reasoning),
-        ("modal_logic_service", ["modal_logic"],
-         "Modal logic analysis via Tweety", _invoke_modal_logic),
-        ("dung_extensions_service", ["dung_extensions"],
-         "Dung AF extension computation via AFHandler", _invoke_dung_extensions),
-        ("formal_synthesis_service", ["formal_synthesis"],
-         "Aggregate formal analysis into unified report", _invoke_formal_synthesis),
+        (
+            "fact_extraction_service",
+            ["fact_extraction"],
+            "Heuristic claim extraction from text",
+            _invoke_fact_extraction,
+        ),
+        (
+            "propositional_logic_service",
+            ["propositional_logic"],
+            "Propositional logic analysis via Tweety",
+            _invoke_propositional_logic,
+        ),
+        (
+            "fol_reasoning_service",
+            ["fol_reasoning"],
+            "First-order logic analysis via Tweety",
+            _invoke_fol_reasoning,
+        ),
+        (
+            "modal_logic_service",
+            ["modal_logic"],
+            "Modal logic analysis via Tweety",
+            _invoke_modal_logic,
+        ),
+        (
+            "dung_extensions_service",
+            ["dung_extensions"],
+            "Dung AF extension computation via AFHandler",
+            _invoke_dung_extensions,
+        ),
+        (
+            "formal_synthesis_service",
+            ["formal_synthesis"],
+            "Aggregate formal analysis into unified report",
+            _invoke_formal_synthesis,
+        ),
         # SAT handler — no JVM dependency, uses PySAT+Z3 (#86)
-        ("sat_handler", ["sat_solving"],
-         "SAT/MaxSAT/MUS solver (PySAT + Z3)", _invoke_sat),
+        (
+            "sat_handler",
+            ["sat_solving"],
+            "SAT/MaxSAT/MUS solver (PySAT + Z3)",
+            _invoke_sat,
+        ),
     ]
     for name, caps, desc, invoke_fn in logic_capabilities:
         try:
@@ -1777,41 +1902,105 @@ def setup_registry(
 def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
     """Register Tweety handler capabilities (Track A #55-#62, #85-#86)."""
     tweety_handlers = [
-        ("ranking_semantics_handler", ["ranking_semantics"],
-         "Qualitative argument ranking (Categoriser, Burden)", _invoke_ranking),
-        ("bipolar_handler", ["bipolar_argumentation"],
-         "Bipolar argumentation (support + attack)", _invoke_bipolar),
-        ("aba_handler", ["aba_reasoning"],
-         "Assumption-Based Argumentation", _invoke_aba),
-        ("adf_handler", ["adf_reasoning"],
-         "Abstract Dialectical Frameworks", _invoke_adf),
-        ("aspic_handler", ["aspic_plus_reasoning"],
-         "ASPIC+ structured argumentation", _invoke_aspic),
-        ("belief_revision_handler", ["belief_revision"],
-         "Belief dynamics and revision operators", _invoke_belief_revision),
-        ("probabilistic_handler", ["probabilistic_argumentation"],
-         "Probabilistic argument acceptance", _invoke_probabilistic),
-        ("dialogue_handler", ["dialogue_protocols"],
-         "Agent dialogue and negotiation protocols", _invoke_dialogue),
+        (
+            "ranking_semantics_handler",
+            ["ranking_semantics"],
+            "Qualitative argument ranking (Categoriser, Burden)",
+            _invoke_ranking,
+        ),
+        (
+            "bipolar_handler",
+            ["bipolar_argumentation"],
+            "Bipolar argumentation (support + attack)",
+            _invoke_bipolar,
+        ),
+        (
+            "aba_handler",
+            ["aba_reasoning"],
+            "Assumption-Based Argumentation",
+            _invoke_aba,
+        ),
+        (
+            "adf_handler",
+            ["adf_reasoning"],
+            "Abstract Dialectical Frameworks",
+            _invoke_adf,
+        ),
+        (
+            "aspic_handler",
+            ["aspic_plus_reasoning"],
+            "ASPIC+ structured argumentation",
+            _invoke_aspic,
+        ),
+        (
+            "belief_revision_handler",
+            ["belief_revision"],
+            "Belief dynamics and revision operators",
+            _invoke_belief_revision,
+        ),
+        (
+            "probabilistic_handler",
+            ["probabilistic_argumentation"],
+            "Probabilistic argument acceptance",
+            _invoke_probabilistic,
+        ),
+        (
+            "dialogue_handler",
+            ["dialogue_protocols"],
+            "Agent dialogue and negotiation protocols",
+            _invoke_dialogue,
+        ),
         # New handlers (#86)
-        ("dl_handler", ["description_logic"],
-         "ALC Description Logic (TBox/ABox reasoning)", _invoke_dl),
-        ("cl_handler", ["conditional_logic"],
-         "Conditional Logic (System Z, non-monotonic)", _invoke_cl),
+        (
+            "dl_handler",
+            ["description_logic"],
+            "ALC Description Logic (TBox/ABox reasoning)",
+            _invoke_dl,
+        ),
+        (
+            "cl_handler",
+            ["conditional_logic"],
+            "Conditional Logic (System Z, non-monotonic)",
+            _invoke_cl,
+        ),
         # AF variants (#87)
-        ("setaf_handler", ["setaf_reasoning"],
-         "Set Argumentation Frameworks (collective attacks)", _invoke_setaf),
-        ("weighted_handler", ["weighted_argumentation"],
-         "Weighted Argumentation Frameworks (attack weights)", _invoke_weighted),
-        ("social_handler", ["social_argumentation"],
-         "Social Abstract Argumentation (voting + attacks)", _invoke_social),
+        (
+            "setaf_handler",
+            ["setaf_reasoning"],
+            "Set Argumentation Frameworks (collective attacks)",
+            _invoke_setaf,
+        ),
+        (
+            "weighted_handler",
+            ["weighted_argumentation"],
+            "Weighted Argumentation Frameworks (attack weights)",
+            _invoke_weighted,
+        ),
+        (
+            "social_handler",
+            ["social_argumentation"],
+            "Social Abstract Argumentation (voting + attacks)",
+            _invoke_social,
+        ),
         # New handlers (#88, #89, #90)
-        ("eaf_handler", ["epistemic_argumentation"],
-         "Epistemic AF (belief-aware multi-agent argumentation)", _invoke_eaf),
-        ("delp_handler", ["defeasible_logic"],
-         "Defeasible Logic Programming (dialectical trees)", _invoke_delp),
-        ("qbf_handler", ["qbf_reasoning"],
-         "Quantified Boolean Formulas (∀/∃ over PL)", _invoke_qbf),
+        (
+            "eaf_handler",
+            ["epistemic_argumentation"],
+            "Epistemic AF (belief-aware multi-agent argumentation)",
+            _invoke_eaf,
+        ),
+        (
+            "delp_handler",
+            ["defeasible_logic"],
+            "Defeasible Logic Programming (dialectical trees)",
+            _invoke_delp,
+        ),
+        (
+            "qbf_handler",
+            ["qbf_reasoning"],
+            "Quantified Boolean Formulas (∀/∃ over PL)",
+            _invoke_qbf,
+        ),
     ]
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:
@@ -2124,7 +2313,9 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_formal_verification_workflow,
             )
 
-            WORKFLOW_CATALOG["formal_verification"] = build_formal_verification_workflow()
+            WORKFLOW_CATALOG["formal_verification"] = (
+                build_formal_verification_workflow()
+            )
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
     return WORKFLOW_CATALOG
@@ -2173,7 +2364,9 @@ async def run_unified_analysis(
 
             state = UnifiedAnalysisState(text)
         except ImportError:
-            logger.warning("Could not import UnifiedAnalysisState; state tracking disabled")
+            logger.warning(
+                "Could not import UnifiedAnalysisState; state tracking disabled"
+            )
             state = None
 
     if custom_workflow is not None:

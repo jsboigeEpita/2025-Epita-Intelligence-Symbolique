@@ -27,8 +27,12 @@ class BipolarHandler:
             "org.tweetyproject.arg.bipolar.syntax.EvidentialArgumentationFramework"
         )
         self.BArgument = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.BArgument")
-        self.BinaryAttack = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.BinaryAttack")
-        self.BinarySupport = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.BinarySupport")
+        self.BinaryAttack = jpype.JClass(
+            "org.tweetyproject.arg.bipolar.syntax.BinaryAttack"
+        )
+        self.BinarySupport = jpype.JClass(
+            "org.tweetyproject.arg.bipolar.syntax.BinarySupport"
+        )
 
     def analyze_bipolar_framework(
         self,

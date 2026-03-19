@@ -82,7 +82,7 @@ class RealLLMOrchestrator:
             "It is maintained for backward compatibility only. "
             "Please use the new agent group chat architecture for new implementations.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         self.config = config or self._default_config()
         self.logger = logging.getLogger(__name__)

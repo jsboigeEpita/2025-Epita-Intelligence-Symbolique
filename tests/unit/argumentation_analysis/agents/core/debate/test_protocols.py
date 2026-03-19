@@ -12,8 +12,8 @@ from argumentation_analysis.agents.core.debate.protocols import (
     PersuasionProtocol,
 )
 
-
 # ── Enums ──
+
 
 class TestDialogueType:
     def test_has_six_types(self):
@@ -21,8 +21,12 @@ class TestDialogueType:
 
     def test_values(self):
         expected = {
-            "information_seeking", "inquiry", "persuasion",
-            "negotiation", "deliberation", "eristic",
+            "information_seeking",
+            "inquiry",
+            "persuasion",
+            "negotiation",
+            "deliberation",
+            "eristic",
         }
         assert {t.value for t in DialogueType} == expected
 
@@ -33,13 +37,21 @@ class TestSpeechAct:
 
     def test_values(self):
         expected = {
-            "claim", "question", "challenge", "argue", "concede",
-            "retract", "support", "refute", "understand",
+            "claim",
+            "question",
+            "challenge",
+            "argue",
+            "concede",
+            "retract",
+            "support",
+            "refute",
+            "understand",
         }
         assert {a.value for a in SpeechAct} == expected
 
 
 # ── Proposition ──
+
 
 class TestProposition:
     def test_init(self):
@@ -88,6 +100,7 @@ class TestProposition:
 
 # ── FormalArgument ──
 
+
 class TestFormalArgument:
     def test_init(self):
         p1 = Proposition(content="P1")
@@ -122,6 +135,7 @@ class TestFormalArgument:
 
 # ── DialogueMove ──
 
+
 class TestDialogueMove:
     def test_init(self):
         p = Proposition(content="test")
@@ -133,18 +147,14 @@ class TestDialogueMove:
         assert move.id != ""  # auto UUID
 
     def test_str(self):
-        move = DialogueMove(
-            speaker="Bob", act=SpeechAct.QUESTION, content="Why?"
-        )
+        move = DialogueMove(speaker="Bob", act=SpeechAct.QUESTION, content="Why?")
         s = str(move)
         assert "Bob" in s
         assert "question" in s
         assert "Why?" in s
 
     def test_custom_id(self):
-        move = DialogueMove(
-            speaker="A", act=SpeechAct.CLAIM, content="X", id="move-1"
-        )
+        move = DialogueMove(speaker="A", act=SpeechAct.CLAIM, content="X", id="move-1")
         assert move.id == "move-1"
 
     def test_with_target(self):
@@ -155,6 +165,7 @@ class TestDialogueMove:
 
 
 # ── InquiryProtocol ──
+
 
 class TestInquiryProtocol:
     @pytest.fixture
@@ -198,9 +209,7 @@ class TestInquiryProtocol:
 
     def test_termination_max_moves(self, protocol):
         """More than 25 moves → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(26)
-        ]
+        moves = [DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(26)]
         assert protocol.is_terminal_state(moves)
 
     def test_not_terminal_few_moves(self, protocol):
@@ -236,6 +245,7 @@ class TestInquiryProtocol:
 
 # ── PersuasionProtocol ──
 
+
 class TestPersuasionProtocol:
     @pytest.fixture
     def protocol(self):
@@ -266,9 +276,7 @@ class TestPersuasionProtocol:
 
     def test_termination_max_moves(self, protocol):
         """More than 30 moves → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(31)
-        ]
+        moves = [DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(31)]
         assert protocol.is_terminal_state(moves)
 
     def test_termination_double_retract(self, protocol):

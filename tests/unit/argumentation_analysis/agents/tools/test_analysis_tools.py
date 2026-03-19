@@ -11,7 +11,6 @@ import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 from datetime import datetime
 
-
 # ---------------------------------------------------------------------------
 # 1. ContextualFallacyDetector tests
 # ---------------------------------------------------------------------------
@@ -85,19 +84,27 @@ class TestContextualFallacyDetector:
         assert factors["domain"] == "scientifique"
 
     def test_infer_domain_politique(self, detector):
-        factors = detector._infer_contextual_factors("un discours politique au parlement")
+        factors = detector._infer_contextual_factors(
+            "un discours politique au parlement"
+        )
         assert factors["domain"] == "politique"
 
     def test_infer_domain_juridique(self, detector):
-        factors = detector._infer_contextual_factors("une affaire juridique au tribunal")
+        factors = detector._infer_contextual_factors(
+            "une affaire juridique au tribunal"
+        )
         assert factors["domain"] == "juridique"
 
     def test_infer_domain_medical(self, detector):
-        factors = detector._infer_contextual_factors("un contexte médical de santé publique")
+        factors = detector._infer_contextual_factors(
+            "un contexte médical de santé publique"
+        )
         assert factors["domain"] == "médical"
 
     def test_infer_domain_commercial(self, detector):
-        factors = detector._infer_contextual_factors("une campagne de marketing commercial")
+        factors = detector._infer_contextual_factors(
+            "une campagne de marketing commercial"
+        )
         assert factors["domain"] == "commercial"
 
     def test_infer_domain_default_general(self, detector):
@@ -109,7 +116,9 @@ class TestContextualFallacyDetector:
         assert factors["audience"] == "expert"
 
     def test_infer_audience_academique(self, detector):
-        factors = detector._infer_contextual_factors("un contexte académique universitaire")
+        factors = detector._infer_contextual_factors(
+            "un contexte académique universitaire"
+        )
         assert factors["audience"] == "académique"
 
     def test_infer_audience_default_generaliste(self, detector):
@@ -125,7 +134,9 @@ class TestContextualFallacyDetector:
         assert factors["medium"] == "général"
 
     def test_infer_purpose_informer(self, detector):
-        factors = detector._infer_contextual_factors("un texte pour informer le lecteur")
+        factors = detector._infer_contextual_factors(
+            "un texte pour informer le lecteur"
+        )
         assert factors["purpose"] == "informer"
 
     def test_infer_purpose_default(self, detector):
@@ -294,9 +305,7 @@ class TestContextualFallacyDetector:
     def test_multiple_arguments_updates_detection_history(self, detector):
         """detect_multiple should append to detection_history."""
         assert len(detector.detection_history) == 0
-        detector.detect_multiple_contextual_fallacies(
-            ["Arg 1"], "contexte de science"
-        )
+        detector.detect_multiple_contextual_fallacies(["Arg 1"], "contexte de science")
         assert len(detector.detection_history) == 1
         entry = detector.detection_history[0]
         assert entry["type"] == "multiple_contextual_fallacy_detection"
@@ -323,9 +332,7 @@ class TestContextualFallacyDetector:
         assert len(second_fallacies) == 0
 
     def test_multiple_returns_argument_count(self, detector):
-        results = detector.detect_multiple_contextual_fallacies(
-            ["a", "b", "c"], "ctx"
-        )
+        results = detector.detect_multiple_contextual_fallacies(["a", "b", "c"], "ctx")
         assert results["argument_count"] == 3
 
 
@@ -418,7 +425,10 @@ class TestRhetoricalResultVisualizer:
         state = {
             "identified_arguments": {"arg_1": "Some text"},
             "identified_fallacies": {
-                "fallacy_1": {"type": "Red herring", "target_argument_id": "arg_missing"},
+                "fallacy_1": {
+                    "type": "Red herring",
+                    "target_argument_id": "arg_missing",
+                },
             },
         }
         graph = visualizer.generate_argument_graph(state)
@@ -486,8 +496,7 @@ class TestRhetoricalResultVisualizer:
         state = {
             "identified_arguments": {"arg_1": "Text"},
             "identified_fallacies": {
-                f"f{i}": {"type": "X", "target_argument_id": "arg_1"}
-                for i in range(6)
+                f"f{i}": {"type": "X", "target_argument_id": "arg_1"} for i in range(6)
             },
         }
         hm = visualizer.generate_argument_quality_heatmap(state)
@@ -574,12 +583,19 @@ class TestArgumentCoherenceEvaluator:
             from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import (
                 ArgumentCoherenceEvaluator,
             )
+
             return ArgumentCoherenceEvaluator()
 
     def test_init_creates_coherence_types(self, evaluator):
         """Evaluator should have 5 coherence type definitions."""
         assert len(evaluator.coherence_types) == 5
-        expected = {"logique", "thématique", "structurelle", "rhétorique", "épistémique"}
+        expected = {
+            "logique",
+            "thématique",
+            "structurelle",
+            "rhétorique",
+            "épistémique",
+        }
         assert set(evaluator.coherence_types.keys()) == expected
 
     def test_coherence_types_importances_sum_to_one(self, evaluator):
@@ -602,7 +618,13 @@ class TestArgumentCoherenceEvaluator:
         """coherence_evaluations should contain all 5 dimensions."""
         result = evaluator.evaluate_coherence(["A", "B"])
         evals = result["coherence_evaluations"]
-        expected = {"logique", "thématique", "structurelle", "rhétorique", "épistémique"}
+        expected = {
+            "logique",
+            "thématique",
+            "structurelle",
+            "rhétorique",
+            "épistémique",
+        }
         assert set(evals.keys()) == expected
 
     def test_evaluate_coherence_each_dimension_has_score(self, evaluator):
@@ -684,6 +706,7 @@ class TestFactClaimDataStructures:
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
                 ClaimType,
             )
+
             assert len(ClaimType) == 10
 
     def test_claim_type_values(self):
@@ -693,10 +716,18 @@ class TestFactClaimDataStructures:
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
                 ClaimType,
             )
+
             expected = {
-                "statistical", "historical", "scientific", "geographical",
-                "biographical", "numerical", "temporal", "causal",
-                "definitional", "quote",
+                "statistical",
+                "historical",
+                "scientific",
+                "geographical",
+                "biographical",
+                "numerical",
+                "temporal",
+                "causal",
+                "definitional",
+                "quote",
             }
             actual = {ct.value for ct in ClaimType}
             assert actual == expected
@@ -708,6 +739,7 @@ class TestFactClaimDataStructures:
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
                 ClaimVerifiability,
             )
+
             assert len(ClaimVerifiability) == 5
 
     def test_claim_verifiability_values(self):
@@ -717,9 +749,13 @@ class TestFactClaimDataStructures:
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
                 ClaimVerifiability,
             )
+
             expected = {
-                "highly_verifiable", "moderately_verifiable",
-                "partially_verifiable", "subjective", "opinion",
+                "highly_verifiable",
+                "moderately_verifiable",
+                "partially_verifiable",
+                "subjective",
+                "opinion",
             }
             actual = {cv.value for cv in ClaimVerifiability}
             assert actual == expected
@@ -729,8 +765,11 @@ class TestFactClaimDataStructures:
         mock_spacy = MagicMock()
         with patch.dict("sys.modules", {"spacy": mock_spacy}):
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
-                FactualClaim, ClaimType, ClaimVerifiability,
+                FactualClaim,
+                ClaimType,
+                ClaimVerifiability,
             )
+
             claim = FactualClaim(
                 claim_text="50% of people agree",
                 claim_type=ClaimType.STATISTICAL,
@@ -755,8 +794,11 @@ class TestFactClaimDataStructures:
         mock_spacy = MagicMock()
         with patch.dict("sys.modules", {"spacy": mock_spacy}):
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
-                FactualClaim, ClaimType, ClaimVerifiability,
+                FactualClaim,
+                ClaimType,
+                ClaimVerifiability,
             )
+
             claim = FactualClaim(
                 claim_text="In 1969, man landed on the moon.",
                 claim_type=ClaimType.HISTORICAL,
@@ -788,8 +830,11 @@ class TestFactClaimDataStructures:
         mock_spacy = MagicMock()
         with patch.dict("sys.modules", {"spacy": mock_spacy}):
             from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
-                FactualClaim, ClaimType, ClaimVerifiability,
+                FactualClaim,
+                ClaimType,
+                ClaimVerifiability,
             )
+
             claim = FactualClaim(
                 claim_text="test",
                 claim_type=ClaimType.CAUSAL,
@@ -807,9 +852,18 @@ class TestFactClaimDataStructures:
             )
             d = claim.to_dict()
             expected_keys = {
-                "claim_text", "claim_type", "verifiability", "confidence",
-                "context", "start_pos", "end_pos", "entities", "keywords",
-                "temporal_references", "numerical_values", "sources_mentioned",
+                "claim_text",
+                "claim_type",
+                "verifiability",
+                "confidence",
+                "context",
+                "start_pos",
+                "end_pos",
+                "entities",
+                "keywords",
+                "temporal_references",
+                "numerical_values",
+                "sources_mentioned",
                 "extraction_method",
             }
             assert set(d.keys()) == expected_keys

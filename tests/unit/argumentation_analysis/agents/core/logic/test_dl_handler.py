@@ -9,11 +9,14 @@ Validates:
 - String-based parse_and_query
 - Error handling (JVM not ready, class not found, JException)
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
 from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
-from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+from argumentation_analysis.agents.core.logic.tweety_initializer import (
+    TweetyInitializer,
+)
 
 
 @pytest.fixture
@@ -37,10 +40,12 @@ def mock_jpype():
             return cls
 
         m.JClass.side_effect = jclass_side_effect
+
         # Use a specific class so ValueError isn't caught by JException handler
         class MockJException(Exception):
             def getMessage(self):
                 return str(self)
+
         m.JException = MockJException
         m.JString = str
 
@@ -178,9 +183,7 @@ class TestKBConstruction:
 
     def test_abox_role_assertions(self, mock_initializer, mock_jpype):
         handler = DLHandler(mock_initializer)
-        kb = handler.create_knowledge_base(
-            abox_roles=[("john", "hasChild", "mary")]
-        )
+        kb = handler.create_knowledge_base(abox_roles=[("john", "hasChild", "mary")])
         assert kb.add.call_count == 1
         assert handler._RoleAssertion.call_count == 1
 
@@ -284,7 +287,9 @@ class TestSubsumptionQuery:
     def test_subsumption_holds(self, mock_initializer, mock_jpype):
         handler = DLHandler(mock_initializer)
         mock_reasoner = MagicMock()
-        mock_reasoner.query.return_value = False  # C ⊓ ¬D not entailed → subsumption holds
+        mock_reasoner.query.return_value = (
+            False  # C ⊓ ¬D not entailed → subsumption holds
+        )
         handler._NaiveDlReasoner.return_value = mock_reasoner
 
         kb = MagicMock()

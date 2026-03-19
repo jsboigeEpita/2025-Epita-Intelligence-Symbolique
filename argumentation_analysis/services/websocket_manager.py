@@ -36,7 +36,9 @@ class AnalysisWebSocketManager:
             if session_id not in self._connections:
                 self._connections[session_id] = set()
             self._connections[session_id].add(websocket)
-        logger.info(f"WS connected: session={session_id}, total={len(self._connections.get(session_id, set()))}")
+        logger.info(
+            f"WS connected: session={session_id}, total={len(self._connections.get(session_id, set()))}"
+        )
 
     async def disconnect(self, session_id: str, websocket: WebSocket):
         """Remove a WebSocket from a session."""
@@ -88,14 +90,17 @@ class AnalysisWebSocketManager:
         total_phases: int = 0,
     ):
         """Broadcast a workflow phase completion event."""
-        await self._send_to_session(session_id, {
-            "type": "phase_result",
-            "phase": phase_name,
-            "phase_index": phase_index,
-            "total_phases": total_phases,
-            "result": _safe_serialize(result),
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "phase_result",
+                "phase": phase_name,
+                "phase_index": phase_index,
+                "total_phases": total_phases,
+                "result": _safe_serialize(result),
+                "timestamp": time.time(),
+            },
+        )
 
     async def broadcast_debate_turn(
         self,
@@ -107,15 +112,18 @@ class AnalysisWebSocketManager:
         argument_type: str = "claim",
     ):
         """Broadcast a debate turn event."""
-        await self._send_to_session(session_id, {
-            "type": "debate_turn",
-            "agent": agent,
-            "argument": argument,
-            "argument_type": argument_type,
-            "scores": scores or {},
-            "round": round_num,
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "debate_turn",
+                "agent": agent,
+                "argument": argument,
+                "argument_type": argument_type,
+                "scores": scores or {},
+                "round": round_num,
+                "timestamp": time.time(),
+            },
+        )
 
     async def broadcast_vote_update(
         self,
@@ -126,14 +134,17 @@ class AnalysisWebSocketManager:
         vote_counts: Optional[Dict[str, int]] = None,
     ):
         """Broadcast a vote update event."""
-        await self._send_to_session(session_id, {
-            "type": "vote_update",
-            "proposal_id": proposal_id,
-            "voter_id": voter_id,
-            "position": position,
-            "vote_counts": vote_counts or {},
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "vote_update",
+                "proposal_id": proposal_id,
+                "voter_id": voter_id,
+                "position": position,
+                "vote_counts": vote_counts or {},
+                "timestamp": time.time(),
+            },
+        )
 
     async def broadcast_jtms_update(
         self,
@@ -144,31 +155,40 @@ class AnalysisWebSocketManager:
         justification: Optional[str] = None,
     ):
         """Broadcast a JTMS belief status change event."""
-        await self._send_to_session(session_id, {
-            "type": "jtms_update",
-            "belief": belief_name,
-            "old_status": old_status,
-            "new_status": new_status,
-            "justification": justification,
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "jtms_update",
+                "belief": belief_name,
+                "old_status": old_status,
+                "new_status": new_status,
+                "justification": justification,
+                "timestamp": time.time(),
+            },
+        )
 
     async def broadcast_status(self, session_id: str, status: str, detail: str = ""):
         """Broadcast a generic status message."""
-        await self._send_to_session(session_id, {
-            "type": "status",
-            "status": status,
-            "detail": detail,
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "status",
+                "status": status,
+                "detail": detail,
+                "timestamp": time.time(),
+            },
+        )
 
     async def broadcast_error(self, session_id: str, error: str):
         """Broadcast an error message."""
-        await self._send_to_session(session_id, {
-            "type": "error",
-            "error": error,
-            "timestamp": time.time(),
-        })
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "error",
+                "error": error,
+                "timestamp": time.time(),
+            },
+        )
 
 
 def _safe_serialize(obj: Any) -> Any:
@@ -185,7 +205,11 @@ def _safe_serialize(obj: Any) -> Any:
         except Exception:
             pass
     if hasattr(obj, "__dict__"):
-        return {k: _safe_serialize(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
+        return {
+            k: _safe_serialize(v)
+            for k, v in obj.__dict__.items()
+            if not k.startswith("_")
+        }
     return str(obj)
 
 

@@ -6,6 +6,7 @@ by calling these functions — it cannot respond freely.
 
 Recovered from commit d2fdd930 and enhanced with structured output.
 """
+
 import json
 import logging
 from typing import Annotated, Optional
@@ -85,7 +86,9 @@ class ExplorationPlugin:
     def confirm_fallacy(
         self,
         node_pk: Annotated[str, "The PK of the confirmed fallacy node"],
-        confidence: Annotated[str, "Confidence level: 'high', 'medium', or 'low'"] = "medium",
+        confidence: Annotated[
+            str, "Confidence level: 'high', 'medium', or 'low'"
+        ] = "medium",
         justification: Annotated[str, "Why this fallacy matches the text"] = "",
     ) -> Annotated[str, "Confirmation result"]:
         """Confirm a fallacy identification with justification."""
@@ -120,6 +123,4 @@ class ExplorationPlugin:
         reason: Annotated[str, "Why no fallacy was found in this branch"],
     ) -> Annotated[str, "Conclusion recorded"]:
         """Conclude that no fallacy was found in this branch."""
-        return json.dumps(
-            {"confirmed": False, "reason": reason}, ensure_ascii=False
-        )
+        return json.dumps({"confirmed": False, "reason": reason}, ensure_ascii=False)

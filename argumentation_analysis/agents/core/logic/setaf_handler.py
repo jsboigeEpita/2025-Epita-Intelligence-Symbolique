@@ -51,9 +51,7 @@ class SetAFHandler:
         self._SetAttack = jpype.JClass(f"{pkg}.syntax.SetAttack")
 
         # Dung Argument is shared
-        self._Argument = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Argument"
-        )
+        self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
 
         # Load reasoners
         self._reasoners = {}

@@ -43,7 +43,9 @@ class SessionManager:
         if len(self._sessions) >= self._max_sessions:
             oldest = min(self._sessions.values(), key=lambda s: s.last_accessed)
             del self._sessions[oldest.session_id]
-            logger.info("Evicted oldest session %s (max sessions reached)", oldest.session_id)
+            logger.info(
+                "Evicted oldest session %s (max sessions reached)", oldest.session_id
+            )
 
         session_id = str(uuid.uuid4())
         now = time.time()

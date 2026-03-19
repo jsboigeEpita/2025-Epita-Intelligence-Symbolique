@@ -329,9 +329,9 @@ class CluedoOrchestrator:
         # Métriques de performance
         performance_metrics = {
             "efficiency": {
-                "turns_per_minute": len(history) / (execution_time / 60)
-                if execution_time > 0
-                else 0,
+                "turns_per_minute": (
+                    len(history) / (execution_time / 60) if execution_time > 0 else 0
+                ),
             },
             "agent_balance": self._calculate_agent_balance(history),
         }
@@ -420,7 +420,7 @@ async def run_cluedo_game(
         "It is maintained for backward compatibility only. "
         "Please use new agent group chat architecture for new implementations.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     orchestrator = CluedoOrchestrator(

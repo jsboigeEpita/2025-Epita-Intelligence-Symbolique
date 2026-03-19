@@ -22,6 +22,7 @@ def plugin():
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_creates_evaluator(self, plugin):
         assert plugin.evaluator is not None
@@ -31,13 +32,22 @@ class TestInit:
 # evaluate_argument_quality
 # ============================================================
 
+
 class TestEvaluateArgumentQuality:
     def test_returns_json(self, plugin):
-        result = json.loads(plugin.evaluate_argument_quality("Ceci est un argument clair et bien structuré."))
+        result = json.loads(
+            plugin.evaluate_argument_quality(
+                "Ceci est un argument clair et bien structuré."
+            )
+        )
         assert isinstance(result, dict)
 
     def test_has_note_finale(self, plugin):
-        result = json.loads(plugin.evaluate_argument_quality("Un argument solide avec des sources fiables."))
+        result = json.loads(
+            plugin.evaluate_argument_quality(
+                "Un argument solide avec des sources fiables."
+            )
+        )
         assert "note_finale" in result
 
     def test_has_note_moyenne(self, plugin):
@@ -57,6 +67,7 @@ class TestEvaluateArgumentQuality:
 # ============================================================
 # get_quality_score
 # ============================================================
+
 
 class TestGetQualityScore:
     def test_returns_json(self, plugin):
@@ -80,6 +91,7 @@ class TestGetQualityScore:
 # ============================================================
 # list_virtues
 # ============================================================
+
 
 class TestListVirtues:
     def test_returns_list(self, plugin):

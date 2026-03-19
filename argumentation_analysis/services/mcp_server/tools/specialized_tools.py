@@ -55,9 +55,7 @@ def register_specialized_tools(mcp: Any, get_registry: Any) -> None:
         Args:
             text: The argumentative text to evaluate.
         """
-        return await _invoke_by_capability(
-            "argument_quality", text, "evaluate_quality"
-        )
+        return await _invoke_by_capability("argument_quality", text, "evaluate_quality")
 
     @mcp.tool()
     async def generate_counter_argument(text: str) -> Dict[str, Any]:

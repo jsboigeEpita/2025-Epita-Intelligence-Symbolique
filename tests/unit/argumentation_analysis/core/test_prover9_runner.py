@@ -12,10 +12,10 @@ from unittest.mock import patch, MagicMock, ANY
 
 from argumentation_analysis.core.prover9_runner import run_prover9, PROVER9_EXECUTABLE
 
-
 # ============================================================
 # run_prover9
 # ============================================================
+
 
 class TestRunProver9:
     """Tests for the run_prover9 function."""
@@ -72,9 +72,13 @@ class TestRunProver9:
 
     @patch("argumentation_analysis.core.prover9_runner.subprocess.run")
     @patch("argumentation_analysis.core.prover9_runner.PROVER9_EXECUTABLE")
-    @patch("argumentation_analysis.core.prover9_runner.os.path.exists", return_value=True)
+    @patch(
+        "argumentation_analysis.core.prover9_runner.os.path.exists", return_value=True
+    )
     @patch("argumentation_analysis.core.prover9_runner.os.remove")
-    def test_temp_file_cleaned_up_on_success(self, mock_remove, mock_exists, mock_executable, mock_run):
+    def test_temp_file_cleaned_up_on_success(
+        self, mock_remove, mock_exists, mock_executable, mock_run
+    ):
         mock_executable.is_file.return_value = True
         mock_run.return_value = MagicMock(stdout="ok", returncode=0)
 
@@ -83,9 +87,13 @@ class TestRunProver9:
 
     @patch("argumentation_analysis.core.prover9_runner.subprocess.run")
     @patch("argumentation_analysis.core.prover9_runner.PROVER9_EXECUTABLE")
-    @patch("argumentation_analysis.core.prover9_runner.os.path.exists", return_value=True)
+    @patch(
+        "argumentation_analysis.core.prover9_runner.os.path.exists", return_value=True
+    )
     @patch("argumentation_analysis.core.prover9_runner.os.remove")
-    def test_temp_file_cleaned_up_on_error(self, mock_remove, mock_exists, mock_executable, mock_run):
+    def test_temp_file_cleaned_up_on_error(
+        self, mock_remove, mock_exists, mock_executable, mock_run
+    ):
         mock_executable.is_file.return_value = True
         mock_run.side_effect = subprocess.CalledProcessError(
             returncode=1, cmd="prover9", output="", stderr="error"

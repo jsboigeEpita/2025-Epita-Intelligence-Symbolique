@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -67,7 +69,7 @@ class TestSherlockTools:
 
         mock_response = MagicMock()
         # Remove value attribute to test fallback
-        if hasattr(mock_response, 'value'):
+        if hasattr(mock_response, "value"):
             del mock_response.value
         # Mock __str__ to return string when value attribute is missing
         mock_response.__str__ = MagicMock(return_value="Direct string response")
@@ -155,11 +157,13 @@ class TestSherlockTools:
         kernel = MagicMock(spec=Kernel)
         tools = SherlockTools(kernel)
 
-        elements = json.dumps({
-            "suspects": ["Mustard", "Scarlet"],
-            "armes": ["Knife", "Revolver"],
-            "lieux": ["Kitchen", "Library"]
-        })
+        elements = json.dumps(
+            {
+                "suspects": ["Mustard", "Scarlet"],
+                "armes": ["Knife", "Revolver"],
+                "lieux": ["Kitchen", "Library"],
+            }
+        )
         result = await tools.instant_deduction(elements)
 
         deduction = json.loads(result)
@@ -178,7 +182,11 @@ class TestSherlockTools:
         deduction = json.loads(result)
         assert "suspect" in deduction
         # Should use default elements
-        assert deduction["suspect"] in ["Colonel Moutarde", "Mme Leblanc", "Mme Pervenche"]
+        assert deduction["suspect"] in [
+            "Colonel Moutarde",
+            "Mme Leblanc",
+            "Mme Pervenche",
+        ]
 
     @pytest.mark.asyncio
     async def test_instant_deduction_logic(self):
@@ -189,7 +197,7 @@ class TestSherlockTools:
         elements = {
             "suspects": ["A", "B", "C"],
             "armes": ["W1", "W2", "W3", "W4"],
-            "lieux": ["L1"]
+            "lieux": ["L1"],
         }
         result = await tools.instant_deduction(json.dumps(elements))
         deduction = json.loads(result)
@@ -354,7 +362,9 @@ class TestSherlockEnqueteAgentMethods:
             name="Sherlock",
         )
         # Use object.__setattr__ to bypass Pydantic V2 validation
-        object.__setattr__(agent, "invoke_single", AsyncMock(return_value=mock_response))
+        object.__setattr__(
+            agent, "invoke_single", AsyncMock(return_value=mock_response)
+        )
 
         result = await agent.invoke("Analyze the evidence")
         assert isinstance(result, list)
@@ -376,7 +386,9 @@ class TestSherlockEnqueteAgentMethods:
             name="Sherlock",
         )
         # Use object.__setattr__ to bypass Pydantic V2 validation
-        object.__setattr__(agent, "invoke_single", AsyncMock(return_value=mock_response))
+        object.__setattr__(
+            agent, "invoke_single", AsyncMock(return_value=mock_response)
+        )
 
         messages = [
             ChatMessageContent(role=AuthorRole.USER, content="First message"),
@@ -467,7 +479,9 @@ class TestSherlockEnqueteAgentMethods:
         messages = [ChatMessageContent(role=AuthorRole.USER, content="Test")]
         result = await agent.invoke_single(messages)
 
-        assert "erreur interne m'emp\u00eache de r\u00e9pondre" in result.content.lower()
+        assert (
+            "erreur interne m'emp\u00eache de r\u00e9pondre" in result.content.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_get_response_with_async_generator(self):
@@ -548,7 +562,9 @@ class TestSherlockEnqueteAgentIntegration:
             name="Sherlock",
         )
         # Use object.__setattr__ to bypass Pydantic V2 validation
-        object.__setattr__(agent, "invoke_single", AsyncMock(return_value=mock_response))
+        object.__setattr__(
+            agent, "invoke_single", AsyncMock(return_value=mock_response)
+        )
 
         result = await agent.invoke("Examine the crime scene")
         assert len(result) == 1

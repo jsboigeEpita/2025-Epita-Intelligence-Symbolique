@@ -43,16 +43,16 @@ class FrenchFallacyPlugin:
 
     @kernel_function(
         name="get_available_tiers",
-        description=(
-            "List available detection tiers (symbolic, nli, llm)."
-        ),
+        description=("List available detection tiers (symbolic, nli, llm)."),
     )
     def get_available_tiers(self) -> str:
         """Return available detection tiers as JSON."""
-        return json.dumps({
-            "available_tiers": self.adapter.get_available_tiers(),
-            "is_available": self.adapter.is_available(),
-        })
+        return json.dumps(
+            {
+                "available_tiers": self.adapter.get_available_tiers(),
+                "is_available": self.adapter.is_available(),
+            }
+        )
 
     @kernel_function(
         name="list_fallacy_types",

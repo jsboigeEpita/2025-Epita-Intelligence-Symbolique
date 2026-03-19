@@ -10,8 +10,8 @@ from argumentation_analysis.agents.core.logic.belief_set import (
     ModalBeliefSet,
 )
 
-
 # ── PropositionalBeliefSet ──
+
 
 class TestPropositionalBeliefSet:
     def test_init(self):
@@ -39,6 +39,7 @@ class TestPropositionalBeliefSet:
 
 # ── FirstOrderBeliefSet ──
 
+
 class TestFirstOrderBeliefSet:
     def test_init(self):
         bs = FirstOrderBeliefSet("forall(X, p(X))")
@@ -61,6 +62,7 @@ class TestFirstOrderBeliefSet:
 
 # ── ModalBeliefSet ──
 
+
 class TestModalBeliefSet:
     def test_init(self):
         bs = ModalBeliefSet("[]p => <>q")
@@ -75,6 +77,7 @@ class TestModalBeliefSet:
 
 
 # ── BeliefSet.is_empty ──
+
 
 class TestIsEmpty:
     def test_none_content(self):
@@ -107,6 +110,7 @@ class TestIsEmpty:
 
 
 # ── BeliefSet.from_dict ──
+
 
 class TestFromDict:
     def test_propositional(self):
@@ -157,6 +161,7 @@ class TestFromDict:
 
 # ── Abstract class ──
 
+
 class TestAbstractBeliefSet:
     def test_cannot_instantiate_directly(self):
         with pytest.raises(TypeError):
@@ -164,4 +169,5 @@ class TestAbstractBeliefSet:
 
     def test_is_abstract(self):
         import inspect
+
         assert inspect.isabstract(BeliefSet)

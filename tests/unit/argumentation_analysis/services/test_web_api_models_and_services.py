@@ -48,7 +48,6 @@ from argumentation_analysis.services.web_api.models.response_models import (
     LogicQueryResult,
 )
 
-
 # ============================================================================
 # Request Models
 # ============================================================================
@@ -416,13 +415,19 @@ class TestResponseModels:
     def test_fallacy_detection_severity_bounds(self):
         with pytest.raises(ValidationError):
             FallacyDetection(
-                type="x", name="x", description="x",
-                severity=1.5, confidence=0.5,
+                type="x",
+                name="x",
+                description="x",
+                severity=1.5,
+                confidence=0.5,
             )
         with pytest.raises(ValidationError):
             FallacyDetection(
-                type="x", name="x", description="x",
-                severity=0.5, confidence=-0.1,
+                type="x",
+                name="x",
+                description="x",
+                severity=0.5,
+                confidence=-0.1,
             )
 
     def test_argument_structure_defaults(self):
@@ -612,6 +617,7 @@ class TestValidationService:
         from argumentation_analysis.services.web_api.services.validation_service import (
             ValidationService,
         )
+
         return ValidationService(logic_service=mock_logic_service)
 
     def test_init(self, validation_service):
@@ -625,7 +631,9 @@ class TestValidationService:
         mock_logic_service.is_healthy.return_value = True
         assert validation_service.is_healthy() is True
 
-    def test_is_healthy_logic_service_down(self, validation_service, mock_logic_service):
+    def test_is_healthy_logic_service_down(
+        self, validation_service, mock_logic_service
+    ):
         """is_healthy returns False when logic_service is unhealthy."""
         mock_logic_service.is_healthy.return_value = False
         assert validation_service.is_healthy() is False
@@ -737,7 +745,10 @@ class TestValidationService:
 
     def test_assess_clarity_normal_text(self, validation_service):
         """Normal length text should get good clarity score."""
-        assert validation_service._assess_clarity("This is a normal length sentence") == 0.8
+        assert (
+            validation_service._assess_clarity("This is a normal length sentence")
+            == 0.8
+        )
 
     def test_assess_clarity_long_text(self, validation_service):
         """Very long text should get medium clarity score."""
@@ -746,7 +757,10 @@ class TestValidationService:
 
     def test_assess_specificity_vague(self, validation_service):
         """Text with vague terms should get low specificity."""
-        assert validation_service._assess_specificity("Certains pensent souvent que") == 0.4
+        assert (
+            validation_service._assess_specificity("Certains pensent souvent que")
+            == 0.4
+        )
 
     def test_assess_specificity_precise(self, validation_service):
         """Text without vague terms should get higher specificity."""
@@ -761,7 +775,9 @@ class TestValidationService:
         assert validation_service._assess_credibility("Le ciel est bleu") == 0.6
 
     def test_contains_qualifiers_true(self, validation_service):
-        assert validation_service._contains_qualifiers("C'est probablement vrai") is True
+        assert (
+            validation_service._contains_qualifiers("C'est probablement vrai") is True
+        )
 
     def test_contains_qualifiers_false(self, validation_service):
         assert validation_service._contains_qualifiers("C'est vrai") is False
@@ -831,6 +847,7 @@ class TestFallacyService:
             from argumentation_analysis.services.web_api.services.fallacy_service import (
                 FallacyService,
             )
+
             service = FallacyService()
         return service
 
@@ -886,7 +903,10 @@ class TestFallacyService:
         )
         response = fallacy_service.detect_fallacies(request)
         assert response.success is True
-        assert response.text_analyzed == "Soit vous etes avec nous, soit vous etes contre nous"
+        assert (
+            response.text_analyzed
+            == "Soit vous etes avec nous, soit vous etes contre nous"
+        )
         # The "soit.*soit" pattern should match
         fallacy_types = [f.type for f in response.fallacies]
         assert "false_dilemma" in fallacy_types
@@ -959,26 +979,50 @@ class TestFallacyService:
     def test_severity_distribution_calculation(self, fallacy_service):
         """Severity distribution should classify into low/medium/high."""
         fallacies = [
-            FallacyDetection(type="a", name="A", description="d", severity=0.3, confidence=0.5),
-            FallacyDetection(type="b", name="B", description="d", severity=0.5, confidence=0.5),
-            FallacyDetection(type="c", name="C", description="d", severity=0.8, confidence=0.5),
+            FallacyDetection(
+                type="a", name="A", description="d", severity=0.3, confidence=0.5
+            ),
+            FallacyDetection(
+                type="b", name="B", description="d", severity=0.5, confidence=0.5
+            ),
+            FallacyDetection(
+                type="c", name="C", description="d", severity=0.8, confidence=0.5
+            ),
         ]
         dist = fallacy_service._calculate_severity_distribution(fallacies)
-        assert dist["low"] == 1      # 0.3 < 0.4
-        assert dist["medium"] == 1   # 0.4 <= 0.5 < 0.7
-        assert dist["high"] == 1     # 0.8 >= 0.7
+        assert dist["low"] == 1  # 0.3 < 0.4
+        assert dist["medium"] == 1  # 0.4 <= 0.5 < 0.7
+        assert dist["high"] == 1  # 0.8 >= 0.7
 
     def test_category_distribution_calculation(self, fallacy_service):
         """Category distribution should count by type -> category mapping."""
         fallacies = [
-            FallacyDetection(type="ad_hominem", name="AH", description="d", severity=0.5, confidence=0.5),
-            FallacyDetection(type="affirming_consequent", name="AC", description="d", severity=0.5, confidence=0.5),
-            FallacyDetection(type="unknown_type", name="U", description="d", severity=0.5, confidence=0.5),
+            FallacyDetection(
+                type="ad_hominem",
+                name="AH",
+                description="d",
+                severity=0.5,
+                confidence=0.5,
+            ),
+            FallacyDetection(
+                type="affirming_consequent",
+                name="AC",
+                description="d",
+                severity=0.5,
+                confidence=0.5,
+            ),
+            FallacyDetection(
+                type="unknown_type",
+                name="U",
+                description="d",
+                severity=0.5,
+                confidence=0.5,
+            ),
         ]
         dist = fallacy_service._calculate_category_distribution(fallacies)
         assert dist.get("informal", 0) == 1  # ad_hominem is informal
-        assert dist.get("formal", 0) == 1    # affirming_consequent is formal
-        assert dist.get("unknown", 0) == 1   # unknown_type not in patterns
+        assert dist.get("formal", 0) == 1  # affirming_consequent is formal
+        assert dist.get("unknown", 0) == 1  # unknown_type not in patterns
 
     def test_extract_context(self, fallacy_service):
         """Context extraction around a position."""
@@ -994,16 +1038,28 @@ class TestFallacyService:
     def test_filter_and_deduplicate(self, fallacy_service):
         """Duplicate fallacies (same type+location) should be removed."""
         f1 = FallacyDetection(
-            type="ad_hominem", name="AH", description="d",
-            severity=0.8, confidence=0.5, location={"start": 10, "end": 20},
+            type="ad_hominem",
+            name="AH",
+            description="d",
+            severity=0.8,
+            confidence=0.5,
+            location={"start": 10, "end": 20},
         )
         f2 = FallacyDetection(
-            type="ad_hominem", name="AH", description="d",
-            severity=0.8, confidence=0.5, location={"start": 10, "end": 25},
+            type="ad_hominem",
+            name="AH",
+            description="d",
+            severity=0.8,
+            confidence=0.5,
+            location={"start": 10, "end": 25},
         )
         f3 = FallacyDetection(
-            type="straw_man", name="SM", description="d",
-            severity=0.7, confidence=0.5, location={"start": 30, "end": 40},
+            type="straw_man",
+            name="SM",
+            description="d",
+            severity=0.7,
+            confidence=0.5,
+            location={"start": 30, "end": 40},
         )
         result = fallacy_service._filter_and_deduplicate([f1, f2, f3], None)
         # f1 and f2 have same type + start position -> deduplicated
@@ -1013,8 +1069,11 @@ class TestFallacyService:
         """Should respect max_fallacies limit."""
         fallacies = [
             FallacyDetection(
-                type=f"type_{i}", name=f"F{i}", description="d",
-                severity=0.8, confidence=0.5,
+                type=f"type_{i}",
+                name=f"F{i}",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
             )
             for i in range(20)
         ]
@@ -1024,13 +1083,18 @@ class TestFallacyService:
 
     def test_pattern_matches_regex(self, fallacy_service):
         """Pattern matching should work with regex."""
-        assert fallacy_service._pattern_matches("soit.*soit", "soit ceci soit cela") is True
+        assert (
+            fallacy_service._pattern_matches("soit.*soit", "soit ceci soit cela")
+            is True
+        )
         assert fallacy_service._pattern_matches("soit.*soit", "rien du tout") is False
 
     def test_pattern_matches_fallback(self, fallacy_service):
         """Invalid regex should fall back to substring search."""
         # This pattern has unbalanced brackets, should trigger fallback
-        assert fallacy_service._pattern_matches("[invalid", "some [invalid text") is True
+        assert (
+            fallacy_service._pattern_matches("[invalid", "some [invalid text") is True
+        )
 
     def test_detect_fallacies_error_handling(self, fallacy_service):
         """If an internal error occurs, service should return success=False gracefully."""

@@ -23,7 +23,9 @@ class BeliefRevisionPlugin:
     )
     def revise_beliefs(self, revision_json: str) -> str:
         """Revise belief set and return updated beliefs."""
-        from argumentation_analysis.agents.core.logic.belief_revision_handler import BeliefRevisionHandler
+        from argumentation_analysis.agents.core.logic.belief_revision_handler import (
+            BeliefRevisionHandler,
+        )
 
         data = json.loads(revision_json)
         handler = BeliefRevisionHandler()
@@ -42,7 +44,9 @@ class BeliefRevisionPlugin:
     )
     def contract_beliefs(self, contraction_json: str) -> str:
         """Contract belief set and return reduced beliefs."""
-        from argumentation_analysis.agents.core.logic.belief_revision_handler import BeliefRevisionHandler
+        from argumentation_analysis.agents.core.logic.belief_revision_handler import (
+            BeliefRevisionHandler,
+        )
 
         data = json.loads(contraction_json)
         handler = BeliefRevisionHandler()

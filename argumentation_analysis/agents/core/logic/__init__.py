@@ -39,12 +39,15 @@ __all__ = [
     "CLHandler",
 ]
 
+
 # Lazy imports for handlers requiring JVM (avoid import errors when JVM not started)
 def __getattr__(name):
     if name == "DLHandler":
         from .dl_handler import DLHandler
+
         return DLHandler
     if name == "CLHandler":
         from .cl_handler import CLHandler
+
         return CLHandler
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

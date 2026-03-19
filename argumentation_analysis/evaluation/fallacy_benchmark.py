@@ -362,7 +362,10 @@ class FallacyBenchmarkRunner:
                 "navigation_trace": best.get("navigation_trace", []),
                 "exploration_method": result.get("exploration_method", ""),
             }
-        return {"error": "No fallacy detected", "exploration_method": result.get("exploration_method", "")}
+        return {
+            "error": "No fallacy detected",
+            "exploration_method": result.get("exploration_method", ""),
+        }
 
     def _parse_json(self, raw: str) -> Dict[str, Any]:
         """Parse JSON from LLM response."""
@@ -439,7 +442,11 @@ class FallacyBenchmarkRunner:
         )
 
     async def _run_single(
-        self, case: dict, mode: str, runner, semaphore: asyncio.Semaphore,
+        self,
+        case: dict,
+        mode: str,
+        runner,
+        semaphore: asyncio.Semaphore,
     ) -> DetectionResult:
         """Run a single case+mode with concurrency control."""
         async with semaphore:
@@ -508,9 +515,7 @@ class FallacyBenchmarkRunner:
             for case in cases:
                 for mode in modes:
                     runner = mode_runners[mode]
-                    detection = await self._run_single(
-                        case, mode, runner, semaphore
-                    )
+                    detection = await self._run_single(case, mode, runner, semaphore)
                     report.results.append(detection)
 
         report.compute_scores()

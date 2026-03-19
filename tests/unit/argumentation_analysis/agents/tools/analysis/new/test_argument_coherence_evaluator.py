@@ -32,6 +32,7 @@ SAMPLE_ARGS = [
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, evaluator):
         assert isinstance(evaluator, ArgumentCoherenceEvaluator)
@@ -59,6 +60,7 @@ class TestInit:
 # ============================================================
 # evaluate_coherence (integration)
 # ============================================================
+
 
 class TestEvaluateCoherence:
     def test_returns_dict(self, evaluator):
@@ -106,6 +108,7 @@ class TestEvaluateCoherence:
 # ============================================================
 # Individual coherence evaluations (simulated)
 # ============================================================
+
 
 class TestIndividualEvaluations:
     def test_logical_coherence_structure(self, evaluator):
@@ -159,6 +162,7 @@ class TestIndividualEvaluations:
 # ============================================================
 # _calculate_overall_coherence
 # ============================================================
+
 
 class TestCalculateOverallCoherence:
     def test_returns_score_and_level(self, evaluator):
@@ -224,6 +228,7 @@ class TestCalculateOverallCoherence:
 # _generate_recommendations
 # ============================================================
 
+
 class TestGenerateRecommendations:
     def test_returns_list(self, evaluator):
         evals = {k: {"score": 0.7} for k in evaluator.coherence_types}
@@ -256,7 +261,9 @@ class TestGenerateRecommendations:
         evals = {k: {"score": 0.7} for k in evaluator.coherence_types}
         overall = {"level": "Bon", "weaknesses": []}
         recs = evaluator._generate_recommendations(["arg1", "arg2"], evals, overall)
-        assert any("davantage" in r.lower() or "supplémentaires" in r.lower() for r in recs)
+        assert any(
+            "davantage" in r.lower() or "supplémentaires" in r.lower() for r in recs
+        )
 
     def test_many_arguments_recommendation(self, evaluator):
         evals = {k: {"score": 0.7} for k in evaluator.coherence_types}

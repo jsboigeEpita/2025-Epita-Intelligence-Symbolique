@@ -9,7 +9,10 @@ Provides:
 """
 
 from argumentation_analysis.evaluation.model_registry import ModelRegistry, ModelConfig
-from argumentation_analysis.evaluation.benchmark_runner import BenchmarkRunner, BenchmarkResult
+from argumentation_analysis.evaluation.benchmark_runner import (
+    BenchmarkRunner,
+    BenchmarkResult,
+)
 from argumentation_analysis.evaluation.result_collector import ResultCollector
 from argumentation_analysis.evaluation.judge import LLMJudge
 

@@ -38,6 +38,7 @@ def _make_argument(**overrides):
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, strategies):
         assert isinstance(strategies, RhetoricalStrategies)
@@ -59,6 +60,7 @@ class TestInit:
 # ============================================================
 # get_strategy_prompt
 # ============================================================
+
 
 class TestGetStrategyPrompt:
     def test_socratic(self, strategies):
@@ -90,11 +92,13 @@ class TestGetStrategyPrompt:
 # apply_strategy
 # ============================================================
 
+
 class TestApplyStrategy:
     def test_socratic_returns_string(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            RhetoricalStrategy.SOCRATIC_QUESTIONING, arg,
+            RhetoricalStrategy.SOCRATIC_QUESTIONING,
+            arg,
             CounterArgumentType.PREMISE_CHALLENGE,
         )
         assert isinstance(result, str)
@@ -103,7 +107,8 @@ class TestApplyStrategy:
     def test_reductio_returns_string(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            RhetoricalStrategy.REDUCTIO_AD_ABSURDUM, arg,
+            RhetoricalStrategy.REDUCTIO_AD_ABSURDUM,
+            arg,
             CounterArgumentType.DIRECT_REFUTATION,
         )
         assert isinstance(result, str)
@@ -111,7 +116,8 @@ class TestApplyStrategy:
     def test_analogical_returns_string(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            RhetoricalStrategy.ANALOGICAL_COUNTER, arg,
+            RhetoricalStrategy.ANALOGICAL_COUNTER,
+            arg,
             CounterArgumentType.COUNTER_EXAMPLE,
         )
         assert isinstance(result, str)
@@ -119,7 +125,8 @@ class TestApplyStrategy:
     def test_authority_returns_string(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            RhetoricalStrategy.AUTHORITY_APPEAL, arg,
+            RhetoricalStrategy.AUTHORITY_APPEAL,
+            arg,
             CounterArgumentType.DIRECT_REFUTATION,
         )
         assert isinstance(result, str)
@@ -127,7 +134,8 @@ class TestApplyStrategy:
     def test_statistical_returns_string(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            RhetoricalStrategy.STATISTICAL_EVIDENCE, arg,
+            RhetoricalStrategy.STATISTICAL_EVIDENCE,
+            arg,
             CounterArgumentType.DIRECT_REFUTATION,
         )
         assert isinstance(result, str)
@@ -135,7 +143,9 @@ class TestApplyStrategy:
     def test_unknown_uses_fallback(self, strategies):
         arg = _make_argument()
         result = strategies.apply_strategy(
-            "unknown", arg, CounterArgumentType.DIRECT_REFUTATION,
+            "unknown",
+            arg,
+            CounterArgumentType.DIRECT_REFUTATION,
         )
         assert isinstance(result, str)
 
@@ -143,6 +153,7 @@ class TestApplyStrategy:
 # ============================================================
 # suggest_strategy
 # ============================================================
+
 
 class TestSuggestStrategy:
     def test_statistical_content(self, strategies):
@@ -182,10 +193,13 @@ class TestSuggestStrategy:
 # get_best_strategy
 # ============================================================
 
+
 class TestGetBestStrategy:
     def test_direct_refutation(self, strategies):
         arg = _make_argument()
-        result = strategies.get_best_strategy(arg, CounterArgumentType.DIRECT_REFUTATION)
+        result = strategies.get_best_strategy(
+            arg, CounterArgumentType.DIRECT_REFUTATION
+        )
         assert result == RhetoricalStrategy.STATISTICAL_EVIDENCE
 
     def test_counter_example(self, strategies):
@@ -195,23 +209,30 @@ class TestGetBestStrategy:
 
     def test_alternative_explanation(self, strategies):
         arg = _make_argument()
-        result = strategies.get_best_strategy(arg, CounterArgumentType.ALTERNATIVE_EXPLANATION)
+        result = strategies.get_best_strategy(
+            arg, CounterArgumentType.ALTERNATIVE_EXPLANATION
+        )
         assert result == RhetoricalStrategy.ANALOGICAL_COUNTER
 
     def test_premise_challenge(self, strategies):
         arg = _make_argument()
-        result = strategies.get_best_strategy(arg, CounterArgumentType.PREMISE_CHALLENGE)
+        result = strategies.get_best_strategy(
+            arg, CounterArgumentType.PREMISE_CHALLENGE
+        )
         assert result == RhetoricalStrategy.SOCRATIC_QUESTIONING
 
     def test_reductio(self, strategies):
         arg = _make_argument()
-        result = strategies.get_best_strategy(arg, CounterArgumentType.REDUCTIO_AD_ABSURDUM)
+        result = strategies.get_best_strategy(
+            arg, CounterArgumentType.REDUCTIO_AD_ABSURDUM
+        )
         assert result == RhetoricalStrategy.REDUCTIO_AD_ABSURDUM
 
 
 # ============================================================
 # Strategy implementations
 # ============================================================
+
 
 class TestSocraticQuestioning:
     def test_no_premises(self, strategies):
@@ -345,6 +366,7 @@ class TestStatisticalEvidence:
 # ============================================================
 # Helper generators
 # ============================================================
+
 
 class TestHelperGenerators:
     def test_absurd_consequence_toujours(self, strategies):

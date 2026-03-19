@@ -22,6 +22,7 @@ async def service_with_instance(service):
 
 # ── __init__ ──
 
+
 class TestInit:
     def test_initial_state(self, service):
         assert service.instances == {}
@@ -30,6 +31,7 @@ class TestInit:
 
 
 # ── create_jtms_instance ──
+
 
 class TestCreateJTMSInstance:
     @pytest.mark.asyncio
@@ -58,6 +60,7 @@ class TestCreateJTMSInstance:
 
 
 # ── create_belief ──
+
 
 class TestCreateBelief:
     @pytest.mark.asyncio
@@ -99,6 +102,7 @@ class TestCreateBelief:
 
 
 # ── add_justification ──
+
 
 class TestAddJustification:
     @pytest.mark.asyncio
@@ -147,6 +151,7 @@ class TestAddJustification:
 
 # ── explain_belief ──
 
+
 class TestExplainBelief:
     @pytest.mark.asyncio
     async def test_explains_belief_no_justifications(self, service):
@@ -180,6 +185,7 @@ class TestExplainBelief:
 
 
 # ── query_beliefs ──
+
 
 class TestQueryBeliefs:
     @pytest.mark.asyncio
@@ -234,6 +240,7 @@ class TestQueryBeliefs:
 
 # ── get_jtms_state ──
 
+
 class TestGetJTMSState:
     @pytest.mark.asyncio
     async def test_empty_state(self, service):
@@ -274,6 +281,7 @@ class TestGetJTMSState:
 
 # ── set_belief_validity ──
 
+
 class TestSetBeliefValidity:
     @pytest.mark.asyncio
     async def test_changes_validity(self, service):
@@ -297,6 +305,7 @@ class TestSetBeliefValidity:
 
 
 # ── remove_belief ──
+
 
 class TestRemoveBelief:
     @pytest.mark.asyncio
@@ -329,6 +338,7 @@ class TestRemoveBelief:
 
 # ── export_jtms_state ──
 
+
 class TestExportJTMSState:
     @pytest.mark.asyncio
     async def test_export_json(self, service):
@@ -359,6 +369,7 @@ class TestExportJTMSState:
 
 
 # ── import_jtms_state ──
+
 
 class TestImportJTMSState:
     @pytest.mark.asyncio
@@ -402,6 +413,7 @@ class TestImportJTMSState:
 
 # ── get_instance_ids ──
 
+
 class TestGetInstanceIds:
     @pytest.mark.asyncio
     async def test_no_instances(self, service):
@@ -426,6 +438,7 @@ class TestGetInstanceIds:
 
 # ── cleanup_instance ──
 
+
 class TestCleanupInstance:
     @pytest.mark.asyncio
     async def test_cleanup_existing(self, service):
@@ -442,6 +455,7 @@ class TestCleanupInstance:
 
 
 # ── Integration ──
+
 
 class TestJTMSServiceIntegration:
     @pytest.mark.asyncio

@@ -19,6 +19,7 @@ _test_import_alias = import_testing_utils.test_import
 # test_module_import_by_name
 # ============================================================
 
+
 class TestModuleImportByName:
     def test_existing_module(self):
         success, msg = _import_by_name("json")
@@ -54,6 +55,7 @@ class TestModuleImportByName:
 # test_module_import_by_path
 # ============================================================
 
+
 class TestModuleImportByPath:
     def test_existing_file(self, tmp_path):
         mod_file = tmp_path / "importutil_test_mod_001.py"
@@ -77,7 +79,9 @@ class TestModuleImportByPath:
     def test_with_name_override(self, tmp_path):
         mod_file = tmp_path / "importutil_custom_mod_002.py"
         mod_file.write_text("Y = 99\n", encoding="utf-8")
-        success, msg = _import_by_path(mod_file, module_name_override="importutil_custom_mod_002")
+        success, msg = _import_by_path(
+            mod_file, module_name_override="importutil_custom_mod_002"
+        )
         assert success is True
 
     def test_invalid_path_type(self):

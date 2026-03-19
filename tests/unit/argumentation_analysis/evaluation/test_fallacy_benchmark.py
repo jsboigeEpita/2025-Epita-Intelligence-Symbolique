@@ -263,7 +263,7 @@ class TestBenchmarkReport:
         assert len(report.mode_scores) == 3
         for mode in ["free", "one_shot", "constrained"]:
             assert mode in report.mode_scores
-            assert report.mode_scores[mode]["exact_pk_accuracy"] == pytest.approx(1/3)
+            assert report.mode_scores[mode]["exact_pk_accuracy"] == pytest.approx(1 / 3)
 
 
 @pytest.mark.unit
@@ -360,7 +360,9 @@ class TestFamilyLookup:
     def test_get_family_for_unknown_pk(self, tmp_path):
         """Test getting family for non-existent PK."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -385,12 +387,12 @@ class TestJSONParsing:
     def test_parse_json_markdown_block(self):
         """Test parsing JSON from markdown code block."""
         runner = FallacyBenchmarkRunner()
-        raw = '''```json
+        raw = """```json
 {
   "fallacy_name_fr": "Appel à l'ignorance",
   "confidence": 0.9
 }
-```'''
+```"""
 
         result = runner._parse_json(raw)
 
@@ -400,9 +402,9 @@ class TestJSONParsing:
     def test_parse_json_without_language(self):
         """Test parsing JSON from markdown without language specifier."""
         runner = FallacyBenchmarkRunner()
-        raw = '''```
+        raw = """```
 {"taxonomy_pk": "4", "confidence": 1.0}
-```'''
+```"""
 
         result = runner._parse_json(raw)
 
@@ -411,11 +413,11 @@ class TestJSONParsing:
     def test_parse_json_with_text_before(self):
         """Test parsing JSON when there's text before."""
         runner = FallacyBenchmarkRunner()
-        raw = '''Here is my analysis:
+        raw = """Here is my analysis:
 
 {"fallacy_name_fr": "Test", "confidence": 0.5}
 
-Hope this helps.'''
+Hope this helps."""
 
         result = runner._parse_json(raw)
 
@@ -448,24 +450,21 @@ class TestNameSimilarity:
     def test_identical_names(self):
         """Test similarity with identical names."""
         sim = FallacyBenchmarkRunner._name_similarity(
-            "Appel à l'ignorance",
-            "Appel à l'ignorance"
+            "Appel à l'ignorance", "Appel à l'ignorance"
         )
         assert sim == 1.0
 
     def test_completely_different_names(self):
         """Test similarity with completely different names."""
         sim = FallacyBenchmarkRunner._name_similarity(
-            "Appel à l'ignorance",
-            "Rationalisation"
+            "Appel à l'ignorance", "Rationalisation"
         )
         assert sim == 0.0
 
     def test_partial_overlap(self):
         """Test similarity with partial word overlap."""
         sim = FallacyBenchmarkRunner._name_similarity(
-            "Appel à l'ignorance",
-            "Appel à l'autorité"
+            "Appel à l'ignorance", "Appel à l'autorité"
         )
         # Words: {appel, à, l'ignorance} ∩ {appel, à, l'autorité} = {appel, à}
         # Union: {appel, à, l'ignorance, l'autorité}
@@ -476,8 +475,7 @@ class TestNameSimilarity:
     def test_case_insensitive(self):
         """Test that comparison is case-insensitive."""
         sim = FallacyBenchmarkRunner._name_similarity(
-            "Appel à l'ignorance",
-            "APPEL À L'IGNORANCE"
+            "Appel à l'ignorance", "APPEL À L'IGNORANCE"
         )
         assert sim == 1.0
 
@@ -574,15 +572,16 @@ class TestResultScoring:
         scored = runner._score_result(case, "constrained", result, 1.0)
 
         assert scored.exact_pk_match is False
-        assert scored.family_match is False  # Different families (Insuffisance vs Influence)
+        assert (
+            scored.family_match is False
+        )  # Different families (Insuffisance vs Influence)
         assert scored.name_similarity < 0.5
 
     def test_depth_reached(self, tmp_path):
         """Test depth reached calculation."""
         taxonomy_path = tmp_path / "taxonomy.csv"
         taxonomy_path.write_text(
-            "PK,nom_vulgarisé,text_fr,depth,path\n"
-            "4,Test,Test,4,1.2.4\n",
+            "PK,nom_vulgarisé,text_fr,depth,path\n" "4,Test,Test,4,1.2.4\n",
             encoding="utf-8",
         )
 
@@ -598,7 +597,9 @@ class TestResultScoring:
     def test_confidence_extraction(self, tmp_path):
         """Test confidence value extraction."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -612,7 +613,9 @@ class TestResultScoring:
     def test_error_handling(self, tmp_path):
         """Test scoring with error result."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -633,7 +636,9 @@ class TestModeRunners:
     async def test_mode_a_free(self, tmp_path):
         """Test Mode A: Free LLM detection."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -642,7 +647,13 @@ class TestModeRunners:
             mock_instance = MagicMock()
             mock_instance.chat.completions.create = AsyncMock(
                 return_value=MagicMock(
-                    choices=[MagicMock(message=MagicMock(content='{"fallacy_name_fr": "Test", "confidence": 0.8}'))]
+                    choices=[
+                        MagicMock(
+                            message=MagicMock(
+                                content='{"fallacy_name_fr": "Test", "confidence": 0.8}'
+                            )
+                        )
+                    ]
                 )
             )
             mock_client.return_value = mock_instance
@@ -657,8 +668,7 @@ class TestModeRunners:
         """Test Mode B: One-shot with taxonomy."""
         taxonomy_path = tmp_path / "taxonomy.csv"
         taxonomy_path.write_text(
-            "PK,nom_vulgarisé,text_fr,depth,path\n"
-            "4,Test,Test,4,1.2.4\n",
+            "PK,nom_vulgarisé,text_fr,depth,path\n" "4,Test,Test,4,1.2.4\n",
             encoding="utf-8",
         )
 
@@ -668,7 +678,13 @@ class TestModeRunners:
             mock_instance = MagicMock()
             mock_instance.chat.completions.create = AsyncMock(
                 return_value=MagicMock(
-                    choices=[MagicMock(message=MagicMock(content='{"taxonomy_pk": "4", "fallacy_name_fr": "Test"}'))]
+                    choices=[
+                        MagicMock(
+                            message=MagicMock(
+                                content='{"taxonomy_pk": "4", "fallacy_name_fr": "Test"}'
+                            )
+                        )
+                    ]
                 )
             )
             mock_client.return_value = mock_instance
@@ -684,8 +700,7 @@ class TestModeRunners:
         """Test Mode C: Constrained workflow (requires API)."""
         taxonomy_path = tmp_path / "taxonomy.csv"
         taxonomy_path.write_text(
-            "PK,nom_vulgarisé,text_fr,depth,path\n"
-            "4,Test,Test,4,1.2.4\n",
+            "PK,nom_vulgarisé,text_fr,depth,path\n" "4,Test,Test,4,1.2.4\n",
             encoding="utf-8",
         )
 
@@ -718,11 +733,20 @@ class TestBenchmarkExecution:
 
         # Mock all three mode runners
         async def mock_mode(text):
-            return {"taxonomy_pk": "4", "fallacy_name_fr": "Test", "confidence": 0.8, "justification": "OK"}
+            return {
+                "taxonomy_pk": "4",
+                "fallacy_name_fr": "Test",
+                "confidence": 0.8,
+                "justification": "OK",
+            }
 
-        with patch.object(runner, "run_mode_a_free", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=mock_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=mock_mode
+        ):
 
             # Run single case
             report = await runner.run_benchmark(
@@ -739,7 +763,9 @@ class TestBenchmarkExecution:
     async def test_run_benchmark_parallel(self, tmp_path):
         """Test parallel benchmark execution."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -747,9 +773,13 @@ class TestBenchmarkExecution:
             await asyncio.sleep(0.01)  # Simulate work
             return {"taxonomy_pk": "4", "confidence": 0.8}
 
-        with patch.object(runner, "run_mode_a_free", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=mock_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=mock_mode
+        ):
 
             report = await runner.run_benchmark(
                 cases=[BENCHMARK_CASES[0], BENCHMARK_CASES[1]],
@@ -764,7 +794,9 @@ class TestBenchmarkExecution:
     async def test_run_benchmark_with_errors(self, tmp_path):
         """Test benchmark with error handling."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -774,8 +806,9 @@ class TestBenchmarkExecution:
         async def working_mode(text):
             return {"taxonomy_pk": "4", "confidence": 0.9}
 
-        with patch.object(runner, "run_mode_a_free", side_effect=failing_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=working_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=failing_mode
+        ), patch.object(runner, "run_mode_b_one_shot", side_effect=working_mode):
 
             report = await runner.run_benchmark(
                 cases=[BENCHMARK_CASES[0]],
@@ -789,7 +822,9 @@ class TestBenchmarkExecution:
             assert free_result.error == "Simulated error"
 
             # one_shot mode should succeed
-            one_shot_result = next((r for r in report.results if r.mode == "one_shot"), None)
+            one_shot_result = next(
+                (r for r in report.results if r.mode == "one_shot"), None
+            )
             assert one_shot_result is not None
             assert one_shot_result.error == ""
 
@@ -797,16 +832,22 @@ class TestBenchmarkExecution:
     async def test_run_benchmark_default_params(self, tmp_path):
         """Test benchmark with default parameters."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
         async def mock_mode(text):
             return {"taxonomy_pk": "4"}
 
-        with patch.object(runner, "run_mode_a_free", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=mock_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=mock_mode
+        ):
 
             # Use default cases and modes
             report = await runner.run_benchmark(concurrency=1)
@@ -841,7 +882,9 @@ class TestReportGeneration:
         report.summary = "# Test Report\n"
 
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -862,16 +905,22 @@ class TestReportGeneration:
     async def test_summary_generation(self, tmp_path):
         """Test that summary is correctly generated."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
         async def mock_mode(text):
             return {"taxonomy_pk": "4", "fallacy_name_fr": "Test", "confidence": 0.8}
 
-        with patch.object(runner, "run_mode_a_free", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=mock_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=mock_mode
+        ):
 
             report = await runner.run_benchmark(
                 cases=[BENCHMARK_CASES[0]],
@@ -893,7 +942,9 @@ class TestConcurrencyControl:
     async def test_semaphore_limits_concurrency(self, tmp_path):
         """Test that semaphore limits concurrent executions."""
         taxonomy_path = tmp_path / "taxonomy.csv"
-        taxonomy_path.write_text("PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8")
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n", encoding="utf-8"
+        )
 
         runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
 
@@ -908,9 +959,13 @@ class TestConcurrencyControl:
             concurrent_count -= 1
             return {"taxonomy_pk": "4"}
 
-        with patch.object(runner, "run_mode_a_free", side_effect=counting_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=counting_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=counting_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=counting_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=counting_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=counting_mode
+        ):
 
             # Run 6 tasks with concurrency limit of 2
             await runner.run_benchmark(
@@ -948,9 +1003,13 @@ class TestBenchmarkIntegration:
                 "justification": "Mock detection",
             }
 
-        with patch.object(runner, "run_mode_a_free", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_b_one_shot", side_effect=mock_mode), \
-             patch.object(runner, "run_mode_c_constrained", side_effect=mock_mode):
+        with patch.object(
+            runner, "run_mode_a_free", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_b_one_shot", side_effect=mock_mode
+        ), patch.object(
+            runner, "run_mode_c_constrained", side_effect=mock_mode
+        ):
 
             # Run benchmark
             report = await runner.run_benchmark(

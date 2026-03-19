@@ -40,15 +40,13 @@ class EAFHandler:
     def _load_classes(self):
         """Load required Java classes."""
         pkg = "org.tweetyproject.arg.eaf"
-        self._EpistemicAF = jpype.JClass(f"{pkg}.syntax.EpistemicArgumentationFramework")
+        self._EpistemicAF = jpype.JClass(
+            f"{pkg}.syntax.EpistemicArgumentationFramework"
+        )
 
         # Dung classes shared
-        self._Argument = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Argument"
-        )
-        self._Attack = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Attack"
-        )
+        self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+        self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
 
         # Load reasoners
         self._reasoners = {}
@@ -68,9 +66,7 @@ class EAFHandler:
             self._AgreementReasoner = None
             logger.debug("EAFAgreementReasoner not available.")
 
-        logger.info(
-            f"EAF classes loaded. Reasoners: {list(self._reasoners.keys())}"
-        )
+        logger.info(f"EAF classes loaded. Reasoners: {list(self._reasoners.keys())}")
 
     def analyze_epistemic_framework(
         self,

@@ -23,7 +23,9 @@ class RankingPlugin:
     )
     def rank_arguments(self, arguments_json: str) -> str:
         """Rank arguments and return ordered comparisons."""
-        from argumentation_analysis.agents.core.logic.ranking_handler import RankingHandler
+        from argumentation_analysis.agents.core.logic.ranking_handler import (
+            RankingHandler,
+        )
 
         data = json.loads(arguments_json)
         handler = RankingHandler()
@@ -40,6 +42,8 @@ class RankingPlugin:
     )
     def list_ranking_methods(self) -> str:
         """Return available ranking method names."""
-        from argumentation_analysis.agents.core.logic.ranking_handler import RankingHandler
+        from argumentation_analysis.agents.core.logic.ranking_handler import (
+            RankingHandler,
+        )
 
         return json.dumps(list(RankingHandler.REASONERS.keys()), ensure_ascii=False)

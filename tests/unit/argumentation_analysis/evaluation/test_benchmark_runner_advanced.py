@@ -15,7 +15,10 @@ import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from argumentation_analysis.evaluation.benchmark_runner import BenchmarkRunner, BenchmarkResult
+from argumentation_analysis.evaluation.benchmark_runner import (
+    BenchmarkRunner,
+    BenchmarkResult,
+)
 
 
 @pytest.mark.unit
@@ -320,11 +323,15 @@ class TestRunCell:
         runner.load_dataset_unencrypted(str(dataset_path))
 
         # Mock the run_unified_analysis function
-        with patch("argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis") as mock_run:
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis"
+        ) as mock_run:
             mock_run.return_value = {
                 "phases": {},
                 "summary": {"completed": 1, "total": 1, "failed": 0, "skipped": 0},
-                "unified_state": MagicMock(get_state_snapshot=MagicMock(return_value={"test": "data"})),
+                "unified_state": MagicMock(
+                    get_state_snapshot=MagicMock(return_value={"test": "data"})
+                ),
             }
 
             result = await runner.run_cell(
@@ -343,9 +350,7 @@ class TestRunCell:
     async def test_run_cell_timeout(self, tmp_path):
         """Test that timeout is handled correctly."""
         dataset = {
-            "documents": [
-                {"id": "doc1", "name": "Test", "full_text": "Test text."}
-            ]
+            "documents": [{"id": "doc1", "name": "Test", "full_text": "Test text."}]
         }
 
         dataset_path = tmp_path / "dataset.json"
@@ -365,7 +370,10 @@ class TestRunCell:
             await asyncio.sleep(5)
             return {}
 
-        with patch("argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis", side_effect=slow_analysis):
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            side_effect=slow_analysis,
+        ):
             result = await runner.run_cell(
                 workflow_name="light",
                 model_name="default",
@@ -380,11 +388,7 @@ class TestRunCell:
     @pytest.mark.asyncio
     async def test_run_cell_empty_document(self, tmp_path):
         """Test handling of empty document."""
-        dataset = {
-            "documents": [
-                {"id": "doc1", "name": "Empty Doc", "full_text": ""}
-            ]
-        }
+        dataset = {"documents": [{"id": "doc1", "name": "Empty Doc", "full_text": ""}]}
 
         dataset_path = tmp_path / "dataset.json"
         with open(dataset_path, "w", encoding="utf-8") as f:
@@ -410,9 +414,7 @@ class TestRunCell:
         long_text = "A" * 10000
 
         dataset = {
-            "documents": [
-                {"id": "doc1", "name": "Long Doc", "full_text": long_text}
-            ]
+            "documents": [{"id": "doc1", "name": "Long Doc", "full_text": long_text}]
         }
 
         dataset_path = tmp_path / "dataset.json"
@@ -433,7 +435,10 @@ class TestRunCell:
             captured_text.append(text)
             return asyncio.sleep(0)
 
-        with patch("argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis", side_effect=capture_run):
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            side_effect=capture_run,
+        ):
             await runner.run_cell(
                 workflow_name="light",
                 model_name="default",
@@ -491,7 +496,8 @@ class TestPhaseSerialization:
         serializable = {
             "status": mock_phase.status,
             "capability": getattr(mock_phase, "capability", None),
-            "has_output": hasattr(mock_phase, "output") and mock_phase.output is not None,
+            "has_output": hasattr(mock_phase, "output")
+            and mock_phase.output is not None,
         }
 
         assert serializable["status"] == "completed"

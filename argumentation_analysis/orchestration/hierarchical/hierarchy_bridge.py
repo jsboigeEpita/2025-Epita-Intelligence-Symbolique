@@ -64,9 +64,7 @@ class RegistryBackedOperationalRegistry:
 
     # --- Discovery ---
 
-    def find_for_capability(
-        self, capability: str
-    ) -> Optional[ComponentRegistration]:
+    def find_for_capability(self, capability: str) -> Optional[ComponentRegistration]:
         """Find the best component providing a capability.
 
         Returns the first registered provider (any type) or None.
@@ -74,9 +72,7 @@ class RegistryBackedOperationalRegistry:
         providers = self._registry.find_for_capability(capability)
         return providers[0] if providers else None
 
-    def find_all_for_capability(
-        self, capability: str
-    ) -> List[ComponentRegistration]:
+    def find_all_for_capability(self, capability: str) -> List[ComponentRegistration]:
         """Find all components providing a capability."""
         return self._registry.find_for_capability(capability)
 
@@ -220,9 +216,7 @@ def objectives_to_workflow(
         priority = objective.get("priority", "medium")
 
         # Find matching capabilities from description keywords
-        matched_capabilities = _match_capabilities(
-            description, capability_registry
-        )
+        matched_capabilities = _match_capabilities(description, capability_registry)
 
         if not matched_capabilities:
             logger.warning(
@@ -392,9 +386,7 @@ def _extract_questions(phase_results: Dict[str, PhaseResult]) -> List[str]:
     """Extract user questions from phase outputs."""
     questions: List[str] = []
     for result in phase_results.values():
-        if result.status == PhaseStatus.COMPLETED and isinstance(
-            result.output, dict
-        ):
+        if result.status == PhaseStatus.COMPLETED and isinstance(result.output, dict):
             q = result.output.get("user_question")
             if q and isinstance(q, str):
                 questions.append(q)

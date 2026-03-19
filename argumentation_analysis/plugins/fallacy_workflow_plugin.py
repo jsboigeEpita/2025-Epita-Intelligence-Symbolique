@@ -9,6 +9,7 @@ Rebuilt from commit d2fdd930 with improvements:
 
 See docs/reports/issue_84_git_archaeology.md for architectural history.
 """
+
 import asyncio
 import csv
 import json
@@ -186,7 +187,9 @@ class FallacyWorkflowPlugin:
 
             # Feed result back to history
             history.add_message(
-                FunctionResultContent(id=item.id, result=result_str).to_chat_message_content()
+                FunctionResultContent(
+                    id=item.id, result=result_str
+                ).to_chat_message_content()
             )
 
             # Parse result for caller
@@ -251,7 +254,9 @@ class FallacyWorkflowPlugin:
             parent_desc = current_node.get(f"desc_{self.language}", "")
             parent_example = current_node.get(f"example_{self.language}", "")
 
-            options_text = f"\n--- OPTIONS at depth {current_node.get('depth', '?')} ---\n"
+            options_text = (
+                f"\n--- OPTIONS at depth {current_node.get('depth', '?')} ---\n"
+            )
             options_text += (
                 f"CONFIRM THIS LEVEL: {parent_name} (ID: {current_pk})\n"
                 f"  Description: {parent_desc}\n"
@@ -272,7 +277,7 @@ class FallacyWorkflowPlugin:
                     options_text += f"    Example: {cexample}\n"
 
             prompt = (
-                f"Text to analyze: \"{argument_text[:500]}\"\n\n"
+                f'Text to analyze: "{argument_text[:500]}"\n\n'
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
                 f"{options_text}\n"
                 "Choose ONE action:\n"
@@ -325,7 +330,9 @@ class FallacyWorkflowPlugin:
                 if func_name == "confirm_fallacy" and result.get("confirmed"):
                     confirmed_pk = result.get("pk", "")
                     confirmed_node = self.taxonomy_navigator.get_node(confirmed_pk)
-                    confirmed_depth = int(confirmed_node.get("depth", 0)) if confirmed_node else 0
+                    confirmed_depth = (
+                        int(confirmed_node.get("depth", 0)) if confirmed_node else 0
+                    )
 
                     # Reject too-shallow confirmations — force deeper exploration
                     if confirmed_depth < self.MIN_CONFIRM_DEPTH and children:
@@ -405,9 +412,7 @@ class FallacyWorkflowPlugin:
             self.logger.addHandler(file_handler)
 
         try:
-            self.logger.info(
-                f"--- Fallacy Analysis for: '{argument_text[:80]}...' ---"
-            )
+            self.logger.info(f"--- Fallacy Analysis for: '{argument_text[:80]}...' ---")
 
             # Direct one-shot mode if requested
             if use_one_shot:
@@ -418,7 +423,7 @@ class FallacyWorkflowPlugin:
             root_presentation = self._build_root_presentation()
 
             selection_prompt = (
-                f"Text to analyze: \"{argument_text[:800]}\"\n\n"
+                f'Text to analyze: "{argument_text[:800]}"\n\n'
                 f"Below are the ROOT CATEGORIES of the fallacy taxonomy:\n"
                 f"{root_presentation}\n\n"
                 "Select up to 3 candidate branches by calling explore_branch(node_pk='<ID>') "

@@ -9,8 +9,8 @@ from argumentation_analysis.core.enquete_states import (
     EnqueteCluedoState,
 )
 
-
 # ── BaseWorkflowState ──
+
 
 class TestBaseWorkflowState:
     @pytest.fixture
@@ -118,6 +118,7 @@ class TestBaseWorkflowState:
 
 
 # ── EnquetePoliciereState ──
+
 
 class TestEnquetePoliciereState:
     @pytest.fixture
@@ -266,6 +267,7 @@ class TestEnquetePoliciereState:
 
 # ── EnqueteCluedoState ──
 
+
 class TestEnqueteCluedoState:
     @pytest.fixture
     def elements(self):
@@ -296,9 +298,7 @@ class TestEnqueteCluedoState:
         assert state.final_solution is None
 
     def test_init_auto_solution(self, elements):
-        state = EnqueteCluedoState(
-            "Auto Game", elements, "Murder case", {}
-        )
+        state = EnqueteCluedoState("Auto Game", elements, "Murder case", {})
         sol = state.solution_secrete_cluedo
         assert sol["suspect"] in elements["suspects"]
         assert sol["arme"] in elements["armes"]
@@ -307,7 +307,10 @@ class TestEnqueteCluedoState:
     def test_init_no_solution_no_auto_raises(self, elements):
         with pytest.raises(ValueError):
             EnqueteCluedoState(
-                "Game", elements, "desc", {},
+                "Game",
+                elements,
+                "desc",
+                {},
                 solution_secrete_cluedo=None,
                 auto_generate_solution=False,
             )
@@ -348,7 +351,9 @@ class TestEnqueteCluedoState:
         assert "Not(Coupable(" in content
 
     def test_propose_final_solution(self, state):
-        state.propose_final_solution({"suspect": "Miss Scarlet", "arme": "Knife", "lieu": "Library"})
+        state.propose_final_solution(
+            {"suspect": "Miss Scarlet", "arme": "Knife", "lieu": "Library"}
+        )
         assert state.is_solution_proposed is True
         assert state.final_solution["suspect"] == "Miss Scarlet"
 

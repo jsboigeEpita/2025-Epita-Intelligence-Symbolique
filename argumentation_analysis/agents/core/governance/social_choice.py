@@ -167,9 +167,13 @@ def kemeny_young(
         for b in options:
             if a != b:
                 count = sum(
-                    1 for ballot in ballots
-                    if (a in ballot and b in ballot
-                        and ballot.index(a) < ballot.index(b))
+                    1
+                    for ballot in ballots
+                    if (
+                        a in ballot
+                        and b in ballot
+                        and ballot.index(a) < ballot.index(b)
+                    )
                 )
                 pairwise[(a, b)] = count
 
@@ -210,7 +214,7 @@ def schulze(
         for i, a in enumerate(ballot):
             if a not in idx:
                 continue
-            for b in ballot[i + 1:]:
+            for b in ballot[i + 1 :]:
                 if b not in idx:
                     continue
                 d[idx[a]][idx[b]] += 1
@@ -241,8 +245,7 @@ def schulze(
 
     winner = max(scores, key=scores.get) if scores else None
     paths = {
-        options[i]: {options[j]: p[i][j] for j in range(n) if i != j}
-        for i in range(n)
+        options[i]: {options[j]: p[i][j] for j in range(n) if i != j} for i in range(n)
     }
     return winner, paths
 
@@ -261,14 +264,14 @@ def condorcet_winner(
             if candidate == other:
                 continue
             wins = sum(
-                1 for b in ballots
-                if candidate in b and other in b
-                and b.index(candidate) < b.index(other)
+                1
+                for b in ballots
+                if candidate in b and other in b and b.index(candidate) < b.index(other)
             )
             losses = sum(
-                1 for b in ballots
-                if candidate in b and other in b
-                and b.index(other) < b.index(candidate)
+                1
+                for b in ballots
+                if candidate in b and other in b and b.index(other) < b.index(candidate)
             )
             if wins <= losses:
                 beats_all = False
@@ -288,7 +291,7 @@ def pairwise_matrix(
         for i, a in enumerate(ballot):
             if a not in matrix:
                 continue
-            for b in ballot[i + 1:]:
+            for b in ballot[i + 1 :]:
                 if b in matrix.get(a, {}):
                     matrix[a][b] += 1
     return matrix

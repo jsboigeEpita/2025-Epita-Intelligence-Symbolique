@@ -73,9 +73,7 @@ CAPABILITY_DESCRIPTIONS: Dict[str, str] = {
     "semantic_indexing": (
         "Semantic argument search and indexing for large document collections"
     ),
-    "speech_transcription": (
-        "Speech-to-text transcription of audio content"
-    ),
+    "speech_transcription": ("Speech-to-text transcription of audio content"),
 }
 
 ROUTING_SYSTEM_PROMPT = """\
@@ -178,9 +176,7 @@ class TextAnalysisRouter:
                 result = await self._route_with_llm(text, available)
                 return self._build_workflow(result)
             except Exception as e:
-                logger.warning(
-                    "LLM routing failed, falling back to heuristics: %s", e
-                )
+                logger.warning("LLM routing failed, falling back to heuristics: %s", e)
 
         # Tier 2: Heuristic fallback
         result = self._route_with_heuristics(text, available)
@@ -249,9 +245,7 @@ class TextAnalysisRouter:
             cap_lines.append(f"- {cap}: {desc}")
         cap_list_str = "\n".join(cap_lines)
 
-        system_prompt = ROUTING_SYSTEM_PROMPT.format(
-            capability_list=cap_list_str
-        )
+        system_prompt = ROUTING_SYSTEM_PROMPT.format(capability_list=cap_list_str)
         user_prompt = f"Text to analyze:\n\n{text[:LLM_TEXT_LIMIT]}"
 
         response = await client.chat.completions.create(
@@ -309,8 +303,15 @@ class TextAnalysisRouter:
 
         # Fallacy detection — prefer hierarchical for depth, neural for speed
         fallacy_keywords = {
-            "sophisme", "fallac", "raisonnement", "logique", "argument",
-            "erreur", "manipulation", "rhétorique", "ad hominem",
+            "sophisme",
+            "fallac",
+            "raisonnement",
+            "logique",
+            "argument",
+            "erreur",
+            "manipulation",
+            "rhétorique",
+            "ad hominem",
         }
         french_chars = set("àâäéèêëïîôùûüçœæ")
         has_french = any(c in french_chars for c in text_lower)
@@ -325,9 +326,17 @@ class TextAnalysisRouter:
 
         # Governance keywords
         gov_keywords = {
-            "vote", "décision", "consensus", "majorité", "élection",
-            "délibération", "scrutin", "suffrage", "proposition",
-            "assemblée", "démocratie",
+            "vote",
+            "décision",
+            "consensus",
+            "majorité",
+            "élection",
+            "délibération",
+            "scrutin",
+            "suffrage",
+            "proposition",
+            "assemblée",
+            "démocratie",
         }
         if any(kw in text_lower for kw in gov_keywords):
             if "governance_simulation" in available_caps:
@@ -335,9 +344,17 @@ class TextAnalysisRouter:
 
         # Debate/opposition patterns
         debate_markers = {
-            "en revanche", "au contraire", "cependant", "néanmoins",
-            "toutefois", "d'un côté", "de l'autre", "s'oppose",
-            "contestant", "réfute", "objecte",
+            "en revanche",
+            "au contraire",
+            "cependant",
+            "néanmoins",
+            "toutefois",
+            "d'un côté",
+            "de l'autre",
+            "s'oppose",
+            "contestant",
+            "réfute",
+            "objecte",
         }
         if any(m in text_lower for m in debate_markers):
             if "adversarial_debate" in available_caps:

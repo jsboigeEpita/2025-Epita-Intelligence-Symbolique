@@ -39,6 +39,7 @@ def _make_msg(
 
 # ── DataStore ──
 
+
 class TestDataStoreInit:
     def test_init(self):
         ds = DataStore("store1")
@@ -170,6 +171,7 @@ class TestDataStoreOperations:
 
 # ── DataChannel ──
 
+
 class TestDataChannelInit:
     def test_channel_type(self):
         ch = DataChannel("d1")
@@ -190,7 +192,9 @@ class TestDataChannelInit:
         assert ch.max_inline_data_size == 10240
 
     def test_custom_config(self):
-        ch = DataChannel("d1", config={"compression_threshold": 512, "max_inline_data_size": 4096})
+        ch = DataChannel(
+            "d1", config={"compression_threshold": 512, "max_inline_data_size": 4096}
+        )
         assert ch.compression_threshold == 512
         assert ch.max_inline_data_size == 4096
 

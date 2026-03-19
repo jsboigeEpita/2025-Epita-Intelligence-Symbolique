@@ -29,7 +29,6 @@ from argumentation_analysis.agents.core.oracle.permissions import (
     QueryResult,
 )
 
-
 # ═════════════════════════════════════════════════════════════════════════════
 # SHARED FIXTURES
 # ═════════════════════════════════════════════════════════════════════════════
@@ -313,6 +312,7 @@ class TestCluedoOracleStateInit:
     def test_init_workflow_id_generated_as_uuid(self, cluedo_elements):
         state, _ = _make_oracle_state(cluedo_elements)
         import uuid
+
         # Should parse without raising
         parsed = uuid.UUID(state.workflow_id)
         assert str(parsed) == state.workflow_id
@@ -356,14 +356,13 @@ class TestCluedoOracleStateCardDistribution:
         state, _ = _make_oracle_state(cluedo_elements)
         solution = state.solution_secrete_cluedo
         solution_values = set(solution.values())
-        all_distributed = (
-            state.cartes_distribuees.get("Moriarty", [])
-            + state.cartes_distribuees.get("AutresJoueurs", [])
-        )
+        all_distributed = state.cartes_distribuees.get(
+            "Moriarty", []
+        ) + state.cartes_distribuees.get("AutresJoueurs", [])
         for card in all_distributed:
-            assert card not in solution_values, (
-                f"Solution card '{card}' should not be in distribution"
-            )
+            assert (
+                card not in solution_values
+            ), f"Solution card '{card}' should not be in distribution"
 
     def test_distribute_cards_moriarty_gets_approx_third(self, cluedo_elements):
         state, _ = _make_oracle_state(cluedo_elements)
@@ -486,9 +485,7 @@ class TestCluedoOracleStatePermissions:
 
     def test_agent_can_query_oracle_wrong_type_denied(self, oracle_state):
         """Watson cannot use ADMIN_COMMAND."""
-        result = oracle_state._agent_can_query_oracle(
-            "Watson", QueryType.ADMIN_COMMAND
-        )
+        result = oracle_state._agent_can_query_oracle("Watson", QueryType.ADMIN_COMMAND)
         assert result is False
 
     def test_moriarty_has_is_oracle_flag(self, oracle_state):
@@ -515,7 +512,10 @@ class TestCluedoOracleStateQueryOracle:
             query_params={},
         )
         assert response.authorized is False
-        assert "invalide" in response.message.lower() or "invalid" in response.message.lower()
+        assert (
+            "invalide" in response.message.lower()
+            or "invalid" in response.message.lower()
+        )
 
     async def test_query_oracle_permission_denied_returns_unauthorized(
         self, oracle_state_with_dataset
@@ -550,13 +550,9 @@ class TestCluedoOracleStateQueryOracle:
         assert isinstance(response, OracleResponse)
         assert response.authorized is True
 
-    async def test_query_oracle_increments_counters(
-        self, oracle_state_with_dataset
-    ):
+    async def test_query_oracle_increments_counters(self, oracle_state_with_dataset):
         state, mock_dataset = oracle_state_with_dataset
-        mock_result = QueryResult(
-            success=True, data={}, message="OK", metadata={}
-        )
+        mock_result = QueryResult(success=True, data={}, message="OK", metadata={})
         mock_dataset.process_query = AsyncMock(return_value=mock_result)
 
         initial_count = state.oracle_queries_count
@@ -587,7 +583,9 @@ class TestCluedoOracleStateQueryOracle:
             query_params={},
         )
         assert response.authorized is False
-        assert "erreur" in response.message.lower() or "error" in response.message.lower()
+        assert (
+            "erreur" in response.message.lower() or "error" in response.message.lower()
+        )
 
 
 class TestCluedoOracleStateRecordAgentTurn:

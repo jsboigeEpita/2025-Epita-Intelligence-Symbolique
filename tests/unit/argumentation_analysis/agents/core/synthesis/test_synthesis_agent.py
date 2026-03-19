@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 from argumentation_analysis.agents.core.synthesis.data_models import (
@@ -137,9 +139,14 @@ class TestSynthesisAgentOrchestration:
         async def mock_error_analysis(text):
             raise RuntimeError("Analysis failed")
 
-        with patch.object(agent, "_run_formal_analysis", side_effect=mock_error_analysis), \
-             patch.object(agent, "_run_informal_analysis", side_effect=mock_error_analysis):
-            logic_result, informal_result = await agent.orchestrate_analysis("Test text")
+        with patch.object(
+            agent, "_run_formal_analysis", side_effect=mock_error_analysis
+        ), patch.object(
+            agent, "_run_informal_analysis", side_effect=mock_error_analysis
+        ):
+            logic_result, informal_result = await agent.orchestrate_analysis(
+                "Test text"
+            )
 
         # Should return empty results
         assert isinstance(logic_result, LogicAnalysisResult)
@@ -219,11 +226,19 @@ class TestSynthesisAgentReportGeneration:
 
         markdown = await agent.generate_report(report)
 
-        assert "# RAPPORT DE SYNTHESE UNIFIE" in markdown or "# RAPPORT DE SYNTH\u00c8SE UNIFI\u00c9" in markdown
+        assert (
+            "# RAPPORT DE SYNTHESE UNIFIE" in markdown
+            or "# RAPPORT DE SYNTH\u00c8SE UNIFI\u00c9" in markdown
+        )
         assert "## TEXTE ORIGINAL ANALYS" in markdown
-        assert "## R\u00c9SUM\u00c9 EX\u00c9CUTIF" in markdown or "RESUME EXECUTIF" in markdown
+        assert (
+            "## R\u00c9SUM\u00c9 EX\u00c9CUTIF" in markdown
+            or "RESUME EXECUTIF" in markdown
+        )
         assert "## STATISTIQUES" in markdown
-        assert "## \u00c9VALUATION GLOBALE" in markdown or "EVALUATION GLOBALE" in markdown
+        assert (
+            "## \u00c9VALUATION GLOBALE" in markdown or "EVALUATION GLOBALE" in markdown
+        )
 
     @pytest.mark.asyncio
     async def test_generate_report_includes_contradictions(self):
@@ -293,9 +308,7 @@ class TestSynthesisAgentHelperMethods:
         agent = SynthesisAgent(kernel)
 
         logic = LogicAnalysisResult(logical_validity=True)
-        informal = InformalAnalysisResult(
-            fallacies_detected=[{"type": "straw_man"}]
-        )
+        informal = InformalAnalysisResult(fallacies_detected=[{"type": "straw_man"}])
 
         validity = agent._assess_overall_validity(logic, informal)
         assert validity is False
@@ -359,9 +372,7 @@ class TestSynthesisAgentHelperMethods:
         agent = SynthesisAgent(kernel)
 
         logic = LogicAnalysisResult(logical_validity=True)
-        informal = InformalAnalysisResult(
-            fallacies_detected=[{"type": "ad_hominem"}]
-        )
+        informal = InformalAnalysisResult(fallacies_detected=[{"type": "ad_hominem"}])
 
         contradictions = agent._identify_basic_contradictions(logic, informal)
         assert len(contradictions) > 0
@@ -441,7 +452,9 @@ class TestSynthesisAgentAbstractMethods:
         agent = SynthesisAgent(kernel)
 
         # Mock the internal methods
-        with patch.object(agent, "_simple_synthesis", new_callable=AsyncMock) as mock_synthesis:
+        with patch.object(
+            agent, "_simple_synthesis", new_callable=AsyncMock
+        ) as mock_synthesis:
             mock_report = UnifiedReport(
                 original_text="Test",
                 logic_analysis=LogicAnalysisResult(),
@@ -468,8 +481,17 @@ class TestSynthesisAgentAbstractMethods:
         )
 
         # Patch at CLASS level to bypass Pydantic V2 validation on instance setattr
-        with patch.object(SynthesisAgent, "invoke_single", new_callable=AsyncMock, return_value=mock_report), \
-             patch.object(SynthesisAgent, "generate_report", new_callable=AsyncMock, return_value="# Report"):
+        with patch.object(
+            SynthesisAgent,
+            "invoke_single",
+            new_callable=AsyncMock,
+            return_value=mock_report,
+        ), patch.object(
+            SynthesisAgent,
+            "generate_report",
+            new_callable=AsyncMock,
+            return_value="# Report",
+        ):
             result = await agent.get_response("Test text")
 
         assert "# Report" in result

@@ -64,16 +64,18 @@ class DebatePlugin:
             phase=DebatePhase.MAIN_ARGUMENTS,
         )
         metrics = self.analyzer.analyze_argument(arg, [])
-        return json.dumps({
-            "logical_coherence": metrics.logical_coherence,
-            "evidence_quality": metrics.evidence_quality,
-            "relevance_score": metrics.relevance_score,
-            "persuasiveness": metrics.persuasiveness,
-            "emotional_appeal": metrics.emotional_appeal,
-            "fact_check_score": metrics.fact_check_score,
-            "novelty_score": metrics.novelty_score,
-            "readability_score": metrics.readability_score,
-        })
+        return json.dumps(
+            {
+                "logical_coherence": metrics.logical_coherence,
+                "evidence_quality": metrics.evidence_quality,
+                "relevance_score": metrics.relevance_score,
+                "persuasiveness": metrics.persuasiveness,
+                "emotional_appeal": metrics.emotional_appeal,
+                "fact_check_score": metrics.fact_check_score,
+                "novelty_score": metrics.novelty_score,
+                "readability_score": metrics.readability_score,
+            }
+        )
 
     @kernel_function(
         name="analyze_logical_structure",
@@ -144,9 +146,7 @@ class DebateAgent(BaseAgent):
     _position: str = PrivateAttr(default="for")
     _memory: List = PrivateAttr(default_factory=list)
     _strategy: str = PrivateAttr(default="balanced")
-    _performance_history: Dict = PrivateAttr(
-        default_factory=lambda: defaultdict(list)
-    )
+    _performance_history: Dict = PrivateAttr(default_factory=lambda: defaultdict(list))
     _opponent_analysis: Dict = PrivateAttr(default_factory=dict)
 
     def __init__(
@@ -369,8 +369,7 @@ class DebateAgent(BaseAgent):
         if debate_state.current_turn < 3:
             self._strategy = "balanced"
         elif any(
-            a["avg_persuasiveness"] > 0.7
-            for a in self._opponent_analysis.values()
+            a["avg_persuasiveness"] > 0.7 for a in self._opponent_analysis.values()
         ):
             self._strategy = "aggressive"
         elif debate_state.phase == DebatePhase.REBUTTALS:
@@ -381,15 +380,15 @@ class DebateAgent(BaseAgent):
     def _identify_style(self, arguments: List[EnhancedArgument]) -> str:
         if not arguments:
             return "unknown"
-        avg_emotional = sum(
-            a.metrics.emotional_appeal for a in arguments
-        ) / len(arguments)
-        avg_evidence = sum(
-            a.metrics.evidence_quality for a in arguments
-        ) / len(arguments)
-        avg_logical = sum(
-            a.metrics.logical_coherence for a in arguments
-        ) / len(arguments)
+        avg_emotional = sum(a.metrics.emotional_appeal for a in arguments) / len(
+            arguments
+        )
+        avg_evidence = sum(a.metrics.evidence_quality for a in arguments) / len(
+            arguments
+        )
+        avg_logical = sum(a.metrics.logical_coherence for a in arguments) / len(
+            arguments
+        )
         if avg_emotional > max(avg_evidence, avg_logical):
             return "emotional"
         elif avg_evidence > avg_logical:
@@ -400,24 +399,18 @@ class DebateAgent(BaseAgent):
         if not arguments:
             return "unknown"
         avg = {
-            "logical_coherence": sum(
-                a.metrics.logical_coherence for a in arguments
-            ) / len(arguments),
-            "evidence_quality": sum(
-                a.metrics.evidence_quality for a in arguments
-            ) / len(arguments),
-            "fact_check_score": sum(
-                a.metrics.fact_check_score for a in arguments
-            ) / len(arguments),
-            "novelty_score": sum(
-                a.metrics.novelty_score for a in arguments
-            ) / len(arguments),
+            "logical_coherence": sum(a.metrics.logical_coherence for a in arguments)
+            / len(arguments),
+            "evidence_quality": sum(a.metrics.evidence_quality for a in arguments)
+            / len(arguments),
+            "fact_check_score": sum(a.metrics.fact_check_score for a in arguments)
+            / len(arguments),
+            "novelty_score": sum(a.metrics.novelty_score for a in arguments)
+            / len(arguments),
         }
         return min(avg, key=avg.get)
 
-    def _build_enhanced_context(
-        self, debate_state: DebateState
-    ) -> Dict[str, Any]:
+    def _build_enhanced_context(self, debate_state: DebateState) -> Dict[str, Any]:
         recent_args = debate_state.arguments[-5:]
         return {
             "recent_arguments": [
@@ -441,12 +434,9 @@ class DebateAgent(BaseAgent):
                 "Provide a well-rounded argument balancing logic, "
                 "evidence, and appeal."
             ),
-            "aggressive": (
-                "Create a strong, direct argument challenging opponents."
-            ),
+            "aggressive": ("Create a strong, direct argument challenging opponents."),
             "defensive": (
-                "Focus on defending your position while addressing "
-                "counterarguments."
+                "Focus on defending your position while addressing " "counterarguments."
             ),
             "evidence_heavy": (
                 "Emphasize concrete evidence, data, and factual support."
@@ -454,15 +444,9 @@ class DebateAgent(BaseAgent):
         }
         phase_instructions = {
             "opening": "Make a compelling opening statement.",
-            "main_arguments": (
-                "Present your strongest arguments with evidence."
-            ),
-            "rebuttals": (
-                "Directly address and refute opposing arguments."
-            ),
-            "closing": (
-                "Summarize your position with a final persuasive appeal."
-            ),
+            "main_arguments": ("Present your strongest arguments with evidence."),
+            "rebuttals": ("Directly address and refute opposing arguments."),
+            "closing": ("Summarize your position with a final persuasive appeal."),
         }
         recent = "\n".join(context.get("recent_arguments", []))
         return (
@@ -487,10 +471,7 @@ class DebateAgent(BaseAgent):
             sentence = sentence.strip()
             if not sentence:
                 continue
-            if any(
-                c in sentence.lower()
-                for c in ["therefore", "thus", "hence"]
-            ):
+            if any(c in sentence.lower() for c in ["therefore", "thus", "hence"]):
                 structure["conclusion"] = sentence
             elif any(
                 e in sentence.lower()
@@ -602,9 +583,7 @@ class EnhancedDebateModerator:
             for i in range(turns):
                 agent = agents[i % len(agents)]
                 arg_type = arg_types[i % len(arg_types)]
-                argument = await agent.generate_argument(
-                    debate_state, arg_type
-                )
+                argument = await agent.generate_argument(debate_state, arg_type)
                 debate_state.arguments.append(argument)
                 audience_score = self._simulate_audience_reaction(argument)
                 debate_state.audience_votes[agent.name] += audience_score
@@ -613,9 +592,7 @@ class EnhancedDebateModerator:
         self._conclude_debate(debate_state, agents)
         return debate_state
 
-    def _simulate_audience_reaction(
-        self, argument: EnhancedArgument
-    ) -> int:
+    def _simulate_audience_reaction(self, argument: EnhancedArgument) -> int:
         base_score = int(argument.metrics.persuasiveness * 10)
         if argument.metrics.evidence_quality > 0.7:
             base_score += 3
@@ -651,9 +628,7 @@ class EnhancedDebateModerator:
         }
         for agent in agents:
             agent_args = [
-                arg
-                for arg in debate_state.arguments
-                if arg.agent_name == agent.name
+                arg for arg in debate_state.arguments if arg.agent_name == agent.name
             ]
             if not agent_args:
                 continue
@@ -663,16 +638,10 @@ class EnhancedDebateModerator:
 
             scores["logic"][agent.name] = sum(logic) / len(logic)
             scores["evidence"][agent.name] = sum(evidence) / len(evidence)
-            scores["persuasiveness"][agent.name] = (
-                sum(persuasion) / len(persuasion)
-            )
+            scores["persuasiveness"][agent.name] = sum(persuasion) / len(persuasion)
 
             try:
-                variance = (
-                    statistics.variance(persuasion)
-                    if len(persuasion) > 1
-                    else 0
-                )
+                variance = statistics.variance(persuasion) if len(persuasion) > 1 else 0
                 scores["consistency"][agent.name] = max(0, 1 - variance)
             except Exception:
                 scores["consistency"][agent.name] = 0.5
@@ -702,9 +671,7 @@ class EnhancedDebateModerator:
     ):
         for agent in agents:
             agent_args = [
-                arg
-                for arg in debate_state.arguments
-                if arg.agent_name == agent.name
+                arg for arg in debate_state.arguments if arg.agent_name == agent.name
             ]
             if agent_args:
                 debate_state.performance_metrics[agent.name] = {

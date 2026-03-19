@@ -41,7 +41,9 @@ class RankingHandler:
     def _get_reasoner(self, name: str):
         if name not in self._reasoner_cache:
             if name not in self.REASONERS:
-                raise ValueError(f"Unknown ranking reasoner: {name}. Available: {list(self.REASONERS.keys())}")
+                raise ValueError(
+                    f"Unknown ranking reasoner: {name}. Available: {list(self.REASONERS.keys())}"
+                )
             cls = jpype.JClass(self.REASONERS[name])
             self._reasoner_cache[name] = cls()
         return self._reasoner_cache[name]

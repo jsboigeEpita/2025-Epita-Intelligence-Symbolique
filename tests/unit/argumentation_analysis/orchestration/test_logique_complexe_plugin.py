@@ -27,13 +27,17 @@ def mock_state():
 
 @pytest.fixture
 def plugin(mock_state):
-    from argumentation_analysis.orchestration.plugins.logique_complexe_plugin import LogiqueComplexePlugin
+    from argumentation_analysis.orchestration.plugins.logique_complexe_plugin import (
+        LogiqueComplexePlugin,
+    )
+
     return LogiqueComplexePlugin(state_instance=mock_state)
 
 
 # ============================================================================
 # Init Tests
 # ============================================================================
+
 
 class TestLogiqueComplexePluginInit:
 
@@ -50,6 +54,7 @@ class TestLogiqueComplexePluginInit:
 # ============================================================================
 # get_enigme_description Tests
 # ============================================================================
+
 
 class TestGetEnigmeDescription:
 
@@ -76,6 +81,7 @@ class TestGetEnigmeDescription:
 # get_contraintes_logiques Tests
 # ============================================================================
 
+
 class TestGetContraintesLogiques:
 
     def test_returns_string(self, plugin, mock_state):
@@ -98,6 +104,7 @@ class TestGetContraintesLogiques:
 # formuler_clause_logique Tests
 # ============================================================================
 
+
 class TestFormulerClauseLogique:
 
     def test_clause_too_short(self, plugin):
@@ -110,7 +117,7 @@ class TestFormulerClauseLogique:
         mock_state.verifier_progression_logique.return_value = {"clauses_formulees": 1}
         result = plugin.formuler_clause_logique(
             "∀x (Maison(x) ∧ Couleur(x,Rouge) → Nationalité(x,Anglais))",
-            justification="Constraint 1"
+            justification="Constraint 1",
         )
         assert "ajoutée avec succès" in result
         assert "Constraint 1" in result
@@ -134,6 +141,7 @@ class TestFormulerClauseLogique:
 # ============================================================================
 # executer_requete_tweety Tests
 # ============================================================================
+
 
 class TestExecuterRequeteTweety:
 
@@ -162,6 +170,7 @@ class TestExecuterRequeteTweety:
 # verifier_deduction_partielle Tests
 # ============================================================================
 
+
 class TestVerifierDeductionPartielle:
 
     def test_invalid_position(self, plugin, mock_state):
@@ -185,7 +194,11 @@ class TestVerifierDeductionPartielle:
 
     def test_partial_deduction(self, plugin, mock_state):
         result = plugin.verifier_deduction_partielle(
-            1, {"couleur": "Jaune", "nationalité": "Anglais"}  # couleur correct, nat wrong
+            1,
+            {
+                "couleur": "Jaune",
+                "nationalité": "Anglais",
+            },  # couleur correct, nat wrong
         )
         assert "1/2" in result
 
@@ -198,6 +211,7 @@ class TestVerifierDeductionPartielle:
 # ============================================================================
 # proposer_solution_complete Tests
 # ============================================================================
+
 
 class TestProposerSolutionComplete:
 
@@ -241,6 +255,7 @@ class TestProposerSolutionComplete:
 # obtenir_progression_logique Tests
 # ============================================================================
 
+
 class TestObtenirProgressionLogique:
 
     def test_returns_string(self, plugin, mock_state):
@@ -253,6 +268,7 @@ class TestObtenirProgressionLogique:
 # ============================================================================
 # generer_indice_complexe Tests
 # ============================================================================
+
 
 class TestGenererIndiceComplexe:
 
@@ -273,6 +289,7 @@ class TestGenererIndiceComplexe:
 # valider_syntaxe_tweety Tests
 # ============================================================================
 
+
 class TestValiderSyntaxeTweety:
 
     def test_valid_clause(self, plugin):
@@ -282,7 +299,9 @@ class TestValiderSyntaxeTweety:
         assert "valide" in result
 
     def test_missing_operators(self, plugin):
-        result = plugin.valider_syntaxe_tweety("Maison(x) has Couleur Rouge for the test")
+        result = plugin.valider_syntaxe_tweety(
+            "Maison(x) has Couleur Rouge for the test"
+        )
         assert "invalide" in result
         assert "opérateurs" in result
 
@@ -301,7 +320,5 @@ class TestValiderSyntaxeTweety:
         assert "invalide" in result
 
     def test_valid_with_exists(self, plugin):
-        result = plugin.valider_syntaxe_tweety(
-            "∃x (Position(x,3) ∧ Boisson(x,Lait))"
-        )
+        result = plugin.valider_syntaxe_tweety("∃x (Position(x,3) ∧ Boisson(x,Lait))")
         assert "valide" in result

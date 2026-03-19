@@ -8,8 +8,12 @@ progress reports, critical issues, corrective actions, coherence evaluation.
 import pytest
 from datetime import datetime, timedelta
 
-from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.orchestration.hierarchical.tactical.monitor import ProgressMonitor
+from argumentation_analysis.orchestration.hierarchical.tactical.state import (
+    TacticalState,
+)
+from argumentation_analysis.orchestration.hierarchical.tactical.monitor import (
+    ProgressMonitor,
+)
 
 
 @pytest.fixture
@@ -32,6 +36,7 @@ def _make_task(task_id, obj_id="obj1", **extra):
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, monitor):
         assert isinstance(monitor, ProgressMonitor)
@@ -52,6 +57,7 @@ class TestInit:
 # ============================================================
 # update_task_progress
 # ============================================================
+
 
 class TestUpdateTaskProgress:
     def test_update_existing_task(self, monitor, state):
@@ -79,6 +85,7 @@ class TestUpdateTaskProgress:
 # ============================================================
 # _check_task_anomalies
 # ============================================================
+
 
 class TestCheckAnomalies:
     def test_stagnation_detected(self, monitor, state):
@@ -123,6 +130,7 @@ class TestCheckAnomalies:
 # generate_progress_report
 # ============================================================
 
+
 class TestGenerateProgressReport:
     def test_empty_state(self, monitor):
         report = monitor.generate_progress_report()
@@ -161,7 +169,9 @@ class TestGenerateProgressReport:
         assert report["progress_by_objective"]["obj1"]["completed_tasks"] == 1
 
     def test_issues_include_conflicts(self, monitor, state):
-        state.add_conflict({"id": "c1", "description": "test conflict", "severity": "high"})
+        state.add_conflict(
+            {"id": "c1", "description": "test conflict", "severity": "high"}
+        )
         report = monitor.generate_progress_report()
         conflict_issues = [i for i in report["issues"] if i["type"] == "conflict"]
         assert len(conflict_issues) == 1
@@ -194,6 +204,7 @@ class TestGenerateProgressReport:
 # ============================================================
 # detect_critical_issues
 # ============================================================
+
 
 class TestDetectCriticalIssues:
     def test_no_issues(self, monitor):
@@ -230,7 +241,10 @@ class TestDetectCriticalIssues:
     def test_delayed_task_with_start_time(self, monitor, state):
         # Task started 2 hours ago with 1 hour estimated, progress at 10%
         past = (datetime.now() - timedelta(hours=2)).isoformat()
-        state.add_task(_make_task("t1", start_time=past, estimated_duration=3600), status="in_progress")
+        state.add_task(
+            _make_task("t1", start_time=past, estimated_duration=3600),
+            status="in_progress",
+        )
         state.task_progress["t1"] = 0.1
         issues = monitor.detect_critical_issues()
         delayed = [i for i in issues if i["type"] == "delayed_task"]
@@ -240,6 +254,7 @@ class TestDetectCriticalIssues:
 # ============================================================
 # suggest_corrective_actions
 # ============================================================
+
 
 class TestSuggestCorrectiveActions:
     def test_no_issues(self, monitor):
@@ -284,39 +299,57 @@ class TestSuggestCorrectiveActions:
 # _evaluate_overall_coherence
 # ============================================================
 
+
 class TestEvaluateCoherence:
     def test_high_coherence(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.9}, {"coherence_score": 0.9}, {"coherence_score": 0.9}, []
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            [],
         )
         assert result["overall_score"] >= 0.8
         assert result["coherence_level"] == "Élevé"
 
     def test_moderate_coherence(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.7}, {"coherence_score": 0.7}, {"coherence_score": 0.7}, []
+            {"coherence_score": 0.7},
+            {"coherence_score": 0.7},
+            {"coherence_score": 0.7},
+            [],
         )
         assert result["coherence_level"] == "Modéré"
 
     def test_low_coherence(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.4}, {"coherence_score": 0.4}, {"coherence_score": 0.5}, []
+            {"coherence_score": 0.4},
+            {"coherence_score": 0.4},
+            {"coherence_score": 0.5},
+            [],
         )
         assert result["coherence_level"] == "Faible"
 
     def test_very_low_coherence(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.1}, {"coherence_score": 0.1}, {"coherence_score": 0.1}, []
+            {"coherence_score": 0.1},
+            {"coherence_score": 0.1},
+            {"coherence_score": 0.1},
+            [],
         )
         assert result["coherence_level"] == "Très faible"
 
     def test_contradiction_penalty(self, monitor):
         no_contradiction = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.9}, {"coherence_score": 0.9}, {"coherence_score": 0.9}, []
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            [],
         )
         with_contradiction = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.9}, {"coherence_score": 0.9}, {"coherence_score": 0.9},
-            [{"severity": "high"}]
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            {"coherence_score": 0.9},
+            [{"severity": "high"}],
         )
         assert with_contradiction["overall_score"] < no_contradiction["overall_score"]
         assert with_contradiction["contradiction_penalty"] > 0
@@ -324,14 +357,19 @@ class TestEvaluateCoherence:
     def test_max_penalty_capped(self, monitor):
         many_contradictions = [{"severity": "critical"}] * 10
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 1.0}, {"coherence_score": 1.0}, {"coherence_score": 1.0},
-            many_contradictions
+            {"coherence_score": 1.0},
+            {"coherence_score": 1.0},
+            {"coherence_score": 1.0},
+            many_contradictions,
         )
         assert result["contradiction_penalty"] == 0.5  # Capped at 0.5
 
     def test_result_structure(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.5}, {"coherence_score": 0.6}, {"coherence_score": 0.7}, []
+            {"coherence_score": 0.5},
+            {"coherence_score": 0.6},
+            {"coherence_score": 0.7},
+            [],
         )
         assert "overall_score" in result
         assert "coherence_level" in result
@@ -343,13 +381,19 @@ class TestEvaluateCoherence:
 
     def test_weights_correct(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 1.0}, {"coherence_score": 0.0}, {"coherence_score": 0.0}, []
+            {"coherence_score": 1.0},
+            {"coherence_score": 0.0},
+            {"coherence_score": 0.0},
+            [],
         )
         # Only structure contributes: 1.0 * 0.3 = 0.3
         assert abs(result["overall_score"] - 0.3) < 0.01
 
     def test_zero_scores(self, monitor):
         result = monitor._evaluate_overall_coherence(
-            {"coherence_score": 0.0}, {"coherence_score": 0.0}, {"coherence_score": 0.0}, []
+            {"coherence_score": 0.0},
+            {"coherence_score": 0.0},
+            {"coherence_score": 0.0},
+            [],
         )
         assert result["overall_score"] == 0.0
