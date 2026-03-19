@@ -68,7 +68,7 @@ def start_backend_api():
     orchestrator_cmd = [
         sys.executable,
         "-c",
-        "from project_core.webapp_from_scripts import UnifiedWebOrchestrator; "
+        "from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator; "
         "import asyncio; "
         "orchestrator = UnifiedWebOrchestrator(); "
         "asyncio.run(orchestrator.start_webapp(headless=True, frontend_enabled=False)); "
