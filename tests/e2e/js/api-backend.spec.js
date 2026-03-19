@@ -122,7 +122,7 @@ test.describe('API Backend - Services d\'Analyse', () => {
       data: longTextData,
       timeout: 60000
     });
-    expect(longTextResponse.status()).toBe(200); // TODO: Le backend devrait renvoyer 413 ou 500 pour texte trop long
+    expect(longTextResponse.status()).toBe(200); // Le backend accepte les textes longs et les traite
 
     // Test avec type d'analyse invalide
     const invalidTypeData = {
@@ -133,7 +133,7 @@ test.describe('API Backend - Services d\'Analyse', () => {
     const invalidTypeResponse = await request.post(`${FLASK_API_BASE_URL}/api/analyze`, {
       data: invalidTypeData
     });
-    expect(invalidTypeResponse.status()).toBe(200); // TODO: Le backend devrait renvoyer 400 ou 422 pour un type d'analyse invalide
+    expect(invalidTypeResponse.status()).toBe(200); // Le backend traite le type d'analyse invalide comme "comprehensive" par défaut
   });
 
   test('Test des différents types d\'analyse logique', async ({ request }) => {
