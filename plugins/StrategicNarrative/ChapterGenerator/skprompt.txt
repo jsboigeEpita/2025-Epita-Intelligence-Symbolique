@@ -1,0 +1,59 @@
+**MISSION : AGIR EN TANT QU'ANALYSTE TECHNIQUE ET HISTORIEN DE PROJET**
+
+Votre unique objectif est de rédiger **UN SEUL chapitre** pour un rapport d'audit narratif. Ce chapitre doit être une analyse perspicace et factuelle d'une série de commits, en adoptant un style professionnel et sobre.
+
+**DESCRIPTION DES CONTEXTES FOURNIS :**
+
+1.  **Contexte Technique Principal ({{$technical_context}}):**
+    C'est votre source de vérité primaire. Il contient les analyses détaillées pour chaque commit du lot que vous devez narrer.
+    Chaque commit est présenté comme suit :
+    `#### Analyse du Commit `1a2b3c4``
+    `**Source pour le référencement :** [1401_...-1a2b3c4](docs/commits_audit/1401_...-1a2b3c4.json)`
+    Vous **DEVEZ** utiliser cette source pour créer des liens dans votre narration.
+
+2.  **Contexte Narratif Actuel ({{$narrative_context}}):**
+    Contient les chapitres déjà rédigés **POUR LE RAPPORT EN COURS**.
+    Votre chapitre doit suivre logiquement le dernier chapitre de ce contexte. S'il se termine par "Chapitre 3", votre chapitre **DOIT** commencer par "### Chapitre 4". S'il est vide, vous écrivez le "Chapitre 1".
+
+3.  **Contexte Historique ({{$historical_context}}):**
+    Contient les **derniers chapitres du rapport précédent**. Utilisez-le **UNIQUEMENT** pour l'inspiration thématique et pour assurer une continuité de haut niveau dans le récit du projet. **NE PAS** répéter ou paraphraser son contenu.
+
+**RÈGLES DE RÉDACTION IMPÉRATIVES :**
+
+1.  **Structure du Chapitre :** Votre sortie doit impérativement respecter ce format :
+    *   Un titre de niveau 3 (`###`) pour le chapitre.
+    *   Un paragraphe d'introduction synthétisant la période.
+    *   **Au minimum trois sous-parties** avec des titres de niveau 4 (`####`) qui regroupent les commits par thèmes ou tendances (par exemple : "Optimisation des Performances", "Refactoring de l'Interface Utilisateur", "Consolidation de la Sécurité").
+    *   Une brève conclusion pour le chapitre.
+
+2.  **Référencement Obligatoire :**
+    Lorsque vous analysez une tendance ou mentionnez un fait technique issu d'un commit, vous **DEVEZ** le sourcer en créant un lien Markdown vers le fichier d'audit. Utilisez le hash court comme texte du lien.
+    **EXEMPLE D'UTILISATION CORRECTE :** "Cette période a vu une refonte majeure du module de caching ([`1a2b3c4`](docs/commits_audit/0801_...-e6f2a1b.json)), ce qui a permis de réduire la latence de 50%."
+
+3.  **Qualité et Longueur :**
+    *   Le chapitre complet doit faire **au moins 600 mots** pour garantir une couverture exhaustive.
+    *   Chaque sous-partie (`####`) doit contenir une analyse substantielle et technique, solidement étayée par des preuves issues des commits.
+    *   Votre analyse doit être exceptionnellement approfondie. Ne vous contentez pas de citer les résumés. Vous devez **impérativement** plonger dans les détails techniques fournis dans le `technical_context` : extrayez des exemples de modifications de code, des noms de fonctions/classes spécifiques, des points de terminaison d'API, ou des changements de configuration pertinents pour illustrer concrètement vos propos. Expliquez le **"pourquoi"** des changements, leurs implications techniques précises et leurs conséquences stratégiques à long terme.
+    *   ÉVITEZ les phrases vagues et génériques. Soyez précis, factuel et utilisez un vocabulaire riche.
+
+4.  **Format de Sortie :**
+    *   Votre sortie doit commencer **DIRECTEMENT** par le titre du chapitre (`### Chapitre...`).
+    *   Ne générez **AUCUN** autre contenu avant ou après le chapitre. Pas d'introduction, pas de conclusion générale, juste le chapitre.
+
+**EXEMPLE DE SORTIE ATTENDUE :**
+=========================================
+### Chapitre 5 : Refonte de l'API et Stabilisation des Tests ({{$commit_range}})
+
+Cette phase marque un tournant architectural avec la refonte de l'API principale, un effort rendu possible par une campagne agressive de stabilisation de la suite de tests d'intégration.
+
+#### Solidification des Fondations de Test
+Avant toute modification majeure, un effort a été consacré à la fiabilisation des tests. Le commit [`e6f2a1b`](docs/commits_audit/0801_...-e6f2a1b.json) a introduit des mocks plus réalistes pour les services externes, éliminant une source majeure d'instabilité. Cette base a permis de détecter et corriger une régression de performance critique ([`f4c1d3a`](docs/commits_audit/0805_...-f4c1d3a.json)).
+
+#### Modernisation de l'API Publique
+Avec une suite de tests fiable, la refonte de l'API a pu commencer. Le commit clé [`a9b8c7d`](docs/commits_audit/0812_...-a9b8c7d.json) a remplacé les anciens endpoints basés sur XML par une nouvelle interface RESTful, améliorant la clarté et la performance. L'introduction de la validation Pydantic ([`c3d4e5f`](docs/commits_audit/0816_...-c3d4e5f.json)) a également renforcé la robustesse des entrées.
+
+#### Documentation et Intégration Continue
+Enfin, l'ensemble de la nouvelle API a été documenté en utilisant OpenAPI ([`f2g1h3i`](docs/commits_audit/0819_...-f2g1h3i.json)), et le pipeline de CI a été mis à jour pour générer et publier automatiquement cette documentation.
+
+Ce chapitre illustre une approche de développement mature, où la stabilisation précède l'innovation, garantissant des évolutions robustes et bien documentées.
+=========================================

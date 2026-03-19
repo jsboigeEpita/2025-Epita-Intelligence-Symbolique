@@ -5,12 +5,33 @@
       "url": "http://127.0.0.1:8000/mcp"
     },
     "roo-state-manager": {
-      "command": "node",
-      "args": ["D:\\roo-extensions\\mcps\\internal\\servers\\roo-state-manager\\build\\index.js"],
+      "command": "cmd",
+      "args": [
+        "/c",
+        "node",
+        "D:/dev/roo-extensions/mcps/internal/servers/roo-state-manager/build/src/index.js"
+      ],
+      "description": "MCP Roo State Manager - RooSync inter-workspace support",
+      "transportType": "stdio",
+      "disabled": false,
       "env": {
-        "ROOSYNC_MACHINE_ID": "myia-ai-01",
-        "ROOSYNC_SHARED_PATH": "G:/Mon Drive/Synchronisation/RooSync/.shared-state"
-      }
+        "QDRANT_URL": "https://qdrant.myia.io",
+        "QDRANT_API_KEY": "4f89edd5-90f7-4ee0-ac25-9185e9835c44",
+        "QDRANT_COLLECTION_NAME": "roo_tasks_semantic_index",
+        "ROO_DEBUG_INSTRUCTIONS": "1"
+      },
+      "cwd": "D:/dev/roo-extensions/mcps/internal/servers/roo-state-manager",
+      "timeout": 300,
+      "alwaysAllow": [
+        "roosync_send",
+        "roosync_read",
+        "roosync_manage",
+        "conversation_browser",
+        "task_browse",
+        "view_conversation_tree",
+        "storage_info",
+        "roosync_get_status"
+      ]
     }
   }
 }

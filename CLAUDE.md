@@ -234,3 +234,26 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - `docs/architecture/INTEGRATION_STRATEGY.md` — Overall integration strategy and Lego architecture
 - `KNOWN_ISSUES.md` — Tracked problems and active issues
 - Issue #21 — Planned Tweety environment update from CoursIA
+
+## RooSync Configuration
+
+- **Machine ID:** myia-po-2025
+- **Workspace ID:** 2025-Epita-Intelligence-Symbolique
+- **Format d'adresse:** `myia-po-2025:2025-Epita-Intelligence-Symbolique`
+- **INTERCOM:** `.claude/local/INTERCOM-myia-po-2025.md`
+
+### MCPs Disponibles
+
+- **roo-state-manager** : RooSync, grounding conversationnel
+- (MCPs globaux hérités de la config machine)
+
+### Communication cross-workspace
+
+```bash
+roosync_send(
+  action: "send",
+  to: "myia-ai-01:roo-extensions",  # ou "all"
+  subject: "[EPITA] Titre",
+  body: "Message..."
+)
+```
