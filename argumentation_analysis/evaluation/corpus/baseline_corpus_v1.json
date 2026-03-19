@@ -123,32 +123,166 @@
       "description": "Argument formel explicite avec méta-analyse du raisonnement",
       "argument_count": 1,
       "complexity_factors": ["formal_logic", "meta_reasoning"]
+    },
+    {
+      "id": "corpus_013",
+      "text": "Depuis que nous avons installé des panneaux solaires dans notre quartier, le nombre de vols a diminué de 30%. La preuve est évidente : les énergies renouvelables réduisent la criminalité. D'ailleurs, une étude a montré que dans les villes avec plus d'arbres, les habitants vivent plus longtemps. Donc planter des arbres sauve des vies. C'est la même logique : deux phénomènes qui coïncident sont nécessairement liés.\n\nNous devrions donc investir massivement dans le solaire et la reforestation pour résoudre nos problèmes sociaux. Les corrélations ne mentent pas.",
+      "expected_fallacies": ["post_hoc_ergo_propter_hoc", "hasty_generalization", "false_analogy"],
+      "expected_quality_score_range": [5, 7],
+      "difficulty": "medium",
+      "description": "Sophismes statistiques : confusion corrélation/causalité, généralisation hâtive et fausse analogie (famille STATISTICAL_PROBABILISTIC et GENERALIZATION_CAUSALITY)",
+      "argument_count": 2,
+      "complexity_factors": ["correlation_causation_confusion", "spurious_correlation", "statistical_misuse"],
+      "fallacy_families": ["STATISTICAL_PROBABILISTIC", "GENERALIZATION_CAUSALITY"]
+    },
+    {
+      "id": "corpus_014",
+      "text": "Le gouvernement dit vouloir plus de 'liberté' pour les entreprises. Mais la liberté, c'est sacré : c'est ce pour quoi nos ancêtres ont combattu. Or accorder de la liberté aux entreprises, c'est leur permettre d'exploiter les travailleurs librement. Donc le gouvernement veut autoriser l'exploitation.\n\nPar ailleurs, on nous parle de 'flexibilité' dans les contrats de travail. La flexibilité, c'est bien quand on fait du yoga. Mais dans le monde du travail, être 'flexible', c'est accepter d'être licencié du jour au lendemain. Ne vous laissez pas berner par ces mots.",
+      "expected_fallacies": ["equivocation", "loaded_language", "straw_man"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "medium",
+      "description": "Équivoque sur 'liberté' et 'flexibilité', langage chargé, homme de paille (famille LANGUAGE_AMBIGUITY)",
+      "argument_count": 2,
+      "complexity_factors": ["semantic_shift", "word_weaponization", "deliberate_ambiguity"],
+      "fallacy_families": ["LANGUAGE_AMBIGUITY", "DIVERSION_ATTACK"]
+    },
+    {
+      "id": "corpus_015",
+      "text": "Les statistiques sont formelles : 92% des accidents de voiture surviennent à moins de 50 km de chez soi. La conclusion s'impose : il est beaucoup plus dangereux de conduire près de chez soi que loin. On devrait donc interdire de conduire dans un rayon de 50 km de son domicile.\n\nDe même, on sait que 80% des noyades ont lieu en été. Donc l'été cause des noyades. Et puisque les noyades augmentent les jours où la vente de glaces est élevée, manger des glaces provoque des noyades. La corrélation est là, les chiffres parlent d'eux-mêmes.",
+      "expected_fallacies": ["post_hoc_ergo_propter_hoc", "misleading_statistics", "false_conclusion_from_statistics"],
+      "expected_quality_score_range": [5, 7],
+      "difficulty": "easy",
+      "description": "Statistiques trompeuses classiques : biais de proximité, corrélation été/noyades/glaces (famille STATISTICAL_PROBABILISTIC)",
+      "argument_count": 3,
+      "complexity_factors": ["base_rate_neglect", "survivorship_bias", "confounding_variables"],
+      "fallacy_families": ["STATISTICAL_PROBABILISTIC"]
+    },
+    {
+      "id": "corpus_016",
+      "text": "Soit on autorise la publicité pour les jeux vidéo violents auprès des mineurs, soit on les interdit complètement. Il n'y a pas de juste milieu : ou vous protégez les enfants, ou vous les abandonnez aux lobbies. Ceux qui proposent des 'régulations progressives' sont en réalité des partisans déguisés de l'industrie vidéoludique.\n\nEt ne me dites pas qu'une restriction partielle serait efficace. C'est comme essayer d'être 'un peu honnête'. Soit on l'est, soit on ne l'est pas. La morale ne se négocie pas.",
+      "expected_fallacies": ["false_dilemma", "poisoning_the_well", "false_analogy"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "easy",
+      "description": "Faux dilemme explicite, empoisonnement du puits contre les modérés, fausse analogie (famille FALSE_DILEMMA_SIMPLIFICATION)",
+      "argument_count": 2,
+      "complexity_factors": ["binary_thinking", "moderate_exclusion", "moral_absolutism"],
+      "fallacy_families": ["FALSE_DILEMMA_SIMPLIFICATION", "DIVERSION_ATTACK"]
+    },
+    {
+      "id": "corpus_017",
+      "text": "Argument principal (A1) : Nous devrions adopter une taxe carbone.\nSupport (S1) : Les émissions de CO2 causent le réchauffement climatique [consensus scientifique].\nSupport (S2) : La taxe carbone réduit les émissions [études empiriques, Suède -25%].\nException (E1) : Sauf si elle nuit aux ménages modestes.\nRéfutation de E1 : Un mécanisme de redistribution progressive neutralise cet effet.\n\nArgument contraire (A2) : La taxe carbone pénalise la compétitivité.\nRéfutation de A2 via A1+S3 : S3 = Les pays sans taxe carbone subiront des pénalités douanières CBAM à partir de 2026, neutralisant l'avantage compétitif apparent.\n\nConclusion : A1 prévaut sur A2. La taxe carbone est préférable sous condition de redistribution.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [3, 5],
+      "difficulty": "hard",
+      "description": "Argument formel structuré ASPIC+ avec supports, exceptions et réfutations. Structure de débat dialectique formelle pour workflow formal_debate",
+      "argument_count": 4,
+      "complexity_factors": ["aspic_plus_structure", "dialectical_reasoning", "rebuttal_chain", "exception_handling"],
+      "fallacy_families": [],
+      "formal_structure": "ASPIC+",
+      "workflow_target": ["formal_debate", "argument_strength"]
+    },
+    {
+      "id": "corpus_018",
+      "text": "Vous prétendez que notre pays va mal ? Regardez ces chiffres : le PIB a augmenté de 2,3% l'année dernière. Le taux de chômage officiel est à 7,1%. L'inflation est 'maîtrisée' à 4,2%. Tout va bien selon les indicateurs.\n\nMais attendez — le PIB par habitant, lui, a baissé. Le taux de chômage exclut les personnes découragées (le taux réel dépasse 14%). Et 4,2% d'inflation sur des biens essentiels représente une perte de pouvoir d'achat massive pour les plus précaires. Les chiffres ne mentent pas, mais on peut choisir lesquels montrer.",
+      "expected_fallacies": ["cherry_picking", "misleading_statistics", "appeal_to_authority"],
+      "expected_quality_score_range": [6, 8],
+      "difficulty": "hard",
+      "description": "Sélection sélective de statistiques flatteuses (cherry picking), indicateurs tronqués, démontage de la manipulation — exercice à double niveau (famille STATISTICAL_PROBABILISTIC)",
+      "argument_count": 2,
+      "complexity_factors": ["selective_evidence", "indicator_choice_manipulation", "meta_argument"],
+      "fallacy_families": ["STATISTICAL_PROBABILISTIC", "AUTHORITY_POPULARITY"]
+    },
+    {
+      "id": "corpus_019",
+      "text": "— Vous qui défendez la réduction du temps de travail, comment expliquez-vous que votre propre entreprise fait travailler ses cadres 60 heures par semaine ?\n— C'est hors sujet. Ce qui compte, c'est l'argument, pas ma situation personnelle. Et d'ailleurs, vous qui critiquez les 35 heures, vous-même vous avez bénéficié de la RTT pendant dix ans. Qui êtes-vous pour donner des leçons ?\n— La question n'est pas là. Il faut voir la vraie menace : si on réduit le temps de travail, les entreprises vont délocaliser. C'est le vrai problème.\n— Et si elles restaient, elles embaucheraient plus. Vous changez de sujet à chaque fois.",
+      "expected_fallacies": ["tu_quoque", "red_herring", "ad_hominem"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "medium",
+      "description": "Dialogue simulant un contexte oral/débat télévisé : tu quoque, diversion (red herring) et ad hominem enchaînés (famille AUDIO_ORAL_CONTEXT + DIVERSION_ATTACK)",
+      "argument_count": 4,
+      "complexity_factors": ["debate_format", "turn_taking_fallacies", "conversational_misdirection"],
+      "fallacy_families": ["AUDIO_ORAL_CONTEXT", "DIVERSION_ATTACK"]
+    },
+    {
+      "id": "corpus_020",
+      "text": "La loi dit que tout homme est égal devant elle. Or les hommes riches ont accès à de meilleurs avocats. Donc les hommes riches sont plus égaux que les autres devant la loi. Ce qui contredit la loi elle-même. La loi est donc auto-contradictoire.\n\nDe même, on nous dit que 'la loi s'applique à tous sans distinction'. Mais 'sans distinction' signifie qu'on ne distingue pas les situations. Ne pas distinguer un mendiant d'un millionnaire, c'est une distinction en faveur du millionnaire. L'égalité formelle crée donc une inégalité réelle. CQFD.",
+      "expected_fallacies": ["equivocation", "amphiboly", "false_equivalence"],
+      "expected_quality_score_range": [5, 7],
+      "difficulty": "hard",
+      "description": "Équivoque sophistiquée sur 'égal/égalité' et 'sans distinction', amphébologie, fausse équivalence — raisonnement spécieux formellement présenté (famille LANGUAGE_AMBIGUITY)",
+      "argument_count": 2,
+      "complexity_factors": ["semantic_ambiguity_chain", "formal_appearance", "legal_reasoning_manipulation"],
+      "fallacy_families": ["LANGUAGE_AMBIGUITY"]
+    },
+    {
+      "id": "corpus_021",
+      "text": "Cadre ASPIC+ — Débat sur l'intelligence artificielle générale (AGI) :\n\nThèse T : L'AGI représente un risque existentiel prioritaire.\n  Argument A1 (fort, p=0.8) : Les systèmes IA surpassent humains dans des domaines critiques [Bostrom 2014, LeCun 2022 contra].\n  Argument A2 (modéré, p=0.6) : L'alignement des valeurs est un problème ouvert non résolu.\n  Contre-argument C1 (fort, p=0.75) : L'AGI reste hypothétique à horizon 50 ans [Marcus 2022].\n  Contre-argument C2 (faible, p=0.3) : Les régulations actuelles suffisent.\n\nHiérarchie de force : A1 > C1 > A2 > C2.\nPréférences : A1 attaque C2 (victoire A1). C1 attaque A1 partiellement (draw). A2 non attaqué (victoire A2).\nConclusion grounded extension : {T, A2} — Thèse soutenue avec réserves.",
+      "expected_fallacies": [],
+      "expected_quality_score_range": [2, 4],
+      "difficulty": "hard",
+      "description": "Structure formelle ASPIC+ avec ranking d'arguments, probabilités, et grounded extension — texte cible pour workflow argument_strength et belief_dynamics",
+      "argument_count": 5,
+      "complexity_factors": ["aspic_plus_structure", "argument_ranking", "grounded_extension", "probabilistic_weights"],
+      "fallacy_families": [],
+      "formal_structure": "ASPIC+",
+      "workflow_target": ["argument_strength", "belief_dynamics", "formal_debate"]
+    },
+    {
+      "id": "corpus_022",
+      "text": "Le Premier ministre a déclaré : 'Nous voulons une école de l'excellence pour tous.' Excellente formule. Mais 'excellence pour tous', est-ce seulement possible ? L'excellence, par définition, c'est ce qui dépasse la moyenne. Si tout le monde est excellent, personne ne l'est. C'est une contradiction dans les termes.\n\nEt puis, ceux qui défendent cette réforme — j'ai fait une petite recherche — plusieurs ont envoyé leurs enfants dans des écoles privées. Je vous laisse tirer les conclusions. Quand les élites parlent d'école publique, méfiez-vous. Ce qu'ils veulent vraiment, c'est maintenir le système qui les a produits : une école à deux vitesses. Refuser ce constat, c'est être complice.",
+      "expected_fallacies": ["equivocation", "ad_hominem_circumstantial", "poisoning_the_well", "false_dilemma"],
+      "expected_quality_score_range": [7, 9],
+      "difficulty": "hard",
+      "description": "Argument politique complexe multi-sophismes : équivoque sur 'excellence', ad hominem circonstanciel, empoisonnement du puits, faux dilemme implicite",
+      "argument_count": 3,
+      "complexity_factors": ["definitional_manipulation", "personal_attack_chain", "conspiracy_framing", "implied_binary"],
+      "fallacy_families": ["LANGUAGE_AMBIGUITY", "DIVERSION_ATTACK", "FALSE_DILEMMA_SIMPLIFICATION"]
     }
   ],
   "metadata": {
-    "total_documents": 12,
+    "total_documents": 22,
     "difficulty_distribution": {
-      "easy": 3,
-      "medium": 6,
-      "hard": 3
+      "easy": 5,
+      "medium": 9,
+      "hard": 8
     },
     "expected_fallacy_coverage": [
       "ad_hominem",
+      "ad_hominem_circumstantial",
+      "amphiboly",
       "appeal_to_authority",
       "appeal_to_emotion",
       "appeal_to_popularity",
       "appeal_to_tradition",
+      "cherry_picking",
+      "equivocation",
       "false_analogy",
       "false_dilemma",
+      "false_equivalence",
       "guilt_by_association",
       "hasty_generalization",
       "loaded_language",
+      "misleading_statistics",
       "poisoning_the_well",
+      "post_hoc_ergo_propter_hoc",
       "red_herring",
       "slippery_slope",
-      "straw_man"
+      "straw_man",
+      "tu_quoque"
     ],
+    "fallacy_family_coverage": {
+      "AUTHORITY_POPULARITY": ["corpus_004", "corpus_007", "corpus_018"],
+      "EMOTIONAL_APPEALS": ["corpus_005", "corpus_010"],
+      "GENERALIZATION_CAUSALITY": ["corpus_003", "corpus_008", "corpus_013"],
+      "DIVERSION_ATTACK": ["corpus_002", "corpus_011", "corpus_016", "corpus_019", "corpus_022"],
+      "FALSE_DILEMMA_SIMPLIFICATION": ["corpus_003", "corpus_008", "corpus_016", "corpus_022"],
+      "LANGUAGE_AMBIGUITY": ["corpus_010", "corpus_014", "corpus_020", "corpus_022"],
+      "STATISTICAL_PROBABILISTIC": ["corpus_013", "corpus_015", "corpus_018"],
+      "AUDIO_ORAL_CONTEXT": ["corpus_019"]
+    },
+    "formal_argument_documents": ["corpus_009", "corpus_012", "corpus_017", "corpus_021"],
     "language": "french",
-    "target_use_case": "baseline_capability_evaluation"
+    "target_use_case": "baseline_capability_evaluation",
+    "corpus_version_notes": "v1.1 — added 10 documents (corpus_013-022) covering STATISTICAL_PROBABILISTIC and LANGUAGE_AMBIGUITY families, 2 ASPIC+ formal argument structures for formal_debate/argument_strength/belief_dynamics workflows"
   }
 }
