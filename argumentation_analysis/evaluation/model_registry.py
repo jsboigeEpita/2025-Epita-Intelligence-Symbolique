@@ -128,4 +128,21 @@ class ModelRegistry:
                 ),
             )
 
+        # Local vLLM endpoints (VLLM_ENDPOINT_* pattern)
+        for i in range(1, 10):
+            url = os.environ.get(f"VLLM_ENDPOINT_{i}_URL", "")
+            model = os.environ.get(f"VLLM_ENDPOINT_{i}_MODEL", "")
+            name = os.environ.get(f"VLLM_ENDPOINT_{i}_NAME", f"vllm-{i}")
+            if url and model:
+                registry.register(
+                    f"vllm-{i}",
+                    ModelConfig(
+                        model_id=model,
+                        base_url=url,
+                        api_key=os.environ.get(f"VLLM_ENDPOINT_{i}_KEY", "not-needed"),
+                        display_name=name,
+                        cost_per_1k_tokens=0.0,  # Local = free
+                    ),
+                )
+
         return registry

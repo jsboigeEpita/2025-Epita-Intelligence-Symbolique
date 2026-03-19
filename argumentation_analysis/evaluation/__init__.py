@@ -6,6 +6,8 @@ Provides:
 - BenchmarkRunner: execute workflow × model × document cells
 - ResultCollector: persist and query benchmark results
 - LLMJudge: evaluate analysis quality via LLM judge
+- SynergyAnalyzer: workflow comparison and recommendations
+- Multi-model benchmark: compare models × workflows × documents
 """
 
 from argumentation_analysis.evaluation.model_registry import ModelRegistry, ModelConfig
