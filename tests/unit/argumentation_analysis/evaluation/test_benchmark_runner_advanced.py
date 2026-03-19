@@ -282,7 +282,7 @@ class TestDocumentExtraction:
 
         assert runner.get_document_name(0) == "source1.txt"
         assert runner.get_document_name(1) == "Document 2"
-        assert runner.get_document_name(2) == "document_2"
+        assert runner.get_document_name(2) == "doc3"  # Falls back to 'id' field
 
     def test_dataset_not_loaded_error(self):
         """Test that accessing dataset without loading raises RuntimeError."""
