@@ -96,7 +96,8 @@ class BenchmarkRunner:
     def get_document_text(self, index: int) -> str:
         """Get the full text of a document by index."""
         doc = self.dataset[index]
-        text = doc.get("full_text") or ""
+        # Try multiple field names: full_text, text, content
+        text = doc.get("full_text") or doc.get("text") or doc.get("content") or ""
         if not text:
             # Try extracting from extracts
             for ext in doc.get("extracts", []):
@@ -107,7 +108,9 @@ class BenchmarkRunner:
 
     def get_document_name(self, index: int) -> str:
         doc = self.dataset[index]
-        return doc.get("source_name", doc.get("name", f"document_{index}"))
+        return doc.get(
+            "source_name", doc.get("name", doc.get("id", f"document_{index}"))
+        )
 
     async def run_cell(
         self,
