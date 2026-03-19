@@ -26,6 +26,7 @@ def reset_globals():
 
 # ── initialize_pyo3 ──
 
+
 class TestInitializePyo3:
     def test_first_init_returns_true(self):
         assert initialize_pyo3() is True
@@ -43,12 +44,14 @@ class TestInitializePyo3:
 
 # ── get_pyo3_module ──
 
+
 class TestGetPyo3Module:
     def test_loads_real_module(self):
         """Load a standard library module to test the flow."""
         mod = get_pyo3_module("json")
         assert mod is not None
         import json
+
         assert mod is json
 
     def test_caches_loaded_module(self):
@@ -98,6 +101,7 @@ class TestGetPyo3Module:
 
 # ── unload_pyo3_module ──
 
+
 class TestUnloadPyo3Module:
     def test_unload_loaded_module(self):
         get_pyo3_module("json")
@@ -126,6 +130,7 @@ class TestUnloadPyo3Module:
 
 
 # ── reset_pyo3_environment ──
+
 
 class TestResetPyo3Environment:
     def test_resets_everything(self):

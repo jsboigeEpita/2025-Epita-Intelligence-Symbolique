@@ -29,6 +29,7 @@ def allocator(state):
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_default_state(self):
         a = ResourceAllocator()
@@ -56,6 +57,7 @@ class TestInit:
 # _analyze_resource_needs
 # ============================================================
 
+
 class TestAnalyzeResourceNeeds:
     def test_empty_phases(self, allocator):
         needs = allocator._analyze_resource_needs([])
@@ -68,7 +70,9 @@ class TestAnalyzeResourceNeeds:
         assert needs["p1"]["text_extraction"] > 0
 
     def test_sophisme_phase(self, allocator):
-        phases = [{"id": "p1", "description": "Détection de sophisme et analyse logique"}]
+        phases = [
+            {"id": "p1", "description": "Détection de sophisme et analyse logique"}
+        ]
         needs = allocator._analyze_resource_needs(phases)
         assert needs["p1"]["fallacy_detection"] > 0
         assert needs["p1"]["formal_logic"] > 0
@@ -80,13 +84,25 @@ class TestAnalyzeResourceNeeds:
         assert needs["p1"]["summary_generation"] > 0
 
     def test_short_duration_factor(self, allocator):
-        phases = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "short"}]
+        phases = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "short",
+            }
+        ]
         needs = allocator._analyze_resource_needs(phases)
         # Short duration uses 0.7 factor
         assert needs["p1"]["argument_identification"] == pytest.approx(0.8 * 0.7)
 
     def test_long_duration_factor(self, allocator):
-        phases = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "long"}]
+        phases = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "long",
+            }
+        ]
         needs = allocator._analyze_resource_needs(phases)
         assert needs["p1"]["argument_identification"] == pytest.approx(0.8 * 1.3)
 
@@ -109,6 +125,7 @@ class TestAnalyzeResourceNeeds:
 # ============================================================
 # _determine_agent_assignments
 # ============================================================
+
 
 class TestDetermineAgentAssignments:
     def test_empty_phases(self, allocator):
@@ -136,6 +153,7 @@ class TestDetermineAgentAssignments:
 # ============================================================
 # _define_agent_priorities
 # ============================================================
+
 
 class TestDefineAgentPriorities:
     def test_no_assignments_low_priority(self, allocator):
@@ -171,6 +189,7 @@ class TestDefineAgentPriorities:
 # _allocate_computational_budget
 # ============================================================
 
+
 class TestAllocateComputationalBudget:
     def test_budget_sums_to_one(self, allocator):
         assignments = {"a1": ["p1"], "a2": ["p1", "p2"]}
@@ -201,6 +220,7 @@ class TestAllocateComputationalBudget:
 # ============================================================
 # allocate_initial_resources
 # ============================================================
+
 
 class TestAllocateInitialResources:
     def test_basic_plan(self, allocator, state):
@@ -233,6 +253,7 @@ class TestAllocateInitialResources:
 # ============================================================
 # adjust_allocation
 # ============================================================
+
 
 class TestAdjustAllocation:
     def test_no_feedback_unchanged(self, allocator, state):
@@ -283,6 +304,7 @@ class TestAdjustAllocation:
 # optimize_resource_utilization
 # ============================================================
 
+
 class TestOptimizeResourceUtilization:
     def test_no_metrics_unchanged(self, allocator, state):
         plan = {
@@ -303,8 +325,16 @@ class TestOptimizeResourceUtilization:
         if len(agent_ids) >= 2:
             metrics = {
                 "agent_efficiency": {
-                    agent_ids[0]: {"processing_speed": 0.9, "accuracy": 0.9, "resource_usage": 0.2},
-                    agent_ids[1]: {"processing_speed": 0.1, "accuracy": 0.1, "resource_usage": 0.9},
+                    agent_ids[0]: {
+                        "processing_speed": 0.9,
+                        "accuracy": 0.9,
+                        "resource_usage": 0.2,
+                    },
+                    agent_ids[1]: {
+                        "processing_speed": 0.1,
+                        "accuracy": 0.1,
+                        "resource_usage": 0.9,
+                    },
                 }
             }
             allocator.optimize_resource_utilization(metrics)
@@ -317,6 +347,7 @@ class TestOptimizeResourceUtilization:
 # ============================================================
 # get_resource_allocation_snapshot
 # ============================================================
+
 
 class TestGetSnapshot:
     def test_snapshot_structure(self, allocator):

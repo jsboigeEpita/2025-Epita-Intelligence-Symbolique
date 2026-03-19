@@ -18,7 +18,6 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import kernel_function
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -28,9 +27,7 @@ from semantic_kernel.functions import kernel_function
 def mock_kernel():
     """Kernel with mock OpenAI service for agent tests."""
     kernel = Kernel()
-    service = OpenAIChatCompletion(
-        service_id="default", api_key="test-key"
-    )
+    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
     kernel.add_service(service)
     return kernel
 
@@ -116,9 +113,8 @@ class TestPluginCompliance:
 
     def _has_kernel_function_attr(self, method):
         """Check if method has kernel_function metadata."""
-        return (
-            hasattr(method, "__kernel_function__")
-            or hasattr(method, "__kernel_function_name__")
+        return hasattr(method, "__kernel_function__") or hasattr(
+            method, "__kernel_function_name__"
         )
 
     def test_counter_argument_plugin_has_kernel_functions(self):
@@ -194,16 +190,10 @@ class TestPluginCompliance:
             GovernancePlugin,
         )
 
-        mock_kernel.add_plugin(
-            CounterArgumentPlugin(), plugin_name="counter_argument"
-        )
+        mock_kernel.add_plugin(CounterArgumentPlugin(), plugin_name="counter_argument")
         mock_kernel.add_plugin(DebatePlugin(), plugin_name="debate")
-        mock_kernel.add_plugin(
-            QualityScoringPlugin(), plugin_name="quality"
-        )
-        mock_kernel.add_plugin(
-            GovernancePlugin(), plugin_name="governance"
-        )
+        mock_kernel.add_plugin(QualityScoringPlugin(), plugin_name="quality")
+        mock_kernel.add_plugin(GovernancePlugin(), plugin_name="governance")
 
         assert "counter_argument" in mock_kernel.plugins
         assert "debate" in mock_kernel.plugins
@@ -299,9 +289,7 @@ class TestFactoryCompliance:
         """Factory creates CounterArgumentAgent."""
         from argumentation_analysis.agents.factory import AgentFactory
 
-        factory = AgentFactory(
-            kernel=mock_kernel, llm_service_id="default"
-        )
+        factory = AgentFactory(kernel=mock_kernel, llm_service_id="default")
         agent = factory.create_counter_argument_agent()
         assert agent.name == "CounterArgumentAgent"
 
@@ -309,9 +297,7 @@ class TestFactoryCompliance:
         """Factory creates DebateAgent with personality."""
         from argumentation_analysis.agents.factory import AgentFactory
 
-        factory = AgentFactory(
-            kernel=mock_kernel, llm_service_id="default"
-        )
+        factory = AgentFactory(kernel=mock_kernel, llm_service_id="default")
         agent = factory.create_debate_agent(
             agent_name="Alice",
             personality="Scholar",

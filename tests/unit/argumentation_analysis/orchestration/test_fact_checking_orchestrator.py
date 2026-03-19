@@ -14,7 +14,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
 from enum import Enum
 
-
 # ---------------------------------------------------------------------------
 # We import the real AnalysisDepth enum so tests stay close to production.
 # Everything else that touches external services is mocked.
@@ -22,7 +21,6 @@ from enum import Enum
 from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
     AnalysisDepth,
 )
-
 
 # ---------------------------------------------------------------------------
 # Module path constant for patching
@@ -34,11 +32,14 @@ MOD = "argumentation_analysis.orchestration.fact_checking_orchestrator"
 # Helpers to build mock objects used across many tests
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_comprehensive_result(**overrides):
     """Return a MagicMock that behaves like ComprehensiveAnalysisResult."""
     result = MagicMock()
     result.text_analyzed = overrides.get("text_analyzed", "sample text")
-    result.analysis_timestamp = overrides.get("analysis_timestamp", datetime(2026, 1, 1))
+    result.analysis_timestamp = overrides.get(
+        "analysis_timestamp", datetime(2026, 1, 1)
+    )
     result.analysis_depth = overrides.get("analysis_depth", AnalysisDepth.STANDARD)
     result.family_results = overrides.get("family_results", {})
     result.factual_claims = overrides.get("factual_claims", [])
@@ -79,10 +80,12 @@ def _build_plugin_registry():
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_singleton():
     """Reset the module-level singleton before each test."""
     import argumentation_analysis.orchestration.fact_checking_orchestrator as mod
+
     mod._global_fact_checking_orchestrator = None
     yield
     mod._global_fact_checking_orchestrator = None
@@ -105,12 +108,14 @@ def mock_family_analyzer():
 @pytest.fixture
 def orchestrator(plugin_registry, mock_family_analyzer):
     """Build a fully-mocked FactCheckingOrchestrator."""
-    with patch(f"{MOD}.get_family_analyzer", return_value=mock_family_analyzer), \
-         patch(f"{MOD}.FactClaimExtractor") as mock_extractor_cls:
+    with patch(f"{MOD}.get_family_analyzer", return_value=mock_family_analyzer), patch(
+        f"{MOD}.FactClaimExtractor"
+    ) as mock_extractor_cls:
         mock_extractor_cls.return_value = MagicMock()
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingOrchestrator,
         )
+
         orch = FactCheckingOrchestrator(
             plugin_registry=plugin_registry,
             api_config={"key": "value"},
@@ -132,6 +137,7 @@ class TestFactCheckingRequest:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         req = FactCheckingRequest(text="Hello world")
         assert req.text == "Hello world"
         assert req.analysis_depth == AnalysisDepth.STANDARD
@@ -145,6 +151,7 @@ class TestFactCheckingRequest:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         req = FactCheckingRequest(
             text="Test",
             analysis_depth=AnalysisDepth.EXPERT,
@@ -165,6 +172,7 @@ class TestFactCheckingRequest:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         for depth in AnalysisDepth:
             req = FactCheckingRequest(text="t", analysis_depth=depth)
             assert req.analysis_depth is depth
@@ -182,6 +190,7 @@ class TestFactCheckingResponse:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingResponse,
         )
+
         comp = _make_mock_comprehensive_result()
         ts = datetime(2026, 3, 1, 12, 0, 0)
         resp = FactCheckingResponse(
@@ -201,6 +210,7 @@ class TestFactCheckingResponse:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingResponse,
         )
+
         comp = _make_mock_comprehensive_result()
         ts = datetime(2026, 3, 1, 12, 0, 0)
         resp = FactCheckingResponse(
@@ -222,6 +232,7 @@ class TestFactCheckingResponse:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingResponse,
         )
+
         long_text = "A" * 300
         comp = _make_mock_comprehensive_result()
         resp = FactCheckingResponse(
@@ -240,6 +251,7 @@ class TestFactCheckingResponse:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingResponse,
         )
+
         comp = _make_mock_comprehensive_result()
         resp = FactCheckingResponse(
             request_id="req-err",
@@ -264,12 +276,14 @@ class TestOrchestratorInit:
     """Tests for FactCheckingOrchestrator initialization."""
 
     def test_init_with_plugin_registry(self, plugin_registry):
-        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, \
-             patch(f"{MOD}.FactClaimExtractor"):
+        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
+            f"{MOD}.FactClaimExtractor"
+        ):
             mock_gfa.return_value = MagicMock()
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             orch = FactCheckingOrchestrator(plugin_registry=plugin_registry)
 
         assert orch.taxonomy_plugin is plugin_registry["taxonomy_explorer"]
@@ -280,14 +294,16 @@ class TestOrchestratorInit:
     def test_init_without_registry_uses_singletons(self):
         mock_tm = MagicMock()
         mock_vs = MagicMock()
-        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), \
-             patch(f"{MOD}.get_verification_service", return_value=mock_vs), \
-             patch(f"{MOD}.get_family_analyzer") as mock_gfa, \
-             patch(f"{MOD}.FactClaimExtractor"):
+        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), patch(
+            f"{MOD}.get_verification_service", return_value=mock_vs
+        ), patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
+            f"{MOD}.FactClaimExtractor"
+        ):
             mock_gfa.return_value = MagicMock()
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             orch = FactCheckingOrchestrator()
 
         assert orch.taxonomy_plugin is mock_tm
@@ -299,6 +315,7 @@ class TestOrchestratorInit:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             with pytest.raises(ValueError, match="taxonomy_explorer"):
                 FactCheckingOrchestrator(plugin_registry=registry)
 
@@ -308,26 +325,31 @@ class TestOrchestratorInit:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             with pytest.raises(ValueError, match="external_verification"):
                 FactCheckingOrchestrator(plugin_registry=registry)
 
     def test_init_api_config_defaults_to_empty_dict(self, plugin_registry):
-        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, \
-             patch(f"{MOD}.FactClaimExtractor"):
+        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
+            f"{MOD}.FactClaimExtractor"
+        ):
             mock_gfa.return_value = MagicMock()
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             orch = FactCheckingOrchestrator(plugin_registry=plugin_registry)
         assert orch.api_config == {}
 
     def test_backward_compat_aliases(self, plugin_registry):
-        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, \
-             patch(f"{MOD}.FactClaimExtractor"):
+        with patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
+            f"{MOD}.FactClaimExtractor"
+        ):
             mock_gfa.return_value = MagicMock()
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 FactCheckingOrchestrator,
             )
+
             orch = FactCheckingOrchestrator(plugin_registry=plugin_registry)
         assert orch.taxonomy_manager is orch.taxonomy_plugin
         assert orch.verification_service is orch.verification_plugin
@@ -345,6 +367,7 @@ class TestAnalyzeWithFactChecking:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         req = FactCheckingRequest(text="Test text for analysis")
         resp = await orchestrator.analyze_with_fact_checking(req)
 
@@ -358,6 +381,7 @@ class TestAnalyzeWithFactChecking:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         assert orchestrator.analysis_count == 0
         req = FactCheckingRequest(text="Test")
         await orchestrator.analyze_with_fact_checking(req)
@@ -369,6 +393,7 @@ class TestAnalyzeWithFactChecking:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         mock_family_analyzer.analyze_comprehensive.side_effect = RuntimeError("boom")
         req = FactCheckingRequest(text="Test")
         resp = await orchestrator.analyze_with_fact_checking(req)
@@ -383,6 +408,7 @@ class TestAnalyzeWithFactChecking:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         mock_family_analyzer.analyze_comprehensive.side_effect = ValueError("bad input")
         req = FactCheckingRequest(text="Test", analysis_depth=AnalysisDepth.BASIC)
 
@@ -398,6 +424,7 @@ class TestAnalyzeWithFactChecking:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         req = FactCheckingRequest(text="Test")
         resp = await orchestrator.analyze_with_fact_checking(req)
         # Should be a valid UUID
@@ -421,7 +448,9 @@ class TestQuickFactCheck:
             return_value=[mock_verif]
         )
 
-        result = await orchestrator.quick_fact_check("Some text with facts", max_claims=3)
+        result = await orchestrator.quick_fact_check(
+            "Some text with facts", max_claims=3
+        )
 
         assert result["status"] == "completed"
         assert result["claims_count"] == 1
@@ -438,7 +467,9 @@ class TestQuickFactCheck:
         assert "message" in result
 
     async def test_error_handling(self, orchestrator):
-        orchestrator.fact_extractor.extract_factual_claims.side_effect = Exception("fail")
+        orchestrator.fact_extractor.extract_factual_claims.side_effect = Exception(
+            "fail"
+        )
 
         result = await orchestrator.quick_fact_check("Some text")
 
@@ -594,7 +625,9 @@ class TestBatchAnalyze:
         # Each text triggers one call
         assert mock_family_analyzer.analyze_comprehensive.await_count == 3
 
-    async def test_handles_exceptions_in_batch(self, orchestrator, mock_family_analyzer):
+    async def test_handles_exceptions_in_batch(
+        self, orchestrator, mock_family_analyzer
+    ):
         call_count = 0
 
         async def side_effect(**kwargs):
@@ -649,9 +682,8 @@ class TestPerformanceMetrics:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
-        await orchestrator.analyze_with_fact_checking(
-            FactCheckingRequest(text="Test")
-        )
+
+        await orchestrator.analyze_with_fact_checking(FactCheckingRequest(text="Test"))
         metrics = orchestrator.get_performance_metrics()
         assert metrics["total_analyses"] == 1
         assert metrics["total_processing_time"] >= 0  # may be 0.0 on fast machines
@@ -665,6 +697,7 @@ class TestPerformanceMetrics:
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         mock_family_analyzer.analyze_comprehensive.side_effect = Exception("err")
 
         with patch(f"{MOD}.ComprehensiveAnalysisResult") as mock_car:
@@ -679,11 +712,14 @@ class TestPerformanceMetrics:
         assert metrics["total_analyses"] == 0
         assert metrics["error_rate"] == 0.0
 
-    async def test_metrics_mixed_success_and_error(self, orchestrator, mock_family_analyzer):
+    async def test_metrics_mixed_success_and_error(
+        self, orchestrator, mock_family_analyzer
+    ):
         """After one success + one error, error_rate = 1/1 = 1.0 (only successes counted)."""
         from argumentation_analysis.orchestration.fact_checking_orchestrator import (
             FactCheckingRequest,
         )
+
         # First call succeeds
         await orchestrator.analyze_with_fact_checking(FactCheckingRequest(text="ok"))
 
@@ -691,7 +727,9 @@ class TestPerformanceMetrics:
         mock_family_analyzer.analyze_comprehensive.side_effect = Exception("err")
         with patch(f"{MOD}.ComprehensiveAnalysisResult") as mock_car:
             mock_car.return_value = _make_mock_comprehensive_result()
-            await orchestrator.analyze_with_fact_checking(FactCheckingRequest(text="fail"))
+            await orchestrator.analyze_with_fact_checking(
+                FactCheckingRequest(text="fail")
+            )
 
         metrics = orchestrator.get_performance_metrics()
         assert metrics["total_analyses"] == 1
@@ -720,7 +758,9 @@ class TestHealthCheck:
         assert health["components"]["family_analyzer"]["status"] == "ok"
 
     async def test_extractor_error(self, orchestrator):
-        orchestrator.fact_extractor.extract_factual_claims.side_effect = Exception("broken")
+        orchestrator.fact_extractor.extract_factual_claims.side_effect = Exception(
+            "broken"
+        )
         orchestrator.taxonomy_manager.detect_fallacies_with_families.return_value = []
 
         health = await orchestrator.health_check()
@@ -730,7 +770,9 @@ class TestHealthCheck:
 
     async def test_taxonomy_fallback_to_plugin(self, orchestrator, plugin_registry):
         # Sync service call fails -> falls back to async plugin
-        orchestrator.taxonomy_manager.detect_fallacies_with_families.side_effect = Exception("sync fail")
+        orchestrator.taxonomy_manager.detect_fallacies_with_families.side_effect = (
+            Exception("sync fail")
+        )
         plugin_registry["taxonomy_explorer"].detect_and_classify = AsyncMock(
             return_value=[MagicMock()]
         )
@@ -783,6 +825,7 @@ class TestModuleLevelFunctions:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 get_taxonomy_manager,
             )
+
             result = get_taxonomy_manager()
             assert result == "tm_instance"
 
@@ -794,20 +837,23 @@ class TestModuleLevelFunctions:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 get_verification_service,
             )
+
             result = get_verification_service()
             assert result == "vs_instance"
 
     def test_singleton_factory_creates_once(self):
         mock_tm = MagicMock()
         mock_vs = MagicMock()
-        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), \
-             patch(f"{MOD}.get_verification_service", return_value=mock_vs), \
-             patch(f"{MOD}.get_family_analyzer") as mock_gfa, \
-             patch(f"{MOD}.FactClaimExtractor"):
+        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), patch(
+            f"{MOD}.get_verification_service", return_value=mock_vs
+        ), patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
+            f"{MOD}.FactClaimExtractor"
+        ):
             mock_gfa.return_value = MagicMock()
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 get_fact_checking_orchestrator,
             )
+
             orch1 = get_fact_checking_orchestrator(api_config={"k": "v"})
             orch2 = get_fact_checking_orchestrator()
             assert orch1 is orch2
@@ -822,6 +868,7 @@ class TestModuleLevelFunctions:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 quick_analyze_text,
             )
+
             result = await quick_analyze_text("Hello", api_config={"k": "v"})
 
         assert result == {"result": "ok"}
@@ -835,6 +882,7 @@ class TestModuleLevelFunctions:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 quick_fact_check_only,
             )
+
             result = await quick_fact_check_only("text", api_config={"k": "v"})
 
         assert result == {"status": "no_claims"}
@@ -849,6 +897,7 @@ class TestModuleLevelFunctions:
             from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                 quick_fallacy_analysis_only,
             )
+
             result = await quick_fallacy_analysis_only("text")
 
         assert result == {"status": "completed"}

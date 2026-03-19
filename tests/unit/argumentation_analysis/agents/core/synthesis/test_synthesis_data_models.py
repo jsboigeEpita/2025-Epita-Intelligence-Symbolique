@@ -12,7 +12,6 @@ from argumentation_analysis.agents.core.synthesis.data_models import (
     UnifiedReport,
 )
 
-
 # =====================================================================
 # LogicAnalysisResult Tests
 # =====================================================================

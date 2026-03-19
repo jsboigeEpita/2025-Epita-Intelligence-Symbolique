@@ -12,8 +12,8 @@ from argumentation_analysis.reporting.enhanced_real_time_trace_analyzer import (
     EnhancedRealTimeTraceAnalyzer,
 )
 
-
 # ── ConversationMessage ──
+
 
 class TestConversationMessage:
     def test_init(self):
@@ -53,7 +53,10 @@ class TestConversationMessage:
 
     def test_to_enhanced_format_with_tool_calls(self):
         msg = ConversationMessage(
-            agent_name="A", content="c", tour_number=1, phase_id="p",
+            agent_name="A",
+            content="c",
+            tour_number=1,
+            phase_id="p",
             tool_calls_count=5,
         )
         result = msg.to_enhanced_format()
@@ -62,11 +65,15 @@ class TestConversationMessage:
 
 # ── StateSnapshot ──
 
+
 class TestStateSnapshot:
     def test_init(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=2, agent_active="AgentB",
-            state_variables={"key": "val"}, metadata={"m": 1},
+            phase_id="p1",
+            tour_number=2,
+            agent_active="AgentB",
+            state_variables={"key": "val"},
+            metadata={"m": 1},
         )
         assert snap.phase_id == "p1"
         assert snap.tour_number == 2
@@ -75,8 +82,11 @@ class TestStateSnapshot:
 
     def test_to_markdown_int(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"count": 42}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"count": 42},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert "`count`" in result
@@ -84,48 +94,66 @@ class TestStateSnapshot:
 
     def test_to_markdown_string(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"name": "hello world"}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"name": "hello world"},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert '"hello world"' in result
 
     def test_to_markdown_long_string(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"text": "a" * 100}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"text": "a" * 100},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert "..." in result
 
     def test_to_markdown_list(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"items": [1, 2, 3]}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"items": [1, 2, 3]},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert "list(3)" in result
 
     def test_to_markdown_dict(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"data": {"a": 1}}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"data": {"a": 1}},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert "dict(1)" in result
 
     def test_to_markdown_other_type(self):
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={"obj": object()}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={"obj": object()},
+            metadata={},
         )
         result = snap.to_markdown_format()
         assert "object" in result
 
     def test_to_markdown_metadata_section(self):
         snap = StateSnapshot(
-            phase_id="analysis", tour_number=3, agent_active="Watson",
-            state_variables={}, metadata={"key": "val"},
+            phase_id="analysis",
+            tour_number=3,
+            agent_active="Watson",
+            state_variables={},
+            metadata={"key": "val"},
         )
         result = snap.to_markdown_format()
         assert "Tour" in result and "3" in result
@@ -134,6 +162,7 @@ class TestStateSnapshot:
 
 
 # ── EnhancedToolCall ──
+
 
 class TestEnhancedToolCall:
     @pytest.fixture
@@ -162,8 +191,13 @@ class TestEnhancedToolCall:
 
     def test_to_enhanced_format_no_args(self):
         tc = EnhancedToolCall(
-            agent_name="A", tool_name="t", arguments={},
-            result=None, timestamp=0, execution_time_ms=10, success=True,
+            agent_name="A",
+            tool_name="t",
+            arguments={},
+            result=None,
+            timestamp=0,
+            execution_time_ms=10,
+            success=True,
         )
         result = tc.to_enhanced_conversation_format()
         assert "aucun argument" in result
@@ -246,6 +280,7 @@ class TestEnhancedToolCall:
 
 # ── ProjectManagerPhase ──
 
+
 class TestProjectManagerPhase:
     def test_init(self):
         phase = ProjectManagerPhase(
@@ -262,8 +297,11 @@ class TestProjectManagerPhase:
             phase_id="p1", phase_name="Test", assigned_agents=[]
         )
         snap = StateSnapshot(
-            phase_id="p1", tour_number=1, agent_active="A",
-            state_variables={}, metadata={},
+            phase_id="p1",
+            tour_number=1,
+            agent_active="A",
+            state_variables={},
+            metadata={},
         )
         phase.add_state_snapshot(snap)
         assert len(phase.state_snapshots) == 1
@@ -273,8 +311,13 @@ class TestProjectManagerPhase:
             phase_id="p1", phase_name="Test", assigned_agents=[]
         )
         tc = EnhancedToolCall(
-            agent_name="A", tool_name="t", arguments={},
-            result=None, timestamp=0, execution_time_ms=10, success=True,
+            agent_name="A",
+            tool_name="t",
+            arguments={},
+            result=None,
+            timestamp=0,
+            execution_time_ms=10,
+            success=True,
         )
         phase.add_tool_call(tc)
         assert len(phase.tool_calls) == 1
@@ -303,7 +346,8 @@ class TestProjectManagerPhase:
 
     def test_to_enhanced_format(self):
         phase = ProjectManagerPhase(
-            phase_id="p1", phase_name="Analysis Phase",
+            phase_id="p1",
+            phase_name="Analysis Phase",
             assigned_agents=["Sherlock", "Watson"],
         )
         result = phase.to_enhanced_conversation_format()
@@ -313,6 +357,7 @@ class TestProjectManagerPhase:
 
 
 # ── EnhancedRealTimeTraceAnalyzer ──
+
 
 class TestEnhancedRealTimeTraceAnalyzer:
     @pytest.fixture
@@ -392,7 +437,9 @@ class TestEnhancedRealTimeTraceAnalyzer:
     def test_record_tool_call_enabled(self, analyzer):
         analyzer.start_capture()
         analyzer.start_pm_phase("p1", "Phase 1", ["A"])
-        analyzer.record_enhanced_tool_call("A", "analyze", {"text": "t"}, "result", 50.0)
+        analyzer.record_enhanced_tool_call(
+            "A", "analyze", {"text": "t"}, "result", 50.0
+        )
         assert analyzer.total_tool_calls == 1
         assert len(analyzer.current_phase.tool_calls) == 1
 
@@ -420,7 +467,9 @@ class TestEnhancedRealTimeTraceAnalyzer:
         analyzer.start_pm_phase("p1", "Rhetoric Analysis", ["Sherlock", "Watson"])
         analyzer.capture_state_snapshot("p1", 1, "Sherlock", {"findings": 3})
         analyzer.record_enhanced_tool_call("Sherlock", "detect", {}, "found 2", 100.0)
-        analyzer.capture_conversation_message("Sherlock", "I found 2 fallacies", 1, "p1")
+        analyzer.capture_conversation_message(
+            "Sherlock", "I found 2 fallacies", 1, "p1"
+        )
         analyzer.stop_capture()
 
         report = analyzer.generate_enhanced_pm_orchestration_report()
@@ -451,7 +500,9 @@ class TestEnhancedRealTimeTraceAnalyzer:
         analyzer.start_pm_phase("p1", "Test", ["A"])
         analyzer.stop_capture()
         # Use a truly non-existent path (Windows drive that doesn't exist)
-        result = analyzer.save_enhanced_report("Z:\\this_drive_does_not_exist\\path\\report.md")
+        result = analyzer.save_enhanced_report(
+            "Z:\\this_drive_does_not_exist\\path\\report.md"
+        )
         assert result is False
 
     def test_metadata_updates(self, analyzer):
@@ -470,8 +521,11 @@ class TestEnhancedRealTimeTraceAnalyzer:
         analyzer.start_pm_phase("extraction", "Extraction Phase", ["FactExtractor"])
         analyzer.capture_state_snapshot("extraction", 1, "FactExtractor", {"facts": 0})
         analyzer.record_enhanced_tool_call(
-            "FactExtractor", "extract_facts", {"text": "sample"},
-            ["fact1", "fact2"], 200.0
+            "FactExtractor",
+            "extract_facts",
+            {"text": "sample"},
+            ["fact1", "fact2"],
+            200.0,
         )
         analyzer.capture_conversation_message(
             "FactExtractor", "Extracted 2 facts", 1, "extraction"

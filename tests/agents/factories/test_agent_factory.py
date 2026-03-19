@@ -62,7 +62,9 @@ class TestFactoryInit:
 class TestCreateAgentDispatch:
     """Tests for create_agent() routing to correct classes."""
 
-    @patch("argumentation_analysis.agents.factory.AgentFactory.create_informal_fallacy_agent")
+    @patch(
+        "argumentation_analysis.agents.factory.AgentFactory.create_informal_fallacy_agent"
+    )
     def test_dispatch_informal_fallacy(self, mock_create, factory):
         """AgentType.INFORMAL_FALLACY delegates to create_informal_fallacy_agent."""
         mock_agent = MagicMock()
@@ -288,12 +290,16 @@ class TestCreatePhase4Agents:
         mock_agent = MagicMock()
         MockCA.return_value = mock_agent
 
-        with patch.object(factory, "_create_agent", return_value=mock_agent) as mock_create:
+        with patch.object(
+            factory, "_create_agent", return_value=mock_agent
+        ) as mock_create:
             result = factory.create_counter_argument_agent()
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args
-            assert call_kwargs[1].get("agent_name") == "CounterArgumentAgent" or \
-                   call_kwargs.kwargs.get("agent_name") == "CounterArgumentAgent"
+            assert (
+                call_kwargs[1].get("agent_name") == "CounterArgumentAgent"
+                or call_kwargs.kwargs.get("agent_name") == "CounterArgumentAgent"
+            )
 
     @patch(
         "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentAgent"
@@ -302,19 +308,21 @@ class TestCreatePhase4Agents:
         mock_agent = MagicMock()
         MockCA.return_value = mock_agent
 
-        with patch.object(factory, "_create_agent", return_value=mock_agent) as mock_create:
+        with patch.object(
+            factory, "_create_agent", return_value=mock_agent
+        ) as mock_create:
             factory.create_counter_argument_agent(agent_name="MyCA")
             call_kwargs = mock_create.call_args
             assert "MyCA" in str(call_kwargs)
 
-    @patch(
-        "argumentation_analysis.agents.core.debate.debate_agent.DebateAgent"
-    )
+    @patch("argumentation_analysis.agents.core.debate.debate_agent.DebateAgent")
     def test_create_debate_defaults(self, MockDebate, factory):
         mock_agent = MagicMock()
         MockDebate.return_value = mock_agent
 
-        with patch.object(factory, "_create_agent", return_value=mock_agent) as mock_create:
+        with patch.object(
+            factory, "_create_agent", return_value=mock_agent
+        ) as mock_create:
             result = factory.create_debate_agent()
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args
@@ -322,14 +330,14 @@ class TestCreatePhase4Agents:
             assert "The Scholar" in str(call_kwargs)
             assert result is mock_agent
 
-    @patch(
-        "argumentation_analysis.agents.core.debate.debate_agent.DebateAgent"
-    )
+    @patch("argumentation_analysis.agents.core.debate.debate_agent.DebateAgent")
     def test_create_debate_custom_params(self, MockDebate, factory):
         mock_agent = MagicMock()
         MockDebate.return_value = mock_agent
 
-        with patch.object(factory, "_create_agent", return_value=mock_agent) as mock_create:
+        with patch.object(
+            factory, "_create_agent", return_value=mock_agent
+        ) as mock_create:
             factory.create_debate_agent(
                 agent_name="CustomDebater",
                 personality="The Diplomat",

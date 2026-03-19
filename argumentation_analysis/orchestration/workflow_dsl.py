@@ -364,8 +364,7 @@ class WorkflowExecutor:
                                 error="Condition not met",
                             )
                             logger.info(
-                                f"Phase '{phase_name}' skipped — "
-                                f"condition not met"
+                                f"Phase '{phase_name}' skipped — " f"condition not met"
                             )
                             continue
                     except Exception as cond_err:
@@ -425,7 +424,10 @@ class WorkflowExecutor:
                         if phase.loop_config is not None:
                             # Iterative execution
                             output = await self._execute_loop(
-                                phase, provider, phase_input, ctx,
+                                phase,
+                                provider,
+                                phase_input,
+                                ctx,
                                 phase.loop_config,
                             )
                         elif phase.timeout_seconds:
@@ -512,9 +514,7 @@ class WorkflowExecutor:
                         "completed": completed,
                         "failed": failed,
                         "skipped": skipped,
-                        "phases": {
-                            name: r.status.value for name, r in results.items()
-                        },
+                        "phases": {name: r.status.value for name, r in results.items()},
                     },
                 )
             except Exception as sw_err:

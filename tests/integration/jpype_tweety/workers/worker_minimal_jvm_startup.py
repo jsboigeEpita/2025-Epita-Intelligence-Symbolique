@@ -41,8 +41,8 @@ def test_minimal_startup_logic():
     # Pour un test de démarrage minimal, le classpath peut être vide ou pointer
     # vers un JAR connu et non corrompu si on veut tester le chargement.
     # Pour rester minimal, on utilise que le JAR 'tweety-full'.
-    full_jar_path = (
-        next(libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None)
+    full_jar_path = next(
+        libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None
     )
     if not full_jar_path or not full_jar_path.exists():
         # On ne peut pas continuer sans le jar.

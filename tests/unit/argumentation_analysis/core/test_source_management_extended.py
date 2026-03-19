@@ -40,10 +40,10 @@ from argumentation_analysis.models.extract_definition import (
     SourceDefinition,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_extract_definitions(
     source_name: str = "Test Source",
@@ -97,6 +97,7 @@ def _make_extract_definitions_no_full_text(
 # ===========================================================================
 # UnifiedSourceConfig
 # ===========================================================================
+
 
 class TestUnifiedSourceConfigConversion:
     """Tests for UnifiedSourceConfig.from_legacy_config and to_legacy_config."""
@@ -192,7 +193,9 @@ class TestUnifiedSourceConfigConversion:
             anonymize_logs=True,
             auto_cleanup=False,
         )
-        roundtripped = UnifiedSourceConfig.from_legacy_config(original).to_legacy_config()
+        roundtripped = UnifiedSourceConfig.from_legacy_config(
+            original
+        ).to_legacy_config()
 
         assert roundtripped.source_type == original.source_type
         assert roundtripped.passphrase == original.passphrase
@@ -203,6 +206,7 @@ class TestUnifiedSourceConfigConversion:
 # ===========================================================================
 # UnifiedSourceManager._get_passphrase
 # ===========================================================================
+
 
 class TestGetPassphrase:
     """Tests for UnifiedSourceManager._get_passphrase."""
@@ -312,6 +316,7 @@ class TestGetPassphrase:
 # ===========================================================================
 # UnifiedSourceManager._load_enc_file_sources
 # ===========================================================================
+
 
 class TestLoadEncFileSources:
     """Tests for _load_enc_file_sources."""
@@ -474,6 +479,7 @@ class TestLoadEncFileSources:
 # UnifiedSourceManager._load_text_file_sources
 # ===========================================================================
 
+
 class TestLoadTextFileSources:
     """Tests for _load_text_file_sources."""
 
@@ -568,6 +574,7 @@ class TestLoadTextFileSources:
 # UnifiedSourceManager._load_free_text_sources
 # ===========================================================================
 
+
 class TestLoadFreeTextSources:
     """Tests for _load_free_text_sources."""
 
@@ -626,6 +633,7 @@ class TestLoadFreeTextSources:
 # ===========================================================================
 # UnifiedSourceManager.load_sources (routing)
 # ===========================================================================
+
 
 class TestLoadSourcesRouting:
     """Tests for load_sources routing to the correct handler."""
@@ -686,6 +694,7 @@ class TestLoadSourcesRouting:
 # ===========================================================================
 # UnifiedSourceManager.select_text_for_analysis (new types)
 # ===========================================================================
+
 
 class TestSelectTextNewTypes:
     """Tests for select_text_for_analysis with non-simple/complex source types."""
@@ -759,6 +768,7 @@ class TestSelectTextNewTypes:
 # UnifiedSourceManager._setup_logging (anonymize filter)
 # ===========================================================================
 
+
 class TestSetupLogging:
     """Tests for _setup_logging and the AnonymizeFilter.
 
@@ -776,7 +786,9 @@ class TestSetupLogging:
 
     def test_anonymize_filter_on_complex(self):
         """Complex type with anonymize_logs=True adds an AnonymizeFilter."""
-        self._clear_logger_filters("argumentation_analysis.core.source_management.complex")
+        self._clear_logger_filters(
+            "argumentation_analysis.core.source_management.complex"
+        )
         config = UnifiedSourceConfig(
             source_type=UnifiedSourceType.COMPLEX,
             passphrase="pw",
@@ -788,7 +800,9 @@ class TestSetupLogging:
 
     def test_anonymize_filter_on_enc_file(self):
         """ENC_FILE type with anonymize_logs=True adds an AnonymizeFilter."""
-        self._clear_logger_filters("argumentation_analysis.core.source_management.enc_file")
+        self._clear_logger_filters(
+            "argumentation_analysis.core.source_management.enc_file"
+        )
         config = UnifiedSourceConfig(
             source_type=UnifiedSourceType.ENC_FILE,
             anonymize_logs=True,
@@ -799,7 +813,9 @@ class TestSetupLogging:
 
     def test_no_anonymize_filter_on_simple(self):
         """SIMPLE type does not add an AnonymizeFilter even with anonymize_logs=True."""
-        self._clear_logger_filters("argumentation_analysis.core.source_management.simple")
+        self._clear_logger_filters(
+            "argumentation_analysis.core.source_management.simple"
+        )
         config = UnifiedSourceConfig(
             source_type=UnifiedSourceType.SIMPLE,
             anonymize_logs=True,
@@ -810,7 +826,9 @@ class TestSetupLogging:
 
     def test_no_anonymize_filter_when_disabled(self):
         """COMPLEX type with anonymize_logs=False does not add filter."""
-        self._clear_logger_filters("argumentation_analysis.core.source_management.complex")
+        self._clear_logger_filters(
+            "argumentation_analysis.core.source_management.complex"
+        )
         config = UnifiedSourceConfig(
             source_type=UnifiedSourceType.COMPLEX,
             passphrase="pw",
@@ -822,7 +840,9 @@ class TestSetupLogging:
 
     def test_anonymize_filter_replaces_sensitive_names(self):
         """AnonymizeFilter replaces known sensitive patterns in log messages."""
-        self._clear_logger_filters("argumentation_analysis.core.source_management.enc_file")
+        self._clear_logger_filters(
+            "argumentation_analysis.core.source_management.enc_file"
+        )
         config = UnifiedSourceConfig(
             source_type=UnifiedSourceType.ENC_FILE,
             anonymize_logs=True,
@@ -831,9 +851,13 @@ class TestSetupLogging:
 
         # Create a log record with a sensitive name
         record = logging.LogRecord(
-            name="test", level=logging.INFO,
-            pathname="", lineno=0, msg="Discours de Hitler et Macron",
-            args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="Discours de Hitler et Macron",
+            args=(),
+            exc_info=None,
         )
         # Apply filters
         for f in manager.logger.filters:
@@ -847,6 +871,7 @@ class TestSetupLogging:
 # ===========================================================================
 # UnifiedSourceManager.list_available_sources
 # ===========================================================================
+
 
 class TestListAvailableSources:
     """Tests for list_available_sources.
@@ -884,12 +909,16 @@ class TestListAvailableSources:
         sources = manager.list_available_sources()
 
         assert len(sources["simple"]) == 1
-        assert "monstration" in sources["simple"][0].lower() or "test" in sources["simple"][0].lower()
+        assert (
+            "monstration" in sources["simple"][0].lower()
+            or "test" in sources["simple"][0].lower()
+        )
 
 
 # ===========================================================================
 # create_unified_source_manager factory
 # ===========================================================================
+
 
 class TestCreateUnifiedSourceManager:
     """Tests for the create_unified_source_manager factory function."""
@@ -956,9 +985,7 @@ class TestCreateUnifiedSourceManager:
 
     def test_forwards_source_index(self):
         """Factory forwards source_index to config."""
-        manager = create_unified_source_manager(
-            source_type="complex", source_index=3
-        )
+        manager = create_unified_source_manager(source_type="complex", source_index=3)
         assert manager.config.source_index == 3
 
     def test_defaults(self):
@@ -974,6 +1001,7 @@ class TestCreateUnifiedSourceManager:
 # ===========================================================================
 # InteractiveSourceSelector.load_source_batch
 # ===========================================================================
+
 
 class TestInteractiveSourceSelectorBatch:
     """Tests for InteractiveSourceSelector.load_source_batch (non-interactive)."""
@@ -1017,7 +1045,8 @@ class TestInteractiveSourceSelectorBatch:
     def test_batch_simple_delegates_to_legacy(self, mocker):
         """Batch load for simple type uses the legacy manager path."""
         mock_legacy_load = mocker.patch.object(
-            MagicMock(), "load_sources",
+            MagicMock(),
+            "load_sources",
             return_value=(_make_extract_definitions(), "ok"),
         )
         selector = InteractiveSourceSelector()
@@ -1032,6 +1061,7 @@ class TestInteractiveSourceSelectorBatch:
 # ===========================================================================
 # Integration: full workflow with new source types
 # ===========================================================================
+
 
 class TestFullWorkflowNewTypes:
     """Integration-style tests for the full workflow with new source types."""

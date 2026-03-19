@@ -39,8 +39,8 @@ from argumentation_analysis.api.jtms_models import (
     PluginStatusResponse,
 )
 
-
 # ── BeliefInfo ──
+
 
 class TestBeliefInfo:
     def test_required_fields(self):
@@ -56,8 +56,11 @@ class TestBeliefInfo:
 
     def test_all_fields(self):
         b = BeliefInfo(
-            name="B", valid=True, non_monotonic=True,
-            justifications_count=3, implications_count=2,
+            name="B",
+            valid=True,
+            non_monotonic=True,
+            justifications_count=3,
+            implications_count=2,
         )
         assert b.valid is True
         assert b.non_monotonic is True
@@ -70,6 +73,7 @@ class TestBeliefInfo:
 
 # ── JustificationInfo ──
 
+
 class TestJustificationInfo:
     def test_required_conclusion(self):
         j = JustificationInfo(conclusion="C")
@@ -80,14 +84,17 @@ class TestJustificationInfo:
 
     def test_all_fields(self):
         j = JustificationInfo(
-            in_beliefs=["A", "B"], out_beliefs=["D"],
-            conclusion="C", is_valid=True,
+            in_beliefs=["A", "B"],
+            out_beliefs=["D"],
+            conclusion="C",
+            is_valid=True,
         )
         assert len(j.in_beliefs) == 2
         assert j.is_valid is True
 
 
 # ── CreateBeliefRequest ──
+
 
 class TestCreateBeliefRequest:
     def test_required_name(self):
@@ -103,8 +110,11 @@ class TestCreateBeliefRequest:
 
     def test_custom(self):
         r = CreateBeliefRequest(
-            belief_name="Y", initial_value="true",
-            session_id="s1", instance_id="i1", agent_id="agent1",
+            belief_name="Y",
+            initial_value="true",
+            session_id="s1",
+            instance_id="i1",
+            agent_id="agent1",
         )
         assert r.initial_value == "true"
         assert r.session_id == "s1"
@@ -116,6 +126,7 @@ class TestCreateBeliefRequest:
 
 # ── AddJustificationRequest ──
 
+
 class TestAddJustificationRequest:
     def test_minimal(self):
         r = AddJustificationRequest(conclusion="C")
@@ -125,13 +136,17 @@ class TestAddJustificationRequest:
 
     def test_full(self):
         r = AddJustificationRequest(
-            in_beliefs=["A"], out_beliefs=["B"], conclusion="C",
-            session_id="s1", agent_id="ag",
+            in_beliefs=["A"],
+            out_beliefs=["B"],
+            conclusion="C",
+            session_id="s1",
+            agent_id="ag",
         )
         assert r.in_beliefs == ["A"]
 
 
 # ── SetBeliefValidityRequest ──
+
 
 class TestSetBeliefValidityRequest:
     def test_required(self):
@@ -146,6 +161,7 @@ class TestSetBeliefValidityRequest:
 
 # ── QueryBeliefsRequest ──
 
+
 class TestQueryBeliefsRequest:
     def test_defaults(self):
         r = QueryBeliefsRequest()
@@ -155,6 +171,7 @@ class TestQueryBeliefsRequest:
 
 # ── ExplainBeliefRequest ──
 
+
 class TestExplainBeliefRequest:
     def test_required(self):
         r = ExplainBeliefRequest(belief_name="X")
@@ -162,6 +179,7 @@ class TestExplainBeliefRequest:
 
 
 # ── GetJTMSStateRequest ──
+
 
 class TestGetJTMSStateRequest:
     def test_defaults(self):
@@ -171,6 +189,7 @@ class TestGetJTMSStateRequest:
 
 
 # ── Session Requests ──
+
 
 class TestSessionRequests:
     def test_create_session(self):
@@ -189,19 +208,20 @@ class TestSessionRequests:
         assert r.checkpoint_id == "c1"
 
     def test_update_metadata(self):
-        r = UpdateSessionMetadataRequest(
-            session_id="s1", metadata={"key": "value"}
-        )
+        r = UpdateSessionMetadataRequest(session_id="s1", metadata={"key": "value"})
         assert r.metadata["key"] == "value"
 
 
 # ── JTMSResponse ──
 
+
 class TestJTMSResponse:
     def test_base_response(self):
         r = JTMSResponse(
-            status="success", operation="create_belief",
-            agent_id="a1", timestamp="2026-01-01",
+            status="success",
+            operation="create_belief",
+            agent_id="a1",
+            timestamp="2026-01-01",
         )
         assert r.status == "success"
         assert r.session_id is None
@@ -209,25 +229,34 @@ class TestJTMSResponse:
     def test_create_belief_response(self):
         belief = BeliefInfo(name="A", valid=True)
         r = CreateBeliefResponse(
-            status="success", operation="create_belief",
-            agent_id="a1", timestamp="2026-01-01", belief=belief,
+            status="success",
+            operation="create_belief",
+            agent_id="a1",
+            timestamp="2026-01-01",
+            belief=belief,
         )
         assert r.belief.name == "A"
 
     def test_add_justification_response(self):
         j = JustificationInfo(conclusion="C")
         r = AddJustificationResponse(
-            status="success", operation="add_justification",
-            agent_id="a1", timestamp="2026-01-01",
-            justification=j, conclusion_status=True,
+            status="success",
+            operation="add_justification",
+            agent_id="a1",
+            timestamp="2026-01-01",
+            justification=j,
+            conclusion_status=True,
         )
         assert r.conclusion_status is True
 
     def test_explain_belief_response(self):
         r = ExplainBeliefResponse(
-            status="success", operation="explain",
-            agent_id="a1", timestamp="2026-01-01",
-            belief_name="X", current_status=True,
+            status="success",
+            operation="explain",
+            agent_id="a1",
+            timestamp="2026-01-01",
+            belief_name="X",
+            current_status=True,
             explanation_text="Supported by A",
         )
         assert r.belief_name == "X"
@@ -235,9 +264,12 @@ class TestJTMSResponse:
 
     def test_query_beliefs_response(self):
         r = QueryBeliefsResponse(
-            status="success", operation="query",
-            agent_id="a1", timestamp="2026-01-01",
-            total_beliefs=5, filtered_count=3,
+            status="success",
+            operation="query",
+            agent_id="a1",
+            timestamp="2026-01-01",
+            total_beliefs=5,
+            filtered_count=3,
             beliefs=[BeliefInfo(name="A"), BeliefInfo(name="B")],
         )
         assert r.total_beliefs == 5
@@ -245,6 +277,7 @@ class TestJTMSResponse:
 
 
 # ── JTMSStatistics ──
+
 
 class TestJTMSStatistics:
     def test_defaults(self):
@@ -256,8 +289,11 @@ class TestJTMSStatistics:
 
     def test_custom(self):
         s = JTMSStatistics(
-            total_beliefs=10, valid_beliefs=5, invalid_beliefs=2,
-            unknown_beliefs=3, non_monotonic_beliefs=1,
+            total_beliefs=10,
+            valid_beliefs=5,
+            invalid_beliefs=2,
+            unknown_beliefs=3,
+            non_monotonic_beliefs=1,
             total_justifications=7,
         )
         assert s.total_beliefs == 10
@@ -266,11 +302,15 @@ class TestJTMSStatistics:
 
 # ── SessionInfo ──
 
+
 class TestSessionInfo:
     def test_all_fields(self):
         s = SessionInfo(
-            session_id="s1", agent_id="a1", session_name="Test Session",
-            created_at="2026-01-01", last_accessed="2026-01-02",
+            session_id="s1",
+            agent_id="a1",
+            session_name="Test Session",
+            created_at="2026-01-01",
+            last_accessed="2026-01-02",
             checkpoint_count=3,
         )
         assert s.session_id == "s1"
@@ -279,11 +319,14 @@ class TestSessionInfo:
 
 # ── GetJTMSStateResponse ──
 
+
 class TestGetJTMSStateResponse:
     def test_minimal(self):
         r = GetJTMSStateResponse(
-            status="success", operation="get_state",
-            agent_id="a1", timestamp="2026-01-01",
+            status="success",
+            operation="get_state",
+            agent_id="a1",
+            timestamp="2026-01-01",
         )
         assert r.beliefs == {}
         assert r.justifications_graph is None
@@ -292,8 +335,10 @@ class TestGetJTMSStateResponse:
     def test_with_stats(self):
         stats = JTMSStatistics(total_beliefs=5)
         r = GetJTMSStateResponse(
-            status="success", operation="get_state",
-            agent_id="a1", timestamp="2026-01-01",
+            status="success",
+            operation="get_state",
+            agent_id="a1",
+            timestamp="2026-01-01",
             statistics=stats,
         )
         assert r.statistics.total_beliefs == 5
@@ -301,12 +346,17 @@ class TestGetJTMSStateResponse:
 
 # ── SetBeliefValidityResponse ──
 
+
 class TestSetBeliefValidityResponse:
     def test_all_fields(self):
         r = SetBeliefValidityResponse(
-            status="success", operation="set_validity",
-            agent_id="a1", timestamp="2026-01-01",
-            belief_name="A", old_value=None, new_value=True,
+            status="success",
+            operation="set_validity",
+            agent_id="a1",
+            timestamp="2026-01-01",
+            belief_name="A",
+            old_value=None,
+            new_value=True,
             propagation_occurred=True,
         )
         assert r.belief_name == "A"
@@ -316,11 +366,14 @@ class TestSetBeliefValidityResponse:
 
 # ── Session Responses ──
 
+
 class TestSessionResponses:
     def test_create_session_response(self):
         r = CreateSessionResponse(
-            session_id="s1", agent_id="a1",
-            session_name="Test", created_at="2026-01-01",
+            session_id="s1",
+            agent_id="a1",
+            session_name="Test",
+            created_at="2026-01-01",
         )
         assert r.status == "success"
 
@@ -331,22 +384,27 @@ class TestSessionResponses:
 
     def test_checkpoint_info(self):
         c = CheckpointInfo(
-            checkpoint_id="c1", session_id="s1",
-            created_at="2026-01-01", description="Before change",
+            checkpoint_id="c1",
+            session_id="s1",
+            created_at="2026-01-01",
+            description="Before change",
         )
         assert c.auto_generated is False
         assert c.session_version == 1
 
     def test_create_checkpoint_response(self):
         r = CreateCheckpointResponse(
-            checkpoint_id="c1", session_id="s1",
-            description="Test", created_at="2026-01-01",
+            checkpoint_id="c1",
+            session_id="s1",
+            description="Test",
+            created_at="2026-01-01",
         )
         assert r.status == "success"
 
     def test_restore_checkpoint_response(self):
         r = RestoreCheckpointResponse(
-            session_id="s1", checkpoint_id="c1",
+            session_id="s1",
+            checkpoint_id="c1",
             restored_at="2026-01-01",
         )
         assert r.instances_restored == 0
@@ -354,10 +412,12 @@ class TestSessionResponses:
 
 # ── JTMSError ──
 
+
 class TestJTMSError:
     def test_required(self):
         e = JTMSError(
-            error_type="validation", error_message="Invalid input",
+            error_type="validation",
+            error_message="Invalid input",
             timestamp="2026-01-01",
         )
         assert e.error_type == "validation"
@@ -365,15 +425,18 @@ class TestJTMSError:
 
     def test_with_details(self):
         e = JTMSError(
-            error_type="not_found", error_message="Belief not found",
+            error_type="not_found",
+            error_message="Belief not found",
             error_details={"belief_name": "X"},
-            operation="explain", session_id="s1",
+            operation="explain",
+            session_id="s1",
             timestamp="2026-01-01",
         )
         assert e.error_details["belief_name"] == "X"
 
 
 # ── Import/Export ──
+
 
 class TestImportExport:
     def test_export_request_defaults(self):
@@ -383,27 +446,34 @@ class TestImportExport:
 
     def test_import_request(self):
         r = ImportJTMSRequest(
-            session_id="s1", state_data='{"beliefs": []}',
+            session_id="s1",
+            state_data='{"beliefs": []}',
         )
         assert r.format == "json"
 
     def test_export_response(self):
         r = ExportJTMSResponse(
-            instance_id="i1", format="json",
-            exported_data='{}', export_timestamp="2026-01-01",
+            instance_id="i1",
+            format="json",
+            exported_data="{}",
+            export_timestamp="2026-01-01",
         )
         assert r.status == "success"
 
     def test_import_response(self):
         r = ImportJTMSResponse(
-            session_id="s1", new_instance_id="i2",
-            format="json", beliefs_imported=5,
-            justifications_imported=3, import_timestamp="2026-01-01",
+            session_id="s1",
+            new_instance_id="i2",
+            format="json",
+            beliefs_imported=5,
+            justifications_imported=3,
+            import_timestamp="2026-01-01",
         )
         assert r.beliefs_imported == 5
 
 
 # ── PluginStatusResponse ──
+
 
 class TestPluginStatusResponse:
     def test_all_fields(self):
@@ -411,7 +481,13 @@ class TestPluginStatusResponse:
             plugin_name="JTMSPlugin",
             semantic_kernel_available=True,
             functions_count=5,
-            functions=["create_belief", "add_justification", "query", "explain", "export"],
+            functions=[
+                "create_belief",
+                "add_justification",
+                "query",
+                "explain",
+                "export",
+            ],
             jtms_service_active=True,
             session_manager_active=True,
         )
@@ -422,6 +498,7 @@ class TestPluginStatusResponse:
 
 # ── Serialization ──
 
+
 class TestSerialization:
     def test_belief_info_dict(self):
         b = BeliefInfo(name="A", valid=True)
@@ -431,8 +508,10 @@ class TestSerialization:
 
     def test_response_json(self):
         r = JTMSResponse(
-            status="success", operation="test",
-            agent_id="a1", timestamp="2026-01-01",
+            status="success",
+            operation="test",
+            agent_id="a1",
+            timestamp="2026-01-01",
         )
         j = r.model_dump_json()
         assert "success" in j

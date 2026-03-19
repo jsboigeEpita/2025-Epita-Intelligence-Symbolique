@@ -659,12 +659,16 @@ class TestInvokeCallables:
 
         mock_plugin = MagicMock()
         mock_plugin.parse_argument.return_value = '{"premise": "X", "conclusion": "Y"}'
-        mock_plugin.suggest_strategy.return_value = '{"strategy_name": "reductio", "confidence": 0.9}'
+        mock_plugin.suggest_strategy.return_value = (
+            '{"strategy_name": "reductio", "confidence": 0.9}'
+        )
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
         ):
-            result = await _invoke_counter_argument("Test", {"phase_quality_output": {"score": 5}})
+            result = await _invoke_counter_argument(
+                "Test", {"phase_quality_output": {"score": 5}}
+            )
         assert result["parsed_argument"]["premise"] == "X"
         assert result["suggested_strategy"]["strategy_name"] == "reductio"
         assert result["quality_context"] == {"score": 5}
@@ -692,7 +696,9 @@ class TestInvokeCallables:
         )
 
         mock_plugin = MagicMock()
-        mock_plugin.analyze_argument_quality.return_value = '{"score": 7, "winner": "pro"}'
+        mock_plugin.analyze_argument_quality.return_value = (
+            '{"score": 7, "winner": "pro"}'
+        )
         with patch(
             "argumentation_analysis.agents.core.debate.debate_agent.DebatePlugin",
             return_value=mock_plugin,
@@ -709,7 +715,7 @@ class TestInvokeCallables:
 
         mock_plugin = MagicMock()
         mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
-        mock_plugin.detect_conflicts_fn.return_value = '[]'
+        mock_plugin.detect_conflicts_fn.return_value = "[]"
         with patch(
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
             return_value=mock_plugin,
@@ -819,7 +825,9 @@ class TestInvokeCallables:
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ):
-            result = await _invoke_propositional_logic("p", {"formulas": "single_formula"})
+            result = await _invoke_propositional_logic(
+                "p", {"formulas": "single_formula"}
+            )
         assert result["formulas"] == ["single_formula"]
         assert result["satisfiable"] is False
 
@@ -947,17 +955,22 @@ class TestInvokeCallables:
         )
 
         mock_handler = MagicMock()
-        mock_handler.analyze_dung_framework.return_value = {"extensions": {"preferred": []}}
+        mock_handler.analyze_dung_framework.return_value = {
+            "extensions": {"preferred": []}
+        }
 
         # Patch at the module level where the import happens inside the function
-        with patch.dict("sys.modules", {
-            "argumentation_analysis.agents.core.logic.af_handler": MagicMock(
-                AFHandler=MagicMock(return_value=mock_handler)
-            ),
-            "argumentation_analysis.core.jvm_setup": MagicMock(
-                TweetyInitializer=MagicMock()
-            ),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "argumentation_analysis.agents.core.logic.af_handler": MagicMock(
+                    AFHandler=MagicMock(return_value=mock_handler)
+                ),
+                "argumentation_analysis.core.jvm_setup": MagicMock(
+                    TweetyInitializer=MagicMock()
+                ),
+            },
+        ):
             result = await _invoke_dung_extensions("text", {})
         # Should have called with default arg_0, arg_1, arg_2
         call_args = mock_handler.analyze_dung_framework.call_args
@@ -1010,7 +1023,9 @@ class TestInvokeCallables:
         )
 
         ctx = {
-            "phase_dung_output": {"extensions": {"preferred": [["a"], ["b"]], "grounded": [["a"]]}},
+            "phase_dung_output": {
+                "extensions": {"preferred": [["a"], ["b"]], "grounded": [["a"]]}
+            },
         }
         result = await _invoke_formal_synthesis("text", ctx)
         assert "extensions" in result["summary"]
@@ -1026,6 +1041,7 @@ class TestStateWriters:
 
     def _make_state(self):
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
         return UnifiedAnalysisState("Test text")
 
     def test_write_quality_to_state(self):
@@ -1035,7 +1051,12 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"note_finale": 7.5, "clarity": 8.0, "relevance": 6.0, "non_numeric": "skip"}
+        output = {
+            "note_finale": 7.5,
+            "clarity": 8.0,
+            "relevance": 6.0,
+            "non_numeric": "skip",
+        }
         _write_quality_to_state(output, state, {})
         assert "arg_input" in state.argument_quality_scores
         assert state.argument_quality_scores["arg_input"]["overall"] == 7.5
@@ -1110,7 +1131,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"beliefs": {"claim_0": "True", "claim_1": "False", "claim_2": "maybe"}}
+        output = {
+            "beliefs": {"claim_0": "True", "claim_1": "False", "claim_2": "maybe"}
+        }
         _write_jtms_to_state(output, state, {})
         assert len(state.jtms_beliefs) == 3
 
@@ -1188,7 +1211,11 @@ class TestStateWriters:
         state = self._make_state()
         output = {
             "detections": [
-                {"text": "attack the person", "label": "ad_hominem", "confidence": 0.92},
+                {
+                    "text": "attack the person",
+                    "label": "ad_hominem",
+                    "confidence": 0.92,
+                },
                 {"text": "straw man", "label": "straw_man", "confidence": 0.78},
             ]
         }
@@ -1222,7 +1249,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"results": [{"id": "doc1", "score": 0.95, "snippet": "relevant text"}]}
+        output = {
+            "results": [{"id": "doc1", "score": 0.95, "snippet": "relevant text"}]
+        }
         _write_semantic_index_to_state(output, state, {"input_data": "query"})
         assert len(state.semantic_index_refs) == 1
 
@@ -1269,7 +1298,13 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"claims": ["Claim one about something", "  ", "Claim two about another thing"]}
+        output = {
+            "claims": [
+                "Claim one about something",
+                "  ",
+                "Claim two about another thing",
+            ]
+        }
         _write_fact_extraction_to_state(output, state, {})
         # Only non-empty stripped strings are added
         assert len(state.extracts) == 2
@@ -1351,7 +1386,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        _write_modal_to_state({"formulas": 42, "valid": True, "modalities": "not list"}, state, {})
+        _write_modal_to_state(
+            {"formulas": 42, "valid": True, "modalities": "not list"}, state, {}
+        )
 
     def test_write_dung_extensions_to_state(self):
         """_write_dung_extensions_to_state writes Dung framework results."""
@@ -1401,7 +1438,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"summary": 42, "phase_results": "not dict", "overall_validity": "high"}
+        output = {
+            "summary": 42,
+            "phase_results": "not dict",
+            "overall_validity": "high",
+        }
         _write_formal_synthesis_to_state(output, state, {})
 
     def test_write_ranking_to_state(self):
@@ -1411,7 +1452,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"method": "categorizer", "arguments": ["a", "b"], "comparisons": [{"a": 1, "b": 2}]}
+        output = {
+            "method": "categorizer",
+            "arguments": ["a", "b"],
+            "comparisons": [{"a": 1, "b": 2}],
+        }
         _write_ranking_to_state(output, state, {})
 
     def test_write_ranking_to_state_bad_types(self):
@@ -1421,7 +1466,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        _write_ranking_to_state({"method": "x", "arguments": "bad", "comparisons": "bad"}, state, {})
+        _write_ranking_to_state(
+            {"method": "x", "arguments": "bad", "comparisons": "bad"}, state, {}
+        )
 
     def test_write_aspic_to_state(self):
         """_write_aspic_to_state writes ASPIC+ result."""
@@ -1430,7 +1477,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"reasoner_type": "simple", "extensions": [["a"]], "statistics": {"count": 1}}
+        output = {
+            "reasoner_type": "simple",
+            "extensions": [["a"]],
+            "statistics": {"count": 1},
+        }
         _write_aspic_to_state(output, state, {})
 
     def test_write_aspic_to_state_bad_types(self):
@@ -1459,7 +1510,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        _write_belief_revision_to_state({"original": "bad", "revised": "bad"}, state, {})
+        _write_belief_revision_to_state(
+            {"original": "bad", "revised": "bad"}, state, {}
+        )
 
     def test_write_dialogue_to_state(self):
         """_write_dialogue_to_state writes dialogue result."""
@@ -1468,7 +1521,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"topic": "AI", "outcome": "agreement", "dialogue_trace": [{"move": "claim"}]}
+        output = {
+            "topic": "AI",
+            "outcome": "agreement",
+            "dialogue_trace": [{"move": "claim"}],
+        }
         _write_dialogue_to_state(output, state, {})
 
     def test_write_dialogue_to_state_bad_trace(self):
@@ -1497,7 +1554,9 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        _write_probabilistic_to_state({"arguments": "bad", "acceptance_probabilities": "bad"}, state, {})
+        _write_probabilistic_to_state(
+            {"arguments": "bad", "acceptance_probabilities": "bad"}, state, {}
+        )
 
     def test_write_bipolar_to_state(self):
         """_write_bipolar_to_state writes bipolar result."""
@@ -1506,7 +1565,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"framework_type": "necessity", "arguments": ["a"], "supports": [["a", "b"]]}
+        output = {
+            "framework_type": "necessity",
+            "arguments": ["a"],
+            "supports": [["a", "b"]],
+        }
         _write_bipolar_to_state(output, state, {})
 
     def test_write_bipolar_to_state_bad_types(self):
@@ -1525,7 +1588,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"assumptions": ["a", "b"], "extensions": [["a"]], "semantics": "preferred"}
+        output = {
+            "assumptions": ["a", "b"],
+            "extensions": [["a"]],
+            "semantics": "preferred",
+        }
         _write_aba_to_state(output, state, {})
         assert len(state.dung_frameworks) == 1
 
@@ -1546,7 +1613,11 @@ class TestStateWriters:
         )
 
         state = self._make_state()
-        output = {"statements": ["s1"], "models": [{"s1": True}], "semantics": "grounded"}
+        output = {
+            "statements": ["s1"],
+            "models": [{"s1": True}],
+            "semantics": "grounded",
+        }
         _write_adf_to_state(output, state, {})
         assert len(state.dung_frameworks) == 1
 
@@ -1678,7 +1749,10 @@ class TestAdditionalWorkflows:
 
         wf = build_quality_gated_counter_workflow()
         counter_phase = wf.get_phase("counter")
-        assert counter_phase.condition({"phase_quality_output": {"note_finale": 5.0}}) is True
+        assert (
+            counter_phase.condition({"phase_quality_output": {"note_finale": 5.0}})
+            is True
+        )
 
     def test_quality_gate_function_blocks_when_low_score(self):
         """Quality gate function returns False when score <= 3.0."""
@@ -1688,7 +1762,10 @@ class TestAdditionalWorkflows:
 
         wf = build_quality_gated_counter_workflow()
         counter_phase = wf.get_phase("counter")
-        assert counter_phase.condition({"phase_quality_output": {"note_finale": 2.0}}) is False
+        assert (
+            counter_phase.condition({"phase_quality_output": {"note_finale": 2.0}})
+            is False
+        )
 
     def test_quality_gate_function_non_dict_output(self):
         """Quality gate function returns True for non-dict quality output."""
@@ -2076,8 +2153,9 @@ class TestHierarchicalFallacyWorkflow:
             _invoke_hierarchical_fallacy,
         )
 
-        with patch("os.path.isfile", return_value=True), \
-             patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        with patch("os.path.isfile", return_value=True), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": ""}, clear=False
+        ):
             result = await _invoke_hierarchical_fallacy("text", {})
         assert result["exploration_method"] == "error"
         assert result["fallacies"] == []
@@ -2123,8 +2201,9 @@ class TestHierarchicalFallacyWorkflow:
         mock_llm_service = MagicMock()
         mock_kernel_cls = MagicMock()
 
-        with patch("os.path.isfile", return_value=True), \
-             patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False):
+        with patch("os.path.isfile", return_value=True), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False
+        ):
             # Mock at the source modules that the function imports from
             import argumentation_analysis.plugins.fallacy_workflow_plugin as fwp_mod
             import semantic_kernel.connectors.ai.open_ai as sk_oai
@@ -2140,9 +2219,7 @@ class TestHierarchicalFallacyWorkflow:
             sk_kernel.Kernel = mock_kernel_cls
             openai_mod.AsyncOpenAI = MagicMock()
             try:
-                result = await _invoke_hierarchical_fallacy(
-                    "some argument text", {}
-                )
+                result = await _invoke_hierarchical_fallacy("some argument text", {})
             finally:
                 fwp_mod.FallacyWorkflowPlugin = orig_plugin
                 sk_oai.OpenAIChatCompletion = orig_oai

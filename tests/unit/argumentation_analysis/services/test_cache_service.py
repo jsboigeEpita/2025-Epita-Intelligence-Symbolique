@@ -19,6 +19,7 @@ def service(cache_dir):
 
 # ── Init ──
 
+
 class TestInit:
     def test_creates_dir(self, cache_dir):
         assert not cache_dir.exists()
@@ -32,6 +33,7 @@ class TestInit:
 
 
 # ── get_cache_filepath ──
+
 
 class TestGetCacheFilepath:
     def test_returns_path(self, service):
@@ -52,12 +54,14 @@ class TestGetCacheFilepath:
 
     def test_sha256_based(self, service):
         import hashlib
+
         url = "https://example.com"
         expected = hashlib.sha256(url.encode()).hexdigest() + ".txt"
         assert service.get_cache_filepath(url).name == expected
 
 
 # ── save_to_cache / load_from_cache ──
+
 
 class TestSaveAndLoad:
     def test_roundtrip(self, service):
@@ -96,6 +100,7 @@ class TestSaveAndLoad:
 
 # ── clear_cache ──
 
+
 class TestClearCache:
     def test_clear_specific_url(self, service):
         url = "https://example.com"
@@ -126,6 +131,7 @@ class TestClearCache:
 
 # ── get_cache_size ──
 
+
 class TestGetCacheSize:
     def test_empty_cache(self, service):
         count, size = service.get_cache_size()
@@ -147,6 +153,7 @@ class TestGetCacheSize:
 
 # ── get_cache_info ──
 
+
 class TestGetCacheInfo:
     def test_empty_info(self, service):
         info = service.get_cache_info()
@@ -159,6 +166,7 @@ class TestGetCacheInfo:
 
 
 # ── _format_size ──
+
 
 class TestFormatSize:
     def test_bytes(self, service):

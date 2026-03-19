@@ -96,9 +96,7 @@ class TestFixMissingFirstLetter:
         data = [
             {
                 "source_name": "No Template",
-                "extracts": [
-                    {"extract_name": "E1", "start_marker": "Hello"}
-                ],
+                "extracts": [{"extract_name": "E1", "start_marker": "Hello"}],
             }
         ]
         f = tmp_path / "no_template.json"

@@ -17,16 +17,21 @@ from argumentation_analysis.services.fact_verification_service import (
 )
 import argumentation_analysis.services.fact_verification_service as fvs_module
 
-
 # ============================================================
 # VerificationStatus enum
 # ============================================================
 
+
 class TestVerificationStatus:
     def test_all_values(self):
         expected = {
-            "verified_true", "verified_false", "partially_true",
-            "disputed", "unverifiable", "insufficient_info", "error",
+            "verified_true",
+            "verified_false",
+            "partially_true",
+            "disputed",
+            "unverifiable",
+            "insufficient_info",
+            "error",
         }
         assert {vs.value for vs in VerificationStatus} == expected
 
@@ -46,11 +51,15 @@ class TestVerificationStatus:
 # SourceReliability enum
 # ============================================================
 
+
 class TestSourceReliability:
     def test_all_values(self):
         expected = {
-            "highly_reliable", "moderately_reliable",
-            "questionable", "unreliable", "unknown",
+            "highly_reliable",
+            "moderately_reliable",
+            "questionable",
+            "unreliable",
+            "unknown",
         }
         assert {sr.value for sr in SourceReliability} == expected
 
@@ -64,6 +73,7 @@ class TestSourceReliability:
 # ============================================================
 # VerificationResult dataclass
 # ============================================================
+
 
 class TestVerificationResult:
     @pytest.fixture
@@ -116,6 +126,7 @@ class TestVerificationResult:
 # FactVerificationService
 # ============================================================
 
+
 class TestFactVerificationService:
     def test_init_default_config(self):
         service = FactVerificationService()
@@ -130,29 +141,53 @@ class TestFactVerificationService:
     def test_source_reliability_map_contains_known_sources(self):
         service = FactVerificationService()
         assert "wikipedia.org" in service.source_reliability_map
-        assert service.source_reliability_map["wikipedia.org"] is SourceReliability.HIGHLY_RELIABLE
+        assert (
+            service.source_reliability_map["wikipedia.org"]
+            is SourceReliability.HIGHLY_RELIABLE
+        )
         assert "lemonde.fr" in service.source_reliability_map
         assert "huffingtonpost.fr" in service.source_reliability_map
-        assert service.source_reliability_map["huffingtonpost.fr"] is SourceReliability.MODERATELY_RELIABLE
+        assert (
+            service.source_reliability_map["huffingtonpost.fr"]
+            is SourceReliability.MODERATELY_RELIABLE
+        )
 
     def test_assess_source_reliability_known(self):
         service = FactVerificationService()
-        assert service._assess_source_reliability("wikipedia.org") is SourceReliability.HIGHLY_RELIABLE
-        assert service._assess_source_reliability("bbc.com") is SourceReliability.HIGHLY_RELIABLE
-        assert service._assess_source_reliability("huffingtonpost.fr") is SourceReliability.MODERATELY_RELIABLE
+        assert (
+            service._assess_source_reliability("wikipedia.org")
+            is SourceReliability.HIGHLY_RELIABLE
+        )
+        assert (
+            service._assess_source_reliability("bbc.com")
+            is SourceReliability.HIGHLY_RELIABLE
+        )
+        assert (
+            service._assess_source_reliability("huffingtonpost.fr")
+            is SourceReliability.MODERATELY_RELIABLE
+        )
 
     def test_assess_source_reliability_unknown(self):
         service = FactVerificationService()
-        assert service._assess_source_reliability("randomsite.xyz") is SourceReliability.UNKNOWN
+        assert (
+            service._assess_source_reliability("randomsite.xyz")
+            is SourceReliability.UNKNOWN
+        )
 
     def test_assess_source_reliability_case_insensitive(self):
         service = FactVerificationService()
-        assert service._assess_source_reliability("WIKIPEDIA.ORG") is SourceReliability.HIGHLY_RELIABLE
+        assert (
+            service._assess_source_reliability("WIKIPEDIA.ORG")
+            is SourceReliability.HIGHLY_RELIABLE
+        )
 
     def test_assess_source_reliability_subdomain(self):
         service = FactVerificationService()
         # "bbc.com" is in map, so "news.bbc.com" should match
-        assert service._assess_source_reliability("news.bbc.com") is SourceReliability.HIGHLY_RELIABLE
+        assert (
+            service._assess_source_reliability("news.bbc.com")
+            is SourceReliability.HIGHLY_RELIABLE
+        )
 
     @pytest.mark.asyncio
     async def test_verify_claim(self):
@@ -183,6 +218,7 @@ class TestFactVerificationService:
 # ============================================================
 # get_verification_service singleton
 # ============================================================
+
 
 class TestGetVerificationService:
     def setup_method(self):

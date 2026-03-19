@@ -38,7 +38,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowExecutor,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -201,7 +200,9 @@ class TestConversationConfig:
         assert cfg.convergence_fn is fn
 
     def test_convergence_fn_callable(self):
-        cfg = ConversationConfig(convergence_fn=lambda p, c: p.confidence == c.confidence)
+        cfg = ConversationConfig(
+            convergence_fn=lambda p, c: p.confidence == c.confidence
+        )
         tr1 = TurnResult(1, {}, 0.5, False)
         tr2 = TurnResult(2, {}, 0.5, False)
         assert cfg.convergence_fn(tr1, tr2) is True
@@ -217,9 +218,11 @@ class TestConversationalPipeline:
 
     async def test_single_round_high_confidence(self):
         """Single round with high confidence exits immediately."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
+            ]
+        )
         pipeline = ConversationalPipeline(
             strategy, ConversationConfig(max_rounds=5, confidence_threshold=0.8)
         )
@@ -230,11 +233,13 @@ class TestConversationalPipeline:
 
     async def test_multi_round_reaches_max(self):
         """Low confidence rounds hit max_rounds."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1")}, 0.3, True),
-            TurnResult(2, {"p1": make_phase_result("p1")}, 0.4, True),
-            TurnResult(3, {"p1": make_phase_result("p1")}, 0.5, True),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {"p1": make_phase_result("p1")}, 0.3, True),
+                TurnResult(2, {"p1": make_phase_result("p1")}, 0.4, True),
+                TurnResult(3, {"p1": make_phase_result("p1")}, 0.5, True),
+            ]
+        )
         pipeline = ConversationalPipeline(
             strategy, ConversationConfig(max_rounds=3, confidence_threshold=0.8)
         )
@@ -244,10 +249,12 @@ class TestConversationalPipeline:
 
     async def test_convergence_stops_early(self):
         """Custom convergence function stops execution."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1")}, 0.5, True),
-            TurnResult(2, {"p1": make_phase_result("p1")}, 0.5, True),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {"p1": make_phase_result("p1")}, 0.5, True),
+                TurnResult(2, {"p1": make_phase_result("p1")}, 0.5, True),
+            ]
+        )
         pipeline = ConversationalPipeline(
             strategy,
             ConversationConfig(
@@ -262,14 +269,14 @@ class TestConversationalPipeline:
 
     async def test_context_carries_turn_number(self):
         """Each round receives incrementing turn_number in context."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {}, 0.3, True),
-            TurnResult(2, {}, 0.3, True),
-            TurnResult(3, {}, 0.9, False),
-        ])
-        pipeline = ConversationalPipeline(
-            strategy, ConversationConfig(max_rounds=3)
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {}, 0.3, True),
+                TurnResult(2, {}, 0.3, True),
+                TurnResult(3, {}, 0.9, False),
+            ]
         )
+        pipeline = ConversationalPipeline(strategy, ConversationConfig(max_rounds=3))
         await pipeline.execute("test")
         assert strategy.contexts_received[0]["turn_number"] == 1
         assert strategy.contexts_received[1]["turn_number"] == 2
@@ -277,13 +284,17 @@ class TestConversationalPipeline:
 
     async def test_previous_outputs_in_context(self):
         """Subsequent rounds get previous_outputs from prior turn."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1", output={"score": 5})}, 0.3, True),
-            TurnResult(2, {"p1": make_phase_result("p1", output={"score": 8})}, 0.9, False),
-        ])
-        pipeline = ConversationalPipeline(
-            strategy, ConversationConfig(max_rounds=3)
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(
+                    1, {"p1": make_phase_result("p1", output={"score": 5})}, 0.3, True
+                ),
+                TurnResult(
+                    2, {"p1": make_phase_result("p1", output={"score": 8})}, 0.9, False
+                ),
+            ]
         )
+        pipeline = ConversationalPipeline(strategy, ConversationConfig(max_rounds=3))
         await pipeline.execute("test")
         # First round: no previous
         assert strategy.contexts_received[0].get("previous_outputs") is None
@@ -293,28 +304,27 @@ class TestConversationalPipeline:
     async def test_failed_round(self):
         """Strategy exception produces failed status."""
         strategy = FailingTurnStrategy(fail_on=1)
-        pipeline = ConversationalPipeline(
-            strategy, ConversationConfig(max_rounds=3)
-        )
+        pipeline = ConversationalPipeline(strategy, ConversationConfig(max_rounds=3))
         result = await pipeline.execute("test")
         assert result["status"] == "failed"
         assert "Strategy failed" in result["summary"]
 
     async def test_convergence_fn_exception_continues(self):
         """Convergence function error doesn't crash — continues looping."""
+
         def bad_convergence(prev, curr):
             raise ValueError("convergence boom")
 
-        strategy = MockTurnStrategy([
-            TurnResult(1, {}, 0.3, True),
-            TurnResult(2, {}, 0.3, True),
-            TurnResult(3, {}, 0.9, False),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {}, 0.3, True),
+                TurnResult(2, {}, 0.3, True),
+                TurnResult(3, {}, 0.9, False),
+            ]
+        )
         pipeline = ConversationalPipeline(
             strategy,
-            ConversationConfig(
-                max_rounds=3, convergence_fn=bad_convergence
-            ),
+            ConversationConfig(max_rounds=3, convergence_fn=bad_convergence),
         )
         result = await pipeline.execute("test")
         # Convergence fn always fails → reaches round 3 where confidence hits threshold
@@ -322,9 +332,11 @@ class TestConversationalPipeline:
 
     async def test_result_dict_structure(self):
         """Verify complete result dict structure."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
+            ]
+        )
         pipeline = ConversationalPipeline(strategy)
         result = await pipeline.execute("test")
         assert "status" in result
@@ -546,7 +558,9 @@ class TestConfidenceExtraction:
 
     def test_handles_failed_phases(self):
         results = {
-            "p1": make_phase_result("p1", PhaseStatus.FAILED, output={"confidence": 0.9}),
+            "p1": make_phase_result(
+                "p1", PhaseStatus.FAILED, output={"confidence": 0.9}
+            ),
         }
         assert _extract_confidence(results) == 0.5  # failed phases ignored
 
@@ -561,7 +575,9 @@ class TestQuestionExtraction:
 
     def test_extracts_questions(self):
         results = {
-            "p1": make_phase_result("p1", output={"user_question": "What do you mean?"}),
+            "p1": make_phase_result(
+                "p1", output={"user_question": "What do you mean?"}
+            ),
         }
         questions = _extract_questions(results)
         assert questions == ["What do you mean?"]
@@ -588,23 +604,25 @@ class TestSummary:
     """Tests for summary generation."""
 
     async def test_summary_format(self):
-        strategy = MockTurnStrategy([
-            TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {"p1": make_phase_result("p1")}, 0.9, False),
+            ]
+        )
         pipeline = ConversationalPipeline(strategy)
         result = await pipeline.execute("test")
         assert "1 round(s)" in result["summary"]
         assert "high_confidence" in result["summary"]
 
     async def test_multi_round_summary(self):
-        strategy = MockTurnStrategy([
-            TurnResult(1, {}, 0.3, True),
-            TurnResult(2, {}, 0.4, True),
-            TurnResult(3, {}, 0.9, False),
-        ])
-        pipeline = ConversationalPipeline(
-            strategy, ConversationConfig(max_rounds=3)
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {}, 0.3, True),
+                TurnResult(2, {}, 0.4, True),
+                TurnResult(3, {}, 0.9, False),
+            ]
         )
+        pipeline = ConversationalPipeline(strategy, ConversationConfig(max_rounds=3))
         result = await pipeline.execute("test")
         assert "3 round(s)" in result["summary"]
 
@@ -647,9 +665,11 @@ class TestEdgeCases:
 
     async def test_pipeline_with_base_context(self):
         """Base context is merged into each round's context."""
-        strategy = MockTurnStrategy([
-            TurnResult(1, {}, 0.9, False),
-        ])
+        strategy = MockTurnStrategy(
+            [
+                TurnResult(1, {}, 0.9, False),
+            ]
+        )
         pipeline = ConversationalPipeline(strategy)
         await pipeline.execute("test", context={"custom_key": "custom_value"})
         assert strategy.contexts_received[0]["custom_key"] == "custom_value"

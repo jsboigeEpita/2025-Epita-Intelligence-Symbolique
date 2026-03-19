@@ -29,7 +29,6 @@ from argumentation_analysis.plugins.identification_models import (
 )
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 
-
 # ---------------------------------------------------------------------------
 # Sample taxonomy data for testing
 # ---------------------------------------------------------------------------
@@ -191,7 +190,9 @@ class TestConstruction:
         assert roots[0]["PK"] == "1"
         assert roots[1]["PK"] == "10"
 
-    def test_construction_with_taxonomy_file(self, mock_kernel, mock_llm_service, tmp_path):
+    def test_construction_with_taxonomy_file(
+        self, mock_kernel, mock_llm_service, tmp_path
+    ):
         csv_file = tmp_path / "taxonomy.csv"
         csv_file.write_text(
             "PK,path,depth,name\n1,root,1,Root Fallacy\n",
@@ -455,12 +456,14 @@ class TestIdentifiedFallacyModel:
 class TestOneShotMode:
     async def test_one_shot_with_json_response(self, plugin, mock_llm_service):
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: json.dumps({
-            "fallacy_name": "Ad Hominem",
-            "taxonomy_pk": "11",
-            "explanation": "Attacks the person",
-            "confidence": 0.8,
-        })
+        mock_response.__str__ = lambda self: json.dumps(
+            {
+                "fallacy_name": "Ad Hominem",
+                "taxonomy_pk": "11",
+                "explanation": "Attacks the person",
+                "confidence": 0.8,
+            }
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         result = await plugin._run_one_shot("You are stupid so you are wrong")
@@ -476,17 +479,23 @@ class TestOneShotMode:
         result = await plugin._run_one_shot("You are wrong")
         parsed = json.loads(result)
         assert "Ad Hominem" in parsed["fallacies"][0]["fallacy_type"]
-        assert parsed["fallacies"][0]["confidence"] == 0.3  # Low confidence for plain text
+        assert (
+            parsed["fallacies"][0]["confidence"] == 0.3
+        )  # Low confidence for plain text
 
     async def test_one_shot_on_llm_error(self, plugin, mock_llm_service):
-        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("API error")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError(
+            "API error"
+        )
         result = await plugin._run_one_shot("test")
         parsed = json.loads(result)
         assert "error" in parsed
 
     async def test_use_one_shot_flag(self, plugin, mock_llm_service):
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "Test", "taxonomy_pk": "1", "explanation": "test", "confidence": 0.5}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Test", "taxonomy_pk": "1", "explanation": "test", "confidence": 0.5}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         result = await plugin.run_guided_analysis(
@@ -530,12 +539,12 @@ class TestIterativeDeepening:
         mock_llm_service.get_chat_message_contents.return_value = []
 
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "Unknown", "taxonomy_pk": "", "explanation": "fallback", "confidence": 0.3}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Unknown", "taxonomy_pk": "", "explanation": "fallback", "confidence": 0.3}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
-        result = await empty_plugin.run_guided_analysis(
-            argument_text="Some text"
-        )
+        result = await empty_plugin.run_guided_analysis(argument_text="Some text")
         parsed = json.loads(result)
         assert parsed["exploration_method"] == "one_shot"
 
@@ -548,21 +557,23 @@ class TestIterativeDeepening:
         mock_llm_service.get_chat_message_contents.return_value = [msg]
 
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "Fallback", "taxonomy_pk": "", "explanation": "no tools", "confidence": 0.3}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Fallback", "taxonomy_pk": "", "explanation": "no tools", "confidence": 0.3}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         result = await plugin.run_guided_analysis(argument_text="text")
         parsed = json.loads(result)
         assert parsed["exploration_method"] == "one_shot"
 
-    async def test_falls_back_on_root_selection_error(
-        self, plugin, mock_llm_service
-    ):
+    async def test_falls_back_on_root_selection_error(self, plugin, mock_llm_service):
         """If root selection LLM call fails, fall back to one-shot."""
         mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("fail")
 
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "Fallback", "taxonomy_pk": "", "explanation": "error", "confidence": 0.2}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Fallback", "taxonomy_pk": "", "explanation": "error", "confidence": 0.2}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         result = await plugin.run_guided_analysis(argument_text="text")
@@ -579,7 +590,9 @@ class TestTraceLogging:
     async def test_trace_log_file_created(self, plugin, mock_llm_service, tmp_path):
         # Use one-shot mode for simpler mock setup
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "Test", "taxonomy_pk": "1", "explanation": "t", "confidence": 0.5}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Test", "taxonomy_pk": "1", "explanation": "t", "confidence": 0.5}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         log_file = tmp_path / "trace.log"
@@ -592,7 +605,9 @@ class TestTraceLogging:
 
     async def test_handlers_cleaned_up(self, plugin, mock_llm_service, tmp_path):
         mock_response = MagicMock()
-        mock_response.__str__ = lambda self: '{"fallacy_name": "T", "taxonomy_pk": "", "explanation": "", "confidence": 0.5}'
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "T", "taxonomy_pk": "", "explanation": "", "confidence": 0.5}'
+        )
         mock_llm_service.get_chat_message_content.return_value = mock_response
 
         log_file = tmp_path / "trace.log"

@@ -138,7 +138,11 @@ class TestAuthenticTweetyIntegration:
     def test_real_tweety_jar_availability(self):
         """Test de disponibilité du JAR Tweety authentique."""
         # Chemins possibles pour le JAR Tweety
-        possible_jar_paths = list(PROJECT_ROOT.glob("libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar")) + [
+        possible_jar_paths = list(
+            PROJECT_ROOT.glob(
+                "libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"
+            )
+        ) + [
             PROJECT_ROOT / "libs/tweety-full.jar",
             PROJECT_ROOT / "libs/tweety.jar",
         ]

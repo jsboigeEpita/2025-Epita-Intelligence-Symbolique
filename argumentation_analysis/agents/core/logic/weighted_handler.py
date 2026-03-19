@@ -44,12 +44,8 @@ class WeightedHandler:
         self._WeightedAF = jpype.JClass(f"{pkg}.syntax.WeightedArgumentationFramework")
 
         # Dung classes shared across AF variants
-        self._Argument = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Argument"
-        )
-        self._Attack = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Attack"
-        )
+        self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+        self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
 
         # Load reasoners
         self._reasoners = {}
@@ -123,8 +119,7 @@ class WeightedHandler:
                 "semantics": semantics,
                 "arguments": sorted(arguments),
                 "attacks": [
-                    {"source": s, "target": t, "weight": w}
-                    for s, t, w in attacks
+                    {"source": s, "target": t, "weight": w} for s, t, w in attacks
                 ],
                 "extensions": extensions,
                 "extensions_count": len(extensions),

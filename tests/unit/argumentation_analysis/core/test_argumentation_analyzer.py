@@ -8,7 +8,6 @@ import sys
 import pytest
 from unittest.mock import MagicMock
 
-
 # The module imports UnifiedTextAnalysisPipeline from pipelines.unified_text_analysis
 # which has a deep import chain (bootstrap.get_fallacy_detector, etc.).
 # We inject mocks into sys.modules BEFORE importing the analyzer module.
@@ -26,15 +25,19 @@ _mock_analysis_service_mod.AnalysisService = MagicMock(
 )
 
 # Save originals if they exist
-_orig_pipeline = sys.modules.get("argumentation_analysis.pipelines.unified_text_analysis")
+_orig_pipeline = sys.modules.get(
+    "argumentation_analysis.pipelines.unified_text_analysis"
+)
 _orig_service = sys.modules.get(
     "argumentation_analysis.services.web_api.services.analysis_service"
 )
 
-sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = _mock_pipeline_mod
-sys.modules[
-    "argumentation_analysis.services.web_api.services.analysis_service"
-] = _mock_analysis_service_mod
+sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = (
+    _mock_pipeline_mod
+)
+sys.modules["argumentation_analysis.services.web_api.services.analysis_service"] = (
+    _mock_analysis_service_mod
+)
 
 from argumentation_analysis.core.argumentation_analyzer import (
     ArgumentationAnalyzer,
@@ -43,14 +46,16 @@ from argumentation_analysis.core.argumentation_analyzer import (
 
 # Restore originals (or remove mocks) so other tests aren't affected
 if _orig_pipeline is not None:
-    sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = _orig_pipeline
+    sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = (
+        _orig_pipeline
+    )
 else:
     sys.modules.pop("argumentation_analysis.pipelines.unified_text_analysis", None)
 
 if _orig_service is not None:
-    sys.modules[
-        "argumentation_analysis.services.web_api.services.analysis_service"
-    ] = _orig_service
+    sys.modules["argumentation_analysis.services.web_api.services.analysis_service"] = (
+        _orig_service
+    )
 else:
     sys.modules.pop(
         "argumentation_analysis.services.web_api.services.analysis_service", None
@@ -60,6 +65,7 @@ else:
 # ============================================================
 # Initialization (degraded mode)
 # ============================================================
+
 
 class TestInit:
     def test_default_init_degraded(self):
@@ -83,6 +89,7 @@ class TestInit:
 # ============================================================
 # _basic_analysis (pure logic)
 # ============================================================
+
 
 class TestBasicAnalysis:
     def test_text_length(self):
@@ -114,7 +121,10 @@ class TestBasicAnalysis:
         analyzer = ArgumentationAnalyzer()
         result = analyzer._basic_analysis("text")
         assert "message" in result
-        assert "basique" in result["message"].lower() or "basic" in result["message"].lower()
+        assert (
+            "basique" in result["message"].lower()
+            or "basic" in result["message"].lower()
+        )
 
     def test_empty_text(self):
         analyzer = ArgumentationAnalyzer()
@@ -132,6 +142,7 @@ class TestBasicAnalysis:
 # ============================================================
 # analyze_text
 # ============================================================
+
 
 class TestAnalyzeText:
     def test_empty_text_returns_error(self):
@@ -205,6 +216,7 @@ class TestAnalyzeText:
 # get_available_features
 # ============================================================
 
+
 class TestGetAvailableFeatures:
     def test_degraded_mode_only_basic(self):
         analyzer = ArgumentationAnalyzer()
@@ -233,12 +245,17 @@ class TestGetAvailableFeatures:
         analyzer.analysis_service = MagicMock()
         features = analyzer.get_available_features()
         assert len(features) == 3
-        assert set(features) == {"unified_pipeline", "analysis_service", "basic_analysis"}
+        assert set(features) == {
+            "unified_pipeline",
+            "analysis_service",
+            "basic_analysis",
+        }
 
 
 # ============================================================
 # validate_configuration
 # ============================================================
+
 
 class TestValidateConfiguration:
     def test_degraded_mode_partial(self):
@@ -280,6 +297,7 @@ class TestValidateConfiguration:
 # ============================================================
 # create_analysis_state
 # ============================================================
+
 
 class TestCreateAnalysisState:
     def test_raises_without_initial_text(self):

@@ -31,8 +31,8 @@ def setup_jvm():
 
     project_root = get_project_root_from_env()
     libs_dir = project_root / "libs" / "tweety"
-    full_jar_path = (
-        next(libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None)
+    full_jar_path = next(
+        libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None
     )
     if not full_jar_path or not full_jar_path.exists():
         raise FileNotFoundError(

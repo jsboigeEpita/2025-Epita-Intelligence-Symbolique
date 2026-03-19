@@ -589,12 +589,8 @@ class MCPService:
             "list_workflows": {
                 "description": "Liste les workflows d'analyse disponibles"
             },
-            "run_workflow": {
-                "description": "Exécute un workflow d'analyse nommé"
-            },
-            "get_workflow_details": {
-                "description": "Détails d'un workflow spécifique"
-            },
+            "run_workflow": {"description": "Exécute un workflow d'analyse nommé"},
+            "get_workflow_details": {"description": "Détails d'un workflow spécifique"},
             "start_conversation": {
                 "description": "Démarre une conversation d'analyse multi-tour"
             },
@@ -607,9 +603,7 @@ class MCPService:
             "list_capabilities": {
                 "description": "Liste les capacités enregistrées et leurs fournisseurs"
             },
-            "invoke_capability": {
-                "description": "Invoque une capacité par nom"
-            },
+            "invoke_capability": {"description": "Invoque une capacité par nom"},
             "get_registry_summary": {
                 "description": "Résumé détaillé du registre de capacités"
             },

@@ -44,17 +44,17 @@ class QualityScoringPlugin:
 
     @kernel_function(
         name="get_quality_score",
-        description=(
-            "Get the overall quality score (0-9) for an argument text."
-        ),
+        description=("Get the overall quality score (0-9) for an argument text."),
     )
     def get_quality_score(self, text: str) -> str:
         """Return just the overall quality score as JSON."""
         result = self.evaluator.evaluate(text)
-        return json.dumps({
-            "note_finale": result["note_finale"],
-            "note_moyenne": result["note_moyenne"],
-        })
+        return json.dumps(
+            {
+                "note_finale": result["note_finale"],
+                "note_moyenne": result["note_moyenne"],
+            }
+        )
 
     @kernel_function(
         name="list_virtues",

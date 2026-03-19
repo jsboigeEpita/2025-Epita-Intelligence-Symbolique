@@ -22,10 +22,10 @@ from argumentation_analysis.config.settings import (
     settings,
 )
 
-
 # ============================================================
 # Module-level singleton
 # ============================================================
+
 
 class TestModuleSingleton:
     def test_settings_is_app_settings_instance(self):
@@ -45,6 +45,7 @@ class TestModuleSingleton:
 # ============================================================
 # OpenAISettings
 # ============================================================
+
 
 class TestOpenAISettings:
     def test_default_chat_model(self):
@@ -73,6 +74,7 @@ class TestOpenAISettings:
 # AzureOpenAISettings
 # ============================================================
 
+
 class TestAzureOpenAISettings:
     def test_api_key_optional(self):
         s = AzureOpenAISettings()
@@ -96,6 +98,7 @@ class TestAzureOpenAISettings:
 # TikaSettings
 # ============================================================
 
+
 class TestTikaSettings:
     def test_timeout_is_int(self):
         s = TikaSettings()
@@ -113,6 +116,7 @@ class TestTikaSettings:
 # JinaSettings
 # ============================================================
 
+
 class TestJinaSettings:
     def test_reader_prefix_default(self):
         s = JinaSettings()
@@ -122,6 +126,7 @@ class TestJinaSettings:
 # ============================================================
 # NetworkSettings
 # ============================================================
+
 
 class TestNetworkSettings:
     def test_breaker_defaults(self):
@@ -145,6 +150,7 @@ class TestNetworkSettings:
 # UISettings
 # ============================================================
 
+
 class TestUISettings:
     def test_temp_download_dir_default(self):
         s = UISettings()
@@ -165,6 +171,7 @@ class TestUISettings:
 # ============================================================
 # ServiceManagerSettings
 # ============================================================
+
 
 class TestServiceManagerSettings:
     def test_defaults(self):
@@ -203,6 +210,7 @@ class TestServiceManagerSettings:
 # JVMSettings
 # ============================================================
 
+
 class TestJVMSettings:
     def test_java_version_defaults(self):
         s = JVMSettings()
@@ -229,6 +237,7 @@ class TestJVMSettings:
 # ============================================================
 # AppSettings — structure and defaults
 # ============================================================
+
 
 class TestAppSettings:
     def test_debug_mode_default(self):

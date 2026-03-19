@@ -15,8 +15,8 @@ from argumentation_analysis.agents.core.counter_argument.definitions import (
     CounterArgumentType,
 )
 
-
 # ── ArgumentParser init ──
+
 
 class TestArgumentParserInit:
     def test_has_premise_markers(self):
@@ -42,6 +42,7 @@ class TestArgumentParserInit:
 
 # ── parse_argument ──
 
+
 class TestParseArgument:
     @pytest.fixture
     def parser(self):
@@ -60,7 +61,10 @@ class TestParseArgument:
     def test_extracts_conclusion_with_marker(self, parser):
         text = "Il pleut. Donc il faut un parapluie."
         result = parser.parse_argument(text)
-        assert "donc" in result.conclusion.lower() or "parapluie" in result.conclusion.lower()
+        assert (
+            "donc" in result.conclusion.lower()
+            or "parapluie" in result.conclusion.lower()
+        )
 
     def test_single_sentence(self, parser):
         text = "Le ciel est bleu."
@@ -79,6 +83,7 @@ class TestParseArgument:
 
 
 # ── _extract_premises ──
+
 
 class TestExtractPremises:
     @pytest.fixture
@@ -113,6 +118,7 @@ class TestExtractPremises:
 
 # ── _extract_conclusion ──
 
+
 class TestExtractConclusion:
     @pytest.fixture
     def parser(self):
@@ -144,28 +150,46 @@ class TestExtractConclusion:
 
 # ── _determine_argument_type ──
 
+
 class TestDetermineArgumentType:
     @pytest.fixture
     def parser(self):
         return ArgumentParser()
 
     def test_deductive_tous(self, parser):
-        assert parser._determine_argument_type("Tous les hommes sont mortels.") == "deductive"
+        assert (
+            parser._determine_argument_type("Tous les hommes sont mortels.")
+            == "deductive"
+        )
 
     def test_deductive_chaque(self, parser):
-        assert parser._determine_argument_type("Chaque étudiant doit réussir.") == "deductive"
+        assert (
+            parser._determine_argument_type("Chaque étudiant doit réussir.")
+            == "deductive"
+        )
 
     def test_inductive_generalement(self, parser):
-        assert parser._determine_argument_type("Généralement, il fait beau en été.") == "inductive"
+        assert (
+            parser._determine_argument_type("Généralement, il fait beau en été.")
+            == "inductive"
+        )
 
     def test_inductive_souvent(self, parser):
-        assert parser._determine_argument_type("Il est souvent en retard.") == "inductive"
+        assert (
+            parser._determine_argument_type("Il est souvent en retard.") == "inductive"
+        )
 
     def test_abductive_meilleure_explication(self, parser):
-        assert parser._determine_argument_type("La meilleure explication est...") == "abductive"
+        assert (
+            parser._determine_argument_type("La meilleure explication est...")
+            == "abductive"
+        )
 
     def test_abductive_probablement(self, parser):
-        assert parser._determine_argument_type("C'est probablement la cause.") == "abductive"
+        assert (
+            parser._determine_argument_type("C'est probablement la cause.")
+            == "abductive"
+        )
 
     def test_si_alors_deductive(self, parser):
         assert parser._determine_argument_type("Si A alors B.") == "deductive"
@@ -174,13 +198,19 @@ class TestDetermineArgumentType:
         assert parser._determine_argument_type("Le ciel.") == "inductive"
 
     def test_secondary_inductive_exemple(self, parser):
-        assert parser._determine_argument_type("Par exemple, on observe que...") == "inductive"
+        assert (
+            parser._determine_argument_type("Par exemple, on observe que...")
+            == "inductive"
+        )
 
     def test_secondary_abductive_explication(self, parser):
-        assert parser._determine_argument_type("L'explication est simple.") == "abductive"
+        assert (
+            parser._determine_argument_type("L'explication est simple.") == "abductive"
+        )
 
 
 # ── _calculate_confidence ──
+
 
 class TestCalculateConfidence:
     @pytest.fixture
@@ -209,13 +239,13 @@ class TestCalculateConfidence:
 
     def test_max_is_1(self, parser):
         c = parser._calculate_confidence(
-            ["parce que premise", "car another"],
-            "donc conclusion"
+            ["parce que premise", "car another"], "donc conclusion"
         )
         assert c <= 1.0
 
 
 # ── _split_into_sentences ──
+
 
 class TestSplitIntoSentences:
     @pytest.fixture
@@ -243,6 +273,7 @@ class TestSplitIntoSentences:
 
 
 # ── _fix_identical_premise_conclusion ──
+
 
 class TestFixIdenticalPremiseConclusion:
     @pytest.fixture
@@ -278,6 +309,7 @@ class TestFixIdenticalPremiseConclusion:
 
 
 # ── VulnerabilityAnalyzer ──
+
 
 class TestVulnerabilityAnalyzer:
     @pytest.fixture
@@ -427,6 +459,7 @@ class TestVulnerabilityAnalyzer:
 
 # ── identify_vulnerabilities via ArgumentParser ──
 
+
 class TestIdentifyVulnerabilities:
     def test_sorted_by_score(self):
         parser = ArgumentParser()
@@ -444,13 +477,14 @@ class TestIdentifyVulnerabilities:
 
 # ── parse_llm_response ──
 
+
 class TestParseLlmResponse:
     def test_valid_json(self):
         result = parse_llm_response('{"key": "value"}')
         assert result == {"key": "value"}
 
     def test_json_list(self):
-        result = parse_llm_response('[1, 2, 3]')
+        result = parse_llm_response("[1, 2, 3]")
         assert result == [1, 2, 3]
 
     def test_invalid_json_structured(self):
@@ -459,11 +493,12 @@ class TestParseLlmResponse:
         assert result["other"] == "data"
 
     def test_empty_json_object(self):
-        result = parse_llm_response('{}')
+        result = parse_llm_response("{}")
         assert result == {}
 
 
 # ── parse_structured_text ──
+
 
 class TestParseStructuredText:
     def test_single_kv(self):
@@ -502,6 +537,7 @@ class TestParseStructuredText:
 
 
 # ── _extract_key_words (VulnerabilityAnalyzer) ──
+
 
 class TestExtractKeyWords:
     def test_removes_stop_words(self):

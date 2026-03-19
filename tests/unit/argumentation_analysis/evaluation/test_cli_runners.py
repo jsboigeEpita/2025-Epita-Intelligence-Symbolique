@@ -29,8 +29,13 @@ class TestBaselineBenchmarkArgparse:
     def test_default_arguments(self):
         """Test that default arguments are correctly configured."""
         parser = argparse.ArgumentParser(description="Baseline Capability Benchmark")
-        parser.add_argument("--corpus", default="argumentation_analysis/evaluation/corpus/baseline_corpus_v1.json")
-        parser.add_argument("--output", default="argumentation_analysis/evaluation/results/baseline")
+        parser.add_argument(
+            "--corpus",
+            default="argumentation_analysis/evaluation/corpus/baseline_corpus_v1.json",
+        )
+        parser.add_argument(
+            "--output", default="argumentation_analysis/evaluation/results/baseline"
+        )
         parser.add_argument("--workflows", nargs="+", default=["light", "standard"])
         parser.add_argument("--max-docs", type=int, default=0)
         parser.add_argument("--skip-judge", action="store_true")
@@ -38,7 +43,10 @@ class TestBaselineBenchmarkArgparse:
 
         # Test with no arguments (use defaults)
         args = parser.parse_args([])
-        assert args.corpus == "argumentation_analysis/evaluation/corpus/baseline_corpus_v1.json"
+        assert (
+            args.corpus
+            == "argumentation_analysis/evaluation/corpus/baseline_corpus_v1.json"
+        )
         assert args.output == "argumentation_analysis/evaluation/results/baseline"
         assert args.workflows == ["light", "standard"]
         assert args.max_docs == 0
@@ -55,14 +63,21 @@ class TestBaselineBenchmarkArgparse:
         parser.add_argument("--skip-judge", action="store_true")
         parser.add_argument("--verbose", action="store_true")
 
-        args = parser.parse_args([
-            "--corpus", "custom_corpus.json",
-            "--output", "custom_output",
-            "--workflows", "light", "full",
-            "--max-docs", "10",
-            "--skip-judge",
-            "--verbose"
-        ])
+        args = parser.parse_args(
+            [
+                "--corpus",
+                "custom_corpus.json",
+                "--output",
+                "custom_output",
+                "--workflows",
+                "light",
+                "full",
+                "--max-docs",
+                "10",
+                "--skip-judge",
+                "--verbose",
+            ]
+        )
         assert args.corpus == "custom_corpus.json"
         assert args.output == "custom_output"
         assert args.workflows == ["light", "full"]
@@ -77,10 +92,16 @@ class TestSynergyAnalysisArgparse:
 
     def test_default_arguments(self):
         """Test that default arguments are correctly configured."""
-        parser = argparse.ArgumentParser(description="Synergy Analysis - Optimal Workflow Configuration")
-        parser.add_argument("--results-dir", default="argumentation_analysis/evaluation/results")
+        parser = argparse.ArgumentParser(
+            description="Synergy Analysis - Optimal Workflow Configuration"
+        )
+        parser.add_argument(
+            "--results-dir", default="argumentation_analysis/evaluation/results"
+        )
         parser.add_argument("--output", default=None)
-        parser.add_argument("--format", choices=["json", "markdown", "both"], default="both")
+        parser.add_argument(
+            "--format", choices=["json", "markdown", "both"], default="both"
+        )
         parser.add_argument("--verbose", action="store_true")
 
         args = parser.parse_args([])
@@ -91,18 +112,27 @@ class TestSynergyAnalysisArgparse:
 
     def test_custom_arguments(self):
         """Test that custom arguments are correctly parsed."""
-        parser = argparse.ArgumentParser(description="Synergy Analysis - Optimal Workflow Configuration")
+        parser = argparse.ArgumentParser(
+            description="Synergy Analysis - Optimal Workflow Configuration"
+        )
         parser.add_argument("--results-dir", default="default_results")
         parser.add_argument("--output", default=None)
-        parser.add_argument("--format", choices=["json", "markdown", "both"], default="both")
+        parser.add_argument(
+            "--format", choices=["json", "markdown", "both"], default="both"
+        )
         parser.add_argument("--verbose", action="store_true")
 
-        args = parser.parse_args([
-            "--results-dir", "custom_results",
-            "--output", "custom_report.md",
-            "--format", "markdown",
-            "--verbose"
-        ])
+        args = parser.parse_args(
+            [
+                "--results-dir",
+                "custom_results",
+                "--output",
+                "custom_report.md",
+                "--format",
+                "markdown",
+                "--verbose",
+            ]
+        )
         assert args.results_dir == "custom_results"
         assert args.output == "custom_report.md"
         assert args.format == "markdown"
@@ -110,8 +140,12 @@ class TestSynergyAnalysisArgparse:
 
     def test_invalid_format(self):
         """Test that invalid format is rejected."""
-        parser = argparse.ArgumentParser(description="Synergy Analysis - Optimal Workflow Configuration")
-        parser.add_argument("--format", choices=["json", "markdown", "both"], default="both")
+        parser = argparse.ArgumentParser(
+            description="Synergy Analysis - Optimal Workflow Configuration"
+        )
+        parser.add_argument(
+            "--format", choices=["json", "markdown", "both"], default="both"
+        )
 
         with pytest.raises(SystemExit):
             parser.parse_args(["--format", "invalid"])
@@ -128,17 +162,18 @@ class TestDirectoryCreation:
         assert not output_dir.exists()
 
         # Mock the benchmark components
-        with patch("argumentation_analysis.evaluation.run_baseline_benchmark.ModelRegistry") as mock_registry, \
-             patch("argumentation_analysis.evaluation.run_baseline_benchmark.BenchmarkRunner") as mock_runner:
+        with patch(
+            "argumentation_analysis.evaluation.run_baseline_benchmark.ModelRegistry"
+        ) as mock_registry, patch(
+            "argumentation_analysis.evaluation.run_baseline_benchmark.BenchmarkRunner"
+        ) as mock_runner:
 
             mock_instance = MagicMock()
             mock_runner.return_value = mock_instance
             mock_instance._dataset = []
-            mock_instance.run_cell = AsyncMock(return_value=MagicMock(
-                success=True,
-                duration_seconds=1.0,
-                error=None
-            ))
+            mock_instance.run_cell = AsyncMock(
+                return_value=MagicMock(success=True, duration_seconds=1.0, error=None)
+            )
 
             # Create a minimal corpus file
             corpus_path = tmp_path / "test_corpus.json"
@@ -194,7 +229,7 @@ class TestReportGeneration:
             "workflows": {
                 "light": {"total": 5, "successful": 4, "failed": 1},
                 "standard": {"total": 5, "successful": 4, "failed": 1},
-            }
+            },
         }
 
         summary_path = output_dir / "benchmark_summary.json"
@@ -234,7 +269,7 @@ class TestReportGeneration:
                     phases_failed=0,
                     phases_skipped=0,
                     error=None,
-                    state_snapshot={}
+                    state_snapshot={},
                 )
                 collector.save(result)
 

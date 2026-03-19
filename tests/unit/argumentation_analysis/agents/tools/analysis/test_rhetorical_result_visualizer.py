@@ -51,6 +51,7 @@ def empty_state():
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, viz):
         assert viz is not None
@@ -60,6 +61,7 @@ class TestInit:
 # ============================================================
 # generate_argument_graph
 # ============================================================
+
 
 class TestGenerateArgumentGraph:
     def test_empty_state(self, viz, empty_state):
@@ -137,6 +139,7 @@ class TestGenerateArgumentGraph:
 # generate_fallacy_distribution
 # ============================================================
 
+
 class TestGenerateFallacyDistribution:
     def test_empty_state(self, viz, empty_state):
         dist = viz.generate_fallacy_distribution(empty_state)
@@ -183,6 +186,7 @@ class TestGenerateFallacyDistribution:
 # generate_argument_quality_heatmap
 # ============================================================
 
+
 class TestGenerateHeatmap:
     def test_empty_state(self, viz, empty_state):
         hm = viz.generate_argument_quality_heatmap(empty_state)
@@ -208,8 +212,7 @@ class TestGenerateHeatmap:
         state = {
             "identified_arguments": {"arg_1": "Argument"},
             "identified_fallacies": {
-                f"f{i}": {"type": "X", "target_argument_id": "arg_1"}
-                for i in range(10)
+                f"f{i}": {"type": "X", "target_argument_id": "arg_1"} for i in range(10)
             },
         }
         hm = viz.generate_argument_quality_heatmap(state)
@@ -229,6 +232,7 @@ class TestGenerateHeatmap:
 # ============================================================
 # generate_all_visualizations
 # ============================================================
+
 
 class TestGenerateAllVisualizations:
     def test_keys_present(self, viz, sample_state):
@@ -250,6 +254,7 @@ class TestGenerateAllVisualizations:
 # ============================================================
 # generate_html_report
 # ============================================================
+
 
 class TestGenerateHtmlReport:
     def test_html_structure(self, viz, sample_state):

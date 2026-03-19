@@ -11,10 +11,10 @@ from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator imp
     FallacySeverityEvaluator,
 )
 
-
 # ============================================================
 # _load_severity_config
 # ============================================================
+
 
 class TestLoadSeverityConfig:
     def test_returns_dict(self):
@@ -30,7 +30,11 @@ class TestLoadSeverityConfig:
         config = _load_severity_config()
         assert "context_modifiers" in config
         assert set(config["context_modifiers"].keys()) == {
-            "politique", "scientifique", "commercial", "juridique", "académique"
+            "politique",
+            "scientifique",
+            "commercial",
+            "juridique",
+            "académique",
         }
 
     def test_base_severity_values_in_range(self):
@@ -48,6 +52,7 @@ class TestLoadSeverityConfig:
 # ============================================================
 # FallacySeverityEvaluator.__init__
 # ============================================================
+
 
 class TestEvaluatorInit:
     def test_creates_instance(self):
@@ -67,6 +72,7 @@ class TestEvaluatorInit:
 # _determine_context_type
 # ============================================================
 
+
 class TestDetermineContextType:
     @pytest.fixture
     def evaluator(self):
@@ -79,10 +85,14 @@ class TestDetermineContextType:
         assert evaluator._determine_context_type("campagne d'élection") == "politique"
 
     def test_scientifique(self, evaluator):
-        assert evaluator._determine_context_type("article scientifique") == "scientifique"
+        assert (
+            evaluator._determine_context_type("article scientifique") == "scientifique"
+        )
 
     def test_scientifique_recherche(self, evaluator):
-        assert evaluator._determine_context_type("résultat de recherche") == "scientifique"
+        assert (
+            evaluator._determine_context_type("résultat de recherche") == "scientifique"
+        )
 
     def test_commercial(self, evaluator):
         assert evaluator._determine_context_type("publicité télévisée") == "commercial"
@@ -107,6 +117,7 @@ class TestDetermineContextType:
 # _calculate_visibility
 # ============================================================
 
+
 class TestCalculateVisibility:
     @pytest.fixture
     def evaluator(self):
@@ -115,15 +126,14 @@ class TestCalculateVisibility:
     def test_known_fallacy_with_keywords(self, evaluator):
         score = evaluator._calculate_visibility(
             "Appel à l'autorité",
-            "Les experts sont unanimes que cette étude prouve tout."
+            "Les experts sont unanimes que cette étude prouve tout.",
         )
         assert 0.0 <= score <= 1.0
         assert score > 0.0  # Should find keywords
 
     def test_known_fallacy_no_keywords(self, evaluator):
         score = evaluator._calculate_visibility(
-            "Appel à l'autorité",
-            "Le ciel est bleu."
+            "Appel à l'autorité", "Le ciel est bleu."
         )
         assert score == 0.0
 
@@ -134,7 +144,7 @@ class TestCalculateVisibility:
     def test_all_keywords_max_score(self, evaluator):
         score = evaluator._calculate_visibility(
             "Faux dilemme",
-            "soit on choisit ou bien l'alternative unique, uniquement ce choix"
+            "soit on choisit ou bien l'alternative unique, uniquement ce choix",
         )
         assert score == 1.0
 
@@ -142,6 +152,7 @@ class TestCalculateVisibility:
 # ============================================================
 # _calculate_impact
 # ============================================================
+
 
 class TestCalculateImpact:
     @pytest.fixture
@@ -169,6 +180,7 @@ class TestCalculateImpact:
 # ============================================================
 # _determine_severity_level
 # ============================================================
+
 
 class TestDetermineSeverityLevel:
     @pytest.fixture
@@ -199,6 +211,7 @@ class TestDetermineSeverityLevel:
 # _generate_explanation
 # ============================================================
 
+
 class TestGenerateExplanation:
     @pytest.fixture
     def evaluator(self):
@@ -222,6 +235,7 @@ class TestGenerateExplanation:
 # evaluate_severity (integration)
 # ============================================================
 
+
 class TestEvaluateSeverity:
     @pytest.fixture
     def evaluator(self):
@@ -229,14 +243,18 @@ class TestEvaluateSeverity:
 
     def test_returns_dict_with_expected_keys(self, evaluator):
         result = evaluator.evaluate_severity(
-            "Appel à l'autorité",
-            "Les experts sont unanimes.",
-            "discours politique"
+            "Appel à l'autorité", "Les experts sont unanimes.", "discours politique"
         )
         expected_keys = {
-            "fallacy_type", "context_type", "base_score", "context_modifier",
-            "visibility_score", "impact_score", "final_score",
-            "severity_level", "explanation"
+            "fallacy_type",
+            "context_type",
+            "base_score",
+            "context_modifier",
+            "visibility_score",
+            "impact_score",
+            "final_score",
+            "severity_level",
+            "explanation",
         }
         assert expected_keys == set(result.keys())
 
@@ -248,16 +266,12 @@ class TestEvaluateSeverity:
 
     def test_context_modifier_applied(self, evaluator):
         result = evaluator.evaluate_severity(
-            "Appel à l'émotion",
-            "Pensez aux enfants !",
-            "discours politique"
+            "Appel à l'émotion", "Pensez aux enfants !", "discours politique"
         )
         assert result["context_modifier"] == 0.3  # politique -> Appel à l'émotion = 0.3
 
     def test_unknown_fallacy_uses_default_base(self, evaluator):
-        result = evaluator.evaluate_severity(
-            "Sophisme inexistant", "arg", "général"
-        )
+        result = evaluator.evaluate_severity("Sophisme inexistant", "arg", "général")
         assert result["base_score"] == 0.5
 
     def test_general_context_no_modifier(self, evaluator):
@@ -286,6 +300,7 @@ class TestEvaluateSeverity:
 # rank_fallacies
 # ============================================================
 
+
 class TestRankFallacies:
     @pytest.fixture
     def evaluator(self):
@@ -293,8 +308,16 @@ class TestRankFallacies:
 
     def test_sorts_by_severity_descending(self, evaluator):
         fallacies = [
-            {"fallacy_type": "Appel à la tradition", "argument": "C'est la tradition.", "context": "général"},
-            {"fallacy_type": "Ad hominem", "argument": "Tu es un menteur.", "context": "politique"},
+            {
+                "fallacy_type": "Appel à la tradition",
+                "argument": "C'est la tradition.",
+                "context": "général",
+            },
+            {
+                "fallacy_type": "Ad hominem",
+                "argument": "Tu es un menteur.",
+                "context": "politique",
+            },
         ]
         ranked = evaluator.rank_fallacies(fallacies)
         assert ranked[0]["severity"] >= ranked[1]["severity"]
@@ -329,6 +352,7 @@ class TestRankFallacies:
 # evaluate_impact
 # ============================================================
 
+
 class TestEvaluateImpact:
     @pytest.fixture
     def evaluator(self):
@@ -339,21 +363,24 @@ class TestEvaluateImpact:
             "Faux dilemme", "Soit A, soit B.", "juridique"
         )
         expected_keys = {
-            "fallacy_type", "severity", "severity_level",
-            "explanation", "impact_on_validity", "correction_suggestions"
+            "fallacy_type",
+            "severity",
+            "severity_level",
+            "explanation",
+            "impact_on_validity",
+            "correction_suggestions",
         }
         assert expected_keys == set(result.keys())
 
     def test_correction_suggestions_not_empty(self, evaluator):
-        result = evaluator.evaluate_impact(
-            "Ad hominem", "Tu es nul.", "politique"
-        )
+        result = evaluator.evaluate_impact("Ad hominem", "Tu es nul.", "politique")
         assert len(result["correction_suggestions"]) > 0
 
 
 # ============================================================
 # _calculate_validity_impact
 # ============================================================
+
 
 class TestCalculateValidityImpact:
     @pytest.fixture
@@ -377,6 +404,7 @@ class TestCalculateValidityImpact:
 # _generate_correction_suggestions
 # ============================================================
 
+
 class TestGenerateCorrectionSuggestions:
     @pytest.fixture
     def evaluator(self):
@@ -390,9 +418,7 @@ class TestGenerateCorrectionSuggestions:
         assert any("preuves" in s for s in suggestions)
 
     def test_unknown_fallacy_generic_suggestions(self, evaluator):
-        suggestions = evaluator._generate_correction_suggestions(
-            "Inconnu XYZ", "arg"
-        )
+        suggestions = evaluator._generate_correction_suggestions("Inconnu XYZ", "arg")
         assert len(suggestions) == 3
         assert any("preuves objectives" in s for s in suggestions)
 

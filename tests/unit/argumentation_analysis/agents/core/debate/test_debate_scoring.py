@@ -29,6 +29,7 @@ def _make_arg(content, agent="Alice", position="for"):
 
 # ── Init ──
 
+
 class TestAnalyzerInit:
     def test_indicators_loaded(self, analyzer):
         assert len(analyzer.logical_indicators) > 0
@@ -43,6 +44,7 @@ class TestAnalyzerInit:
 
 
 # ── Logical Coherence ──
+
 
 class TestLogicalCoherence:
     def test_baseline(self, analyzer):
@@ -72,13 +74,16 @@ class TestLogicalCoherence:
 
 # ── Evidence Quality ──
 
+
 class TestEvidenceQuality:
     def test_baseline(self, analyzer):
         score = analyzer._assess_evidence_quality("Simple opinion.")
         assert 0.2 <= score <= 0.4  # baseline ~0.3
 
     def test_with_citations(self, analyzer):
-        text = "Studies show that 85% of participants improved. According to the journal."
+        text = (
+            "Studies show that 85% of participants improved. According to the journal."
+        )
         score = analyzer._assess_evidence_quality(text)
         assert score > 0.5
 
@@ -99,6 +104,7 @@ class TestEvidenceQuality:
 
 
 # ── Relevance ──
+
 
 class TestRelevance:
     def test_no_context(self, analyzer):
@@ -129,6 +135,7 @@ class TestRelevance:
 
 # ── Emotional Appeal ──
 
+
 class TestEmotionalAppeal:
     def test_neutral(self, analyzer):
         score = analyzer._assess_emotional_appeal("The data is clear.")
@@ -157,6 +164,7 @@ class TestEmotionalAppeal:
 
 # ── Readability ──
 
+
 class TestReadability:
     def test_short_sentences(self, analyzer):
         text = "Short sentence. Another one. Easy to read."
@@ -176,6 +184,7 @@ class TestReadability:
 
 # ── Fact Check ──
 
+
 class TestFactCheck:
     def test_hedging_language(self, analyzer):
         text = "This might possibly be true. It could likely happen."
@@ -194,6 +203,7 @@ class TestFactCheck:
 
 
 # ── Novelty ──
+
 
 class TestNovelty:
     def test_no_context(self, analyzer):
@@ -223,6 +233,7 @@ class TestNovelty:
 
 # ── Full Analysis ──
 
+
 class TestAnalyzeArgument:
     def test_returns_metrics(self, analyzer):
         arg = _make_arg("Because of the evidence, therefore the conclusion follows.")
@@ -242,7 +253,9 @@ class TestAnalyzeArgument:
         assert 0 <= metrics.persuasiveness <= 1.0
 
     def test_persuasiveness_is_weighted_combo(self, analyzer):
-        arg = _make_arg("Because studies show evidence, therefore the conclusion follows.")
+        arg = _make_arg(
+            "Because studies show evidence, therefore the conclusion follows."
+        )
         metrics = analyzer.analyze_argument(arg, [])
         expected = min(
             metrics.logical_coherence * 0.25

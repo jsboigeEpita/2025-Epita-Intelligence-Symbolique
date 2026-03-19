@@ -26,6 +26,7 @@ def service(mock_logic_service):
 
 # ── Init & Health ──
 
+
 class TestInit:
     def test_init(self, service):
         assert service.is_initialized is True
@@ -43,6 +44,7 @@ class TestInit:
 
 # ── Clarity ──
 
+
 class TestClarity:
     def test_short_text_low_clarity(self, service):
         assert service._assess_clarity("ab") == 0.3
@@ -57,6 +59,7 @@ class TestClarity:
 
 # ── Specificity ──
 
+
 class TestSpecificity:
     def test_vague_term_lowers_specificity(self, service):
         assert service._assess_specificity("certains pensent que c'est vrai") == 0.4
@@ -66,6 +69,7 @@ class TestSpecificity:
 
 
 # ── Credibility ──
+
 
 class TestCredibility:
     def test_source_indicator_high_credibility(self, service):
@@ -77,6 +81,7 @@ class TestCredibility:
 
 # ── Qualifiers ──
 
+
 class TestQualifiers:
     def test_contains_qualifier(self, service):
         assert service._contains_qualifiers("c'est probablement vrai") is True
@@ -86,6 +91,7 @@ class TestQualifiers:
 
 
 # ── Factual Claim ──
+
 
 class TestFactualClaim:
     def test_factual(self, service):
@@ -100,6 +106,7 @@ class TestFactualClaim:
 
 # ── Conclusion Strength ──
 
+
 class TestConclusionStrength:
     def test_reasonable_conclusion(self, service):
         strength = service._assess_conclusion_strength(
@@ -109,6 +116,7 @@ class TestConclusionStrength:
 
 
 # ── Logical Connectors ──
+
 
 class TestLogicalConnectors:
     def test_has_connector(self, service):
@@ -122,6 +130,7 @@ class TestLogicalConnectors:
 
 
 # ── Premise Relevance ──
+
 
 class TestPremiseRelevance:
     def test_relevant_premises(self, service):
@@ -144,6 +153,7 @@ class TestPremiseRelevance:
 
 # ── Logical Flow ──
 
+
 class TestLogicalFlow:
     def test_good_flow(self, service):
         score = service._assess_logical_flow(
@@ -162,6 +172,7 @@ class TestLogicalFlow:
 
 # ── Completeness ──
 
+
 class TestCompleteness:
     def test_complete_argument(self, service):
         score = service._assess_completeness(
@@ -177,6 +188,7 @@ class TestCompleteness:
 
 # ── Consistency ──
 
+
 class TestConsistency:
     def test_single_premise_full_consistency(self, service):
         assert service._assess_consistency(["une prémisse"]) == 1.0
@@ -186,6 +198,7 @@ class TestConsistency:
 
 
 # ── Logical Gaps ──
+
 
 class TestLogicalGaps:
     def test_no_gaps(self, service):
@@ -214,12 +227,15 @@ class TestLogicalGaps:
 
 # ── Premise Analysis ──
 
+
 class TestPremiseAnalysis:
     def test_analyze_premises(self, service):
-        analysis = service._analyze_premises([
-            "Selon une étude, la terre est ronde",
-            "ok",
-        ])
+        analysis = service._analyze_premises(
+            [
+                "Selon une étude, la terre est ronde",
+                "ok",
+            ]
+        )
         assert len(analysis) == 2
         assert analysis[0]["index"] == 0
         assert analysis[0]["credibility_score"] == 0.8  # "étude"
@@ -228,6 +244,7 @@ class TestPremiseAnalysis:
 
 
 # ── Conclusion Analysis ──
+
 
 class TestConclusionAnalysis:
     def test_analyze_conclusion(self, service):
@@ -241,10 +258,13 @@ class TestConclusionAnalysis:
 
 # ── Logical Structure ──
 
+
 class TestLogicalStructure:
     def test_analyze_structure(self, service):
         result = service._analyze_logical_structure(
-            ["p1", "p2"], "donc c'est vrai", "deductive",
+            ["p1", "p2"],
+            "donc c'est vrai",
+            "deductive",
         )
         assert result["argument_type"] == "deductive"
         assert result["premise_count"] == 2
@@ -255,6 +275,7 @@ class TestLogicalStructure:
 
 # ── Validity Score ──
 
+
 class TestValidityScore:
     def test_no_premises_returns_zero(self, service):
         assert service._calculate_validity_score([], {}, {}) == 0.0
@@ -264,12 +285,15 @@ class TestValidityScore:
         conclusion_analysis = {"strength": 0.6}
         structure = {"premise_relevance": 0.5, "logical_flow": 0.6, "completeness": 0.5}
         score = service._calculate_validity_score(
-            premise_analysis, conclusion_analysis, structure,
+            premise_analysis,
+            conclusion_analysis,
+            structure,
         )
         assert 0.0 <= score <= 1.0
 
 
 # ── Soundness Score ──
+
 
 class TestSoundnessScore:
     def test_no_premises_returns_zero(self, service):
@@ -283,10 +307,13 @@ class TestSoundnessScore:
 
 # ── Issues ──
 
+
 class TestIdentifyIssues:
     def test_no_premises_issue(self, service):
         issues = service._identify_issues(
-            [], {"text": "conclusion", "clarity_score": 0.8}, {},
+            [],
+            {"text": "conclusion", "clarity_score": 0.8},
+            {},
         )
         assert any("prémisse" in i.lower() for i in issues)
 
@@ -294,7 +321,13 @@ class TestIdentifyIssues:
         issues = service._identify_issues(
             [{"clarity_score": 0.3, "credibility_score": 0.7}],
             {"text": "ok", "clarity_score": 0.8},
-            {"premise_relevance": 0.8, "logical_flow": 0.8, "completeness": 0.8, "consistency": 0.8, "gap_analysis": []},
+            {
+                "premise_relevance": 0.8,
+                "logical_flow": 0.8,
+                "completeness": 0.8,
+                "consistency": 0.8,
+                "gap_analysis": [],
+            },
         )
         assert any("clarté" in i for i in issues)
 
@@ -302,13 +335,19 @@ class TestIdentifyIssues:
         issues = service._identify_issues(
             [{"clarity_score": 0.9, "credibility_score": 0.9}],
             {"text": "conclusion", "clarity_score": 0.9},
-            {"premise_relevance": 0.8, "logical_flow": 0.8, "completeness": 0.8, "consistency": 0.8,
-             "gap_analysis": ["gap1"]},
+            {
+                "premise_relevance": 0.8,
+                "logical_flow": 0.8,
+                "completeness": 0.8,
+                "consistency": 0.8,
+                "gap_analysis": ["gap1"],
+            },
         )
         assert any("gap1" in i for i in issues)
 
 
 # ── Suggestions ──
+
 
 class TestSuggestions:
     def test_no_issues_positive_suggestion(self, service):
@@ -318,36 +357,43 @@ class TestSuggestions:
 
     def test_premise_clarity_suggestion(self, service):
         suggestions = service._generate_suggestions(
-            ["la prémisse manque de clarté"], {},
+            ["la prémisse manque de clarté"],
+            {},
         )
         assert any("clarté" in s for s in suggestions)
 
     def test_premise_credibility_suggestion(self, service):
         suggestions = service._generate_suggestions(
-            ["prémisse manque de crédibilité"], {},
+            ["prémisse manque de crédibilité"],
+            {},
         )
         assert any("crédibilité" in s for s in suggestions)
 
     def test_deductive_suggestion(self, service):
         suggestions = service._generate_suggestions(
-            ["un problème"], {"argument_type": "deductive"},
+            ["un problème"],
+            {"argument_type": "deductive"},
         )
         assert any("déductif" in s for s in suggestions)
 
     def test_inductive_suggestion(self, service):
         suggestions = service._generate_suggestions(
-            ["un problème"], {"argument_type": "inductive"},
+            ["un problème"],
+            {"argument_type": "inductive"},
         )
         assert any("inductif" in s for s in suggestions)
 
 
 # ── validate_argument (async) ──
 
+
 class TestValidateArgument:
     async def test_valid_argument(self, service):
         request = ValidationRequest(
-            premises=["La terre est ronde selon les données scientifiques",
-                       "Les données proviennent d'une étude approfondie"],
+            premises=[
+                "La terre est ronde selon les données scientifiques",
+                "Les données proviennent d'une étude approfondie",
+            ],
             conclusion="Donc la terre est ronde selon ces données",
         )
         response = await service.validate_argument(request)
@@ -358,12 +404,14 @@ class TestValidateArgument:
     async def test_no_premises_pydantic_rejects(self, service):
         """Pydantic model enforces min 1 premise."""
         from pydantic import ValidationError as PydanticValidationError
+
         with pytest.raises(PydanticValidationError):
             ValidationRequest(premises=[], conclusion="conclusion")
 
     async def test_empty_conclusion_pydantic_rejects(self, service):
         """Pydantic model enforces non-empty conclusion."""
         from pydantic import ValidationError as PydanticValidationError
+
         with pytest.raises(PydanticValidationError):
             ValidationRequest(premises=["premise"], conclusion="")
 

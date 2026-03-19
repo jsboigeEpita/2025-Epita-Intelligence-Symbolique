@@ -20,7 +20,9 @@ class ProbabilisticHandler:
         self.DungTheory = jpype.JClass("org.tweetyproject.arg.dung.syntax.DungTheory")
         self.Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self.Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
-        self.Probability = jpype.JClass("org.tweetyproject.math.probability.Probability")
+        self.Probability = jpype.JClass(
+            "org.tweetyproject.math.probability.Probability"
+        )
         self.SubgraphProbReasoner = jpype.JClass(
             "org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner"
         )
@@ -88,7 +90,9 @@ class ProbabilisticHandler:
         Limited to small frameworks (<15 arguments) for efficiency.
         """
         if len(arguments) > 15:
-            logger.warning("Framework too large for exact probabilistic computation, using approximation")
+            logger.warning(
+                "Framework too large for exact probabilistic computation, using approximation"
+            )
             return {arg: probabilities.get(arg, 1.0) for arg in arguments}
 
         from itertools import combinations
@@ -111,7 +115,7 @@ class ProbabilisticHandler:
                     if arg in subset_set:
                         prob *= p
                     else:
-                        prob *= (1.0 - p)
+                        prob *= 1.0 - p
 
                 if prob < 1e-10:
                     continue
@@ -130,7 +134,9 @@ class ProbabilisticHandler:
                 # Compute grounded extension
                 reasoner = GroundedReasoner()
                 grounded = reasoner.getModel(sub_theory)
-                grounded_args = {str(a.getName()) for a in grounded} if grounded else set()
+                grounded_args = (
+                    {str(a.getName()) for a in grounded} if grounded else set()
+                )
 
                 for arg in grounded_args:
                     if arg in acceptance:

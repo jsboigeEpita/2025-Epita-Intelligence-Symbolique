@@ -209,7 +209,7 @@ class TestUnicodeHandling:
             state_snapshot={
                 "status": "✅ Success",
                 "flags": ["🔍 Analysis", "📊 Results", "⚠️ Warning"],
-                "metrics": {"quality": "🌟 Excellent"}
+                "metrics": {"quality": "🌟 Excellent"},
             },
         )
         collector.save(result)
@@ -524,9 +524,7 @@ class TestQueryFiltering:
 
         # Query with combined filters
         results = collector.query(
-            workflow_name="light",
-            model_name="gpt-4",
-            success_only=True
+            workflow_name="light", model_name="gpt-4", success_only=True
         )
         assert len(results) == 1  # Only one result matches all criteria
         assert results[0]["workflow_name"] == "light"

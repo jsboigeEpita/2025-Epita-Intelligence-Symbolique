@@ -188,7 +188,7 @@ class AnalysisState:
             "consistency_score": round(self.consistency_score, 2),
             "phase": self.phase,
             "completed": self.completed,
-            "processing_time": round(self.processing_time,3),
+            "processing_time": round(self.processing_time, 3),
         }
 
     def to_rhetorical_state(self) -> "RhetoricalAnalysisState":
@@ -554,6 +554,7 @@ class ConversationOrchestrator:
             from argumentation_analysis.agents.core.informal.informal_agent import (
                 InformalAnalysisAgent,
             )
+
             informal = InformalAnalysisAgent(
                 kernel=self.kernel,
                 agent_name="InformalAnalysisAgent",
@@ -568,6 +569,7 @@ class ConversationOrchestrator:
             from argumentation_analysis.agents.core.synthesis.synthesis_agent import (
                 SynthesisAgent as RealSynthesisAgent,
             )
+
             synth = RealSynthesisAgent(
                 kernel=self.kernel,
                 agent_name="SynthesisAgent",
@@ -578,9 +580,7 @@ class ConversationOrchestrator:
             self.logger.warning(f"Cannot create real SynthesisAgent: {e}")
 
         if not self._real_agents:
-            self.logger.error(
-                "No real agents could be created. Falling back to demo."
-            )
+            self.logger.error("No real agents could be created. Falling back to demo.")
             self.mode = "demo"
             self._setup_simulated_agents()
 
@@ -637,9 +637,7 @@ class ConversationOrchestrator:
             if hasattr(agent, "analyze_text"):
                 return await agent.analyze_text(text)
             else:
-                raise AttributeError(
-                    "FOLLogicAgent has no suitable analysis method"
-                )
+                raise AttributeError("FOLLogicAgent has no suitable analysis method")
         elif agent_key == "synthesis":
             report = await agent.synthesize_analysis(text)
             if hasattr(report, "model_dump"):
@@ -858,9 +856,9 @@ class ConversationOrchestrator:
             "Please use `analysis_runner` for new implementations. "
             "This class is maintained for backward compatibility only.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
-        
+
         return self.generate_report()
 
     def generate_report(self) -> str:

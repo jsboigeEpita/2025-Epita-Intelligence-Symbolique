@@ -8,8 +8,8 @@ from argumentation_analysis.core.utils.error_management import (
     ErrorRecoveryManager,
 )
 
-
 # ── StateManager ──
+
 
 class TestStateManager:
     @pytest.fixture
@@ -91,6 +91,7 @@ class TestStateManager:
 
 
 # ── ErrorRecoveryManager ──
+
 
 class TestErrorRecoveryManager:
     @pytest.fixture

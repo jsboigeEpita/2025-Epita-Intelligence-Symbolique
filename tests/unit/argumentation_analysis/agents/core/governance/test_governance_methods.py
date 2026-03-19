@@ -29,13 +29,21 @@ def make_agent(decision=None, preferences=None, personality="default"):
 
 # ── GOVERNANCE_METHODS registry ──
 
+
 class TestGovernanceMethodsRegistry:
     def test_has_seven_methods(self):
         assert len(GOVERNANCE_METHODS) == 7
 
     def test_keys(self):
-        expected = {"majority", "plurality", "borda", "condorcet",
-                    "quadratic", "byzantine", "raft"}
+        expected = {
+            "majority",
+            "plurality",
+            "borda",
+            "condorcet",
+            "quadratic",
+            "byzantine",
+            "raft",
+        }
         assert set(GOVERNANCE_METHODS.keys()) == expected
 
     def test_all_callable(self):
@@ -44,6 +52,7 @@ class TestGovernanceMethodsRegistry:
 
 
 # ── majority_voting ──
+
 
 class TestMajorityVoting:
     def test_unanimous(self):
@@ -65,6 +74,7 @@ class TestMajorityVoting:
 
 # ── plurality_voting ──
 
+
 class TestPluralityVoting:
     def test_same_as_majority(self):
         agents = [make_agent("A"), make_agent("B"), make_agent("A")]
@@ -72,6 +82,7 @@ class TestPluralityVoting:
 
 
 # ── borda_count ──
+
 
 class TestBordaCount:
     def test_unanimous_preference(self):
@@ -107,6 +118,7 @@ class TestBordaCount:
 
 # ── condorcet_method ──
 
+
 class TestCondorcetMethod:
     def test_condorcet_winner_exists(self):
         # A beats B (2-1), A beats C (2-1)
@@ -136,6 +148,7 @@ class TestCondorcetMethod:
 
 
 # ── quadratic_voting ──
+
 
 class TestQuadraticVoting:
     def test_default_budget(self):
@@ -171,6 +184,7 @@ class TestQuadraticVoting:
 
 # ── byzantine_consensus ──
 
+
 class TestByzantineConsensus:
     def test_no_byzantine(self):
         agents = [make_agent("A"), make_agent("A"), make_agent("A")]
@@ -198,6 +212,7 @@ class TestByzantineConsensus:
 
 
 # ── raft_consensus ──
+
 
 class TestRaftConsensus:
     def test_proposal_accepted(self):

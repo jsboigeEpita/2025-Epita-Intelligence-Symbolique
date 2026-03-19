@@ -20,9 +20,27 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
 def state():
     """Create a TacticalState with sample tasks."""
     s = TacticalState()
-    s.add_assigned_objective({"id": "obj-1", "description": "Analyze text", "priority": "high"})
-    s.add_task({"id": "t1", "description": "Task 1", "objective_id": "obj-1", "estimated_duration": 60}, "pending")
-    s.add_task({"id": "t2", "description": "Task 2", "objective_id": "obj-1", "estimated_duration": 120}, "pending")
+    s.add_assigned_objective(
+        {"id": "obj-1", "description": "Analyze text", "priority": "high"}
+    )
+    s.add_task(
+        {
+            "id": "t1",
+            "description": "Task 1",
+            "objective_id": "obj-1",
+            "estimated_duration": 60,
+        },
+        "pending",
+    )
+    s.add_task(
+        {
+            "id": "t2",
+            "description": "Task 2",
+            "objective_id": "obj-1",
+            "estimated_duration": 120,
+        },
+        "pending",
+    )
     return s
 
 
@@ -34,6 +52,7 @@ def monitor(state):
 # ============================================================
 # __init__
 # ============================================================
+
 
 class TestProgressMonitorInit:
     def test_default_state(self):
@@ -54,6 +73,7 @@ class TestProgressMonitorInit:
 # ============================================================
 # update_task_progress
 # ============================================================
+
 
 class TestUpdateTaskProgress:
     def test_success(self, monitor, state):
@@ -87,6 +107,7 @@ class TestUpdateTaskProgress:
 # _check_task_anomalies
 # ============================================================
 
+
 class TestCheckTaskAnomalies:
     def test_stagnation_detected(self, monitor, state):
         state.update_task_status("t1", "in_progress")
@@ -105,7 +126,15 @@ class TestCheckTaskAnomalies:
         assert not any(a["type"] == "regression" for a in anomalies)
 
     def test_blocked_dependency(self, monitor, state):
-        state.add_task({"id": "t3", "description": "Task 3", "objective_id": "obj-1", "estimated_duration": 60}, "in_progress")
+        state.add_task(
+            {
+                "id": "t3",
+                "description": "Task 3",
+                "objective_id": "obj-1",
+                "estimated_duration": 60,
+            },
+            "in_progress",
+        )
         state.add_task_dependency("t1", "t3")
         state.update_task_status("t3", "failed")
         anomalies = monitor._check_task_anomalies("t1", 0.0, 0.1)
@@ -124,6 +153,7 @@ class TestCheckTaskAnomalies:
 # ============================================================
 # generate_progress_report
 # ============================================================
+
 
 class TestGenerateProgressReport:
     def test_empty_state_report(self):
@@ -145,7 +175,14 @@ class TestGenerateProgressReport:
         assert any(i["type"] == "task_failure" for i in report["issues"])
 
     def test_report_with_unresolved_conflicts(self, monitor, state):
-        state.add_conflict({"id": "c1", "description": "Conflict", "involved_tasks": ["t1"], "severity": "high"})
+        state.add_conflict(
+            {
+                "id": "c1",
+                "description": "Conflict",
+                "involved_tasks": ["t1"],
+                "severity": "high",
+            }
+        )
         report = monitor.generate_progress_report()
         assert report["conflicts"]["total"] == 1
         assert report["conflicts"]["resolved"] == 0
@@ -166,7 +203,15 @@ class TestGenerateProgressReport:
         assert report["overall_progress"] > 0.0
 
     def test_blocked_task_detected(self, monitor, state):
-        state.add_task({"id": "t3", "description": "Dep", "objective_id": "obj-1", "estimated_duration": 30}, "failed")
+        state.add_task(
+            {
+                "id": "t3",
+                "description": "Dep",
+                "objective_id": "obj-1",
+                "estimated_duration": 30,
+            },
+            "failed",
+        )
         state.add_task_dependency("t1", "t3")
         report = monitor.generate_progress_report()
         assert any(i["type"] == "blocked_task" for i in report["issues"])
@@ -176,6 +221,7 @@ class TestGenerateProgressReport:
 # detect_critical_issues
 # ============================================================
 
+
 class TestDetectCriticalIssues:
     def test_no_issues_clean_state(self, monitor):
         issues = monitor.detect_critical_issues()
@@ -183,7 +229,15 @@ class TestDetectCriticalIssues:
 
     def test_blocked_task(self, monitor, state):
         state.update_task_status("t1", "in_progress")
-        state.add_task({"id": "dep", "description": "Failed dep", "objective_id": "obj-1", "estimated_duration": 30}, "failed")
+        state.add_task(
+            {
+                "id": "dep",
+                "description": "Failed dep",
+                "objective_id": "obj-1",
+                "estimated_duration": 30,
+            },
+            "failed",
+        )
         state.add_task_dependency("t1", "dep")
         issues = monitor.detect_critical_issues()
         blocked = [i for i in issues if i["type"] == "blocked_task"]
@@ -214,6 +268,7 @@ class TestDetectCriticalIssues:
 # ============================================================
 # suggest_corrective_actions
 # ============================================================
+
 
 class TestSuggestCorrectiveActions:
     def test_blocked_task_action(self, monitor):
@@ -257,6 +312,7 @@ class TestSuggestCorrectiveActions:
 # _evaluate_overall_coherence
 # ============================================================
 
+
 class TestEvaluateOverallCoherence:
     @pytest.fixture
     def monitor_fresh(self):
@@ -267,7 +323,7 @@ class TestEvaluateOverallCoherence:
             {"coherence_score": 0.9},
             {"coherence_score": 0.9},
             {"coherence_score": 0.9},
-            []
+            [],
         )
         assert result["overall_score"] == pytest.approx(0.9, abs=0.01)
         assert result["coherence_level"] == "Élevé"
@@ -277,7 +333,7 @@ class TestEvaluateOverallCoherence:
             {"coherence_score": 0.1},
             {"coherence_score": 0.1},
             {"coherence_score": 0.1},
-            []
+            [],
         )
         assert result["overall_score"] < 0.3
         assert result["coherence_level"] == "Très faible"
@@ -287,13 +343,13 @@ class TestEvaluateOverallCoherence:
             {"coherence_score": 0.8},
             {"coherence_score": 0.8},
             {"coherence_score": 0.8},
-            []
+            [],
         )
         with_contradictions = monitor_fresh._evaluate_overall_coherence(
             {"coherence_score": 0.8},
             {"coherence_score": 0.8},
             {"coherence_score": 0.8},
-            [{"severity": "critical"}, {"severity": "high"}]
+            [{"severity": "critical"}, {"severity": "high"}],
         )
         assert with_contradictions["overall_score"] < no_contradictions["overall_score"]
         assert with_contradictions["contradiction_penalty"] > 0.0
@@ -303,13 +359,16 @@ class TestEvaluateOverallCoherence:
             {"coherence_score": 1.0},
             {"coherence_score": 1.0},
             {"coherence_score": 1.0},
-            [{"severity": "critical"}] * 10  # Many contradictions
+            [{"severity": "critical"}] * 10,  # Many contradictions
         )
         assert result["contradiction_penalty"] == 0.5
 
     def test_weights_sum(self, monitor_fresh):
         result = monitor_fresh._evaluate_overall_coherence(
-            {"coherence_score": 1.0}, {"coherence_score": 1.0}, {"coherence_score": 1.0}, []
+            {"coherence_score": 1.0},
+            {"coherence_score": 1.0},
+            {"coherence_score": 1.0},
+            [],
         )
         weights = result["weights_used"]
         assert sum(weights.values()) == pytest.approx(1.0)
@@ -323,14 +382,16 @@ class TestEvaluateOverallCoherence:
             {"coherence_score": 0.7},
             {"coherence_score": 0.65},
             {"coherence_score": 0.7},
-            []
+            [],
         )
         assert result["coherence_level"] == "Modéré"
 
     def test_contradictions_count(self, monitor_fresh):
         result = monitor_fresh._evaluate_overall_coherence(
-            {"coherence_score": 0.5}, {"coherence_score": 0.5}, {"coherence_score": 0.5},
-            [{"severity": "low"}, {"severity": "medium"}]
+            {"coherence_score": 0.5},
+            {"coherence_score": 0.5},
+            {"coherence_score": 0.5},
+            [{"severity": "low"}, {"severity": "medium"}],
         )
         assert result["contradictions_count"] == 2
 
@@ -338,6 +399,7 @@ class TestEvaluateOverallCoherence:
 # ============================================================
 # _log_action
 # ============================================================
+
 
 class TestLogAction:
     def test_logs_to_state(self, monitor, state):

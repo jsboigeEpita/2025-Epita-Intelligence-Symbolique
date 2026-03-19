@@ -39,13 +39,16 @@ class BenchmarkResult:
     def __post_init__(self):
         if not self.timestamp:
             from datetime import datetime
+
             self.timestamp = datetime.now().isoformat()
 
 
 class BenchmarkRunner:
     """Execute benchmark cells (workflow × model × document)."""
 
-    def __init__(self, model_registry: ModelRegistry, dataset_path: Optional[str] = None):
+    def __init__(
+        self, model_registry: ModelRegistry, dataset_path: Optional[str] = None
+    ):
         self.model_registry = model_registry
         self._dataset: Optional[List[Dict[str, Any]]] = None
         self._dataset_path = dataset_path
@@ -58,7 +61,9 @@ class BenchmarkRunner:
         logger.info(f"Loaded {len(self._dataset)} documents from {path}")
         return self._dataset
 
-    def load_dataset_encrypted(self, path: str, passphrase: str) -> List[Dict[str, Any]]:
+    def load_dataset_encrypted(
+        self, path: str, passphrase: str
+    ) -> List[Dict[str, Any]]:
         """Load the encrypted dataset (Fernet + gzip)."""
         from argumentation_analysis.core.utils.crypto_utils import (
             derive_encryption_key,
@@ -172,9 +177,19 @@ class BenchmarkRunner:
             serializable_phases = {}
             for pname, presult in phases.items():
                 serializable_phases[pname] = {
-                    "status": presult.status.value if hasattr(presult.status, "value") else str(presult.status),
-                    "capability": presult.capability if hasattr(presult, "capability") else None,
-                    "has_output": presult.output is not None if hasattr(presult, "output") else False,
+                    "status": (
+                        presult.status.value
+                        if hasattr(presult.status, "value")
+                        else str(presult.status)
+                    ),
+                    "capability": (
+                        presult.capability if hasattr(presult, "capability") else None
+                    ),
+                    "has_output": (
+                        presult.output is not None
+                        if hasattr(presult, "output")
+                        else False
+                    ),
                 }
 
             return BenchmarkResult(

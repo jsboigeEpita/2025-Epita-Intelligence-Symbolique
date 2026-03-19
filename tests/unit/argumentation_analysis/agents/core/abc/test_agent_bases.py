@@ -10,12 +10,13 @@ from unittest.mock import MagicMock, patch, AsyncMock, Mock
 import pytest
 
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent, BaseLogicAgent
-
 
 # =====================================================================
 # BaseAgent Tests
@@ -244,7 +245,9 @@ class TestBaseLogicAgent:
             def generate_queries(self, text, belief_set, context=None):
                 pass
 
-            def interpret_results(self, text, belief_set, queries, results, context=None):
+            def interpret_results(
+                self, text, belief_set, queries, results, context=None
+            ):
                 pass
 
             def validate_formula(self, formula):
@@ -256,7 +259,9 @@ class TestBaseLogicAgent:
             def _create_belief_set_from_data(self, belief_set_data):
                 pass
 
-        agent = ConcreteLogicAgent(kernel, "LogicAgent", "PL", description="Logic Agent")
+        agent = ConcreteLogicAgent(
+            kernel, "LogicAgent", "PL", description="Logic Agent"
+        )
 
         assert agent.id == "LogicAgent"
         assert agent.description == "Logic Agent"
@@ -288,7 +293,9 @@ class TestBaseLogicAgent:
             def generate_queries(self, text, belief_set, context=None):
                 pass
 
-            def interpret_results(self, text, belief_set, queries, results, context=None):
+            def interpret_results(
+                self, text, belief_set, queries, results, context=None
+            ):
                 pass
 
             def validate_formula(self, formula):
@@ -326,7 +333,9 @@ class TestBaseLogicAgent:
             def generate_queries(self, text, belief_set, context=None):
                 pass
 
-            def interpret_results(self, text, belief_set, queries, results, context=None):
+            def interpret_results(
+                self, text, belief_set, queries, results, context=None
+            ):
                 pass
 
             def validate_formula(self, formula):
@@ -365,7 +374,9 @@ class TestBaseLogicAgent:
             def generate_queries(self, text, belief_set, context=None):
                 pass
 
-            def interpret_results(self, text, belief_set, queries, results, context=None):
+            def interpret_results(
+                self, text, belief_set, queries, results, context=None
+            ):
                 pass
 
             def validate_formula(self, formula):
@@ -407,7 +418,9 @@ class TestBaseLogicAgent:
             def generate_queries(self, text, belief_set, context=None):
                 pass
 
-            def interpret_results(self, text, belief_set, queries, results, context=None):
+            def interpret_results(
+                self, text, belief_set, queries, results, context=None
+            ):
                 pass
 
             def validate_formula(self, formula):
@@ -512,7 +525,7 @@ class TestAgentBasesIntegration:
                     "reasoning": True,
                     "analysis": True,
                     "synthesis": True,
-                    "supported_logics": ["propositional", "first_order"]
+                    "supported_logics": ["propositional", "first_order"],
                 }
 
         agent = CapabilitiesAgent(kernel, "Caps")
@@ -538,7 +551,9 @@ class TestAgentBasesIntegration:
             def get_agent_capabilities(self):
                 return {"version": "1.0", "features": ["test"]}
 
-        agent = InfoAgent(kernel, "InfoAgent", system_prompt="Test prompt", llm_service_id="custom")
+        agent = InfoAgent(
+            kernel, "InfoAgent", system_prompt="Test prompt", llm_service_id="custom"
+        )
         info = agent.get_agent_info()
 
         assert info["name"] == "InfoAgent"

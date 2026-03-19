@@ -11,11 +11,14 @@ Validates:
 - ZReasoner (System Z) lazy loading
 - Error handling (JVM not ready, class not found, JException)
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
 from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
-from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+from argumentation_analysis.agents.core.logic.tweety_initializer import (
+    TweetyInitializer,
+)
 
 
 @pytest.fixture
@@ -38,9 +41,11 @@ def mock_jpype():
             return cls
 
         m.JClass.side_effect = jclass_side_effect
+
         class MockJException(Exception):
             def getMessage(self):
                 return str(self)
+
         m.JException = MockJException
         m.JString = str
 
@@ -178,17 +183,13 @@ class TestKBConstruction:
 
     def test_conditional_with_premise(self, mock_initializer, mock_jpype):
         handler = CLHandler(mock_initializer)
-        kb = handler.create_knowledge_base(
-            conditionals=[("flies", "bird")]
-        )
+        kb = handler.create_knowledge_base(conditionals=[("flies", "bird")])
         assert kb.add.call_count == 1
         handler._Conditional.assert_called_once()
 
     def test_unconditional_fact(self, mock_initializer, mock_jpype):
         handler = CLHandler(mock_initializer)
-        kb = handler.create_knowledge_base(
-            conditionals=[("bird", None)]
-        )
+        kb = handler.create_knowledge_base(conditionals=[("bird", None)])
         assert kb.add.call_count == 1
 
     def test_multiple_conditionals(self, mock_initializer, mock_jpype):
@@ -204,9 +205,7 @@ class TestKBConstruction:
 
     def test_negated_conclusion(self, mock_initializer, mock_jpype):
         handler = CLHandler(mock_initializer)
-        kb = handler.create_knowledge_base(
-            conditionals=[("!flies", "penguin")]
-        )
+        kb = handler.create_knowledge_base(conditionals=[("!flies", "penguin")])
         handler._Negation.assert_called_once()
 
 

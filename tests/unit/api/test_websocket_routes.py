@@ -5,6 +5,7 @@ Validates:
 - Ping/pong keepalive
 - Clean disconnect handling
 """
+
 import pytest
 from starlette.testclient import TestClient
 

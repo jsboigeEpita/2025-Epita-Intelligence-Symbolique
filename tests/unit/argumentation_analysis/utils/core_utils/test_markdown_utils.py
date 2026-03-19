@@ -9,8 +9,8 @@ from argumentation_analysis.core.utils.markdown_utils import (
     convert_markdown_file_to_html,
 )
 
-
 # ── save_markdown_to_html ──
+
 
 class TestSaveMarkdownToHtml:
     def test_basic_conversion(self, tmp_path):
@@ -75,6 +75,7 @@ class TestSaveMarkdownToHtml:
 
 # ── convert_markdown_file_to_html ──
 
+
 class TestConvertMarkdownFileToHtml:
     def test_basic_conversion(self, tmp_path):
         md_file = tmp_path / "input.md"
@@ -98,7 +99,9 @@ class TestConvertMarkdownFileToHtml:
         html_file = tmp_path / "output.html"
         viz_dir = tmp_path / "viz"
         viz_dir.mkdir()
-        result = convert_markdown_file_to_html(md_file, html_file, visualization_dir=viz_dir)
+        result = convert_markdown_file_to_html(
+            md_file, html_file, visualization_dir=viz_dir
+        )
         assert result is True
 
     def test_unicode_file(self, tmp_path):

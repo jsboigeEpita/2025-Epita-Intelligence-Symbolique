@@ -39,6 +39,7 @@ def _make_msg(
 
 # ── CollaborationGroup ──
 
+
 class TestCollaborationGroup:
     def test_init_defaults(self):
         g = CollaborationGroup("g1")
@@ -98,7 +99,9 @@ class TestCollaborationGroup:
         assert g.get_member_count() == 3
 
     def test_get_group_info(self):
-        g = CollaborationGroup("g1", name="Team", description="Test group", members=["a"])
+        g = CollaborationGroup(
+            "g1", name="Team", description="Test group", members=["a"]
+        )
         g.add_message(_make_msg())
         info = g.get_group_info()
         assert info["id"] == "g1"
@@ -110,6 +113,7 @@ class TestCollaborationGroup:
 
 
 # ── CollaborationChannel Init ──
+
 
 class TestCollaborationChannelInit:
     def test_channel_type(self):
@@ -132,6 +136,7 @@ class TestCollaborationChannelInit:
 
 
 # ── Direct messages ──
+
 
 class TestDirectMessages:
     @pytest.fixture
@@ -181,6 +186,7 @@ class TestDirectMessages:
 
 
 # ── Group operations ──
+
 
 class TestGroupOperations:
     @pytest.fixture
@@ -265,6 +271,7 @@ class TestGroupOperations:
 
 # ── Group messaging ──
 
+
 class TestGroupMessaging:
     @pytest.fixture
     def ch(self):
@@ -308,6 +315,7 @@ class TestGroupMessaging:
 
 # ── Subscribe / Unsubscribe ──
 
+
 class TestSubscription:
     @pytest.fixture
     def ch(self):
@@ -339,6 +347,7 @@ class TestSubscription:
 
 
 # ── get_channel_info ──
+
 
 class TestGetChannelInfo:
     def test_channel_info(self):

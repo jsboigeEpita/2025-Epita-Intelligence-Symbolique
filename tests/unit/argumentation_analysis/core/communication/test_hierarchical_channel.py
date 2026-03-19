@@ -36,6 +36,7 @@ def _make_msg(
 
 # ── Init ──
 
+
 class TestInit:
     def test_channel_type(self):
         ch = HierarchicalChannel("h1")
@@ -57,6 +58,7 @@ class TestInit:
 
 
 # ── send_message ──
+
 
 class TestSendMessage:
     @pytest.fixture
@@ -95,36 +97,29 @@ class TestSendMessage:
 
 # ── Direction tracking ──
 
+
 class TestDirectionStats:
     @pytest.fixture
     def ch(self):
         return HierarchicalChannel("h1")
 
     def test_strategic_to_tactical(self, ch):
-        msg = _make_msg(
-            sender_level=AgentLevel.STRATEGIC, recipient="tactical_agent"
-        )
+        msg = _make_msg(sender_level=AgentLevel.STRATEGIC, recipient="tactical_agent")
         ch.send_message(msg)
         assert ch.stats["by_direction"]["strategic_to_tactical"] == 1
 
     def test_tactical_to_strategic(self, ch):
-        msg = _make_msg(
-            sender_level=AgentLevel.TACTICAL, recipient="strategic_agent"
-        )
+        msg = _make_msg(sender_level=AgentLevel.TACTICAL, recipient="strategic_agent")
         ch.send_message(msg)
         assert ch.stats["by_direction"]["tactical_to_strategic"] == 1
 
     def test_tactical_to_operational(self, ch):
-        msg = _make_msg(
-            sender_level=AgentLevel.TACTICAL, recipient="operational_agent"
-        )
+        msg = _make_msg(sender_level=AgentLevel.TACTICAL, recipient="operational_agent")
         ch.send_message(msg)
         assert ch.stats["by_direction"]["tactical_to_operational"] == 1
 
     def test_operational_to_tactical(self, ch):
-        msg = _make_msg(
-            sender_level=AgentLevel.OPERATIONAL, recipient="tactical_agent"
-        )
+        msg = _make_msg(sender_level=AgentLevel.OPERATIONAL, recipient="tactical_agent")
         ch.send_message(msg)
         assert ch.stats["by_direction"]["operational_to_tactical"] == 1
 
@@ -137,6 +132,7 @@ class TestDirectionStats:
 
 
 # ── receive_message ──
+
 
 class TestReceiveMessage:
     @pytest.fixture
@@ -177,6 +173,7 @@ class TestReceiveMessage:
 
 
 # ── subscribe / unsubscribe ──
+
 
 class TestSubscribe:
     @pytest.fixture
@@ -231,6 +228,7 @@ class TestSubscribe:
 
 # ── get_pending_messages ──
 
+
 class TestGetPendingMessages:
     @pytest.fixture
     def ch(self):
@@ -262,6 +260,7 @@ class TestGetPendingMessages:
 
 # ── clear_queue ──
 
+
 class TestClearQueue:
     @pytest.fixture
     def ch(self):
@@ -284,6 +283,7 @@ class TestClearQueue:
 
 
 # ── get_channel_info ──
+
 
 class TestGetChannelInfo:
     def test_channel_info(self):

@@ -122,8 +122,10 @@ class LogicAgentFactory:
 
     # Handler-only types (no full agent, but handler available via TweetyBridge)
     _handler_types: List[str] = [
-        "description_logic", "dl",
-        "conditional_logic", "cl",
+        "description_logic",
+        "dl",
+        "conditional_logic",
+        "cl",
         "sat",
     ]
 

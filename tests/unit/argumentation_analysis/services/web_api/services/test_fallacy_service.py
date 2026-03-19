@@ -35,6 +35,7 @@ def service():
 
 # ── Init & Health ──
 
+
 class TestInit:
     def test_initialized(self, service):
         assert service.is_initialized is True
@@ -59,12 +60,20 @@ class TestInit:
 
 # ── Pattern Matching ──
 
+
 class TestPatternMatching:
     def test_simple_substring_match(self, service):
-        assert service._pattern_matches("tout le monde", "tout le monde sait que") is True
+        assert (
+            service._pattern_matches("tout le monde", "tout le monde sait que") is True
+        )
 
     def test_regex_match(self, service):
-        assert service._pattern_matches("si.*alors.*donc.*vrai", "si A alors B donc c'est vrai") is True
+        assert (
+            service._pattern_matches(
+                "si.*alors.*donc.*vrai", "si A alors B donc c'est vrai"
+            )
+            is True
+        )
 
     def test_no_match(self, service):
         assert service._pattern_matches("xyz123", "un texte normal") is False
@@ -74,6 +83,7 @@ class TestPatternMatching:
 
 
 # ── Context Extraction ──
+
 
 class TestContextExtraction:
     def test_extract_middle(self, service):
@@ -92,33 +102,52 @@ class TestContextExtraction:
 
 # ── Severity Distribution ──
 
+
 class TestSeverityDistribution:
     def test_empty_list(self, service):
         dist = service._calculate_severity_distribution([])
         assert dist == {"low": 0, "medium": 0, "high": 0}
 
     def test_low_severity(self, service):
-        fallacies = [FallacyDetection(type="t", name="n", description="d", severity=0.3, confidence=0.5)]
+        fallacies = [
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.3, confidence=0.5
+            )
+        ]
         dist = service._calculate_severity_distribution(fallacies)
         assert dist["low"] == 1
         assert dist["medium"] == 0
         assert dist["high"] == 0
 
     def test_medium_severity(self, service):
-        fallacies = [FallacyDetection(type="t", name="n", description="d", severity=0.5, confidence=0.5)]
+        fallacies = [
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.5, confidence=0.5
+            )
+        ]
         dist = service._calculate_severity_distribution(fallacies)
         assert dist["medium"] == 1
 
     def test_high_severity(self, service):
-        fallacies = [FallacyDetection(type="t", name="n", description="d", severity=0.8, confidence=0.5)]
+        fallacies = [
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.8, confidence=0.5
+            )
+        ]
         dist = service._calculate_severity_distribution(fallacies)
         assert dist["high"] == 1
 
     def test_mixed(self, service):
         fallacies = [
-            FallacyDetection(type="t", name="n", description="d", severity=0.2, confidence=0.5),
-            FallacyDetection(type="t", name="n", description="d", severity=0.5, confidence=0.5),
-            FallacyDetection(type="t", name="n", description="d", severity=0.9, confidence=0.5),
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.2, confidence=0.5
+            ),
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.5, confidence=0.5
+            ),
+            FallacyDetection(
+                type="t", name="n", description="d", severity=0.9, confidence=0.5
+            ),
         ]
         dist = service._calculate_severity_distribution(fallacies)
         assert dist == {"low": 1, "medium": 1, "high": 1}
@@ -126,29 +155,51 @@ class TestSeverityDistribution:
 
 # ── Category Distribution ──
 
+
 class TestCategoryDistribution:
     def test_empty_list(self, service):
         dist = service._calculate_category_distribution([])
         assert dist == {}
 
     def test_known_type(self, service):
-        fallacies = [FallacyDetection(type="ad_hominem", name="n", description="d", severity=0.5, confidence=0.5)]
+        fallacies = [
+            FallacyDetection(
+                type="ad_hominem",
+                name="n",
+                description="d",
+                severity=0.5,
+                confidence=0.5,
+            )
+        ]
         dist = service._calculate_category_distribution(fallacies)
         assert dist.get("informal", 0) == 1
 
     def test_unknown_type(self, service):
-        fallacies = [FallacyDetection(type="unknown_type", name="n", description="d", severity=0.5, confidence=0.5)]
+        fallacies = [
+            FallacyDetection(
+                type="unknown_type",
+                name="n",
+                description="d",
+                severity=0.5,
+                confidence=0.5,
+            )
+        ]
         dist = service._calculate_category_distribution(fallacies)
         assert "unknown" in dist
 
 
 # ── Filter and Deduplicate ──
 
+
 class TestFilterAndDeduplicate:
     def test_severity_threshold_default(self, service):
         fallacies = [
-            FallacyDetection(type="t1", name="n", description="d", severity=0.3, confidence=0.5),
-            FallacyDetection(type="t2", name="n", description="d", severity=0.8, confidence=0.5),
+            FallacyDetection(
+                type="t1", name="n", description="d", severity=0.3, confidence=0.5
+            ),
+            FallacyDetection(
+                type="t2", name="n", description="d", severity=0.8, confidence=0.5
+            ),
         ]
         result = service._filter_and_deduplicate(fallacies, None)
         assert len(result) == 1
@@ -157,24 +208,56 @@ class TestFilterAndDeduplicate:
     def test_severity_threshold_custom(self, service):
         options = FallacyOptions(severity_threshold=0.2)
         fallacies = [
-            FallacyDetection(type="t1", name="n", description="d", severity=0.3, confidence=0.5),
-            FallacyDetection(type="t2", name="n", description="d", severity=0.8, confidence=0.5),
+            FallacyDetection(
+                type="t1", name="n", description="d", severity=0.3, confidence=0.5
+            ),
+            FallacyDetection(
+                type="t2", name="n", description="d", severity=0.8, confidence=0.5
+            ),
         ]
         result = service._filter_and_deduplicate(fallacies, options)
         assert len(result) == 2
 
     def test_deduplication_same_type_same_location(self, service):
         fallacies = [
-            FallacyDetection(type="t1", name="n", description="d", severity=0.8, confidence=0.5, location={"start": 10}),
-            FallacyDetection(type="t1", name="n", description="d", severity=0.8, confidence=0.5, location={"start": 10}),
+            FallacyDetection(
+                type="t1",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+                location={"start": 10},
+            ),
+            FallacyDetection(
+                type="t1",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+                location={"start": 10},
+            ),
         ]
         result = service._filter_and_deduplicate(fallacies, None)
         assert len(result) == 1
 
     def test_no_dedup_different_locations(self, service):
         fallacies = [
-            FallacyDetection(type="t1", name="n", description="d", severity=0.8, confidence=0.5, location={"start": 10}),
-            FallacyDetection(type="t1", name="n", description="d", severity=0.8, confidence=0.5, location={"start": 50}),
+            FallacyDetection(
+                type="t1",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+                location={"start": 10},
+            ),
+            FallacyDetection(
+                type="t1",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+                location={"start": 50},
+            ),
         ]
         result = service._filter_and_deduplicate(fallacies, None)
         assert len(result) == 2
@@ -182,7 +265,9 @@ class TestFilterAndDeduplicate:
     def test_max_fallacies_limit(self, service):
         options = FallacyOptions(max_fallacies=2, severity_threshold=0.0)
         fallacies = [
-            FallacyDetection(type=f"t{i}", name="n", description="d", severity=0.8, confidence=0.5)
+            FallacyDetection(
+                type=f"t{i}", name="n", description="d", severity=0.8, confidence=0.5
+            )
             for i in range(5)
         ]
         result = service._filter_and_deduplicate(fallacies, options)
@@ -191,8 +276,20 @@ class TestFilterAndDeduplicate:
     def test_category_filter(self, service):
         options = FallacyOptions(categories=["ad_hominem"], severity_threshold=0.0)
         fallacies = [
-            FallacyDetection(type="ad_hominem", name="n", description="d", severity=0.8, confidence=0.5),
-            FallacyDetection(type="straw_man", name="n", description="d", severity=0.8, confidence=0.5),
+            FallacyDetection(
+                type="ad_hominem",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+            ),
+            FallacyDetection(
+                type="straw_man",
+                name="n",
+                description="d",
+                severity=0.8,
+                confidence=0.5,
+            ),
         ]
         result = service._filter_and_deduplicate(fallacies, options)
         assert len(result) == 1
@@ -200,6 +297,7 @@ class TestFilterAndDeduplicate:
 
 
 # ── Get Fallacy Types ──
+
 
 class TestGetFallacyTypes:
     def test_returns_dict(self, service):
@@ -223,6 +321,7 @@ class TestGetFallacyTypes:
 
 # ── Get Categories ──
 
+
 class TestGetCategories:
     def test_returns_list(self, service):
         categories = service.get_categories()
@@ -236,9 +335,12 @@ class TestGetCategories:
 
 # ── Detect Fallacies (integration) ──
 
+
 class TestDetectFallacies:
     def test_detect_false_dilemma(self, service):
-        request = FallacyRequest(text="Soit vous êtes avec nous, soit vous êtes contre nous.")
+        request = FallacyRequest(
+            text="Soit vous êtes avec nous, soit vous êtes contre nous."
+        )
         response = service.detect_fallacies(request)
         assert response.success is True
         assert response.fallacy_count > 0
@@ -257,14 +359,18 @@ class TestDetectFallacies:
         assert response.processing_time >= 0.0
 
     def test_response_has_distributions(self, service):
-        request = FallacyRequest(text="Soit ceci soit cela, c'est tout le monde qui le dit.")
+        request = FallacyRequest(
+            text="Soit ceci soit cela, c'est tout le monde qui le dit."
+        )
         response = service.detect_fallacies(request)
         assert isinstance(response.severity_distribution, dict)
         assert isinstance(response.category_distribution, dict)
 
     def test_detect_with_options(self, service):
         options = FallacyOptions(severity_threshold=0.9)
-        request = FallacyRequest(text="Soit A soit B, tout le monde le dit.", options=options)
+        request = FallacyRequest(
+            text="Soit A soit B, tout le monde le dit.", options=options
+        )
         response = service.detect_fallacies(request)
         assert response.success is True
         # High threshold should filter out low-severity matches

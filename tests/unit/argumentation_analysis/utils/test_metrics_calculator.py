@@ -9,8 +9,8 @@ from argumentation_analysis.utils.metrics_calculator import (
     analyze_contextual_richness,
 )
 
-
 # ── count_fallacies ──
+
 
 class TestCountFallacies:
     def test_empty_results(self):
@@ -131,6 +131,7 @@ class TestCountFallacies:
 
 # ── extract_confidence_scores ──
 
+
 class TestExtractConfidenceScores:
     def test_empty_results(self):
         scores = extract_confidence_scores([])
@@ -139,13 +140,7 @@ class TestExtractConfidenceScores:
 
     def test_base_coherence(self):
         results = [
-            {
-                "analyses": {
-                    "argument_coherence": {
-                        "overall_coherence": {"score": 0.85}
-                    }
-                }
-            }
+            {"analyses": {"argument_coherence": {"overall_coherence": {"score": 0.85}}}}
         ]
         scores = extract_confidence_scores(results)
         assert abs(scores["base_coherence"] - 0.85) < 1e-6
@@ -168,9 +163,7 @@ class TestExtractConfidenceScores:
             {
                 "analyses": {
                     "rhetorical_results": {
-                        "coherence_analysis": {
-                            "overall_coherence": {"score": 0.9}
-                        }
+                        "coherence_analysis": {"overall_coherence": {"score": 0.9}}
                     }
                 }
             }
@@ -192,24 +185,14 @@ class TestExtractConfidenceScores:
         assert abs(scores["advanced_coherence"] - 0.75) < 1e-6
 
     def test_advanced_severity(self):
-        results = [
-            {"analyses": {"fallacy_severity": {"overall_severity": 0.3}}}
-        ]
+        results = [{"analyses": {"fallacy_severity": {"overall_severity": 0.3}}}]
         scores = extract_confidence_scores(results)
         assert abs(scores["advanced_severity"] - 0.3) < 1e-6
 
     def test_averaging_multiple(self):
         results = [
-            {
-                "analyses": {
-                    "argument_coherence": {"overall_coherence": {"score": 0.8}}
-                }
-            },
-            {
-                "analyses": {
-                    "argument_coherence": {"overall_coherence": {"score": 0.6}}
-                }
-            },
+            {"analyses": {"argument_coherence": {"overall_coherence": {"score": 0.8}}}},
+            {"analyses": {"argument_coherence": {"overall_coherence": {"score": 0.6}}}},
         ]
         scores = extract_confidence_scores(results)
         assert abs(scores["base_coherence"] - 0.7) < 1e-6
@@ -226,6 +209,7 @@ class TestExtractConfidenceScores:
 
 
 # ── analyze_contextual_richness ──
+
 
 class TestAnalyzeContextualRichness:
     def test_empty_results(self):
@@ -310,9 +294,7 @@ class TestAnalyzeContextualRichness:
         results = [
             {
                 "analyses": {
-                    "contextual_fallacies": {
-                        "contextual_factors": {"f1": "v1"}
-                    }
+                    "contextual_fallacies": {"contextual_factors": {"f1": "v1"}}
                 }
             },
             {
@@ -328,14 +310,6 @@ class TestAnalyzeContextualRichness:
         assert abs(scores["base_contextual"] - 2.0) < 1e-6
 
     def test_empty_context_analysis(self):
-        results = [
-            {
-                "analyses": {
-                    "contextual_fallacies": {
-                        "context_analysis": {}
-                    }
-                }
-            }
-        ]
+        results = [{"analyses": {"contextual_fallacies": {"context_analysis": {}}}}]
         scores = analyze_contextual_richness(results)
         assert abs(scores["advanced_contextual"] - 0.0) < 1e-6

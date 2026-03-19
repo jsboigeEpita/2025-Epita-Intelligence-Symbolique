@@ -10,8 +10,8 @@ from argumentation_analysis.core.utils.code_manipulation_utils import (
     refactor_rename_function,
 )
 
-
 # ── ImportUpdater ──
+
 
 class TestImportUpdater:
     def test_init(self):
@@ -21,6 +21,7 @@ class TestImportUpdater:
 
     def test_replaces_matching_import(self):
         import ast
+
         code = "from old.module import something"
         tree = ast.parse(code)
         updater = ImportUpdater("old.module", "new.module")
@@ -31,6 +32,7 @@ class TestImportUpdater:
 
     def test_no_match_unchanged(self):
         import ast
+
         code = "from other.module import something"
         tree = ast.parse(code)
         updater = ImportUpdater("old.module", "new.module")
@@ -40,6 +42,7 @@ class TestImportUpdater:
 
     def test_multiple_imports(self):
         import ast
+
         code = "from old.mod import a\nfrom old.mod import b\nfrom keep.mod import c"
         tree = ast.parse(code)
         updater = ImportUpdater("old.mod", "new.mod")
@@ -50,6 +53,7 @@ class TestImportUpdater:
 
 
 # ── refactor_update_import ──
+
 
 class TestRefactorUpdateImport:
     def test_basic_replacement(self):
@@ -89,6 +93,7 @@ class TestRefactorUpdateImport:
 
 # ── FunctionRenamer ──
 
+
 class TestFunctionRenamer:
     def test_init(self):
         renamer = FunctionRenamer("old_fn", "new_fn")
@@ -97,6 +102,7 @@ class TestFunctionRenamer:
 
     def test_renames_matching_call(self):
         import ast
+
         code = "old_fn(x, y)"
         tree = ast.parse(code)
         renamer = FunctionRenamer("old_fn", "new_fn")
@@ -107,6 +113,7 @@ class TestFunctionRenamer:
 
     def test_no_match_unchanged(self):
         import ast
+
         code = "other_fn(x)"
         tree = ast.parse(code)
         renamer = FunctionRenamer("old_fn", "new_fn")
@@ -116,6 +123,7 @@ class TestFunctionRenamer:
 
     def test_attribute_call_not_affected(self):
         import ast
+
         code = "obj.old_fn(x)"
         tree = ast.parse(code)
         renamer = FunctionRenamer("old_fn", "new_fn")
@@ -126,6 +134,7 @@ class TestFunctionRenamer:
 
 
 # ── refactor_rename_function ──
+
 
 class TestRefactorRenameFunction:
     def test_basic_rename(self):

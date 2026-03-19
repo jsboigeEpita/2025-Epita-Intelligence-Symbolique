@@ -73,7 +73,9 @@ class TestAnalyzeAgentEffectiveness:
 
     def test_fallback_to_source_name(self):
         """Uses source_name when agent_name is missing."""
-        corpus = [{"source_name": "FallbackAgent", "fallacies": [], "confidence_score": 0.5}]
+        corpus = [
+            {"source_name": "FallbackAgent", "fallacies": [], "confidence_score": 0.5}
+        ]
         result = analyze_agent_effectiveness(corpus)
         assert "FallbackAgent" in result["agents_evaluated"]
 
@@ -135,7 +137,9 @@ class TestAnalyzeAgentEffectiveness:
             }
         ]
         result = analyze_agent_effectiveness(corpus)
-        assert result["fallacy_detection_by_agent"]["BadConf"]["average_confidence"] == 0.0
+        assert (
+            result["fallacy_detection_by_agent"]["BadConf"]["average_confidence"] == 0.0
+        )
 
     def test_multiple_results_same_agent(self):
         """Multiple results for same agent are aggregated."""

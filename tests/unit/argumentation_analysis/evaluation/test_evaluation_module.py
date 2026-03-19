@@ -12,10 +12,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from argumentation_analysis.evaluation.model_registry import ModelConfig, ModelRegistry
-from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult, BenchmarkRunner
+from argumentation_analysis.evaluation.benchmark_runner import (
+    BenchmarkResult,
+    BenchmarkRunner,
+)
 from argumentation_analysis.evaluation.result_collector import ResultCollector
 from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore
-
 
 # =====================================================================
 # ModelConfig Tests
@@ -24,16 +26,24 @@ from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore
 
 class TestModelConfig:
     def test_basic_creation(self):
-        mc = ModelConfig(model_id="gpt-5-mini", base_url="https://api.openai.com/v1", api_key="sk-test")
+        mc = ModelConfig(
+            model_id="gpt-5-mini",
+            base_url="https://api.openai.com/v1",
+            api_key="sk-test",
+        )
         assert mc.model_id == "gpt-5-mini"
         assert mc.display_name == "gpt-5-mini"
 
     def test_custom_display_name(self):
-        mc = ModelConfig(model_id="x", base_url="y", api_key="z", display_name="My Model")
+        mc = ModelConfig(
+            model_id="x", base_url="y", api_key="z", display_name="My Model"
+        )
         assert mc.display_name == "My Model"
 
     def test_thinking_model_flag(self):
-        mc = ModelConfig(model_id="qwen", base_url="u", api_key="k", is_thinking_model=True)
+        mc = ModelConfig(
+            model_id="qwen", base_url="u", api_key="k", is_thinking_model=True
+        )
         assert mc.is_thinking_model is True
 
 
@@ -80,11 +90,15 @@ class TestModelRegistry:
         assert os.environ.get("OPENAI_API_KEY") == original_key
 
     def test_from_env(self):
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "test-key",
-            "OPENAI_CHAT_MODEL_ID": "gpt-test",
-            "OPENAI_BASE_URL": "https://test.api/v1",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-test",
+                "OPENAI_BASE_URL": "https://test.api/v1",
+            },
+            clear=False,
+        ):
             reg = ModelRegistry.from_env()
             assert "default" in reg.list_models()
 
@@ -113,9 +127,16 @@ class TestBenchmarkResult:
 
     def test_serializable(self):
         r = BenchmarkResult(
-            workflow_name="test", model_name="m", document_index=0,
-            document_name="d", success=True, duration_seconds=0.5,
-            phases_completed=1, phases_total=1, phases_failed=0, phases_skipped=0,
+            workflow_name="test",
+            model_name="m",
+            document_index=0,
+            document_name="d",
+            success=True,
+            duration_seconds=0.5,
+            phases_completed=1,
+            phases_total=1,
+            phases_failed=0,
+            phases_skipped=0,
         )
         data = asdict(r)
         json_str = json.dumps(data)
@@ -133,7 +154,11 @@ class TestBenchmarkRunner:
         reg.register("mock", ModelConfig("mock-model", "http://mock/v1", "mock-key"))
         runner = BenchmarkRunner(reg)
         runner._dataset = [
-            {"source_name": "Test Doc", "full_text": "This is a test argument about policy.", "extracts": []},
+            {
+                "source_name": "Test Doc",
+                "full_text": "This is a test argument about policy.",
+                "extracts": [],
+            },
             {"source_name": "Empty Doc", "full_text": None, "extracts": []},
         ]
         return runner
@@ -167,7 +192,13 @@ class TestBenchmarkRunner:
     async def test_run_cell_success(self):
         runner = self._make_runner_with_dataset()
         mock_result = {
-            "phases": {"p1": MagicMock(status=MagicMock(value="completed"), capability="test", output={"data": 1})},
+            "phases": {
+                "p1": MagicMock(
+                    status=MagicMock(value="completed"),
+                    capability="test",
+                    output={"data": 1},
+                )
+            },
             "summary": {"completed": 1, "total": 1, "failed": 0, "skipped": 0},
             "unified_state": None,
         }
@@ -186,6 +217,7 @@ class TestBenchmarkRunner:
 
         async def slow(*a, **kw):
             import asyncio
+
             await asyncio.sleep(10)
 
         with patch(
@@ -217,9 +249,16 @@ class TestBenchmarkRunner:
 class TestResultCollector:
     def _make_result(self, wf="light", model="test", idx=0, success=True):
         return BenchmarkResult(
-            workflow_name=wf, model_name=model, document_index=idx,
-            document_name=f"doc_{idx}", success=success, duration_seconds=1.0,
-            phases_completed=2, phases_total=3, phases_failed=0, phases_skipped=1,
+            workflow_name=wf,
+            model_name=model,
+            document_index=idx,
+            document_name=f"doc_{idx}",
+            success=success,
+            duration_seconds=1.0,
+            phases_completed=2,
+            phases_total=3,
+            phases_failed=0,
+            phases_skipped=1,
         )
 
     def test_save_and_load(self, tmp_path):
@@ -405,6 +444,7 @@ class TestBaselineCorpus:
     def test_corpus_loads_valid_json(self):
         """Verify the corpus file is valid JSON."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             # Strip BOM if present before parsing
             content = f.read()
@@ -416,6 +456,7 @@ class TestBaselineCorpus:
     def test_corpus_has_required_metadata(self):
         """Verify the corpus has all required metadata fields."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -432,6 +473,7 @@ class TestBaselineCorpus:
     def test_corpus_metadata_valid(self):
         """Verify corpus metadata contains expected values."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -446,6 +488,7 @@ class TestBaselineCorpus:
     def test_corpus_documents_structure(self):
         """Verify each document has the required structure."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -469,6 +512,7 @@ class TestBaselineCorpus:
     def test_corpus_document_ids_unique(self):
         """Verify all document IDs are unique."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -481,6 +525,7 @@ class TestBaselineCorpus:
     def test_corpus_difficulty_distribution(self):
         """Verify the corpus has documents from all difficulty levels."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -500,6 +545,7 @@ class TestBaselineCorpus:
     def test_corpus_fallacy_coverage(self):
         """Verify the corpus covers the expected fallacies."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -511,14 +557,14 @@ class TestBaselineCorpus:
 
         # Verify at least some documents have expected fallacies
         docs_with_fallacies = [
-            doc for doc in corpus["documents"]
-            if doc["expected_fallacies"]
+            doc for doc in corpus["documents"] if doc["expected_fallacies"]
         ]
         assert len(docs_with_fallacies) >= 8
 
     def test_corpus_text_not_empty(self):
         """Verify all documents have non-empty text."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -531,6 +577,7 @@ class TestBaselineCorpus:
     def test_corpus_sample_document_content(self):
         """Verify a sample document has expected content."""
         import json
+
         with open(self.corpus_path, "r", encoding="utf-8") as f:
             content = f.read()
             if content.startswith("\ufeff"):
@@ -538,14 +585,18 @@ class TestBaselineCorpus:
             corpus = json.loads(content)
 
         # Find corpus_001 (simple political argument, no fallacies)
-        doc_001 = next((d for d in corpus["documents"] if d["id"] == "corpus_001"), None)
+        doc_001 = next(
+            (d for d in corpus["documents"] if d["id"] == "corpus_001"), None
+        )
         assert doc_001 is not None
         assert doc_001["difficulty"] == "easy"
         assert len(doc_001["expected_fallacies"]) == 0
         assert "Monsieur le Président" in doc_001["text"]
 
         # Find corpus_002 (ad hominem, guilt by association)
-        doc_002 = next((d for d in corpus["documents"] if d["id"] == "corpus_002"), None)
+        doc_002 = next(
+            (d for d in corpus["documents"] if d["id"] == "corpus_002"), None
+        )
         assert doc_002 is not None
         assert doc_002["difficulty"] == "medium"
         assert "ad_hominem" in doc_002["expected_fallacies"]
@@ -611,31 +662,35 @@ class TestSynergyAnalyzer:
 
         # Create sample results
         collector = ResultCollector(tmp_path)
-        collector.save(BenchmarkResult(
-            workflow_name="light",
-            model_name="test",
-            document_index=0,
-            document_name="corpus_001",
-            success=True,
-            duration_seconds=1.5,
-            phases_completed=3,
-            phases_total=3,
-            phases_failed=0,
-            phases_skipped=0,
-        ))
-        collector.save(BenchmarkResult(
-            workflow_name="light",
-            model_name="test",
-            document_index=1,
-            document_name="corpus_002",
-            success=False,
-            duration_seconds=0.5,
-            phases_completed=1,
-            phases_total=3,
-            phases_failed=1,
-            phases_skipped=0,
-            error="Test error",
-        ))
+        collector.save(
+            BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=0,
+                document_name="corpus_001",
+                success=True,
+                duration_seconds=1.5,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            )
+        )
+        collector.save(
+            BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=1,
+                document_name="corpus_002",
+                success=False,
+                duration_seconds=0.5,
+                phases_completed=1,
+                phases_total=3,
+                phases_failed=1,
+                phases_skipped=0,
+                error="Test error",
+            )
+        )
 
         analyzer = SynergyAnalyzer(tmp_path)
         metrics = analyzer.analyze_workflow_performance()
@@ -653,18 +708,20 @@ class TestSynergyAnalyzer:
         from argumentation_analysis.evaluation.benchmark_runner import BenchmarkResult
 
         collector = ResultCollector(tmp_path)
-        collector.save(BenchmarkResult(
-            workflow_name="light",
-            model_name="test",
-            document_index=0,
-            document_name="corpus_001",
-            success=True,
-            duration_seconds=1.0,
-            phases_completed=3,
-            phases_total=3,
-            phases_failed=0,
-            phases_skipped=0,
-        ))
+        collector.save(
+            BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=0,
+                document_name="corpus_001",
+                success=True,
+                duration_seconds=1.0,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            )
+        )
 
         analyzer = SynergyAnalyzer(tmp_path)
         comparison = analyzer.compare_workflows()
@@ -694,31 +751,35 @@ class TestSynergyAnalyzer:
         # Create results for multiple workflows
         collector = ResultCollector(tmp_path)
         for idx in range(3):
-            collector.save(BenchmarkResult(
-                workflow_name="light",
-                model_name="test",
-                document_index=idx,
-                document_name=f"corpus_00{idx+1}",
-                success=True,
-                duration_seconds=1.0,
-                phases_completed=3,
-                phases_total=3,
-                phases_failed=0,
-                phases_skipped=0,
-            ))
+            collector.save(
+                BenchmarkResult(
+                    workflow_name="light",
+                    model_name="test",
+                    document_index=idx,
+                    document_name=f"corpus_00{idx+1}",
+                    success=True,
+                    duration_seconds=1.0,
+                    phases_completed=3,
+                    phases_total=3,
+                    phases_failed=0,
+                    phases_skipped=0,
+                )
+            )
         for idx in range(3):
-            collector.save(BenchmarkResult(
-                workflow_name="standard",
-                model_name="test",
-                document_index=idx,
-                document_name=f"corpus_00{idx+1}",
-                success=True,
-                duration_seconds=2.5,
-                phases_completed=5,
-                phases_total=6,
-                phases_failed=0,
-                phases_skipped=1,
-            ))
+            collector.save(
+                BenchmarkResult(
+                    workflow_name="standard",
+                    model_name="test",
+                    document_index=idx,
+                    document_name=f"corpus_00{idx+1}",
+                    success=True,
+                    duration_seconds=2.5,
+                    phases_completed=5,
+                    phases_total=6,
+                    phases_failed=0,
+                    phases_skipped=1,
+                )
+            )
 
         analyzer = SynergyAnalyzer(tmp_path)
         recommendations = analyzer.generate_recommendations()
@@ -741,18 +802,20 @@ class TestSynergyAnalyzer:
 
         # Add sample data
         collector = ResultCollector(tmp_path)
-        collector.save(BenchmarkResult(
-            workflow_name="light",
-            model_name="test",
-            document_index=0,
-            document_name="corpus_001",
-            success=True,
-            duration_seconds=1.0,
-            phases_completed=3,
-            phases_total=3,
-            phases_failed=0,
-            phases_skipped=0,
-        ))
+        collector.save(
+            BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=0,
+                document_name="corpus_001",
+                success=True,
+                duration_seconds=1.0,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            )
+        )
 
         analyzer = SynergyAnalyzer(tmp_path)
         report_path = analyzer.generate_report()
@@ -773,18 +836,20 @@ class TestSynergyAnalyzer:
 
         # Add sample data
         collector = ResultCollector(tmp_path)
-        collector.save(BenchmarkResult(
-            workflow_name="light",
-            model_name="test",
-            document_index=0,
-            document_name="corpus_001",
-            success=True,
-            duration_seconds=1.0,
-            phases_completed=3,
-            phases_total=3,
-            phases_failed=0,
-            phases_skipped=0,
-        ))
+        collector.save(
+            BenchmarkResult(
+                workflow_name="light",
+                model_name="test",
+                document_index=0,
+                document_name="corpus_001",
+                success=True,
+                duration_seconds=1.0,
+                phases_completed=3,
+                phases_total=3,
+                phases_failed=0,
+                phases_skipped=0,
+            )
+        )
 
         analyzer = SynergyAnalyzer(tmp_path)
         report_path = analyzer.export_markdown_report()

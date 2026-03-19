@@ -29,7 +29,6 @@ from argumentation_analysis.agents.watson_jtms.utils import (
     _analyze_hypothesis_consistency,
 )
 
-
 # =============================================================================
 # _extract_logical_structure
 # =============================================================================
@@ -42,7 +41,9 @@ class TestExtractLogicalStructure:
         assert "implication" in result["logical_operators"]
 
     def test_conjunctive(self):
-        result = _extract_logical_structure("Le soleil brille et la température est élevée")
+        result = _extract_logical_structure(
+            "Le soleil brille et la température est élevée"
+        )
         assert result["type"] == "conjunctive"
 
     def test_disjunctive(self):
@@ -73,17 +74,21 @@ class TestAnalyzeHypothesisStrengthsWeaknesses:
         assert "Confiance insuffisante" in result["weaknesses"]
 
     def test_multiple_evidence_strength(self):
-        result = _analyze_hypothesis_strengths_weaknesses({
-            "confidence": 0.5,
-            "supporting_evidence": ["e1", "e2", "e3"],
-        })
+        result = _analyze_hypothesis_strengths_weaknesses(
+            {
+                "confidence": 0.5,
+                "supporting_evidence": ["e1", "e2", "e3"],
+            }
+        )
         assert "Multiples évidences de support" in result["strengths"]
 
     def test_no_evidence_critical(self):
-        result = _analyze_hypothesis_strengths_weaknesses({
-            "confidence": 0.3,
-            "supporting_evidence": [],
-        })
+        result = _analyze_hypothesis_strengths_weaknesses(
+            {
+                "confidence": 0.3,
+                "supporting_evidence": [],
+            }
+        )
         assert "Aucune évidence de support" in result["critical_issues"]
 
     def test_default_values(self):
@@ -194,25 +199,31 @@ class TestGenerateContradictoryTests:
 
 class TestGenerateFinalAssessment:
     def test_excellent(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a", "b", "c"],
-            "validated_beliefs": ["a", "b", "c"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a", "b", "c"],
+                "validated_beliefs": ["a", "b", "c"],
+            }
+        )
         assert result["assessment_level"] == "excellent"
         assert result["quality_score"] == 1.0
 
     def test_poor(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": [],
-            "validated_beliefs": ["a", "b", "c", "d"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": [],
+                "validated_beliefs": ["a", "b", "c", "d"],
+            }
+        )
         assert result["assessment_level"] == "poor"
 
     def test_empty(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": [],
-            "validated_beliefs": [],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": [],
+                "validated_beliefs": [],
+            }
+        )
         assert result["quality_score"] == 0.0
 
 

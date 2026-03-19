@@ -14,10 +14,10 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime, timedelta
 
-
 # ============================================================================
 # TestCluedoInvestigatorPlugin
 # ============================================================================
+
 
 class TestCluedoInvestigatorPlugin:
     """Tests for CluedoInvestigatorPlugin (cluedo_plugins.py)."""
@@ -26,6 +26,7 @@ class TestCluedoInvestigatorPlugin:
         from argumentation_analysis.orchestration.cluedo_components.cluedo_plugins import (
             CluedoInvestigatorPlugin,
         )
+
         if handler is None:
             handler = MagicMock()
             handler.force_moriarty_oracle_revelation = AsyncMock()
@@ -71,7 +72,9 @@ class TestCluedoInvestigatorPlugin:
 
     async def test_make_suggestion_exception_handled(self):
         plugin, handler = self._make_plugin()
-        handler.force_moriarty_oracle_revelation.side_effect = RuntimeError("Network error")
+        handler.force_moriarty_oracle_revelation.side_effect = RuntimeError(
+            "Network error"
+        )
         result = await plugin.make_suggestion(
             suspect="Rose", arme="Poignard", lieu="Cuisine"
         )
@@ -82,6 +85,7 @@ class TestCluedoInvestigatorPlugin:
 # TestDialogueAnalyzer
 # ============================================================================
 
+
 class TestDialogueAnalyzer:
     """Tests for DialogueAnalyzer (dialogue_analyzer.py)."""
 
@@ -89,6 +93,7 @@ class TestDialogueAnalyzer:
         from argumentation_analysis.orchestration.cluedo_components.dialogue_analyzer import (
             DialogueAnalyzer,
         )
+
         oracle_state = MagicMock()
         oracle_state.record_contextual_reference = MagicMock()
         oracle_state.record_emotional_reaction = MagicMock()
@@ -104,9 +109,14 @@ class TestDialogueAnalyzer:
 
     def test_detect_suggestion(self):
         analyzer, _ = self._make_analyzer()
-        assert analyzer.detect_message_type("Je suggère Colonel Moutarde") == "suggestion"
+        assert (
+            analyzer.detect_message_type("Je suggère Colonel Moutarde") == "suggestion"
+        )
         assert analyzer.detect_message_type("Le suspect est Rose") == "suggestion"
-        assert analyzer.detect_message_type("L'arme utilisée est le poignard") == "suggestion"
+        assert (
+            analyzer.detect_message_type("L'arme utilisée est le poignard")
+            == "suggestion"
+        )
 
     def test_detect_analysis(self):
         analyzer, _ = self._make_analyzer()
@@ -207,19 +217,19 @@ class TestDialogueAnalyzer:
     def test_emotional_reaction_fallback_to_role(self):
         """When author_name is missing on trigger msg, falls back to role attribute."""
         analyzer, _ = self._make_analyzer()
+
         # history[-2] is the trigger; give it no author_name so getattr falls back to role
         class _MinimalMsg:
             def __init__(self, role, content):
                 self.role = role
                 self.content = content
+
         trigger_msg = _MinimalMsg(role="assistant", content="Some message")
         current_msg = MagicMock()
         current_msg.author_name = "Watson"
         current_msg.content = "brillant!"
         history = [trigger_msg, current_msg]
-        reactions = analyzer._detect_emotional_reactions(
-            "Watson", "brillant!", history
-        )
+        reactions = analyzer._detect_emotional_reactions("Watson", "brillant!", history)
         assert len(reactions) == 1
         assert reactions[0]["trigger_agent"] == "assistant"
 
@@ -228,6 +238,7 @@ class TestDialogueAnalyzer:
 # TestEnhancedLogicHandler
 # ============================================================================
 
+
 class TestEnhancedLogicHandler:
     """Tests for EnhancedLogicHandler (enhanced_logic.py)."""
 
@@ -235,6 +246,7 @@ class TestEnhancedLogicHandler:
         from argumentation_analysis.orchestration.cluedo_components.enhanced_logic import (
             EnhancedLogicHandler,
         )
+
         return EnhancedLogicHandler(oracle_state=oracle_state, oracle_strategy=strategy)
 
     # -- analyze_suggestion_quality --
@@ -257,7 +269,9 @@ class TestEnhancedLogicHandler:
 
     def test_suggestion_trivial_keyword(self):
         handler = self._make_handler()
-        result = handler.analyze_suggestion_quality("Je ne sais pas qui c'est, c'est difficile")
+        result = handler.analyze_suggestion_quality(
+            "Je ne sais pas qui c'est, c'est difficile"
+        )
         assert result["is_trivial"] is True
         assert "trivial_keyword_detected" in result["reason"]
 
@@ -289,7 +303,9 @@ class TestEnhancedLogicHandler:
         state = MagicMock()
         state.get_moriarty_cards.return_value = ["Chandelier", "Salon"]
         state.add_revelation = MagicMock()
-        handler = self._make_handler(oracle_state=state, strategy="enhanced_auto_reveal")
+        handler = self._make_handler(
+            oracle_state=state, strategy="enhanced_auto_reveal"
+        )
         result = handler.trigger_auto_revelation("stalled", "test context")
         assert result["success"] is True
         assert result["revealed_card"] == "Chandelier"
@@ -312,9 +328,7 @@ class TestEnhancedLogicHandler:
 
     def test_state_transition_invalid_target(self):
         handler = self._make_handler()
-        result = handler.handle_enhanced_state_transition(
-            "idle", "invalid_state", {}
-        )
+        result = handler.handle_enhanced_state_transition("idle", "invalid_state", {})
         assert result["success"] is False
         assert result["new_state"] == "idle"  # stays at current
         assert "Invalid target state" in result["error"]
@@ -336,7 +350,9 @@ class TestEnhancedLogicHandler:
 
     async def test_optimized_turn_sherlock(self):
         handler = self._make_handler()
-        result = await handler.execute_optimized_agent_turn("Sherlock", 1, "enhanced_cluedo")
+        result = await handler.execute_optimized_agent_turn(
+            "Sherlock", 1, "enhanced_cluedo"
+        )
         assert result["role"] == "investigator"
         assert result["success"] is True
         assert result["performance"]["context_awareness"] == 0.75
@@ -350,7 +366,9 @@ class TestEnhancedLogicHandler:
 
     async def test_optimized_turn_moriarty(self):
         handler = self._make_handler()
-        result = await handler.execute_optimized_agent_turn("Moriarty", 0, "enhanced_cluedo")
+        result = await handler.execute_optimized_agent_turn(
+            "Moriarty", 0, "enhanced_cluedo"
+        )
         assert result["role"] == "oracle_revealer"
 
     async def test_optimized_turn_unknown_agent(self):
@@ -369,6 +387,7 @@ class TestEnhancedLogicHandler:
 # TestToolCallLoggingHandler
 # ============================================================================
 
+
 class TestToolCallLoggingHandler:
     """Tests for ToolCallLoggingHandler (logging_handler.py)."""
 
@@ -376,6 +395,7 @@ class TestToolCallLoggingHandler:
         from argumentation_analysis.orchestration.cluedo_components.logging_handler import (
             ToolCallLoggingHandler,
         )
+
         return ToolCallLoggingHandler()
 
     def test_construction(self):
@@ -440,6 +460,7 @@ class TestToolCallLoggingHandler:
 # ============================================================================
 # TestMetricsCollector
 # ============================================================================
+
 
 class TestMetricsCollector:
     """Tests for MetricsCollector (metrics_collector.py)."""
@@ -626,6 +647,7 @@ class TestMetricsCollector:
 # TestSuggestionHandler
 # ============================================================================
 
+
 class TestSuggestionHandler:
     """Tests for SuggestionHandler (suggestion_handler.py)."""
 
@@ -633,6 +655,7 @@ class TestSuggestionHandler:
         from argumentation_analysis.orchestration.cluedo_components.suggestion_handler import (
             SuggestionHandler,
         )
+
         if moriarty is None:
             moriarty = MagicMock()
             moriarty.validate_suggestion_cluedo = AsyncMock()

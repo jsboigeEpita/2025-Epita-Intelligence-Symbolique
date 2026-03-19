@@ -17,10 +17,10 @@ from argumentation_analysis.utils.dev_tools.env_checks import (
     check_python_dependencies,
 )
 
-
 # ============================================================
 # _parse_requirement / _parse_version
 # ============================================================
+
 
 class TestParseHelpers:
     def test_parse_requirement_simple(self):
@@ -53,6 +53,7 @@ class TestParseHelpers:
 # _run_command
 # ============================================================
 
+
 class TestRunCommand:
     @patch("argumentation_analysis.utils.dev_tools.env_checks.subprocess.Popen")
     def test_success(self, mock_popen):
@@ -67,6 +68,7 @@ class TestRunCommand:
     @patch("argumentation_analysis.utils.dev_tools.env_checks.subprocess.Popen")
     def test_timeout(self, mock_popen):
         import subprocess
+
         proc = MagicMock()
         proc.communicate.side_effect = subprocess.TimeoutExpired(cmd="cmd", timeout=30)
         mock_popen.return_value = proc
@@ -92,9 +94,13 @@ class TestRunCommand:
 # check_java_environment
 # ============================================================
 
+
 class TestCheckJavaEnvironment:
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.os.environ", {"JAVA_HOME": "/fake/java"})
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
+        {"JAVA_HOME": "/fake/java"},
+    )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_home_valid_and_java_works(self, mock_path_cls, mock_run):
         # Setup JAVA_HOME path mock
@@ -103,11 +109,13 @@ class TestCheckJavaEnvironment:
         mock_java_exe = MagicMock()
         mock_java_exe.exists.return_value = True
         mock_java_exe.is_file.return_value = True
-        mock_home_path.__truediv__ = MagicMock(side_effect=lambda x: mock_java_exe if "java" in str(x) else MagicMock())
+        mock_home_path.__truediv__ = MagicMock(
+            side_effect=lambda x: mock_java_exe if "java" in str(x) else MagicMock()
+        )
         # Return the home path when _PathInternal is called with JAVA_HOME
         mock_path_cls.return_value = mock_home_path
         # java -version succeeds
-        mock_run.return_value = (0, "", "openjdk version \"11.0.1\"")
+        mock_run.return_value = (0, "", 'openjdk version "11.0.1"')
         result = check_java_environment()
         assert result is True
 
@@ -128,7 +136,10 @@ class TestCheckJavaEnvironment:
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.os.environ", {"JAVA_HOME": "/fake"})
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
+        {"JAVA_HOME": "/fake"},
+    )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_home_not_a_dir(self, mock_path_cls, mock_run):
         mock_home_path = MagicMock()
@@ -139,7 +150,10 @@ class TestCheckJavaEnvironment:
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.os.environ", {"JAVA_HOME": "/fake/java"})
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
+        {"JAVA_HOME": "/fake/java"},
+    )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_version_returns_no_output(self, mock_path_cls, mock_run):
         mock_home_path = MagicMock()
@@ -159,6 +173,7 @@ class TestCheckJavaEnvironment:
 # check_python_dependencies
 # ============================================================
 
+
 class TestCheckPythonDependencies:
     def test_file_not_found(self, tmp_path):
         result = check_python_dependencies(tmp_path / "nonexistent.txt")
@@ -170,7 +185,9 @@ class TestCheckPythonDependencies:
         result = check_python_dependencies(f)
         assert result is True
 
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version")
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version"
+    )
     def test_satisfied_dependency(self, mock_version, tmp_path):
         mock_version.return_value = "2.28.0"
         f = tmp_path / "reqs.txt"
@@ -178,7 +195,9 @@ class TestCheckPythonDependencies:
         result = check_python_dependencies(f)
         assert result is True
 
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version")
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version"
+    )
     def test_unsatisfied_dependency(self, mock_version, tmp_path):
         mock_version.return_value = "1.0.0"
         f = tmp_path / "reqs.txt"
@@ -186,9 +205,12 @@ class TestCheckPythonDependencies:
         result = check_python_dependencies(f)
         assert result is False
 
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version")
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version"
+    )
     def test_missing_package(self, mock_version, tmp_path):
         import importlib.metadata
+
         mock_version.side_effect = importlib.metadata.PackageNotFoundError("nope")
         f = tmp_path / "reqs.txt"
         f.write_text("nonexistent_package_xyz\n", encoding="utf-8")
@@ -207,7 +229,9 @@ class TestCheckPythonDependencies:
         result = check_python_dependencies(f)
         assert result is True
 
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version")
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version"
+    )
     def test_no_version_specifier(self, mock_version, tmp_path):
         mock_version.return_value = "1.0.0"
         f = tmp_path / "reqs.txt"
@@ -221,13 +245,17 @@ class TestCheckPythonDependencies:
         result = check_python_dependencies(str(f))
         assert result is True
 
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version")
+    @patch(
+        "argumentation_analysis.utils.dev_tools.env_checks.importlib.metadata.version"
+    )
     def test_multiple_deps_mixed(self, mock_version, tmp_path):
         import importlib.metadata
+
         def side_effect(name):
             if name == "requests":
                 return "2.28.0"
             raise importlib.metadata.PackageNotFoundError(name)
+
         mock_version.side_effect = side_effect
         f = tmp_path / "reqs.txt"
         f.write_text("requests>=2.20\nmissing_pkg\n", encoding="utf-8")

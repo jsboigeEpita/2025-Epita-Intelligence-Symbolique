@@ -18,10 +18,10 @@ from argumentation_analysis.utils.dev_tools.refactoring_utils import (
     DEFAULT_PATH_PATTERNS,
 )
 
-
 # ============================================================
 # update_imports_in_file_content
 # ============================================================
+
 
 class TestUpdateImportsInFileContent:
     def test_no_changes_on_unmatched_content(self):
@@ -58,7 +58,9 @@ class TestUpdateImportsInFileContent:
         content = "from agents.core.abc import agent_bases\n"
         result, count = update_imports_in_file_content(content)
         assert count == 1
-        assert "from argumentation_analysis.agents.core.abc import agent_bases" in result
+        assert (
+            "from argumentation_analysis.agents.core.abc import agent_bases" in result
+        )
 
     def test_replaces_orchestration_import(self):
         content = "from orchestration import workflow_dsl\n"
@@ -131,6 +133,7 @@ class TestUpdateImportsInFileContent:
 # update_imports_in_file
 # ============================================================
 
+
 class TestUpdateImportsInFile:
     def test_dry_run_returns_updated_content(self, tmp_path):
         f = tmp_path / "test.py"
@@ -166,7 +169,9 @@ class TestUpdateImportsInFile:
         f = tmp_path / "test.py"
         f.write_text("from mymod import X\n", encoding="utf-8")
         patterns = [(r"from\s+mymod\s+import\s+([^\n]+)", r"from newmod import \1")]
-        count, content = update_imports_in_file(f, dry_run=True, import_patterns=patterns)
+        count, content = update_imports_in_file(
+            f, dry_run=True, import_patterns=patterns
+        )
         assert count == 1
         assert "from newmod import X" in content
 
@@ -175,15 +180,20 @@ class TestUpdateImportsInFile:
 # update_imports_in_directory
 # ============================================================
 
+
 class TestUpdateImportsInDirectory:
     def _make_tree(self, tmp_path):
         """Create a simple directory tree with Python files."""
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "a.py").write_text("from core import A\n", encoding="utf-8")
         (tmp_path / "src" / "b.py").write_text("import os\n", encoding="utf-8")
-        (tmp_path / "src" / "c.txt").write_text("from core import C\n", encoding="utf-8")
+        (tmp_path / "src" / "c.txt").write_text(
+            "from core import C\n", encoding="utf-8"
+        )
         (tmp_path / "__pycache__").mkdir()
-        (tmp_path / "__pycache__" / "d.py").write_text("from core import D\n", encoding="utf-8")
+        (tmp_path / "__pycache__" / "d.py").write_text(
+            "from core import D\n", encoding="utf-8"
+        )
         return tmp_path
 
     def test_scans_only_py_files(self, tmp_path):
@@ -217,7 +227,9 @@ class TestUpdateImportsInDirectory:
         self._make_tree(tmp_path)
         update_imports_in_directory(tmp_path, dry_run=True)
         # Original file content should be unchanged
-        assert (tmp_path / "src" / "a.py").read_text(encoding="utf-8") == "from core import A\n"
+        assert (tmp_path / "src" / "a.py").read_text(
+            encoding="utf-8"
+        ) == "from core import A\n"
 
     def test_write_mode_modifies_files(self, tmp_path):
         self._make_tree(tmp_path)
@@ -234,6 +246,7 @@ class TestUpdateImportsInDirectory:
 # ============================================================
 # update_paths_in_file_content
 # ============================================================
+
 
 class TestUpdatePathsInFileContent:
     def test_no_changes_on_unmatched(self):
@@ -329,6 +342,7 @@ class TestUpdatePathsInFileContent:
 # update_paths_in_file
 # ============================================================
 
+
 class TestUpdatePathsInFile:
     def test_dry_run(self, tmp_path):
         f = tmp_path / "test.py"
@@ -367,13 +381,18 @@ class TestUpdatePathsInFile:
 # update_paths_in_directory
 # ============================================================
 
+
 class TestUpdatePathsInDirectory:
     def _make_tree(self, tmp_path):
         (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "a.py").write_text('f = "config/x.yaml"\n', encoding="utf-8")
+        (tmp_path / "src" / "a.py").write_text(
+            'f = "config/x.yaml"\n', encoding="utf-8"
+        )
         (tmp_path / "src" / "b.py").write_text("import os\n", encoding="utf-8")
         (tmp_path / "docs").mkdir()
-        (tmp_path / "docs" / "c.py").write_text('f = "config/y.yaml"\n', encoding="utf-8")
+        (tmp_path / "docs" / "c.py").write_text(
+            'f = "config/y.yaml"\n', encoding="utf-8"
+        )
         return tmp_path
 
     def test_scans_and_reports(self, tmp_path):
@@ -389,6 +408,7 @@ class TestUpdatePathsInDirectory:
         # docs/ directory files should be excluded by default
         # Check using Path parts (not substring) to avoid false positives from temp dir names
         from pathlib import Path
+
         for p in modified_paths:
             assert "docs" not in Path(p).relative_to(tmp_path).parts
 
@@ -408,12 +428,14 @@ class TestUpdatePathsInDirectory:
 # DEFAULT_IMPORT_PATTERNS validation
 # ============================================================
 
+
 class TestDefaultImportPatterns:
     def test_patterns_are_nonempty(self):
         assert len(DEFAULT_IMPORT_PATTERNS) > 0
 
     def test_all_patterns_are_valid_regex(self):
         import re
+
         for pattern, replacement in DEFAULT_IMPORT_PATTERNS:
             re.compile(pattern)  # Should not raise
 
@@ -428,12 +450,14 @@ class TestDefaultImportPatterns:
 # DEFAULT_PATH_PATTERNS validation
 # ============================================================
 
+
 class TestDefaultPathPatterns:
     def test_patterns_are_nonempty(self):
         assert len(DEFAULT_PATH_PATTERNS) > 0
 
     def test_all_patterns_are_valid_regex(self):
         import re
+
         for pattern, replacement in DEFAULT_PATH_PATTERNS:
             re.compile(pattern)  # Should not raise
 

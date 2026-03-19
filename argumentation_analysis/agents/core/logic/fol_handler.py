@@ -356,9 +356,7 @@ class FOLHandler:
             logger.error(
                 f"Error during EProver FOL consistency check: {e}", exc_info=True
             )
-            raise RuntimeError(
-                f"EProver consistency check failed: {e}"
-            ) from e
+            raise RuntimeError(f"EProver consistency check failed: {e}") from e
 
     def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
@@ -439,7 +437,9 @@ class FOLHandler:
             )
             reasoner = EFOLReasoner()
             entails = reasoner.query(belief_set, query_formula)
-            logger.info(f"EProver query: KB entails '{query_formula_str}'? {bool(entails)}")
+            logger.info(
+                f"EProver query: KB entails '{query_formula_str}'? {bool(entails)}"
+            )
             return bool(entails)
         except Exception as e:
             logger.error(f"Error during EProver FOL query: {e}", exc_info=True)

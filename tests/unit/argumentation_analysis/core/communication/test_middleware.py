@@ -43,6 +43,7 @@ def middleware():
 
 # ── Init ──
 
+
 class TestInit:
     def test_default_config(self, middleware):
         assert middleware.config == {}
@@ -65,6 +66,7 @@ class TestInit:
 
 
 # ── Channel registration ──
+
 
 class TestChannelRegistration:
     def test_register_channel(self, middleware):
@@ -91,6 +93,7 @@ class TestChannelRegistration:
 
 # ── Handler registration ──
 
+
 class TestHandlerRegistration:
     def test_register_message_handler(self, middleware):
         handler = MagicMock()
@@ -110,6 +113,7 @@ class TestHandlerRegistration:
 
 
 # ── determine_channel ──
+
 
 class TestDetermineChannel:
     def test_explicit_channel(self, middleware):
@@ -177,6 +181,7 @@ class TestDetermineChannel:
 
 # ── send_message ──
 
+
 class TestSendMessage:
     def test_send_success(self, middleware):
         channel = MagicMock()
@@ -227,6 +232,7 @@ class TestSendMessage:
 
 # ── get_statistics ──
 
+
 class TestGetStatistics:
     def test_returns_copy(self, middleware):
         stats = middleware.get_statistics()
@@ -235,6 +241,7 @@ class TestGetStatistics:
 
 
 # ── get_channel_info ──
+
 
 class TestGetChannelInfo:
     def test_existing_channel(self, middleware):
@@ -251,6 +258,7 @@ class TestGetChannelInfo:
 
 
 # ── _handle_message ──
+
 
 class TestHandleMessage:
     def test_calls_type_handler(self, middleware):
@@ -292,6 +300,7 @@ class TestHandleMessage:
 
 
 # ── shutdown ──
+
 
 class TestShutdown:
     def test_shutdown_with_protocols(self, middleware):

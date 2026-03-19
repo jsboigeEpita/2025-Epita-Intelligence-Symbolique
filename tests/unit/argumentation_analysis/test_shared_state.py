@@ -458,9 +458,7 @@ class TestUnifiedAnalysisStateNewMethods(unittest.TestCase):
         self.state = UnifiedAnalysisState("Test text")
 
     def test_add_neural_fallacy_score(self):
-        nf_id = self.state.add_neural_fallacy_score(
-            "you're dumb", "ad_hominem", 0.92
-        )
+        nf_id = self.state.add_neural_fallacy_score("you're dumb", "ad_hominem", 0.92)
         self.assertTrue(nf_id.startswith("nf_"))
         self.assertEqual(len(self.state.neural_fallacy_scores), 1)
         self.assertEqual(self.state.neural_fallacy_scores[0]["label"], "ad_hominem")
@@ -471,7 +469,9 @@ class TestUnifiedAnalysisStateNewMethods(unittest.TestCase):
         nf_id = self.state.add_neural_fallacy_score(
             "text", "straw_man", 0.75, detector="custom_model"
         )
-        self.assertEqual(self.state.neural_fallacy_scores[0]["detector"], "custom_model")
+        self.assertEqual(
+            self.state.neural_fallacy_scores[0]["detector"], "custom_model"
+        )
 
     def test_add_transcription_segment(self):
         ts_id = self.state.add_transcription_segment(0.0, 1.5, "Hello world", "Alice")

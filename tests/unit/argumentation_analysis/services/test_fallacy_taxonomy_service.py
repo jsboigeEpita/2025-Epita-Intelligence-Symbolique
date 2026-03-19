@@ -11,8 +11,8 @@ from argumentation_analysis.services.fallacy_taxonomy_service import (
     get_taxonomy_manager,
 )
 
-
 # ── FallacyFamily Enum ──
+
 
 class TestFallacyFamily:
     def test_has_eight_families(self):
@@ -33,7 +33,9 @@ class TestFallacyFamily:
         assert actual == expected
 
     def test_by_value(self):
-        assert FallacyFamily("authority_popularity") == FallacyFamily.AUTHORITY_POPULARITY
+        assert (
+            FallacyFamily("authority_popularity") == FallacyFamily.AUTHORITY_POPULARITY
+        )
         assert FallacyFamily("emotional_appeals") == FallacyFamily.EMOTIONAL_APPEALS
 
     def test_invalid_value_raises(self):
@@ -42,6 +44,7 @@ class TestFallacyFamily:
 
 
 # ── ClassifiedFallacy ──
+
 
 class TestClassifiedFallacy:
     @pytest.fixture
@@ -77,11 +80,16 @@ class TestClassifiedFallacy:
 
     def test_to_dict_string_family(self):
         f = ClassifiedFallacy(
-            taxonomy_key=1, name="n", nom_vulgarise="nv",
+            taxonomy_key=1,
+            name="n",
+            nom_vulgarise="nv",
             family="string_family",
-            confidence=0.5, description="d",
-            severity="Moyenne", context_relevance=0.5,
-            family_pattern_score=0.5, detection_method="m",
+            confidence=0.5,
+            description="d",
+            severity="Moyenne",
+            context_relevance=0.5,
+            family_pattern_score=0.5,
+            detection_method="m",
         )
         d = f.to_dict()
         assert d["family"] == "string_family"  # no .value call
@@ -89,14 +97,22 @@ class TestClassifiedFallacy:
     def test_to_dict_all_keys(self, fallacy):
         d = fallacy.to_dict()
         expected_keys = {
-            "taxonomy_key", "name", "nom_vulgarise", "family",
-            "confidence", "description", "severity",
-            "context_relevance", "family_pattern_score", "detection_method",
+            "taxonomy_key",
+            "name",
+            "nom_vulgarise",
+            "family",
+            "confidence",
+            "description",
+            "severity",
+            "context_relevance",
+            "family_pattern_score",
+            "detection_method",
         }
         assert set(d.keys()) == expected_keys
 
 
 # ── FallacyTaxonomyManager ──
+
 
 class TestFallacyTaxonomyManager:
     @pytest.fixture
@@ -152,9 +168,11 @@ class TestFallacyTaxonomyManager:
 
 # ── get_taxonomy_manager singleton ──
 
+
 class TestGetTaxonomyManager:
     def test_returns_manager(self):
         import argumentation_analysis.services.fallacy_taxonomy_service as mod
+
         mod._global_taxonomy_manager = None
         with patch(
             "argumentation_analysis.services.fallacy_taxonomy_service.get_global_detector",
@@ -165,6 +183,7 @@ class TestGetTaxonomyManager:
 
     def test_singleton(self):
         import argumentation_analysis.services.fallacy_taxonomy_service as mod
+
         mod._global_taxonomy_manager = None
         with patch(
             "argumentation_analysis.services.fallacy_taxonomy_service.get_global_detector",

@@ -16,7 +16,6 @@ from argumentation_analysis.orchestration.conversation_orchestrator import (
     create_conversation_orchestrator,
 )
 
-
 # ============================================================
 # Real mode setup & fallback
 # ============================================================
@@ -83,12 +82,15 @@ class TestResultAdaptation:
         return ConversationOrchestrator(mode="demo")
 
     def test_adapt_informal_result(self, orch):
-        result = orch._adapt_real_result("informal", {
-            "fallacies": [
-                {"fallacy_type": "ad_hominem", "confidence": 0.9},
-                {"fallacy_type": "false_cause", "confidence": 0.7},
-            ],
-        })
+        result = orch._adapt_real_result(
+            "informal",
+            {
+                "fallacies": [
+                    {"fallacy_type": "ad_hominem", "confidence": 0.9},
+                    {"fallacy_type": "false_cause", "confidence": 0.7},
+                ],
+            },
+        )
         assert result["fallacies_count"] == 2
         assert result["sophistication_score"] > 0
         assert "ad_hominem" in result["main_issues"]
@@ -99,21 +101,27 @@ class TestResultAdaptation:
         assert result["sophistication_score"] == 0.3  # baseline
 
     def test_adapt_fol_result(self, orch):
-        result = orch._adapt_real_result("fol_logic", {
-            "formulas": ["forall X: (P(X) => Q(X))"],
-            "consistency_check": True,
-            "confidence_score": 0.8,
-        })
+        result = orch._adapt_real_result(
+            "fol_logic",
+            {
+                "formulas": ["forall X: (P(X) => Q(X))"],
+                "consistency_check": True,
+                "confidence_score": 0.8,
+            },
+        )
         assert result["formulas_count"] == 1
         assert result["logical_score"] == 0.8
         assert result["consistency"] == 1.0
 
     def test_adapt_synthesis_result(self, orch):
-        result = orch._adapt_real_result("synthesis", {
-            "confidence_level": 0.65,
-            "overall_validity": True,
-            "executive_summary": "Good argument",
-        })
+        result = orch._adapt_real_result(
+            "synthesis",
+            {
+                "confidence_level": 0.65,
+                "overall_validity": True,
+                "executive_summary": "Good argument",
+            },
+        )
         assert result["unified_score"] == 0.65
         assert result["recommendation"] == "Good argument"
 
@@ -144,12 +152,14 @@ class TestRealModeExecution:
     def mock_informal(self):
         agent = AsyncMock()
         agent.name = "InformalAnalysisAgent"
-        agent.perform_complete_analysis = AsyncMock(return_value={
-            "fallacies": [
-                {"fallacy_type": "ad_hominem", "confidence": 0.9},
-            ],
-            "categories": {"RELEVANCE": ["ad_hominem"]},
-        })
+        agent.perform_complete_analysis = AsyncMock(
+            return_value={
+                "fallacies": [
+                    {"fallacy_type": "ad_hominem", "confidence": 0.9},
+                ],
+                "categories": {"RELEVANCE": ["ad_hominem"]},
+            }
+        )
         return agent
 
     @pytest.fixture

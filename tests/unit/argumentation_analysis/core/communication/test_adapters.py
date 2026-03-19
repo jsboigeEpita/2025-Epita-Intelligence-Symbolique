@@ -15,8 +15,8 @@ from argumentation_analysis.core.communication.message import (
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 from argumentation_analysis.paths import DATA_DIR
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_middleware():
@@ -86,6 +86,7 @@ def make_task_result_message(sender="operational_01"):
 # ══════════════════════════════════════════════════════════════════════════
 # StrategicAdapter Tests
 # ══════════════════════════════════════════════════════════════════════════
+
 
 class TestStrategicAdapterInit:
     """Tests for StrategicAdapter.__init__."""
@@ -184,11 +185,13 @@ class TestReceiveReport:
             recipient="strategic_01",
         )
         call_count = [0]
+
         def receive_side_effect(**kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 return non_report
             return None
+
         mock_middleware.receive_message.side_effect = receive_side_effect
         result = strategic.receive_report(timeout=0.2)
         assert result is None
@@ -205,11 +208,13 @@ class TestReceiveReport:
     def test_filter_criteria_no_match(self, strategic, mock_middleware):
         report = make_report_message()
         call_count = [0]
+
         def receive_side_effect(**kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 return report
             return None
+
         mock_middleware.receive_message.side_effect = receive_side_effect
         result = strategic.receive_report(
             timeout=0.2,
@@ -287,6 +292,7 @@ class TestCollaborateWithStrategic:
 # ══════════════════════════════════════════════════════════════════════════
 # TacticalAdapter Tests
 # ══════════════════════════════════════════════════════════════════════════
+
 
 class TestTacticalAdapterInit:
     """Tests for TacticalAdapter.__init__."""
@@ -383,7 +389,9 @@ class TestAssignTask:
         mock_middleware.send_message.assert_called_once()
 
     def test_message_content(self, tactical, mock_middleware):
-        tactical.assign_task("detect", {"t": "x"}, "op_01", constraints={"max_time": 30})
+        tactical.assign_task(
+            "detect", {"t": "x"}, "op_01", constraints={"max_time": 30}
+        )
         sent = mock_middleware.send_message.call_args[0][0]
         assert sent.content["command_type"] == "detect"
         assert sent.content["constraints"] == {"max_time": 30}
@@ -437,11 +445,13 @@ class TestReceiveTaskResult:
             recipient="tactical_01",
         )
         call_count = [0]
+
         def receive_side_effect(**kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 return wrong
             return None
+
         mock_middleware.receive_message.side_effect = receive_side_effect
         result = tactical.receive_task_result(timeout=0.2)
         assert result is None

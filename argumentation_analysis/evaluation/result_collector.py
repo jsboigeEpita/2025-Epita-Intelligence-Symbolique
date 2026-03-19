@@ -31,7 +31,9 @@ class ResultCollector:
         """Append a single result to the JSONL file."""
         with open(self._results_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(asdict(result), ensure_ascii=False) + "\n")
-        logger.debug(f"Saved result: {result.workflow_name}/{result.model_name}/{result.document_name}")
+        logger.debug(
+            f"Saved result: {result.workflow_name}/{result.model_name}/{result.document_name}"
+        )
 
     def save_batch(self, results: List[BenchmarkResult]) -> None:
         """Append multiple results."""
@@ -95,8 +97,12 @@ class ResultCollector:
             model_stats[model] = {
                 "total": len(results),
                 "success": len(ok),
-                "avg_duration": sum(r["duration_seconds"] for r in ok) / len(ok) if ok else 0,
-                "avg_phases_completed": sum(r["phases_completed"] for r in ok) / len(ok) if ok else 0,
+                "avg_duration": (
+                    sum(r["duration_seconds"] for r in ok) / len(ok) if ok else 0
+                ),
+                "avg_phases_completed": (
+                    sum(r["phases_completed"] for r in ok) / len(ok) if ok else 0
+                ),
             }
 
         workflow_stats = {}
@@ -105,7 +111,9 @@ class ResultCollector:
             workflow_stats[wf] = {
                 "total": len(results),
                 "success": len(ok),
-                "avg_duration": sum(r["duration_seconds"] for r in ok) / len(ok) if ok else 0,
+                "avg_duration": (
+                    sum(r["duration_seconds"] for r in ok) / len(ok) if ok else 0
+                ),
             }
 
         return {
@@ -129,9 +137,18 @@ class ResultCollector:
             return output
 
         fields = [
-            "timestamp", "workflow_name", "model_name", "document_index",
-            "document_name", "success", "duration_seconds", "phases_completed",
-            "phases_total", "phases_failed", "phases_skipped", "error",
+            "timestamp",
+            "workflow_name",
+            "model_name",
+            "document_index",
+            "document_name",
+            "success",
+            "duration_seconds",
+            "phases_completed",
+            "phases_total",
+            "phases_failed",
+            "phases_skipped",
+            "error",
         ]
 
         with open(output, "w", newline="", encoding="utf-8") as f:

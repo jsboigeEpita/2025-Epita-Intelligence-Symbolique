@@ -15,7 +15,9 @@ logger = logging.getLogger("evaluation.synergy_runner")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Synergy Analysis - Optimal Workflow Configuration")
+    parser = argparse.ArgumentParser(
+        description="Synergy Analysis - Optimal Workflow Configuration"
+    )
     parser.add_argument(
         "--results-dir",
         default="argumentation_analysis/evaluation/results",

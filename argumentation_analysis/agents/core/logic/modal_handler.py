@@ -44,9 +44,7 @@ class ModalHandler:
                 logger.info("SPASSMlReasoner loaded successfully.")
             except Exception as e:
                 logger.warning(f"Failed to load SPASSMlReasoner: {e}")
-                raise RuntimeError(
-                    f"SPASS reasoner not available: {e}"
-                ) from e
+                raise RuntimeError(f"SPASS reasoner not available: {e}") from e
         return self._spass_reasoner
 
     def _get_active_reasoner(self):
@@ -81,7 +79,11 @@ class ModalHandler:
         Uses the configured reasoner (SimpleMlReasoner or SPASSMlReasoner).
         """
         reasoner = self._get_active_reasoner()
-        reasoner_name = type(reasoner).__name__ if hasattr(reasoner, '__class__') else settings.modal_solver.value
+        reasoner_name = (
+            type(reasoner).__name__
+            if hasattr(reasoner, "__class__")
+            else settings.modal_solver.value
+        )
         logger.debug(f"Executing modal query '{query_string}' with {reasoner_name}")
         try:
             StringReader = jpype.JClass("java.io.StringReader")
@@ -99,13 +101,9 @@ class ModalHandler:
             result = reasoner.query(belief_set, query_formula)
 
             if bool(result):
-                return (
-                    f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is ACCEPTED (True)."
-                )
+                return f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is ACCEPTED (True)."
             else:
-                return (
-                    f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is REJECTED (False)."
-                )
+                return f"Tweety Result ({reasoner_name}): Modal Query '{query_string}' is REJECTED (False)."
 
         except jpype.JException as e:
             error_msg = f"Error executing modal query: {e.getMessage()}"
@@ -124,7 +122,9 @@ class ModalHandler:
         Uses the configured reasoner (SimpleMlReasoner or SPASSMlReasoner).
         """
         reasoner = self._get_active_reasoner()
-        logger.debug(f"Checking modal KB consistency with {settings.modal_solver.value}.")
+        logger.debug(
+            f"Checking modal KB consistency with {settings.modal_solver.value}."
+        )
         try:
             StringReader = jpype.JClass("java.io.StringReader")
             belief_set_reader = StringReader(belief_set_content)

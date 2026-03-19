@@ -27,9 +27,7 @@ def register_capability_tools(mcp: Any, get_registry: Any) -> None:
             summary = registry.summary()
             return {
                 "capabilities": safe_serialize(caps),
-                "unfilled_slots": {
-                    name: s.description for name, s in slots.items()
-                },
+                "unfilled_slots": {name: s.description for name, s in slots.items()},
                 "summary": safe_serialize(summary),
             }
         except Exception as e:

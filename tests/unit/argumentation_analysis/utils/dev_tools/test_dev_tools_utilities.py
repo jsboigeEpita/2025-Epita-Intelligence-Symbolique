@@ -11,7 +11,6 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-
 # ============================================================================
 # project_structure_utils tests
 # ============================================================================
@@ -67,7 +66,9 @@ class TestMapPackageToModule:
     def test_custom_mapping_overrides_default(self):
         """Custom mapping overrides default mapping."""
         custom = {"argumentation_analysis.utils": "Custom Utils"}
-        result = map_package_to_module("argumentation_analysis.utils", custom_mapping=custom)
+        result = map_package_to_module(
+            "argumentation_analysis.utils", custom_mapping=custom
+        )
         assert result == "Custom Utils"
 
     def test_custom_mapping_adds_new_entry(self):
@@ -78,7 +79,9 @@ class TestMapPackageToModule:
 
     def test_custom_mapping_none_uses_defaults(self):
         """None custom_mapping uses defaults only."""
-        result = map_package_to_module("argumentation_analysis.services", custom_mapping=None)
+        result = map_package_to_module(
+            "argumentation_analysis.services", custom_mapping=None
+        )
         assert result == "Argumentation Services"
 
     def test_most_specific_partial_match_wins(self):
@@ -101,7 +104,6 @@ from argumentation_analysis.utils.dev_tools.coverage_utils import (
     create_initial_coverage_history,
     save_coverage_history,
 )
-
 
 SAMPLE_COVERAGE_XML = """<?xml version="1.0" ?>
 <coverage version="7.0" timestamp="1234567890" lines-valid="1000" lines-covered="750"

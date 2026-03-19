@@ -9,7 +9,6 @@ from argumentation_analysis.plugins.analysis_tools.logic.rhetorical_result_analy
     EnhancedRhetoricalResultAnalyzer,
 )
 
-
 # ── RecommendationGenerator ──
 
 
@@ -43,21 +42,27 @@ class TestRecommendationGenerator:
     def test_most_common_fallacies_emotion(self, gen):
         recs = gen.generate(
             {"overall_severity": 0.8, "most_common_fallacies": ["Appel à l'émotion"]},
-            {}, {}, "",
+            {},
+            {},
+            "",
         )
         assert any("émotionnel" in r for r in recs["fallacy_recommendations"])
 
     def test_most_common_fallacies_ad_hominem(self, gen):
         recs = gen.generate(
             {"overall_severity": 0.8, "most_common_fallacies": ["Ad hominem"]},
-            {}, {}, "",
+            {},
+            {},
+            "",
         )
         assert any("personnelles" in r for r in recs["fallacy_recommendations"])
 
     def test_most_common_fallacies_authority(self, gen):
         recs = gen.generate(
             {"overall_severity": 0.8, "most_common_fallacies": ["Appel à l'autorité"]},
-            {}, {}, "",
+            {},
+            {},
+            "",
         )
         assert any("crédibles" in r for r in recs["fallacy_recommendations"])
 
@@ -76,49 +81,70 @@ class TestRecommendationGenerator:
 
     def test_thematic_shifts_issue(self, gen):
         recs = gen.generate(
-            {}, {"main_coherence_issues": ["Thematic shifts"]}, {}, "",
+            {},
+            {"main_coherence_issues": ["Thematic shifts"]},
+            {},
+            "",
         )
         assert any("thématique" in r for r in recs["coherence_recommendations"])
 
     def test_logical_gaps_issue(self, gen):
         recs = gen.generate(
-            {}, {"main_coherence_issues": ["Logical gaps"]}, {}, "",
+            {},
+            {"main_coherence_issues": ["Logical gaps"]},
+            {},
+            "",
         )
         assert any("logiques" in r for r in recs["coherence_recommendations"])
 
     def test_multiple_themes_issue(self, gen):
         recs = gen.generate(
-            {}, {"main_coherence_issues": ["Multiple unrelated themes"]}, {}, "",
+            {},
+            {"main_coherence_issues": ["Multiple unrelated themes"]},
+            {},
+            "",
         )
         assert any("thèmes" in r for r in recs["coherence_recommendations"])
 
     # -- Persuasion recommendations --
     def test_low_persuasion(self, gen):
         recs = gen.generate({}, {}, {"persuasion_score": 0.3}, "")
-        assert any("persuasive" in r.lower() for r in recs["persuasion_recommendations"])
+        assert any(
+            "persuasive" in r.lower() for r in recs["persuasion_recommendations"]
+        )
 
     def test_low_ethos_appeal(self, gen):
         recs = gen.generate(
-            {}, {}, {"rhetorical_appeals": {"ethos": 0.2, "pathos": 0.8, "logos": 0.5}}, "",
+            {},
+            {},
+            {"rhetorical_appeals": {"ethos": 0.2, "pathos": 0.8, "logos": 0.5}},
+            "",
         )
         assert any("crédibilité" in r for r in recs["persuasion_recommendations"])
 
     def test_low_pathos_appeal(self, gen):
         recs = gen.generate(
-            {}, {}, {"rhetorical_appeals": {"ethos": 0.8, "pathos": 0.2, "logos": 0.5}}, "",
+            {},
+            {},
+            {"rhetorical_appeals": {"ethos": 0.8, "pathos": 0.2, "logos": 0.5}},
+            "",
         )
         assert any("émotionnel" in r for r in recs["persuasion_recommendations"])
 
     def test_low_logos_appeal(self, gen):
         recs = gen.generate(
-            {}, {}, {"rhetorical_appeals": {"ethos": 0.8, "pathos": 0.8, "logos": 0.1}}, "",
+            {},
+            {},
+            {"rhetorical_appeals": {"ethos": 0.8, "pathos": 0.8, "logos": 0.1}},
+            "",
         )
         assert any("logique" in r for r in recs["persuasion_recommendations"])
 
     # -- Context-specific recommendations --
     def test_politique_context(self, gen):
         recs = gen.generate(
-            {}, {},
+            {},
+            {},
             {"emotional_appeal": 0.9, "logical_appeal": 0.2},
             "politique",
         )
@@ -282,16 +308,32 @@ class TestAnalyzePersuasionEffectiveness:
 
     def test_persuasion_levels(self, analyzer):
         # Test excellent level
-        with patch.object(analyzer, "_identify_rhetorical_appeals", return_value={"ethos": 1.0, "pathos": 1.0, "logos": 1.0}):
-            with patch.object(analyzer, "_evaluate_context_appropriateness", return_value=1.0):
-                with patch.object(analyzer, "_evaluate_audience_alignment", return_value=1.0):
+        with patch.object(
+            analyzer,
+            "_identify_rhetorical_appeals",
+            return_value={"ethos": 1.0, "pathos": 1.0, "logos": 1.0},
+        ):
+            with patch.object(
+                analyzer, "_evaluate_context_appropriateness", return_value=1.0
+            ):
+                with patch.object(
+                    analyzer, "_evaluate_audience_alignment", return_value=1.0
+                ):
                     result = analyzer._analyze_persuasion_effectiveness({}, "")
                     assert result["persuasion_level"] == "Excellent"
 
     def test_low_persuasion_level(self, analyzer):
-        with patch.object(analyzer, "_identify_rhetorical_appeals", return_value={"ethos": 0.0, "pathos": 0.0, "logos": 0.0}):
-            with patch.object(analyzer, "_evaluate_context_appropriateness", return_value=0.0):
-                with patch.object(analyzer, "_evaluate_audience_alignment", return_value=0.0):
+        with patch.object(
+            analyzer,
+            "_identify_rhetorical_appeals",
+            return_value={"ethos": 0.0, "pathos": 0.0, "logos": 0.0},
+        ):
+            with patch.object(
+                analyzer, "_evaluate_context_appropriateness", return_value=0.0
+            ):
+                with patch.object(
+                    analyzer, "_evaluate_audience_alignment", return_value=0.0
+                ):
                     result = analyzer._analyze_persuasion_effectiveness({}, "")
                     assert result["persuasion_level"] == "Très faible"
 
@@ -321,9 +363,17 @@ class TestContextAppropriateness:
         score = analyzer._evaluate_context_appropriateness(appeals, "général")
         assert score <= 1.0
 
-    @pytest.mark.parametrize("context", [
-        "politique", "scientifique", "commercial", "juridique", "académique", "général",
-    ])
+    @pytest.mark.parametrize(
+        "context",
+        [
+            "politique",
+            "scientifique",
+            "commercial",
+            "juridique",
+            "académique",
+            "général",
+        ],
+    )
     def test_all_defined_contexts(self, analyzer, context):
         appeals = {"ethos": 0.5, "pathos": 0.5, "logos": 0.5}
         score = analyzer._evaluate_context_appropriateness(appeals, context)
@@ -410,61 +460,81 @@ class TestStrengthsAndWeaknesses:
 
     def test_no_fallacies_is_strength(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {"total_fallacies": 0}, {}, {},
+            {"total_fallacies": 0},
+            {},
+            {},
         )
         assert any("Absence" in x for x in s)
 
     def test_moderate_fallacies_is_strength(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {"total_fallacies": 3, "overall_severity": 0.3}, {}, {},
+            {"total_fallacies": 3, "overall_severity": 0.3},
+            {},
+            {},
         )
         assert any("modérée" in x for x in s)
 
     def test_severe_fallacies_is_weakness(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {"total_fallacies": 5, "overall_severity": 0.8}, {}, {},
+            {"total_fallacies": 5, "overall_severity": 0.8},
+            {},
+            {},
         )
         assert any("excessive" in x for x in w)
 
     def test_high_coherence_strength(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {}, {"overall_coherence": 0.8}, {},
+            {},
+            {"overall_coherence": 0.8},
+            {},
         )
         assert any("cohérence argumentative" in x for x in s)
 
     def test_low_coherence_weakness(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {}, {"overall_coherence": 0.3}, {},
+            {},
+            {"overall_coherence": 0.3},
+            {},
         )
         assert any("cohérence argumentative" in x for x in w)
 
     def test_high_persuasion_strength(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {}, {}, {"persuasion_score": 0.8},
+            {},
+            {},
+            {"persuasion_score": 0.8},
         )
         assert any("persuasive" in x.lower() for x in s)
 
     def test_low_persuasion_weakness(self, analyzer):
         s, w = analyzer._identify_strengths_and_weaknesses(
-            {}, {}, {"persuasion_score": 0.3},
+            {},
+            {},
+            {"persuasion_score": 0.3},
         )
         assert any("persuasive" in x.lower() for x in w)
 
     def test_strong_emotional_appeal(self, analyzer):
         s, _ = analyzer._identify_strengths_and_weaknesses(
-            {}, {}, {"emotional_appeal": 0.8},
+            {},
+            {},
+            {"emotional_appeal": 0.8},
         )
         assert any("émotionnel" in x for x in s)
 
     def test_strong_logical_appeal(self, analyzer):
         s, _ = analyzer._identify_strengths_and_weaknesses(
-            {}, {}, {"logical_appeal": 0.8},
+            {},
+            {},
+            {"logical_appeal": 0.8},
         )
         assert any("logique" in x for x in s)
 
     def test_strong_credibility_appeal(self, analyzer):
         s, _ = analyzer._identify_strengths_and_weaknesses(
-            {}, {}, {"credibility_appeal": 0.8},
+            {},
+            {},
+            {"credibility_appeal": 0.8},
         )
         assert any("crédibilité" in x for x in s)
 

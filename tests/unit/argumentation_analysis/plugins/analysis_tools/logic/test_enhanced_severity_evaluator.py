@@ -21,6 +21,7 @@ def evaluator():
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, evaluator):
         assert isinstance(evaluator, EnhancedFallacySeverityEvaluator)
@@ -46,6 +47,7 @@ class TestInit:
 # _determine_severity_level
 # ============================================================
 
+
 class TestDetermineSeverityLevel:
     def test_low(self, evaluator):
         assert evaluator._determine_severity_level(0.0) == "Faible"
@@ -67,6 +69,7 @@ class TestDetermineSeverityLevel:
 # ============================================================
 # _analyze_context_impact
 # ============================================================
+
 
 class TestAnalyzeContextImpact:
     def test_known_context(self, evaluator):
@@ -112,6 +115,7 @@ class TestAnalyzeContextImpact:
 # _calculate_fallacy_severity
 # ============================================================
 
+
 class TestCalculateFallacySeverity:
     def test_known_fallacy_general_context(self, evaluator):
         fallacy = {"fallacy_type": "Appel à l'autorité", "context_text": "test"}
@@ -131,8 +135,12 @@ class TestCalculateFallacySeverity:
         fallacy = {"fallacy_type": "Ad hominem", "context_text": "test"}
         ctx_general = evaluator._analyze_context_impact("général")
         ctx_science = evaluator._analyze_context_impact("scientifique")
-        sev_general = evaluator._calculate_fallacy_severity(fallacy, ctx_general)["final_severity"]
-        sev_science = evaluator._calculate_fallacy_severity(fallacy, ctx_science)["final_severity"]
+        sev_general = evaluator._calculate_fallacy_severity(fallacy, ctx_general)[
+            "final_severity"
+        ]
+        sev_science = evaluator._calculate_fallacy_severity(fallacy, ctx_science)[
+            "final_severity"
+        ]
         assert sev_science > sev_general
 
     def test_severity_clamped_to_one(self, evaluator):
@@ -152,6 +160,7 @@ class TestCalculateFallacySeverity:
 # ============================================================
 # _calculate_overall_severity
 # ============================================================
+
 
 class TestCalculateOverallSeverity:
     def test_empty_list(self, evaluator):
@@ -186,6 +195,7 @@ class TestCalculateOverallSeverity:
 # ============================================================
 # evaluate_fallacy_severity (keyword-based detection)
 # ============================================================
+
 
 class TestEvaluateFallacySeverity:
     def test_detects_authority_keyword(self, evaluator):
@@ -226,12 +236,16 @@ class TestEvaluateFallacySeverity:
         gen = evaluator.evaluate_fallacy_severity(args, "général")
         sci = evaluator.evaluate_fallacy_severity(args, "scientifique")
         if gen["fallacy_evaluations"] and sci["fallacy_evaluations"]:
-            assert sci["fallacy_evaluations"][0]["final_severity"] >= gen["fallacy_evaluations"][0]["final_severity"]
+            assert (
+                sci["fallacy_evaluations"][0]["final_severity"]
+                >= gen["fallacy_evaluations"][0]["final_severity"]
+            )
 
 
 # ============================================================
 # evaluate_fallacy_list (pre-identified fallacies)
 # ============================================================
+
 
 class TestEvaluateFallacyList:
     def test_empty_list(self, evaluator):
@@ -258,7 +272,10 @@ class TestEvaluateFallacyList:
         fallacies = [{"fallacy_type": "Appel à la peur", "context_text": "risk"}]
         gen = evaluator.evaluate_fallacy_list(fallacies, "général")
         med = evaluator.evaluate_fallacy_list(fallacies, "médical")
-        assert med["fallacy_evaluations"][0]["final_severity"] > gen["fallacy_evaluations"][0]["final_severity"]
+        assert (
+            med["fallacy_evaluations"][0]["final_severity"]
+            > gen["fallacy_evaluations"][0]["final_severity"]
+        )
 
     def test_result_structure(self, evaluator):
         result = evaluator.evaluate_fallacy_list(
