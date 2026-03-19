@@ -1,0 +1,12 @@
+{
+  "report_batch_size": 200,
+  "chapter_batch_size": 20,
+  "input_directory": "docs/commits_audit",
+  "output_directory": "docs/audit/synthesis_reports",
+  "report_skeleton_script": "core/generate_audit_report_skeleton.py",
+  "strategic_preamble_text": "Contexte Stratégique du Projet : La 'Guerre des Agents'. Le projet est le théâtre d'un conflit technologique entre deux approches pour l'environnement de développement Python : d'un côté, l'utilisation de `python -m venv` pour des environnements légers et natifs, favorisant l'intégration système et la simplicité ; de l'autre, l'écosystème `Conda`, puissant pour la gestion de dépendances complexes et la science des données, mais introduisant une couche d'abstraction plus lourde. Chaque commit doit être analysé à travers le prisme de ce conflit, en identifiant quelle 'faction' gagne du terrain, quelles décisions renforcent une approche par rapport à l'autre, et comment la dette technique ou les sauts qualitatifs impactent cet équilibre des forces.",
+  "semantic_kernel": {
+    "plugin_name": "StrategicNarrative",
+    "function_name": "ChapterGenerator"
+  }
+}
