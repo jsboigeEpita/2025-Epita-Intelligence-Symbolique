@@ -1,0 +1,402 @@
+{
+  "timestamp": "2026-03-19T13:24:57.925448",
+  "models": [
+    "openrouter"
+  ],
+  "workflows": [
+    "light",
+    "standard",
+    "quality_gated",
+    "debate_governance",
+    "jtms_dung",
+    "neural_symbolic",
+    "hierarchical_fallacy",
+    "debate_tournament",
+    "formal_debate",
+    "belief_dynamics",
+    "argument_strength",
+    "formal_verification",
+    "comprehensive"
+  ],
+  "num_documents": 3,
+  "total_cells": 39,
+  "total_duration_seconds": 1098.765000000014,
+  "scores": [
+    {
+      "model_name": "openrouter",
+      "workflow_name": "light",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 21.499666666670237,
+      "avg_phases_completed": 3.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "standard",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 43.94799999999426,
+      "avg_phases_completed": 6.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "quality_gated",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 9.489666666660924,
+      "avg_phases_completed": 3.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "debate_governance",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 30.677000000005744,
+      "avg_phases_completed": 3.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "jtms_dung",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 0.005333333334419876,
+      "avg_phases_completed": 2.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "neural_symbolic",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 28.431999999990996,
+      "avg_phases_completed": 3.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "hierarchical_fallacy",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 36.927333333335504,
+      "avg_phases_completed": 3.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "debate_tournament",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 45.71333333333799,
+      "avg_phases_completed": 6.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "formal_debate",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 11.66166666666201,
+      "avg_phases_completed": 8.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "belief_dynamics",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 23.286333333332248,
+      "avg_phases_completed": 5.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "argument_strength",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 13.578333333328677,
+      "avg_phases_completed": 6.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "formal_verification",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 11.677000000005743,
+      "avg_phases_completed": 17.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "comprehensive",
+      "total_runs": 3,
+      "successes": 3,
+      "failures": 0,
+      "avg_duration": 86.84900000000682,
+      "avg_phases_completed": 8.0,
+      "avg_completion_ratio": 1.0,
+      "total_cost_estimate": 0.0
+    }
+  ],
+  "best_by_success": null,
+  "best_by_speed": null,
+  "best_overall": {
+    "best_by_success": {
+      "model": "openrouter",
+      "workflow": "light",
+      "success_rate": 1.0
+    },
+    "best_by_speed": {
+      "model": "openrouter",
+      "workflow": "jtms_dung",
+      "avg_duration": 0.01
+    },
+    "best_overall": {
+      "model": "openrouter",
+      "workflow": "jtms_dung",
+      "composite_score": 0.999
+    }
+  },
+  "model_rankings": {
+    "light": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 21.5,
+        "completion_ratio": 1.0
+      }
+    ],
+    "standard": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 43.95,
+        "completion_ratio": 1.0
+      }
+    ],
+    "quality_gated": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 9.49,
+        "completion_ratio": 1.0
+      }
+    ],
+    "debate_governance": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 30.68,
+        "completion_ratio": 1.0
+      }
+    ],
+    "jtms_dung": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 0.01,
+        "completion_ratio": 1.0
+      }
+    ],
+    "neural_symbolic": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 28.43,
+        "completion_ratio": 1.0
+      }
+    ],
+    "hierarchical_fallacy": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 36.93,
+        "completion_ratio": 1.0
+      }
+    ],
+    "debate_tournament": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 45.71,
+        "completion_ratio": 1.0
+      }
+    ],
+    "formal_debate": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 11.66,
+        "completion_ratio": 1.0
+      }
+    ],
+    "belief_dynamics": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 23.29,
+        "completion_ratio": 1.0
+      }
+    ],
+    "argument_strength": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 13.58,
+        "completion_ratio": 1.0
+      }
+    ],
+    "formal_verification": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 11.68,
+        "completion_ratio": 1.0
+      }
+    ],
+    "comprehensive": [
+      {
+        "rank": 1,
+        "model": "openrouter",
+        "success_rate": 1.0,
+        "avg_duration": 86.85,
+        "completion_ratio": 1.0
+      }
+    ]
+  },
+  "workflow_rankings": {
+    "openrouter": [
+      {
+        "rank": 1,
+        "workflow": "jtms_dung",
+        "success_rate": 1.0,
+        "avg_duration": 0.01,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 2,
+        "workflow": "quality_gated",
+        "success_rate": 1.0,
+        "avg_duration": 9.49,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 3,
+        "workflow": "formal_debate",
+        "success_rate": 1.0,
+        "avg_duration": 11.66,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 4,
+        "workflow": "formal_verification",
+        "success_rate": 1.0,
+        "avg_duration": 11.68,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 5,
+        "workflow": "argument_strength",
+        "success_rate": 1.0,
+        "avg_duration": 13.58,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 6,
+        "workflow": "light",
+        "success_rate": 1.0,
+        "avg_duration": 21.5,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 7,
+        "workflow": "belief_dynamics",
+        "success_rate": 1.0,
+        "avg_duration": 23.29,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 8,
+        "workflow": "neural_symbolic",
+        "success_rate": 1.0,
+        "avg_duration": 28.43,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 9,
+        "workflow": "debate_governance",
+        "success_rate": 1.0,
+        "avg_duration": 30.68,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 10,
+        "workflow": "hierarchical_fallacy",
+        "success_rate": 1.0,
+        "avg_duration": 36.93,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 11,
+        "workflow": "standard",
+        "success_rate": 1.0,
+        "avg_duration": 43.95,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 12,
+        "workflow": "debate_tournament",
+        "success_rate": 1.0,
+        "avg_duration": 45.71,
+        "completion_ratio": 1.0
+      },
+      {
+        "rank": 13,
+        "workflow": "comprehensive",
+        "success_rate": 1.0,
+        "avg_duration": 86.85,
+        "completion_ratio": 1.0
+      }
+    ]
+  }
+}
