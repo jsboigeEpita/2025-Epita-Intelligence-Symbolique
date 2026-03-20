@@ -328,7 +328,17 @@ async def run_multi_model_benchmark(
         raise ValueError(f"No registered models found. Available: {available_models}")
 
     runner = BenchmarkRunner(registry)
-    runner.load_dataset_unencrypted(corpus_path)
+    if corpus_path.endswith(".enc"):
+        import os
+
+        passphrase = os.environ.get("TEXT_CONFIG_PASSPHRASE", "")
+        if not passphrase:
+            raise ValueError(
+                "TEXT_CONFIG_PASSPHRASE env var required for encrypted dataset"
+            )
+        runner.load_dataset_encrypted(corpus_path, passphrase)
+    else:
+        runner.load_dataset_unencrypted(corpus_path)
 
     num_docs = len(runner.dataset)
     if max_docs > 0:

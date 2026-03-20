@@ -64,7 +64,12 @@ class BenchmarkRunner:
     def load_dataset_encrypted(
         self, path: str, passphrase: str
     ) -> List[Dict[str, Any]]:
-        """Load the encrypted dataset (Fernet + gzip)."""
+        """Load the encrypted dataset (Fernet + gzip).
+
+        Supports two formats:
+        - New format: {"documents": [...]} (same as unencrypted corpus)
+        - Legacy format: list of sources with extracts, each extract becomes a document
+        """
         from argumentation_analysis.core.utils.crypto_utils import (
             derive_encryption_key,
             decrypt_data_with_fernet,
@@ -83,9 +88,44 @@ class BenchmarkRunner:
 
         json_data = gzip.decompress(dec_data)
         data = json.loads(json_data)
-        self._dataset = data.get("documents", [])
+
+        if isinstance(data, dict) and "documents" in data:
+            self._dataset = data["documents"]
+        elif isinstance(data, list):
+            # Source/extract format: flatten into documents
+            self._dataset = self._sources_to_documents(data)
+        else:
+            self._dataset = []
+
         logger.info(f"Loaded {len(self._dataset)} documents from encrypted {path}")
         return self._dataset
+
+    @staticmethod
+    def _sources_to_documents(
+        sources: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Convert source/extract format to flat document list.
+
+        Each extract with text becomes a document. Source metadata is
+        preserved but text content is sanitized from logs (privacy).
+        """
+        documents = []
+        for src_idx, source in enumerate(sources):
+            source_name = source.get("source_name", f"source_{src_idx}")
+            for ext_idx, extract in enumerate(source.get("extracts", [])):
+                text = extract.get("extract_text") or extract.get("full_text") or ""
+                if not text:
+                    continue
+                doc = {
+                    "id": f"src{src_idx}_ext{ext_idx}",
+                    "source_name": source_name,
+                    "extract_name": extract.get("extract_name", f"extract_{ext_idx}"),
+                    "text": text,
+                    "source_index": src_idx,
+                    "extract_index": ext_idx,
+                }
+                documents.append(doc)
+        return documents
 
     @property
     def dataset(self) -> List[Dict[str, Any]]:
