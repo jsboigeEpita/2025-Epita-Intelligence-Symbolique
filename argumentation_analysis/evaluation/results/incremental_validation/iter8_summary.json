@@ -13,7 +13,7 @@
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 66.0,
+  "avg_duration": 107.9,
   "avg_non_empty_fields": 13.0,
   "delta_vs_previous": {
     "aspic_results": {
@@ -21,11 +21,16 @@
       "curr": 1,
       "delta": 1
     },
-    "identified_arguments": {
+    "extracts": {
       "prev": 8,
       "curr": 7,
       "delta": -1
+    },
+    "identified_arguments": {
+      "prev": 7,
+      "curr": 6,
+      "delta": -1
     }
   },
-  "timestamp": "2026-03-21T00:13:41.081537"
+  "timestamp": "2026-03-20T23:41:17.290504"
 }

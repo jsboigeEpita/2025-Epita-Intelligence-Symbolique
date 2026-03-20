@@ -19,7 +19,7 @@
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 84.4,
+  "avg_duration": 88.4,
   "avg_non_empty_fields": 18.0,
   "delta_vs_previous": {
     "dung_frameworks": {
@@ -28,20 +28,20 @@
       "delta": 2
     },
     "extracts": {
-      "prev": 8,
+      "prev": 9,
       "curr": 10,
-      "delta": 2
+      "delta": 1
     },
     "identified_arguments": {
-      "prev": 5,
-      "curr": 8,
-      "delta": 3
+      "prev": 7,
+      "curr": 6,
+      "delta": -1
     },
     "identified_fallacies": {
-      "prev": 6,
-      "curr": 7,
+      "prev": 9,
+      "curr": 10,
       "delta": 1
     }
   },
-  "timestamp": "2026-03-21T00:34:04.967915"
+  "timestamp": "2026-03-21T00:04:29.143099"
 }
