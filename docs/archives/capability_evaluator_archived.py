@@ -1,3 +1,7 @@
+# Archived: 2026-03-20 - Superseded by capability_eval.py (FilteredRegistry + marginal scores + synergy)
+# Features merged: CapabilityEvalResult, _run_with_subset, compute_marginal_delta, 8 preset subsets
+# The new capability_eval.py provides: FilteredRegistry wrapping, configurable presets, LLM Judge integration, synergy analysis
+
 """
 Selective Capability Evaluator: measure the impact of each capability.
 
