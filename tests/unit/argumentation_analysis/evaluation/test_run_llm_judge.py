@@ -432,3 +432,91 @@ class TestWriteReport:
 
         data = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
         assert "total_cells_evaluated" in data
+
+
+# ── Regression tests for bugs fixed in cc726a98 ──────────────────────────
+
+
+class TestMaxDocsRegression:
+    """Regression test: max_docs filter must actually limit documents (#133 review).
+
+    Bug: doc_key was added to seen_docs BEFORE the len check, making the
+    `continue` branch unreachable. The filter was a no-op.
+    """
+
+    @pytest.fixture
+    def entries_3_docs(self):
+        """3 successful entries from 3 different documents."""
+        return [
+            {
+                "workflow_name": "standard",
+                "model_name": "gpt-5-mini",
+                "document_name": f"doc_{i}",
+                "success": True,
+                "state_snapshot": {"raw_text": f"Text for doc {i}. " * 10},
+            }
+            for i in range(3)
+        ]
+
+    async def test_max_docs_2_excludes_third(self, entries_3_docs):
+        """With max_docs=2, only 2 unique documents should be evaluated."""
+        mock_judge = AsyncMock(spec=LLMJudge)
+        mock_judge.evaluate = AsyncMock(
+            return_value=JudgeScore(
+                overall=4.0,
+                completeness=3.5,
+                accuracy=4.0,
+                depth=3.0,
+                coherence=4.5,
+                actionability=3.0,
+                reasoning="test",
+                judge_model="test-model",
+            )
+        )
+        results = await run_judge_on_results(
+            entries_3_docs, mock_judge, max_docs=2
+        )
+        # Only 2 docs should have been evaluated
+        assert len(results) == 2
+        doc_names = {r.document_name for r in results}
+        assert len(doc_names) == 2
+
+    async def test_max_docs_1_evaluates_only_first(self, entries_3_docs):
+        """With max_docs=1, only 1 document should be evaluated."""
+        mock_judge = AsyncMock(spec=LLMJudge)
+        mock_judge.evaluate = AsyncMock(
+            return_value=JudgeScore(
+                overall=4.0,
+                completeness=3.5,
+                accuracy=4.0,
+                depth=3.0,
+                coherence=4.5,
+                actionability=3.0,
+                reasoning="test",
+                judge_model="test-model",
+            )
+        )
+        results = await run_judge_on_results(
+            entries_3_docs, mock_judge, max_docs=1
+        )
+        assert len(results) == 1
+
+    async def test_max_docs_none_evaluates_all(self, entries_3_docs):
+        """With max_docs=None, all documents should be evaluated."""
+        mock_judge = AsyncMock(spec=LLMJudge)
+        mock_judge.evaluate = AsyncMock(
+            return_value=JudgeScore(
+                overall=4.0,
+                completeness=3.5,
+                accuracy=4.0,
+                depth=3.0,
+                coherence=4.5,
+                actionability=3.0,
+                reasoning="test",
+                judge_model="test-model",
+            )
+        )
+        results = await run_judge_on_results(
+            entries_3_docs, mock_judge, max_docs=None
+        )
+        assert len(results) == 3
