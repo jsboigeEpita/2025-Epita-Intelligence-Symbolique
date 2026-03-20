@@ -399,13 +399,17 @@ def _extract_arguments_from_context(
             if "scores" in phase_out and isinstance(phase_out["scores"], dict):
                 return list(phase_out["scores"].keys())
 
-    # Fall back: split text into sentences as pseudo-arguments
+    # Fall back: use actual text sentences as argument content (not opaque labels)
     sentences = [
-        s.strip() for s in input_text.replace("\n", ". ").split(".") if s.strip()
+        s.strip()
+        for s in input_text.replace("\n", ". ").split(".")
+        if len(s.strip()) > 10
     ]
     if len(sentences) >= 2:
-        return [f"arg_{i+1}" for i in range(min(len(sentences), 6))]
-    return ["arg_1", "arg_2", "arg_3"]
+        # Use truncated real sentences so downstream consumers have meaningful content
+        return [s[:120] for s in sentences[: min(len(sentences), 6)]]
+    # Absolute fallback: use the input text itself as a single argument
+    return [input_text[:200] if len(input_text) > 10 else "argument_placeholder"]
 
 
 def _generate_attacks_from_args(arguments: List[str]) -> List[List[str]]:
