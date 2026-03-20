@@ -39,6 +39,7 @@ logger = logging.getLogger("evaluation.capability_eval")
 # Capability configuration matrix (from issue #95)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CapabilityConfig:
     """Named set of capabilities to activate for one experimental condition."""
@@ -141,6 +142,7 @@ EVAL_WORKFLOW_PHASES = [
 # FilteredRegistry
 # ---------------------------------------------------------------------------
 
+
 class FilteredRegistry:
     """
     Wraps a CapabilityRegistry and limits which capabilities are visible.
@@ -167,6 +169,7 @@ class FilteredRegistry:
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EvalCell:
@@ -212,8 +215,8 @@ class MarginalScore:
     """Marginal contribution of one capability across all documents."""
 
     capability: str
-    avg_score_with: float      # avg composite when this cap is in the config
-    avg_score_without: float   # avg composite when this cap is NOT in the config
+    avg_score_with: float  # avg composite when this cap is in the config
+    avg_score_without: float  # avg composite when this cap is NOT in the config
     marginal_contribution: float  # score_with - score_without
     n_with: int
     n_without: int
@@ -254,6 +257,7 @@ class CapabilityEvalReport:
 # ---------------------------------------------------------------------------
 # Core evaluation logic
 # ---------------------------------------------------------------------------
+
 
 def _load_dotenv() -> None:
     env_path = Path(".env")
@@ -325,21 +329,32 @@ async def run_single_cell(
     state = UnifiedAnalysisState(initial_text=document_text)
 
     try:
-        results = await executor.execute(workflow, document_text, state=state)
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        results = await executor.execute(
+            workflow, document_text, state=state, state_writers=CAPABILITY_STATE_WRITERS
+        )
     except Exception as e:
-        logger.error(f"Workflow execution failed for {config.name}/{document_name}: {e}")
+        logger.error(
+            f"Workflow execution failed for {config.name}/{document_name}: {e}"
+        )
         results = {}
 
     phases_run = sum(
-        1 for r in results.values()
+        1
+        for r in results.values()
         if hasattr(r, "status") and r.status.value == "completed"
     )
     phases_skipped = sum(
-        1 for r in results.values()
+        1
+        for r in results.values()
         if hasattr(r, "status") and r.status.value == "skipped"
     )
     phases_failed = sum(
-        1 for r in results.values()
+        1
+        for r in results.values()
         if hasattr(r, "status") and r.status.value == "failed"
     )
 
@@ -359,7 +374,11 @@ async def run_single_cell(
     # Judge evaluation (requires API key)
     if judge is not None:
         try:
-            snapshot = state.get_state_snapshot() if hasattr(state, "get_state_snapshot") else {}
+            snapshot = (
+                state.get_state_snapshot()
+                if hasattr(state, "get_state_snapshot")
+                else {}
+            )
             score = await judge.evaluate(
                 input_text=document_text,
                 workflow_name=config.name,
@@ -397,19 +416,25 @@ def compute_marginal_scores(cells: List[EvalCell]) -> List[MarginalScore]:
     marginals = []
     for cap in sorted(all_caps):
         with_scores = [c.composite_score for c in cells if cap in c.capabilities_active]
-        without_scores = [c.composite_score for c in cells if cap not in c.capabilities_active]
+        without_scores = [
+            c.composite_score for c in cells if cap not in c.capabilities_active
+        ]
 
         avg_with = sum(with_scores) / len(with_scores) if with_scores else 0.0
-        avg_without = sum(without_scores) / len(without_scores) if without_scores else 0.0
+        avg_without = (
+            sum(without_scores) / len(without_scores) if without_scores else 0.0
+        )
 
-        marginals.append(MarginalScore(
-            capability=cap,
-            avg_score_with=avg_with,
-            avg_score_without=avg_without,
-            marginal_contribution=avg_with - avg_without,
-            n_with=len(with_scores),
-            n_without=len(without_scores),
-        ))
+        marginals.append(
+            MarginalScore(
+                capability=cap,
+                avg_score_with=avg_with,
+                avg_score_without=avg_without,
+                marginal_contribution=avg_with - avg_without,
+                n_with=len(with_scores),
+                n_without=len(without_scores),
+            )
+        )
 
     # Sort by marginal contribution descending
     marginals.sort(key=lambda m: m.marginal_contribution, reverse=True)
@@ -437,10 +462,14 @@ def compute_synergies(cells: List[EvalCell]) -> List[SynergyScore]:
         return None
 
     # Find baseline (smallest config)
-    baseline_cells = [c for c in cells if len(c.capabilities_active) == min(
-        len(x.capabilities_active) for x in cells
-    )]
-    baseline = sum(c.composite_score for c in baseline_cells) / max(len(baseline_cells), 1)
+    baseline_cells = [
+        c
+        for c in cells
+        if len(c.capabilities_active) == min(len(x.capabilities_active) for x in cells)
+    ]
+    baseline = sum(c.composite_score for c in baseline_cells) / max(
+        len(baseline_cells), 1
+    )
 
     # Collect all unique capabilities across configs
     all_caps: Set[str] = set()
@@ -450,17 +479,19 @@ def compute_synergies(cells: List[EvalCell]) -> List[SynergyScore]:
     synergies = []
     caps_list = sorted(all_caps)
     for i, cap_a in enumerate(caps_list):
-        for cap_b in caps_list[i + 1:]:
+        for cap_b in caps_list[i + 1 :]:
             score_ab = avg_for_caps({cap_a, cap_b})
             score_a = avg_for_caps({cap_a})
             score_b = avg_for_caps({cap_b})
             if score_ab is not None and score_a is not None and score_b is not None:
                 synergy_val = score_ab - score_a - score_b + baseline
-                synergies.append(SynergyScore(
-                    cap_a=cap_a,
-                    cap_b=cap_b,
-                    synergy=synergy_val,
-                ))
+                synergies.append(
+                    SynergyScore(
+                        cap_a=cap_a,
+                        cap_b=cap_b,
+                        synergy=synergy_val,
+                    )
+                )
 
     synergies.sort(key=lambda s: abs(s.synergy), reverse=True)
     return synergies
@@ -474,7 +505,9 @@ def build_report(
     """Build the aggregated evaluation report."""
     from collections import defaultdict
 
-    configs_seen = list(dict.fromkeys(c.config_name for c in cells))  # order-preserving unique
+    configs_seen = list(
+        dict.fromkeys(c.config_name for c in cells)
+    )  # order-preserving unique
     docs_seen = set(c.document_name for c in cells)
 
     # Per-config aggregates
@@ -488,16 +521,20 @@ def build_report(
         n = len(cfg_cells)
         avg_composite = sum(c.composite_score for c in cfg_cells) / n
         avg_phases_run = sum(c.phases_run for c in cfg_cells) / n
-        config_scores.append({
-            "config_name": cfg_name,
-            "capabilities": cfg_cells[0].capabilities_active if cfg_cells else [],
-            "n_docs": n,
-            "avg_composite": round(avg_composite, 3),
-            "avg_overall": round(sum(c.overall for c in cfg_cells) / n, 3),
-            "avg_depth": round(sum(c.depth for c in cfg_cells) / n, 3),
-            "avg_completeness": round(sum(c.completeness for c in cfg_cells) / n, 3),
-            "avg_phases_run": round(avg_phases_run, 1),
-        })
+        config_scores.append(
+            {
+                "config_name": cfg_name,
+                "capabilities": cfg_cells[0].capabilities_active if cfg_cells else [],
+                "n_docs": n,
+                "avg_composite": round(avg_composite, 3),
+                "avg_overall": round(sum(c.overall for c in cfg_cells) / n, 3),
+                "avg_depth": round(sum(c.depth for c in cfg_cells) / n, 3),
+                "avg_completeness": round(
+                    sum(c.completeness for c in cfg_cells) / n, 3
+                ),
+                "avg_phases_run": round(avg_phases_run, 1),
+            }
+        )
 
     # Sort by composite
     config_scores.sort(key=lambda x: x["avg_composite"], reverse=True)
@@ -602,6 +639,7 @@ def write_report(report: CapabilityEvalReport, output_dir: Path) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 async def main_async(args: argparse.Namespace) -> int:
     _load_dotenv()
     logging.basicConfig(
@@ -648,6 +686,7 @@ async def main_async(args: argparse.Namespace) -> int:
     judge = None
     if not args.skip_judge:
         from argumentation_analysis.evaluation.judge import LLMJudge
+
         judge = LLMJudge(model_name=args.judge_model)
         logger.info(f"LLM judge: {args.judge_model}")
     else:
@@ -656,12 +695,13 @@ async def main_async(args: argparse.Namespace) -> int:
     # Run evaluation matrix
     cells: List[EvalCell] = []
     total = len(configs) * len(documents)
-    logger.info(f"Running {total} cells ({len(configs)} configs × {len(documents)} docs)...")
+    logger.info(
+        f"Running {total} cells ({len(configs)} configs × {len(documents)} docs)..."
+    )
 
-    for doc in documents:
+    for doc_idx, doc in enumerate(documents):
         doc_text = doc.get("text", "")
-        doc_name = doc.get("id", f"doc_{documents.index(doc)}")
-        doc_idx = documents.index(doc)
+        doc_name = doc.get("id", f"doc_{doc_idx}")
 
         if not doc_text:
             logger.warning(f"Empty text for {doc_name}, skipping")
@@ -693,7 +733,9 @@ async def main_async(args: argparse.Namespace) -> int:
 
     # Print summary
     print(f"\n=== Capability Evaluation Summary ===\n")
-    print(f"{'Config':<22} {'N':>3}  {'Composite':>9}  {'Overall':>7}  {'Depth':>5}  {'Phases':>6}")
+    print(
+        f"{'Config':<22} {'N':>3}  {'Composite':>9}  {'Overall':>7}  {'Depth':>5}  {'Phases':>6}"
+    )
     print("-" * 60)
     for cs in report.config_scores:
         print(

@@ -55,7 +55,7 @@ class JudgeResult:
 
     @property
     def composite_score(self) -> float:
-        """Weighted composite: overall 40%, depth 20%, completeness 20%, rest 10% each."""
+        """Weighted composite: overall 40%, depth 20%, completeness 20%, accuracy 10%, coherence 5%, actionability 5%."""
         return (
             self.overall * 0.40
             + self.depth * 0.20
@@ -155,11 +155,10 @@ async def run_judge_on_results(
 
         # Apply max_docs limit (across all workflows/models, per doc name)
         if max_docs is not None:
-            doc_key = doc_name
-            if doc_key not in seen_docs:
-                seen_docs.add(doc_key)
-            if len(seen_docs) > max_docs and doc_key not in seen_docs:
-                continue
+            if doc_name not in seen_docs:
+                if len(seen_docs) >= max_docs:
+                    continue
+                seen_docs.add(doc_name)
 
         state_snapshot = entry.get("state_snapshot", {})
         raw_text = state_snapshot.get("raw_text", "")
@@ -388,7 +387,9 @@ async def main_async(args: argparse.Namespace) -> int:
 
     # Print summary table
     print("\n=== LLM Judge Quality Summary ===\n")
-    print(f"{'Model':<15} {'Workflow':<22} {'N':>3}  {'Composite':>9}  {'Overall':>7}  {'Depth':>5}")
+    print(
+        f"{'Model':<15} {'Workflow':<22} {'N':>3}  {'Composite':>9}  {'Overall':>7}  {'Depth':>5}"
+    )
     print("-" * 75)
     for agg in report.aggregates:
         print(
@@ -397,7 +398,9 @@ async def main_async(args: argparse.Namespace) -> int:
         )
     if report.best_by_quality:
         bq = report.best_by_quality
-        print(f"\nBest overall: {bq['model']} × {bq['workflow']} (composite={bq['avg_composite']})")
+        print(
+            f"\nBest overall: {bq['model']} × {bq['workflow']} (composite={bq['avg_composite']})"
+        )
 
     return 0
 
