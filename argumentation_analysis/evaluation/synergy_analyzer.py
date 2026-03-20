@@ -125,20 +125,23 @@ class SynergyAnalyzer:
         if not corpus or document_index >= len(corpus.get("documents", [])):
             return {"difficulty": "unknown", "expected_fallacies": []}
 
-        return {
-            "id": corpus["documents"][document_index].get(
-                "id", f"doc_{document_index}"
-            ),
-            "difficulty": corpus["documents"][document_index].get(
-                "difficulty", "unknown"
-            ),
-            "expected_fallacies": corpus["documents"][document_index].get(
-                "expected_fallacies", []
-            ),
-            "expected_quality_score_range": corpus["documents"][document_index].get(
+        doc = corpus["documents"][document_index]
+        result = {
+            "id": doc.get("id", f"doc_{document_index}"),
+            "difficulty": doc.get("difficulty", "unknown"),
+            "expected_fallacies": doc.get("expected_fallacies", []),
+            "expected_quality_score_range": doc.get(
                 "expected_quality_score_range", [0, 10]
             ),
         }
+        # Include taxonomy-enriched fields if available (#136)
+        if "expected_fallacies_structured" in doc:
+            result["expected_fallacies_structured"] = doc[
+                "expected_fallacies_structured"
+            ]
+        if "taxonomy_families" in doc:
+            result["taxonomy_families"] = doc["taxonomy_families"]
+        return result
 
     def analyze_workflow_performance(self) -> Dict[str, WorkflowMetrics]:
         """Analyze performance metrics for each workflow."""

@@ -1,0 +1,21 @@
+{
+  "iter": 7,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection",
+    "argument_quality",
+    "counter_argument_generation",
+    "adversarial_debate",
+    "governance_simulation",
+    "propositional_logic",
+    "fol_reasoning"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 71.9,
+  "avg_non_empty_fields": 12.0,
+  "delta_vs_previous": {
+    "note": "baseline — no previous iteration"
+  },
+  "timestamp": "2026-03-21T00:24:14.683993"
+}

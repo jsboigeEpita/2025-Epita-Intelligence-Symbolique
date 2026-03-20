@@ -3,24 +3,24 @@
   "capabilities": "ALL",
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 85.0,
+  "avg_duration": 114.0,
   "avg_non_empty_fields": 18.0,
   "delta_vs_previous": {
     "extracts": {
-      "prev": 10,
+      "prev": 7,
       "curr": 8,
-      "delta": -2
+      "delta": 1
     },
     "identified_arguments": {
-      "prev": 6,
-      "curr": 9,
-      "delta": 3
+      "prev": 7,
+      "curr": 8,
+      "delta": 1
     },
     "identified_fallacies": {
-      "prev": 10,
-      "curr": 6,
-      "delta": -4
+      "prev": 8,
+      "curr": 7,
+      "delta": -1
     }
   },
-  "timestamp": "2026-03-21T00:09:11.110548"
+  "timestamp": "2026-03-21T00:52:45.491693"
 }

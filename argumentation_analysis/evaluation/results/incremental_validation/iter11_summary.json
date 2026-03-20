@@ -17,7 +17,7 @@
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 41.4,
+  "avg_duration": 110.2,
   "avg_non_empty_fields": 17.0,
   "delta_vs_previous": {
     "belief_revision_results": {
@@ -26,14 +26,14 @@
       "delta": 1
     },
     "identified_arguments": {
-      "prev": 3,
-      "curr": 4,
+      "prev": 6,
+      "curr": 7,
       "delta": 1
     },
     "identified_fallacies": {
-      "prev": 4,
-      "curr": 2,
-      "delta": -2
+      "prev": 6,
+      "curr": 9,
+      "delta": 3
     },
     "jtms_beliefs": {
       "prev": 0,
@@ -41,5 +41,5 @@
       "delta": 10
     }
   },
-  "timestamp": "2026-03-21T00:08:59.769658"
+  "timestamp": "2026-03-20T23:59:45.849242"
 }

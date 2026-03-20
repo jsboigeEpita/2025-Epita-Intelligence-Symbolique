@@ -1,5 +1,5 @@
 {
-  "iter": 7,
+  "iter": 9,
   "capabilities": [
     "fact_extraction",
     "hierarchical_fallacy_detection",
@@ -8,38 +8,35 @@
     "adversarial_debate",
     "governance_simulation",
     "propositional_logic",
-    "fol_reasoning"
+    "fol_reasoning",
+    "aspic_plus_reasoning",
+    "ranking_semantics"
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 109.7,
-  "avg_non_empty_fields": 12.0,
+  "avg_duration": 71.7,
+  "avg_non_empty_fields": 14.0,
   "delta_vs_previous": {
     "extracts": {
-      "prev": 7,
+      "prev": 9,
       "curr": 8,
-      "delta": 1
-    },
-    "fol_analysis_results": {
-      "prev": 0,
-      "curr": 1,
-      "delta": 1
-    },
-    "identified_arguments": {
-      "prev": 7,
-      "curr": 8,
-      "delta": 1
-    },
-    "identified_fallacies": {
-      "prev": 8,
-      "curr": 7,
       "delta": -1
     },
-    "propositional_analysis_results": {
+    "identified_arguments": {
+      "prev": 9,
+      "curr": 8,
+      "delta": -1
+    },
+    "identified_fallacies": {
+      "prev": 7,
+      "curr": 6,
+      "delta": -1
+    },
+    "ranking_results": {
       "prev": 0,
       "curr": 1,
       "delta": 1
     }
   },
-  "timestamp": "2026-03-20T23:55:49.504164"
+  "timestamp": "2026-03-21T00:31:58.338701"
 }

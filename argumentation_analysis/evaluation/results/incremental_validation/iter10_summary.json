@@ -15,7 +15,7 @@
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 33.1,
+  "avg_duration": 117.7,
   "avg_non_empty_fields": 15.0,
   "delta_vs_previous": {
     "dialogue_results": {
@@ -24,15 +24,15 @@
       "delta": 1
     },
     "extracts": {
-      "prev": 3,
-      "curr": 2,
-      "delta": -1
+      "prev": 8,
+      "curr": 9,
+      "delta": 1
     },
-    "identified_arguments": {
-      "prev": 4,
-      "curr": 3,
+    "identified_fallacies": {
+      "prev": 7,
+      "curr": 6,
       "delta": -1
     }
   },
-  "timestamp": "2026-03-21T00:05:50.411682"
+  "timestamp": "2026-03-20T23:53:42.588760"
 }

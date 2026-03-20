@@ -1,5 +1,5 @@
 {
-  "iter": 7,
+  "iter": 11,
   "capabilities": [
     "fact_extraction",
     "hierarchical_fallacy_detection",
@@ -8,21 +8,26 @@
     "adversarial_debate",
     "governance_simulation",
     "propositional_logic",
-    "fol_reasoning"
+    "fol_reasoning",
+    "aspic_plus_reasoning",
+    "ranking_semantics",
+    "dialogue_protocols",
+    "belief_revision",
+    "belief_maintenance"
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 109.7,
-  "avg_non_empty_fields": 12.0,
+  "avg_duration": 89.3,
+  "avg_non_empty_fields": 17.0,
   "delta_vs_previous": {
+    "belief_revision_results": {
+      "prev": 0,
+      "curr": 1,
+      "delta": 1
+    },
     "extracts": {
       "prev": 7,
       "curr": 8,
-      "delta": 1
-    },
-    "fol_analysis_results": {
-      "prev": 0,
-      "curr": 1,
       "delta": 1
     },
     "identified_arguments": {
@@ -31,15 +36,15 @@
       "delta": 1
     },
     "identified_fallacies": {
-      "prev": 8,
+      "prev": 6,
       "curr": 7,
-      "delta": -1
-    },
-    "propositional_analysis_results": {
-      "prev": 0,
-      "curr": 1,
       "delta": 1
+    },
+    "jtms_beliefs": {
+      "prev": 0,
+      "curr": 10,
+      "delta": 10
     }
   },
-  "timestamp": "2026-03-20T23:55:49.504164"
+  "timestamp": "2026-03-21T00:41:05.981203"
 }
