@@ -263,17 +263,12 @@ class TestInvokeDialogueFallback:
         if result.get("fallback") == "python":
             assert result["outcome"] in ("proponent", "opponent")
 
-    async def test_schema_mismatch_trace_vs_dialogue_trace(self):
-        """KNOWN MISMATCH: fallback returns 'trace', writer reads 'dialogue_trace'.
-
-        When JVM is unavailable, state.add_dialogue_result() will receive
-        trace=[] because _write_dialogue_to_state looks for 'dialogue_trace'
-        which is absent from the Python fallback output.
-        """
+    async def test_dialogue_trace_key_matches_writer(self):
+        """Verify fallback uses 'dialogue_trace' key matching the state writer."""
         result = await _invoke_dialogue(SAMPLE_TEXT, {})
         if result.get("fallback") == "python":
-            assert "trace" in result
-            assert "dialogue_trace" not in result  # The mismatch
+            assert "dialogue_trace" in result
+            assert isinstance(result["dialogue_trace"], list)
 
 
 class TestInvokeBipolarFallback:
@@ -348,13 +343,13 @@ class TestStateWritersWithFallbackOutput:
         _write_ranking_to_state(output, fresh_state, {})
         assert len(fresh_state.ranking_results) == 1
 
-    def test_write_ranking_fallback_schema_mismatch_empty_arguments(self, fresh_state):
-        """Documents known mismatch: fallback has no 'arguments' key → stored as []."""
+    def test_write_ranking_fallback_arguments_preserved(self, fresh_state):
+        """Verify ranking fallback correctly passes arguments to state writer."""
         output = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
         _write_ranking_to_state(output, fresh_state, {})
         entry = fresh_state.ranking_results[0]
-        # Mismatch: 'ranking' key in output → 'arguments' key in state → []
-        assert entry["arguments"] == []
+        # Fixed: fallback now includes 'arguments' key
+        assert entry["arguments"] == SAMPLE_ARGS
         assert entry["method"] == "categorizer"
 
     def test_write_aspic_fallback_does_not_raise(self, fresh_state):
@@ -414,19 +409,19 @@ class TestStateWritersWithFallbackOutput:
         }
         _write_dialogue_to_state(output, fresh_state, {})
 
-    def test_write_dialogue_fallback_schema_mismatch_empty_trace(self, fresh_state):
-        """Documents known mismatch: fallback has 'trace' key, writer reads 'dialogue_trace'."""
+    def test_write_dialogue_fallback_trace_preserved(self, fresh_state):
+        """Verify dialogue fallback correctly passes trace to state writer."""
         output = {
             "topic": "test topic",
-            "trace": [{"turn": 1, "speaker": "proponent", "move": "arg_1"}],
+            "dialogue_trace": [{"turn": 1, "speaker": "proponent", "move": "arg_1"}],
             "outcome": "proponent",
             "fallback": "python",
         }
         _write_dialogue_to_state(output, fresh_state, {})
         assert len(fresh_state.dialogue_results) == 1
         entry = fresh_state.dialogue_results[0]
-        # Mismatch: 'trace' in output → 'dialogue_trace' key read by writer → []
-        assert entry["trace"] == []
+        # Fixed: fallback now uses 'dialogue_trace' key matching the writer
+        assert entry["trace"] == [{"turn": 1, "speaker": "proponent", "move": "arg_1"}]
         assert entry["outcome"] == "proponent"
 
     def test_write_quality_with_none_output_does_not_raise(self, fresh_state):

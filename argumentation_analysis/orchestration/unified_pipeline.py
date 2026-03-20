@@ -445,6 +445,7 @@ def _python_ranking_fallback(
         )
     return {
         "method": method,
+        "arguments": arguments,
         "ranking": [a for a, _ in sorted_args],
         "scores": {a: round(s, 4) for a, s in scores.items()},
         "comparisons": comparisons,
@@ -700,7 +701,7 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
             "topic": topic[:100],
             "proponent_args": pro_args,
             "opponent_args": opp_args,
-            "trace": trace,
+            "dialogue_trace": trace,
             "outcome": winner,
             "turns": len(trace),
             "fallback": "python",
