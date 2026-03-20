@@ -116,7 +116,7 @@ Several root-level directories contain code that should live under `argumentatio
 | Root directory | Overlaps with | Status |
 |---|---|---|
 | `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
-| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **ARCHIVED** → `docs/archives/core_overflow/` |
+| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **DELETED** (PR #154) — was in `docs/archives/core_overflow/` |
 | ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
 | ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **MIGRATED** — `mcp_server/` → `argumentation_analysis/services/mcp_server/`; legacy archived |
 | ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **MIGRATED** — `AnalysisToolsPlugin` → `argumentation_analysis/plugins/analysis_tools/`; minor plugins archived |
@@ -229,8 +229,6 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - `docs/projets/` — 17 student project subjects with detailed specs
 - `docs/technical/` — API docs, agent components, entry points, tools reference
 - `docs/reports/` — Audit reports, mission reports, analysis results
-- `docs/validation/` — Test verification reports
-- `docs/integration/plans/` — 12 per-project integration plans (one per student project)
 - `docs/architecture/INTEGRATION_STRATEGY.md` — Overall integration strategy and Lego architecture
 - `KNOWN_ISSUES.md` — Tracked problems and active issues
 - Issue #21 — Planned Tweety environment update from CoursIA
