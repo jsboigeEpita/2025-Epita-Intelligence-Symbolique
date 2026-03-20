@@ -84,8 +84,8 @@ CAPABILITY_SUBSETS = {
     "core_plus_ranking": CORE_CAPABILITIES + ["ranking_semantics"],
     "core_plus_formal": CORE_CAPABILITIES
     + ["ranking_semantics", "aspic_plus_reasoning", "dialogue_protocols"],
-    "core_plus_belief": CORE_CAPABILITIES + ["belief_revision", "belief_maintenance"],
-    "all_available": CORE_CAPABILITIES + TRACK_A_CAPABILITIES,
+    "core_plus_belief": CORE_CAPABILITIES + ["belief_revision"],
+    "all_available": list(dict.fromkeys(CORE_CAPABILITIES + TRACK_A_CAPABILITIES)),
 }
 
 
