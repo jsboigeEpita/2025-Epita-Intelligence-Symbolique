@@ -123,7 +123,8 @@ examples/rapport_simple_*.json
 
 # Generated outputs & reports
 outputs/
-reports/
+/reports/
+!docs/reports/
 backend_info.json
 build_cache_logs*.txt
 tree.txt
