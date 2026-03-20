@@ -379,23 +379,30 @@ def _extract_arguments_from_context(
 ) -> List[str]:
     """Extract argument labels from upstream phase outputs.
 
-    Looks at quality_baseline, extract, or quality phase outputs for argument
-    lists, then falls back to generating labels from the input text.
+    Priority order:
+    1. ``arguments`` list from extract/quality phases (LLM-extracted, best quality)
+    2. ``claims`` list from extract phase (heuristic fallback, still real text)
+    3. Sentence splitting from input_text (last resort before placeholder)
     """
-    # Try various upstream phase outputs
+    # Try various upstream phase outputs — check extract first (best source)
     for phase_key in [
-        "phase_quality_baseline_output",
         "phase_extract_output",
+        "phase_quality_baseline_output",
         "phase_quality_output",
     ]:
         phase_out = context.get(phase_key, {})
         if isinstance(phase_out, dict):
-            # Quality evaluator returns scores dict keyed by virtue
+            # Primary: explicit arguments list (from fact_extraction LLM)
             if "arguments" in phase_out:
                 args = phase_out["arguments"]
                 if isinstance(args, list) and args:
                     return [str(a) for a in args]
-            # Some evaluators return 'scores' keyed by argument ID
+            # Secondary: claims list (from fact_extraction heuristic fallback)
+            if "claims" in phase_out:
+                claims = phase_out["claims"]
+                if isinstance(claims, list) and claims:
+                    return [str(c) for c in claims[:8]]
+            # Tertiary: scores dict keyed by argument ID
             if "scores" in phase_out and isinstance(phase_out["scores"], dict):
                 return list(phase_out["scores"].keys())
 

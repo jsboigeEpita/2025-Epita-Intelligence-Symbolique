@@ -31,16 +31,22 @@ def build_argument_strength_workflow() -> WorkflowDefinition:
     """
     return (
         WorkflowBuilder("argument_strength")
+        # Phase 0: Extract arguments and claims from text
+        .add_phase(
+            "extract",
+            capability="fact_extraction",
+        )
         # Phase 1: Quality baseline
         .add_phase(
             "quality_baseline",
             capability="argument_quality",
+            depends_on=["extract"],
         )
         # Phase 2: Formal ranking
         .add_phase(
             "formal_ranking",
             capability="ranking_semantics",
-            depends_on=["quality_baseline"],
+            depends_on=["extract", "quality_baseline"],
         )
         # Phase 2b: Bipolar AF for support+attack analysis (optional, #85)
         .add_phase(

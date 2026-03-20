@@ -45,10 +45,16 @@ def build_belief_dynamics_workflow() -> WorkflowDefinition:
     """
     return (
         WorkflowBuilder("belief_dynamics")
+        # Phase 0: Extract arguments and claims from text
+        .add_phase(
+            "extract",
+            capability="fact_extraction",
+        )
         # Phase 1: Adversarial stress test
         .add_phase(
             "adversarial_test",
             capability="adversarial_debate",
+            depends_on=["extract"],
         )
         # Phase 2: Revise beliefs based on debate
         .add_phase(
