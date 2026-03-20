@@ -1540,7 +1540,8 @@ def _write_ranking_to_state(output, state, ctx) -> None:
     if not output or not isinstance(output, dict):
         return
     method = str(output.get("method", "unknown"))
-    arguments = output.get("arguments", [])
+    # Accept both "arguments" (JVM path) and "ranking" (Python fallback path)
+    arguments = output.get("arguments") or output.get("ranking", [])
     comparisons = output.get("comparisons", [])
     if not isinstance(arguments, list):
         arguments = []
@@ -1583,7 +1584,8 @@ def _write_dialogue_to_state(output, state, ctx) -> None:
         return
     topic = str(output.get("topic", ""))
     outcome = str(output.get("outcome", "unknown"))
-    trace = output.get("dialogue_trace", [])
+    # Accept both "dialogue_trace" (JVM path) and "trace" (Python fallback path)
+    trace = output.get("dialogue_trace") or output.get("trace", [])
     if not isinstance(trace, list):
         trace = []
     state.add_dialogue_result(topic, outcome, trace)
