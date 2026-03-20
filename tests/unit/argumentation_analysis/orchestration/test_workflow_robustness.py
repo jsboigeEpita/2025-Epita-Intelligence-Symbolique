@@ -46,10 +46,19 @@ def shared_registry():
 BASE_WORKFLOWS = ["light", "standard", "full"]
 
 # Timeout per workflow tier — standard/full use real LLM calls that take 30-90s
+# Extended workflows (debate_tournament etc.) have multi-phase loops — 300s budget
 WORKFLOW_TIMEOUTS = {
     "light": 60.0,
     "standard": 120.0,
     "full": 180.0,
+    # Extended multi-phase workflows (6+ phases, iterative loops)
+    "debate_tournament": 300.0,
+    "democratech": 240.0,
+    "formal_debate": 240.0,
+    "formal_verification": 240.0,
+    "hierarchical_fallacy": 180.0,
+    "neural_symbolic": 180.0,
+    "fact_check": 180.0,
 }
 
 
@@ -472,6 +481,7 @@ EXTENDED_WORKFLOWS = [
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestAllWorkflowsEmptyInput:
     """Test all available workflows with empty input."""
 
@@ -496,6 +506,7 @@ class TestAllWorkflowsEmptyInput:
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestAllWorkflowsAdversarialSample:
     """Test all available workflows with a representative adversarial sample."""
 
@@ -799,6 +810,7 @@ class TestBoundaryEdgeCases:
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestConcurrentAdversarialExecution:
     """Test that multiple adversarial inputs can be processed concurrently."""
 
