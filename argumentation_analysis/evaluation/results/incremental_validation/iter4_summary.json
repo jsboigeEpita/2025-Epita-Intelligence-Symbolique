@@ -1,0 +1,36 @@
+{
+  "iter": 4,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection",
+    "argument_quality",
+    "counter_argument_generation"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 46.2,
+  "avg_non_empty_fields": 8.0,
+  "delta_vs_previous": {
+    "counter_arguments": {
+      "prev": 0,
+      "curr": 1,
+      "delta": 1
+    },
+    "extracts": {
+      "prev": 11,
+      "curr": 10,
+      "delta": -1
+    },
+    "identified_arguments": {
+      "prev": 7,
+      "curr": 6,
+      "delta": -1
+    },
+    "identified_fallacies": {
+      "prev": 7,
+      "curr": 8,
+      "delta": 1
+    }
+  },
+  "timestamp": "2026-03-20T23:22:40.237286"
+}

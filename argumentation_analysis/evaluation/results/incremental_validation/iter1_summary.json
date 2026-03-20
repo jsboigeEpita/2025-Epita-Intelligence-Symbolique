@@ -1,0 +1,14 @@
+{
+  "iter": 1,
+  "capabilities": [
+    "fact_extraction"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 16.2,
+  "avg_non_empty_fields": 6.0,
+  "delta_vs_previous": {
+    "note": "baseline — no previous iteration"
+  },
+  "timestamp": "2026-03-20T23:14:24.799143"
+}

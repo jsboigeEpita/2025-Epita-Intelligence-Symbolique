@@ -1,0 +1,29 @@
+{
+  "iter": 2,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 41.1,
+  "avg_non_empty_fields": 6.0,
+  "delta_vs_previous": {
+    "extracts": {
+      "prev": 8,
+      "curr": 10,
+      "delta": 2
+    },
+    "identified_arguments": {
+      "prev": 9,
+      "curr": 8,
+      "delta": -1
+    },
+    "identified_fallacies": {
+      "prev": 6,
+      "curr": 9,
+      "delta": 3
+    }
+  },
+  "timestamp": "2026-03-20T23:17:59.717903"
+}
