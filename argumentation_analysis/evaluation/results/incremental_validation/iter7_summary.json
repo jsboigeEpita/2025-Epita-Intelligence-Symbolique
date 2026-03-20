@@ -12,7 +12,7 @@
   ],
   "n_docs": 3,
   "n_success": 3,
-  "avg_duration": 78.8,
+  "avg_duration": 109.7,
   "avg_non_empty_fields": 12.0,
   "delta_vs_previous": {
     "extracts": {
@@ -23,6 +23,11 @@
     "fol_analysis_results": {
       "prev": 0,
       "curr": 1,
+      "delta": 1
+    },
+    "identified_arguments": {
+      "prev": 7,
+      "curr": 8,
       "delta": 1
     },
     "identified_fallacies": {
@@ -36,5 +41,5 @@
       "delta": 1
     }
   },
-  "timestamp": "2026-03-20T23:35:37.644981"
+  "timestamp": "2026-03-20T23:55:49.504164"
 }
