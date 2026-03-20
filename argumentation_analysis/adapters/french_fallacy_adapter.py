@@ -18,8 +18,10 @@ All tiers degrade gracefully if their dependencies are missing.
 Integration from student project 2.3.2-detection-sophismes (GitHub #44).
 """
 
+import csv
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.core.interfaces.fallacy_detector import (
@@ -30,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────
 
-FALLACY_LABELS_FR = [
+# Legacy 13-label list kept as absolute fallback
+_FALLACY_LABELS_LEGACY = [
     "Attaque personnelle (Ad Hominem)",
     "Appel à la popularité (Ad Populum)",
     "Appel à l'émotion (Appeal to Emotion)",
@@ -45,6 +48,52 @@ FALLACY_LABELS_FR = [
     "Sophisme de pertinence",
     "Homme de paille (Straw Man)",
 ]
+
+_TAXONOMY_CSV = Path(__file__).resolve().parent.parent / "data" / "taxonomy_medium.csv"
+
+# Maps taxonomy text_fr label → PK for downstream hierarchical descent
+_TAXONOMY_LABEL_TO_PK: Dict[str, int] = {}
+
+
+def _load_taxonomy_labels() -> List[str]:
+    """Load fallacy labels from taxonomy_medium.csv (depth 1+2).
+
+    Returns 28 labels covering 7 families and 21 sub-families instead of
+    the original 13 hardcoded labels. Falls back to legacy list if the
+    CSV is missing or unreadable.
+    """
+    try:
+        with open(_TAXONOMY_CSV, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            labels = []
+            for row in reader:
+                depth = int(row.get("depth", 0))
+                if depth < 1:
+                    continue  # skip root
+                text_fr = row.get("text_fr", "").strip()
+                famille = row.get("Famille", "").strip()
+                pk = int(row.get("PK", 0))
+                if text_fr:
+                    # Include family context for depth-2 sub-families
+                    if depth == 2 and famille and famille != text_fr:
+                        label = f"{text_fr} ({famille})"
+                    else:
+                        label = text_fr
+                    labels.append(label)
+                    _TAXONOMY_LABEL_TO_PK[label] = pk
+            if labels:
+                logger.info(
+                    f"Loaded {len(labels)} fallacy labels from taxonomy_medium.csv"
+                )
+                return labels
+    except Exception as e:
+        logger.warning(f"Could not load taxonomy_medium.csv: {e}")
+
+    logger.info("Using legacy 13-label fallacy list as fallback")
+    return list(_FALLACY_LABELS_LEGACY)
+
+
+FALLACY_LABELS_FR = _load_taxonomy_labels()
 
 # Symbolic rules from student project (spaCy Matcher patterns)
 _SYMBOLIC_FALLACY_RULES = {
@@ -210,6 +259,7 @@ class FallacyDetection:
     source: str  # "symbolic", "nli", "llm"
     matched_rule: Optional[str] = None
     description: Optional[str] = None
+    taxonomy_pk: Optional[int] = None  # PK in taxonomy CSV for hierarchical descent
 
 
 @dataclass
@@ -232,6 +282,7 @@ class FallacyAnalysisResult:
                     "confidence": f.confidence,
                     "matched_rule": f.matched_rule,
                     "description": f.description,
+                    "taxonomy_pk": f.taxonomy_pk,
                 }
                 for f in self.fallacies
             },
@@ -405,12 +456,17 @@ class NLIFallacyDetector:
             detections = []
             for label, score in zip(result["labels"], result["scores"]):
                 if score >= self.threshold:
+                    taxonomy_pk = _TAXONOMY_LABEL_TO_PK.get(label)
+                    desc = f"NLI zero-shot ({self._model_name})"
+                    if taxonomy_pk is not None:
+                        desc += f" [taxonomy PK={taxonomy_pk}]"
                     detections.append(
                         FallacyDetection(
                             fallacy_type=label,
                             confidence=round(score, 3),
                             source="nli",
-                            description=f"NLI zero-shot ({self._model_name})",
+                            description=desc,
+                            taxonomy_pk=taxonomy_pk,
                         )
                     )
             return detections
