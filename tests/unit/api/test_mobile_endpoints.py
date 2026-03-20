@@ -8,6 +8,7 @@ Validates:
 - Input validation (text too short)
 - Graceful error handling when pipeline unavailable
 """
+
 import pytest
 from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
@@ -27,7 +28,9 @@ class TestMobileAnalyze:
     def test_analyze_returns_200(self, client):
         resp = client.post(
             "/api/mobile/analyze",
-            json={"text": "All men are mortal. Socrates is a man. Therefore Socrates is mortal."},
+            json={
+                "text": "All men are mortal. Socrates is a man. Therefore Socrates is mortal."
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -68,8 +71,10 @@ class TestMobileAnalyze:
         assert resp.status_code == 200
         data = resp.json()
         assert data["overall_quality"] == 0.0
-        assert any("error" in arg["id"].lower() or "unavailable" in arg["text"].lower()
-                    for arg in data["arguments"])
+        assert any(
+            "error" in arg["id"].lower() or "unavailable" in arg["text"].lower()
+            for arg in data["arguments"]
+        )
 
 
 # ──── Fallacies Endpoint ────
@@ -125,7 +130,9 @@ class TestMobileValidate:
     def test_validate_returns_200(self, client):
         resp = client.post(
             "/api/mobile/validate",
-            json={"text": "If it rains then the road is wet. It rains. Therefore the road is wet."},
+            json={
+                "text": "If it rains then the road is wet. It rains. Therefore the road is wet."
+            },
         )
         assert resp.status_code == 200
         data = resp.json()

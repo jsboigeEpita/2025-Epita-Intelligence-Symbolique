@@ -22,7 +22,6 @@ from argumentation_analysis.agents.core.exceptions import (
     CircularDependencyError,
 )
 
-
 # ===========================================================================
 # BasePlugin / LegoPlugin Tests
 # ===========================================================================
@@ -46,7 +45,9 @@ class ConcreteLegoPlugin(LegoPlugin):
     requires = ["llm_service"]
     parameters = [
         ParameterSpec("language", type="string", default="fr"),
-        ParameterSpec("threshold", type="float", required=True, description="Min confidence"),
+        ParameterSpec(
+            "threshold", type="float", required=True, description="Min confidence"
+        ),
     ]
 
     @property
@@ -269,7 +270,10 @@ class {class_name}(BasePlugin):
     def test_load_with_dependencies(self, loader, tmp_path):
         self._create_plugin_dir(tmp_path, "base_plugin", "base_mod", "BaseP")
         self._create_plugin_dir(
-            tmp_path, "dependent_plugin", "dep_mod", "DepP",
+            tmp_path,
+            "dependent_plugin",
+            "dep_mod",
+            "DepP",
             deps=["base_plugin"],
         )
 

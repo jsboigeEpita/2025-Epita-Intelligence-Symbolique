@@ -15,7 +15,6 @@ from argumentation_analysis.agents.watson_jtms.models import (
 )
 from argumentation_analysis.agents.watson_jtms.validation import FormalValidator
 
-
 # =============================================================================
 # ValidationResult tests
 # =============================================================================
@@ -175,8 +174,13 @@ class TestFormalValidator:
     def test_construct_formal_proof(self):
         validator = self._make_validator()
         steps = [
-            {"valid": True, "logical_structure": "modus_ponens",
-             "premises_valid": True, "negatives_invalid": True, "confidence": 0.8},
+            {
+                "valid": True,
+                "logical_structure": "modus_ponens",
+                "premises_valid": True,
+                "negatives_invalid": True,
+                "confidence": 0.8,
+            },
             {"valid": False, "logical_structure": "unknown"},
         ]
         proof = validator._construct_formal_proof("belief_x", steps)

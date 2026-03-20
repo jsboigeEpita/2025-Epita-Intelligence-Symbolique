@@ -18,8 +18,8 @@ from argumentation_analysis.core.communication.message import (
     AgentLevel,
 )
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_middleware():
@@ -52,6 +52,7 @@ def make_response(reply_to, conversation_id=None):
 
 # ── __init__ ────────────────────────────────────────────────────────────
 
+
 class TestRequestResponseInit:
     """Tests for RequestResponseProtocol.__init__."""
 
@@ -79,6 +80,7 @@ class TestRequestResponseInit:
 
 
 # ── handle_response ─────────────────────────────────────────────────────
+
 
 class TestHandleResponse:
     """Tests for handle_response()."""
@@ -160,6 +162,7 @@ class TestHandleResponse:
 
 # ── _handle_timeout ─────────────────────────────────────────────────────
 
+
 class TestHandleTimeout:
     """Tests for _handle_timeout()."""
 
@@ -223,6 +226,7 @@ class TestHandleTimeout:
 
 
 # ── send_request_async_callback ─────────────────────────────────────────
+
 
 class TestSendRequestAsyncCallback:
     """Tests for send_request_async_callback()."""
@@ -314,11 +318,13 @@ class TestSendRequestAsyncCallback:
 
 # ── send_request (synchronous, with fast response) ──────────────────────
 
+
 class TestSendRequest:
     """Tests for send_request() — synchronous version."""
 
     def test_sends_and_receives_response(self, protocol, mock_middleware):
         """Simulate middleware instantly responding."""
+
         def side_effect(msg):
             # Simulate instant response via handle_response
             response = make_response(msg.id)
@@ -351,6 +357,7 @@ class TestSendRequest:
 
     def test_early_response_found(self, protocol, mock_middleware):
         """Pre-store an early response before sending the request."""
+
         # We can't predict the request ID, so test via handle_response flow
         def side_effect(msg):
             response = make_response(msg.id)
@@ -370,6 +377,7 @@ class TestSendRequest:
 
 
 # ── send_request_async ──────────────────────────────────────────────────
+
 
 class TestSendRequestAsync:
     """Tests for send_request_async()."""
@@ -403,6 +411,7 @@ class TestSendRequestAsync:
 
 # ── shutdown ────────────────────────────────────────────────────────────
 
+
 class TestShutdown:
     """Tests for shutdown()."""
 
@@ -422,8 +431,14 @@ class TestShutdown:
         assert protocol.pending_requests == {}
 
     def test_clears_early_responses(self, protocol):
-        protocol.early_responses["e1"] = {"response": MagicMock(), "timestamp": datetime.now()}
-        protocol.early_responses_by_conversation["c1"] = {"response": MagicMock(), "timestamp": datetime.now()}
+        protocol.early_responses["e1"] = {
+            "response": MagicMock(),
+            "timestamp": datetime.now(),
+        }
+        protocol.early_responses_by_conversation["c1"] = {
+            "response": MagicMock(),
+            "timestamp": datetime.now(),
+        }
         protocol.shutdown()
         assert protocol.early_responses == {}
         assert protocol.early_responses_by_conversation == {}
@@ -461,6 +476,7 @@ class TestShutdown:
 
 
 # ── RequestTimeoutError ─────────────────────────────────────────────────
+
 
 class TestRequestTimeoutError:
     """Tests for RequestTimeoutError exception."""

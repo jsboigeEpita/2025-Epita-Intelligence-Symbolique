@@ -47,9 +47,11 @@ class AgentFactory:
     def _create_informal_fallacy_agent(self, **kwargs) -> InformalFallacyAgent:
         """Create an informal fallacy analysis agent."""
         from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
+
         return InformalFallacyAgent(self.config, **kwargs)
 
     def _create_project_manager_agent(self, **kwargs) -> ProjectManagerAgent:
         """Create a project management agent."""
         from .concrete_agents.project_manager_agent import ProjectManagerAgent
+
         return ProjectManagerAgent(self.config, **kwargs)

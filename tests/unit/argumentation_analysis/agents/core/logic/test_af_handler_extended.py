@@ -8,6 +8,7 @@ Validates:
 - Error handling (invalid semantics, unavailable reasoner)
 - Framework building and extension conversion
 """
+
 import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 
@@ -15,7 +16,9 @@ from argumentation_analysis.agents.core.logic.af_handler import (
     AFHandler,
     SEMANTICS_REASONERS,
 )
-from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
+from argumentation_analysis.agents.core.logic.tweety_initializer import (
+    TweetyInitializer,
+)
 
 
 @pytest.fixture
@@ -68,8 +71,17 @@ class TestSupportedSemantics:
 
     def test_supported_semantics_list(self):
         expected = [
-            "preferred", "grounded", "stable", "complete", "admissible",
-            "conflict_free", "semi_stable", "stage", "cf2", "ideal", "naive",
+            "preferred",
+            "grounded",
+            "stable",
+            "complete",
+            "admissible",
+            "conflict_free",
+            "semi_stable",
+            "stage",
+            "cf2",
+            "ideal",
+            "naive",
         ]
         assert AFHandler.supported_semantics() == expected
 

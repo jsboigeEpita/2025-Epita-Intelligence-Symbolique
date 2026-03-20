@@ -19,12 +19,17 @@ def state():
 
 
 def _make_task(task_id, objective_id="obj1"):
-    return {"id": task_id, "description": f"Task {task_id}", "objective_id": objective_id}
+    return {
+        "id": task_id,
+        "description": f"Task {task_id}",
+        "objective_id": objective_id,
+    }
 
 
 # ============================================================
 # Initialization
 # ============================================================
+
 
 class TestInit:
     def test_creates_instance(self, state):
@@ -34,7 +39,12 @@ class TestInit:
         assert state.assigned_objectives == []
 
     def test_task_statuses(self, state):
-        assert set(state.tasks.keys()) == {"pending", "in_progress", "completed", "failed"}
+        assert set(state.tasks.keys()) == {
+            "pending",
+            "in_progress",
+            "completed",
+            "failed",
+        }
         for v in state.tasks.values():
             assert v == []
 
@@ -52,9 +62,12 @@ class TestInit:
 
     def test_rhetorical_analysis_results_keys(self, state):
         expected = {
-            "complex_fallacy_analyses", "contextual_fallacy_analyses",
-            "fallacy_severity_evaluations", "argument_structure_visualizations",
-            "argument_coherence_evaluations", "semantic_argument_analyses",
+            "complex_fallacy_analyses",
+            "contextual_fallacy_analyses",
+            "fallacy_severity_evaluations",
+            "argument_structure_visualizations",
+            "argument_coherence_evaluations",
+            "semantic_argument_analyses",
             "contextual_fallacy_detections",
         }
         assert set(state.rhetorical_analysis_results.keys()) == expected
@@ -75,9 +88,12 @@ class TestInit:
 # add_assigned_objective
 # ============================================================
 
+
 class TestAddObjective:
     def test_add_one(self, state):
-        state.add_assigned_objective({"id": "o1", "description": "test", "priority": "high"})
+        state.add_assigned_objective(
+            {"id": "o1", "description": "test", "priority": "high"}
+        )
         assert len(state.assigned_objectives) == 1
 
     def test_add_multiple(self, state):
@@ -89,6 +105,7 @@ class TestAddObjective:
 # ============================================================
 # add_task / update_task_status
 # ============================================================
+
 
 class TestTaskLifecycle:
     def test_add_pending(self, state):
@@ -127,6 +144,7 @@ class TestTaskLifecycle:
 # assign_task
 # ============================================================
 
+
 class TestAssignTask:
     def test_assign_existing_task(self, state):
         state.add_task(_make_task("t1"))
@@ -146,6 +164,7 @@ class TestAssignTask:
 # ============================================================
 # add_task_dependency
 # ============================================================
+
 
 class TestTaskDependency:
     def test_add_dependency(self, state):
@@ -182,6 +201,7 @@ class TestTaskDependency:
 # ============================================================
 # update_task_progress
 # ============================================================
+
 
 class TestTaskProgress:
     def test_update_progress(self, state):
@@ -221,6 +241,7 @@ class TestTaskProgress:
 # Intermediate Results
 # ============================================================
 
+
 class TestIntermediateResults:
     def test_add_result(self, state):
         state.add_task(_make_task("t1"))
@@ -235,22 +256,34 @@ class TestIntermediateResults:
 # Rhetorical Analysis Results
 # ============================================================
 
+
 class TestRhetoricalResults:
     def test_add_valid_type(self, state):
         state.add_task(_make_task("t1"))
-        result = state.add_rhetorical_analysis_result("t1", "complex_fallacy_analyses", {"data": 1})
+        result = state.add_rhetorical_analysis_result(
+            "t1", "complex_fallacy_analyses", {"data": 1}
+        )
         assert result is True
 
     def test_add_invalid_type(self, state):
         state.add_task(_make_task("t1"))
-        assert state.add_rhetorical_analysis_result("t1", "nonexistent_type", {}) is False
+        assert (
+            state.add_rhetorical_analysis_result("t1", "nonexistent_type", {}) is False
+        )
 
     def test_add_nonexistent_task(self, state):
-        assert state.add_rhetorical_analysis_result("nonexistent", "complex_fallacy_analyses", {}) is False
+        assert (
+            state.add_rhetorical_analysis_result(
+                "nonexistent", "complex_fallacy_analyses", {}
+            )
+            is False
+        )
 
     def test_get_result_by_type_and_task(self, state):
         state.add_task(_make_task("t1"))
-        state.add_rhetorical_analysis_result("t1", "complex_fallacy_analyses", {"v": 42})
+        state.add_rhetorical_analysis_result(
+            "t1", "complex_fallacy_analyses", {"v": 42}
+        )
         result = state.get_rhetorical_analysis_result("complex_fallacy_analyses", "t1")
         assert result == {"v": 42}
 
@@ -268,6 +301,7 @@ class TestRhetoricalResults:
 # ============================================================
 # Conflicts
 # ============================================================
+
 
 class TestConflicts:
     def test_add_conflict(self, state):
@@ -298,6 +332,7 @@ class TestConflicts:
 # Agent utilization & action log
 # ============================================================
 
+
 class TestAgentUtilization:
     def test_set_utilization(self, state):
         state.update_agent_utilization("a1", 0.75)
@@ -315,6 +350,7 @@ class TestAgentUtilization:
 # ============================================================
 # Queries
 # ============================================================
+
 
 class TestQueries:
     def test_get_pending_tasks(self, state):
@@ -364,6 +400,7 @@ class TestQueries:
 # Snapshots and summaries
 # ============================================================
 
+
 class TestSnapshots:
     def test_get_snapshot_structure(self, state):
         snap = state.get_snapshot()
@@ -404,6 +441,7 @@ class TestSnapshots:
 # JSON serialization
 # ============================================================
 
+
 class TestSerialization:
     def test_to_json_is_valid(self, state):
         state.add_task(_make_task("t1"))
@@ -429,7 +467,16 @@ class TestSerialization:
         assert len(restored.identified_conflicts) == 1
 
     def test_from_json_partial(self):
-        partial = json.dumps({"tasks": {"pending": [{"id": "t1"}], "in_progress": [], "completed": [], "failed": []}})
+        partial = json.dumps(
+            {
+                "tasks": {
+                    "pending": [{"id": "t1"}],
+                    "in_progress": [],
+                    "completed": [],
+                    "failed": [],
+                }
+            }
+        )
         restored = TacticalState.from_json(partial)
         assert len(restored.tasks["pending"]) == 1
 
@@ -445,6 +492,7 @@ class TestSerialization:
 # ============================================================
 # Completion rate edge cases
 # ============================================================
+
 
 class TestCompletionRate:
     def test_zero_tasks(self, state):

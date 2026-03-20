@@ -20,6 +20,7 @@ def plugin():
 # detect_conflicts_fn
 # ============================================================
 
+
 class TestDetectConflicts:
     def test_no_conflicts(self, plugin):
         positions = {"agent_a": "agree", "agent_b": "agree"}
@@ -52,24 +53,47 @@ class TestDetectConflicts:
 # resolve_conflict_fn
 # ============================================================
 
+
 class TestResolveConflict:
     def test_collaborative(self, plugin):
-        conflict = {"agents": ["a", "b"], "positions": {"a": "pour", "b": "contre"}, "conflict_level": "high"}
-        result = json.loads(plugin.resolve_conflict_fn(json.dumps(conflict), strategy="collaborative"))
+        conflict = {
+            "agents": ["a", "b"],
+            "positions": {"a": "pour", "b": "contre"},
+            "conflict_level": "high",
+        }
+        result = json.loads(
+            plugin.resolve_conflict_fn(json.dumps(conflict), strategy="collaborative")
+        )
         assert isinstance(result, dict)
 
     def test_competitive(self, plugin):
-        conflict = {"agents": ["a", "b"], "positions": {"a": "pour", "b": "contre"}, "conflict_level": "medium"}
-        result = json.loads(plugin.resolve_conflict_fn(json.dumps(conflict), strategy="competitive"))
+        conflict = {
+            "agents": ["a", "b"],
+            "positions": {"a": "pour", "b": "contre"},
+            "conflict_level": "medium",
+        }
+        result = json.loads(
+            plugin.resolve_conflict_fn(json.dumps(conflict), strategy="competitive")
+        )
         assert isinstance(result, dict)
 
     def test_arbitration(self, plugin):
-        conflict = {"agents": ["a", "b"], "positions": {"a": "pour", "b": "contre"}, "conflict_level": "low"}
-        result = json.loads(plugin.resolve_conflict_fn(json.dumps(conflict), strategy="arbitration"))
+        conflict = {
+            "agents": ["a", "b"],
+            "positions": {"a": "pour", "b": "contre"},
+            "conflict_level": "low",
+        }
+        result = json.loads(
+            plugin.resolve_conflict_fn(json.dumps(conflict), strategy="arbitration")
+        )
         assert isinstance(result, dict)
 
     def test_default_strategy(self, plugin):
-        conflict = {"agents": ["a", "b"], "positions": {"a": "x", "b": "y"}, "conflict_level": "low"}
+        conflict = {
+            "agents": ["a", "b"],
+            "positions": {"a": "x", "b": "y"},
+            "conflict_level": "low",
+        }
         result = json.loads(plugin.resolve_conflict_fn(json.dumps(conflict)))
         assert isinstance(result, dict)
 
@@ -77,6 +101,7 @@ class TestResolveConflict:
 # ============================================================
 # compute_consensus_metrics
 # ============================================================
+
 
 class TestComputeConsensusMetrics:
     def test_unanimous(self, plugin):
@@ -105,6 +130,7 @@ class TestComputeConsensusMetrics:
 # ============================================================
 # list_governance_methods
 # ============================================================
+
 
 class TestListGovernanceMethods:
     def test_returns_list(self, plugin):

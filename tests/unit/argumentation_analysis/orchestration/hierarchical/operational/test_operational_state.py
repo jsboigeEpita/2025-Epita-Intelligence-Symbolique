@@ -28,6 +28,7 @@ def _make_task(task_id="t1", **extra):
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, state):
         assert isinstance(state, OperationalState)
@@ -58,6 +59,7 @@ class TestInit:
 # ============================================================
 # add_task
 # ============================================================
+
 
 class TestAddTask:
     def test_adds_task(self, state):
@@ -93,6 +95,7 @@ class TestAddTask:
 # update_task_status
 # ============================================================
 
+
 class TestUpdateTaskStatus:
     def test_updates_status(self, state):
         state.add_task(_make_task("t1"))
@@ -120,6 +123,7 @@ class TestUpdateTaskStatus:
 # get_task
 # ============================================================
 
+
 class TestGetTask:
     def test_existing_task(self, state):
         state.add_task(_make_task("t1"))
@@ -134,6 +138,7 @@ class TestGetTask:
 # ============================================================
 # Text extracts
 # ============================================================
+
 
 class TestTextExtracts:
     def test_add_extract(self, state):
@@ -150,6 +155,7 @@ class TestTextExtracts:
 # ============================================================
 # Analysis results
 # ============================================================
+
 
 class TestAnalysisResults:
     def test_add_known_type(self, state):
@@ -179,6 +185,7 @@ class TestAnalysisResults:
 # Issues
 # ============================================================
 
+
 class TestIssues:
     def test_add_issue(self, state):
         issue_id = state.add_issue({"severity": "high"})
@@ -201,6 +208,7 @@ class TestIssues:
 # ============================================================
 # Metrics
 # ============================================================
+
 
 class TestMetrics:
     def test_update_execution_time(self, state):
@@ -227,6 +235,7 @@ class TestMetrics:
 # Action log
 # ============================================================
 
+
 class TestActionLog:
     def test_log_action(self, state):
         state.log_action("started", {"task": "t1"})
@@ -241,6 +250,7 @@ class TestActionLog:
 # ============================================================
 # Query methods
 # ============================================================
+
 
 class TestQueries:
     def test_get_task_results(self, state):
@@ -299,6 +309,7 @@ class TestQueries:
 # clear
 # ============================================================
 
+
 class TestClear:
     def test_resets_tasks(self, state):
         state.add_task(_make_task("t1"))
@@ -320,6 +331,7 @@ class TestClear:
 # find_operational_task_by_tactical_id
 # ============================================================
 
+
 class TestFindByTacticalId:
     def test_finds_task(self, state):
         state.add_task(_make_task("op1", tactical_task_id="tac1"))
@@ -340,6 +352,7 @@ class TestFindByTacticalId:
 # ============================================================
 # Result futures
 # ============================================================
+
 
 class TestResultFutures:
     def test_add_and_get_future(self, state):

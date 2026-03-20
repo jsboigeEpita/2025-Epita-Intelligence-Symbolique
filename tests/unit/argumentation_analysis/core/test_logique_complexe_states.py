@@ -8,8 +8,8 @@ from argumentation_analysis.core.logique_complexe_states import (
     LogiqueBridgeState,
 )
 
-
 # ── EinsteinsRiddleState ──
+
 
 class TestEinsteinsRiddleStateInit:
     def test_init_defaults(self):
@@ -59,7 +59,12 @@ class TestEinsteinsRiddleConstraints:
         assert any("Norvégien" in c for c in contraintes)
 
     def test_ajouter_clause_nouvelle(self, state):
-        assert state.ajouter_clause_logique("forall(X, couleur(X, rouge) => nation(X, anglais))") is True
+        assert (
+            state.ajouter_clause_logique(
+                "forall(X, couleur(X, rouge) => nation(X, anglais))"
+            )
+            is True
+        )
         assert len(state.clauses_logiques) == 1
         assert len(state.deductions_watson) == 1
 
@@ -156,7 +161,15 @@ class TestEinsteinsRiddleSolution:
             state.ajouter_clause_logique(f"clause_{i}")
         for i in range(5):
             state.executer_requete_logique(f"query_{i}")
-        wrong = {1: {"couleur": "X", "nationalite": "X", "animal": "X", "boisson": "X", "metier": "X"}}
+        wrong = {
+            1: {
+                "couleur": "X",
+                "nationalite": "X",
+                "animal": "X",
+                "boisson": "X",
+                "metier": "X",
+            }
+        }
         result = state.proposer_solution_complexe(wrong)
         assert result["acceptee"] is False
         assert "incorrecte" in result["raison"].lower()
@@ -168,6 +181,7 @@ class TestEinsteinsRiddleSolution:
 
 
 # ── LogiqueBridgeState ──
+
 
 class TestLogiqueBridgeStateInit:
     def test_init(self):

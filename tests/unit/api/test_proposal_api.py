@@ -8,6 +8,7 @@ Validates:
 - Custom workflow endpoint
 - Error handling (404, 409)
 """
+
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
@@ -101,7 +102,10 @@ class TestProposalListing:
         for i in range(5):
             client.post(
                 "/api/propose",
-                json={"text": f"Proposal number {i} text content", "author": f"user{i}"},
+                json={
+                    "text": f"Proposal number {i} text content",
+                    "author": f"user{i}",
+                },
             )
         resp = client.get("/api/proposals?limit=2&offset=0")
         assert len(resp.json()) == 2
@@ -222,7 +226,9 @@ class TestDeliberation:
         from api.proposal_models import ProposalCreate
 
         p = store.create_proposal(
-            ProposalCreate(text="Check deliberation status endpoint test", author="alice")
+            ProposalCreate(
+                text="Check deliberation status endpoint test", author="alice"
+            )
         )
         delib = store.create_deliberation(p.id, "light")
 

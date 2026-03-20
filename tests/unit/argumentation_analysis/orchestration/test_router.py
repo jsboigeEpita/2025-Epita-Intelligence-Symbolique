@@ -20,7 +20,6 @@ from argumentation_analysis.orchestration.router import (
 )
 from argumentation_analysis.orchestration.workflow_dsl import WorkflowDefinition
 
-
 # ============================================================
 # Helpers
 # ============================================================
@@ -55,15 +54,19 @@ class TestLLMRouting:
     async def test_llm_returns_valid_json(self):
         """LLM returns valid JSON → correct capabilities selected."""
         router = _make_router()
-        llm_response = json.dumps({
-            "capabilities": ["argument_quality", "counter_argument_generation"],
-            "workflow_complexity": "standard",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": ["argument_quality", "counter_argument_generation"],
+                "workflow_complexity": "standard",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             workflow = await router.analyze_and_route_async("Test text for analysis.")
@@ -77,15 +80,19 @@ class TestLLMRouting:
     async def test_llm_unknown_capabilities_filtered(self):
         """LLM returns unknown capabilities → filtered out."""
         router = _make_router()
-        llm_response = json.dumps({
-            "capabilities": ["argument_quality", "unknown_cap", "magic_analysis"],
-            "workflow_complexity": "light",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": ["argument_quality", "unknown_cap", "magic_analysis"],
+                "workflow_complexity": "light",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             workflow = await router.analyze_and_route_async("Test text.")
@@ -99,15 +106,19 @@ class TestLLMRouting:
     async def test_llm_empty_capabilities_gives_quality_only(self):
         """LLM returns empty list → quality-only workflow."""
         router = _make_router()
-        llm_response = json.dumps({
-            "capabilities": [],
-            "workflow_complexity": "light",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": [],
+                "workflow_complexity": "light",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             workflow = await router.analyze_and_route_async("Short text.")
@@ -124,7 +135,9 @@ class TestLLMRouting:
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             workflow = await router.analyze_and_route_async("Test text for analysis.")
@@ -156,15 +169,19 @@ class TestLLMRouting:
     async def test_llm_routing_method_is_llm(self):
         """LLM routing sets routing_method='llm' in RoutingResult."""
         router = _make_router()
-        llm_response = json.dumps({
-            "capabilities": ["argument_quality", "adversarial_debate"],
-            "workflow_complexity": "standard",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": ["argument_quality", "adversarial_debate"],
+                "workflow_complexity": "standard",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             result = await router._route_with_llm("Test text.", KNOWN_CAPABILITIES)
@@ -177,10 +194,12 @@ class TestLLMRouting:
         """Text is truncated to LLM_TEXT_LIMIT chars for the LLM call."""
         router = _make_router()
         long_text = "A" * 5000
-        llm_response = json.dumps({
-            "capabilities": ["argument_quality"],
-            "workflow_complexity": "full",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": ["argument_quality"],
+                "workflow_complexity": "full",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
         captured_messages = []
 
@@ -190,7 +209,9 @@ class TestLLMRouting:
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(side_effect=capture_create)
+            client_instance.chat.completions.create = AsyncMock(
+                side_effect=capture_create
+            )
             MockClient.return_value = client_instance
 
             await router.analyze_and_route_async(long_text)
@@ -215,7 +236,9 @@ class TestLLMRouting:
 
         with patch("openai.AsyncOpenAI") as MockClient:
             client_instance = AsyncMock()
-            client_instance.chat.completions.create = AsyncMock(return_value=mock_response)
+            client_instance.chat.completions.create = AsyncMock(
+                return_value=mock_response
+            )
             MockClient.return_value = client_instance
 
             workflow = await router.analyze_and_route_async("Test text.")
@@ -455,10 +478,12 @@ class TestRouterIntegration:
         registry = setup_registry(include_optional=False)
 
         # Mock the LLM call in the router
-        llm_response = json.dumps({
-            "capabilities": ["argument_quality", "counter_argument_generation"],
-            "workflow_complexity": "light",
-        })
+        llm_response = json.dumps(
+            {
+                "capabilities": ["argument_quality", "counter_argument_generation"],
+                "workflow_complexity": "light",
+            }
+        )
         mock_response = _mock_openai_response(llm_response)
 
         with patch("openai.AsyncOpenAI") as MockClient:

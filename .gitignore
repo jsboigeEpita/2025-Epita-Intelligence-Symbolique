@@ -105,6 +105,7 @@ _temp_downloads/
 portable_jdk/
 libs/jdk-*/
 libs/octave-*/
+libs/portable_octave/
 libs/node-v*/
 libs/portable_octave/
 libs/tweety/
@@ -113,7 +114,12 @@ libs/*.jar
 # Generated configs & caches
 .claude/code-history/
 .claude/memory/
+.claude/local/
 .benchmarks/
+
+# Generated analysis reports (reproductible pipeline outputs)
+rapport_simple_*.json
+examples/rapport_simple_*.json
 
 # Generated outputs & reports
 outputs/

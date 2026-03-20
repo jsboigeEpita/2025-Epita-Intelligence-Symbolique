@@ -13,10 +13,10 @@ from argumentation_analysis.utils.tweety_error_analyzer import (
     create_bnf_feedback_for_error,
 )
 
-
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def analyzer():
@@ -26,6 +26,7 @@ def analyzer():
 # ============================================================
 # TweetyErrorFeedback dataclass
 # ============================================================
+
 
 class TestTweetyErrorFeedback:
     def test_creation(self):
@@ -41,16 +42,21 @@ class TestTweetyErrorFeedback:
 
     def test_custom_confidence(self):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=[], corrections=[], example_fix="",
+            error_type="t",
+            original_error="e",
+            bnf_rules=[],
+            corrections=[],
+            example_fix="",
             confidence=0.5,
         )
         assert fb.confidence == 0.5
 
     def test_fields_accessible(self):
         fb = TweetyErrorFeedback(
-            error_type="atom_error", original_error="atom not defined",
-            bnf_rules=["r1", "r2"], corrections=["c1"],
+            error_type="atom_error",
+            original_error="atom not defined",
+            bnf_rules=["r1", "r2"],
+            corrections=["c1"],
             example_fix="fix",
         )
         assert len(fb.bnf_rules) == 2
@@ -61,6 +67,7 @@ class TestTweetyErrorFeedback:
 # ============================================================
 # TweetyErrorAnalyzer.__init__
 # ============================================================
+
 
 class TestAnalyzerInit:
     def test_error_patterns_populated(self, analyzer):
@@ -78,12 +85,15 @@ class TestAnalyzerInit:
 
     def test_all_error_types_have_corrections(self, analyzer):
         for error_type in analyzer.error_patterns:
-            assert error_type in analyzer.corrections, f"Missing corrections for {error_type}"
+            assert (
+                error_type in analyzer.corrections
+            ), f"Missing corrections for {error_type}"
 
 
 # ============================================================
 # _detect_error_type
 # ============================================================
+
 
 class TestDetectErrorType:
     def test_declaration_error(self, analyzer):
@@ -155,6 +165,7 @@ class TestDetectErrorType:
 # analyze_error
 # ============================================================
 
+
 class TestAnalyzeError:
     def test_returns_feedback(self, analyzer):
         fb = analyzer.analyze_error("syntax error near ';'")
@@ -207,17 +218,22 @@ class TestAnalyzeError:
 # _generate_example_fix
 # ============================================================
 
+
 class TestGenerateExampleFix:
     def test_syntax_error_example(self, analyzer):
         fix = analyzer._generate_example_fix("syntax_error", "syntax error", None)
         assert "Exemple" in fix or "règle" in fix
 
     def test_atom_error_with_entity(self, analyzer):
-        fix = analyzer._generate_example_fix("atom_error", "atom 'foo' not defined", None)
+        fix = analyzer._generate_example_fix(
+            "atom_error", "atom 'foo' not defined", None
+        )
         assert "foo" in fix
 
     def test_declaration_error_with_entity(self, analyzer):
-        fix = analyzer._generate_example_fix("DECLARATION_ERROR", "predicate 'bar' not declared", None)
+        fix = analyzer._generate_example_fix(
+            "DECLARATION_ERROR", "predicate 'bar' not declared", None
+        )
         assert "bar" in fix
 
     def test_unknown_type_default(self, analyzer):
@@ -238,6 +254,7 @@ class TestGenerateExampleFix:
 # ============================================================
 # _calculate_confidence
 # ============================================================
+
 
 class TestCalculateConfidence:
     def test_declaration_error_high(self, analyzer):
@@ -275,27 +292,37 @@ class TestCalculateConfidence:
 # generate_bnf_feedback_message
 # ============================================================
 
+
 class TestGenerateBnfFeedbackMessage:
     def test_contains_error_type(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="syntax_error", original_error="err",
-            bnf_rules=["r1"], corrections=["c1"], example_fix="fix",
+            error_type="syntax_error",
+            original_error="err",
+            bnf_rules=["r1"],
+            corrections=["c1"],
+            example_fix="fix",
         )
         msg = analyzer.generate_bnf_feedback_message(fb)
         assert "syntax_error" in msg
 
     def test_contains_attempt_number(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=[], corrections=[], example_fix="",
+            error_type="t",
+            original_error="e",
+            bnf_rules=[],
+            corrections=[],
+            example_fix="",
         )
         msg = analyzer.generate_bnf_feedback_message(fb, attempt_number=3)
         assert "#3" in msg
 
     def test_contains_bnf_rules(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=["rule1", "rule2"], corrections=[], example_fix="",
+            error_type="t",
+            original_error="e",
+            bnf_rules=["rule1", "rule2"],
+            corrections=[],
+            example_fix="",
         )
         msg = analyzer.generate_bnf_feedback_message(fb)
         assert "rule1" in msg
@@ -303,8 +330,11 @@ class TestGenerateBnfFeedbackMessage:
 
     def test_contains_corrections(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=[], corrections=["Fix this", "Fix that"], example_fix="",
+            error_type="t",
+            original_error="e",
+            bnf_rules=[],
+            corrections=["Fix this", "Fix that"],
+            example_fix="",
         )
         msg = analyzer.generate_bnf_feedback_message(fb)
         assert "Fix this" in msg
@@ -312,16 +342,22 @@ class TestGenerateBnfFeedbackMessage:
 
     def test_contains_example_fix(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=[], corrections=[], example_fix="my_example_fix_code",
+            error_type="t",
+            original_error="e",
+            bnf_rules=[],
+            corrections=[],
+            example_fix="my_example_fix_code",
         )
         msg = analyzer.generate_bnf_feedback_message(fb)
         assert "my_example_fix_code" in msg
 
     def test_contains_confidence(self, analyzer):
         fb = TweetyErrorFeedback(
-            error_type="t", original_error="e",
-            bnf_rules=[], corrections=[], example_fix="",
+            error_type="t",
+            original_error="e",
+            bnf_rules=[],
+            corrections=[],
+            example_fix="",
             confidence=0.85,
         )
         msg = analyzer.generate_bnf_feedback_message(fb)
@@ -331,6 +367,7 @@ class TestGenerateBnfFeedbackMessage:
 # ============================================================
 # analyze_tweety_error (top-level function)
 # ============================================================
+
 
 class TestAnalyzeTweetyError:
     def test_returns_string(self):
@@ -353,6 +390,7 @@ class TestAnalyzeTweetyError:
 # ============================================================
 # create_bnf_feedback_for_error (alias function)
 # ============================================================
+
 
 class TestCreateBnfFeedbackForError:
     def test_returns_string(self):

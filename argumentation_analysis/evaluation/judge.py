@@ -142,8 +142,12 @@ class LLMJudge:
         except Exception as e:
             logger.error(f"Judge evaluation failed: {e}")
             return JudgeScore(
-                completeness=0, accuracy=0, depth=0, coherence=0,
-                actionability=0, overall=0,
+                completeness=0,
+                accuracy=0,
+                depth=0,
+                coherence=0,
+                actionability=0,
+                overall=0,
                 reasoning=f"Evaluation failed: {e}",
                 judge_model=self.model_name,
             )
@@ -186,7 +190,9 @@ class LLMJudge:
             elif isinstance(obj, list):
                 if len(obj) > MAX_LIST_ITEMS:
                     shown = [_trim(item, depth + 1) for item in obj[:MAX_LIST_ITEMS]]
-                    return shown + [f"... and {len(obj) - MAX_LIST_ITEMS} more (total: {len(obj)})"]
+                    return shown + [
+                        f"... and {len(obj) - MAX_LIST_ITEMS} more (total: {len(obj)})"
+                    ]
                 return [_trim(item, depth + 1) for item in obj]
             elif isinstance(obj, str) and len(obj) > MAX_VALUE_LEN:
                 return obj[:MAX_VALUE_LEN] + f"... ({len(obj)} chars)"

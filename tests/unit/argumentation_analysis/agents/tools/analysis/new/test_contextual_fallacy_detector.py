@@ -22,6 +22,7 @@ def detector():
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, detector):
         assert isinstance(detector, ContextualFallacyDetector)
@@ -41,6 +42,7 @@ class TestInit:
 # ============================================================
 # _define_contextual_factors
 # ============================================================
+
 
 class TestDefineContextualFactors:
     def test_has_domain(self, detector):
@@ -77,6 +79,7 @@ class TestDefineContextualFactors:
 # _define_contextual_fallacies
 # ============================================================
 
+
 class TestDefineContextualFallacies:
     def test_has_appel_autorite(self, detector):
         assert "appel_inapproprié_autorité" in detector.contextual_fallacies
@@ -99,14 +102,15 @@ class TestDefineContextualFallacies:
             for factor, rules in fallacy.get("contextual_rules", {}).items():
                 for value, rule in rules.items():
                     severity = rule.get("severity", 0.5)
-                    assert 0.0 <= severity <= 1.0, (
-                        f"Severity {severity} out of range for {name}/{factor}/{value}"
-                    )
+                    assert (
+                        0.0 <= severity <= 1.0
+                    ), f"Severity {severity} out of range for {name}/{factor}/{value}"
 
 
 # ============================================================
 # _infer_contextual_factors
 # ============================================================
+
 
 class TestInferContextualFactors:
     def test_scientific_domain(self, detector):
@@ -194,6 +198,7 @@ class TestInferContextualFactors:
 # _calculate_contextual_severity
 # ============================================================
 
+
 class TestCalculateContextualSeverity:
     def test_unknown_fallacy_returns_base(self, detector):
         severity = detector._calculate_contextual_severity(
@@ -222,7 +227,13 @@ class TestCalculateContextualSeverity:
 
     def test_severity_in_valid_range(self, detector):
         for fallacy_name in detector.contextual_fallacies:
-            for domain in ["scientifique", "politique", "juridique", "médical", "commercial"]:
+            for domain in [
+                "scientifique",
+                "politique",
+                "juridique",
+                "médical",
+                "commercial",
+            ]:
                 severity = detector._calculate_contextual_severity(
                     fallacy_name, {"domain": domain}
                 )
@@ -232,6 +243,7 @@ class TestCalculateContextualSeverity:
 # ============================================================
 # detect_contextual_fallacies
 # ============================================================
+
 
 class TestDetectContextualFallacies:
     def test_returns_dict(self, detector):
@@ -273,7 +285,8 @@ class TestDetectContextualFallacies:
     def test_explicit_contextual_factors(self, detector):
         explicit_factors = {"domain": "juridique", "audience": "expert"}
         result = detector.detect_contextual_fallacies(
-            "un argument", "un contexte",
+            "un argument",
+            "un contexte",
             contextual_factors=explicit_factors,
         )
         assert result["contextual_factors"] == explicit_factors
@@ -303,6 +316,7 @@ class TestDetectContextualFallacies:
 # detect_multiple_contextual_fallacies
 # ============================================================
 
+
 class TestDetectMultipleContextualFallacies:
     def test_returns_dict(self, detector):
         result = detector.detect_multiple_contextual_fallacies(
@@ -311,9 +325,7 @@ class TestDetectMultipleContextualFallacies:
         assert isinstance(result, dict)
 
     def test_result_has_required_keys(self, detector):
-        result = detector.detect_multiple_contextual_fallacies(
-            ["arg1"], "contexte"
-        )
+        result = detector.detect_multiple_contextual_fallacies(["arg1"], "contexte")
         assert "argument_count" in result
         assert "argument_results" in result
         assert "analysis_timestamp" in result
@@ -326,9 +338,7 @@ class TestDetectMultipleContextualFallacies:
         assert len(result["argument_results"]) == 3
 
     def test_each_result_has_index(self, detector):
-        result = detector.detect_multiple_contextual_fallacies(
-            ["a", "b"], "contexte"
-        )
+        result = detector.detect_multiple_contextual_fallacies(["a", "b"], "contexte")
         for i, arg_result in enumerate(result["argument_results"]):
             assert arg_result["argument_index"] == i
 
@@ -347,6 +357,8 @@ class TestDetectMultipleContextualFallacies:
     def test_explicit_factors_passed_through(self, detector):
         factors = {"domain": "médical", "audience": "expert"}
         result = detector.detect_multiple_contextual_fallacies(
-            ["arg"], "ctx", contextual_factors=factors,
+            ["arg"],
+            "ctx",
+            contextual_factors=factors,
         )
         assert result["contextual_factors"] == factors

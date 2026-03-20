@@ -44,7 +44,9 @@ class DLHandler:
             self._Complement = jpype.JClass(f"{dl_pkg}.Complement")
             self._Union = jpype.JClass(f"{dl_pkg}.Union")
             self._Intersection = jpype.JClass(f"{dl_pkg}.Intersection")
-            self._ExistentialRestriction = jpype.JClass(f"{dl_pkg}.ExistentialRestriction")
+            self._ExistentialRestriction = jpype.JClass(
+                f"{dl_pkg}.ExistentialRestriction"
+            )
             self._UniversalRestriction = jpype.JClass(f"{dl_pkg}.UniversalRestriction")
             self._EquivalenceAxiom = jpype.JClass(f"{dl_pkg}.EquivalenceAxiom")
             self._ConceptAssertion = jpype.JClass(f"{dl_pkg}.ConceptAssertion")
@@ -52,9 +54,7 @@ class DLHandler:
             self._DlBeliefSet = jpype.JClass(f"{dl_pkg}.DlBeliefSet")
             self._DlSignature = jpype.JClass(f"{dl_pkg}.DlSignature")
 
-            self._DlParser = jpype.JClass(
-                "org.tweetyproject.logics.dl.parser.DlParser"
-            )
+            self._DlParser = jpype.JClass("org.tweetyproject.logics.dl.parser.DlParser")
             self._NaiveDlReasoner = jpype.JClass(
                 "org.tweetyproject.logics.dl.reasoner.NaiveDlReasoner"
             )

@@ -13,8 +13,8 @@ from argumentation_analysis.core.utils.path_operations import (
     PATH_TYPE_DIRECTORY,
 )
 
-
 # ── sanitize_filename ──
+
 
 class TestSanitizeFilename:
     def test_simple_name(self):
@@ -86,6 +86,7 @@ class TestSanitizeFilename:
 
 # ── check_path_exists ──
 
+
 class TestCheckPathExists:
     def test_existing_file(self, tmp_path):
         f = tmp_path / "test.txt"
@@ -118,6 +119,7 @@ class TestCheckPathExists:
 
 
 # ── create_archive_path ──
+
 
 class TestCreateArchivePath:
     def test_basic(self, tmp_path):
@@ -160,6 +162,7 @@ class TestCreateArchivePath:
 
 
 # ── archive_file ──
+
 
 class TestArchiveFile:
     def test_archive_moves_file(self, tmp_path):

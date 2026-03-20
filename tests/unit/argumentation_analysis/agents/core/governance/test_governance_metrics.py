@@ -16,8 +16,8 @@ from argumentation_analysis.agents.core.governance.metrics import (
     validate_scenario,
 )
 
-
 # ── consensus_rate ──
+
 
 class TestConsensusRate:
     def test_unanimous(self):
@@ -42,6 +42,7 @@ class TestConsensusRate:
 
 
 # ── gini ──
+
 
 class TestGini:
     def test_perfect_equality(self):
@@ -70,6 +71,7 @@ class TestGini:
 
 # ── fairness_index ──
 
+
 class TestFairnessIndex:
     def test_equal_satisfaction(self):
         r = {"satisfaction": [0.8, 0.8, 0.8]}
@@ -89,6 +91,7 @@ class TestFairnessIndex:
 
 
 # ── efficiency ──
+
 
 class TestEfficiency:
     def test_one_round(self):
@@ -114,6 +117,7 @@ class TestEfficiency:
 
 # ── satisfaction ──
 
+
 class TestSatisfaction:
     def test_mean(self):
         r = {"satisfaction": [0.5, 0.7, 0.9]}
@@ -128,6 +132,7 @@ class TestSatisfaction:
 
 
 # ── stability ──
+
 
 class TestStability:
     def test_all_same_winner(self):
@@ -147,6 +152,7 @@ class TestStability:
 
 # ── per_agent_satisfaction ──
 
+
 class TestPerAgentSatisfaction:
     def test_normal(self):
         r = {
@@ -162,6 +168,7 @@ class TestPerAgentSatisfaction:
 
 
 # ── summarize_results ──
+
 
 class TestSummarizeResults:
     def test_single_run(self):
@@ -181,12 +188,16 @@ class TestSummarizeResults:
     def test_batch_runs(self):
         runs = [
             {
-                "votes": ["A", "A"], "winner": "A",
-                "satisfaction": [0.9, 0.9], "rounds": 1,
+                "votes": ["A", "A"],
+                "winner": "A",
+                "satisfaction": [0.9, 0.9],
+                "rounds": 1,
             },
             {
-                "votes": ["A", "B"], "winner": "A",
-                "satisfaction": [0.8, 0.6], "rounds": 2,
+                "votes": ["A", "B"],
+                "winner": "A",
+                "satisfaction": [0.8, 0.6],
+                "rounds": 2,
             },
         ]
         summary = summarize_results(runs)
@@ -196,6 +207,7 @@ class TestSummarizeResults:
 
 
 # ── validate_scenario ──
+
 
 class TestValidateScenario:
     def test_valid(self):

@@ -19,7 +19,9 @@ def evaluator():
     return CounterArgumentEvaluator()
 
 
-def _make_argument(content="Le climat change", premises=None, conclusion="Donc il faut agir"):
+def _make_argument(
+    content="Le climat change", premises=None, conclusion="Donc il faut agir"
+):
     return Argument(
         content=content,
         premises=premises or ["Le climat change"],
@@ -50,16 +52,26 @@ def _make_counter(
 
 # ── _evaluate_relevance ──
 
+
 class TestEvaluateRelevance:
     def test_high_keyword_overlap(self, evaluator):
-        orig = _make_argument(content="Le climat change rapidement", premises=["Le climat change"])
-        counter = _make_counter(original=orig, counter_content="Le climat ne change pas rapidement selon les données")
+        orig = _make_argument(
+            content="Le climat change rapidement", premises=["Le climat change"]
+        )
+        counter = _make_counter(
+            original=orig,
+            counter_content="Le climat ne change pas rapidement selon les données",
+        )
         score = evaluator._evaluate_relevance(orig, counter)
         assert score > 0.0
 
     def test_no_overlap(self, evaluator):
-        orig = _make_argument(content="Les chats sont mignons", premises=["Les chats sont mignons"])
-        counter = _make_counter(original=orig, counter_content="La physique quantique démontre autre chose")
+        orig = _make_argument(
+            content="Les chats sont mignons", premises=["Les chats sont mignons"]
+        )
+        counter = _make_counter(
+            original=orig, counter_content="La physique quantique démontre autre chose"
+        )
         score = evaluator._evaluate_relevance(orig, counter)
         assert score < 0.5
 
@@ -93,7 +105,9 @@ class TestEvaluateRelevance:
 
     def test_mentions_argument_bonus(self, evaluator):
         orig = _make_argument()
-        counter = _make_counter(original=orig, counter_content="Cet argument est incorrect")
+        counter = _make_counter(
+            original=orig, counter_content="Cet argument est incorrect"
+        )
         score_with = evaluator._evaluate_relevance(orig, counter)
         counter2 = _make_counter(original=orig, counter_content="C'est incorrect")
         score_without = evaluator._evaluate_relevance(orig, counter2)
@@ -147,25 +161,38 @@ class TestEvaluateRelevance:
 
 # ── _evaluate_logical_strength ──
 
+
 class TestEvaluateLogicalStrength:
     def test_type_strength_direct_refutation(self, evaluator):
-        counter = _make_counter(counter_type=CounterArgumentType.DIRECT_REFUTATION, counter_content="Non")
+        counter = _make_counter(
+            counter_type=CounterArgumentType.DIRECT_REFUTATION, counter_content="Non"
+        )
         score = evaluator._evaluate_logical_strength(counter)
         assert score >= 0.5
 
     def test_type_strength_counter_example(self, evaluator):
-        counter = _make_counter(counter_type=CounterArgumentType.COUNTER_EXAMPLE, counter_content="Exemple contraire")
+        counter = _make_counter(
+            counter_type=CounterArgumentType.COUNTER_EXAMPLE,
+            counter_content="Exemple contraire",
+        )
         score = evaluator._evaluate_logical_strength(counter)
         assert score >= 0.5
 
     def test_type_strength_reductio(self, evaluator):
-        counter = _make_counter(counter_type=CounterArgumentType.REDUCTIO_AD_ABSURDUM, counter_content="Absurde")
+        counter = _make_counter(
+            counter_type=CounterArgumentType.REDUCTIO_AD_ABSURDUM,
+            counter_content="Absurde",
+        )
         score = evaluator._evaluate_logical_strength(counter)
         assert score >= 0.5
 
     def test_logical_markers_boost(self, evaluator):
-        counter_with = _make_counter(counter_content="Car ceci est faux, donc la conclusion est invalide")
-        counter_without = _make_counter(counter_content="Ceci est faux, la conclusion est invalide")
+        counter_with = _make_counter(
+            counter_content="Car ceci est faux, donc la conclusion est invalide"
+        )
+        counter_without = _make_counter(
+            counter_content="Ceci est faux, la conclusion est invalide"
+        )
         s1 = evaluator._evaluate_logical_strength(counter_with)
         s2 = evaluator._evaluate_logical_strength(counter_without)
         assert s1 >= s2
@@ -179,26 +206,38 @@ class TestEvaluateLogicalStrength:
         assert score >= 0.5
 
     def test_evidence_bonus(self, evaluator):
-        counter = _make_counter(counter_content="Une étude prouve le contraire avec des exemples")
+        counter = _make_counter(
+            counter_content="Une étude prouve le contraire avec des exemples"
+        )
         score = evaluator._evaluate_logical_strength(counter)
         assert score > 0.5
 
     def test_fallacy_penalty(self, evaluator):
-        counter_clean = _make_counter(counter_content="Les données montrent le contraire")
-        counter_fallacy = _make_counter(counter_content="C'est un ad hominem et un faux dilemme")
+        counter_clean = _make_counter(
+            counter_content="Les données montrent le contraire"
+        )
+        counter_fallacy = _make_counter(
+            counter_content="C'est un ad hominem et un faux dilemme"
+        )
         s1 = evaluator._evaluate_logical_strength(counter_clean)
         s2 = evaluator._evaluate_logical_strength(counter_fallacy)
         assert s1 >= s2
 
     def test_strength_adjustment_strong(self, evaluator):
-        counter_strong = _make_counter(strength=ArgumentStrength.STRONG, counter_content="Test")
-        counter_weak = _make_counter(strength=ArgumentStrength.WEAK, counter_content="Test")
+        counter_strong = _make_counter(
+            strength=ArgumentStrength.STRONG, counter_content="Test"
+        )
+        counter_weak = _make_counter(
+            strength=ArgumentStrength.WEAK, counter_content="Test"
+        )
         s1 = evaluator._evaluate_logical_strength(counter_strong)
         s2 = evaluator._evaluate_logical_strength(counter_weak)
         assert s1 > s2
 
     def test_strength_decisive_bonus(self, evaluator):
-        counter = _make_counter(strength=ArgumentStrength.DECISIVE, counter_content="Car c'est prouvé")
+        counter = _make_counter(
+            strength=ArgumentStrength.DECISIVE, counter_content="Car c'est prouvé"
+        )
         score = evaluator._evaluate_logical_strength(counter)
         assert score >= 0.7
 
@@ -213,6 +252,7 @@ class TestEvaluateLogicalStrength:
 
 
 # ── _evaluate_persuasiveness ──
+
 
 class TestEvaluatePersuasiveness:
     def test_persuasive_elements_boost(self, evaluator):
@@ -263,7 +303,8 @@ class TestEvaluatePersuasiveness:
 
     def test_capped_at_one(self, evaluator):
         counter = _make_counter(
-            counter_content="Clairement une étude montre des preuves et données statistiques évidentes " * 5,
+            counter_content="Clairement une étude montre des preuves et données statistiques évidentes "
+            * 5,
             rhetorical_strategy="socratic_questioning",
         )
         score = evaluator._evaluate_persuasiveness(counter)
@@ -272,9 +313,12 @@ class TestEvaluatePersuasiveness:
 
 # ── _evaluate_originality ──
 
+
 class TestEvaluateOriginality:
     def test_base_originality(self, evaluator):
-        counter = _make_counter(counter_content="Un point de vue différent sur la question climatique")
+        counter = _make_counter(
+            counter_content="Un point de vue différent sur la question climatique"
+        )
         score = evaluator._evaluate_originality(counter)
         assert 0.1 <= score <= 1.0
 
@@ -332,6 +376,7 @@ class TestEvaluateOriginality:
 
 # ── _evaluate_clarity ──
 
+
 class TestEvaluateClarity:
     def test_short_sentences_high_clarity(self, evaluator):
         counter = _make_counter(
@@ -362,14 +407,20 @@ class TestEvaluateClarity:
         assert score > 0.0
 
     def test_ambiguity_penalty(self, evaluator):
-        counter_clear = _make_counter(counter_content="Les données montrent le contraire.")
-        counter_ambig = _make_counter(counter_content="Peut-être possiblement il se pourrait que les données montrent le contraire.")
+        counter_clear = _make_counter(
+            counter_content="Les données montrent le contraire."
+        )
+        counter_ambig = _make_counter(
+            counter_content="Peut-être possiblement il se pourrait que les données montrent le contraire."
+        )
         s1 = evaluator._evaluate_clarity(counter_clear)
         s2 = evaluator._evaluate_clarity(counter_ambig)
         assert s1 >= s2
 
     def test_vocabulary_complexity_impact(self, evaluator):
-        counter_simple = _make_counter(counter_content="Les données montrent le contraire clairement.")
+        counter_simple = _make_counter(
+            counter_content="Les données montrent le contraire clairement."
+        )
         counter_complex = _make_counter(
             counter_content="Le paradigme épistémologie herméneutique heuristique dialectique syllogisme ontologie axiomatique."
         )
@@ -379,7 +430,8 @@ class TestEvaluateClarity:
 
     def test_floor_at_01(self, evaluator):
         counter = _make_counter(
-            counter_content="Peut-être possiblement il se pourrait que plus ou moins " * 3
+            counter_content="Peut-être possiblement il se pourrait que plus ou moins "
+            * 3
         )
         score = evaluator._evaluate_clarity(counter)
         assert score >= 0.1
@@ -387,51 +439,67 @@ class TestEvaluateClarity:
 
 # ── _generate_recommendations ──
 
+
 class TestGenerateRecommendations:
     def test_low_relevance(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.3, 0.7, 0.7, 0.7, 0.7)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.3, 0.7, 0.7, 0.7, 0.7
+        )
         assert any("relevance" in r.lower() for r in recs)
 
     def test_low_logic(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.7, 0.3, 0.7, 0.7, 0.7)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.7, 0.3, 0.7, 0.7, 0.7
+        )
         assert any("logical" in r.lower() for r in recs)
 
     def test_low_persuasion(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.7, 0.7, 0.3, 0.7, 0.7)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.7, 0.7, 0.3, 0.7, 0.7
+        )
         assert any("persuasive" in r.lower() for r in recs)
 
     def test_low_originality(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.7, 0.7, 0.7, 0.3, 0.7)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.7, 0.7, 0.7, 0.3, 0.7
+        )
         assert any("original" in r.lower() for r in recs)
 
     def test_low_clarity(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.7, 0.7, 0.7, 0.7, 0.3)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.7, 0.7, 0.7, 0.7, 0.3
+        )
         assert any("simplif" in r.lower() for r in recs)
 
     def test_all_good(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.8, 0.8, 0.8, 0.8, 0.8)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.8, 0.8, 0.8, 0.8, 0.8
+        )
         assert any("good quality" in r.lower() for r in recs)
 
     def test_multiple_low_scores(self, evaluator):
         orig = _make_argument()
         counter = _make_counter(original=orig)
-        recs = evaluator._generate_recommendations(orig, counter, 0.3, 0.3, 0.3, 0.3, 0.3)
+        recs = evaluator._generate_recommendations(
+            orig, counter, 0.3, 0.3, 0.3, 0.3, 0.3
+        )
         assert len(recs) >= 5
 
 
 # ── Helper methods ──
+
 
 class TestHelperMethods:
     def test_extract_keywords_stopwords_removed(self, evaluator):
@@ -467,7 +535,9 @@ class TestHelperMethods:
         assert avg == 3.0
 
     def test_has_structure_true(self, evaluator):
-        assert evaluator._has_structure("Premièrement c'est vrai. Ensuite c'est confirmé.")
+        assert evaluator._has_structure(
+            "Premièrement c'est vrai. Ensuite c'est confirmé."
+        )
 
     def test_has_structure_false(self, evaluator):
         assert not evaluator._has_structure("Le chat dort tranquillement")
@@ -477,7 +547,9 @@ class TestHelperMethods:
         assert score < 0.3
 
     def test_vocabulary_complexity_complex(self, evaluator):
-        score = evaluator._vocabulary_complexity("Le paradigme épistémologie herméneutique ontologie")
+        score = evaluator._vocabulary_complexity(
+            "Le paradigme épistémologie herméneutique ontologie"
+        )
         assert score > 0.0
 
     def test_vocabulary_complexity_empty(self, evaluator):
@@ -490,6 +562,7 @@ class TestHelperMethods:
 
 
 # ── Full evaluate pipeline ──
+
 
 class TestFullEvaluate:
     def test_evaluate_pipeline(self, evaluator):

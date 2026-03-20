@@ -19,10 +19,10 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from dataclasses import asdict
 from datetime import datetime
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def orchestrator():
@@ -48,7 +48,9 @@ def initialized_orchestrator(orchestrator):
     orchestrator.pragmatic_analyzer = orchestrator._create_basic_pragmatic_analyzer()
     orchestrator.entity_extractor = orchestrator._create_basic_entity_extractor()
     orchestrator.relation_extractor = orchestrator._create_basic_relation_extractor()
-    orchestrator.consistency_validator = orchestrator._create_basic_consistency_validator()
+    orchestrator.consistency_validator = (
+        orchestrator._create_basic_consistency_validator()
+    )
     orchestrator.coherence_validator = orchestrator._create_basic_coherence_validator()
     return orchestrator
 
@@ -256,7 +258,9 @@ class TestMetricsAndCache:
 
         r1 = LLMAnalysisRequest(text="Hello", analysis_type="syntactic")
         r2 = LLMAnalysisRequest(text="World", analysis_type="syntactic")
-        assert orchestrator._generate_cache_key(r1) != orchestrator._generate_cache_key(r2)
+        assert orchestrator._generate_cache_key(r1) != orchestrator._generate_cache_key(
+            r2
+        )
 
     def test_cache_roundtrip(self, orchestrator, request_obj):
         from argumentation_analysis.orchestration.real_llm_orchestrator import (
@@ -424,7 +428,9 @@ class TestAnalyzeText:
             LLMAnalysisRequest,
         )
 
-        req = LLMAnalysisRequest(text="A implies B.", analysis_type="relation_extraction")
+        req = LLMAnalysisRequest(
+            text="A implies B.", analysis_type="relation_extraction"
+        )
         result = await initialized_orchestrator.analyze_text(req)
         assert result.result["success"] is True
 
@@ -433,7 +439,9 @@ class TestAnalyzeText:
             LLMAnalysisRequest,
         )
 
-        req = LLMAnalysisRequest(text="Statement.", analysis_type="consistency_validation")
+        req = LLMAnalysisRequest(
+            text="Statement.", analysis_type="consistency_validation"
+        )
         result = await initialized_orchestrator.analyze_text(req)
         assert result.result["success"] is True
 
@@ -451,7 +459,9 @@ class TestAnalyzeText:
             LLMAnalysisRequest,
         )
 
-        req = LLMAnalysisRequest(text="Full analysis.", analysis_type="unified_analysis")
+        req = LLMAnalysisRequest(
+            text="Full analysis.", analysis_type="unified_analysis"
+        )
         result = await initialized_orchestrator.analyze_text(req)
         assert result.result["success"] is True
         assert "results" in result.result
@@ -492,13 +502,27 @@ class TestAnalyzeText:
         async def mock_init():
             orchestrator.is_initialized = True
             orchestrator.unified_analyzer = orchestrator._create_unified_analyzer()
-            orchestrator.syntactic_analyzer = orchestrator._create_basic_syntactic_analyzer()
-            orchestrator.semantic_analyzer = orchestrator._create_basic_semantic_analyzer()
-            orchestrator.pragmatic_analyzer = orchestrator._create_basic_pragmatic_analyzer()
-            orchestrator.entity_extractor = orchestrator._create_basic_entity_extractor()
-            orchestrator.relation_extractor = orchestrator._create_basic_relation_extractor()
-            orchestrator.consistency_validator = orchestrator._create_basic_consistency_validator()
-            orchestrator.coherence_validator = orchestrator._create_basic_coherence_validator()
+            orchestrator.syntactic_analyzer = (
+                orchestrator._create_basic_syntactic_analyzer()
+            )
+            orchestrator.semantic_analyzer = (
+                orchestrator._create_basic_semantic_analyzer()
+            )
+            orchestrator.pragmatic_analyzer = (
+                orchestrator._create_basic_pragmatic_analyzer()
+            )
+            orchestrator.entity_extractor = (
+                orchestrator._create_basic_entity_extractor()
+            )
+            orchestrator.relation_extractor = (
+                orchestrator._create_basic_relation_extractor()
+            )
+            orchestrator.consistency_validator = (
+                orchestrator._create_basic_consistency_validator()
+            )
+            orchestrator.coherence_validator = (
+                orchestrator._create_basic_coherence_validator()
+            )
             return True
 
         orchestrator.initialize = mock_init
@@ -639,7 +663,9 @@ class TestOrchestrateAnalysis:
 
         async def mock_init():
             orchestrator.is_initialized = True
-            orchestrator.semantic_analyzer = orchestrator._create_basic_semantic_analyzer()
+            orchestrator.semantic_analyzer = (
+                orchestrator._create_basic_semantic_analyzer()
+            )
             return True
 
         orchestrator.initialize = mock_init
@@ -659,7 +685,9 @@ class TestErrorHandling:
         """When an analyzer raises, analyze_text returns error result, not exception."""
         # Make syntactic analyzer raise
         initialized_orchestrator.syntactic_analyzer = MagicMock()
-        initialized_orchestrator.syntactic_analyzer.analyze.side_effect = RuntimeError("boom")
+        initialized_orchestrator.syntactic_analyzer.analyze.side_effect = RuntimeError(
+            "boom"
+        )
 
         from argumentation_analysis.orchestration.real_llm_orchestrator import (
             LLMAnalysisRequest,
@@ -673,7 +701,9 @@ class TestErrorHandling:
 
     async def test_failed_analysis_has_request_id(self, initialized_orchestrator):
         initialized_orchestrator.syntactic_analyzer = MagicMock()
-        initialized_orchestrator.syntactic_analyzer.analyze.side_effect = ValueError("err")
+        initialized_orchestrator.syntactic_analyzer.analyze.side_effect = ValueError(
+            "err"
+        )
 
         from argumentation_analysis.orchestration.real_llm_orchestrator import (
             LLMAnalysisRequest,
@@ -695,7 +725,9 @@ class TestLogicalAnalysis:
 
     async def test_logical_without_proper_agent(self, initialized_orchestrator):
         """When logical_analyzer is not PropositionalLogicAgent, returns error."""
-        initialized_orchestrator.logical_analyzer = MagicMock()  # Not a PropositionalLogicAgent
+        initialized_orchestrator.logical_analyzer = (
+            MagicMock()
+        )  # Not a PropositionalLogicAgent
 
         result = await initialized_orchestrator._analyze_logical("Test", {}, {})
         assert result["success"] is False

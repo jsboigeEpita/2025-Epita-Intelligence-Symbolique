@@ -8,7 +8,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 
-
 # Patch the SK import so that InformalAnalysisAgent doesn't try to use SK
 with patch(
     "argumentation_analysis.agents.core.informal.informal_agent_adapter.InformalAnalysisAgent",
@@ -22,6 +21,7 @@ with patch(
 # ============================================================
 # Initialization
 # ============================================================
+
 
 class TestInformalAgentInit:
     def test_default_init(self):
@@ -70,6 +70,7 @@ class TestInformalAgentInit:
 # get_available_tools
 # ============================================================
 
+
 class TestGetAvailableTools:
     def test_empty_tools(self):
         agent = InformalAgent()
@@ -89,6 +90,7 @@ class TestGetAvailableTools:
 # ============================================================
 # get_agent_capabilities
 # ============================================================
+
 
 class TestGetAgentCapabilities:
     def test_no_tools_all_false(self):
@@ -135,6 +137,7 @@ class TestGetAgentCapabilities:
 # ============================================================
 # _categorize_fallacies (pure logic)
 # ============================================================
+
 
 class TestCategorizeFallacies:
     def test_empty_list(self):
@@ -221,7 +224,14 @@ class TestCategorizeFallacies:
     def test_all_six_categories_present(self):
         agent = InformalAgent()
         result = agent._categorize_fallacies([])
-        expected = {"RELEVANCE", "INDUCTION", "CAUSALITE", "AMBIGUITE", "PRESUPPOSITION", "AUTRES"}
+        expected = {
+            "RELEVANCE",
+            "INDUCTION",
+            "CAUSALITE",
+            "AMBIGUITE",
+            "PRESUPPOSITION",
+            "AUTRES",
+        }
         assert set(result.keys()) == expected
 
     def test_case_normalization(self):
@@ -235,6 +245,7 @@ class TestCategorizeFallacies:
 # ============================================================
 # analyze_text (degraded mode — no SK agent)
 # ============================================================
+
 
 class TestAnalyzeText:
     def test_basic_result_structure(self):
@@ -250,7 +261,9 @@ class TestAnalyzeText:
 
     def test_with_fallacy_detector_detect_method(self):
         detector = MagicMock()
-        detector.detect.return_value = [{"fallacy_type": "ad_hominem", "confidence": 0.9}]
+        detector.detect.return_value = [
+            {"fallacy_type": "ad_hominem", "confidence": 0.9}
+        ]
         agent = InformalAgent(tools={"fallacy_detector": detector})
         result = agent.analyze_text("Tu as tort car tu es bête")
         assert len(result["fallacies"]) == 1
@@ -286,6 +299,7 @@ class TestAnalyzeText:
 # perform_complete_analysis
 # ============================================================
 
+
 class TestPerformCompleteAnalysis:
     def test_basic_structure(self):
         agent = InformalAgent()
@@ -302,9 +316,7 @@ class TestPerformCompleteAnalysis:
     def test_with_contextual_analyzer(self):
         ctx_analyzer = MagicMock()
         ctx_analyzer.analyze_context.return_value = {"context_type": "political"}
-        agent = InformalAgent(
-            tools={"contextual_analyzer": ctx_analyzer}
-        )
+        agent = InformalAgent(tools={"contextual_analyzer": ctx_analyzer})
         result = agent.perform_complete_analysis("text", context="debate")
         assert result["contextual_analysis"] == {"context_type": "political"}
 
@@ -340,6 +352,7 @@ class TestPerformCompleteAnalysis:
 # ============================================================
 # _get_timestamp
 # ============================================================
+
 
 class TestGetTimestamp:
     def test_returns_string(self):

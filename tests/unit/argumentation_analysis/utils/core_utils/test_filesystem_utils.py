@@ -11,8 +11,8 @@ from argumentation_analysis.core.utils.filesystem_utils import (
     get_all_files_in_directory,
 )
 
-
 # ── ensure_directory_exists ──
+
 
 class TestEnsureDirectoryExists:
     def test_creates_new_directory(self, tmp_path):
@@ -34,6 +34,7 @@ class TestEnsureDirectoryExists:
 
 
 # ── create_gitkeep_in_directory ──
+
 
 class TestCreateGitkeepInDirectory:
     def test_creates_gitkeep(self, tmp_path):
@@ -65,6 +66,7 @@ class TestCreateGitkeepInDirectory:
 
 
 # ── check_files_existence ──
+
 
 class TestCheckFilesExistence:
     def test_all_exist(self, tmp_path):
@@ -110,6 +112,7 @@ class TestCheckFilesExistence:
 
 # ── get_all_files_in_directory ──
 
+
 class TestGetAllFilesInDirectory:
     def test_all_files(self, tmp_path):
         (tmp_path / "a.txt").write_text("a")
@@ -137,7 +140,9 @@ class TestGetAllFilesInDirectory:
         subdir.mkdir()
         (tmp_path / "root.txt").write_text("r")
         (subdir / "nested.txt").write_text("n")
-        files = get_all_files_in_directory(tmp_path, patterns=["*.txt"], recursive=False)
+        files = get_all_files_in_directory(
+            tmp_path, patterns=["*.txt"], recursive=False
+        )
         assert len(files) == 1
 
     def test_exclusions(self, tmp_path):

@@ -8,29 +8,38 @@ from datetime import datetime
 
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-
 # ============================================================================
 # AgentGroupChat Tests
 # ============================================================================
+
 
 class TestAgentGroupChatInit:
     """Tests for AgentGroupChat initialization."""
 
     def test_init_default_empty_agents(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         chat = AgentGroupChat()
         assert chat.agents == []
         assert chat.selection_strategy is None
         assert chat.termination_strategy is None
 
     def test_init_with_agents(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agents = [MagicMock(), MagicMock()]
         chat = AgentGroupChat(agents=agents)
         assert len(chat.agents) == 2
 
     def test_init_with_strategies(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         sel = MagicMock()
         term = MagicMock()
         chat = AgentGroupChat(
@@ -42,7 +51,10 @@ class TestAgentGroupChatInit:
         assert chat.termination_strategy is term
 
     def test_init_none_agents_becomes_empty_list(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         chat = AgentGroupChat(agents=None)
         assert chat.agents == []
 
@@ -51,13 +63,19 @@ class TestAgentGroupChatInvoke:
     """Tests for AgentGroupChat.invoke()."""
 
     async def test_invoke_empty_agents_returns_empty_list(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         chat = AgentGroupChat(agents=[])
         result = await chat.invoke("hello")
         assert result == []
 
     async def test_invoke_with_callable_agent(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent = MagicMock()
         agent.invoke.return_value = "response1"
         chat = AgentGroupChat(agents=[agent])
@@ -65,7 +83,10 @@ class TestAgentGroupChatInvoke:
         assert "response1" in result
 
     async def test_invoke_with_async_agent(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent = MagicMock()
         agent.invoke = AsyncMock(return_value="async_response")
         chat = AgentGroupChat(agents=[agent])
@@ -73,7 +94,10 @@ class TestAgentGroupChatInvoke:
         assert "async_response" in result
 
     async def test_invoke_agent_without_invoke_method(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent = MagicMock(spec=[])  # No invoke method
         chat = AgentGroupChat(agents=[agent])
         result = await chat.invoke("hello")
@@ -82,7 +106,10 @@ class TestAgentGroupChatInvoke:
         assert "AgentGroupChat" in result[0]
 
     async def test_invoke_agent_raises_exception(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent = MagicMock()
         agent.invoke.side_effect = RuntimeError("Agent error")
         chat = AgentGroupChat(agents=[agent])
@@ -92,7 +119,10 @@ class TestAgentGroupChatInvoke:
         assert "AgentGroupChat" in result[0]
 
     async def test_invoke_multiple_agents(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent1 = MagicMock()
         agent1.invoke.return_value = "resp1"
         agent2 = MagicMock()
@@ -102,7 +132,10 @@ class TestAgentGroupChatInvoke:
         assert len(result) == 2
 
     async def test_invoke_none_input(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            AgentGroupChat,
+        )
+
         agent = MagicMock()
         agent.invoke.return_value = "response"
         chat = AgentGroupChat(agents=[agent])
@@ -114,11 +147,15 @@ class TestAgentGroupChatInvoke:
 # CluedoExtendedOrchestrator Tests
 # ============================================================================
 
+
 class TestCluedoExtendedOrchestratorInit:
     """Tests for CluedoExtendedOrchestrator initialization."""
 
     def test_init_default_values(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         kernel = MagicMock()
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(kernel=kernel, settings=settings)
@@ -134,7 +171,10 @@ class TestCluedoExtendedOrchestratorInit:
         assert orch.moriarty_agent is None
 
     def test_init_custom_values(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         kernel = MagicMock()
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(
@@ -151,7 +191,10 @@ class TestCluedoExtendedOrchestratorInit:
         assert orch.adaptive_selection is True
 
     def test_init_execution_metrics_empty(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         kernel = MagicMock()
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(kernel=kernel, settings=settings)
@@ -164,7 +207,10 @@ class TestCluedoExtendedOrchestratorConsolidate:
     """Tests for consolidate_agent_response()."""
 
     def _make_orchestrator(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
     def test_consolidate_string_response(self):
@@ -212,12 +258,17 @@ class TestCluedoExtendedOrchestratorDetectMessageType:
     """Tests for _detect_message_type()."""
 
     def _make_orchestrator(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
     def test_detect_revelation(self):
         orch = self._make_orchestrator()
-        assert orch._detect_message_type("Je révèle la carte du Colonel") == "revelation"
+        assert (
+            orch._detect_message_type("Je révèle la carte du Colonel") == "revelation"
+        )
 
     def test_detect_revelation_carte(self):
         orch = self._make_orchestrator()
@@ -225,11 +276,17 @@ class TestCluedoExtendedOrchestratorDetectMessageType:
 
     def test_detect_suggestion(self):
         orch = self._make_orchestrator()
-        assert orch._detect_message_type("Je suggère que le suspect est...") == "suggestion"
+        assert (
+            orch._detect_message_type("Je suggère que le suspect est...")
+            == "suggestion"
+        )
 
     def test_detect_suggestion_propose(self):
         orch = self._make_orchestrator()
-        assert orch._detect_message_type("Je propose une hypothèse avec l'arme") == "suggestion"
+        assert (
+            orch._detect_message_type("Je propose une hypothèse avec l'arme")
+            == "suggestion"
+        )
 
     def test_detect_analysis(self):
         orch = self._make_orchestrator()
@@ -237,7 +294,10 @@ class TestCluedoExtendedOrchestratorDetectMessageType:
 
     def test_detect_analysis_deduction(self):
         orch = self._make_orchestrator()
-        assert orch._detect_message_type("Ma déduction logique est la suivante") == "analysis"
+        assert (
+            orch._detect_message_type("Ma déduction logique est la suivante")
+            == "analysis"
+        )
 
     def test_detect_analysis_donc(self):
         orch = self._make_orchestrator()
@@ -249,7 +309,9 @@ class TestCluedoExtendedOrchestratorDetectMessageType:
 
     def test_detect_reaction_aha(self):
         orch = self._make_orchestrator()
-        assert orch._detect_message_type("Aha! Exactement ce que je pensais") == "reaction"
+        assert (
+            orch._detect_message_type("Aha! Exactement ce que je pensais") == "reaction"
+        )
 
     def test_detect_generic_message(self):
         orch = self._make_orchestrator()
@@ -268,7 +330,10 @@ class TestCluedoExtendedOrchestratorExtractSuggestion:
     """Tests for _extract_cluedo_suggestion()."""
 
     def _make_orchestrator(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
     def test_no_suggestion_keywords(self):
@@ -341,8 +406,13 @@ class TestCluedoExtendedOrchestratorExtractSuggestion:
 class TestCluedoExtendedOrchestratorEvaluateSolution:
     """Tests for _evaluate_solution_success()."""
 
-    def _make_orchestrator_with_state(self, proposed=None, correct=None, is_proposed=False):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+    def _make_orchestrator_with_state(
+        self, proposed=None, correct=None, is_proposed=False
+    ):
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
         orch.oracle_state = MagicMock()
         orch.oracle_state.is_solution_proposed = is_proposed
@@ -393,7 +463,10 @@ class TestCluedoExtendedOrchestratorPerformanceMetrics:
     """Tests for _calculate_performance_metrics()."""
 
     def _make_orchestrator(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
     def test_performance_metrics_basic(self):
@@ -446,7 +519,10 @@ class TestCluedoExtendedOrchestratorDetectEmotionalReactions:
     """Tests for _detect_emotional_reactions()."""
 
     def _make_orchestrator(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
     def test_returns_empty_list(self):
@@ -459,13 +535,19 @@ class TestCluedoExtendedOrchestratorExecuteWorkflow:
     """Tests for execute_workflow() error handling."""
 
     async def test_execute_without_setup_raises(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
         with pytest.raises(ValueError, match="Workflow non configuré"):
             await orch.execute_workflow()
 
     async def test_execute_sets_start_time(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
         orch.orchestration = MagicMock()
         orch.oracle_state = MagicMock()
@@ -497,7 +579,10 @@ class TestAnalyzeContextualElements:
     """Tests for _analyze_contextual_elements()."""
 
     def _make_orchestrator_with_state(self):
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            CluedoExtendedOrchestrator,
+        )
+
         orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
         orch.oracle_state = MagicMock()
         return orch
@@ -505,7 +590,9 @@ class TestAnalyzeContextualElements:
     def test_detects_suite_a_reference(self):
         orch = self._make_orchestrator_with_state()
         history = [MagicMock(), MagicMock()]
-        orch._analyze_contextual_elements("Sherlock", "Suite à votre remarque...", history)
+        orch._analyze_contextual_elements(
+            "Sherlock", "Suite à votre remarque...", history
+        )
         orch.oracle_state.record_contextual_reference.assert_called_once()
         call_args = orch.oracle_state.record_contextual_reference.call_args
         assert call_args.kwargs["reference_type"] == "building_on"

@@ -43,7 +43,9 @@ class ModelRegistry:
 
     def get(self, name: str) -> ModelConfig:
         if name not in self._models:
-            raise KeyError(f"Model '{name}' not registered. Available: {list(self._models.keys())}")
+            raise KeyError(
+                f"Model '{name}' not registered. Available: {list(self._models.keys())}"
+            )
         return self._models[name]
 
     def list_models(self) -> Dict[str, ModelConfig]:
@@ -86,12 +88,15 @@ class ModelRegistry:
         model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         if api_key:
-            registry.register("default", ModelConfig(
-                model_id=model_id,
-                base_url=base_url,
-                api_key=api_key,
-                display_name=f"Default ({model_id})",
-            ))
+            registry.register(
+                "default",
+                ModelConfig(
+                    model_id=model_id,
+                    base_url=base_url,
+                    api_key=api_key,
+                    display_name=f"Default ({model_id})",
+                ),
+            )
 
         # Numbered endpoints (2, 3, 4, ...)
         for i in range(2, 10):
@@ -99,22 +104,45 @@ class ModelRegistry:
             url = os.environ.get(f"OPENAI_BASE_URL_{i}", "")
             name = os.environ.get(f"OPENAI_ENDPOINT_NAME_{i}", f"endpoint-{i}")
             if key and url:
-                registry.register(f"endpoint-{i}", ModelConfig(
-                    model_id=name,
-                    base_url=url,
-                    api_key=key,
-                    display_name=name,
-                ))
+                registry.register(
+                    f"endpoint-{i}",
+                    ModelConfig(
+                        model_id=name,
+                        base_url=url,
+                        api_key=key,
+                        display_name=name,
+                    ),
+                )
 
         # OpenRouter
         or_key = os.environ.get("OPENROUTER_API_KEY", "")
         or_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         if or_key:
-            registry.register("openrouter", ModelConfig(
-                model_id="anthropic/claude-sonnet-4-6",
-                base_url=or_url,
-                api_key=or_key,
-                display_name="OpenRouter (Claude Sonnet)",
-            ))
+            registry.register(
+                "openrouter",
+                ModelConfig(
+                    model_id="anthropic/claude-sonnet-4-6",
+                    base_url=or_url,
+                    api_key=or_key,
+                    display_name="OpenRouter (Claude Sonnet)",
+                ),
+            )
+
+        # Local vLLM endpoints (VLLM_ENDPOINT_* pattern)
+        for i in range(1, 10):
+            url = os.environ.get(f"VLLM_ENDPOINT_{i}_URL", "")
+            model = os.environ.get(f"VLLM_ENDPOINT_{i}_MODEL", "")
+            name = os.environ.get(f"VLLM_ENDPOINT_{i}_NAME", f"vllm-{i}")
+            if url and model:
+                registry.register(
+                    f"vllm-{i}",
+                    ModelConfig(
+                        model_id=model,
+                        base_url=url,
+                        api_key=os.environ.get(f"VLLM_ENDPOINT_{i}_KEY", "not-needed"),
+                        display_name=name,
+                        cost_per_1k_tokens=0.0,  # Local = free
+                    ),
+                )
 
         return registry

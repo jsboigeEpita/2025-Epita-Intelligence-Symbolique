@@ -13,10 +13,10 @@ from argumentation_analysis.orchestration.hierarchical.operational.feedback_mech
     FeedbackManager,
 )
 
-
 # ============================================================
 # RhetoricalToolsFeedback
 # ============================================================
+
 
 class TestRhetoricalToolsFeedbackInit:
     def test_default_storage_path(self, tmp_path, monkeypatch):
@@ -37,9 +37,12 @@ class TestRhetoricalToolsFeedbackInit:
     def test_stats_structure(self, tmp_path):
         fb = RhetoricalToolsFeedback(feedback_storage_path=str(tmp_path / "fb"))
         expected_tools = {
-            "complex_fallacy_analysis", "contextual_fallacy_analysis",
-            "fallacy_severity_evaluation", "argument_structure_visualization",
-            "argument_coherence_evaluation", "semantic_argument_analysis",
+            "complex_fallacy_analysis",
+            "contextual_fallacy_analysis",
+            "fallacy_severity_evaluation",
+            "argument_structure_visualization",
+            "argument_coherence_evaluation",
+            "semantic_argument_analysis",
             "contextual_fallacy_detection",
         }
         assert set(fb.feedback_stats.keys()) == expected_tools
@@ -53,13 +56,17 @@ class TestAddFeedback:
         return RhetoricalToolsFeedback(feedback_storage_path=str(tmp_path / "fb"))
 
     def test_add_positive(self, fb):
-        result = fb.add_feedback("complex_fallacy_analysis", "r1", "positive", {"comment": "Good"})
+        result = fb.add_feedback(
+            "complex_fallacy_analysis", "r1", "positive", {"comment": "Good"}
+        )
         assert result is True
         assert len(fb.feedback_history) == 1
         assert fb.feedback_stats["complex_fallacy_analysis"]["positive"] == 1
 
     def test_add_negative(self, fb):
-        fb.add_feedback("complex_fallacy_analysis", "r1", "negative", {"comment": "Bad"})
+        fb.add_feedback(
+            "complex_fallacy_analysis", "r1", "negative", {"comment": "Bad"}
+        )
         assert fb.feedback_stats["complex_fallacy_analysis"]["negative"] == 1
 
     def test_add_neutral(self, fb):
@@ -83,7 +90,9 @@ class TestAddFeedback:
         assert fb.feedback_history[0]["id"] == "feedback-1"
 
     def test_custom_source(self, fb):
-        fb.add_feedback("complex_fallacy_analysis", "r1", "positive", {}, source="system")
+        fb.add_feedback(
+            "complex_fallacy_analysis", "r1", "positive", {}, source="system"
+        )
         assert fb.feedback_history[0]["source"] == "system"
 
     def test_multiple_feedbacks(self, fb):
@@ -150,7 +159,9 @@ class TestApplyFeedback:
 
     def test_no_feedbacks_unchanged(self, fb):
         params = {"confidence_threshold": 0.8}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         assert result == params
 
     def test_positive_feedback_adjusts_threshold(self, fb):
@@ -159,7 +170,9 @@ class TestApplyFeedback:
             fb.add_feedback("complex_fallacy_analysis", f"r{i}", "positive", {})
         fb.add_feedback("complex_fallacy_analysis", "rn", "negative", {})
         params = {"confidence_threshold": 0.8}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         # Positive feedback should decrease threshold slightly
         assert result["confidence_threshold"] < 0.8
 
@@ -168,27 +181,35 @@ class TestApplyFeedback:
             fb.add_feedback("complex_fallacy_analysis", f"r{i}", "negative", {})
         fb.add_feedback("complex_fallacy_analysis", "rp", "positive", {})
         params = {"confidence_threshold": 0.7}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         assert result["confidence_threshold"] > 0.7
 
     def test_threshold_clamped_min(self, fb):
         for i in range(100):
             fb.add_feedback("complex_fallacy_analysis", f"r{i}", "positive", {})
         params = {"confidence_threshold": 0.51}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         assert result["confidence_threshold"] >= 0.5
 
     def test_threshold_clamped_max(self, fb):
         for i in range(100):
             fb.add_feedback("complex_fallacy_analysis", f"r{i}", "negative", {})
         params = {"confidence_threshold": 0.94}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         assert result["confidence_threshold"] <= 0.95
 
     def test_no_threshold_param_unchanged(self, fb):
         fb.add_feedback("complex_fallacy_analysis", "r1", "positive", {})
         params = {"other_param": 42}
-        result = fb.apply_feedback_to_tool_parameters("complex_fallacy_analysis", params)
+        result = fb.apply_feedback_to_tool_parameters(
+            "complex_fallacy_analysis", params
+        )
         assert result["other_param"] == 42
 
 
@@ -214,7 +235,10 @@ class TestGenerateReport:
         fb.add_feedback("complex_fallacy_analysis", "r1", "positive", {})
         report = fb.generate_feedback_report()
         assert "complex_fallacy_analysis" in report["tool_statistics"]
-        assert report["tool_statistics"]["complex_fallacy_analysis"]["satisfaction_rate"] == 1.0
+        assert (
+            report["tool_statistics"]["complex_fallacy_analysis"]["satisfaction_rate"]
+            == 1.0
+        )
 
     def test_report_recent_feedbacks(self, tmp_path):
         fb = RhetoricalToolsFeedback(feedback_storage_path=str(tmp_path / "fb"))
@@ -241,6 +265,7 @@ class TestPersistence:
 # FeedbackManager
 # ============================================================
 
+
 class TestFeedbackManagerInit:
     def test_default_state(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
@@ -252,7 +277,10 @@ class TestFeedbackManagerInit:
 class TestCollectFeedback:
     @pytest.fixture
     def fm(self, tmp_path):
-        from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+        from argumentation_analysis.orchestration.hierarchical.operational.state import (
+            OperationalState,
+        )
+
         os_state = OperationalState()
         fm = FeedbackManager(operational_state=os_state)
         fm.rhetorical_tools_feedback = RhetoricalToolsFeedback(
@@ -261,22 +289,31 @@ class TestCollectFeedback:
         return fm
 
     def test_operational_level(self, fm):
-        result = fm.collect_feedback("operational", "complex_fallacy_analysis", "r1", "positive", {})
+        result = fm.collect_feedback(
+            "operational", "complex_fallacy_analysis", "r1", "positive", {}
+        )
         assert result is True
 
     def test_unsupported_level(self, fm):
-        result = fm.collect_feedback("strategic", "complex_fallacy_analysis", "r1", "positive", {})
+        result = fm.collect_feedback(
+            "strategic", "complex_fallacy_analysis", "r1", "positive", {}
+        )
         assert result is False
 
     def test_unsupported_tool(self, fm):
-        result = fm.collect_feedback("operational", "unknown_tool", "r1", "positive", {})
+        result = fm.collect_feedback(
+            "operational", "unknown_tool", "r1", "positive", {}
+        )
         assert result is False
 
 
 class TestApplyFeedbackManager:
     @pytest.fixture
     def fm(self, tmp_path):
-        from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+        from argumentation_analysis.orchestration.hierarchical.operational.state import (
+            OperationalState,
+        )
+
         fm = FeedbackManager(operational_state=OperationalState())
         fm.rhetorical_tools_feedback = RhetoricalToolsFeedback(
             feedback_storage_path=str(tmp_path / "fb")
@@ -297,7 +334,10 @@ class TestApplyFeedbackManager:
 class TestGenerateReportManager:
     @pytest.fixture
     def fm(self, tmp_path):
-        from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+        from argumentation_analysis.orchestration.hierarchical.operational.state import (
+            OperationalState,
+        )
+
         fm = FeedbackManager(operational_state=OperationalState())
         fm.rhetorical_tools_feedback = RhetoricalToolsFeedback(
             feedback_storage_path=str(tmp_path / "fb")

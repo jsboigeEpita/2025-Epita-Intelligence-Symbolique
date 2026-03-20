@@ -18,9 +18,15 @@ from argumentation_analysis.orchestration.hierarchical.strategic.state import (
 @pytest.fixture
 def state():
     s = StrategicState()
-    s.add_global_objective({"id": "obj-1", "description": "Identifier les arguments", "priority": "high"})
-    s.add_global_objective({"id": "obj-2", "description": "Détecter les sophismes", "priority": "medium"})
-    s.add_global_objective({"id": "obj-3", "description": "Évaluer la cohérence", "priority": "low"})
+    s.add_global_objective(
+        {"id": "obj-1", "description": "Identifier les arguments", "priority": "high"}
+    )
+    s.add_global_objective(
+        {"id": "obj-2", "description": "Détecter les sophismes", "priority": "medium"}
+    )
+    s.add_global_objective(
+        {"id": "obj-3", "description": "Évaluer la cohérence", "priority": "low"}
+    )
     return s
 
 
@@ -32,6 +38,7 @@ def planner(state):
 # ============================================================
 # __init__
 # ============================================================
+
 
 class TestPlannerInit:
     def test_default_state(self):
@@ -47,34 +54,52 @@ class TestPlannerInit:
 # _assess_text_complexity
 # ============================================================
 
+
 class TestAssessTextComplexity:
     @pytest.fixture
     def planner(self):
         return StrategicPlanner()
 
     def test_low_complexity(self, planner):
-        metadata = {"length": 500, "avg_sentence_length": 10, "vocabulary_diversity": 0.3}
+        metadata = {
+            "length": 500,
+            "avg_sentence_length": 10,
+            "vocabulary_diversity": 0.3,
+        }
         assert planner._assess_text_complexity(metadata) == "low"
 
     def test_medium_complexity(self, planner):
-        metadata = {"length": 3000, "avg_sentence_length": 18, "vocabulary_diversity": 0.6}
+        metadata = {
+            "length": 3000,
+            "avg_sentence_length": 18,
+            "vocabulary_diversity": 0.6,
+        }
         assert planner._assess_text_complexity(metadata) == "medium"
 
     def test_high_complexity(self, planner):
-        metadata = {"length": 10000, "avg_sentence_length": 25, "vocabulary_diversity": 0.8}
+        metadata = {
+            "length": 10000,
+            "avg_sentence_length": 25,
+            "vocabulary_diversity": 0.8,
+        }
         assert planner._assess_text_complexity(metadata) == "high"
 
     def test_empty_metadata_defaults_low(self, planner):
         assert planner._assess_text_complexity({}) == "low"
 
     def test_boundary_medium(self, planner):
-        metadata = {"length": 2001, "avg_sentence_length": 16, "vocabulary_diversity": 0.51}
+        metadata = {
+            "length": 2001,
+            "avg_sentence_length": 16,
+            "vocabulary_diversity": 0.51,
+        }
         assert planner._assess_text_complexity(metadata) == "medium"
 
 
 # ============================================================
 # _decompose_objectives_into_phases
 # ============================================================
+
 
 class TestDecomposeObjectives:
     @pytest.fixture
@@ -125,6 +150,7 @@ class TestDecomposeObjectives:
 # _establish_phase_dependencies
 # ============================================================
 
+
 class TestEstablishDependencies:
     @pytest.fixture
     def planner(self):
@@ -146,6 +172,7 @@ class TestEstablishDependencies:
 # ============================================================
 # _define_phase_priorities
 # ============================================================
+
 
 class TestDefinePhaPriorities:
     @pytest.fixture
@@ -182,6 +209,7 @@ class TestDefinePhaPriorities:
 # ============================================================
 # _define_success_criteria
 # ============================================================
+
 
 class TestDefineSuccessCriteria:
     @pytest.fixture
@@ -222,9 +250,14 @@ class TestDefineSuccessCriteria:
 # create_analysis_plan (integration)
 # ============================================================
 
+
 class TestCreateAnalysisPlan:
     def test_creates_plan(self, planner, state):
-        metadata = {"length": 1000, "avg_sentence_length": 12, "vocabulary_diversity": 0.4}
+        metadata = {
+            "length": 1000,
+            "avg_sentence_length": 12,
+            "vocabulary_diversity": 0.4,
+        }
         plan = planner.create_analysis_plan(metadata, state.global_objectives)
         assert "phases" in plan
         assert len(plan["phases"]) >= 3
@@ -240,6 +273,7 @@ class TestCreateAnalysisPlan:
 # ============================================================
 # decompose_objective
 # ============================================================
+
 
 class TestDecomposeObjective:
     def test_identifier_arguments(self, planner, state):
@@ -263,7 +297,9 @@ class TestDecomposeObjective:
         assert subs == []
 
     def test_generic_decomposition(self, planner, state):
-        state.add_global_objective({"id": "obj-generic", "description": "Faire le café", "priority": "medium"})
+        state.add_global_objective(
+            {"id": "obj-generic", "description": "Faire le café", "priority": "medium"}
+        )
         subs = planner.decompose_objective("obj-generic")
         assert len(subs) == 2
 
@@ -271,6 +307,7 @@ class TestDecomposeObjective:
 # ============================================================
 # adjust_plan
 # ============================================================
+
 
 class TestAdjustPlan:
     def test_no_feedback_no_change(self, planner, state):
@@ -287,7 +324,7 @@ class TestAdjustPlan:
             "progress": {
                 "phase-2": {"completion_rate": 0.2, "expected_completion_rate": 0.8}
             },
-            "issues": []
+            "issues": [],
         }
         planner.adjust_plan(feedback)
         # Plan should be adjusted
@@ -297,6 +334,7 @@ class TestAdjustPlan:
 # ============================================================
 # _identify_problematic_phases
 # ============================================================
+
 
 class TestIdentifyProblematicPhases:
     @pytest.fixture
@@ -324,6 +362,7 @@ class TestIdentifyProblematicPhases:
 # _create_phase_adjustment
 # ============================================================
 
+
 class TestCreatePhaseAdjustment:
     @pytest.fixture
     def planner(self):
@@ -341,6 +380,11 @@ class TestCreatePhaseAdjustment:
         assert adj == {}
 
     def test_objective_unrealistic(self, planner):
-        problems = [{"type": "objective_unrealistic", "details": {"suggested_criteria": "50% accuracy"}}]
+        problems = [
+            {
+                "type": "objective_unrealistic",
+                "details": {"suggested_criteria": "50% accuracy"},
+            }
+        ]
         adj = planner._create_phase_adjustment("p1", problems)
         assert adj["success_criteria"] == "50% accuracy"

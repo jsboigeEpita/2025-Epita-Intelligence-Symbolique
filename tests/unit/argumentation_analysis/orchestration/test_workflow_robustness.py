@@ -28,7 +28,6 @@ from argumentation_analysis.orchestration.unified_pipeline import (
     setup_registry,
 )
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -45,6 +44,28 @@ def shared_registry():
 # ============================================================
 
 BASE_WORKFLOWS = ["light", "standard", "full"]
+
+# Timeout per workflow tier — standard/full use real LLM calls that take 30-90s
+# Extended workflows (debate_tournament etc.) have multi-phase loops — 300s budget
+WORKFLOW_TIMEOUTS = {
+    "light": 60.0,
+    "standard": 120.0,
+    "full": 180.0,
+    # Extended multi-phase workflows (6+ phases, iterative loops)
+    "debate_tournament": 300.0,
+    "democratech": 240.0,
+    "formal_debate": 240.0,
+    "formal_verification": 240.0,
+    "hierarchical_fallacy": 180.0,
+    "neural_symbolic": 180.0,
+    "fact_check": 180.0,
+}
+
+
+def _timeout_for(workflow_name: str) -> float:
+    """Return appropriate timeout for the given workflow."""
+    return WORKFLOW_TIMEOUTS.get(workflow_name, 120.0)
+
 
 # 1. Empty and whitespace inputs
 EMPTY_WHITESPACE_INPUTS = [
@@ -206,7 +227,7 @@ MIXED_CONTENT_INPUTS = [
         id="sql_english_code_url",
     ),
     pytest.param(
-        "{ \"key\": \"value\", \"nested\": { \"arr\": [1,2,3] } }\n"
+        '{ "key": "value", "nested": { "arr": [1,2,3] } }\n'
         "The above JSON represents the argument structure.\n"
         "\u8fd9\u662f\u4e2d\u6587\u3002 This is English. C'est du francais.",
         id="json_multilingual",
@@ -241,9 +262,9 @@ ALL_ADVERSARIAL_INPUTS = (
 def assert_valid_result(result, workflow_name):
     """Assert that a workflow result has the expected structure."""
     assert result is not None, f"Result is None for workflow '{workflow_name}'"
-    assert "summary" in result, (
-        f"Missing 'summary' key in result for workflow '{workflow_name}'"
-    )
+    assert (
+        "summary" in result
+    ), f"Missing 'summary' key in result for workflow '{workflow_name}'"
     summary = result["summary"]
     assert "completed" in summary, "Missing 'completed' in summary"
     assert "failed" in summary, "Missing 'failed' in summary"
@@ -284,7 +305,7 @@ class TestEmptyWhitespaceInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -305,7 +326,7 @@ class TestVeryShortInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -326,7 +347,7 @@ class TestVeryLongInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -347,7 +368,7 @@ class TestNonFrenchInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -368,7 +389,7 @@ class TestCodeInjectionInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -389,7 +410,7 @@ class TestSpecialCharInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -410,7 +431,7 @@ class TestRepetitiveInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -431,7 +452,7 @@ class TestMixedContentInputs:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for(workflow_name),
         )
         assert_valid_result(result, workflow_name)
 
@@ -460,6 +481,7 @@ EXTENDED_WORKFLOWS = [
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestAllWorkflowsEmptyInput:
     """Test all available workflows with empty input."""
 
@@ -475,7 +497,7 @@ class TestAllWorkflowsEmptyInput:
                     registry=shared_registry,
                     create_state=True,
                 ),
-                timeout=30.0,
+                timeout=_timeout_for(workflow_name),
             )
             assert_valid_result(result, workflow_name)
         except ValueError as e:
@@ -484,6 +506,7 @@ class TestAllWorkflowsEmptyInput:
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestAllWorkflowsAdversarialSample:
     """Test all available workflows with a representative adversarial sample."""
 
@@ -524,7 +547,7 @@ class TestAllWorkflowsAdversarialSample:
                     registry=shared_registry,
                     create_state=True,
                 ),
-                timeout=30.0,
+                timeout=_timeout_for(workflow_name),
             )
             assert_valid_result(result, workflow_name)
         except ValueError as e:
@@ -567,7 +590,7 @@ class TestStateIntegrityAdversarial:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
         # State should be present and snapshot should be a dict
@@ -589,7 +612,7 @@ class TestStateIntegrityAdversarial:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
         state = result.get("unified_state")
@@ -609,7 +632,7 @@ class TestStateIntegrityAdversarial:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
         state = result.get("unified_state")
@@ -638,7 +661,7 @@ class TestBoundaryEdgeCases:
                     registry=shared_registry,
                     create_state=True,
                 ),
-                timeout=30.0,
+                timeout=_timeout_for("light"),
             )
             assert_valid_result(result, "light")
 
@@ -653,7 +676,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -668,7 +691,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -683,7 +706,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -698,7 +721,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -714,7 +737,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -729,7 +752,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -745,7 +768,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -753,7 +776,7 @@ class TestBoundaryEdgeCases:
     async def test_unicode_surrogates_safe(self, shared_registry):
         """Input with high Unicode codepoints (beyond BMP)."""
         # Mathematical symbols, musical symbols, etc.
-        text = "\U0001D49E \U0001D4B6 \U0001D4C1 \U0001F3B5 \U0001F3B6 This is an argument."
+        text = "\U0001d49e \U0001d4b6 \U0001d4c1 \U0001f3b5 \U0001f3b6 This is an argument."
         result = await asyncio.wait_for(
             run_unified_analysis(
                 text,
@@ -761,7 +784,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("light"),
         )
         assert_valid_result(result, "light")
 
@@ -776,7 +799,7 @@ class TestBoundaryEdgeCases:
                 registry=shared_registry,
                 create_state=True,
             ),
-            timeout=30.0,
+            timeout=_timeout_for("standard"),
         )
         assert_valid_result(result, "standard")
 
@@ -787,6 +810,7 @@ class TestBoundaryEdgeCases:
 
 
 @pytest.mark.robustness
+@pytest.mark.slow
 class TestConcurrentAdversarialExecution:
     """Test that multiple adversarial inputs can be processed concurrently."""
 
@@ -811,7 +835,7 @@ class TestConcurrentAdversarialExecution:
                     registry=shared_registry,
                     create_state=True,
                 ),
-                timeout=30.0,
+                timeout=_timeout_for("light"),
             )
             for text in inputs
         ]
@@ -828,7 +852,7 @@ class TestConcurrentAdversarialExecution:
     @pytest.mark.asyncio
     async def test_concurrent_different_workflows(self, shared_registry):
         """Different workflows process the same adversarial input concurrently."""
-        text = '<script>alert(1)</script> Cet argument est un sophisme \x00 ad hominem.'
+        text = "<script>alert(1)</script> Cet argument est un sophisme \x00 ad hominem."
         tasks = [
             asyncio.wait_for(
                 run_unified_analysis(
@@ -837,7 +861,7 @@ class TestConcurrentAdversarialExecution:
                     registry=shared_registry,
                     create_state=True,
                 ),
-                timeout=30.0,
+                timeout=_timeout_for(wf),
             )
             for wf in BASE_WORKFLOWS
         ]

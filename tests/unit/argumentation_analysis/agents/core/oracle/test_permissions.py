@@ -18,8 +18,8 @@ from argumentation_analysis.agents.core.oracle.permissions import (
     get_default_cluedo_permissions,
 )
 
-
 # ── Enums ──
+
 
 class TestQueryType:
     def test_has_twelve_types(self):
@@ -42,6 +42,7 @@ class TestRevealPolicy:
 
 
 # ── PermissionRule ──
+
 
 class TestPermissionRule:
     def test_defaults(self):
@@ -83,6 +84,7 @@ class TestPermissionRule:
 
 # ── QueryResult ──
 
+
 class TestQueryResult:
     def test_success(self):
         r = QueryResult(success=True, data={"key": "val"}, message="OK")
@@ -94,6 +96,7 @@ class TestQueryResult:
 
 
 # ── ValidationResult ──
+
 
 class TestValidationResult:
     def test_can_refute(self):
@@ -111,6 +114,7 @@ class TestValidationResult:
 
 
 # ── OracleResponse ──
+
 
 class TestOracleResponse:
     def test_authorized(self):
@@ -142,6 +146,7 @@ class TestOracleResponse:
 
 
 # ── PermissionManager ──
+
 
 class TestPermissionManager:
     @pytest.fixture
@@ -246,6 +251,7 @@ class TestPermissionManager:
 
 # ── Cluedo Integrity ──
 
+
 class TestCluedoIntegrity:
     def test_forbidden_method(self):
         with pytest.raises(CluedoIntegrityError, match="INTÉGRITÉ CLUEDO"):
@@ -300,6 +306,7 @@ class TestDefaultCluedoPermissions:
 
 
 # ── Exceptions ──
+
 
 class TestExceptions:
     def test_permission_denied_error(self):

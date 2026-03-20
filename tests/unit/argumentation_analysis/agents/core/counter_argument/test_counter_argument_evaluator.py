@@ -47,6 +47,7 @@ def counter_argument(original_argument):
 
 # ── Init ──
 
+
 class TestEvaluatorInit:
     def test_criteria_weights(self, evaluator):
         assert evaluator.evaluation_criteria["relevance"] == 0.25
@@ -70,8 +71,11 @@ class TestEvaluatorInit:
 
 # ── evaluate (full pipeline) ──
 
+
 class TestEvaluate:
-    def test_returns_evaluation_result(self, evaluator, original_argument, counter_argument):
+    def test_returns_evaluation_result(
+        self, evaluator, original_argument, counter_argument
+    ):
         result = evaluator.evaluate(original_argument, counter_argument)
         assert isinstance(result, EvaluationResult)
 
@@ -79,7 +83,9 @@ class TestEvaluate:
         result = evaluator.evaluate(original_argument, counter_argument)
         assert 0.0 <= result.overall_score <= 1.0
 
-    def test_all_criteria_populated(self, evaluator, original_argument, counter_argument):
+    def test_all_criteria_populated(
+        self, evaluator, original_argument, counter_argument
+    ):
         result = evaluator.evaluate(original_argument, counter_argument)
         assert 0.0 <= result.relevance <= 1.0
         assert 0.0 <= result.logical_strength <= 1.0
@@ -91,7 +97,9 @@ class TestEvaluate:
         result = evaluator.evaluate(original_argument, counter_argument)
         assert isinstance(result.recommendations, list)
 
-    def test_overall_is_weighted_sum(self, evaluator, original_argument, counter_argument):
+    def test_overall_is_weighted_sum(
+        self, evaluator, original_argument, counter_argument
+    ):
         result = evaluator.evaluate(original_argument, counter_argument)
         expected = (
             result.relevance * 0.25
@@ -104,6 +112,7 @@ class TestEvaluate:
 
 
 # ── _evaluate_relevance ──
+
 
 class TestEvaluateRelevance:
     def test_high_keyword_overlap(self, evaluator, original_argument):
@@ -192,6 +201,7 @@ class TestEvaluateRelevance:
 
 
 # ── _evaluate_logical_strength ──
+
 
 class TestEvaluateLogicalStrength:
     def test_direct_refutation_base(self, evaluator, original_argument):
@@ -299,6 +309,7 @@ class TestEvaluateLogicalStrength:
 
 # ── _evaluate_persuasiveness ──
 
+
 class TestEvaluatePersuasiveness:
     def test_with_persuasive_elements(self, evaluator, original_argument):
         ca = CounterArgument(
@@ -367,6 +378,7 @@ class TestEvaluatePersuasiveness:
 
 
 # ── _evaluate_originality ──
+
 
 class TestEvaluateOriginality:
     def test_base_originality(self, evaluator, original_argument):
@@ -446,6 +458,7 @@ class TestEvaluateOriginality:
 
 # ── _evaluate_clarity ──
 
+
 class TestEvaluateClarity:
     def test_short_sentences_clear(self, evaluator, original_argument):
         ca = CounterArgument(
@@ -523,44 +536,59 @@ class TestEvaluateClarity:
 
 # ── _generate_recommendations ──
 
+
 class TestGenerateRecommendations:
-    def test_low_relevance_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_low_relevance_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.3, 0.8, 0.8, 0.8, 0.8
         )
         assert any("relevance" in r.lower() for r in recs)
 
-    def test_low_logic_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_low_logic_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.8, 0.3, 0.8, 0.8, 0.8
         )
         assert any("logical" in r.lower() for r in recs)
 
-    def test_low_persuasion_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_low_persuasion_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.8, 0.8, 0.3, 0.8, 0.8
         )
         assert any("persuasive" in r.lower() for r in recs)
 
-    def test_low_originality_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_low_originality_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.8, 0.8, 0.8, 0.3, 0.8
         )
         assert any("original" in r.lower() for r in recs)
 
-    def test_low_clarity_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_low_clarity_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.8, 0.8, 0.8, 0.8, 0.3
         )
         assert any("simplif" in r.lower() for r in recs)
 
-    def test_all_good_recommendation(self, evaluator, original_argument, counter_argument):
+    def test_all_good_recommendation(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.8, 0.8, 0.8, 0.8, 0.8
         )
         assert any("good quality" in r.lower() for r in recs)
 
-    def test_multiple_low_multiple_recs(self, evaluator, original_argument, counter_argument):
+    def test_multiple_low_multiple_recs(
+        self, evaluator, original_argument, counter_argument
+    ):
         recs = evaluator._generate_recommendations(
             original_argument, counter_argument, 0.3, 0.3, 0.3, 0.3, 0.3
         )
@@ -568,6 +596,7 @@ class TestGenerateRecommendations:
 
 
 # ── Helper methods ──
+
 
 class TestHelperMethods:
     def test_extract_keywords(self, evaluator):
@@ -599,7 +628,9 @@ class TestHelperMethods:
         assert c < 0.3
 
     def test_vocabulary_complexity_complex(self, evaluator):
-        c = evaluator._vocabulary_complexity("L'épistémologie et l'ontologie du paradigme herméneutique.")
+        c = evaluator._vocabulary_complexity(
+            "L'épistémologie et l'ontologie du paradigme herméneutique."
+        )
         assert c > 0.0
 
     def test_vocabulary_complexity_empty(self, evaluator):

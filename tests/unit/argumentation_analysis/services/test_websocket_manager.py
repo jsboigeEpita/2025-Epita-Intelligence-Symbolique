@@ -9,6 +9,7 @@ Validates:
 - Singleton manager
 - Safe serialization
 """
+
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,7 +27,9 @@ class FakeWebSocket:
     """Minimal fake WebSocket for testing."""
 
     def __init__(self, connected=True):
-        self.client_state = WebSocketState.CONNECTED if connected else WebSocketState.DISCONNECTED
+        self.client_state = (
+            WebSocketState.CONNECTED if connected else WebSocketState.DISCONNECTED
+        )
         self.accepted = False
         self.sent_messages = []
         self.accept = AsyncMock()
@@ -144,8 +147,12 @@ class TestBroadcastHelpers:
     async def test_debate_turn(self, manager, ws):
         await manager.connect("s1", ws)
         await manager.broadcast_debate_turn(
-            "s1", "Socrate", "The argument is...",
-            {"clarity": 8.5}, round_num=3, argument_type="rebuttal"
+            "s1",
+            "Socrate",
+            "The argument is...",
+            {"clarity": 8.5},
+            round_num=3,
+            argument_type="rebuttal",
         )
 
         msg = ws.sent_messages[0]
@@ -159,7 +166,11 @@ class TestBroadcastHelpers:
     async def test_vote_update(self, manager, ws):
         await manager.connect("s1", ws)
         await manager.broadcast_vote_update(
-            "s1", "prop-1", "voter-42", "pour", {"pour": 5, "contre": 2, "abstention": 1}
+            "s1",
+            "prop-1",
+            "voter-42",
+            "pour",
+            {"pour": 5, "contre": 2, "abstention": 1},
         )
 
         msg = ws.sent_messages[0]
@@ -219,6 +230,7 @@ class TestSafeSerialize:
         class Custom:
             def __str__(self):
                 return "custom_repr"
+
         # Non-serializable falls back to str()
         result = _safe_serialize(Custom())
         assert "custom_repr" in str(result) or isinstance(result, dict)
@@ -230,6 +242,7 @@ class TestSafeSerialize:
 class TestSingleton:
     def test_get_websocket_manager(self):
         import argumentation_analysis.services.websocket_manager as mod
+
         old = mod._manager
         mod._manager = None
         try:

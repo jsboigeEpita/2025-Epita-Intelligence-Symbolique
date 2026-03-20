@@ -93,9 +93,7 @@ class ConversationalPipeline:
                     "summary": f"Failed at round {round_num}: {e}",
                 }
 
-            rounds.append(
-                {"round_number": round_num, "turn_result": turn_result}
-            )
+            rounds.append({"round_number": round_num, "turn_result": turn_result})
 
             logger.info(
                 f"Round {round_num}: confidence={turn_result.confidence:.2f}, "
@@ -107,9 +105,7 @@ class ConversationalPipeline:
                 prev_result, turn_result
             ):
                 logger.info(f"Converged at round {round_num}")
-                return self._build_result(
-                    "converged", rounds, turn_result, start_time
-                )
+                return self._build_result("converged", rounds, turn_result, start_time)
 
             # Check confidence threshold
             if turn_result.confidence >= self._config.confidence_threshold:
@@ -145,9 +141,7 @@ class ConversationalPipeline:
             }
         return ctx
 
-    def _has_converged(
-        self, prev_result: TurnResult, curr_result: TurnResult
-    ) -> bool:
+    def _has_converged(self, prev_result: TurnResult, curr_result: TurnResult) -> bool:
         """Check convergence between two turns."""
         if self._config.convergence_fn is not None:
             try:
@@ -172,9 +166,7 @@ class ConversationalPipeline:
             "summary": self._generate_summary(status, rounds),
         }
 
-    def _generate_summary(
-        self, status: str, rounds: List[Dict[str, Any]]
-    ) -> str:
+    def _generate_summary(self, status: str, rounds: List[Dict[str, Any]]) -> str:
         """Generate text summary of the conversation."""
         lines = [f"Conversation: {len(rounds)} round(s), status={status}"]
         for r in rounds:
@@ -282,9 +274,7 @@ class GroupChatTurnStrategy(TurnStrategy):
                 AgentGroupChat,
             )
         except ImportError:
-            logger.warning(
-                "AgentGroupChat not available — returning empty turn"
-            )
+            logger.warning("AgentGroupChat not available — returning empty turn")
             return TurnResult(
                 turn_number=context.get("turn_number", 1),
                 phase_results={},
@@ -300,9 +290,7 @@ class GroupChatTurnStrategy(TurnStrategy):
         )
 
         # Run the group chat
-        raw_results = await chat.invoke(
-            str(input_data) if input_data else None
-        )
+        raw_results = await chat.invoke(str(input_data) if input_data else None)
 
         duration = time.time() - start
 
@@ -320,9 +308,7 @@ class GroupChatTurnStrategy(TurnStrategy):
             duration_seconds=duration,
         )
 
-    def _messages_to_phase_results(
-        self, messages: Any
-    ) -> Dict[str, PhaseResult]:
+    def _messages_to_phase_results(self, messages: Any) -> Dict[str, PhaseResult]:
         """Convert AgentGroupChat messages to PhaseResult dict."""
         results: Dict[str, PhaseResult] = {}
         if not messages or not isinstance(messages, list):
@@ -376,9 +362,7 @@ def _extract_questions(phase_results: Dict[str, PhaseResult]) -> List[str]:
     """Extract user questions from phase outputs."""
     questions: List[str] = []
     for result in phase_results.values():
-        if result.status == PhaseStatus.COMPLETED and isinstance(
-            result.output, dict
-        ):
+        if result.status == PhaseStatus.COMPLETED and isinstance(result.output, dict):
             q = result.output.get("user_question")
             if q and isinstance(q, str):
                 questions.append(q)

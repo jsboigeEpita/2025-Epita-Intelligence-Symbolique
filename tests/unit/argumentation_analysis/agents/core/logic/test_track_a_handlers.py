@@ -8,7 +8,6 @@ import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 import sys
 
-
 # --- Mock JPype setup ---
 # Handlers import jpype at module level, so we mock it before importing.
 
@@ -48,6 +47,7 @@ class TestRankingHandler:
             # Force reimport
             from importlib import reload
             import argumentation_analysis.agents.core.logic.ranking_handler as mod
+
             reload(mod)
 
             handler = mod.RankingHandler()
@@ -91,8 +91,15 @@ class TestRankingHandler:
 
     def test_available_reasoners(self):
         handler, _, _ = self._make_handler()
-        expected = {"categorizer", "burden", "discussion", "counting", "tuples",
-                    "strategy", "propagation"}
+        expected = {
+            "categorizer",
+            "burden",
+            "discussion",
+            "counting",
+            "tuples",
+            "strategy",
+            "propagation",
+        }
         assert set(handler.REASONERS.keys()) == expected
 
 
@@ -109,12 +116,16 @@ class TestBipolarHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.bipolar_handler as mod
+
             reload(mod)
             return mod.BipolarHandler(), mock_jpype, registry
 
     def test_init_loads_bipolar_classes(self):
         handler, _, registry = self._make_handler()
-        assert "org.tweetyproject.arg.bipolar.syntax.NecessityArgumentationFramework" in registry
+        assert (
+            "org.tweetyproject.arg.bipolar.syntax.NecessityArgumentationFramework"
+            in registry
+        )
         assert "org.tweetyproject.arg.bipolar.syntax.BArgument" in registry
 
     def test_analyze_necessity_framework(self):
@@ -155,6 +166,7 @@ class TestABAHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.aba_handler as mod
+
             reload(mod)
             return mod.ABAHandler(), mock_jpype, registry
 
@@ -206,12 +218,16 @@ class TestADFHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.adf_handler as mod
+
             reload(mod)
             return mod.ADFHandler(), mock_jpype, registry
 
     def test_init_loads_adf_classes(self):
         handler, _, registry = self._make_handler()
-        assert "org.tweetyproject.arg.adf.syntax.adf.GraphAbstractDialecticalFramework" in registry
+        assert (
+            "org.tweetyproject.arg.adf.syntax.adf.GraphAbstractDialecticalFramework"
+            in registry
+        )
         assert "org.tweetyproject.arg.adf.syntax.Argument" in registry
 
     def test_analyze_adf_basic(self):
@@ -242,8 +258,15 @@ class TestADFHandler:
 
     def test_available_semantics(self):
         handler, _, _ = self._make_handler()
-        expected = {"grounded", "complete", "preferred", "admissible",
-                    "model", "naive", "conflict_free"}
+        expected = {
+            "grounded",
+            "complete",
+            "preferred",
+            "admissible",
+            "model",
+            "naive",
+            "conflict_free",
+        }
         assert set(handler.REASONERS.keys()) == expected
 
 
@@ -260,6 +283,7 @@ class TestASPICHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.aspic_handler as mod
+
             reload(mod)
             return mod.ASPICHandler(), mock_jpype, registry
 
@@ -316,6 +340,7 @@ class TestBeliefRevisionHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.belief_revision_handler as mod
+
             reload(mod)
             return mod.BeliefRevisionHandler(), mock_jpype, registry
 
@@ -323,13 +348,20 @@ class TestBeliefRevisionHandler:
         handler, _, registry = self._make_handler()
         assert "org.tweetyproject.logics.pl.syntax.PlBeliefSet" in registry
         assert "org.tweetyproject.beliefdynamics.revops.DalalRevision" in registry
-        assert "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator" in registry
+        assert (
+            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+            in registry
+        )
 
     def test_revise_dalal(self):
         handler, _, registry = self._make_handler()
         # Mock revision operator
         mock_revised = MagicMock()
-        mock_revised.__iter__ = MagicMock(return_value=iter([MagicMock(__str__=lambda s: "a"), MagicMock(__str__=lambda s: "b")]))
+        mock_revised.__iter__ = MagicMock(
+            return_value=iter(
+                [MagicMock(__str__=lambda s: "a"), MagicMock(__str__=lambda s: "b")]
+            )
+        )
 
         dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
         if dalal:
@@ -386,6 +418,7 @@ class TestProbabilisticHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.probabilistic_handler as mod
+
             reload(mod)
             return mod.ProbabilisticHandler(), mock_jpype, registry
 
@@ -428,6 +461,7 @@ class TestDialogueHandler:
         with patch.dict(sys.modules, {"jpype": mock_jpype}):
             from importlib import reload
             import argumentation_analysis.agents.core.logic.dialogue_handler as mod
+
             reload(mod)
             return mod.DialogueHandler(), mock_jpype, registry
 
@@ -495,7 +529,9 @@ class TestTrackARegistration:
     def test_tweety_slots_registered_as_services(self):
         """Verify _declare_tweety_slots registers services, not just slots."""
         from unittest.mock import MagicMock
-        from argumentation_analysis.orchestration.unified_pipeline import _declare_tweety_slots
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _declare_tweety_slots,
+        )
 
         mock_registry = MagicMock()
         _declare_tweety_slots(mock_registry)
@@ -511,18 +547,30 @@ class TestTrackARegistration:
                 registered_caps.add(cap)
 
         expected_caps = {
-            "ranking_semantics", "bipolar_argumentation", "aba_reasoning",
-            "adf_reasoning", "aspic_plus_reasoning", "belief_revision",
-            "probabilistic_argumentation", "dialogue_protocols",
-            "description_logic", "conditional_logic",
-            "setaf_reasoning", "weighted_argumentation", "social_argumentation",
-            "epistemic_argumentation", "defeasible_logic", "qbf_reasoning",
+            "ranking_semantics",
+            "bipolar_argumentation",
+            "aba_reasoning",
+            "adf_reasoning",
+            "aspic_plus_reasoning",
+            "belief_revision",
+            "probabilistic_argumentation",
+            "dialogue_protocols",
+            "description_logic",
+            "conditional_logic",
+            "setaf_reasoning",
+            "weighted_argumentation",
+            "social_argumentation",
+            "epistemic_argumentation",
+            "defeasible_logic",
+            "qbf_reasoning",
         }
         assert registered_caps == expected_caps
 
     def test_tweety_slots_have_invoke_functions(self):
         """Each registered handler has an invoke callable."""
-        from argumentation_analysis.orchestration.unified_pipeline import _declare_tweety_slots
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _declare_tweety_slots,
+        )
 
         mock_registry = MagicMock()
         _declare_tweety_slots(mock_registry)
@@ -546,9 +594,14 @@ class TestTweetyBridgeTrackA:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         expected_properties = [
-            "ranking_handler", "bipolar_handler", "aba_handler",
-            "adf_handler", "aspic_handler", "belief_revision_handler",
-            "probabilistic_handler", "dialogue_handler",
+            "ranking_handler",
+            "bipolar_handler",
+            "aba_handler",
+            "adf_handler",
+            "aspic_handler",
+            "belief_revision_handler",
+            "probabilistic_handler",
+            "dialogue_handler",
         ]
         for prop_name in expected_properties:
             assert hasattr(TweetyBridge, prop_name), f"Missing property: {prop_name}"

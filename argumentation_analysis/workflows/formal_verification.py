@@ -27,7 +27,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowDefinition,
 )
 
-
 DEFAULT_INCONSISTENCY_THRESHOLD = 0.5
 
 
@@ -166,10 +165,16 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             "formal_synthesis",
             capability="formal_synthesis",
             depends_on=[
-                "ranking", "aspic_analysis", "belief_revision",
-                "adf_analysis", "bipolar_analysis", "setaf_analysis",
-                "dl_analysis", "cl_analysis",
-                "delp_analysis", "qbf_analysis",
+                "ranking",
+                "aspic_analysis",
+                "belief_revision",
+                "adf_analysis",
+                "bipolar_analysis",
+                "setaf_analysis",
+                "dl_analysis",
+                "cl_analysis",
+                "delp_analysis",
+                "qbf_analysis",
             ],
         )
         .set_metadata("domain", "formal_verification")
@@ -181,7 +186,9 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
 
 async def run_formal_verification(text: str, **kwargs) -> Dict[str, Any]:
     """Convenience wrapper for running the formal verification workflow."""
-    from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
+    )
 
     return await run_unified_analysis(
         text, workflow_name="formal_verification", **kwargs

@@ -16,18 +16,24 @@ from argumentation_analysis.models.extended_belief_model import (
     ExtendedBeliefModel,
 )
 
-
 # ============================================================
 # BeliefType enum
 # ============================================================
+
 
 class TestBeliefType:
     """Tests for the BeliefType enum."""
 
     def test_all_values(self):
         expected = {
-            "fact", "hypothesis", "evidence", "deduction",
-            "assumption", "constraint", "validation", "critique",
+            "fact",
+            "hypothesis",
+            "evidence",
+            "deduction",
+            "assumption",
+            "constraint",
+            "validation",
+            "critique",
         }
         assert {bt.value for bt in BeliefType} == expected
 
@@ -46,6 +52,7 @@ class TestBeliefType:
 # ============================================================
 # ConfidenceLevel enum
 # ============================================================
+
 
 class TestConfidenceLevel:
     """Tests for the ConfidenceLevel enum."""
@@ -94,11 +101,18 @@ class TestConfidenceLevel:
 # EvidenceQuality enum
 # ============================================================
 
+
 class TestEvidenceQuality:
     """Tests for the EvidenceQuality enum."""
 
     def test_all_values(self):
-        expected = {"unreliable", "circumstantial", "corroborated", "verified", "proven"}
+        expected = {
+            "unreliable",
+            "circumstantial",
+            "corroborated",
+            "verified",
+            "proven",
+        }
         assert {eq.value for eq in EvidenceQuality} == expected
 
     def test_from_value(self):
@@ -111,6 +125,7 @@ class TestEvidenceQuality:
 # ============================================================
 # ModificationHistory
 # ============================================================
+
 
 class TestModificationHistory:
     """Tests for the ModificationHistory dataclass."""
@@ -195,6 +210,7 @@ class TestModificationHistory:
 # ============================================================
 # BeliefMetadata
 # ============================================================
+
 
 class TestBeliefMetadata:
     """Tests for the BeliefMetadata dataclass."""
@@ -340,6 +356,7 @@ class TestBeliefMetadata:
 # ExtendedBeliefModel
 # ============================================================
 
+
 class TestExtendedBeliefModel:
     """Tests for the ExtendedBeliefModel dataclass."""
 
@@ -381,7 +398,9 @@ class TestExtendedBeliefModel:
         assert default_belief.metadata is not None
         assert default_belief.metadata.belief_type is BeliefType.FACT
         assert default_belief.metadata.source_agent == "unknown"
-        assert default_belief.metadata.evidence_quality is EvidenceQuality.CIRCUMSTANTIAL
+        assert (
+            default_belief.metadata.evidence_quality is EvidenceQuality.CIRCUMSTANTIAL
+        )
 
     def test_creation_records_history(self, default_belief):
         assert len(default_belief.modification_history) >= 1
@@ -404,7 +423,11 @@ class TestExtendedBeliefModel:
         assert sample_belief.confidence == 0.9
         assert sample_belief.metadata.confidence_level is ConfidenceLevel.VERY_HIGH
         # History should have creation + update
-        updates = [m for m in sample_belief.modification_history if m.modification_type == "updated"]
+        updates = [
+            m
+            for m in sample_belief.modification_history
+            if m.modification_type == "updated"
+        ]
         assert len(updates) == 1
         assert updates[0].previous_confidence == 0.75
         assert updates[0].new_confidence == 0.9
@@ -499,7 +522,10 @@ class TestExtendedBeliefModel:
         assert summary["total_modifications"] >= 2
         assert "created" in summary["modification_types"]
         assert "updated" in summary["modification_types"]
-        assert "watson" in summary["involved_agents"] or "unknown" in summary["involved_agents"]
+        assert (
+            "watson" in summary["involved_agents"]
+            or "unknown" in summary["involved_agents"]
+        )
 
     def test_is_consistent_with_no_conflict(self, sample_belief, default_belief):
         report = sample_belief.is_consistent_with(default_belief)
@@ -510,7 +536,10 @@ class TestExtendedBeliefModel:
             belief_id="b1", belief_name="guilty", content="Guilty", confidence=0.8
         )
         b2 = ExtendedBeliefModel(
-            belief_id="b2", belief_name="not_guilty", content="Not guilty", confidence=0.8
+            belief_id="b2",
+            belief_name="not_guilty",
+            content="Not guilty",
+            confidence=0.8,
         )
         report = b1.is_consistent_with(b2)
         assert report["is_consistent"] is False
@@ -518,7 +547,10 @@ class TestExtendedBeliefModel:
 
     def test_is_consistent_with_direct_contradiction_reversed(self):
         b1 = ExtendedBeliefModel(
-            belief_id="b1", belief_name="not_guilty", content="Not guilty", confidence=0.8
+            belief_id="b1",
+            belief_name="not_guilty",
+            content="Not guilty",
+            confidence=0.8,
         )
         b2 = ExtendedBeliefModel(
             belief_id="b2", belief_name="guilty", content="Guilty", confidence=0.8

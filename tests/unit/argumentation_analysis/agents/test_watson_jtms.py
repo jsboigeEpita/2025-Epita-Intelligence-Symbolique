@@ -44,13 +44,18 @@ from argumentation_analysis.agents.watson_jtms.models import (
 
 from argumentation_analysis.agents.watson_jtms.consistency import ConsistencyChecker
 
-
 # ============================================================================
 # Helpers: mock factories
 # ============================================================================
 
-def _make_belief(confidence=0.5, valid=True, non_monotonic=False,
-                 justifications=None, agent_source="test"):
+
+def _make_belief(
+    confidence=0.5,
+    valid=True,
+    non_monotonic=False,
+    justifications=None,
+    agent_source="test",
+):
     """Create a mock belief object with common attributes."""
     b = MagicMock()
     b.confidence = confidence
@@ -69,8 +74,7 @@ def _make_justification(in_list=None, out_list=None):
     return j
 
 
-def _make_jtms_session(extended_beliefs=None, jtms_beliefs=None,
-                       has_update_nm=False):
+def _make_jtms_session(extended_beliefs=None, jtms_beliefs=None, has_update_nm=False):
     """Create a mock JTMS session."""
     session = MagicMock()
     session.extended_beliefs = extended_beliefs or {}
@@ -86,6 +90,7 @@ def _make_jtms_session(extended_beliefs=None, jtms_beliefs=None,
 # ============================================================================
 # MODELS TESTS
 # ============================================================================
+
 
 class TestValidationResult:
     """Tests for models.ValidationResult dataclass."""
@@ -117,7 +122,10 @@ class TestValidationResult:
 
     def test_with_issues_and_suggestions(self):
         vr = ValidationResult(
-            "B1", False, 0.2, "m",
+            "B1",
+            False,
+            0.2,
+            "m",
             issues_found=["circular"],
             suggestions=["add evidence"],
             formal_proof="QED",
@@ -150,8 +158,9 @@ class TestConflictResolution:
         assert isinstance(cr.timestamp, datetime)
 
     def test_chosen_belief_none(self):
-        cr = ConflictResolution("c1", ["A", "B"], "manual_review_needed",
-                                None, "equal", 0.3)
+        cr = ConflictResolution(
+            "c1", ["A", "B"], "manual_review_needed", None, "equal", 0.3
+        )
         assert cr.chosen_belief is None
 
     def test_field_count(self):
@@ -161,6 +170,7 @@ class TestConflictResolution:
 # ============================================================================
 # UTILS TESTS: _extract_logical_structure
 # ============================================================================
+
 
 class TestExtractLogicalStructure:
 
@@ -211,6 +221,7 @@ class TestExtractLogicalStructure:
 # UTILS TESTS: _analyze_hypothesis_consistency (async)
 # ============================================================================
 
+
 class TestAnalyzeHypothesisConsistency:
 
     async def test_empty_beliefs_consistent(self):
@@ -221,11 +232,7 @@ class TestAnalyzeHypothesisConsistency:
         assert result["conflicts"] == []
 
     async def test_supportive_belief_high_similarity(self):
-        sherlock = {
-            "beliefs": {
-                "b1": {"context": {"description": "matching text"}}
-            }
-        }
+        sherlock = {"beliefs": {"b1": {"context": {"description": "matching text"}}}}
         result = await _analyze_hypothesis_consistency(
             {"hypothesis": "matching text"}, sherlock, lambda a, b: 0.8
         )
@@ -234,11 +241,7 @@ class TestAnalyzeHypothesisConsistency:
         assert result["consistent"] is True
 
     async def test_contradictory_belief_negative_similarity(self):
-        sherlock = {
-            "beliefs": {
-                "b1": {"context": {"description": "opposite"}}
-            }
-        }
+        sherlock = {"beliefs": {"b1": {"context": {"description": "opposite"}}}}
         result = await _analyze_hypothesis_consistency(
             {"hypothesis": "something"}, sherlock, lambda a, b: -0.5
         )
@@ -246,11 +249,7 @@ class TestAnalyzeHypothesisConsistency:
         assert result["consistent"] is False
 
     async def test_neutral_similarity_no_match(self):
-        sherlock = {
-            "beliefs": {
-                "b1": {"context": {"description": "neutral"}}
-            }
-        }
+        sherlock = {"beliefs": {"b1": {"context": {"description": "neutral"}}}}
         result = await _analyze_hypothesis_consistency(
             {"hypothesis": "something"}, sherlock, lambda a, b: 0.3
         )
@@ -280,8 +279,7 @@ class TestAnalyzeHypothesisConsistency:
 
     async def test_missing_hypothesis_key(self):
         result = await _analyze_hypothesis_consistency(
-            {}, {"beliefs": {"b1": {"context": {"description": "x"}}}},
-            lambda a, b: 0.0
+            {}, {"beliefs": {"b1": {"context": {"description": "x"}}}}, lambda a, b: 0.0
         )
         assert result["consistent"] is True
 
@@ -295,6 +293,7 @@ class TestAnalyzeHypothesisConsistency:
 # ============================================================================
 # UTILS TESTS: _analyze_hypothesis_strengths_weaknesses
 # ============================================================================
+
 
 class TestAnalyzeHypothesisStrengthsWeaknesses:
 
@@ -335,6 +334,7 @@ class TestAnalyzeHypothesisStrengthsWeaknesses:
 # ============================================================================
 # UTILS TESTS: _calculate_overall_assessment
 # ============================================================================
+
 
 class TestCalculateOverallAssessment:
 
@@ -390,6 +390,7 @@ class TestCalculateOverallAssessment:
 # UTILS TESTS: _analyze_justification_gaps (async)
 # ============================================================================
 
+
 class TestAnalyzeJustificationGaps:
 
     async def test_belief_not_found(self):
@@ -426,6 +427,7 @@ class TestAnalyzeJustificationGaps:
 # UTILS TESTS: _generate_contextual_alternatives (async)
 # ============================================================================
 
+
 class TestGenerateContextualAlternatives:
 
     async def test_investigation_context(self):
@@ -437,9 +439,7 @@ class TestGenerateContextualAlternatives:
         assert alts[0]["priority"] == "medium"
 
     async def test_unknown_context_empty(self):
-        alts = await _generate_contextual_alternatives(
-            "belief", {"type": "unknown"}
-        )
+        alts = await _generate_contextual_alternatives("belief", {"type": "unknown"})
         assert alts == []
 
     async def test_no_type_key(self):
@@ -447,15 +447,14 @@ class TestGenerateContextualAlternatives:
         assert alts == []
 
     async def test_other_context_type(self):
-        alts = await _generate_contextual_alternatives(
-            "belief", {"type": "debate"}
-        )
+        alts = await _generate_contextual_alternatives("belief", {"type": "debate"})
         assert alts == []
 
 
 # ============================================================================
 # UTILS TESTS: _suggest_belief_strengthening
 # ============================================================================
+
 
 class TestSuggestBeliefStrengthening:
 
@@ -490,6 +489,7 @@ class TestSuggestBeliefStrengthening:
 # UTILS TESTS: _generate_contradictory_tests
 # ============================================================================
 
+
 class TestGenerateContradictoryTests:
 
     def test_always_returns_one(self):
@@ -513,6 +513,7 @@ class TestGenerateContradictoryTests:
 # ============================================================================
 # UTILS TESTS: _resolve_single_conflict (async)
 # ============================================================================
+
 
 class TestResolveSingleConflict:
 
@@ -549,9 +550,7 @@ class TestResolveSingleConflict:
 
     async def test_missing_beliefs_error(self):
         conflict = {"beliefs": ["A", "B"]}
-        result = await _resolve_single_conflict(
-            conflict, 0, {}, ConflictResolution
-        )
+        result = await _resolve_single_conflict(conflict, 0, {}, ConflictResolution)
         assert result.resolution_strategy == "error"
         assert result.chosen_belief is None
 
@@ -565,38 +564,32 @@ class TestResolveSingleConflict:
 
     async def test_complex_conflict_three_beliefs(self):
         conflict = {"beliefs": ["A", "B", "C"]}
-        result = await _resolve_single_conflict(
-            conflict, 0, {}, ConflictResolution
-        )
+        result = await _resolve_single_conflict(conflict, 0, {}, ConflictResolution)
         assert result.resolution_strategy == "complex_conflict"
         assert "3" in result.reasoning
 
     async def test_single_belief_complex(self):
         conflict = {"beliefs": ["A"]}
-        result = await _resolve_single_conflict(
-            conflict, 0, {}, ConflictResolution
-        )
+        result = await _resolve_single_conflict(conflict, 0, {}, ConflictResolution)
         assert result.resolution_strategy == "complex_conflict"
 
     async def test_conflict_id_format(self):
         conflict = {"beliefs": ["A", "B"]}
         result = await _resolve_single_conflict(
-            conflict, 5, {"A": _make_belief(), "B": _make_belief()},
-            ConflictResolution
+            conflict, 5, {"A": _make_belief(), "B": _make_belief()}, ConflictResolution
         )
         assert result.conflict_id.startswith("conflict_5_")
 
     async def test_empty_beliefs_list(self):
         conflict = {"beliefs": []}
-        result = await _resolve_single_conflict(
-            conflict, 0, {}, ConflictResolution
-        )
+        result = await _resolve_single_conflict(conflict, 0, {}, ConflictResolution)
         assert result.resolution_strategy == "complex_conflict"
 
 
 # ============================================================================
 # UTILS TESTS: _apply_conflict_resolutions (async)
 # ============================================================================
+
 
 class TestApplyConflictResolutions:
 
@@ -652,6 +645,7 @@ class TestApplyConflictResolutions:
 # UTILS TESTS: _analyze_logical_soundness (async)
 # ============================================================================
 
+
 class TestAnalyzeLogicalSoundness:
 
     async def test_no_beliefs_sound(self):
@@ -691,13 +685,12 @@ class TestAnalyzeLogicalSoundness:
 # UTILS TESTS: _generate_validation_recommendations
 # ============================================================================
 
+
 class TestGenerateValidationRecommendations:
 
     def test_with_conflicts(self):
         report = {
-            "consistency_analysis": {
-                "conflicts_detected": [{"type": "direct"}]
-            },
+            "consistency_analysis": {"conflicts_detected": [{"type": "direct"}]},
             "beliefs_validated": {},
         }
         recs = _generate_validation_recommendations(report)
@@ -727,9 +720,7 @@ class TestGenerateValidationRecommendations:
 
     def test_both_issues(self):
         report = {
-            "consistency_analysis": {
-                "conflicts_detected": [{"x": 1}]
-            },
+            "consistency_analysis": {"conflicts_detected": [{"x": 1}]},
             "beliefs_validated": {
                 "A": {"provable": False},
             },
@@ -739,9 +730,7 @@ class TestGenerateValidationRecommendations:
 
     def test_conflict_count_in_description(self):
         report = {
-            "consistency_analysis": {
-                "conflicts_detected": [{"x": 1}, {"y": 2}]
-            },
+            "consistency_analysis": {"conflicts_detected": [{"x": 1}, {"y": 2}]},
             "beliefs_validated": {},
         }
         recs = _generate_validation_recommendations(report)
@@ -751,6 +740,7 @@ class TestGenerateValidationRecommendations:
 # ============================================================================
 # UTILS TESTS: _assess_overall_validity
 # ============================================================================
+
 
 class TestAssessOverallValidity:
 
@@ -830,6 +820,7 @@ class TestAssessOverallValidity:
 # UTILS TESTS: _build_logical_chains
 # ============================================================================
 
+
 class TestBuildLogicalChains:
 
     def test_empty_beliefs(self):
@@ -861,63 +852,79 @@ class TestBuildLogicalChains:
 # UTILS TESTS: _generate_final_assessment
 # ============================================================================
 
+
 class TestGenerateFinalAssessment:
 
     def test_excellent(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a", "b", "c", "d"],
-            "validated_beliefs": ["a", "b", "c", "d"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a", "b", "c", "d"],
+                "validated_beliefs": ["a", "b", "c", "d"],
+            }
+        )
         assert result["assessment_level"] == "excellent"
         assert result["quality_score"] == 1.0
 
     def test_good(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a", "b"],
-            "validated_beliefs": ["a", "b", "c"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a", "b"],
+                "validated_beliefs": ["a", "b", "c"],
+            }
+        )
         assert result["assessment_level"] == "good"
 
     def test_acceptable(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a"],
-            "validated_beliefs": ["a", "b", "c"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a"],
+                "validated_beliefs": ["a", "b", "c"],
+            }
+        )
         assert result["assessment_level"] == "acceptable"
 
     def test_poor(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": [],
-            "validated_beliefs": ["a", "b", "c"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": [],
+                "validated_beliefs": ["a", "b", "c"],
+            }
+        )
         assert result["assessment_level"] == "poor"
 
     def test_empty_validated(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": [],
-            "validated_beliefs": [],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": [],
+                "validated_beliefs": [],
+            }
+        )
         assert result["quality_score"] == 0.0
         assert result["assessment_level"] == "poor"
 
     def test_total_conclusions(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a"],
-            "validated_beliefs": ["a", "b"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a"],
+                "validated_beliefs": ["a", "b"],
+            }
+        )
         assert result["total_conclusions"] == 2
 
     def test_synthesis_quality_fixed(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": [],
-            "validated_beliefs": [],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": [],
+                "validated_beliefs": [],
+            }
+        )
         assert result["synthesis_quality"] == "rigorous_formal_analysis"
 
 
 # ============================================================================
 # UTILS TESTS: _validate_logical_step
 # ============================================================================
+
 
 class TestValidateLogicalStep:
 
@@ -941,6 +948,7 @@ class TestValidateLogicalStep:
 # ============================================================================
 # UTILS TESTS: _calculate_text_similarity
 # ============================================================================
+
 
 class TestCalculateTextSimilarity:
 
@@ -996,6 +1004,7 @@ class TestCalculateTextSimilarity:
 # CONSISTENCY CHECKER TESTS
 # ============================================================================
 
+
 class TestConsistencyCheckerInit:
 
     def test_init(self):
@@ -1030,18 +1039,14 @@ class TestCheckGlobalConsistency:
     def test_no_contradiction_only_positive(self):
         b1 = _make_belief(valid=True)
         b2 = _make_belief(valid=True)
-        session = _make_jtms_session(
-            extended_beliefs={"A": b1, "B": b2}
-        )
+        session = _make_jtms_session(extended_beliefs={"A": b1, "B": b2})
         checker = ConsistencyChecker(session)
         report = checker.check_global_consistency()
         assert report["is_consistent"] is True
 
     def test_not_prefix_without_positive(self):
         b = _make_belief(valid=True)
-        session = _make_jtms_session(
-            extended_beliefs={"not_X": b}
-        )
+        session = _make_jtms_session(extended_beliefs={"not_X": b})
         checker = ConsistencyChecker(session)
         report = checker.check_global_consistency()
         # not_X exists but X doesn't => no contradiction
@@ -1050,9 +1055,7 @@ class TestCheckGlobalConsistency:
     def test_both_invalid_no_conflict(self):
         b_pos = _make_belief(valid=False)
         b_neg = _make_belief(valid=False)
-        session = _make_jtms_session(
-            extended_beliefs={"A": b_pos, "not_A": b_neg}
-        )
+        session = _make_jtms_session(extended_beliefs={"A": b_pos, "not_A": b_neg})
         checker = ConsistencyChecker(session)
         report = checker.check_global_consistency()
         assert len(report["conflicts_detected"]) == 0
@@ -1061,8 +1064,7 @@ class TestCheckGlobalConsistency:
         b = _make_belief(non_monotonic=True, valid=True)
         jtms_beliefs = {"loopy": MagicMock(non_monotonic=True)}
         session = _make_jtms_session(
-            extended_beliefs={"loopy": b},
-            jtms_beliefs=jtms_beliefs
+            extended_beliefs={"loopy": b}, jtms_beliefs=jtms_beliefs
         )
         checker = ConsistencyChecker(session)
         report = checker.check_global_consistency()
@@ -1071,9 +1073,7 @@ class TestCheckGlobalConsistency:
     def test_confidence_score_decreases_with_issues(self):
         b_pos = _make_belief(valid=True, confidence=0.8)
         b_neg = _make_belief(valid=True, confidence=0.6)
-        session = _make_jtms_session(
-            extended_beliefs={"X": b_pos, "not_X": b_neg}
-        )
+        session = _make_jtms_session(extended_beliefs={"X": b_pos, "not_X": b_neg})
         checker = ConsistencyChecker(session)
         report = checker.check_global_consistency()
         assert report["confidence_score"] < 1.0
@@ -1130,9 +1130,7 @@ class TestDetectDirectContradictions:
     def test_pair_only_counted_once(self):
         b_pos = _make_belief(valid=True)
         b_neg = _make_belief(valid=True)
-        session = _make_jtms_session(
-            extended_beliefs={"A": b_pos, "not_A": b_neg}
-        )
+        session = _make_jtms_session(extended_beliefs={"A": b_pos, "not_A": b_neg})
         checker = ConsistencyChecker(session)
         conflicts = checker._detect_direct_contradictions()
         # Should be exactly 1, not duplicated
@@ -1141,9 +1139,7 @@ class TestDetectDirectContradictions:
     def test_agent_source_in_conflict(self):
         b_pos = _make_belief(valid=True, agent_source="sherlock")
         b_neg = _make_belief(valid=True, agent_source="watson")
-        session = _make_jtms_session(
-            extended_beliefs={"B": b_pos, "not_B": b_neg}
-        )
+        session = _make_jtms_session(extended_beliefs={"B": b_pos, "not_B": b_neg})
         checker = ConsistencyChecker(session)
         conflicts = checker._detect_direct_contradictions()
         assert conflicts[0]["agents"] == ["sherlock", "watson"]
@@ -1152,6 +1148,7 @@ class TestDetectDirectContradictions:
 # ============================================================================
 # CONSISTENCY CHECKER: resolve_conflicts (delegation to utils)
 # ============================================================================
+
 
 class TestConsistencyCheckerResolveConflicts:
     """ConsistencyChecker.resolve_conflicts is not defined in consistency.py,
@@ -1173,24 +1170,21 @@ class TestConsistencyCheckerResolveConflicts:
 # Additional edge case tests
 # ============================================================================
 
+
 class TestEdgeCases:
 
     def test_text_similarity_est_nest_pas_no_match(self):
         # "n'est pas" is split into ["n'est", "pas"] by str.split(),
         # so the multi-word contradiction key ("est", "n'est pas") won't match.
         # The function uses word-level Jaccard instead.
-        sim = _calculate_text_similarity(
-            "il est coupable", "il n'est pas coupable"
-        )
+        sim = _calculate_text_similarity("il est coupable", "il n'est pas coupable")
         assert sim > 0  # partial word overlap, no contradiction detected
 
     def test_text_similarity_peut_ne_peut_pas_no_match(self):
         # Same issue: "ne peut pas" becomes ["ne", "peut", "pas"]
         # "peut" appears in both sets so Jaccard > 0, but multi-word
         # contradiction key doesn't trigger.
-        sim = _calculate_text_similarity(
-            "il peut partir", "il ne peut pas partir"
-        )
+        sim = _calculate_text_similarity("il peut partir", "il ne peut pas partir")
         assert sim > 0
 
     def test_extract_logical_structure_mixed_case_ou(self):
@@ -1239,10 +1233,12 @@ class TestEdgeCases:
         assert chains[0]["premises"] == ["premise_str"]
 
     def test_generate_final_assessment_high_confidence_ratio(self):
-        result = _generate_final_assessment({
-            "high_confidence_conclusions": ["a"],
-            "validated_beliefs": ["a", "b"],
-        })
+        result = _generate_final_assessment(
+            {
+                "high_confidence_conclusions": ["a"],
+                "validated_beliefs": ["a", "b"],
+            }
+        )
         assert result["high_confidence_ratio"] == result["quality_score"]
 
     async def test_apply_resolution_chosen_but_wrong_strategy(self):

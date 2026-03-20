@@ -13,7 +13,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-
 # ── Fixtures ─────────────────────────────────────────────────────
 
 

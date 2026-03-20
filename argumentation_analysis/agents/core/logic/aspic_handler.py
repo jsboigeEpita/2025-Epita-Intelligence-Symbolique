@@ -41,12 +41,16 @@ class ASPICHandler:
             "org.tweetyproject.arg.aspic.ruleformulagenerator.PlFormulaGenerator"
         )
         self.PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
-        self.Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+        self.Proposition = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.Proposition"
+        )
         # Dung reasoners for the generated AF
         self.SimplePreferredReasoner = jpype.JClass(
             "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner"
         )
-        self.AspicParser = jpype.JClass("org.tweetyproject.arg.aspic.parser.AspicParser")
+        self.AspicParser = jpype.JClass(
+            "org.tweetyproject.arg.aspic.parser.AspicParser"
+        )
 
     def analyze_aspic_framework(
         self,

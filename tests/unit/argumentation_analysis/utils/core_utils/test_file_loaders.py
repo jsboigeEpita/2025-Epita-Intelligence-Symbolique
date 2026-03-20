@@ -12,8 +12,8 @@ from argumentation_analysis.core.utils.file_loaders import (
     load_document_content,
 )
 
-
 # ── load_json_file ──
+
 
 class TestLoadJsonFile:
     def test_load_dict(self, tmp_path):
@@ -24,7 +24,7 @@ class TestLoadJsonFile:
 
     def test_load_list(self, tmp_path):
         f = tmp_path / "data.json"
-        f.write_text('[1, 2, 3]', encoding="utf-8")
+        f.write_text("[1, 2, 3]", encoding="utf-8")
         result = load_json_file(f)
         assert result == [1, 2, 3]
 
@@ -70,6 +70,7 @@ class TestLoadJsonFile:
 
 # ── load_extracts ──
 
+
 class TestLoadExtracts:
     def test_returns_list(self, tmp_path):
         f = tmp_path / "extracts.json"
@@ -93,6 +94,7 @@ class TestLoadExtracts:
 
 
 # ── load_text_file ──
+
 
 class TestLoadTextFile:
     def test_basic(self, tmp_path):
@@ -129,6 +131,7 @@ class TestLoadTextFile:
 
 
 # ── load_document_content ──
+
 
 class TestLoadDocumentContent:
     def test_txt_file(self, tmp_path):

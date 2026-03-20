@@ -20,7 +20,6 @@ from argumentation_analysis.core.bootstrap import (
     _load_tweety_classes,
 )
 
-
 # ===========================================================================
 # ProjectContext Tests
 # ===========================================================================
@@ -288,9 +287,7 @@ class TestInitializeProjectEnvironment:
         with patch(
             "argumentation_analysis.core.bootstrap.initialize_jvm_func",
             mock_init_jvm,
-        ), patch(
-            "argumentation_analysis.core.bootstrap._load_tweety_classes"
-        ), patch(
+        ), patch("argumentation_analysis.core.bootstrap._load_tweety_classes"), patch(
             "argumentation_analysis.core.bootstrap.CryptoService_class", None
         ), patch(
             "argumentation_analysis.core.bootstrap.DefinitionService_class", None

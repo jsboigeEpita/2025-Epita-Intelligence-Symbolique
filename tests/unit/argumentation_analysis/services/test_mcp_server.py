@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # 1. safe_serialize tests
 # ---------------------------------------------------------------------------
+
 
 class TestSafeSerialize:
     """Tests for _serialization.safe_serialize."""
@@ -27,6 +27,7 @@ class TestSafeSerialize:
         from argumentation_analysis.services.mcp_server.tools._serialization import (
             safe_serialize,
         )
+
         return safe_serialize
 
     def test_none(self):
@@ -128,6 +129,7 @@ class TestSafeSerialize:
 # 2. SessionManager tests
 # ---------------------------------------------------------------------------
 
+
 class TestSessionManager:
     """Tests for session_manager.SessionManager."""
 
@@ -135,6 +137,7 @@ class TestSessionManager:
         from argumentation_analysis.services.mcp_server.session_manager import (
             SessionManager,
         )
+
         return SessionManager(**kwargs)
 
     def test_create_session_returns_state(self):
@@ -236,6 +239,7 @@ class TestSessionManager:
         from argumentation_analysis.services.mcp_server.session_manager import (
             SessionState,
         )
+
         ss = SessionState(
             session_id="test",
             created_at=1.0,
@@ -253,6 +257,7 @@ class TestSessionManager:
 # 3. AppServices tests
 # ---------------------------------------------------------------------------
 
+
 class TestAppServices:
     """Tests for main.AppServices."""
 
@@ -261,9 +266,11 @@ class TestAppServices:
     @patch("argumentation_analysis.services.mcp_server.main.ValidationService")
     @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
     @patch("argumentation_analysis.services.mcp_server.main.LogicService")
-    def test_init_creates_services(self, mock_logic, mock_analysis,
-                                    mock_validation, mock_fallacy, mock_framework):
+    def test_init_creates_services(
+        self, mock_logic, mock_analysis, mock_validation, mock_fallacy, mock_framework
+    ):
         from argumentation_analysis.services.mcp_server.main import AppServices
+
         app = AppServices()
         mock_logic.assert_called_once()
         mock_analysis.assert_called_once()
@@ -277,8 +284,15 @@ class TestAppServices:
     @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
     @patch("argumentation_analysis.services.mcp_server.main.LogicService")
     @patch("argumentation_analysis.services.mcp_server.main.jpype")
-    def test_is_healthy_jvm_running(self, mock_jpype, mock_logic, mock_analysis,
-                                     mock_validation, mock_fallacy, mock_framework):
+    def test_is_healthy_jvm_running(
+        self,
+        mock_jpype,
+        mock_logic,
+        mock_analysis,
+        mock_validation,
+        mock_fallacy,
+        mock_framework,
+    ):
         mock_jpype.isJVMStarted.return_value = True
         mock_logic.return_value.is_healthy.return_value = {"status": "ok"}
         mock_analysis.return_value.is_healthy.return_value = {"status": "ok"}
@@ -287,6 +301,7 @@ class TestAppServices:
         mock_framework.return_value.is_healthy.return_value = {"status": "ok"}
 
         from argumentation_analysis.services.mcp_server.main import AppServices
+
         app = AppServices()
         health = app.is_healthy()
         assert health["jvm"]["running"] is True
@@ -298,13 +313,27 @@ class TestAppServices:
     @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
     @patch("argumentation_analysis.services.mcp_server.main.LogicService")
     @patch("argumentation_analysis.services.mcp_server.main.jpype")
-    def test_is_healthy_jvm_not_running(self, mock_jpype, mock_logic, mock_analysis,
-                                         mock_validation, mock_fallacy, mock_framework):
+    def test_is_healthy_jvm_not_running(
+        self,
+        mock_jpype,
+        mock_logic,
+        mock_analysis,
+        mock_validation,
+        mock_fallacy,
+        mock_framework,
+    ):
         mock_jpype.isJVMStarted.return_value = False
-        for m in [mock_logic, mock_analysis, mock_validation, mock_fallacy, mock_framework]:
+        for m in [
+            mock_logic,
+            mock_analysis,
+            mock_validation,
+            mock_fallacy,
+            mock_framework,
+        ]:
             m.return_value.is_healthy.return_value = {"status": "ok"}
 
         from argumentation_analysis.services.mcp_server.main import AppServices
+
         app = AppServices()
         health = app.is_healthy()
         assert health["jvm"]["running"] is False
@@ -315,22 +344,31 @@ class TestAppServices:
 # 4. MCPService tests — tool methods
 # ---------------------------------------------------------------------------
 
+
 def _make_mcp_service():
     """Create an MCPService with all heavy dependencies mocked."""
-    with patch("argumentation_analysis.services.mcp_server.main.FastMCP") as mock_fmcp, \
-         patch("argumentation_analysis.services.mcp_server.main.initialize_project_environment"), \
-         patch("argumentation_analysis.services.mcp_server.main.AppServices") as mock_app, \
-         patch("argumentation_analysis.services.mcp_server.main.jpype") as mock_jpype, \
-         patch.dict("sys.modules", {
-             "argumentation_analysis.services.mcp_server.tools.workflow_tools": MagicMock(),
-             "argumentation_analysis.services.mcp_server.tools.conversation_tools": MagicMock(),
-             "argumentation_analysis.services.mcp_server.tools.capability_tools": MagicMock(),
-             "argumentation_analysis.services.mcp_server.tools.specialized_tools": MagicMock(),
-         }):
+    with patch(
+        "argumentation_analysis.services.mcp_server.main.FastMCP"
+    ) as mock_fmcp, patch(
+        "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
+    ), patch(
+        "argumentation_analysis.services.mcp_server.main.AppServices"
+    ) as mock_app, patch(
+        "argumentation_analysis.services.mcp_server.main.jpype"
+    ) as mock_jpype, patch.dict(
+        "sys.modules",
+        {
+            "argumentation_analysis.services.mcp_server.tools.workflow_tools": MagicMock(),
+            "argumentation_analysis.services.mcp_server.tools.conversation_tools": MagicMock(),
+            "argumentation_analysis.services.mcp_server.tools.capability_tools": MagicMock(),
+            "argumentation_analysis.services.mcp_server.tools.specialized_tools": MagicMock(),
+        },
+    ):
         mock_fmcp.return_value = MagicMock()
         mock_jpype.isJVMStarted.return_value = True
         mock_app.return_value = MagicMock()
         from argumentation_analysis.services.mcp_server.main import MCPService
+
         svc = MCPService("test_mcp")
     return svc
 
@@ -344,31 +382,48 @@ class TestMCPServiceInit:
         assert svc.services is not None
 
     def test_init_failure_raises_runtime_error(self):
-        with patch("argumentation_analysis.services.mcp_server.main.FastMCP") as mock_fmcp, \
-             patch("argumentation_analysis.services.mcp_server.main.initialize_project_environment",
-                   side_effect=Exception("init failed")):
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.FastMCP"
+        ) as mock_fmcp, patch(
+            "argumentation_analysis.services.mcp_server.main.initialize_project_environment",
+            side_effect=Exception("init failed"),
+        ):
             mock_fmcp.return_value = MagicMock()
             from argumentation_analysis.services.mcp_server.main import MCPService
+
             with pytest.raises(RuntimeError, match="init failed"):
                 MCPService("failing_mcp")
 
     def test_v2_tools_failure_is_silent(self):
         """V2 tool registration failure should not crash init."""
-        with patch("argumentation_analysis.services.mcp_server.main.FastMCP") as mock_fmcp, \
-             patch("argumentation_analysis.services.mcp_server.main.initialize_project_environment"), \
-             patch("argumentation_analysis.services.mcp_server.main.AppServices"), \
-             patch("argumentation_analysis.services.mcp_server.main.jpype"):
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.FastMCP"
+        ) as mock_fmcp, patch(
+            "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
+        ), patch(
+            "argumentation_analysis.services.mcp_server.main.AppServices"
+        ), patch(
+            "argumentation_analysis.services.mcp_server.main.jpype"
+        ):
             mock_fmcp.return_value = MagicMock()
             # Make v2 imports fail
             import builtins
+
             original_import = builtins.__import__
+
             def failing_import(name, *args, **kwargs):
-                if "workflow_tools" in name or "conversation_tools" in name or \
-                   "capability_tools" in name or "specialized_tools" in name:
+                if (
+                    "workflow_tools" in name
+                    or "conversation_tools" in name
+                    or "capability_tools" in name
+                    or "specialized_tools" in name
+                ):
                     raise ImportError("no v2")
                 return original_import(name, *args, **kwargs)
+
             with patch("builtins.__import__", side_effect=failing_import):
                 from argumentation_analysis.services.mcp_server.main import MCPService
+
                 svc = MCPService("test_no_v2")
                 # Should not raise
                 assert svc._initialized is True
@@ -380,7 +435,9 @@ class TestMCPServiceHealthCheck:
     async def test_health_check_healthy(self):
         svc = _make_mcp_service()
         svc.services.is_healthy.return_value = {"all": "ok"}
-        with patch("argumentation_analysis.services.mcp_server.main.jpype") as mock_jpype:
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.jpype"
+        ) as mock_jpype:
             mock_jpype.isJVMStarted.return_value = True
             result = await svc.health_check()
         assert result["status"] == "healthy"
@@ -389,7 +446,9 @@ class TestMCPServiceHealthCheck:
     async def test_health_check_unhealthy(self):
         svc = _make_mcp_service()
         svc.services.is_healthy.return_value = {"all": "ok"}
-        with patch("argumentation_analysis.services.mcp_server.main.jpype") as mock_jpype:
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.jpype"
+        ) as mock_jpype:
             mock_jpype.isJVMStarted.return_value = False
             result = await svc.health_check()
         assert result["status"] == "unhealthy"
@@ -397,7 +456,9 @@ class TestMCPServiceHealthCheck:
     async def test_health_check_error(self):
         svc = _make_mcp_service()
         svc.services.is_healthy.side_effect = Exception("boom")
-        with patch("argumentation_analysis.services.mcp_server.main.jpype") as mock_jpype:
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.jpype"
+        ) as mock_jpype:
             mock_jpype.isJVMStarted.return_value = True
             result = await svc.health_check()
         assert result["status"] == "error"
@@ -418,19 +479,24 @@ class TestMCPServiceAnalyzeText:
     async def test_analyze_text_validation_error(self):
         svc = _make_mcp_service()
         from pydantic import ValidationError
+
         # Trigger validation error via invalid severity_threshold
         # We mock the AnalysisRequest to raise
-        with patch("argumentation_analysis.services.mcp_server.main.AnalysisRequest",
-                    side_effect=ValidationError.from_exception_data(
-                        title="AnalysisRequest",
-                        line_errors=[{
-                            "type": "string_type",
-                            "loc": ("text",),
-                            "msg": "bad",
-                            "input": None,
-                            "ctx": {},
-                        }],
-                    )):
+        with patch(
+            "argumentation_analysis.services.mcp_server.main.AnalysisRequest",
+            side_effect=ValidationError.from_exception_data(
+                title="AnalysisRequest",
+                line_errors=[
+                    {
+                        "type": "string_type",
+                        "loc": ("text",),
+                        "msg": "bad",
+                        "input": None,
+                        "ctx": {},
+                    }
+                ],
+            ),
+        ):
             result = await svc.analyze_text("test")
         assert result["status_code"] == 400
 
@@ -560,9 +626,7 @@ class TestMCPServiceLogicTools:
         svc = _make_mcp_service()
         mock_result = MagicMock()
         mock_result.model_dump.return_value = {"answer": True}
-        svc.services.logic_service.execute_query = AsyncMock(
-            return_value=mock_result
-        )
+        svc.services.logic_service.execute_query = AsyncMock(return_value=mock_result)
         result = await svc.execute_logic_query("bs1", "p", "propositional")
         assert result == {"answer": True}
 
@@ -660,6 +724,7 @@ class TestMCPServiceRun:
 # 5. Tool registration module tests (workflow, capability, specialized, conversation)
 # ---------------------------------------------------------------------------
 
+
 class TestWorkflowToolsRegistration:
     """Tests for workflow_tools.register_workflow_tools."""
 
@@ -667,6 +732,7 @@ class TestWorkflowToolsRegistration:
         from argumentation_analysis.services.mcp_server.tools.workflow_tools import (
             register_workflow_tools,
         )
+
         mock_mcp = MagicMock()
         mock_mcp.tool.return_value = lambda fn: fn
         register_workflow_tools(mock_mcp, MagicMock())
@@ -680,6 +746,7 @@ class TestCapabilityToolsRegistration:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         mock_mcp = MagicMock()
         mock_mcp.tool.return_value = lambda fn: fn
         register_capability_tools(mock_mcp, MagicMock())
@@ -693,6 +760,7 @@ class TestSpecializedToolsRegistration:
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
+
         mock_mcp = MagicMock()
         mock_mcp.tool.return_value = lambda fn: fn
         register_specialized_tools(mock_mcp, MagicMock())
@@ -706,6 +774,7 @@ class TestConversationToolsRegistration:
         from argumentation_analysis.services.mcp_server.tools.conversation_tools import (
             register_conversation_tools,
         )
+
         mock_mcp = MagicMock()
         mock_mcp.tool.return_value = lambda fn: fn
         register_conversation_tools(mock_mcp, MagicMock(), MagicMock())

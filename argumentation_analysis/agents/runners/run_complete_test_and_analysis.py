@@ -43,7 +43,6 @@ logging.basicConfig(
 logger = logging.getLogger("RunCompleteTestAndAnalysis")
 
 
-
 async def run_orchestration_test() -> Optional[str]:
     """
     Lance le script de test d'orchestration et récupère le chemin du fichier de trace.

@@ -16,7 +16,6 @@ from argumentation_analysis.core.capability_registry import (
     ComponentType,
 )
 
-
 # --- Build tests ---
 
 
@@ -157,17 +156,20 @@ class TestFactCheckExecution:
 
         registry = CapabilityRegistry()
         registry.register(
-            "quality", ComponentType.AGENT,
+            "quality",
+            ComponentType.AGENT,
             capabilities=["argument_quality"],
             invoke=AsyncMock(return_value={"note_finale": 6.5}),
         )
         registry.register(
-            "jtms", ComponentType.SERVICE,
+            "jtms",
+            ComponentType.SERVICE,
             capabilities=["belief_maintenance"],
             invoke=tracking_invoke,
         )
         registry.register(
-            "counter", ComponentType.AGENT,
+            "counter",
+            ComponentType.AGENT,
             capabilities=["counter_argument_generation"],
             invoke=counter_invoke,
         )

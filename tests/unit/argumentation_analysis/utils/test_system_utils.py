@@ -16,10 +16,10 @@ from argumentation_analysis.utils.system_utils import (
     check_and_install,
 )
 
-
 # ============================================================
 # ensure_directory_exists
 # ============================================================
+
 
 class TestEnsureDirectoryExists:
     def test_creates_missing_directory(self, tmp_path):
@@ -64,6 +64,7 @@ class TestEnsureDirectoryExists:
 # get_project_root
 # ============================================================
 
+
 class TestGetProjectRoot:
     def test_returns_path(self):
         root = get_project_root()
@@ -84,6 +85,7 @@ class TestGetProjectRoot:
 # is_running_in_notebook
 # ============================================================
 
+
 class TestIsRunningInNotebook:
     def test_not_in_notebook(self):
         # In pytest, ipykernel is typically not loaded
@@ -102,6 +104,7 @@ class TestIsRunningInNotebook:
 # check_and_install
 # ============================================================
 
+
 class TestCheckAndInstall:
     def test_existing_package_returns_true(self):
         # os is always available
@@ -118,7 +121,9 @@ class TestCheckAndInstall:
 
     def test_install_failure_returns_false(self):
         with patch("importlib.import_module", side_effect=ImportError):
-            with patch("subprocess.check_call", side_effect=Exception("install failed")):
+            with patch(
+                "subprocess.check_call", side_effect=Exception("install failed")
+            ):
                 result = check_and_install("fake_pkg_xyz", "fake-pkg-xyz")
                 assert result is False
 

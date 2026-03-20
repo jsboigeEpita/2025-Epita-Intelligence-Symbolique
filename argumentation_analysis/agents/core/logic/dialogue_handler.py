@@ -89,24 +89,28 @@ class DialogueHandler:
             # Build dialogue trace
             trace = []
             # Round 1: Proponent asserts topic
-            trace.append({
-                "round": 1,
-                "speaker": "proponent",
-                "action": "assert",
-                "argument": topic,
-            })
+            trace.append(
+                {
+                    "round": 1,
+                    "speaker": "proponent",
+                    "action": "assert",
+                    "argument": topic,
+                }
+            )
 
             # Simulate opponent responses
             round_num = 2
             for atk in opponent_attacks:
                 if atk[1] == topic or atk[1] in [a[0] for a in proponent_attacks]:
-                    trace.append({
-                        "round": round_num,
-                        "speaker": "opponent",
-                        "action": "attack",
-                        "argument": atk[0],
-                        "target": atk[1],
-                    })
+                    trace.append(
+                        {
+                            "round": round_num,
+                            "speaker": "opponent",
+                            "action": "attack",
+                            "argument": atk[0],
+                            "target": atk[1],
+                        }
+                    )
                     round_num += 1
                     if round_num > max_rounds:
                         break
@@ -115,13 +119,15 @@ class DialogueHandler:
             for atk in proponent_attacks:
                 for opp_atk in opponent_attacks:
                     if atk[1] == opp_atk[0]:
-                        trace.append({
-                            "round": round_num,
-                            "speaker": "proponent",
-                            "action": "defend",
-                            "argument": atk[0],
-                            "target": atk[1],
-                        })
+                        trace.append(
+                            {
+                                "round": round_num,
+                                "speaker": "proponent",
+                                "action": "defend",
+                                "argument": atk[0],
+                                "target": atk[1],
+                            }
+                        )
                         round_num += 1
                         if round_num > max_rounds:
                             break

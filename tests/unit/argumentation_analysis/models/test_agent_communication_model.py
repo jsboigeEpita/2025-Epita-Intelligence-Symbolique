@@ -21,7 +21,6 @@ from argumentation_analysis.models.agent_communication_model import (
     create_sync_request_message,
 )
 
-
 # ── Enums ──
 
 
@@ -92,8 +91,8 @@ class TestMessageMetadata:
 
     def test_increment_retry(self):
         m = self._make_metadata(max_retries=2)
-        assert m.increment_retry() is True   # retry_count = 1
-        assert m.increment_retry() is True   # retry_count = 2
+        assert m.increment_retry() is True  # retry_count = 1
+        assert m.increment_retry() is True  # retry_count = 2
         assert m.increment_retry() is False  # retry_count = 3 > max_retries=2
 
     def test_is_expired_no_timeout(self):
@@ -333,7 +332,9 @@ class TestCommunicationProtocol:
 
     def test_can_send_unsupported_type(self, protocol):
         protocol.add_agent("sherlock")
-        ok, reason = protocol.can_send_message("sherlock", MessageType.ERROR_NOTIFICATION)
+        ok, reason = protocol.can_send_message(
+            "sherlock", MessageType.ERROR_NOTIFICATION
+        )
         assert ok is False
         assert "non supporté" in reason
 
@@ -347,8 +348,10 @@ class TestCommunicationProtocol:
     def test_validate_message_valid(self, protocol):
         protocol.add_agent("sherlock")
         metadata = MessageMetadata(
-            message_id="", timestamp=datetime.now(),
-            sender_id="sherlock", receiver_id="watson",
+            message_id="",
+            timestamp=datetime.now(),
+            sender_id="sherlock",
+            receiver_id="watson",
             message_type=MessageType.BELIEF_SHARE,
             priority=MessagePriority.NORMAL,
         )
@@ -362,8 +365,10 @@ class TestCommunicationProtocol:
 
     def test_validate_message_non_participant(self, protocol):
         metadata = MessageMetadata(
-            message_id="", timestamp=datetime.now(),
-            sender_id="unknown", receiver_id="watson",
+            message_id="",
+            timestamp=datetime.now(),
+            sender_id="unknown",
+            receiver_id="watson",
             message_type=MessageType.BELIEF_SHARE,
             priority=MessagePriority.NORMAL,
         )
@@ -577,7 +582,11 @@ class TestIntegration:
 
         # Create validation request
         msg = create_validation_request_message(
-            "sherlock", "watson", "b1", {"strict": True}, "session1",
+            "sherlock",
+            "watson",
+            "b1",
+            {"strict": True},
+            "session1",
         )
 
         # Validate message

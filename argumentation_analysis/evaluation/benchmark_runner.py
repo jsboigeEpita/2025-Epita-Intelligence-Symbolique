@@ -39,13 +39,16 @@ class BenchmarkResult:
     def __post_init__(self):
         if not self.timestamp:
             from datetime import datetime
+
             self.timestamp = datetime.now().isoformat()
 
 
 class BenchmarkRunner:
     """Execute benchmark cells (workflow × model × document)."""
 
-    def __init__(self, model_registry: ModelRegistry, dataset_path: Optional[str] = None):
+    def __init__(
+        self, model_registry: ModelRegistry, dataset_path: Optional[str] = None
+    ):
         self.model_registry = model_registry
         self._dataset: Optional[List[Dict[str, Any]]] = None
         self._dataset_path = dataset_path
@@ -53,12 +56,20 @@ class BenchmarkRunner:
     def load_dataset_unencrypted(self, path: str) -> List[Dict[str, Any]]:
         """Load the unencrypted dataset JSON."""
         with open(path, "r", encoding="utf-8") as f:
-            self._dataset = json.load(f)
+            data = json.load(f)
+        self._dataset = data.get("documents", [])
         logger.info(f"Loaded {len(self._dataset)} documents from {path}")
         return self._dataset
 
-    def load_dataset_encrypted(self, path: str, passphrase: str) -> List[Dict[str, Any]]:
-        """Load the encrypted dataset (Fernet + gzip)."""
+    def load_dataset_encrypted(
+        self, path: str, passphrase: str
+    ) -> List[Dict[str, Any]]:
+        """Load the encrypted dataset (Fernet + gzip).
+
+        Supports two formats:
+        - New format: {"documents": [...]} (same as unencrypted corpus)
+        - Legacy format: list of sources with extracts, each extract becomes a document
+        """
         from argumentation_analysis.core.utils.crypto_utils import (
             derive_encryption_key,
             decrypt_data_with_fernet,
@@ -76,9 +87,45 @@ class BenchmarkRunner:
             raise ValueError("Decryption failed — wrong passphrase?")
 
         json_data = gzip.decompress(dec_data)
-        self._dataset = json.loads(json_data)
+        data = json.loads(json_data)
+
+        if isinstance(data, dict) and "documents" in data:
+            self._dataset = data["documents"]
+        elif isinstance(data, list):
+            # Source/extract format: flatten into documents
+            self._dataset = self._sources_to_documents(data)
+        else:
+            self._dataset = []
+
         logger.info(f"Loaded {len(self._dataset)} documents from encrypted {path}")
         return self._dataset
+
+    @staticmethod
+    def _sources_to_documents(
+        sources: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Convert source/extract format to flat document list.
+
+        Each extract with text becomes a document. Source metadata is
+        preserved but text content is sanitized from logs (privacy).
+        """
+        documents = []
+        for src_idx, source in enumerate(sources):
+            source_name = source.get("source_name", f"source_{src_idx}")
+            for ext_idx, extract in enumerate(source.get("extracts", [])):
+                text = extract.get("extract_text") or extract.get("full_text") or ""
+                if not text:
+                    continue
+                doc = {
+                    "id": f"src{src_idx}_ext{ext_idx}",
+                    "source_name": source_name,
+                    "extract_name": extract.get("extract_name", f"extract_{ext_idx}"),
+                    "text": text,
+                    "source_index": src_idx,
+                    "extract_index": ext_idx,
+                }
+                documents.append(doc)
+        return documents
 
     @property
     def dataset(self) -> List[Dict[str, Any]]:
@@ -89,7 +136,8 @@ class BenchmarkRunner:
     def get_document_text(self, index: int) -> str:
         """Get the full text of a document by index."""
         doc = self.dataset[index]
-        text = doc.get("full_text") or ""
+        # Try multiple field names: full_text, text, content
+        text = doc.get("full_text") or doc.get("text") or doc.get("content") or ""
         if not text:
             # Try extracting from extracts
             for ext in doc.get("extracts", []):
@@ -100,7 +148,9 @@ class BenchmarkRunner:
 
     def get_document_name(self, index: int) -> str:
         doc = self.dataset[index]
-        return doc.get("source_name", doc.get("name", f"document_{index}"))
+        return doc.get(
+            "source_name", doc.get("name", doc.get("id", f"document_{index}"))
+        )
 
     async def run_cell(
         self,
@@ -170,9 +220,19 @@ class BenchmarkRunner:
             serializable_phases = {}
             for pname, presult in phases.items():
                 serializable_phases[pname] = {
-                    "status": presult.status.value if hasattr(presult.status, "value") else str(presult.status),
-                    "capability": presult.capability if hasattr(presult, "capability") else None,
-                    "has_output": presult.output is not None if hasattr(presult, "output") else False,
+                    "status": (
+                        presult.status.value
+                        if hasattr(presult.status, "value")
+                        else str(presult.status)
+                    ),
+                    "capability": (
+                        presult.capability if hasattr(presult, "capability") else None
+                    ),
+                    "has_output": (
+                        presult.output is not None
+                        if hasattr(presult, "output")
+                        else False
+                    ),
                 }
 
             return BenchmarkResult(

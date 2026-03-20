@@ -56,7 +56,9 @@ try:
     PROJ_ROOT = get_project_root_robust()
     LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
     TWEETY_VERSION = settings.jvm.tweety_version
-    TWEETY_JAR_FILENAME = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+    TWEETY_JAR_FILENAME = (
+        f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+    )
     MIN_JAVA_VERSION = settings.jvm.min_java_version
     JDK_VERSION = settings.jvm.jdk_version
     JDK_BUILD = settings.jvm.jdk_build
@@ -203,9 +205,7 @@ def download_tweety_jars(
     return success
 
 
-def download_clingo(
-    version: str = None, target_dir: Optional[Path] = None
-) -> bool:
+def download_clingo(version: str = None, target_dir: Optional[Path] = None) -> bool:
     """
     Download Clingo ASP solver binary for the current platform.
     Inspired by CoursIA download_tweety_tools.py.
@@ -239,7 +239,9 @@ def download_clingo(
         archive_url = f"{base_url}/{archive_name}"
         archive_path = clingo_dir / archive_name
 
-        success, _ = download_file(archive_url, archive_path, description=f"Clingo {version}")
+        success, _ = download_file(
+            archive_url, archive_path, description=f"Clingo {version}"
+        )
         if not success:
             logger.error(f"Failed to download Clingo from {archive_url}")
             return False
@@ -265,11 +267,14 @@ def download_clingo(
 
     elif platform.system() == "Linux":
         import tarfile
+
         archive_name = f"clingo-{version}-linux-x86_64.tar.gz"
         archive_url = f"{base_url}/{archive_name}"
         archive_path = clingo_dir / archive_name
 
-        success, _ = download_file(archive_url, archive_path, description=f"Clingo {version}")
+        success, _ = download_file(
+            archive_url, archive_path, description=f"Clingo {version}"
+        )
         if not success:
             return False
 
@@ -291,7 +296,9 @@ def download_clingo(
             logger.error(f"Error extracting Clingo: {e}")
             return False
     else:
-        logger.warning(f"Automatic Clingo download not available for {platform.system()}")
+        logger.warning(
+            f"Automatic Clingo download not available for {platform.system()}"
+        )
         return False
 
 
@@ -321,7 +328,9 @@ def download_native_sat_libs(target_dir: Optional[Path] = None) -> bool:
         url = base_url + github_path
         success, _ = download_file(url, dest, description=lib_name)
         if not success:
-            logger.warning(f"Failed to download {lib_name} — not critical if embedded in JAR")
+            logger.warning(
+                f"Failed to download {lib_name} — not critical if embedded in JAR"
+            )
             all_ok = False
     return all_ok
 
@@ -345,24 +354,32 @@ def download_external_tools() -> Dict[str, bool]:
     results["native_sat"] = download_native_sat_libs()
 
     # 4. EProver — check presence only (manual install, already committed)
-    eprover_path = EXT_TOOLS_DIR / "EProver" / (
-        "eprover.exe" if platform.system() == "Windows" else "eprover"
+    eprover_path = (
+        EXT_TOOLS_DIR
+        / "EProver"
+        / ("eprover.exe" if platform.system() == "Windows" else "eprover")
     )
     results["eprover"] = eprover_path.exists()
     if results["eprover"]:
         logger.info(f"EProver found: {eprover_path}")
     else:
-        logger.warning(f"EProver not found at {eprover_path} — install manually from https://eprover.org/")
+        logger.warning(
+            f"EProver not found at {eprover_path} — install manually from https://eprover.org/"
+        )
 
     # 5. SPASS — check presence only (manual install on Windows)
-    spass_path = EXT_TOOLS_DIR / "spass" / (
-        "SPASS.exe" if platform.system() == "Windows" else "SPASS"
+    spass_path = (
+        EXT_TOOLS_DIR
+        / "spass"
+        / ("SPASS.exe" if platform.system() == "Windows" else "SPASS")
     )
     results["spass"] = spass_path.exists()
     if results["spass"]:
         logger.info(f"SPASS found: {spass_path}")
     else:
-        logger.warning(f"SPASS not found at {spass_path} — install manually from https://www.spass-prover.org/")
+        logger.warning(
+            f"SPASS not found at {spass_path} — install manually from https://www.spass-prover.org/"
+        )
 
     # Summary
     ok = [k for k, v in results.items() if v]

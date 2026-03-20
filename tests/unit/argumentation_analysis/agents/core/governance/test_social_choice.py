@@ -10,6 +10,7 @@ Validates:
 - Pairwise matrix construction
 - GovernancePlugin social choice integration
 """
+
 import json
 import pytest
 
@@ -23,7 +24,6 @@ from argumentation_analysis.agents.core.governance.social_choice import (
     pairwise_matrix,
     SOCIAL_CHOICE_METHODS,
 )
-
 
 # ──── Test Data ────
 
@@ -272,6 +272,7 @@ class TestGovernancePluginSocialChoice:
     @pytest.fixture
     def plugin(self):
         from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
         return GovernancePlugin()
 
     def test_list_methods_includes_social_choice(self, plugin):

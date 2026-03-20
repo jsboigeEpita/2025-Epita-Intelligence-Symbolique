@@ -14,8 +14,8 @@ from argumentation_analysis.models.investigation_session_model import (
     InvestigationSessionModel,
 )
 
-
 # ── Enums ──
+
 
 class TestEnums:
     def test_session_status_values(self):
@@ -34,6 +34,7 @@ class TestEnums:
 
 
 # ── SessionCheckpoint ──
+
 
 class TestSessionCheckpoint:
     def test_auto_id_generation(self):
@@ -96,6 +97,7 @@ class TestSessionCheckpoint:
 
 # ── SessionSummary ──
 
+
 class TestSessionSummary:
     @pytest.fixture
     def summary(self):
@@ -152,6 +154,7 @@ class TestSessionSummary:
 
 
 # ── InvestigationSessionModel ──
+
 
 class TestInvestigationSessionModel:
     @pytest.fixture
@@ -259,7 +262,9 @@ class TestInvestigationSessionModel:
 
     # -- Beliefs --
     def test_add_session_belief(self, session):
-        assert session.add_session_belief("b1", {"content": "suspect"}, "sherlock") is True
+        assert (
+            session.add_session_belief("b1", {"content": "suspect"}, "sherlock") is True
+        )
         assert "b1" in session.session_beliefs
         assert session.session_statistics["beliefs_created"] == 1
 
@@ -286,7 +291,10 @@ class TestInvestigationSessionModel:
 
     # -- Hypotheses --
     def test_add_hypothesis(self, session):
-        assert session.add_hypothesis("h1", {"text": "Colonel Mustard"}, "sherlock") is True
+        assert (
+            session.add_hypothesis("h1", {"text": "Colonel Mustard"}, "sherlock")
+            is True
+        )
         assert "h1" in session.hypotheses_under_test
         assert session.session_statistics["hypotheses_formulated"] == 1
 
@@ -384,10 +392,12 @@ class TestInvestigationSessionModel:
 
     def test_update_consistency_with_conflicts(self, session):
         session.start_phase("test")
-        session.update_consistency_state({
-            "is_consistent": False,
-            "conflicts": ["c1", "c2"],
-        })
+        session.update_consistency_state(
+            {
+                "is_consistent": False,
+                "conflicts": ["c1", "c2"],
+            }
+        )
         assert session.session_statistics["conflicts_detected"] == 2
 
     # -- Metrics --
@@ -433,6 +443,7 @@ class TestInvestigationSessionModel:
 
 # ── Integration ──
 
+
 class TestInvestigationIntegration:
     def test_full_investigation_lifecycle(self):
         """Full Cluedo investigation: register, start, evidence, hypotheses, validate, complete."""
@@ -463,7 +474,9 @@ class TestInvestigationIntegration:
         session.end_phase()
 
         # Link evidence
-        session.link_evidence_to_hypothesis("fingerprint_kitchen", "h_mustard", "supports")
+        session.link_evidence_to_hypothesis(
+            "fingerprint_kitchen", "h_mustard", "supports"
+        )
         session.link_evidence_to_hypothesis("weapon_rope", "h_plum", "contradicts")
 
         # Validation phase
@@ -473,10 +486,12 @@ class TestInvestigationIntegration:
         session.end_phase()
 
         # Complete
-        summary = session.complete_session({
-            "solution": "Colonel Mustard in the Kitchen with the Rope",
-            "confidence": 0.95,
-        })
+        summary = session.complete_session(
+            {
+                "solution": "Colonel Mustard in the Kitchen with the Rope",
+                "confidence": 0.95,
+            }
+        )
 
         assert summary.status == SessionStatus.COMPLETED
         assert summary.confidence_score == 0.95

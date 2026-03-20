@@ -16,11 +16,11 @@ from argumentation_analysis.services.fallacy_family_definitions import (
 )
 from argumentation_analysis.services.fallacy_taxonomy_service import FallacyFamily
 
-
 ALL_FAMILIES = list(FallacyFamily)
 
 
 # ── FALLACY_FAMILY_SEVERITY ──
+
 
 class TestSeverityDictionary:
     def test_all_families_present(self):
@@ -32,7 +32,9 @@ class TestSeverityDictionary:
 
     def test_base_severity_range(self):
         for family, info in FALLACY_FAMILY_SEVERITY.items():
-            assert 0.0 <= info["base_severity"] <= 1.0, f"{family} base_severity out of range"
+            assert (
+                0.0 <= info["base_severity"] <= 1.0
+            ), f"{family} base_severity out of range"
 
     def test_context_multipliers_range(self):
         for family, info in FALLACY_FAMILY_SEVERITY.items():
@@ -46,7 +48,9 @@ class TestSeverityDictionary:
 
     def test_all_have_keywords_medium(self):
         for family, info in FALLACY_FAMILY_SEVERITY.items():
-            assert "keywords_medium_severity" in info, f"{family} missing medium keywords"
+            assert (
+                "keywords_medium_severity" in info
+            ), f"{family} missing medium keywords"
             assert len(info["keywords_medium_severity"]) > 0
 
     def test_all_have_keywords_low(self):
@@ -71,6 +75,7 @@ class TestSeverityDictionary:
 
 # ── FALLACY_FAMILY_KEYWORDS ──
 
+
 class TestKeywordsDictionary:
     def test_all_families_present(self):
         for family in ALL_FAMILIES:
@@ -81,15 +86,21 @@ class TestKeywordsDictionary:
 
     def test_all_have_primary(self):
         for family, kw in FALLACY_FAMILY_KEYWORDS.items():
-            assert "primary" in kw and len(kw["primary"]) > 0, f"{family} missing primary"
+            assert (
+                "primary" in kw and len(kw["primary"]) > 0
+            ), f"{family} missing primary"
 
     def test_all_have_secondary(self):
         for family, kw in FALLACY_FAMILY_KEYWORDS.items():
-            assert "secondary" in kw and len(kw["secondary"]) > 0, f"{family} missing secondary"
+            assert (
+                "secondary" in kw and len(kw["secondary"]) > 0
+            ), f"{family} missing secondary"
 
     def test_all_have_patterns(self):
         for family, kw in FALLACY_FAMILY_KEYWORDS.items():
-            assert "patterns" in kw and len(kw["patterns"]) > 0, f"{family} missing patterns"
+            assert (
+                "patterns" in kw and len(kw["patterns"]) > 0
+            ), f"{family} missing patterns"
 
     def test_patterns_are_valid_regex(self):
         for family, kw in FALLACY_FAMILY_KEYWORDS.items():
@@ -117,10 +128,13 @@ class TestKeywordsDictionary:
     def test_no_duplicate_primary_keywords_within_family(self):
         for family, kw in FALLACY_FAMILY_KEYWORDS.items():
             primary = kw["primary"]
-            assert len(primary) == len(set(primary)), f"{family} has duplicate primary keywords"
+            assert len(primary) == len(
+                set(primary)
+            ), f"{family} has duplicate primary keywords"
 
 
 # ── FALLACY_FAMILY_CONTEXTS ──
+
 
 class TestContextsDictionary:
     def test_all_families_present(self):
@@ -151,6 +165,7 @@ class TestContextsDictionary:
 
 # ── FALLACY_FAMILY_METRICS ──
 
+
 class TestMetricsDictionary:
     def test_all_families_present(self):
         for family in ALL_FAMILIES:
@@ -162,13 +177,17 @@ class TestMetricsDictionary:
     def test_all_metrics_have_description_and_weight(self):
         for family, metrics in FALLACY_FAMILY_METRICS.items():
             for metric_name, metric_info in metrics.items():
-                assert "description" in metric_info, f"{family}/{metric_name} missing description"
+                assert (
+                    "description" in metric_info
+                ), f"{family}/{metric_name} missing description"
                 assert "weight" in metric_info, f"{family}/{metric_name} missing weight"
 
     def test_weights_sum_to_one(self):
         for family, metrics in FALLACY_FAMILY_METRICS.items():
             total = sum(m["weight"] for m in metrics.values())
-            assert abs(total - 1.0) < 0.01, f"{family} weights sum to {total}, expected 1.0"
+            assert (
+                abs(total - 1.0) < 0.01
+            ), f"{family} weights sum to {total}, expected 1.0"
 
     def test_weights_positive(self):
         for family, metrics in FALLACY_FAMILY_METRICS.items():
@@ -187,6 +206,7 @@ class TestMetricsDictionary:
 
 
 # ── Helper Functions ──
+
 
 class TestGetFamilySeverityInfo:
     def test_known_family(self):

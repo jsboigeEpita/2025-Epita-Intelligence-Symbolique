@@ -11,6 +11,7 @@ Validates:
 - Solver benchmarking
 - PLHandler SAT dispatch methods
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -54,10 +55,13 @@ class TestPLSolverChoiceEnum:
         assert s.pysat_solver == "cadical195"
 
     def test_settings_env_override(self):
-        with patch.dict("os.environ", {
-            "ARG_ANALYSIS_PL_SOLVER": "pysat",
-            "ARG_ANALYSIS_PYSAT_SOLVER": "glucose42",
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "ARG_ANALYSIS_PL_SOLVER": "pysat",
+                "ARG_ANALYSIS_PYSAT_SOLVER": "glucose42",
+            },
+        ):
             s = ArgAnalysisSettings()
             assert s.pl_solver == PLSolverChoice.PYSAT
             assert s.pysat_solver == "glucose42"
@@ -389,8 +393,8 @@ class TestMaxSAT:
         handler = SATHandler()
         hard = [[1, 2]]  # x1 OR x2 must hold
         soft = [
-            ([1], 3),    # prefer x1=True (weight 3)
-            ([-1], 1),   # prefer x1=False (weight 1)
+            ([1], 3),  # prefer x1=True (weight 3)
+            ([-1], 1),  # prefer x1=False (weight 1)
         ]
         model, cost = handler.solve_maxsat(hard, soft)
         assert model is not None
@@ -484,6 +488,7 @@ class TestPLHandlerSATDispatch:
             mock_init.get_pl_parser.return_value = MagicMock()
 
             from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
             handler = PLHandler(mock_init)
             return handler
 

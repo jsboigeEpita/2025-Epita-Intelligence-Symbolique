@@ -20,7 +20,17 @@ except ImportError:
     PYSAT_AVAILABLE = False
 
 try:
-    from z3 import Bool, Not, Or, Implies, Solver as Z3Solver, sat, unsat, is_false, Z3_get_ast_id
+    from z3 import (
+        Bool,
+        Not,
+        Or,
+        Implies,
+        Solver as Z3Solver,
+        sat,
+        unsat,
+        is_false,
+        Z3_get_ast_id,
+    )
 
     Z3_AVAILABLE = True
 except ImportError:
@@ -46,9 +56,7 @@ class SATHandler:
 
     def __init__(self, default_solver: str = "cadical195"):
         if not PYSAT_AVAILABLE:
-            raise RuntimeError(
-                "PySAT is not installed. Run: pip install python-sat"
-            )
+            raise RuntimeError("PySAT is not installed. Run: pip install python-sat")
         self._default_solver = default_solver
         self._var_map: Dict[str, int] = {}
         self._next_var = 1
@@ -130,12 +138,14 @@ class SATHandler:
                 # Encoded as: (aux => (left => right)) & (aux => (right => left)) &
                 #              ((left => right) & (right => left) => aux)
                 # Simplified CNF:
-                clauses.extend([
-                    [-aux, -left, right],
-                    [-aux, left, -right],
-                    [aux, left, right],
-                    [aux, -left, -right],
-                ])
+                clauses.extend(
+                    [
+                        [-aux, -left, right],
+                        [-aux, left, -right],
+                        [aux, left, right],
+                        [aux, -left, -right],
+                    ]
+                )
                 left = aux
             return left
 
@@ -146,11 +156,13 @@ class SATHandler:
                 right = parse_or()
                 aux = self._new_aux_var()
                 # aux <=> (left => right) i.e. aux <=> (!left | right)
-                clauses.extend([
-                    [-aux, -left, right],
-                    [aux, left],
-                    [aux, -right],
-                ])
+                clauses.extend(
+                    [
+                        [-aux, -left, right],
+                        [aux, left],
+                        [aux, -right],
+                    ]
+                )
                 left = aux
             return left
 

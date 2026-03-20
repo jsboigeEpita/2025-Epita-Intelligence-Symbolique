@@ -10,8 +10,8 @@ from argumentation_analysis.reporting.document_assembler import (
     UnifiedReportTemplate,
 )
 
-
 # ── ReportMetadata ──
+
 
 class TestReportMetadata:
     def test_required_fields(self):
@@ -51,6 +51,7 @@ class TestReportMetadata:
 
 # ── UnifiedReportTemplate Init ──
 
+
 class TestTemplateInit:
     def test_default_config(self):
         t = UnifiedReportTemplate({})
@@ -77,11 +78,14 @@ class TestTemplateInit:
 
 # ── Render Dispatch ──
 
+
 class TestRenderDispatch:
     @pytest.fixture
     def metadata(self):
         return ReportMetadata(
-            source_component="test", analysis_type="unit", generated_at=datetime(2026, 1, 1)
+            source_component="test",
+            analysis_type="unit",
+            generated_at=datetime(2026, 1, 1),
         )
 
     def test_markdown_format(self, metadata):
@@ -115,6 +119,7 @@ class TestRenderDispatch:
 
 
 # ── Markdown Rendering ──
+
 
 class TestMarkdownRendering:
     @pytest.fixture
@@ -209,11 +214,7 @@ class TestMarkdownRendering:
         assert "72" in result
 
     def test_fallacy_zero_confidence(self, template, metadata):
-        data = {
-            "informal_analysis": {
-                "fallacies": [{"type": "Test", "confidence": 0}]
-            }
-        }
+        data = {"informal_analysis": {"fallacies": [{"type": "Test", "confidence": 0}]}}
         result = template.render(data, metadata)
         assert "Non calculée" in result
 
@@ -291,6 +292,7 @@ class TestMarkdownRendering:
 
 # ── Console Rendering ──
 
+
 class TestConsoleRendering:
     @pytest.fixture
     def template(self):
@@ -299,7 +301,9 @@ class TestConsoleRendering:
     @pytest.fixture
     def metadata(self):
         return ReportMetadata(
-            source_component="system", analysis_type="analysis", generated_at=datetime.now()
+            source_component="system",
+            analysis_type="analysis",
+            generated_at=datetime.now(),
         )
 
     def test_header_bar(self, template, metadata):
@@ -351,6 +355,7 @@ class TestConsoleRendering:
 
 # ── JSON Rendering ──
 
+
 class TestJsonRendering:
     @pytest.fixture
     def template(self):
@@ -359,7 +364,9 @@ class TestJsonRendering:
     @pytest.fixture
     def metadata(self):
         return ReportMetadata(
-            source_component="test", analysis_type="test", generated_at=datetime(2026, 1, 1)
+            source_component="test",
+            analysis_type="test",
+            generated_at=datetime(2026, 1, 1),
         )
 
     def test_valid_json(self, template, metadata):
@@ -382,6 +389,7 @@ class TestJsonRendering:
 
 # ── HTML Rendering ──
 
+
 class TestHtmlRendering:
     @pytest.fixture
     def template(self):
@@ -390,7 +398,9 @@ class TestHtmlRendering:
     @pytest.fixture
     def metadata(self):
         return ReportMetadata(
-            source_component="pipeline", analysis_type="LLM", generated_at=datetime(2026, 1, 1)
+            source_component="pipeline",
+            analysis_type="LLM",
+            generated_at=datetime(2026, 1, 1),
         )
 
     def test_html_structure(self, template, metadata):
@@ -454,6 +464,7 @@ class TestHtmlRendering:
 
 # ── Helper Methods ──
 
+
 class TestHelperMethods:
     @pytest.fixture
     def template(self):
@@ -476,7 +487,11 @@ class TestHelperMethods:
     def test_extract_error_context_found(self, template):
         text = "some prefix predicate 'test' has not been declared some suffix"
         result = template._extract_error_context(text, "predicate")
-        assert "non déclaré" in result.lower() or "not declared" in result.lower() or "déclaré" in result.lower()
+        assert (
+            "non déclaré" in result.lower()
+            or "not declared" in result.lower()
+            or "déclaré" in result.lower()
+        )
 
     def test_extract_error_context_not_found(self, template):
         result = template._extract_error_context("some text", "nonexistent_xyz")
@@ -503,11 +518,24 @@ class TestHelperMethods:
         assert errors == []
 
     def test_is_generic_recommendation_true(self, template):
-        assert template._is_generic_recommendation("Analyse orchestrée complétée avec succès") is True
-        assert template._is_generic_recommendation("Examen des insights avancés recommandé pour l'avenir") is True
+        assert (
+            template._is_generic_recommendation(
+                "Analyse orchestrée complétée avec succès"
+            )
+            is True
+        )
+        assert (
+            template._is_generic_recommendation(
+                "Examen des insights avancés recommandé pour l'avenir"
+            )
+            is True
+        )
 
     def test_is_generic_recommendation_false(self, template):
-        assert template._is_generic_recommendation("Fix the modal logic conversion") is False
+        assert (
+            template._is_generic_recommendation("Fix the modal logic conversion")
+            is False
+        )
 
     def test_count_modal_failures_none(self, template):
         assert template._count_modal_failures({}) == 0
@@ -579,7 +607,10 @@ class TestHelperMethods:
             "orchestration_analysis": {
                 "conversation_log": {
                     "messages": [
-                        {"agent": "ModalLogicAgent", "message": "erreur de conversion Tweety"},
+                        {
+                            "agent": "ModalLogicAgent",
+                            "message": "erreur de conversion Tweety",
+                        },
                     ]
                 }
             }
@@ -600,6 +631,7 @@ class TestHelperMethods:
 
 # ── Orchestration Sections ──
 
+
 class TestOrchestrationRendering:
     @pytest.fixture
     def template(self):
@@ -608,7 +640,9 @@ class TestOrchestrationRendering:
     @pytest.fixture
     def metadata(self):
         return ReportMetadata(
-            source_component="test", analysis_type="test", generated_at=datetime(2026, 1, 1)
+            source_component="test",
+            analysis_type="test",
+            generated_at=datetime(2026, 1, 1),
         )
 
     def test_orchestration_results(self, template, metadata):
@@ -656,7 +690,10 @@ class TestOrchestrationRendering:
                 "status": "partial",
                 "conversation_log": {
                     "messages": [
-                        {"agent": "ModalLogicAgent", "message": "tentative de conversion 1/3 échouée"},
+                        {
+                            "agent": "ModalLogicAgent",
+                            "message": "tentative de conversion 1/3 échouée",
+                        },
                     ]
                 },
             }

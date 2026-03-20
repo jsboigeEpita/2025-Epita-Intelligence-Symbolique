@@ -94,7 +94,10 @@ class TestDisplayExtractSourcesDetails:
         display_extract_sources_details(data, show_all=True, show_all_french=True)
 
     def test_non_dict_items_skipped(self):
-        data = ["not_a_dict", {"id": "s1", "source_name": "S1", "host_parts": [], "extracts": []}]
+        data = [
+            "not_a_dict",
+            {"id": "s1", "source_name": "S1", "host_parts": [], "extracts": []},
+        ]
         display_extract_sources_details(data, show_all=True)
 
     def test_source_with_full_text_preview(self):

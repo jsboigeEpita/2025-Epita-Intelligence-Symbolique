@@ -15,10 +15,10 @@ from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
 )
 
-
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def allocator():
@@ -71,6 +71,7 @@ def allocated_allocator(allocator, sample_plan):
 # __init__
 # ============================================================
 
+
 class TestResourceAllocatorInit:
     def test_default_state_created(self, allocator):
         assert isinstance(allocator.state, StrategicState)
@@ -99,6 +100,7 @@ class TestResourceAllocatorInit:
 # ============================================================
 # allocate_initial_resources
 # ============================================================
+
 
 class TestAllocateInitialResources:
     def test_returns_dict(self, allocator, sample_plan):
@@ -140,6 +142,7 @@ class TestAllocateInitialResources:
 # _analyze_resource_needs
 # ============================================================
 
+
 class TestAnalyzeResourceNeeds:
     def test_returns_dict_per_phase(self, allocator):
         phases = [
@@ -151,7 +154,9 @@ class TestAnalyzeResourceNeeds:
         assert "p2" in result
 
     def test_identification_keywords_boost_scores(self, allocator):
-        phases = [{"id": "p1", "description": "Identification des éléments clés et arguments"}]
+        phases = [
+            {"id": "p1", "description": "Identification des éléments clés et arguments"}
+        ]
         result = allocator._analyze_resource_needs(phases)
         assert result["p1"]["argument_identification"] > 0
         assert result["p1"]["text_extraction"] > 0
@@ -174,25 +179,70 @@ class TestAnalyzeResourceNeeds:
         assert result["p1"]["argument_visualization"] > 0
 
     def test_short_duration_reduces_scores(self, allocator):
-        phases_short = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "short"}]
-        phases_medium = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "medium"}]
+        phases_short = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "short",
+            }
+        ]
+        phases_medium = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "medium",
+            }
+        ]
         short_result = allocator._analyze_resource_needs(phases_short)
         medium_result = allocator._analyze_resource_needs(phases_medium)
-        assert short_result["p1"]["argument_identification"] < medium_result["p1"]["argument_identification"]
+        assert (
+            short_result["p1"]["argument_identification"]
+            < medium_result["p1"]["argument_identification"]
+        )
 
     def test_long_duration_increases_scores(self, allocator):
-        phases_long = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "long"}]
-        phases_medium = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "medium"}]
+        phases_long = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "long",
+            }
+        ]
+        phases_medium = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "medium",
+            }
+        ]
         long_result = allocator._analyze_resource_needs(phases_long)
         medium_result = allocator._analyze_resource_needs(phases_medium)
-        assert long_result["p1"]["argument_identification"] > medium_result["p1"]["argument_identification"]
+        assert (
+            long_result["p1"]["argument_identification"]
+            > medium_result["p1"]["argument_identification"]
+        )
 
     def test_unknown_duration_defaults_to_medium(self, allocator):
-        phases_unknown = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "unknown"}]
-        phases_medium = [{"id": "p1", "description": "Identification des éléments clés", "estimated_duration": "medium"}]
+        phases_unknown = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "unknown",
+            }
+        ]
+        phases_medium = [
+            {
+                "id": "p1",
+                "description": "Identification des éléments clés",
+                "estimated_duration": "medium",
+            }
+        ]
         unknown_result = allocator._analyze_resource_needs(phases_unknown)
         medium_result = allocator._analyze_resource_needs(phases_medium)
-        assert unknown_result["p1"]["argument_identification"] == medium_result["p1"]["argument_identification"]
+        assert (
+            unknown_result["p1"]["argument_identification"]
+            == medium_result["p1"]["argument_identification"]
+        )
 
     def test_unmatched_description_all_zero(self, allocator):
         phases = [{"id": "p1", "description": "generic task with no keywords"}]
@@ -203,6 +253,7 @@ class TestAnalyzeResourceNeeds:
 # ============================================================
 # _determine_agent_assignments
 # ============================================================
+
 
 class TestDetermineAgentAssignments:
     def test_relevant_agents_assigned(self, allocator):
@@ -232,6 +283,7 @@ class TestDetermineAgentAssignments:
 # ============================================================
 # _define_agent_priorities
 # ============================================================
+
 
 class TestDefineAgentPriorities:
     def test_unassigned_agents_get_low(self, allocator):
@@ -273,6 +325,7 @@ class TestDefineAgentPriorities:
 # _allocate_computational_budget
 # ============================================================
 
+
 class TestAllocateComputationalBudget:
     def test_budget_sums_to_one(self, allocator):
         assignments = {
@@ -312,6 +365,7 @@ class TestAllocateComputationalBudget:
 # adjust_allocation
 # ============================================================
 
+
 class TestAdjustAllocation:
     def test_bottleneck_increases_priority(self, allocated_allocator):
         alloc = allocated_allocator
@@ -330,7 +384,9 @@ class TestAdjustAllocation:
         alloc = allocated_allocator
         agents = list(alloc.state.resource_allocation["computational_budget"].keys())
         target_agent = agents[0]
-        original_budget = alloc.state.resource_allocation["computational_budget"][target_agent]
+        original_budget = alloc.state.resource_allocation["computational_budget"][
+            target_agent
+        ]
 
         feedback = {
             "bottlenecks": [],
@@ -369,6 +425,7 @@ class TestAdjustAllocation:
 # ============================================================
 # optimize_resource_utilization
 # ============================================================
+
 
 class TestOptimizeResourceUtilization:
     def test_adjusts_budget_based_on_efficiency(self, allocated_allocator):
@@ -413,12 +470,24 @@ class TestOptimizeResourceUtilization:
 
         metrics = {
             "agent_efficiency": {
-                agents[0]: {"processing_speed": 1.0, "accuracy": 1.0, "resource_usage": 0.0},
-                agents[1]: {"processing_speed": 0.1, "accuracy": 0.1, "resource_usage": 0.9},
+                agents[0]: {
+                    "processing_speed": 1.0,
+                    "accuracy": 1.0,
+                    "resource_usage": 0.0,
+                },
+                agents[1]: {
+                    "processing_speed": 0.1,
+                    "accuracy": 0.1,
+                    "resource_usage": 0.9,
+                },
             },
         }
-        before_0 = alloc.state.resource_allocation["computational_budget"].get(agents[0], 0)
-        before_1 = alloc.state.resource_allocation["computational_budget"].get(agents[1], 0)
+        before_0 = alloc.state.resource_allocation["computational_budget"].get(
+            agents[0], 0
+        )
+        before_1 = alloc.state.resource_allocation["computational_budget"].get(
+            agents[1], 0
+        )
         result = alloc.optimize_resource_utilization(metrics)
         # After optimization, the more efficient agent should move toward more budget
         # (progressive 50% movement toward ideal)
@@ -428,6 +497,7 @@ class TestOptimizeResourceUtilization:
 # ============================================================
 # get_resource_allocation_snapshot
 # ============================================================
+
 
 class TestGetResourceAllocationSnapshot:
     def test_returns_dict(self, allocated_allocator):

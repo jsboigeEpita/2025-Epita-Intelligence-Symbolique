@@ -1,0 +1,162 @@
+{
+  "timestamp": "2026-03-20T17:15:43.780429",
+  "total_cells_evaluated": 36,
+  "total_errors": 0,
+  "aggregates": [
+    {
+      "model_name": "default",
+      "workflow_name": "standard",
+      "n_docs": 3,
+      "avg_overall": 4.0,
+      "avg_completeness": 4.666666666666667,
+      "avg_accuracy": 4.333333333333333,
+      "avg_depth": 3.6666666666666665,
+      "avg_coherence": 4.333333333333333,
+      "avg_actionability": 4.0,
+      "avg_composite": 4.116666666666667
+    },
+    {
+      "model_name": "default",
+      "workflow_name": "comprehensive",
+      "n_docs": 3,
+      "avg_overall": 4.0,
+      "avg_completeness": 4.333333333333333,
+      "avg_accuracy": 4.0,
+      "avg_depth": 4.0,
+      "avg_coherence": 4.0,
+      "avg_actionability": 4.333333333333333,
+      "avg_composite": 4.083333333333333
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "standard",
+      "n_docs": 3,
+      "avg_overall": 4.0,
+      "avg_completeness": 4.333333333333333,
+      "avg_accuracy": 4.333333333333333,
+      "avg_depth": 3.6666666666666665,
+      "avg_coherence": 4.0,
+      "avg_actionability": 4.333333333333333,
+      "avg_composite": 4.050000000000001
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "comprehensive",
+      "n_docs": 3,
+      "avg_overall": 3.6666666666666665,
+      "avg_completeness": 4.0,
+      "avg_accuracy": 4.0,
+      "avg_depth": 3.6666666666666665,
+      "avg_coherence": 3.6666666666666665,
+      "avg_actionability": 3.6666666666666665,
+      "avg_composite": 3.766666666666667
+    },
+    {
+      "model_name": "default",
+      "workflow_name": "belief_dynamics",
+      "n_docs": 3,
+      "avg_overall": 2.3333333333333335,
+      "avg_completeness": 2.0,
+      "avg_accuracy": 2.3333333333333335,
+      "avg_depth": 2.0,
+      "avg_coherence": 2.0,
+      "avg_actionability": 2.3333333333333335,
+      "avg_composite": 2.183333333333333
+    },
+    {
+      "model_name": "default",
+      "workflow_name": "quality_gated",
+      "n_docs": 3,
+      "avg_overall": 2.0,
+      "avg_completeness": 1.6666666666666667,
+      "avg_accuracy": 2.3333333333333335,
+      "avg_depth": 2.0,
+      "avg_coherence": 2.3333333333333335,
+      "avg_actionability": 2.0,
+      "avg_composite": 1.9833333333333336
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "belief_dynamics",
+      "n_docs": 3,
+      "avg_overall": 2.0,
+      "avg_completeness": 1.6666666666666667,
+      "avg_accuracy": 2.3333333333333335,
+      "avg_depth": 2.0,
+      "avg_coherence": 2.0,
+      "avg_actionability": 2.0,
+      "avg_composite": 1.9666666666666668
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "quality_gated",
+      "n_docs": 3,
+      "avg_overall": 2.0,
+      "avg_completeness": 1.3333333333333333,
+      "avg_accuracy": 2.3333333333333335,
+      "avg_depth": 2.0,
+      "avg_coherence": 2.0,
+      "avg_actionability": 1.6666666666666667,
+      "avg_composite": 1.8833333333333335
+    },
+    {
+      "model_name": "default",
+      "workflow_name": "argument_strength",
+      "n_docs": 3,
+      "avg_overall": 2.0,
+      "avg_completeness": 1.3333333333333333,
+      "avg_accuracy": 2.0,
+      "avg_depth": 2.0,
+      "avg_coherence": 1.6666666666666667,
+      "avg_actionability": 1.6666666666666667,
+      "avg_composite": 1.8333333333333333
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "argument_strength",
+      "n_docs": 3,
+      "avg_overall": 1.6666666666666667,
+      "avg_completeness": 1.3333333333333333,
+      "avg_accuracy": 2.0,
+      "avg_depth": 1.6666666666666667,
+      "avg_coherence": 1.6666666666666667,
+      "avg_actionability": 1.6666666666666667,
+      "avg_composite": 1.6333333333333335
+    },
+    {
+      "model_name": "openrouter",
+      "workflow_name": "formal_debate",
+      "n_docs": 3,
+      "avg_overall": 1.0,
+      "avg_completeness": 1.0,
+      "avg_accuracy": 1.0,
+      "avg_depth": 1.0,
+      "avg_coherence": 1.6666666666666667,
+      "avg_actionability": 1.0,
+      "avg_composite": 1.0333333333333332
+    },
+    {
+      "model_name": "default",
+      "workflow_name": "formal_debate",
+      "n_docs": 3,
+      "avg_overall": 0.6666666666666666,
+      "avg_completeness": 0.6666666666666666,
+      "avg_accuracy": 0.6666666666666666,
+      "avg_depth": 0.6666666666666666,
+      "avg_coherence": 1.0,
+      "avg_actionability": 0.6666666666666666,
+      "avg_composite": 0.6833333333333332
+    }
+  ],
+  "best_by_quality": {
+    "model": "default",
+    "workflow": "standard",
+    "avg_composite": 4.117,
+    "avg_overall": 4.0
+  },
+  "best_by_depth": {
+    "model": "default",
+    "workflow": "comprehensive",
+    "avg_depth": 4.0
+  }
+}

@@ -45,6 +45,7 @@ def analyzer(mock_detector):
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_creates_instance(self, analyzer):
         assert isinstance(analyzer, EnhancedContextualFallacyAnalyzer)
@@ -67,6 +68,7 @@ class TestInit:
 # _determine_context_type
 # ============================================================
 
+
 class TestDetermineContextType:
     def test_political(self, analyzer):
         assert analyzer._determine_context_type("discours politique") == "politique"
@@ -75,10 +77,14 @@ class TestDetermineContextType:
         assert analyzer._determine_context_type("campagne élection") == "politique"
 
     def test_scientific(self, analyzer):
-        assert analyzer._determine_context_type("article scientifique") == "scientifique"
+        assert (
+            analyzer._determine_context_type("article scientifique") == "scientifique"
+        )
 
     def test_research(self, analyzer):
-        assert analyzer._determine_context_type("recherche académique") == "scientifique"
+        assert (
+            analyzer._determine_context_type("recherche académique") == "scientifique"
+        )
 
     def test_commercial(self, analyzer):
         assert analyzer._determine_context_type("publicité commercial") == "commercial"
@@ -100,51 +106,65 @@ class TestDetermineContextType:
 # _are_complementary_fallacies
 # ============================================================
 
+
 class TestAreComplementaryFallacies:
     def test_authority_and_popularity(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Appel à l'autorité", "Appel à la popularité"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies(
+                "Appel à l'autorité", "Appel à la popularité"
+            )
+            is True
+        )
 
     def test_popularity_and_authority_reversed(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Appel à la popularité", "Appel à l'autorité"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies(
+                "Appel à la popularité", "Appel à l'autorité"
+            )
+            is True
+        )
 
     def test_dilemma_and_emotion(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Faux dilemme", "Appel à l'émotion"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies("Faux dilemme", "Appel à l'émotion")
+            is True
+        )
 
     def test_slippery_slope_and_fear(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Pente glissante", "Appel à la peur"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies("Pente glissante", "Appel à la peur")
+            is True
+        )
 
     def test_strawman_and_ad_hominem(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Homme de paille", "Ad hominem"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies("Homme de paille", "Ad hominem")
+            is True
+        )
 
     def test_tradition_and_authority(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Appel à la tradition", "Appel à l'autorité"
-        ) is True
+        assert (
+            analyzer._are_complementary_fallacies(
+                "Appel à la tradition", "Appel à l'autorité"
+            )
+            is True
+        )
 
     def test_non_complementary(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Ad hominem", "Faux dilemme"
-        ) is False
+        assert (
+            analyzer._are_complementary_fallacies("Ad hominem", "Faux dilemme") is False
+        )
 
     def test_same_type_not_complementary(self, analyzer):
-        assert analyzer._are_complementary_fallacies(
-            "Ad hominem", "Ad hominem"
-        ) is False
+        assert (
+            analyzer._are_complementary_fallacies("Ad hominem", "Ad hominem") is False
+        )
 
 
 # ============================================================
 # _analyze_context_deeply (without NLP models)
 # ============================================================
+
 
 class TestAnalyzeContextDeeply:
     def test_returns_expected_keys(self, analyzer):
@@ -173,6 +193,7 @@ class TestAnalyzeContextDeeply:
 # ============================================================
 # _analyze_fallacy_relations
 # ============================================================
+
 
 class TestAnalyzeFallacyRelations:
     def test_empty_list(self, analyzer):
@@ -212,12 +233,18 @@ class TestAnalyzeFallacyRelations:
 # _filter_by_context_semantic
 # ============================================================
 
+
 class TestFilterByContextSemantic:
     def test_general_context_returns_all(self, analyzer):
         fallacies = [
             {"fallacy_type": "Ad hominem", "confidence": 0.5, "context_text": "x"},
         ]
-        ctx = {"context_type": "général", "context_subtypes": [], "audience_characteristics": [], "formality_level": "moyen"}
+        ctx = {
+            "context_type": "général",
+            "context_subtypes": [],
+            "audience_characteristics": [],
+            "formality_level": "moyen",
+        }
         result = analyzer._filter_by_context_semantic(fallacies, ctx)
         assert len(result) == len(fallacies)
 
@@ -239,7 +266,11 @@ class TestFilterByContextSemantic:
 
     def test_irrelevant_fallacy_low_relevance(self, analyzer):
         fallacies = [
-            {"fallacy_type": "Post hoc ergo propter hoc", "confidence": 0.5, "context_text": "x"},
+            {
+                "fallacy_type": "Post hoc ergo propter hoc",
+                "confidence": 0.5,
+                "context_text": "x",
+            },
         ]
         ctx = {
             "context_type": "politique",
@@ -253,7 +284,11 @@ class TestFilterByContextSemantic:
 
     def test_subtype_adjustments(self, analyzer):
         fallacies = [
-            {"fallacy_type": "Appel à l'émotion", "confidence": 0.5, "context_text": "x"},
+            {
+                "fallacy_type": "Appel à l'émotion",
+                "confidence": 0.5,
+                "context_text": "x",
+            },
         ]
         ctx = {
             "context_type": "politique",
@@ -267,7 +302,11 @@ class TestFilterByContextSemantic:
 
     def test_audience_adjustments(self, analyzer):
         fallacies = [
-            {"fallacy_type": "Appel à l'autorité", "confidence": 0.5, "context_text": "x"},
+            {
+                "fallacy_type": "Appel à l'autorité",
+                "confidence": 0.5,
+                "context_text": "x",
+            },
         ]
         ctx = {
             "context_type": "académique",
@@ -281,7 +320,11 @@ class TestFilterByContextSemantic:
 
     def test_sorted_by_confidence_desc(self, analyzer):
         fallacies = [
-            {"fallacy_type": "Post hoc ergo propter hoc", "confidence": 0.9, "context_text": "x"},
+            {
+                "fallacy_type": "Post hoc ergo propter hoc",
+                "confidence": 0.9,
+                "context_text": "x",
+            },
             {"fallacy_type": "Ad hominem", "confidence": 0.3, "context_text": "y"},
         ]
         ctx = {
@@ -298,6 +341,7 @@ class TestFilterByContextSemantic:
 # analyze_context
 # ============================================================
 
+
 class TestAnalyzeContext:
     def test_returns_expected_keys(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = []
@@ -311,7 +355,12 @@ class TestAnalyzeContext:
 
     def test_with_detected_fallacies(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "attack", "confidence": 0.7},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "attack",
+                "confidence": 0.7,
+            },
         ]
         result = analyzer.analyze_context("He attacked the person", "politique")
         assert result["potential_fallacies_count"] >= 1
@@ -319,7 +368,12 @@ class TestAnalyzeContext:
 
     def test_stores_last_analysis_fallacies(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.5},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.5,
+            },
         ]
         analyzer.analyze_context("text", "politique")
         assert len(analyzer.last_analysis_fallacies) >= 1
@@ -329,10 +383,16 @@ class TestAnalyzeContext:
 # provide_feedback
 # ============================================================
 
+
 class TestProvideFeedback:
     def test_records_feedback(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.5},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.5,
+            },
         ]
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", True, "good detection")
@@ -341,23 +401,42 @@ class TestProvideFeedback:
 
     def test_positive_feedback_increases_confidence(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.5},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.5,
+            },
         ]
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", True)
-        assert analyzer.learning_data["confidence_adjustments"]["Ad hominem"] == pytest.approx(0.05)
+        assert analyzer.learning_data["confidence_adjustments"][
+            "Ad hominem"
+        ] == pytest.approx(0.05)
 
     def test_negative_feedback_decreases_confidence(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Faux dilemme", "keyword": "x", "context_text": "t", "confidence": 0.5},
+            {
+                "fallacy_type": "Faux dilemme",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.5,
+            },
         ]
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", False)
-        assert analyzer.learning_data["confidence_adjustments"]["Faux dilemme"] == pytest.approx(-0.1)
+        assert analyzer.learning_data["confidence_adjustments"][
+            "Faux dilemme"
+        ] == pytest.approx(-0.1)
 
     def test_feedback_clamped(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.5},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.5,
+            },
         ]
         analyzer.analyze_context("text", "politique")
         # Push confidence down many times
@@ -374,6 +453,7 @@ class TestProvideFeedback:
 # ============================================================
 # _generate_fallacy_explanation
 # ============================================================
+
 
 class TestGenerateFallacyExplanation:
     def test_known_combination(self, analyzer):
@@ -393,6 +473,7 @@ class TestGenerateFallacyExplanation:
 # ============================================================
 # _generate_correction_suggestion
 # ============================================================
+
 
 class TestGenerateCorrectionSuggestion:
     def test_known_fallacy(self, analyzer):
@@ -418,6 +499,7 @@ class TestGenerateCorrectionSuggestion:
 # get_contextual_fallacy_examples
 # ============================================================
 
+
 class TestGetContextualFallacyExamples:
     def test_returns_list(self, analyzer):
         result = analyzer.get_contextual_fallacy_examples(
@@ -437,6 +519,7 @@ class TestGetContextualFallacyExamples:
 # identify_contextual_fallacies
 # ============================================================
 
+
 class TestIdentifyContextualFallacies:
     def test_returns_list(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = []
@@ -445,7 +528,12 @@ class TestIdentifyContextualFallacies:
 
     def test_filters_by_confidence(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.1},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.1,
+            },
         ]
         result = analyzer.identify_contextual_fallacies("some text", "politique")
         # In political context, Ad hominem gets +0.3 -> 0.4 still below 0.5?
@@ -455,7 +543,12 @@ class TestIdentifyContextualFallacies:
 
     def test_high_confidence_passed_through(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
-            {"fallacy_type": "Ad hominem", "keyword": "x", "context_text": "t", "confidence": 0.8},
+            {
+                "fallacy_type": "Ad hominem",
+                "keyword": "x",
+                "context_text": "t",
+                "confidence": 0.8,
+            },
         ]
         result = analyzer.identify_contextual_fallacies("some text", "politique")
         # 0.8 + 0.3 = 1.0, well above 0.5 threshold

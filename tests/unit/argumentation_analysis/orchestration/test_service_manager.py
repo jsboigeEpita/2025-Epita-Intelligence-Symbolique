@@ -33,7 +33,6 @@ from unittest.mock import patch, MagicMock, AsyncMock, PropertyMock
 from datetime import datetime, timedelta
 from pathlib import Path
 
-
 # ========================================================================
 # Module-level patch path prefix
 # ========================================================================
@@ -52,6 +51,7 @@ class TestServiceManagerState:
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerState,
         )
+
         return ServiceManagerState()
 
     def test_init_creates_session_id(self):
@@ -113,12 +113,14 @@ class TestServiceManagerError:
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerError,
         )
+
         assert issubclass(ServiceManagerError, Exception)
 
     def test_can_be_raised_and_caught(self):
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerError,
         )
+
         with pytest.raises(ServiceManagerError, match="test message"):
             raise ServiceManagerError("test message")
 
@@ -126,6 +128,7 @@ class TestServiceManagerError:
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerError,
         )
+
         err = ServiceManagerError("specific error detail")
         assert str(err) == "specific error detail"
 
@@ -143,6 +146,7 @@ class TestOrchestrationServiceManagerInit:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     # --- __init__ ---
@@ -177,6 +181,7 @@ class TestOrchestrationServiceManagerInit:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         mgr = OrchestrationServiceManager(
             enable_logging=False, taxonomy_file_path="/some/path.csv"
         )
@@ -196,6 +201,7 @@ class TestOrchestrationServiceManagerInit:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         # Should not raise
         mgr = OrchestrationServiceManager(enable_logging=True, log_level=40)
         assert mgr.logger is not None
@@ -265,6 +271,7 @@ class TestUnifiedState:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     def test_unified_state_initially_none(self, manager):
@@ -309,6 +316,7 @@ class TestInitialize:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_initialize_already_initialized(self, manager):
@@ -342,9 +350,11 @@ class TestInitialize:
 
         mock_context = MagicMock()
 
-        with patch(f"{SM_MODULE}.initialize_project_environment", return_value=mock_context), \
-             patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.sk") as mock_sk:
+        with patch(
+            f"{SM_MODULE}.initialize_project_environment", return_value=mock_context
+        ), patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.sk"
+        ) as mock_sk:
             mock_sk.Kernel.return_value = MagicMock()
             result = await manager.initialize()
             assert result is True
@@ -364,10 +374,13 @@ class TestInitialize:
         mock_kernel.get_service.return_value = MagicMock()
         mock_llm_service = MagicMock()
 
-        with patch(f"{SM_MODULE}.initialize_project_environment", return_value=mock_context), \
-             patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.sk") as mock_sk, \
-             patch(f"{SM_MODULE}.create_llm_service", return_value=mock_llm_service):
+        with patch(
+            f"{SM_MODULE}.initialize_project_environment", return_value=mock_context
+        ), patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.sk"
+        ) as mock_sk, patch(
+            f"{SM_MODULE}.create_llm_service", return_value=mock_llm_service
+        ):
             mock_sk.Kernel.return_value = mock_kernel
             result = await manager.initialize()
             assert result is True
@@ -387,10 +400,13 @@ class TestInitialize:
         mock_kernel = MagicMock()
         mock_kernel.get_service.side_effect = Exception("no service")
 
-        with patch(f"{SM_MODULE}.initialize_project_environment", return_value=mock_context), \
-             patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.sk") as mock_sk, \
-             patch(f"{SM_MODULE}.create_llm_service", side_effect=RuntimeError("LLM fail")):
+        with patch(
+            f"{SM_MODULE}.initialize_project_environment", return_value=mock_context
+        ), patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.sk"
+        ) as mock_sk, patch(
+            f"{SM_MODULE}.create_llm_service", side_effect=RuntimeError("LLM fail")
+        ):
             mock_sk.Kernel.return_value = mock_kernel
             result = await manager.initialize()
             # Still succeeds (error is logged but not fatal)
@@ -407,10 +423,13 @@ class TestInitialize:
 
         mock_context = MagicMock()
 
-        with patch(f"{SM_MODULE}.initialize_project_environment", return_value=mock_context), \
-             patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.sk") as mock_sk, \
-             patch.object(manager, "initialize_middleware", new_callable=AsyncMock) as mock_mw:
+        with patch(
+            f"{SM_MODULE}.initialize_project_environment", return_value=mock_context
+        ), patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.sk"
+        ) as mock_sk, patch.object(
+            manager, "initialize_middleware", new_callable=AsyncMock
+        ) as mock_mw:
             mock_sk.Kernel.return_value = MagicMock()
             result = await manager.initialize()
             assert result is True
@@ -427,10 +446,13 @@ class TestInitialize:
 
         mock_context = MagicMock()
 
-        with patch(f"{SM_MODULE}.initialize_project_environment", return_value=mock_context), \
-             patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.sk") as mock_sk, \
-             patch.object(manager, "_initialize_hierarchical_managers", new_callable=AsyncMock) as mock_hm:
+        with patch(
+            f"{SM_MODULE}.initialize_project_environment", return_value=mock_context
+        ), patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.sk"
+        ) as mock_sk, patch.object(
+            manager, "_initialize_hierarchical_managers", new_callable=AsyncMock
+        ) as mock_hm:
             mock_sk.Kernel.return_value = MagicMock()
             result = await manager.initialize()
             assert result is True
@@ -450,6 +472,7 @@ class TestInitializeMiddleware:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_middleware_already_initialized(self, manager):
@@ -478,9 +501,9 @@ class TestInitializeMiddleware:
         mock_hc_instance = MagicMock()
         mock_hc_class.return_value = mock_hc_instance
 
-        with patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.MessageMiddleware", mock_mw_class), \
-             patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
+        with patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
+        ), patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
             await manager.initialize_middleware()
             assert manager.middleware is mock_mw_instance
             mock_mw_instance.register_channel.assert_called_once_with(mock_hc_instance)
@@ -493,9 +516,9 @@ class TestInitializeMiddleware:
         mock_mw_instance = MagicMock()
         mock_mw_class.return_value = mock_mw_instance
 
-        with patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.MessageMiddleware", mock_mw_class), \
-             patch(f"{SM_MODULE}.HierarchicalChannel", None):
+        with patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
+        ), patch(f"{SM_MODULE}.HierarchicalChannel", None):
             await manager.initialize_middleware()
             assert manager.middleware is mock_mw_instance
             # No channel registered since HierarchicalChannel is None
@@ -513,9 +536,9 @@ class TestInitializeMiddleware:
 
         mock_hc_class = MagicMock()
 
-        with patch(f"{SM_MODULE}.settings", mock_settings), \
-             patch(f"{SM_MODULE}.MessageMiddleware", mock_mw_class), \
-             patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
+        with patch(f"{SM_MODULE}.settings", mock_settings), patch(
+            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
+        ), patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
             # Should not raise, error is logged
             await manager.initialize_middleware()
             assert manager.middleware is mock_mw_instance
@@ -534,6 +557,7 @@ class TestInitializeHierarchicalManagers:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_no_middleware_skips(self, manager):
@@ -553,9 +577,9 @@ class TestInitializeHierarchicalManagers:
         mock_tactical = MagicMock()
         mock_operational = MagicMock()
 
-        with patch(f"{SM_MODULE}.StrategicManager", mock_strategic), \
-             patch(f"{SM_MODULE}.TacticalManager", mock_tactical), \
-             patch(f"{SM_MODULE}.OperationalManager", mock_operational):
+        with patch(f"{SM_MODULE}.StrategicManager", mock_strategic), patch(
+            f"{SM_MODULE}.TacticalManager", mock_tactical
+        ), patch(f"{SM_MODULE}.OperationalManager", mock_operational):
             await manager._initialize_hierarchical_managers()
             assert manager.strategic_manager is not None
             assert manager.tactical_manager is not None
@@ -564,7 +588,9 @@ class TestInitializeHierarchicalManagers:
     async def test_exception_resets_managers_to_none(self, manager):
         manager.middleware = MagicMock()
 
-        with patch(f"{SM_MODULE}.StrategicManager", side_effect=RuntimeError("init fail")):
+        with patch(
+            f"{SM_MODULE}.StrategicManager", side_effect=RuntimeError("init fail")
+        ):
             await manager._initialize_hierarchical_managers()
             assert manager.strategic_manager is None
             assert manager.tactical_manager is None
@@ -573,9 +599,9 @@ class TestInitializeHierarchicalManagers:
     async def test_managers_none_when_classes_none(self, manager):
         manager.middleware = MagicMock()
 
-        with patch(f"{SM_MODULE}.StrategicManager", None), \
-             patch(f"{SM_MODULE}.TacticalManager", None), \
-             patch(f"{SM_MODULE}.OperationalManager", None):
+        with patch(f"{SM_MODULE}.StrategicManager", None), patch(
+            f"{SM_MODULE}.TacticalManager", None
+        ), patch(f"{SM_MODULE}.OperationalManager", None):
             await manager._initialize_hierarchical_managers()
             assert manager.strategic_manager is None
             assert manager.tactical_manager is None
@@ -595,6 +621,7 @@ class TestInitializeSpecializedOrchestrators:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         mgr = OrchestrationServiceManager(enable_logging=False)
         mgr.kernel = MagicMock()
         return mgr
@@ -603,10 +630,11 @@ class TestInitializeSpecializedOrchestrators:
         mock_cluedo = MagicMock()
         mock_conversation = MagicMock()
 
-        with patch(f"{SM_MODULE}.CluedoOrchestrator", mock_cluedo), \
-             patch(f"{SM_MODULE}.ConversationOrchestrator", mock_conversation), \
-             patch(f"{SM_MODULE}.RealLLMOrchestrator", None), \
-             patch(f"{SM_MODULE}.FactCheckingOrchestrator", None):
+        with patch(f"{SM_MODULE}.CluedoOrchestrator", mock_cluedo), patch(
+            f"{SM_MODULE}.ConversationOrchestrator", mock_conversation
+        ), patch(f"{SM_MODULE}.RealLLMOrchestrator", None), patch(
+            f"{SM_MODULE}.FactCheckingOrchestrator", None
+        ):
             await manager._initialize_specialized_orchestrators()
             assert manager.cluedo_orchestrator is not None
             assert manager.conversation_orchestrator is not None
@@ -617,10 +645,11 @@ class TestInitializeSpecializedOrchestrators:
                 await manager._initialize_specialized_orchestrators()
 
     async def test_all_none_when_classes_none(self, manager):
-        with patch(f"{SM_MODULE}.CluedoOrchestrator", None), \
-             patch(f"{SM_MODULE}.ConversationOrchestrator", None), \
-             patch(f"{SM_MODULE}.RealLLMOrchestrator", None), \
-             patch(f"{SM_MODULE}.FactCheckingOrchestrator", None):
+        with patch(f"{SM_MODULE}.CluedoOrchestrator", None), patch(
+            f"{SM_MODULE}.ConversationOrchestrator", None
+        ), patch(f"{SM_MODULE}.RealLLMOrchestrator", None), patch(
+            f"{SM_MODULE}.FactCheckingOrchestrator", None
+        ):
             await manager._initialize_specialized_orchestrators()
             assert manager.cluedo_orchestrator is None
             assert manager.conversation_orchestrator is None
@@ -641,6 +670,7 @@ class TestAnalyzeText:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         mgr = OrchestrationServiceManager(enable_logging=False)
         mgr._initialized = True
         return mgr
@@ -650,6 +680,7 @@ class TestAnalyzeText:
             OrchestrationServiceManager,
             ServiceManagerError,
         )
+
         mgr = OrchestrationServiceManager(enable_logging=False)
         with pytest.raises(ServiceManagerError, match="non initialisé"):
             await mgr.analyze_text("Test text")
@@ -658,6 +689,7 @@ class TestAnalyzeText:
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerError,
         )
+
         with pytest.raises(ServiceManagerError, match="vide"):
             await manager.analyze_text("")
 
@@ -665,6 +697,7 @@ class TestAnalyzeText:
         from argumentation_analysis.orchestration.service_manager import (
             ServiceManagerError,
         )
+
         with pytest.raises(ServiceManagerError, match="vide"):
             await manager.analyze_text("   \t\n  ")
 
@@ -675,9 +708,16 @@ class TestAnalyzeText:
         mock_settings = MagicMock()
         mock_settings.service_manager.save_results = False
 
-        with patch.object(manager, "_select_orchestrator", return_value=mock_orch), \
-             patch.object(manager, "_run_specialized_analysis", new_callable=AsyncMock, return_value={"result": "ok"}), \
-             patch(f"{SM_MODULE}.settings", mock_settings):
+        with patch.object(
+            manager, "_select_orchestrator", return_value=mock_orch
+        ), patch.object(
+            manager,
+            "_run_specialized_analysis",
+            new_callable=AsyncMock,
+            return_value={"result": "ok"},
+        ), patch(
+            f"{SM_MODULE}.settings", mock_settings
+        ):
             result = await manager.analyze_text("Analyze this text")
             assert result["status"] == "completed"
             assert result["results"]["specialized"] == {"result": "ok"}
@@ -686,10 +726,19 @@ class TestAnalyzeText:
         mock_settings = MagicMock()
         mock_settings.service_manager.save_results = False
 
-        with patch.object(manager, "_select_orchestrator", return_value=None), \
-             patch.object(manager, "_run_hierarchical_analysis", new_callable=AsyncMock, return_value={"level": "hierarchical"}), \
-             patch(f"{SM_MODULE}.settings", mock_settings):
-            result = await manager.analyze_text("Analyze this text", analysis_type="unknown_type")
+        with patch.object(
+            manager, "_select_orchestrator", return_value=None
+        ), patch.object(
+            manager,
+            "_run_hierarchical_analysis",
+            new_callable=AsyncMock,
+            return_value={"level": "hierarchical"},
+        ), patch(
+            f"{SM_MODULE}.settings", mock_settings
+        ):
+            result = await manager.analyze_text(
+                "Analyze this text", analysis_type="unknown_type"
+            )
             assert result["status"] == "completed"
             assert result["results"]["hierarchical"] == {"level": "hierarchical"}
 
@@ -697,8 +746,9 @@ class TestAnalyzeText:
         mock_settings = MagicMock()
         mock_settings.service_manager.save_results = False
 
-        with patch.object(manager, "_select_orchestrator", side_effect=RuntimeError("select error")), \
-             patch(f"{SM_MODULE}.settings", mock_settings):
+        with patch.object(
+            manager, "_select_orchestrator", side_effect=RuntimeError("select error")
+        ), patch(f"{SM_MODULE}.settings", mock_settings):
             result = await manager.analyze_text("Some text")
             assert result["status"] == "failed"
             assert "error" in result
@@ -707,10 +757,18 @@ class TestAnalyzeText:
         mock_settings = MagicMock()
         mock_settings.service_manager.save_results = True
 
-        with patch.object(manager, "_select_orchestrator", return_value=None), \
-             patch.object(manager, "_run_hierarchical_analysis", new_callable=AsyncMock, return_value={}), \
-             patch.object(manager, "_save_results", new_callable=AsyncMock) as mock_save, \
-             patch(f"{SM_MODULE}.settings", mock_settings):
+        with patch.object(
+            manager, "_select_orchestrator", return_value=None
+        ), patch.object(
+            manager,
+            "_run_hierarchical_analysis",
+            new_callable=AsyncMock,
+            return_value={},
+        ), patch.object(
+            manager, "_save_results", new_callable=AsyncMock
+        ) as mock_save, patch(
+            f"{SM_MODULE}.settings", mock_settings
+        ):
             await manager.analyze_text("Text to analyze")
             mock_save.assert_awaited_once()
 
@@ -718,9 +776,16 @@ class TestAnalyzeText:
         mock_settings = MagicMock()
         mock_settings.service_manager.save_results = False
 
-        with patch.object(manager, "_select_orchestrator", return_value=None), \
-             patch.object(manager, "_run_hierarchical_analysis", new_callable=AsyncMock, return_value={}), \
-             patch(f"{SM_MODULE}.settings", mock_settings):
+        with patch.object(
+            manager, "_select_orchestrator", return_value=None
+        ), patch.object(
+            manager,
+            "_run_hierarchical_analysis",
+            new_callable=AsyncMock,
+            return_value={},
+        ), patch(
+            f"{SM_MODULE}.settings", mock_settings
+        ):
             result = await manager.analyze_text("Test text")
             assert "analysis_id" in result
             # Should be a valid UUID
@@ -740,6 +805,7 @@ class TestSelectOrchestrator:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         mgr = OrchestrationServiceManager(enable_logging=False)
         mgr.cluedo_orchestrator = MagicMock(name="cluedo")
         mgr.conversation_orchestrator = MagicMock(name="conversation")
@@ -754,25 +820,42 @@ class TestSelectOrchestrator:
         assert manager._select_orchestrator("detective") is manager.cluedo_orchestrator
 
     def test_conversation_type(self, manager):
-        assert manager._select_orchestrator("conversation") is manager.conversation_orchestrator
+        assert (
+            manager._select_orchestrator("conversation")
+            is manager.conversation_orchestrator
+        )
 
     def test_dialogue_type(self, manager):
-        assert manager._select_orchestrator("dialogue") is manager.conversation_orchestrator
+        assert (
+            manager._select_orchestrator("dialogue")
+            is manager.conversation_orchestrator
+        )
 
     def test_llm_type(self, manager):
         assert manager._select_orchestrator("llm") is manager.llm_orchestrator
 
     def test_language_model_type(self, manager):
-        assert manager._select_orchestrator("language_model") is manager.llm_orchestrator
+        assert (
+            manager._select_orchestrator("language_model") is manager.llm_orchestrator
+        )
 
     def test_fact_checking_type(self, manager):
-        assert manager._select_orchestrator("fact_checking") is manager.fact_checking_orchestrator
+        assert (
+            manager._select_orchestrator("fact_checking")
+            is manager.fact_checking_orchestrator
+        )
 
     def test_comprehensive_type(self, manager):
-        assert manager._select_orchestrator("comprehensive") is manager.fact_checking_orchestrator
+        assert (
+            manager._select_orchestrator("comprehensive")
+            is manager.fact_checking_orchestrator
+        )
 
     def test_rhetorical_type(self, manager):
-        assert manager._select_orchestrator("rhetorical") is manager.fact_checking_orchestrator
+        assert (
+            manager._select_orchestrator("rhetorical")
+            is manager.fact_checking_orchestrator
+        )
 
     def test_logical_type(self, manager):
         assert manager._select_orchestrator("logical") is manager.llm_orchestrator
@@ -791,7 +874,9 @@ class TestSelectOrchestrator:
 
     def test_unified_analysis_defaults_to_llm(self, manager):
         # "unified_analysis" is not in the map, so defaults to llm_orchestrator
-        assert manager._select_orchestrator("unified_analysis") is manager.llm_orchestrator
+        assert (
+            manager._select_orchestrator("unified_analysis") is manager.llm_orchestrator
+        )
 
 
 # ========================================================================
@@ -807,6 +892,7 @@ class TestRunSpecializedAnalysis:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_fact_checking_interface(self, manager):
@@ -827,14 +913,18 @@ class TestRunSpecializedAnalysis:
         # which resolves to `argumentation_analysis.orchestration.fact_checking_orchestrator`.
         # We mock the module in sys.modules so the import picks up our mocks.
         import sys
+
         mock_fc_module = MagicMock()
         mock_fc_module.FactCheckingRequest = MagicMock(return_value=MagicMock())
         mock_fc_module.AnalysisDepth = MagicMock()
         mock_fc_module.AnalysisDepth.STANDARD = "standard"
 
-        with patch.dict(sys.modules, {
-            "argumentation_analysis.orchestration.fact_checking_orchestrator": mock_fc_module
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "argumentation_analysis.orchestration.fact_checking_orchestrator": mock_fc_module
+            },
+        ):
             result = await manager._run_specialized_analysis(
                 mock_orch, "test text", "fact_checking", None
             )
@@ -859,12 +949,16 @@ class TestRunSpecializedAnalysis:
         mock_orch.analyze_text = AsyncMock(return_value=mock_result)
 
         import sys
+
         mock_llm_module = MagicMock()
         mock_llm_module.LLMAnalysisRequest = MagicMock()
 
-        with patch.dict(sys.modules, {
-            "argumentation_analysis.orchestration.real_llm_orchestrator": mock_llm_module
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "argumentation_analysis.orchestration.real_llm_orchestrator": mock_llm_module
+            },
+        ):
             result = await manager._run_specialized_analysis(
                 mock_orch, "test text", "llm", {"context": "test"}
             )
@@ -921,6 +1015,7 @@ class TestRunHierarchicalAnalysis:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_no_managers_returns_empty(self, manager):
@@ -931,9 +1026,10 @@ class TestRunHierarchicalAnalysis:
         manager.strategic_manager = MagicMock()
 
         with patch.object(
-            manager, "_run_strategic_analysis",
+            manager,
+            "_run_strategic_analysis",
             new_callable=AsyncMock,
-            return_value={"level": "strategic", "status": "ok"}
+            return_value={"level": "strategic", "status": "ok"},
         ):
             result = await manager._run_hierarchical_analysis("text", "type", None)
             assert "strategic" in result
@@ -942,9 +1038,10 @@ class TestRunHierarchicalAnalysis:
         manager.tactical_manager = MagicMock()
 
         with patch.object(
-            manager, "_run_tactical_analysis",
+            manager,
+            "_run_tactical_analysis",
             new_callable=AsyncMock,
-            return_value={"level": "tactical", "status": "ok"}
+            return_value={"level": "tactical", "status": "ok"},
         ):
             result = await manager._run_hierarchical_analysis("text", "type", None)
             assert "tactical" in result
@@ -953,9 +1050,10 @@ class TestRunHierarchicalAnalysis:
         manager.operational_manager = MagicMock()
 
         with patch.object(
-            manager, "_run_operational_analysis",
+            manager,
+            "_run_operational_analysis",
             new_callable=AsyncMock,
-            return_value={"level": "operational", "status": "ok"}
+            return_value={"level": "operational", "status": "ok"},
         ):
             result = await manager._run_hierarchical_analysis("text", "type", None)
             assert "operational" in result
@@ -964,9 +1062,10 @@ class TestRunHierarchicalAnalysis:
         manager.strategic_manager = MagicMock()
 
         with patch.object(
-            manager, "_run_strategic_analysis",
+            manager,
+            "_run_strategic_analysis",
             new_callable=AsyncMock,
-            side_effect=RuntimeError("strategic fail")
+            side_effect=RuntimeError("strategic fail"),
         ):
             result = await manager._run_hierarchical_analysis("text", "type", None)
             assert result["strategic"]["error"] == "strategic fail"
@@ -985,6 +1084,7 @@ class TestGetStatusAndHealthCheck:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_get_status_not_initialized(self, manager):
@@ -1031,6 +1131,7 @@ class TestShutdown:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_shutdown_sets_flag(self, manager):
@@ -1066,8 +1167,15 @@ class TestShutdown:
     async def test_shutdown_with_multiple_components(self, manager):
         """Shutdown calls shutdown on all components that have it."""
         components = {}
-        for name in ["cluedo_orchestrator", "conversation_orchestrator", "llm_orchestrator",
-                      "strategic_manager", "tactical_manager", "operational_manager", "middleware"]:
+        for name in [
+            "cluedo_orchestrator",
+            "conversation_orchestrator",
+            "llm_orchestrator",
+            "strategic_manager",
+            "tactical_manager",
+            "operational_manager",
+            "middleware",
+        ]:
             mock = MagicMock()
             mock.shutdown = MagicMock(return_value=None)
             components[name] = mock
@@ -1103,6 +1211,7 @@ class TestSaveResults:
         from argumentation_analysis.orchestration.service_manager import (
             OrchestrationServiceManager,
         )
+
         return OrchestrationServiceManager(enable_logging=False)
 
     async def test_save_results_creates_file(self, manager, tmp_path):
@@ -1123,7 +1232,9 @@ class TestSaveResults:
 
     async def test_save_results_error_does_not_crash(self, manager):
         mock_settings = MagicMock()
-        mock_settings.service_manager.results_dir = Path("/nonexistent/path/that/wont/work")
+        mock_settings.service_manager.results_dir = Path(
+            "/nonexistent/path/that/wont/work"
+        )
 
         results = {"analysis_id": "bad-id", "data": "test"}
 
@@ -1148,10 +1259,13 @@ class TestCreateServiceManager:
         mock_instance = MagicMock(spec=OrchestrationServiceManager)
         mock_instance.initialize = AsyncMock()
 
-        with patch(f"{SM_MODULE}.OrchestrationServiceManager", return_value=mock_instance):
+        with patch(
+            f"{SM_MODULE}.OrchestrationServiceManager", return_value=mock_instance
+        ):
             from argumentation_analysis.orchestration.service_manager import (
                 create_service_manager,
             )
+
             result = await create_service_manager()
             assert result is mock_instance
             mock_instance.initialize.assert_awaited_once()
@@ -1174,7 +1288,9 @@ class TestServiceManagerAlias:
             instance = ServiceManager(enable_logging=False)
             assert len(w) >= 1
             assert issubclass(w[-1].category, DeprecationWarning)
-            assert "déprécié" in str(w[-1].message).lower() or "ServiceManager" in str(w[-1].message)
+            assert "déprécié" in str(w[-1].message).lower() or "ServiceManager" in str(
+                w[-1].message
+            )
 
     def test_deprecated_alias_returns_orchestration_manager(self):
         import warnings
@@ -1202,6 +1318,7 @@ class TestGetDefaultServiceManager:
             get_default_service_manager,
             OrchestrationServiceManager,
         )
+
         mgr = get_default_service_manager()
         assert isinstance(mgr, OrchestrationServiceManager)
         assert mgr._initialized is False

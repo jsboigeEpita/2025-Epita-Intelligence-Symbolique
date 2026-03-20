@@ -127,7 +127,11 @@ async def run_baseline_benchmark(
 
         # Judge first successful result from each workflow
         for workflow in workflows:
-            wf_results = [r for r in collector.query(workflow_name=workflow) if r.get("success", False)]
+            wf_results = [
+                r
+                for r in collector.query(workflow_name=workflow)
+                if r.get("success", False)
+            ]
             if wf_results:
                 sample = wf_results[0]
                 doc_idx = sample["document_index"]
@@ -141,20 +145,24 @@ async def run_baseline_benchmark(
                         analysis_results=sample.get("state_snapshot", {}),
                         model_registry=model_registry,
                     )
-                    judge_results.append({
-                        "workflow": workflow,
-                        "document_index": doc_idx,
-                        "document_id": documents[doc_idx].get("id", f"doc_{doc_idx}"),
-                        "score": {
-                            "completeness": score.completeness,
-                            "accuracy": score.accuracy,
-                            "depth": score.depth,
-                            "coherence": score.coherence,
-                            "actionability": score.actionability,
-                            "overall": score.overall,
-                        },
-                        "reasoning": score.reasoning,
-                    })
+                    judge_results.append(
+                        {
+                            "workflow": workflow,
+                            "document_index": doc_idx,
+                            "document_id": documents[doc_idx].get(
+                                "id", f"doc_{doc_idx}"
+                            ),
+                            "score": {
+                                "completeness": score.completeness,
+                                "accuracy": score.accuracy,
+                                "depth": score.depth,
+                                "coherence": score.coherence,
+                                "actionability": score.actionability,
+                                "overall": score.overall,
+                            },
+                            "reasoning": score.reasoning,
+                        }
+                    )
                     logger.info(f"    Score global: {score.overall}/5")
                 except Exception as e:
                     logger.error(f"    Erreur de jugement: {e}")
@@ -215,13 +223,15 @@ def main():
     )
 
     # Run benchmark
-    asyncio.run(run_baseline_benchmark(
-        corpus_path=args.corpus,
-        output_dir=args.output,
-        workflows=args.workflows,
-        max_docs=args.max_docs,
-        skip_judge=args.skip_judge,
-    ))
+    asyncio.run(
+        run_baseline_benchmark(
+            corpus_path=args.corpus,
+            output_dir=args.output,
+            workflows=args.workflows,
+            max_docs=args.max_docs,
+            skip_judge=args.skip_judge,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ async def session(manager):
 
 # ── __init__ ──
 
+
 class TestInit:
     def test_bidirectional_injection(self, service, tmp_path):
         mgr = JTMSSessionManager(service, storage_path=str(tmp_path))
@@ -50,6 +51,7 @@ class TestInit:
 
 
 # ── create_session ──
+
 
 class TestCreateSession:
     @pytest.mark.asyncio
@@ -104,6 +106,7 @@ class TestCreateSession:
 
 # ── get_session ──
 
+
 class TestGetSession:
     @pytest.mark.asyncio
     async def test_get_existing_session(self, manager):
@@ -148,6 +151,7 @@ class TestGetSession:
 
 # ── list_sessions ──
 
+
 class TestListSessions:
     @pytest.mark.asyncio
     async def test_list_all(self, manager):
@@ -188,6 +192,7 @@ class TestListSessions:
 
 
 # ── create_checkpoint ──
+
 
 class TestCreateCheckpoint:
     @pytest.mark.asyncio
@@ -230,6 +235,7 @@ class TestCreateCheckpoint:
 
 
 # ── restore_checkpoint ──
+
 
 class TestRestoreCheckpoint:
     @pytest.mark.asyncio
@@ -276,6 +282,7 @@ class TestRestoreCheckpoint:
 
 
 # ── delete_session ──
+
 
 class TestDeleteSession:
     @pytest.mark.asyncio
@@ -324,6 +331,7 @@ class TestDeleteSession:
 
 # ── update_session_metadata ──
 
+
 class TestUpdateSessionMetadata:
     @pytest.mark.asyncio
     async def test_updates_metadata(self, manager):
@@ -354,6 +362,7 @@ class TestUpdateSessionMetadata:
 
 
 # ── add_jtms_instance_to_session ──
+
 
 class TestAddJTMSInstanceToSession:
     @pytest.mark.asyncio
@@ -386,6 +395,7 @@ class TestAddJTMSInstanceToSession:
 
 # ── cleanup_expired_sessions ──
 
+
 class TestCleanupExpiredSessions:
     @pytest.mark.asyncio
     async def test_no_expired(self, manager):
@@ -398,6 +408,7 @@ class TestCleanupExpiredSessions:
         sid = await manager.create_session("watson")
         # Set last_accessed to 48 hours ago
         from datetime import datetime, timedelta
+
         old_time = (datetime.now() - timedelta(hours=48)).isoformat()
         manager.sessions[sid]["last_accessed"] = old_time
         count = await manager.cleanup_expired_sessions()
@@ -408,6 +419,7 @@ class TestCleanupExpiredSessions:
     async def test_locked_sessions_not_cleaned(self, manager):
         sid = await manager.create_session("watson")
         from datetime import datetime, timedelta
+
         old_time = (datetime.now() - timedelta(hours=48)).isoformat()
         manager.sessions[sid]["last_accessed"] = old_time
         manager.sessions[sid]["status"] = "locked"
@@ -416,6 +428,7 @@ class TestCleanupExpiredSessions:
 
 
 # ── Disk persistence ──
+
 
 class TestDiskPersistence:
     @pytest.mark.asyncio
@@ -468,6 +481,7 @@ class TestDiskPersistence:
 
 
 # ── Integration ──
+
 
 class TestSessionManagerIntegration:
     @pytest.mark.asyncio

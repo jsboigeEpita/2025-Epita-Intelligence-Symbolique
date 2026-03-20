@@ -21,12 +21,18 @@ class BeliefRevisionHandler:
 
     def __init__(self, initializer_instance=None):
         if initializer_instance and not initializer_instance.is_jvm_ready():
-            raise RuntimeError("BeliefRevisionHandler instantiated before JVM is ready.")
+            raise RuntimeError(
+                "BeliefRevisionHandler instantiated before JVM is ready."
+            )
         # PL classes
-        self.PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        self.PlBeliefSet = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.PlBeliefSet"
+        )
         self.PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         self.PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
-        self.Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+        self.Proposition = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.Proposition"
+        )
         self.PlNegation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
         # Revision operators
         self.DalalRevision = jpype.JClass(

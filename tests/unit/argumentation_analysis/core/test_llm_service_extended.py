@@ -16,6 +16,7 @@ class TestCreateLlmServiceMocking:
 
     def _import_create(self):
         from argumentation_analysis.core.llm_service import create_llm_service
+
         return create_llm_service
 
     def test_force_mock_returns_mock_service(self):
@@ -35,13 +36,20 @@ class TestCreateLlmServiceMocking:
     def test_force_authentic_overrides_test_env(self):
         """force_authentic=True bypasses mock even in test env."""
         create = self._import_create()
-        with patch.dict(os.environ, {
-            "PYTEST_CURRENT_TEST": "test_file::test_fn",
-            "OPENAI_API_KEY": "sk-test-fake-key",
-            "OPENAI_CHAT_MODEL_ID": "gpt-5-mini",
-        }):
-            with patch("argumentation_analysis.core.llm_service.AsyncOpenAI") as mock_client:
-                with patch("argumentation_analysis.core.llm_service.OpenAIChatCompletion") as mock_oai:
+        with patch.dict(
+            os.environ,
+            {
+                "PYTEST_CURRENT_TEST": "test_file::test_fn",
+                "OPENAI_API_KEY": "sk-test-fake-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-5-mini",
+            },
+        ):
+            with patch(
+                "argumentation_analysis.core.llm_service.AsyncOpenAI"
+            ) as mock_client:
+                with patch(
+                    "argumentation_analysis.core.llm_service.OpenAIChatCompletion"
+                ) as mock_oai:
                     mock_oai.return_value = MagicMock()
                     service = create("svc", force_authentic=True)
         assert service is not None
@@ -64,13 +72,18 @@ class TestCreateLlmServiceModelSubstitution:
         """gpt-4-32k is automatically replaced by gpt-5-mini."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "sk-test",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "sk-test",
+            },
+        ):
             # Remove PYTEST_CURRENT_TEST to avoid mock path
             os.environ.pop("PYTEST_CURRENT_TEST", None)
             with patch("argumentation_analysis.core.llm_service.AsyncOpenAI"):
-                with patch("argumentation_analysis.core.llm_service.OpenAIChatCompletion") as mock_oai:
+                with patch(
+                    "argumentation_analysis.core.llm_service.OpenAIChatCompletion"
+                ) as mock_oai:
                     mock_oai.return_value = MagicMock()
                     create_llm_service(
                         "svc",
@@ -85,13 +98,18 @@ class TestCreateLlmServiceModelSubstitution:
         """When model_id is None, reads from OPENAI_CHAT_MODEL_ID."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "sk-test",
-            "OPENAI_CHAT_MODEL_ID": "custom-model",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "sk-test",
+                "OPENAI_CHAT_MODEL_ID": "custom-model",
+            },
+        ):
             os.environ.pop("PYTEST_CURRENT_TEST", None)
             with patch("argumentation_analysis.core.llm_service.AsyncOpenAI"):
-                with patch("argumentation_analysis.core.llm_service.OpenAIChatCompletion") as mock_oai:
+                with patch(
+                    "argumentation_analysis.core.llm_service.OpenAIChatCompletion"
+                ) as mock_oai:
                     mock_oai.return_value = MagicMock()
                     create_llm_service("svc", force_authentic=True)
             call_kwargs = mock_oai.call_args
@@ -121,12 +139,17 @@ class TestCreateLlmServiceAzure:
         """Azure path with endpoint creates AzureChatCompletion."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "sk-test",
-            "AZURE_OPENAI_ENDPOINT": "https://my-resource.openai.azure.com",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "sk-test",
+                "AZURE_OPENAI_ENDPOINT": "https://my-resource.openai.azure.com",
+            },
+        ):
             os.environ.pop("PYTEST_CURRENT_TEST", None)
-            with patch("argumentation_analysis.core.llm_service.AzureChatCompletion") as mock_azure:
+            with patch(
+                "argumentation_analysis.core.llm_service.AzureChatCompletion"
+            ) as mock_azure:
                 mock_azure.return_value = MagicMock()
                 service = create_llm_service(
                     "svc",
@@ -173,13 +196,20 @@ class TestCreateLlmServiceErrors:
         """OPENAI_ORG_ID is forwarded to AsyncOpenAI."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "sk-test",
-            "OPENAI_ORG_ID": "org-12345",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "sk-test",
+                "OPENAI_ORG_ID": "org-12345",
+            },
+        ):
             os.environ.pop("PYTEST_CURRENT_TEST", None)
-            with patch("argumentation_analysis.core.llm_service.AsyncOpenAI") as mock_client:
-                with patch("argumentation_analysis.core.llm_service.OpenAIChatCompletion") as mock_oai:
+            with patch(
+                "argumentation_analysis.core.llm_service.AsyncOpenAI"
+            ) as mock_client:
+                with patch(
+                    "argumentation_analysis.core.llm_service.OpenAIChatCompletion"
+                ) as mock_oai:
                     mock_oai.return_value = MagicMock()
                     create_llm_service("svc", model_id="m", force_authentic=True)
             call_kwargs = mock_client.call_args[1]

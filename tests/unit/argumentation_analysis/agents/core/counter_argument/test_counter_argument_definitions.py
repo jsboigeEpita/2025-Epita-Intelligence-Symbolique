@@ -13,8 +13,8 @@ from argumentation_analysis.agents.core.counter_argument.definitions import (
     ValidationResult,
 )
 
-
 # ── Enums ──
+
 
 class TestCounterArgumentType:
     def test_has_five_types(self):
@@ -22,8 +22,11 @@ class TestCounterArgumentType:
 
     def test_values(self):
         expected = {
-            "direct_refutation", "counter_example", "alternative_explanation",
-            "premise_challenge", "reductio_ad_absurdum",
+            "direct_refutation",
+            "counter_example",
+            "alternative_explanation",
+            "premise_challenge",
+            "reductio_ad_absurdum",
         }
         assert {t.value for t in CounterArgumentType} == expected
 
@@ -44,13 +47,17 @@ class TestRhetoricalStrategy:
 
     def test_values(self):
         expected = {
-            "socratic_questioning", "reductio_ad_absurdum",
-            "analogical_counter", "authority_appeal", "statistical_evidence",
+            "socratic_questioning",
+            "reductio_ad_absurdum",
+            "analogical_counter",
+            "authority_appeal",
+            "statistical_evidence",
         }
         assert {s.value for s in RhetoricalStrategy} == expected
 
 
 # ── Argument ──
+
 
 class TestArgument:
     def test_init(self):
@@ -69,13 +76,17 @@ class TestArgument:
 
     def test_minimal(self):
         arg = Argument(
-            content="X", premises=[], conclusion="Y",
-            argument_type="inductive", confidence=0.5,
+            content="X",
+            premises=[],
+            conclusion="Y",
+            argument_type="inductive",
+            confidence=0.5,
         )
         assert arg.premises == []
 
 
 # ── Vulnerability ──
+
 
 class TestVulnerability:
     def test_init(self):
@@ -93,6 +104,7 @@ class TestVulnerability:
 
 
 # ── CounterArgument ──
+
 
 class TestCounterArgument:
     @pytest.fixture
@@ -138,6 +150,7 @@ class TestCounterArgument:
 
 # ── EvaluationResult ──
 
+
 class TestEvaluationResult:
     def test_init(self):
         ev = EvaluationResult(
@@ -154,14 +167,19 @@ class TestEvaluationResult:
 
     def test_with_recommendations(self):
         ev = EvaluationResult(
-            relevance=0.5, logical_strength=0.3, persuasiveness=0.4,
-            originality=0.2, clarity=0.6, overall_score=0.4,
+            relevance=0.5,
+            logical_strength=0.3,
+            persuasiveness=0.4,
+            originality=0.2,
+            clarity=0.6,
+            overall_score=0.4,
             recommendations=["Add evidence", "Improve logic"],
         )
         assert len(ev.recommendations) == 2
 
 
 # ── ValidationResult ──
+
 
 class TestValidationResult:
     def test_valid_attack(self):

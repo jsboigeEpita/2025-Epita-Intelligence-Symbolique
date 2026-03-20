@@ -1,10 +1,12 @@
 """
 Test Playwright simple et robuste pour validation de la démo.
+
+Note: This file was previously skipped due to test suite hangs (issue #112).
+The skip has been removed - tests should now run. If hangs recur, investigate
+the e2e_servers fixture or Playwright configuration.
 """
 
 import pytest
-
-pytest.mark.skip(reason="Skipping entire file to debug test suite hang")
 from playwright.sync_api import Page, expect
 
 

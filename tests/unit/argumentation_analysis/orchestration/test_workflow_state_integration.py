@@ -21,7 +21,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     PhaseStatus,
 )
 
-
 # ============================================================
 # State injection into context
 # ============================================================
@@ -94,8 +93,12 @@ class TestStateInjection:
             state.add_quality_score("arg_1", {"clarity": 0.9}, 0.9)
 
         registry = CapabilityRegistry()
-        registry.register("a", ComponentType.AGENT, capabilities=["cap_a"], invoke=phase_a)
-        registry.register("b", ComponentType.AGENT, capabilities=["cap_b"], invoke=phase_b)
+        registry.register(
+            "a", ComponentType.AGENT, capabilities=["cap_a"], invoke=phase_a
+        )
+        registry.register(
+            "b", ComponentType.AGENT, capabilities=["cap_b"], invoke=phase_b
+        )
 
         workflow = (
             WorkflowBuilder("chain")
@@ -139,7 +142,10 @@ class TestStateWriters:
         state = UnifiedAnalysisState("test")
         output = {
             "parsed_argument": {"premise": "All cats are animals"},
-            "suggested_strategy": {"strategy_name": "counter_example", "confidence": 0.8},
+            "suggested_strategy": {
+                "strategy_name": "counter_example",
+                "confidence": 0.8,
+            },
         }
         ctx = {"input_data": "test"}
         _write_counter_argument_to_state(output, state, ctx)
@@ -267,7 +273,9 @@ class TestWorkflowExecutorWithState:
             writer_calls.append(output)
 
         registry = CapabilityRegistry()
-        registry.register("c", ComponentType.AGENT, capabilities=["cap"], invoke=fake_invoke)
+        registry.register(
+            "c", ComponentType.AGENT, capabilities=["cap"], invoke=fake_invoke
+        )
 
         workflow = WorkflowBuilder("test").add_phase("p1", capability="cap").build()
         state = UnifiedAnalysisState("test")
@@ -317,7 +325,9 @@ class TestWorkflowExecutorWithState:
             raise ValueError("writer exploded")
 
         registry = CapabilityRegistry()
-        registry.register("c", ComponentType.AGENT, capabilities=["cap"], invoke=ok_invoke)
+        registry.register(
+            "c", ComponentType.AGENT, capabilities=["cap"], invoke=ok_invoke
+        )
 
         workflow = WorkflowBuilder("test").add_phase("p1", capability="cap").build()
         state = UnifiedAnalysisState("test")
@@ -337,7 +347,9 @@ class TestWorkflowExecutorWithState:
             return {"ok": True}
 
         registry = CapabilityRegistry()
-        registry.register("c", ComponentType.AGENT, capabilities=["cap"], invoke=ok_invoke)
+        registry.register(
+            "c", ComponentType.AGENT, capabilities=["cap"], invoke=ok_invoke
+        )
 
         workflow = WorkflowBuilder("wf").add_phase("p1", capability="cap").build()
         state = UnifiedAnalysisState("test")

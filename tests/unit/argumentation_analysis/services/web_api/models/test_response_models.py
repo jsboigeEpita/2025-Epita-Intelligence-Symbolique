@@ -33,23 +33,30 @@ from argumentation_analysis.services.web_api.models.response_models import (
     SuccessResponse,
 )
 
-
 # ============================================================
 # FallacyDetection
 # ============================================================
 
+
 class TestFallacyDetection:
     def test_valid_creation(self):
         fd = FallacyDetection(
-            type="ad_hominem", name="Ad Hominem",
-            description="Attaque la personne", severity=0.8, confidence=0.9,
+            type="ad_hominem",
+            name="Ad Hominem",
+            description="Attaque la personne",
+            severity=0.8,
+            confidence=0.9,
         )
         assert fd.type == "ad_hominem"
         assert fd.severity == 0.8
 
     def test_optional_fields_default_none(self):
         fd = FallacyDetection(
-            type="t", name="n", description="d", severity=0.5, confidence=0.5,
+            type="t",
+            name="n",
+            description="d",
+            severity=0.5,
+            confidence=0.5,
         )
         assert fd.location is None
         assert fd.context is None
@@ -57,8 +64,14 @@ class TestFallacyDetection:
 
     def test_with_optional_fields(self):
         fd = FallacyDetection(
-            type="t", name="n", description="d", severity=0.5, confidence=0.5,
-            location={"start": 0, "end": 10}, context="ctx", explanation="expl",
+            type="t",
+            name="n",
+            description="d",
+            severity=0.5,
+            confidence=0.5,
+            location={"start": 0, "end": 10},
+            context="ctx",
+            explanation="expl",
         )
         assert fd.location == {"start": 0, "end": 10}
         assert fd.context == "ctx"
@@ -66,18 +79,30 @@ class TestFallacyDetection:
     def test_severity_out_of_range(self):
         with pytest.raises(ValidationError):
             FallacyDetection(
-                type="t", name="n", description="d", severity=1.5, confidence=0.5,
+                type="t",
+                name="n",
+                description="d",
+                severity=1.5,
+                confidence=0.5,
             )
 
     def test_confidence_out_of_range(self):
         with pytest.raises(ValidationError):
             FallacyDetection(
-                type="t", name="n", description="d", severity=0.5, confidence=-0.1,
+                type="t",
+                name="n",
+                description="d",
+                severity=0.5,
+                confidence=-0.1,
             )
 
     def test_severity_boundaries(self):
-        fd0 = FallacyDetection(type="t", name="n", description="d", severity=0.0, confidence=0.0)
-        fd1 = FallacyDetection(type="t", name="n", description="d", severity=1.0, confidence=1.0)
+        fd0 = FallacyDetection(
+            type="t", name="n", description="d", severity=0.0, confidence=0.0
+        )
+        fd1 = FallacyDetection(
+            type="t", name="n", description="d", severity=1.0, confidence=1.0
+        )
         assert fd0.severity == 0.0
         assert fd1.severity == 1.0
 
@@ -85,6 +110,7 @@ class TestFallacyDetection:
 # ============================================================
 # ArgumentStructure
 # ============================================================
+
 
 class TestArgumentStructure:
     def test_defaults(self):
@@ -97,8 +123,11 @@ class TestArgumentStructure:
 
     def test_custom_values(self):
         a = ArgumentStructure(
-            premises=["P1", "P2"], conclusion="C",
-            argument_type="deductive", strength=0.8, coherence=0.7,
+            premises=["P1", "P2"],
+            conclusion="C",
+            argument_type="deductive",
+            strength=0.8,
+            coherence=0.7,
         )
         assert len(a.premises) == 2
         assert a.argument_type == "deductive"
@@ -115,6 +144,7 @@ class TestArgumentStructure:
 # ============================================================
 # AnalysisResponse
 # ============================================================
+
 
 class TestAnalysisResponse:
     def test_minimal_creation(self):
@@ -135,7 +165,11 @@ class TestAnalysisResponse:
 
     def test_with_fallacies(self):
         fd = FallacyDetection(
-            type="t", name="n", description="d", severity=0.5, confidence=0.5,
+            type="t",
+            name="n",
+            description="d",
+            severity=0.5,
+            confidence=0.5,
         )
         r = AnalysisResponse(success=True, text_analyzed="X", fallacies=[fd])
         assert len(r.fallacies) == 1
@@ -152,6 +186,7 @@ class TestAnalysisResponse:
 # ============================================================
 # ValidationResult
 # ============================================================
+
 
 class TestValidationResult:
     def test_creation(self):
@@ -176,12 +211,16 @@ class TestValidationResult:
 # ValidationResponse
 # ============================================================
 
+
 class TestValidationResponse:
     def test_creation(self):
         vr = ValidationResult(is_valid=True, validity_score=0.9, soundness_score=0.8)
         resp = ValidationResponse(
-            success=True, premises=["P1"], conclusion="C",
-            argument_type="deductive", result=vr,
+            success=True,
+            premises=["P1"],
+            conclusion="C",
+            argument_type="deductive",
+            result=vr,
         )
         assert resp.success is True
         assert resp.result.is_valid is True
@@ -190,8 +229,11 @@ class TestValidationResponse:
     def test_default_processing_time(self):
         vr = ValidationResult(is_valid=True, validity_score=0.5, soundness_score=0.5)
         resp = ValidationResponse(
-            success=True, premises=[], conclusion="C",
-            argument_type="inductive", result=vr,
+            success=True,
+            premises=[],
+            conclusion="C",
+            argument_type="inductive",
+            result=vr,
         )
         assert resp.processing_time == 0.0
 
@@ -199,6 +241,7 @@ class TestValidationResponse:
 # ============================================================
 # FallacyResponse
 # ============================================================
+
 
 class TestFallacyResponse:
     def test_creation(self):
@@ -218,6 +261,7 @@ class TestFallacyResponse:
 # ArgumentNode
 # ============================================================
 
+
 class TestArgumentNode:
     def test_creation(self):
         node = ArgumentNode(id="a1", content="Argument 1")
@@ -233,9 +277,12 @@ class TestArgumentNode:
 
     def test_with_relations(self):
         node = ArgumentNode(
-            id="a1", content="X",
-            attacks=["a2"], attacked_by=["a3"],
-            supports=["a4"], supported_by=["a5"],
+            id="a1",
+            content="X",
+            attacks=["a2"],
+            attacked_by=["a3"],
+            supports=["a4"],
+            supported_by=["a5"],
         )
         assert "a2" in node.attacks
         assert "a3" in node.attacked_by
@@ -244,6 +291,7 @@ class TestArgumentNode:
 # ============================================================
 # Extension
 # ============================================================
+
 
 class TestExtension:
     def test_creation(self):
@@ -263,6 +311,7 @@ class TestExtension:
 # FrameworkVisualization
 # ============================================================
 
+
 class TestFrameworkVisualization:
     def test_defaults(self):
         fv = FrameworkVisualization()
@@ -272,7 +321,8 @@ class TestFrameworkVisualization:
 
     def test_with_data(self):
         fv = FrameworkVisualization(
-            nodes=[{"id": "a1"}], edges=[{"from": "a1", "to": "a2"}],
+            nodes=[{"id": "a1"}],
+            edges=[{"from": "a1", "to": "a2"}],
             layout={"type": "force"},
         )
         assert len(fv.nodes) == 1
@@ -282,6 +332,7 @@ class TestFrameworkVisualization:
 # ============================================================
 # FrameworkResponse
 # ============================================================
+
 
 class TestFrameworkResponse:
     def test_creation(self):
@@ -309,6 +360,7 @@ class TestFrameworkResponse:
 # ErrorResponse
 # ============================================================
 
+
 class TestErrorResponse:
     def test_creation(self):
         err = ErrorResponse(error="NotFound", message="Not found", status_code=404)
@@ -322,7 +374,9 @@ class TestErrorResponse:
 
     def test_with_details(self):
         err = ErrorResponse(
-            error="E", message="M", status_code=500,
+            error="E",
+            message="M",
+            status_code=500,
             details={"trace": "stack"},
         )
         assert err.details["trace"] == "stack"
@@ -331,6 +385,7 @@ class TestErrorResponse:
 # ============================================================
 # LogicQueryResult
 # ============================================================
+
 
 class TestLogicQueryResult:
     def test_creation(self):
@@ -348,7 +403,9 @@ class TestLogicQueryResult:
 
     def test_with_explanation(self):
         r = LogicQueryResult(
-            query="q", result=True, formatted_result="T",
+            query="q",
+            result=True,
+            formatted_result="T",
             explanation="Because...",
         )
         assert r.explanation == "Because..."
@@ -358,11 +415,14 @@ class TestLogicQueryResult:
 # LogicBeliefSet
 # ============================================================
 
+
 class TestLogicBeliefSet:
     def test_creation(self):
         bs = LogicBeliefSet(
-            id="bs1", logic_type="propositional",
-            content="p -> q, p", source_text="If p then q, p.",
+            id="bs1",
+            logic_type="propositional",
+            content="p -> q, p",
+            source_text="If p then q, p.",
         )
         assert bs.id == "bs1"
         assert bs.logic_type == "propositional"
@@ -373,11 +433,14 @@ class TestLogicBeliefSet:
 # LogicBeliefSetResponse
 # ============================================================
 
+
 class TestLogicBeliefSetResponse:
     def test_creation(self):
         bs = LogicBeliefSet(
-            id="bs1", logic_type="first_order",
-            content="forall X: P(X)", source_text="All X are P",
+            id="bs1",
+            logic_type="first_order",
+            content="forall X: P(X)",
+            source_text="All X are P",
         )
         resp = LogicBeliefSetResponse(success=True, belief_set=bs)
         assert resp.success is True
@@ -389,12 +452,15 @@ class TestLogicBeliefSetResponse:
 # LogicQueryResponse
 # ============================================================
 
+
 class TestLogicQueryResponse:
     def test_creation(self):
         qr = LogicQueryResult(query="p", result=True, formatted_result="True")
         resp = LogicQueryResponse(
-            success=True, belief_set_id="bs1",
-            logic_type="propositional", result=qr,
+            success=True,
+            belief_set_id="bs1",
+            logic_type="propositional",
+            result=qr,
         )
         assert resp.belief_set_id == "bs1"
         assert resp.processing_time == 0.0
@@ -404,17 +470,22 @@ class TestLogicQueryResponse:
 # LogicGenerateQueriesResponse
 # ============================================================
 
+
 class TestLogicGenerateQueriesResponse:
     def test_creation(self):
         resp = LogicGenerateQueriesResponse(
-            success=True, belief_set_id="bs1", logic_type="modal",
+            success=True,
+            belief_set_id="bs1",
+            logic_type="modal",
             queries=["p", "q", "p -> q"],
         )
         assert len(resp.queries) == 3
 
     def test_defaults(self):
         resp = LogicGenerateQueriesResponse(
-            success=True, belief_set_id="bs1", logic_type="modal",
+            success=True,
+            belief_set_id="bs1",
+            logic_type="modal",
         )
         assert resp.queries == []
         assert resp.processing_time == 0.0
@@ -425,18 +496,23 @@ class TestLogicGenerateQueriesResponse:
 # LogicInterpretationResponse
 # ============================================================
 
+
 class TestLogicInterpretationResponse:
     def test_creation(self):
         resp = LogicInterpretationResponse(
-            success=True, belief_set_id="bs1",
-            logic_type="propositional", interpretation="The results show...",
+            success=True,
+            belief_set_id="bs1",
+            logic_type="propositional",
+            interpretation="The results show...",
         )
         assert resp.interpretation == "The results show..."
 
     def test_defaults(self):
         resp = LogicInterpretationResponse(
-            success=True, belief_set_id="bs1",
-            logic_type="propositional", interpretation="X",
+            success=True,
+            belief_set_id="bs1",
+            logic_type="propositional",
+            interpretation="X",
         )
         assert resp.queries == []
         assert resp.results == []
@@ -448,6 +524,7 @@ class TestLogicInterpretationResponse:
 # SuccessResponse
 # ============================================================
 
+
 class TestSuccessResponse:
     def test_defaults(self):
         resp = SuccessResponse()
@@ -458,7 +535,9 @@ class TestSuccessResponse:
 
     def test_custom_values(self):
         resp = SuccessResponse(
-            message="Created", data={"id": 1}, status_code=201,
+            message="Created",
+            data={"id": 1},
+            status_code=201,
         )
         assert resp.message == "Created"
         assert resp.data == {"id": 1}

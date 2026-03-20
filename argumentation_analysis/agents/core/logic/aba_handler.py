@@ -33,19 +33,25 @@ class ABAHandler:
             raise RuntimeError("ABAHandler instantiated before JVM is ready.")
         self.AbaTheory = jpype.JClass("org.tweetyproject.arg.aba.syntax.AbaTheory")
         self.Assumption = jpype.JClass("org.tweetyproject.arg.aba.syntax.Assumption")
-        self.InferenceRule = jpype.JClass("org.tweetyproject.arg.aba.syntax.InferenceRule")
+        self.InferenceRule = jpype.JClass(
+            "org.tweetyproject.arg.aba.syntax.InferenceRule"
+        )
         self.Negation = jpype.JClass("org.tweetyproject.arg.aba.syntax.Negation")
         self.AbaParser = jpype.JClass("org.tweetyproject.arg.aba.parser.AbaParser")
         # PL formula classes for ABA over propositional logic
         self.PlFormula = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlFormula")
-        self.Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+        self.Proposition = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.Proposition"
+        )
         self.PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         self._reasoner_cache = {}
 
     def _get_reasoner(self, semantics: str):
         if semantics not in self._reasoner_cache:
             if semantics not in self.REASONERS:
-                raise ValueError(f"Unknown ABA semantics: {semantics}. Available: {list(self.REASONERS.keys())}")
+                raise ValueError(
+                    f"Unknown ABA semantics: {semantics}. Available: {list(self.REASONERS.keys())}"
+                )
             cls = jpype.JClass(self.REASONERS[semantics])
             self._reasoner_cache[semantics] = cls()
         return self._reasoner_cache[semantics]
@@ -121,7 +127,9 @@ class ABAHandler:
             logger.error(f"Java exception in ABA analysis: {e}")
             raise RuntimeError(f"ABA analysis failed: {e}") from e
 
-    def parse_aba_file(self, file_path: str, semantics: str = "preferred") -> Dict[str, Any]:
+    def parse_aba_file(
+        self, file_path: str, semantics: str = "preferred"
+    ) -> Dict[str, Any]:
         """Parse an ABA framework from a file and analyze it.
 
         Args:

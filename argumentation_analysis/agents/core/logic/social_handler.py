@@ -42,12 +42,8 @@ class SocialHandler:
         self._IssReasoner = jpype.JClass(f"{pkg}.reasoner.IssReasoner")
 
         # Dung classes
-        self._Argument = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Argument"
-        )
-        self._Attack = jpype.JClass(
-            "org.tweetyproject.arg.dung.syntax.Attack"
-        )
+        self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+        self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
 
         logger.info("Social AF classes loaded successfully.")
 
@@ -115,13 +111,13 @@ class SocialHandler:
                 "attacks": attacks,
                 "votes": votes or {},
                 "scores": scores,
-                "ranking": [{"argument": name, "score": score} for name, score in ranking],
+                "ranking": [
+                    {"argument": name, "score": score} for name, score in ranking
+                ],
                 "statistics": {
                     "arguments_count": len(arguments),
                     "attacks_count": len(attacks),
-                    "voters": sum(
-                        (p + n) for p, n in (votes or {}).values()
-                    ),
+                    "voters": sum((p + n) for p, n in (votes or {}).values()),
                     "handler": "SocialHandler",
                 },
             }

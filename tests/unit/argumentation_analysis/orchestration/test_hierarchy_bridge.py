@@ -41,7 +41,6 @@ from argumentation_analysis.orchestration.hierarchical.hierarchy_bridge import (
     _extract_questions,
 )
 
-
 # ---------------------------------------------------------------------------
 # Test helpers
 # ---------------------------------------------------------------------------
@@ -380,9 +379,7 @@ class TestHierarchicalTurnStrategy:
 
     @pytest.mark.asyncio
     async def test_basic_execution(self):
-        invoke_fn = AsyncMock(
-            return_value={"confidence": 0.9, "analysis": "done"}
-        )
+        invoke_fn = AsyncMock(return_value={"confidence": 0.9, "analysis": "done"})
         registry = make_registry(
             make_component("extract", ["fact_extraction"], invoke=invoke_fn),
         )
@@ -419,8 +416,7 @@ class TestHierarchicalTurnStrategy:
 
         assert result.needs_refinement is True
         assert any(
-            r.status == PhaseStatus.FAILED
-            for r in result.phase_results.values()
+            r.status == PhaseStatus.FAILED for r in result.phase_results.values()
         )
 
     @pytest.mark.asyncio

@@ -125,7 +125,9 @@ class ADFHandler:
             logger.error(f"Java exception in ADF analysis: {e}")
             raise RuntimeError(f"ADF analysis failed: {e}") from e
 
-    def parse_adf_file(self, file_path: str, semantics: str = "grounded") -> Dict[str, Any]:
+    def parse_adf_file(
+        self, file_path: str, semantics: str = "grounded"
+    ) -> Dict[str, Any]:
         """Parse an ADF from a KppADF format file and analyze it.
 
         Args:

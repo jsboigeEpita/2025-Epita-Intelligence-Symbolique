@@ -13,11 +13,15 @@ from argumentation_analysis.agents.core.governance.simulation import (
 )
 
 
-def make_sim_agent(name, decision=None, preferences=None, personality="default", trust=None):
+def make_sim_agent(
+    name, decision=None, preferences=None, personality="default", trust=None
+):
     """Create a mock agent for simulation tests."""
     agent = MagicMock()
     agent.name = name
-    agent.decide = MagicMock(return_value=decision or (preferences[0] if preferences else "A"))
+    agent.decide = MagicMock(
+        return_value=decision or (preferences[0] if preferences else "A")
+    )
     agent.preferences = preferences or ["A", "B"]
     agent.personality = personality
     agent.trust = trust or {}
@@ -27,6 +31,7 @@ def make_sim_agent(name, decision=None, preferences=None, personality="default",
 
 
 # ── shapley_value ──
+
 
 class TestShapleyValue:
     def test_empty_coalition(self):
@@ -58,7 +63,9 @@ class TestShapleyValue:
     def test_values_sum_to_grand_coalition(self):
         agents = [make_sim_agent(n) for n in ["X", "Y"]]
         # Shapley values sum to v(N) - v(empty) = 3.0 - 0.0 = 3.0
-        payoff = lambda names: 3.0 if len(names) == 2 else (1.0 if len(names) == 1 else 0.0)
+        payoff = lambda names: (
+            3.0 if len(names) == 2 else (1.0 if len(names) == 1 else 0.0)
+        )
         result = shapley_value(agents, agents, payoff)
         total = sum(result.values())
         # v(N) - v(∅) = 3.0 - 0.0, but each agent's marginal is relative
@@ -68,6 +75,7 @@ class TestShapleyValue:
 
 
 # ── get_neighbors ──
+
 
 class TestGetNeighbors:
     def test_fully_connected(self):
@@ -98,6 +106,7 @@ class TestGetNeighbors:
 
 # ── distributed_gossip_consensus ──
 
+
 class TestDistributedGossipConsensus:
     def test_all_agree(self):
         agents = [make_sim_agent(n, decision="X") for n in ["A", "B", "C"]]
@@ -112,7 +121,9 @@ class TestDistributedGossipConsensus:
             make_sim_agent("C", decision="Y"),
         ]
         adjacency = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
-        winner, votes = distributed_gossip_consensus(agents, ["X", "Y"], adjacency, rounds=5)
+        winner, votes = distributed_gossip_consensus(
+            agents, ["X", "Y"], adjacency, rounds=5
+        )
         assert winner == "X"
 
     def test_returns_votes_dict(self):
@@ -129,6 +140,7 @@ class TestDistributedGossipConsensus:
 
 
 # ── simulate_governance ──
+
 
 class TestSimulateGovernance:
     def test_with_adjacency_networked(self):

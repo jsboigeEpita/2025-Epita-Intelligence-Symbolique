@@ -29,7 +29,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowPhase,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -223,9 +222,7 @@ class TestLoopExecution:
         assert results["p1"].output == {"s": 3}
 
     async def test_convergence_stops_early(self):
-        invoke_fn = AsyncMock(
-            side_effect=[{"s": 1}, {"s": 5}, {"s": 5}]
-        )
+        invoke_fn = AsyncMock(side_effect=[{"s": 1}, {"s": 5}, {"s": 5}])
         registry = make_registry(("cap_a", "prov_a", invoke_fn))
         wf = (
             WorkflowBuilder("loop_conv")
@@ -382,9 +379,7 @@ class TestWorkflowBuilderExtensions:
         conv = lambda p, c: p == c
         wf = (
             WorkflowBuilder("b2")
-            .add_loop(
-                "p1", capability="cap_a", max_iterations=5, convergence_fn=conv
-            )
+            .add_loop("p1", capability="cap_a", max_iterations=5, convergence_fn=conv)
             .build()
         )
         assert wf.phases[0].loop_config is not None

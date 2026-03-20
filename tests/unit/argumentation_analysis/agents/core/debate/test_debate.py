@@ -22,7 +22,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -32,9 +31,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 def mock_kernel():
     """Create a Kernel with a mock OpenAI service for testing."""
     kernel = Kernel()
-    service = OpenAIChatCompletion(
-        service_id="default", api_key="test-key"
-    )
+    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
     kernel.add_service(service)
     return kernel
 
@@ -265,9 +262,7 @@ class TestDebatePlugin:
         )
 
         plugin = DebatePlugin()
-        result = plugin.suggest_debate_strategy(
-            phase="opening", turn_number="1"
-        )
+        result = plugin.suggest_debate_strategy(phase="opening", turn_number="1")
         data = json.loads(result)
         assert data["strategy"] == "balanced"
 
@@ -615,15 +610,9 @@ class TestWaltonKrabbeProtocols:
         prop = Proposition(content="Test")
         history = [
             DialogueMove(speaker="a", act=SpeechAct.CLAIM, content=prop),
-            DialogueMove(
-                speaker="b", act=SpeechAct.UNDERSTAND, content=prop
-            ),
-            DialogueMove(
-                speaker="a", act=SpeechAct.UNDERSTAND, content=prop
-            ),
-            DialogueMove(
-                speaker="b", act=SpeechAct.UNDERSTAND, content=prop
-            ),
+            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
+            DialogueMove(speaker="a", act=SpeechAct.UNDERSTAND, content=prop),
+            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
         ]
         assert protocol.is_terminal_state(history)
 
@@ -771,9 +760,7 @@ class TestKnowledgeBase:
         kb = KnowledgeBase()
         target = Proposition(content="It is sunny")
         neg = Proposition(content="\u00acIt is sunny")
-        arg = FormalArgument(
-            premises=[Proposition(content="Clouds")], conclusion=neg
-        )
+        arg = FormalArgument(premises=[Proposition(content="Clouds")], conclusion=neg)
         kb.add_argument(arg)
 
         attackers = kb.find_attacking_arguments(target)
@@ -824,9 +811,7 @@ class TestDebateAgent:
 
         self.AgentClass = DebateAgent
         self.kernel = Kernel()
-        service = OpenAIChatCompletion(
-            service_id="default", api_key="test-key"
-        )
+        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
         self.kernel.add_service(service)
 
     def _create_agent(self, **kwargs):
@@ -870,9 +855,7 @@ class TestDebateAgent:
             new_callable=AsyncMock,
             side_effect=RuntimeError("LLM unavailable"),
         ):
-            arg = await agent.generate_argument(
-                state, ArgumentType.OPENING_STATEMENT
-            )
+            arg = await agent.generate_argument(state, ArgumentType.OPENING_STATEMENT)
 
         assert arg.agent_name == "Test"
         assert arg.content != ""
@@ -899,8 +882,7 @@ class TestDebateAgent:
         )
 
         mock_response = (
-            "Renewable energy is the future because studies show "
-            "declining costs."
+            "Renewable energy is the future because studies show " "declining costs."
         )
         with patch.object(
             agent,
@@ -908,9 +890,7 @@ class TestDebateAgent:
             new_callable=AsyncMock,
             return_value=mock_response,
         ):
-            arg = await agent.generate_argument(
-                state, ArgumentType.EVIDENCE
-            )
+            arg = await agent.generate_argument(state, ArgumentType.EVIDENCE)
 
         assert "Renewable" in arg.content or "energy" in arg.content
 
@@ -983,9 +963,7 @@ class TestDebateModerator:
     def setup_method(self):
         """Set up kernel for agent creation."""
         self.kernel = Kernel()
-        service = OpenAIChatCompletion(
-            service_id="default", api_key="test-key"
-        )
+        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
         self.kernel.add_service(service)
 
     def test_moderator_creation(self):

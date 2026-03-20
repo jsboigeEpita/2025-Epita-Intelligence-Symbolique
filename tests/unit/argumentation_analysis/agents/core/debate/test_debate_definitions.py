@@ -14,8 +14,8 @@ from argumentation_analysis.agents.core.debate.debate_definitions import (
     AGENT_PERSONALITIES,
 )
 
-
 # ── Enums ──
+
 
 class TestArgumentType:
     def test_all_values(self):
@@ -43,6 +43,7 @@ class TestDebatePhase:
 
 
 # ── ArgumentMetrics ──
+
 
 class TestArgumentMetrics:
     def test_defaults_all_zero(self):
@@ -74,6 +75,7 @@ class TestArgumentMetrics:
 
 
 # ── EnhancedArgument ──
+
 
 class TestEnhancedArgument:
     @pytest.fixture
@@ -190,6 +192,7 @@ class TestEnhancedArgument:
 
 # ── DebateState ──
 
+
 class TestDebateState:
     @pytest.fixture
     def basic_state(self):
@@ -290,6 +293,7 @@ class TestDebateState:
 
 # ── AGENT_PERSONALITIES ──
 
+
 class TestAgentPersonalities:
     def test_eight_personalities(self):
         assert len(AGENT_PERSONALITIES) == 8
@@ -308,23 +312,28 @@ class TestAgentPersonalities:
         valid_metrics = {f.name for f in ArgumentMetrics.__dataclass_fields__.values()}
         for name, personality in AGENT_PERSONALITIES.items():
             for strength in personality["strengths"]:
-                assert strength in valid_metrics, (
-                    f"{name} has invalid strength '{strength}'"
-                )
+                assert (
+                    strength in valid_metrics
+                ), f"{name} has invalid strength '{strength}'"
 
     def test_weaknesses_are_valid_metric_names(self):
         valid_metrics = {f.name for f in ArgumentMetrics.__dataclass_fields__.values()}
         for name, personality in AGENT_PERSONALITIES.items():
             for weakness in personality["weaknesses"]:
-                assert weakness in valid_metrics, (
-                    f"{name} has invalid weakness '{weakness}'"
-                )
+                assert (
+                    weakness in valid_metrics
+                ), f"{name} has invalid weakness '{weakness}'"
 
     def test_known_personalities(self):
         expected = [
-            "The Scholar", "The Pragmatist", "The Devil's Advocate",
-            "The Idealist", "The Skeptic", "The Populist",
-            "The Economist", "The Philosopher",
+            "The Scholar",
+            "The Pragmatist",
+            "The Devil's Advocate",
+            "The Idealist",
+            "The Skeptic",
+            "The Populist",
+            "The Economist",
+            "The Philosopher",
         ]
         for name in expected:
             assert name in AGENT_PERSONALITIES

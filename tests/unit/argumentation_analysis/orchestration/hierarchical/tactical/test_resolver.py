@@ -7,8 +7,12 @@ contradiction/overlap/fallacy/formal checking, escalation.
 
 import pytest
 
-from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.orchestration.hierarchical.tactical.resolver import ConflictResolver
+from argumentation_analysis.orchestration.hierarchical.tactical.state import (
+    TacticalState,
+)
+from argumentation_analysis.orchestration.hierarchical.tactical.resolver import (
+    ConflictResolver,
+)
 
 
 @pytest.fixture
@@ -28,6 +32,7 @@ def _make_task(task_id, obj_id="obj1"):
 # ============================================================
 # Initialization
 # ============================================================
+
 
 class TestInit:
     def test_creates_instance(self, resolver):
@@ -51,6 +56,7 @@ class TestInit:
 # _are_arguments_contradictory
 # ============================================================
 
+
 class TestAreArgumentsContradictory:
     def test_contradictory_est_nest_pas(self, resolver):
         arg1 = {"conclusion": "La terre est ronde"}
@@ -73,12 +79,15 @@ class TestAreArgumentsContradictory:
         assert resolver._are_arguments_contradictory(arg1, arg2) is False
 
     def test_no_conclusion_field(self, resolver):
-        assert resolver._are_arguments_contradictory({"text": "a"}, {"text": "b"}) is False
+        assert (
+            resolver._are_arguments_contradictory({"text": "a"}, {"text": "b"}) is False
+        )
 
 
 # ============================================================
 # _are_arguments_overlapping
 # ============================================================
+
 
 class TestAreArgumentsOverlapping:
     def test_same_subject(self, resolver):
@@ -104,6 +113,7 @@ class TestAreArgumentsOverlapping:
 # _are_fallacies_contradictory
 # ============================================================
 
+
 class TestAreFallaciesContradictory:
     def test_same_segment_different_type(self, resolver):
         f1 = {"segment": "les experts disent", "type": "appel_autorité"}
@@ -127,6 +137,7 @@ class TestAreFallaciesContradictory:
 # ============================================================
 # _are_formal_analyses_contradictory
 # ============================================================
+
 
 class TestAreFormalAnalysesContradictory:
     def test_same_arg_opposite_validity(self, resolver):
@@ -152,64 +163,67 @@ class TestAreFormalAnalysesContradictory:
 # detect_conflicts
 # ============================================================
 
+
 class TestDetectConflicts:
     def test_no_existing_results(self, resolver):
-        conflicts = resolver.detect_conflicts({"identified_arguments": [{"conclusion": "A"}]})
+        conflicts = resolver.detect_conflicts(
+            {"identified_arguments": [{"conclusion": "A"}]}
+        )
         assert isinstance(conflicts, list)
         assert len(conflicts) == 0  # No existing results to compare against
 
     def test_detects_argument_contradiction(self, resolver, state):
         # Set up existing results
         state.add_task(_make_task("t1", "obj1"))
-        state.add_intermediate_result("t1", {
-            "identified_arguments": [{"conclusion": "La terre est ronde"}]
-        })
+        state.add_intermediate_result(
+            "t1", {"identified_arguments": [{"conclusion": "La terre est ronde"}]}
+        )
         # Detect conflicts with contradictory argument
-        conflicts = resolver.detect_conflicts({
-            "identified_arguments": [{"conclusion": "La terre n'est pas ronde"}]
-        })
+        conflicts = resolver.detect_conflicts(
+            {"identified_arguments": [{"conclusion": "La terre n'est pas ronde"}]}
+        )
         assert len(conflicts) >= 1
         assert conflicts[0]["type"] == "contradiction"
 
     def test_detects_argument_overlap(self, resolver, state):
         state.add_task(_make_task("t1", "obj1"))
-        state.add_intermediate_result("t1", {
-            "identified_arguments": [{"subject": "climat"}]
-        })
-        conflicts = resolver.detect_conflicts({
-            "identified_arguments": [{"subject": "climat"}]
-        })
+        state.add_intermediate_result(
+            "t1", {"identified_arguments": [{"subject": "climat"}]}
+        )
+        conflicts = resolver.detect_conflicts(
+            {"identified_arguments": [{"subject": "climat"}]}
+        )
         assert len(conflicts) >= 1
         assert conflicts[0]["type"] == "overlap"
 
     def test_detects_fallacy_contradiction(self, resolver, state):
         state.add_task(_make_task("t1", "obj1"))
-        state.add_intermediate_result("t1", {
-            "identified_fallacies": [{"segment": "test", "type": "type_a"}]
-        })
-        conflicts = resolver.detect_conflicts({
-            "identified_fallacies": [{"segment": "test", "type": "type_b"}]
-        })
+        state.add_intermediate_result(
+            "t1", {"identified_fallacies": [{"segment": "test", "type": "type_a"}]}
+        )
+        conflicts = resolver.detect_conflicts(
+            {"identified_fallacies": [{"segment": "test", "type": "type_b"}]}
+        )
         assert len(conflicts) >= 1
 
     def test_detects_formal_contradiction(self, resolver, state):
         state.add_task(_make_task("t1", "obj1"))
-        state.add_intermediate_result("t1", {
-            "formal_analyses": [{"argument_id": "arg1", "is_valid": True}]
-        })
-        conflicts = resolver.detect_conflicts({
-            "formal_analyses": [{"argument_id": "arg1", "is_valid": False}]
-        })
+        state.add_intermediate_result(
+            "t1", {"formal_analyses": [{"argument_id": "arg1", "is_valid": True}]}
+        )
+        conflicts = resolver.detect_conflicts(
+            {"formal_analyses": [{"argument_id": "arg1", "is_valid": False}]}
+        )
         assert len(conflicts) >= 1
 
     def test_conflicts_added_to_state(self, resolver, state):
         state.add_task(_make_task("t1", "obj1"))
-        state.add_intermediate_result("t1", {
-            "identified_arguments": [{"conclusion": "c'est vrai"}]
-        })
-        resolver.detect_conflicts({
-            "identified_arguments": [{"conclusion": "c'est faux"}]
-        })
+        state.add_intermediate_result(
+            "t1", {"identified_arguments": [{"conclusion": "c'est vrai"}]}
+        )
+        resolver.detect_conflicts(
+            {"identified_arguments": [{"conclusion": "c'est faux"}]}
+        )
         assert len(state.identified_conflicts) >= 1
 
     def test_empty_results(self, resolver):
@@ -225,48 +239,74 @@ class TestDetectConflicts:
 # resolve_conflict
 # ============================================================
 
+
 class TestResolveConflict:
     def test_nonexistent_conflict(self, resolver):
         result = resolver.resolve_conflict("nonexistent")
         assert result["status"] == "error"
 
     def test_already_resolved(self, resolver, state):
-        state.add_conflict({"id": "c1", "type": "contradiction", "resolved": True, "resolution": {"method": "test"}})
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "resolved": True,
+                "resolution": {"method": "test"},
+            }
+        )
         result = resolver.resolve_conflict("c1")
         assert result["status"] == "already_resolved"
 
     def test_resolve_contradiction_with_args(self, resolver, state):
-        state.add_conflict({
-            "id": "c1", "type": "contradiction", "severity": "medium",
-            "details": {
-                "argument1": {"conclusion": "A", "confidence": 0.8},
-                "argument2": {"conclusion": "B", "confidence": 0.3},
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "severity": "medium",
+                "details": {
+                    "argument1": {"conclusion": "A", "confidence": 0.8},
+                    "argument2": {"conclusion": "B", "confidence": 0.3},
+                },
             }
-        })
+        )
         result = resolver.resolve_conflict("c1")
         assert result["status"] == "success"
         assert result["resolution"]["method"] == "confidence_based"
 
     def test_resolve_contradiction_with_fallacies(self, resolver, state):
-        state.add_conflict({
-            "id": "c1", "type": "contradiction",
-            "details": {
-                "fallacy1": {"type": "a", "confidence": 0.9},
-                "fallacy2": {"type": "b", "confidence": 0.4},
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "details": {
+                    "fallacy1": {"type": "a", "confidence": 0.9},
+                    "fallacy2": {"type": "b", "confidence": 0.4},
+                },
             }
-        })
+        )
         result = resolver.resolve_conflict("c1")
         assert result["status"] == "success"
         assert result["resolution"]["method"] == "confidence_based"
 
     def test_resolve_contradiction_with_analyses(self, resolver, state):
-        state.add_conflict({
-            "id": "c1", "type": "contradiction",
-            "details": {
-                "analysis1": {"argument_id": "a1", "is_valid": True, "confidence": 0.7},
-                "analysis2": {"argument_id": "a1", "is_valid": False, "confidence": 0.6},
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "details": {
+                    "analysis1": {
+                        "argument_id": "a1",
+                        "is_valid": True,
+                        "confidence": 0.7,
+                    },
+                    "analysis2": {
+                        "argument_id": "a1",
+                        "is_valid": False,
+                        "confidence": 0.6,
+                    },
+                },
             }
-        })
+        )
         result = resolver.resolve_conflict("c1")
         assert result["status"] == "success"
 
@@ -277,13 +317,28 @@ class TestResolveConflict:
         assert result["resolution"]["method"] == "default"
 
     def test_resolve_overlap(self, resolver, state):
-        state.add_conflict({
-            "id": "c1", "type": "overlap",
-            "details": {
-                "argument1": {"id": "a1", "subject": "X", "premises": ["p1"], "conclusion": "C", "confidence": 0.8},
-                "argument2": {"id": "a2", "subject": "X", "premises": ["p2"], "conclusion": "D", "confidence": 0.6},
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "overlap",
+                "details": {
+                    "argument1": {
+                        "id": "a1",
+                        "subject": "X",
+                        "premises": ["p1"],
+                        "conclusion": "C",
+                        "confidence": 0.8,
+                    },
+                    "argument2": {
+                        "id": "a2",
+                        "subject": "X",
+                        "premises": ["p2"],
+                        "conclusion": "D",
+                        "confidence": 0.6,
+                    },
+                },
             }
-        })
+        )
         result = resolver.resolve_conflict("c1")
         assert result["status"] == "success"
         assert result["resolution"]["method"] == "merge"
@@ -308,6 +363,7 @@ class TestResolveConflict:
 # escalate_unresolved_conflicts
 # ============================================================
 
+
 class TestEscalateUnresolved:
     def test_no_conflicts(self, resolver):
         result = resolver.escalate_unresolved_conflicts()
@@ -321,19 +377,37 @@ class TestEscalateUnresolved:
         assert result[0]["resolution_attempt"] is None
 
     def test_resolved_not_escalated(self, resolver, state):
-        state.add_conflict({"id": "c1", "type": "contradiction", "resolved": True, "resolution": {"method": "confidence_based"}})
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "resolved": True,
+                "resolution": {"method": "confidence_based"},
+            }
+        )
         result = resolver.escalate_unresolved_conflicts()
         assert len(result) == 0
 
     def test_default_resolution_escalated(self, resolver, state):
-        state.add_conflict({"id": "c1", "type": "contradiction", "resolved": True, "resolution": {"method": "default"}})
+        state.add_conflict(
+            {
+                "id": "c1",
+                "type": "contradiction",
+                "resolved": True,
+                "resolution": {"method": "default"},
+            }
+        )
         result = resolver.escalate_unresolved_conflicts()
         assert len(result) == 1
 
     def test_mixed_conflicts(self, resolver, state):
-        state.add_conflict({"id": "c1", "resolved": True, "resolution": {"method": "confidence_based"}})
+        state.add_conflict(
+            {"id": "c1", "resolved": True, "resolution": {"method": "confidence_based"}}
+        )
         state.add_conflict({"id": "c2", "type": "overlap"})
-        state.add_conflict({"id": "c3", "resolved": True, "resolution": {"method": "default"}})
+        state.add_conflict(
+            {"id": "c3", "resolved": True, "resolution": {"method": "default"}}
+        )
         result = resolver.escalate_unresolved_conflicts()
         # c2 (unresolved) and c3 (default resolution) should be escalated
         assert len(result) == 2

@@ -12,7 +12,9 @@ from unittest.mock import MagicMock
 
 def _get_module():
     """Get the actual nlp_model_manager MODULE (not the instance exported by __init__.py)."""
-    return sys.modules["argumentation_analysis.plugins.analysis_tools.logic.nlp_model_manager"]
+    return sys.modules[
+        "argumentation_analysis.plugins.analysis_tools.logic.nlp_model_manager"
+    ]
 
 
 # Force import so the module is in sys.modules
@@ -25,10 +27,10 @@ from argumentation_analysis.plugins.analysis_tools.logic.nlp_model_manager impor
     HAS_TRANSFORMERS,
 )
 
-
 # ============================================================
 # Singleton pattern
 # ============================================================
+
 
 class TestSingleton:
     def test_singleton_returns_same_instance(self):
@@ -44,6 +46,7 @@ class TestSingleton:
 # Constants
 # ============================================================
 
+
 class TestConstants:
     def test_model_constants_defined(self):
         assert isinstance(TEXT_CLASSIFICATION_MODEL, str)
@@ -57,6 +60,7 @@ class TestConstants:
 # ============================================================
 # get_model / are_models_loaded (without loading)
 # ============================================================
+
 
 class TestGetModelWithoutLoad:
     def test_get_model_returns_none_when_not_loaded(self):
@@ -85,6 +89,7 @@ class TestGetModelWithoutLoad:
 # ============================================================
 # load_models_sync (mocked)
 # ============================================================
+
 
 class TestLoadModelsSync:
     def test_load_without_transformers_does_nothing(self):
@@ -174,6 +179,7 @@ class TestLoadModelsSync:
 # ============================================================
 # get_model after successful load
 # ============================================================
+
 
 class TestGetModelAfterLoad:
     def test_returns_model_when_loaded(self):

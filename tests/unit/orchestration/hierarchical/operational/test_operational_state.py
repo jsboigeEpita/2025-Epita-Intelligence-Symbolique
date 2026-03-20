@@ -22,6 +22,7 @@ def state():
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_default_values(self, state):
         assert state.assigned_tasks == []
@@ -31,11 +32,18 @@ class TestInit:
 
     def test_analysis_results_structure(self, state):
         expected_keys = {
-            "identified_arguments", "identified_fallacies", "formal_analyses",
-            "extracted_data", "visualizations", "complex_fallacy_analyses",
-            "contextual_fallacy_analyses", "fallacy_severity_evaluations",
-            "argument_structure_visualizations", "argument_coherence_evaluations",
-            "semantic_argument_analyses", "contextual_fallacy_detections",
+            "identified_arguments",
+            "identified_fallacies",
+            "formal_analyses",
+            "extracted_data",
+            "visualizations",
+            "complex_fallacy_analyses",
+            "contextual_fallacy_analyses",
+            "fallacy_severity_evaluations",
+            "argument_structure_visualizations",
+            "argument_coherence_evaluations",
+            "semantic_argument_analyses",
+            "contextual_fallacy_detections",
         }
         assert expected_keys == set(state.analysis_results.keys())
 
@@ -48,6 +56,7 @@ class TestInit:
 # ============================================================
 # add_task
 # ============================================================
+
 
 class TestAddTask:
     def test_add_with_id(self, state):
@@ -73,6 +82,7 @@ class TestAddTask:
 # ============================================================
 # update_task_status
 # ============================================================
+
 
 class TestUpdateTaskStatus:
     def test_update_success(self, state):
@@ -101,6 +111,7 @@ class TestUpdateTaskStatus:
 # get_task
 # ============================================================
 
+
 class TestGetTask:
     def test_found(self, state):
         state.add_task({"id": "t1", "description": "Test"})
@@ -115,6 +126,7 @@ class TestGetTask:
 # ============================================================
 # add_text_extract
 # ============================================================
+
 
 class TestAddTextExtract:
     def test_add_success(self, state):
@@ -133,18 +145,25 @@ class TestAddTextExtract:
 # add_analysis_result
 # ============================================================
 
+
 class TestAddAnalysisResult:
     def test_known_type(self, state):
-        result_id = state.add_analysis_result("identified_fallacies", {"type": "ad_hominem"})
+        result_id = state.add_analysis_result(
+            "identified_fallacies", {"type": "ad_hominem"}
+        )
         assert len(state.analysis_results["identified_fallacies"]) == 1
         assert state.analysis_results["identified_fallacies"][0]["type"] == "ad_hominem"
 
     def test_auto_id(self, state):
-        result_id = state.add_analysis_result("identified_arguments", {"content": "test"})
+        result_id = state.add_analysis_result(
+            "identified_arguments", {"content": "test"}
+        )
         assert result_id.startswith("result-")
 
     def test_custom_id(self, state):
-        result_id = state.add_analysis_result("identified_arguments", {"id": "r1", "content": "test"})
+        result_id = state.add_analysis_result(
+            "identified_arguments", {"id": "r1", "content": "test"}
+        )
         assert result_id == "r1"
 
     def test_unknown_type_creates_category(self, state):
@@ -160,6 +179,7 @@ class TestAddAnalysisResult:
 # ============================================================
 # add_issue
 # ============================================================
+
 
 class TestAddIssue:
     def test_add_with_id(self, state):
@@ -179,6 +199,7 @@ class TestAddIssue:
 # ============================================================
 # update_metrics
 # ============================================================
+
 
 class TestUpdateMetrics:
     def test_execution_time(self, state):
@@ -205,6 +226,7 @@ class TestUpdateMetrics:
 # log_action
 # ============================================================
 
+
 class TestLogAction:
     def test_logs_entry(self, state):
         state.log_action("analyze", {"text": "sample"})
@@ -217,10 +239,15 @@ class TestLogAction:
 # get_task_results / get_task_issues / get_task_metrics
 # ============================================================
 
+
 class TestGetTaskData:
     def test_get_task_results(self, state):
-        state.add_analysis_result("identified_fallacies", {"task_id": "t1", "type": "ad_hominem"})
-        state.add_analysis_result("identified_fallacies", {"task_id": "t2", "type": "straw_man"})
+        state.add_analysis_result(
+            "identified_fallacies", {"task_id": "t1", "type": "ad_hominem"}
+        )
+        state.add_analysis_result(
+            "identified_fallacies", {"task_id": "t2", "type": "straw_man"}
+        )
         results = state.get_task_results("t1")
         assert "identified_fallacies" in results
         assert len(results["identified_fallacies"]) == 1
@@ -245,6 +272,7 @@ class TestGetTaskData:
 # ============================================================
 # Filtering methods
 # ============================================================
+
 
 class TestFilteringMethods:
     def test_get_pending_tasks(self, state):
@@ -278,6 +306,7 @@ class TestFilteringMethods:
 # clear
 # ============================================================
 
+
 class TestClear:
     def test_resets_state(self, state):
         state.add_task({"id": "t1"})
@@ -293,6 +322,7 @@ class TestClear:
 # find_operational_task_by_tactical_id
 # ============================================================
 
+
 class TestFindByTacticalId:
     def test_found(self, state):
         state.add_task({"id": "op1", "tactical_task_id": "tac1"})
@@ -307,6 +337,7 @@ class TestFindByTacticalId:
 # ============================================================
 # add_result_future / get_result_future
 # ============================================================
+
 
 class TestResultFutures:
     def test_add_and_get(self, state):

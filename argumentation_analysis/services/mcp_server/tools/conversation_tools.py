@@ -45,9 +45,7 @@ def register_conversation_tools(
             )
 
             # Run first round
-            round_result = await _execute_round(
-                get_registry, session, round_number=1
-            )
+            round_result = await _execute_round(get_registry, session, round_number=1)
             sm.update_session(session.session_id, round_result)
 
             return {

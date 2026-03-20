@@ -41,9 +41,7 @@ class QBFHandler:
         self._ForallQuantifiedFormula = jpype.JClass(
             f"{qbf_pkg}.syntax.ForallQuantifiedFormula"
         )
-        self._NaiveQbfReasoner = jpype.JClass(
-            f"{qbf_pkg}.reasoner.NaiveQbfReasoner"
-        )
+        self._NaiveQbfReasoner = jpype.JClass(f"{qbf_pkg}.reasoner.NaiveQbfReasoner")
 
         # PL classes for building formulas
         pl_pkg = "org.tweetyproject.logics.pl.syntax"

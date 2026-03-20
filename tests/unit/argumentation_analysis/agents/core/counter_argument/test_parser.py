@@ -33,6 +33,7 @@ def analyzer():
 # ArgumentParser — initialization
 # ============================================================
 
+
 class TestParserInit:
     def test_creates_instance(self, parser):
         assert isinstance(parser, ArgumentParser)
@@ -59,6 +60,7 @@ class TestParserInit:
 # ============================================================
 # ArgumentParser — parse_argument
 # ============================================================
+
 
 class TestParseArgument:
     def test_returns_argument(self, parser):
@@ -100,6 +102,7 @@ class TestParseArgument:
 # ArgumentParser — _extract_premises
 # ============================================================
 
+
 class TestExtractPremises:
     def test_with_premise_marker(self, parser):
         premises = parser._extract_premises("X car Y.")
@@ -119,9 +122,7 @@ class TestExtractPremises:
         assert "Une seule phrase" in premises[0]
 
     def test_parce_que_marker(self, parser):
-        premises = parser._extract_premises(
-            "Le sol est mouillé parce que il a plu"
-        )
+        premises = parser._extract_premises("Le sol est mouillé parce que il a plu")
         assert len(premises) >= 1
 
     def test_etant_donne_marker(self, parser):
@@ -134,6 +135,7 @@ class TestExtractPremises:
 # ============================================================
 # ArgumentParser — _extract_conclusion
 # ============================================================
+
 
 class TestExtractConclusion:
     def test_with_conclusion_marker(self, parser):
@@ -158,9 +160,7 @@ class TestExtractConclusion:
         assert "Une seule phrase" in conclusion
 
     def test_par_consequent(self, parser):
-        conclusion = parser._extract_conclusion(
-            "Il fait beau. Par conséquent on sort."
-        )
+        conclusion = parser._extract_conclusion("Il fait beau. Par conséquent on sort.")
         assert "conséquent" in conclusion.lower() or "sort" in conclusion.lower()
 
 
@@ -168,36 +168,56 @@ class TestExtractConclusion:
 # ArgumentParser — _determine_argument_type
 # ============================================================
 
+
 class TestDetermineArgumentType:
     def test_deductive_tous(self, parser):
-        assert parser._determine_argument_type("Tous les hommes sont mortels") == "deductive"
+        assert (
+            parser._determine_argument_type("Tous les hommes sont mortels")
+            == "deductive"
+        )
 
     def test_deductive_chaque(self, parser):
-        assert parser._determine_argument_type("Chaque élève doit réussir") == "deductive"
+        assert (
+            parser._determine_argument_type("Chaque élève doit réussir") == "deductive"
+        )
 
     def test_deductive_toujours(self, parser):
         assert parser._determine_argument_type("Il est toujours vrai") == "deductive"
 
     def test_deductive_necessairement(self, parser):
-        assert parser._determine_argument_type("Cela est nécessairement vrai") == "deductive"
+        assert (
+            parser._determine_argument_type("Cela est nécessairement vrai")
+            == "deductive"
+        )
 
     def test_inductive_generalement(self, parser):
-        assert parser._determine_argument_type("Généralement les gens préfèrent") == "inductive"
+        assert (
+            parser._determine_argument_type("Généralement les gens préfèrent")
+            == "inductive"
+        )
 
     def test_inductive_souvent(self, parser):
         assert parser._determine_argument_type("C'est souvent le cas") == "inductive"
 
     def test_inductive_la_plupart(self, parser):
-        assert parser._determine_argument_type("La plupart des gens sont d'accord") == "inductive"
+        assert (
+            parser._determine_argument_type("La plupart des gens sont d'accord")
+            == "inductive"
+        )
 
     def test_abductive_meilleure_explication(self, parser):
-        assert parser._determine_argument_type("La meilleure explication est") == "abductive"
+        assert (
+            parser._determine_argument_type("La meilleure explication est")
+            == "abductive"
+        )
 
     def test_abductive_probablement(self, parser):
         assert parser._determine_argument_type("C'est probablement vrai") == "abductive"
 
     def test_abductive_cause(self, parser):
-        assert parser._determine_argument_type("La cause de cet événement") == "abductive"
+        assert (
+            parser._determine_argument_type("La cause de cet événement") == "abductive"
+        )
 
     def test_abductive_explique(self, parser):
         assert parser._determine_argument_type("Cela explique pourquoi") == "abductive"
@@ -210,7 +230,10 @@ class TestDetermineArgumentType:
         assert parser._determine_argument_type("Le ciel est bleu") == "inductive"
 
     def test_inductive_statistiques(self, parser):
-        assert parser._determine_argument_type("Les statistiques montrent que") == "inductive"
+        assert (
+            parser._determine_argument_type("Les statistiques montrent que")
+            == "inductive"
+        )
 
     def test_inductive_exemple(self, parser):
         assert parser._determine_argument_type("Par exemple ceci prouve") == "inductive"
@@ -219,6 +242,7 @@ class TestDetermineArgumentType:
 # ============================================================
 # ArgumentParser — _calculate_confidence
 # ============================================================
+
 
 class TestCalculateConfidence:
     def test_base_confidence(self, parser):
@@ -239,27 +263,22 @@ class TestCalculateConfidence:
         assert confidence >= 0.89  # 0.5 + 0.2 + 0.2 (float precision)
 
     def test_premise_marker_bonus(self, parser):
-        confidence = parser._calculate_confidence(
-            ["car il pleut"], "conclusion"
-        )
+        confidence = parser._calculate_confidence(["car il pleut"], "conclusion")
         assert confidence >= 0.99  # 0.5 + 0.2 + 0.2 + 0.1 (float precision)
 
     def test_conclusion_marker_bonus(self, parser):
-        confidence = parser._calculate_confidence(
-            ["prémisse"], "donc il fait beau"
-        )
+        confidence = parser._calculate_confidence(["prémisse"], "donc il fait beau")
         assert confidence >= 0.99  # 0.5 + 0.2 + 0.2 + 0.1 (float precision)
 
     def test_max_is_one(self, parser):
-        confidence = parser._calculate_confidence(
-            ["car il pleut"], "donc il fait beau"
-        )
+        confidence = parser._calculate_confidence(["car il pleut"], "donc il fait beau")
         assert confidence == 1.0
 
 
 # ============================================================
 # ArgumentParser — _split_into_sentences
 # ============================================================
+
 
 class TestSplitIntoSentences:
     def test_period_split(self, parser):
@@ -287,6 +306,7 @@ class TestSplitIntoSentences:
 # ArgumentParser — _fix_identical_premise_conclusion
 # ============================================================
 
+
 class TestFixIdenticalPremiseConclusion:
     def test_no_fix_needed_different(self, parser):
         premises, conclusion = parser._fix_identical_premise_conclusion(
@@ -296,16 +316,12 @@ class TestFixIdenticalPremiseConclusion:
         assert conclusion == "B"
 
     def test_no_fix_empty_premises(self, parser):
-        premises, conclusion = parser._fix_identical_premise_conclusion(
-            [], "B", "B"
-        )
+        premises, conclusion = parser._fix_identical_premise_conclusion([], "B", "B")
         assert premises == []
         assert conclusion == "B"
 
     def test_no_fix_empty_conclusion(self, parser):
-        premises, conclusion = parser._fix_identical_premise_conclusion(
-            ["A"], "", "A"
-        )
+        premises, conclusion = parser._fix_identical_premise_conclusion(["A"], "", "A")
         assert premises == ["A"]
         assert conclusion == ""
 
@@ -336,6 +352,7 @@ class TestFixIdenticalPremiseConclusion:
 # ArgumentParser — identify_vulnerabilities
 # ============================================================
 
+
 class TestIdentifyVulnerabilities:
     def test_returns_list(self, parser):
         arg = Argument(
@@ -365,6 +382,7 @@ class TestIdentifyVulnerabilities:
 # VulnerabilityAnalyzer — initialization
 # ============================================================
 
+
 class TestVulnerabilityAnalyzerInit:
     def test_creates_instance(self, analyzer):
         assert isinstance(analyzer, VulnerabilityAnalyzer)
@@ -386,6 +404,7 @@ class TestVulnerabilityAnalyzerInit:
 # ============================================================
 # VulnerabilityAnalyzer — _analyze_text
 # ============================================================
+
 
 class TestAnalyzeText:
     def test_generalisation_tous(self, analyzer):
@@ -438,11 +457,15 @@ class TestAnalyzeText:
 # VulnerabilityAnalyzer — _analyze_structure
 # ============================================================
 
+
 class TestAnalyzeStructure:
     def test_no_premises(self, analyzer):
         arg = Argument(
-            content="test", premises=[], conclusion="conclusion",
-            argument_type="inductive", confidence=0.5,
+            content="test",
+            premises=[],
+            conclusion="conclusion",
+            argument_type="inductive",
+            confidence=0.5,
         )
         vuln = analyzer._analyze_structure(arg)
         assert vuln is not None
@@ -478,6 +501,7 @@ class TestAnalyzeStructure:
 # VulnerabilityAnalyzer — _check_coherence
 # ============================================================
 
+
 class TestCheckCoherence:
     def test_shared_keywords_coherent(self, analyzer):
         arg = Argument(
@@ -503,6 +527,7 @@ class TestCheckCoherence:
 # ============================================================
 # VulnerabilityAnalyzer — _extract_key_words
 # ============================================================
+
 
 class TestExtractKeyWords:
     def test_removes_stop_words(self, analyzer):
@@ -532,6 +557,7 @@ class TestExtractKeyWords:
 # VulnerabilityAnalyzer — analyze_vulnerabilities (integration)
 # ============================================================
 
+
 class TestAnalyzeVulnerabilities:
     def test_premise_vulnerability_tagged(self, analyzer):
         arg = Argument(
@@ -560,8 +586,11 @@ class TestAnalyzeVulnerabilities:
 
     def test_structure_vulnerability_no_premises(self, analyzer):
         arg = Argument(
-            content="test", premises=[], conclusion="conclusion",
-            argument_type="inductive", confidence=0.5,
+            content="test",
+            premises=[],
+            conclusion="conclusion",
+            argument_type="inductive",
+            confidence=0.5,
         )
         vulns = analyzer.analyze_vulnerabilities(arg)
         structure_vulns = [v for v in vulns if v.target == "structure"]
@@ -583,6 +612,7 @@ class TestAnalyzeVulnerabilities:
 # ============================================================
 # parse_llm_response
 # ============================================================
+
 
 class TestParseLlmResponse:
     def test_valid_json(self):
@@ -608,6 +638,7 @@ class TestParseLlmResponse:
 # parse_structured_text
 # ============================================================
 
+
 class TestParseStructuredText:
     def test_simple_key_value(self):
         result = parse_structured_text("name: Alice\nage: 30")
@@ -615,7 +646,9 @@ class TestParseStructuredText:
         assert result["age"] == "30"
 
     def test_multiline_value(self):
-        result = parse_structured_text("description: first line\nsecond line\nother: value")
+        result = parse_structured_text(
+            "description: first line\nsecond line\nother: value"
+        )
         assert "first line" in result["description"]
         assert "second line" in result["description"]
         assert result["other"] == "value"

@@ -37,6 +37,7 @@ class TestEnsureEnv:
             if not patched.get("E2E_TESTING_MODE"):
                 os.environ.pop("E2E_TESTING_MODE", None)
             from argumentation_analysis.core.environment import ensure_env
+
             return ensure_env(**kwargs)
 
     # --- E2E testing mode bypass ---
@@ -44,6 +45,7 @@ class TestEnsureEnv:
     def test_e2e_mode_skips_conda_check(self):
         """When E2E_TESTING_MODE=1, ensure_env returns True without checking conda."""
         from argumentation_analysis.core.environment import ensure_env
+
         with patch.dict(os.environ, {"E2E_TESTING_MODE": "1"}):
             result = ensure_env(silent=True, load_dotenv=False)
             assert result is True
@@ -51,7 +53,10 @@ class TestEnsureEnv:
     def test_e2e_mode_skips_even_wrong_env(self):
         """E2E mode bypasses conda check even with wrong env."""
         from argumentation_analysis.core.environment import ensure_env
-        with patch.dict(os.environ, {"E2E_TESTING_MODE": "1", "CONDA_DEFAULT_ENV": "wrong"}):
+
+        with patch.dict(
+            os.environ, {"E2E_TESTING_MODE": "1", "CONDA_DEFAULT_ENV": "wrong"}
+        ):
             result = ensure_env(env_name="projet-is", silent=True, load_dotenv=False)
             assert result is True
 
@@ -61,7 +66,9 @@ class TestEnsureEnv:
         """When CONDA_DEFAULT_ENV matches expected, returns True."""
         result = self._call_ensure_env(
             {"CONDA_DEFAULT_ENV": "projet-is"},
-            env_name="projet-is", silent=True, load_dotenv=False
+            env_name="projet-is",
+            silent=True,
+            load_dotenv=False,
         )
         assert result is True
 
@@ -69,7 +76,9 @@ class TestEnsureEnv:
         """When CONDA_DEFAULT_ENV matches explicitly-given env name, returns True."""
         result = self._call_ensure_env(
             {"CONDA_DEFAULT_ENV": "projet-is-roo-new"},
-            env_name="projet-is-roo-new", silent=True, load_dotenv=False
+            env_name="projet-is-roo-new",
+            silent=True,
+            load_dotenv=False,
         )
         assert result is True
 
@@ -79,7 +88,9 @@ class TestEnsureEnv:
         """When expected is 'projet-is-roo' and active is 'projet-is', it's accepted."""
         result = self._call_ensure_env(
             {"CONDA_DEFAULT_ENV": "projet-is"},
-            env_name="projet-is-roo", silent=True, load_dotenv=False
+            env_name="projet-is-roo",
+            silent=True,
+            load_dotenv=False,
         )
         assert result is True
 
@@ -90,17 +101,23 @@ class TestEnsureEnv:
         with pytest.raises(RuntimeError, match="MAUVAIS ENVIRONNEMENT CONDA"):
             self._call_ensure_env(
                 {"CONDA_DEFAULT_ENV": "wrong-env"},
-                env_name="projet-is", silent=True, load_dotenv=False
+                env_name="projet-is",
+                silent=True,
+                load_dotenv=False,
             )
 
     def test_missing_conda_env_raises(self):
         """When CONDA_DEFAULT_ENV is not set, raises RuntimeError."""
         with pytest.raises(RuntimeError, match="MAUVAIS ENVIRONNEMENT CONDA"):
             # Use a clean env without CONDA_DEFAULT_ENV
-            env_copy = {k: v for k, v in os.environ.items()
-                        if k not in ("CONDA_DEFAULT_ENV", "E2E_TESTING_MODE")}
+            env_copy = {
+                k: v
+                for k, v in os.environ.items()
+                if k not in ("CONDA_DEFAULT_ENV", "E2E_TESTING_MODE")
+            }
             with patch.dict(os.environ, env_copy, clear=True):
                 from argumentation_analysis.core.environment import ensure_env
+
                 ensure_env(env_name="projet-is", silent=True, load_dotenv=False)
 
     # --- Error message content ---
@@ -109,7 +126,9 @@ class TestEnsureEnv:
         with pytest.raises(RuntimeError) as exc_info:
             self._call_ensure_env(
                 {"CONDA_DEFAULT_ENV": "wrong"},
-                env_name="my-expected-env", silent=True, load_dotenv=False
+                env_name="my-expected-env",
+                silent=True,
+                load_dotenv=False,
             )
         assert "my-expected-env" in str(exc_info.value)
         assert "wrong" in str(exc_info.value)
@@ -118,7 +137,9 @@ class TestEnsureEnv:
         with pytest.raises(RuntimeError) as exc_info:
             self._call_ensure_env(
                 {"CONDA_DEFAULT_ENV": "bad"},
-                env_name="good", silent=True, load_dotenv=False
+                env_name="good",
+                silent=True,
+                load_dotenv=False,
             )
         assert "conda activate" in str(exc_info.value)
 
@@ -128,16 +149,22 @@ class TestEnsureEnv:
         """When load_dotenv=False, EnvironmentManager is not called."""
         result = self._call_ensure_env(
             {"CONDA_DEFAULT_ENV": "projet-is"},
-            env_name="projet-is", silent=True, load_dotenv=False
+            env_name="projet-is",
+            silent=True,
+            load_dotenv=False,
         )
         assert result is True
 
     def test_load_dotenv_handles_import_error(self):
         """When EnvironmentManager can't be imported, ensure_env continues gracefully."""
-        with patch.dict(sys.modules, {"project_core.managers.environment_manager": None}):
+        with patch.dict(
+            sys.modules, {"project_core.managers.environment_manager": None}
+        ):
             result = self._call_ensure_env(
                 {"CONDA_DEFAULT_ENV": "projet-is"},
-                env_name="projet-is", silent=True, load_dotenv=True
+                env_name="projet-is",
+                silent=True,
+                load_dotenv=True,
             )
             assert result is True
 
@@ -147,6 +174,7 @@ class TestHelperFunctions:
 
     def test_get_one_liner_returns_string(self):
         from argumentation_analysis.core.environment import get_one_liner
+
         result = get_one_liner()
         assert isinstance(result, str)
         assert len(result) > 50
@@ -154,6 +182,7 @@ class TestHelperFunctions:
 
     def test_get_simple_import_returns_string(self):
         from argumentation_analysis.core.environment import get_simple_import
+
         result = get_simple_import()
         assert isinstance(result, str)
         assert "argumentation_analysis.core.environment" in result

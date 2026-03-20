@@ -16,11 +16,11 @@ from argumentation_analysis.orchestration.conversation_orchestrator import (
     run_mode_enhanced,
 )
 
-
 SAMPLE_TEXT = "Les mesures fermes sont nécessaires pour maintenir l'ordre et la stabilité du pays."
 
 
 # ── ConversationLogger ──
+
 
 class TestConversationLogger:
     def test_micro_mode_limits(self):
@@ -96,6 +96,7 @@ class TestConversationLogger:
 
 # ── AnalysisState ──
 
+
 class TestAnalysisState:
     def test_initial_state(self):
         state = AnalysisState()
@@ -113,7 +114,9 @@ class TestAnalysisState:
 
     def test_update_from_modal(self):
         state = AnalysisState()
-        state.update_from_modal({"propositions_count": 5, "consistency": 0.9, "logical_score": 0.7})
+        state.update_from_modal(
+            {"propositions_count": 5, "consistency": 0.9, "logical_score": 0.7}
+        )
         assert state.propositions_found == 5
         assert state.consistency_score == 0.9
         assert state.score == pytest.approx(0.21)  # 0.7 * 0.3
@@ -138,6 +141,7 @@ class TestAnalysisState:
         state.completed = True
         rs = state.to_rhetorical_state()
         from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+
         assert isinstance(rs, RhetoricalAnalysisState)
         assert rs.final_conclusion is not None
 
@@ -145,6 +149,7 @@ class TestAnalysisState:
         state = AnalysisState()
         rs = state.to_rhetorical_state()
         from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+
         assert isinstance(rs, RhetoricalAnalysisState)
         assert rs.final_conclusion is None
 
@@ -156,12 +161,15 @@ class TestAnalysisState:
     def test_cumulative_scoring(self):
         state = AnalysisState()
         state.update_from_informal({"fallacies_count": 2, "sophistication_score": 1.0})
-        state.update_from_modal({"propositions_count": 3, "consistency": 0.8, "logical_score": 1.0})
+        state.update_from_modal(
+            {"propositions_count": 3, "consistency": 0.8, "logical_score": 1.0}
+        )
         state.update_from_synthesis({"unified_score": 1.0})
         assert state.score == pytest.approx(1.0)  # 0.4 + 0.3 + 0.3
 
 
 # ── SimulatedAgent ──
+
 
 class TestSimulatedAgent:
     def test_informal_agent(self):
@@ -200,6 +208,7 @@ class TestSimulatedAgent:
 
 
 # ── ConversationOrchestrator ──
+
 
 class TestConversationOrchestrator:
     def test_micro_mode_setup(self):
@@ -263,12 +272,15 @@ class TestConversationOrchestrator:
     @patch("builtins.print")
     def test_agent_error_handled(self, mock_print):
         orch = ConversationOrchestrator(mode="demo")
+
         # Replace first agent with one that raises
         class FailingAgent:
             name = "FailAgent"
             agent_type = "informal"
+
             def analyze(self, text, cl, state):
                 raise RuntimeError("Agent failure")
+
         orch.agents[0] = FailingAgent()
         # Should not raise — errors are caught
         report = orch.run_orchestration(SAMPLE_TEXT)
@@ -282,6 +294,7 @@ class TestConversationOrchestrator:
 
 
 # ── Factory and mode functions ──
+
 
 class TestFactoryAndModes:
     def test_create_conversation_orchestrator(self):

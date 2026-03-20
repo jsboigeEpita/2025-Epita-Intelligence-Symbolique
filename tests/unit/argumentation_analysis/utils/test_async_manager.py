@@ -22,6 +22,7 @@ def mgr():
 
 # ── Init ──
 
+
 class TestAsyncManagerInit:
     def test_defaults(self):
         m = AsyncManager()
@@ -39,6 +40,7 @@ class TestAsyncManagerInit:
 
 
 # ── run_hybrid (sync functions) ──
+
 
 class TestRunHybridSync:
     def test_basic_sync_function(self, mgr):
@@ -85,6 +87,7 @@ class TestRunHybridSync:
 
 # ── run_hybrid (async functions) ──
 
+
 class TestRunHybridAsync:
     def test_async_function(self, mgr):
         async def async_add(a, b):
@@ -102,6 +105,7 @@ class TestRunHybridAsync:
 
 
 # ── run_multiple_hybrid ──
+
 
 class TestRunMultipleHybrid:
     def test_multiple_tasks(self, mgr):
@@ -132,6 +136,7 @@ class TestRunMultipleHybrid:
 
 
 # ── Task management ──
+
 
 class TestTaskManagement:
     def test_generate_task_id(self, mgr):
@@ -180,6 +185,7 @@ class TestTaskManagement:
 
 # ── Performance stats ──
 
+
 class TestPerformanceStats:
     def test_no_tasks(self, mgr):
         stats = mgr.get_performance_stats()
@@ -195,12 +201,15 @@ class TestPerformanceStats:
         assert stats["average_duration"] >= 0
 
     def test_with_error_tasks(self, mgr):
-        mgr.run_hybrid(lambda: (_ for _ in ()).throw(RuntimeError("e")), fallback_result=None)
+        mgr.run_hybrid(
+            lambda: (_ for _ in ()).throw(RuntimeError("e")), fallback_result=None
+        )
         stats = mgr.get_performance_stats()
         assert stats["error_tasks"] >= 0
 
 
 # ── Wrappers ──
+
 
 class TestWrappers:
     def test_create_async_wrapper(self, mgr):
@@ -220,6 +229,7 @@ class TestWrappers:
 
 # ── Module-level functions ──
 
+
 class TestModuleFunctions:
     def test_run_hybrid_safe(self):
         result = run_hybrid_safe(lambda: 42)
@@ -238,6 +248,7 @@ class TestModuleFunctions:
 
         wrapped = ensure_async(sync_fn)
         import asyncio
+
         assert asyncio.iscoroutinefunction(wrapped)
 
     def test_ensure_async_already_async(self):
@@ -260,10 +271,12 @@ class TestModuleFunctions:
 
         wrapped = ensure_sync(async_fn)
         import asyncio
+
         assert not asyncio.iscoroutinefunction(wrapped)
 
 
 # ── Shutdown ──
+
 
 class TestShutdown:
     def test_shutdown_clean(self):

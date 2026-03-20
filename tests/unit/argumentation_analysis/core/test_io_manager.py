@@ -16,7 +16,6 @@ from argumentation_analysis.core.io_manager import (
     save_extract_definitions,
 )
 
-
 # ============================================================
 # Helpers
 # ============================================================
@@ -51,6 +50,7 @@ def _make_encrypted_payload(definitions):
 # ============================================================
 # load_extract_definitions
 # ============================================================
+
 
 class TestLoadExtractDefinitions:
     """Tests for load_extract_definitions."""
@@ -186,6 +186,7 @@ class TestLoadExtractDefinitions:
 # save_extract_definitions
 # ============================================================
 
+
 class TestSaveExtractDefinitions:
     """Tests for save_extract_definitions."""
 
@@ -278,8 +279,11 @@ class TestSaveExtractDefinitions:
             return_value=b"data",
         ):
             result = save_extract_definitions(
-                [definition], config_file, "key",
-                embed_full_text=True, text_retriever=retriever
+                [definition],
+                config_file,
+                "key",
+                embed_full_text=True,
+                text_retriever=retriever,
             )
             assert result is True
             retriever.assert_called_once()
@@ -295,8 +299,11 @@ class TestSaveExtractDefinitions:
             return_value=b"data",
         ):
             result = save_extract_definitions(
-                [definition], config_file, "key",
-                embed_full_text=True, text_retriever=retriever
+                [definition],
+                config_file,
+                "key",
+                embed_full_text=True,
+                text_retriever=retriever,
             )
             assert result is True
 
@@ -311,8 +318,11 @@ class TestSaveExtractDefinitions:
             return_value=b"data",
         ):
             result = save_extract_definitions(
-                [definition], config_file, "key",
-                embed_full_text=True, text_retriever=retriever
+                [definition],
+                config_file,
+                "key",
+                embed_full_text=True,
+                text_retriever=retriever,
             )
             assert result is True
 
@@ -327,8 +337,11 @@ class TestSaveExtractDefinitions:
             return_value=b"data",
         ):
             result = save_extract_definitions(
-                [definition], config_file, "key",
-                embed_full_text=True, text_retriever=retriever
+                [definition],
+                config_file,
+                "key",
+                embed_full_text=True,
+                text_retriever=retriever,
             )
             assert result is True
 
@@ -374,8 +387,11 @@ class TestSaveExtractDefinitions:
             side_effect=capture_encrypt,
         ):
             save_extract_definitions(
-                [definition], config_file, "key",
-                embed_full_text=True, text_retriever=retriever
+                [definition],
+                config_file,
+                "key",
+                embed_full_text=True,
+                text_retriever=retriever,
             )
             retriever.assert_not_called()
             assert saved_data["definitions"][0]["full_text"] == "Existing full text"

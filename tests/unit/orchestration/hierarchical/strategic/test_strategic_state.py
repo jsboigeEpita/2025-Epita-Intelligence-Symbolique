@@ -21,6 +21,7 @@ def state():
 # __init__
 # ============================================================
 
+
 class TestInit:
     def test_default_values(self, state):
         assert state.raw_text is None
@@ -46,9 +47,12 @@ class TestInit:
 
     def test_rhetorical_summary_keys(self, state):
         expected = {
-            "complex_fallacy_summary", "contextual_fallacy_summary",
-            "fallacy_severity_summary", "argument_structure_summary",
-            "argument_coherence_summary", "semantic_argument_summary",
+            "complex_fallacy_summary",
+            "contextual_fallacy_summary",
+            "fallacy_severity_summary",
+            "argument_structure_summary",
+            "argument_coherence_summary",
+            "semantic_argument_summary",
         }
         assert set(state.rhetorical_analysis_summary.keys()) == expected
 
@@ -56,6 +60,7 @@ class TestInit:
 # ============================================================
 # set_raw_text
 # ============================================================
+
 
 class TestSetRawText:
     def test_sets_text(self, state):
@@ -72,6 +77,7 @@ class TestSetRawText:
 # add_global_objective
 # ============================================================
 
+
 class TestAddGlobalObjective:
     def test_adds_objective(self, state):
         obj = {"id": "obj-1", "description": "Test", "priority": "high"}
@@ -81,13 +87,16 @@ class TestAddGlobalObjective:
 
     def test_multiple_objectives(self, state):
         for i in range(3):
-            state.add_global_objective({"id": f"obj-{i}", "description": f"Obj {i}", "priority": "medium"})
+            state.add_global_objective(
+                {"id": f"obj-{i}", "description": f"Obj {i}", "priority": "medium"}
+            )
         assert len(state.global_objectives) == 3
 
 
 # ============================================================
 # update_strategic_plan
 # ============================================================
+
 
 class TestUpdateStrategicPlan:
     def test_update_phases(self, state):
@@ -107,6 +116,7 @@ class TestUpdateStrategicPlan:
 # update_resource_allocation
 # ============================================================
 
+
 class TestUpdateResourceAllocation:
     def test_update_agent_assignments(self, state):
         state.update_resource_allocation({"agent_assignments": {"a1": "task1"}})
@@ -123,6 +133,7 @@ class TestUpdateResourceAllocation:
 # update_global_metrics
 # ============================================================
 
+
 class TestUpdateGlobalMetrics:
     def test_update_progress(self, state):
         state.update_global_metrics({"progress": 0.5})
@@ -137,10 +148,15 @@ class TestUpdateGlobalMetrics:
 # update_rhetorical_analysis_summary
 # ============================================================
 
+
 class TestUpdateRhetoricalSummary:
     def test_update_summary(self, state):
-        state.update_rhetorical_analysis_summary({"complex_fallacy_summary": {"count": 3}})
-        assert state.rhetorical_analysis_summary["complex_fallacy_summary"]["count"] == 3
+        state.update_rhetorical_analysis_summary(
+            {"complex_fallacy_summary": {"count": 3}}
+        )
+        assert (
+            state.rhetorical_analysis_summary["complex_fallacy_summary"]["count"] == 3
+        )
 
     def test_unknown_key_ignored(self, state):
         state.update_rhetorical_analysis_summary({"nonexistent": "val"})
@@ -151,25 +167,33 @@ class TestUpdateRhetoricalSummary:
 # set_final_conclusion / log_strategic_decision
 # ============================================================
 
+
 class TestConclusionAndDecisions:
     def test_set_conclusion(self, state):
         state.set_final_conclusion("The argument is fallacious.")
         assert state.final_conclusion == "The argument is fallacious."
 
     def test_log_decision(self, state):
-        decision = {"timestamp": "2025-01-01", "description": "Increase priority", "rationale": "Too slow"}
+        decision = {
+            "timestamp": "2025-01-01",
+            "description": "Increase priority",
+            "rationale": "Too slow",
+        }
         state.log_strategic_decision(decision)
         assert len(state.strategic_decisions_log) == 1
 
     def test_multiple_decisions(self, state):
         for i in range(5):
-            state.log_strategic_decision({"timestamp": f"t{i}", "description": f"D{i}", "rationale": f"R{i}"})
+            state.log_strategic_decision(
+                {"timestamp": f"t{i}", "description": f"D{i}", "rationale": f"R{i}"}
+            )
         assert len(state.strategic_decisions_log) == 5
 
 
 # ============================================================
 # get_snapshot
 # ============================================================
+
 
 class TestGetSnapshot:
     def test_snapshot_structure(self, state):
@@ -192,7 +216,9 @@ class TestGetSnapshot:
         assert snap["raw_text_length"] == 5
 
     def test_decisions_count(self, state):
-        state.log_strategic_decision({"timestamp": "t", "description": "d", "rationale": "r"})
+        state.log_strategic_decision(
+            {"timestamp": "t", "description": "d", "rationale": "r"}
+        )
         snap = state.get_snapshot()
         assert snap["strategic_decisions_count"] == 1
 
@@ -200,6 +226,7 @@ class TestGetSnapshot:
 # ============================================================
 # to_json / from_json
 # ============================================================
+
 
 class TestSerialization:
     def test_to_json_returns_string(self, state):
@@ -210,10 +237,14 @@ class TestSerialization:
 
     def test_roundtrip(self, state):
         state.set_raw_text("Test text")
-        state.add_global_objective({"id": "obj-1", "description": "Test", "priority": "high"})
+        state.add_global_objective(
+            {"id": "obj-1", "description": "Test", "priority": "high"}
+        )
         state.update_global_metrics({"progress": 0.75})
         state.set_final_conclusion("Done")
-        state.log_strategic_decision({"timestamp": "t", "description": "d", "rationale": "r"})
+        state.log_strategic_decision(
+            {"timestamp": "t", "description": "d", "rationale": "r"}
+        )
 
         j = state.to_json()
         restored = StrategicState.from_json(j)

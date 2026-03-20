@@ -46,9 +46,15 @@ def _make_registry(components=None, slots=None):
     registry.get_all_capabilities.return_value = caps_index
     registry.get_all_slots.return_value = slots
     registry.summary.return_value = {
-        "agents": sum(1 for c in components if c.component_type == MockComponentType.AGENT),
-        "services": sum(1 for c in components if c.component_type == MockComponentType.SERVICE),
-        "plugins": sum(1 for c in components if c.component_type == MockComponentType.PLUGIN),
+        "agents": sum(
+            1 for c in components if c.component_type == MockComponentType.AGENT
+        ),
+        "services": sum(
+            1 for c in components if c.component_type == MockComponentType.SERVICE
+        ),
+        "plugins": sum(
+            1 for c in components if c.component_type == MockComponentType.PLUGIN
+        ),
         "total_registrations": len(components),
         "slots_unfilled": len(slots),
     }
@@ -70,6 +76,7 @@ def _setup_tools():
         def wrapper(fn):
             tools[fn.__name__] = fn
             return fn
+
         return wrapper
 
     mcp_mock.tool = fake_tool
@@ -97,6 +104,7 @@ class TestListCapabilities:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["list_capabilities"]()
@@ -112,6 +120,7 @@ class TestListCapabilities:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["list_capabilities"]()
@@ -140,6 +149,7 @@ class TestInvokeCapability:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["invoke_capability"](
@@ -157,6 +167,7 @@ class TestInvokeCapability:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["invoke_capability"](
@@ -182,6 +193,7 @@ class TestInvokeCapability:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["invoke_capability"](
@@ -208,6 +220,7 @@ class TestInvokeCapability:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         ctx = {"key": "value"}
@@ -242,6 +255,7 @@ class TestGetRegistrySummary:
         from argumentation_analysis.services.mcp_server.tools.capability_tools import (
             register_capability_tools,
         )
+
         register_capability_tools(mcp_mock, lambda: registry)
 
         result = await tools["get_registry_summary"]()

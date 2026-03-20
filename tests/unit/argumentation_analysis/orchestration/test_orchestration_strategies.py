@@ -22,16 +22,18 @@ from argumentation_analysis.orchestration.strategies import (
     OracleTerminationStrategy,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers: concrete Agent subclass (Agent is abstract)
 # ---------------------------------------------------------------------------
+
 
 class ConcreteAgent(Agent):
     """Minimal concrete Agent for testing purposes."""
 
     async def invoke(self, history: List[ChatMessageContent]) -> ChatMessageContent:
-        return ChatMessageContent(role="assistant", content=f"Response from {self.name}")
+        return ChatMessageContent(
+            role="assistant", content=f"Response from {self.name}"
+        )
 
 
 def _make_agents(*names: str) -> List[ConcreteAgent]:
@@ -58,6 +60,7 @@ def _make_oracle_state(
 # ===========================================================================
 # Tests for base classes
 # ===========================================================================
+
 
 class TestBaseAgent:
     """Tests for the abstract Agent base class."""
@@ -109,6 +112,7 @@ class TestBaseTerminationStrategy:
 # ===========================================================================
 # Tests for CyclicSelectionStrategy
 # ===========================================================================
+
 
 class TestCyclicSelectionStrategyInit:
     """Tests for CyclicSelectionStrategy initialization."""
@@ -186,8 +190,12 @@ class TestCyclicSelectionStrategyNext:
             names.append(selected.name)
 
         assert names == [
-            "Sherlock", "Watson", "Moriarty",
-            "Sherlock", "Watson", "Moriarty",
+            "Sherlock",
+            "Watson",
+            "Moriarty",
+            "Sherlock",
+            "Watson",
+            "Moriarty",
         ]
 
     async def test_cyclic_order_two_agents(self):
@@ -301,7 +309,9 @@ class TestCyclicSelectionStrategyContextInjection:
     async def test_context_injected_when_oracle_state_and_attr_present(self):
         """Context is injected into agent when oracle_state and _context_enhanced_prompt attr exist."""
         mock_state = _make_oracle_state()
-        mock_state.get_contextual_prompt_addition = Mock(return_value="Extra context info")
+        mock_state.get_contextual_prompt_addition = Mock(
+            return_value="Extra context info"
+        )
 
         agents = _make_agents("Sherlock", "Watson")
         # Add the attribute that triggers context injection
@@ -397,6 +407,7 @@ class TestCyclicSelectionStrategyReset:
 # ===========================================================================
 # Tests for OracleTerminationStrategy
 # ===========================================================================
+
 
 class TestOracleTerminationStrategyInit:
     """Tests for OracleTerminationStrategy initialization."""
@@ -514,7 +525,11 @@ class TestOracleTerminationStrategyShouldTerminate:
 
     async def test_terminates_when_solution_found(self):
         """should_terminate() returns True when oracle_state has a correct proposed solution."""
-        solution = {"suspect": "Colonel Mustard", "weapon": "Candlestick", "room": "Library"}
+        solution = {
+            "suspect": "Colonel Mustard",
+            "weapon": "Candlestick",
+            "room": "Library",
+        }
         mock_state = _make_oracle_state(
             is_solution_proposed=True,
             final_solution=solution,
@@ -529,7 +544,11 @@ class TestOracleTerminationStrategyShouldTerminate:
 
     async def test_does_not_terminate_on_wrong_solution(self):
         """should_terminate() returns False when proposed solution does not match secret."""
-        proposed = {"suspect": "Colonel Mustard", "weapon": "Candlestick", "room": "Library"}
+        proposed = {
+            "suspect": "Colonel Mustard",
+            "weapon": "Candlestick",
+            "room": "Library",
+        }
         secret = {"suspect": "Miss Scarlet", "weapon": "Rope", "room": "Kitchen"}
         mock_state = _make_oracle_state(
             is_solution_proposed=True,
@@ -740,7 +759,12 @@ class TestOracleTerminationStrategySummary:
         strategy = OracleTerminationStrategy()
         summary = strategy.get_termination_summary()
         expected_keys = {
-            "turn_count", "cycle_count", "max_turns", "max_cycles",
-            "is_solution_found", "solution_proposed", "elimination_possible",
+            "turn_count",
+            "cycle_count",
+            "max_turns",
+            "max_cycles",
+            "is_solution_found",
+            "solution_proposed",
+            "elimination_possible",
         }
         assert set(summary.keys()) == expected_keys

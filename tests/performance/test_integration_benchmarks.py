@@ -31,6 +31,7 @@ pytestmark = pytest.mark.performance
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def timed(func, *args, **kwargs):
     """Run func and return (result, elapsed_seconds)."""
     gc.collect()
@@ -61,6 +62,7 @@ SAMPLE_ARGUMENT_FR_3 = (
 # ===========================================================================
 # 1. CapabilityRegistry Benchmarks
 # ===========================================================================
+
 
 class TestRegistryPerformance:
     """Benchmark CapabilityRegistry registration and lookup speed."""
@@ -96,7 +98,9 @@ class TestRegistryPerformance:
 
         avg_ms = (sum(times) / len(times)) * 1000 if times else 0
         max_ms = max(times) * 1000 if times else 0
-        print(f"\n  Capability lookups ({len(times)}): avg={avg_ms:.2f}ms, max={max_ms:.2f}ms")
+        print(
+            f"\n  Capability lookups ({len(times)}): avg={avg_ms:.2f}ms, max={max_ms:.2f}ms"
+        )
         assert max_ms < 50, f"Max lookup took {max_ms:.2f}ms (limit: 50ms)"
 
     def test_registry_capabilities_count(self):
@@ -106,19 +110,25 @@ class TestRegistryPerformance:
         registry = setup_registry(include_optional=True)
         caps = registry.get_all_capabilities()
         print(f"\n  Registered capabilities: {len(caps)}")
-        assert len(caps) >= 15, f"Only {len(caps)} capabilities registered (expected >= 15)"
+        assert (
+            len(caps) >= 15
+        ), f"Only {len(caps)} capabilities registered (expected >= 15)"
 
 
 # ===========================================================================
 # 2. QualityScoringPlugin Benchmarks
 # ===========================================================================
 
+
 class TestQualityScoringPerformance:
     """Benchmark argument quality evaluation."""
 
     @pytest.fixture
     def plugin(self):
-        from argumentation_analysis.plugins.quality_scoring_plugin import QualityScoringPlugin
+        from argumentation_analysis.plugins.quality_scoring_plugin import (
+            QualityScoringPlugin,
+        )
+
         return QualityScoringPlugin()
 
     def test_evaluate_argument_quality_time(self, plugin):
@@ -135,7 +145,11 @@ class TestQualityScoringPerformance:
 
     def test_batch_evaluation_scalability(self, plugin):
         """10 sequential evaluations should show linear scaling."""
-        texts = [SAMPLE_ARGUMENT_FR, SAMPLE_ARGUMENT_FR_2, SAMPLE_ARGUMENT_FR_3] * 4  # 12 texts
+        texts = [
+            SAMPLE_ARGUMENT_FR,
+            SAMPLE_ARGUMENT_FR_2,
+            SAMPLE_ARGUMENT_FR_3,
+        ] * 4  # 12 texts
 
         gc.collect()
         start = time.perf_counter()
@@ -159,12 +173,14 @@ class TestQualityScoringPerformance:
 # 3. GovernancePlugin Benchmarks
 # ===========================================================================
 
+
 class TestGovernancePerformance:
     """Benchmark governance voting and conflict detection."""
 
     @pytest.fixture
     def plugin(self):
         from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
         return GovernancePlugin()
 
     def _make_positions(self, n_agents):
@@ -180,7 +196,9 @@ class TestGovernancePerformance:
         """Listing methods should be near-instant."""
         _, elapsed = timed(plugin.list_governance_methods)
         result = json.loads(plugin.list_governance_methods())
-        print(f"\n  list_governance_methods: {elapsed * 1000:.2f}ms, {len(result)} methods")
+        print(
+            f"\n  list_governance_methods: {elapsed * 1000:.2f}ms, {len(result)} methods"
+        )
         assert elapsed < 0.01
 
     def test_conflict_detection_5_agents(self, plugin):
@@ -205,7 +223,9 @@ class TestGovernancePerformance:
             _, elapsed = timed(plugin.detect_conflicts_fn, positions)
             times[n] = elapsed * 1000
 
-        print(f"\n  Scalability: " + ", ".join(f"{n}={t:.1f}ms" for n, t in times.items()))
+        print(
+            f"\n  Scalability: " + ", ".join(f"{n}={t:.1f}ms" for n, t in times.items())
+        )
         # 50-agent time should be < 20x the 5-agent time (sub-quadratic)
         if times[5] > 0:
             ratio = times[50] / times[5]
@@ -217,12 +237,16 @@ class TestGovernancePerformance:
 # 4. CounterArgumentPlugin Benchmarks
 # ===========================================================================
 
+
 class TestCounterArgumentPerformance:
     """Benchmark counter-argument generation pipeline."""
 
     @pytest.fixture
     def plugin(self):
-        from argumentation_analysis.agents.core.counter_argument import CounterArgumentPlugin
+        from argumentation_analysis.agents.core.counter_argument import (
+            CounterArgumentPlugin,
+        )
+
         return CounterArgumentPlugin()
 
     def test_parse_argument_time(self, plugin):
@@ -260,12 +284,14 @@ class TestCounterArgumentPerformance:
 # 5. DebatePlugin Benchmarks
 # ===========================================================================
 
+
 class TestDebatePerformance:
     """Benchmark debate analysis operations."""
 
     @pytest.fixture
     def plugin(self):
         from argumentation_analysis.agents.core.debate.debate_agent import DebatePlugin
+
         return DebatePlugin()
 
     def test_analyze_argument_quality_time(self, plugin):
@@ -292,7 +318,9 @@ class TestDebatePerformance:
         total = time.perf_counter() - start
 
         avg_ms = (total / 10) * 1000
-        print(f"\n  Batch (10 args, quality+structure): total={total:.3f}s, avg={avg_ms:.1f}ms/arg")
+        print(
+            f"\n  Batch (10 args, quality+structure): total={total:.3f}s, avg={avg_ms:.1f}ms/arg"
+        )
         assert total < 2.0
 
 
@@ -300,12 +328,15 @@ class TestDebatePerformance:
 # 6. UnifiedPipeline Workflow Benchmarks
 # ===========================================================================
 
+
 class TestPipelinePerformance:
     """Benchmark unified pipeline workflow construction."""
 
     def test_build_light_workflow_time(self):
         """Light workflow should build in under 100ms."""
-        from argumentation_analysis.orchestration.unified_pipeline import build_light_workflow
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_light_workflow,
+        )
 
         _, elapsed = timed(build_light_workflow)
         print(f"\n  build_light_workflow: {elapsed * 1000:.1f}ms")
@@ -313,7 +344,9 @@ class TestPipelinePerformance:
 
     def test_build_standard_workflow_time(self):
         """Standard workflow should build in under 200ms."""
-        from argumentation_analysis.orchestration.unified_pipeline import build_standard_workflow
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_standard_workflow,
+        )
 
         _, elapsed = timed(build_standard_workflow)
         print(f"\n  build_standard_workflow: {elapsed * 1000:.1f}ms")
@@ -321,7 +354,9 @@ class TestPipelinePerformance:
 
     def test_build_full_workflow_time(self):
         """Full workflow should build in under 500ms."""
-        from argumentation_analysis.orchestration.unified_pipeline import build_full_workflow
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_full_workflow,
+        )
 
         _, elapsed = timed(build_full_workflow)
         print(f"\n  build_full_workflow: {elapsed * 1000:.1f}ms")

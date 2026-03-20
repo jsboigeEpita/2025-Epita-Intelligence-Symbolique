@@ -38,6 +38,7 @@ def _make_msg(
 
 # ── Topic ──
 
+
 class TestTopicInit:
     def test_defaults(self):
         t = Topic("t1")
@@ -119,13 +120,17 @@ class TestTopicPublish:
 
     def test_publish_with_filter_match(self, topic):
         cb = MagicMock()
-        topic.add_subscriber("agent_1", callback=cb, filter_criteria={"sender": "agent_1"})
+        topic.add_subscriber(
+            "agent_1", callback=cb, filter_criteria={"sender": "agent_1"}
+        )
         topic.publish_message(_make_msg(sender="agent_1"))
         cb.assert_called_once()
 
     def test_publish_with_filter_no_match(self, topic):
         cb = MagicMock()
-        topic.add_subscriber("agent_1", callback=cb, filter_criteria={"sender": "other"})
+        topic.add_subscriber(
+            "agent_1", callback=cb, filter_criteria={"sender": "other"}
+        )
         topic.publish_message(_make_msg(sender="agent_1"))
         cb.assert_not_called()
 
@@ -150,49 +155,74 @@ class TestTopicFilter:
         assert topic._matches_filter(_make_msg(), {}) is True
 
     def test_sender_filter_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender="alice"), {"sender": "alice"}
-        ) is True
+        assert (
+            topic._matches_filter(_make_msg(sender="alice"), {"sender": "alice"})
+            is True
+        )
 
     def test_sender_filter_no_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender="alice"), {"sender": "bob"}
-        ) is False
+        assert (
+            topic._matches_filter(_make_msg(sender="alice"), {"sender": "bob"}) is False
+        )
 
     def test_sender_filter_list_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender="alice"), {"sender": ["alice", "bob"]}
-        ) is True
+        assert (
+            topic._matches_filter(
+                _make_msg(sender="alice"), {"sender": ["alice", "bob"]}
+            )
+            is True
+        )
 
     def test_sender_filter_list_no_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender="charlie"), {"sender": ["alice", "bob"]}
-        ) is False
+        assert (
+            topic._matches_filter(
+                _make_msg(sender="charlie"), {"sender": ["alice", "bob"]}
+            )
+            is False
+        )
 
     def test_priority_filter_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(priority=MessagePriority.HIGH), {"priority": "high"}
-        ) is True
+        assert (
+            topic._matches_filter(
+                _make_msg(priority=MessagePriority.HIGH), {"priority": "high"}
+            )
+            is True
+        )
 
     def test_priority_filter_no_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(priority=MessagePriority.LOW), {"priority": "high"}
-        ) is False
+        assert (
+            topic._matches_filter(
+                _make_msg(priority=MessagePriority.LOW), {"priority": "high"}
+            )
+            is False
+        )
 
     def test_priority_filter_list(self, topic):
-        assert topic._matches_filter(
-            _make_msg(priority=MessagePriority.CRITICAL), {"priority": ["high", "critical"]}
-        ) is True
+        assert (
+            topic._matches_filter(
+                _make_msg(priority=MessagePriority.CRITICAL),
+                {"priority": ["high", "critical"]},
+            )
+            is True
+        )
 
     def test_sender_level_filter_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender_level=AgentLevel.STRATEGIC), {"sender_level": "strategic"}
-        ) is True
+        assert (
+            topic._matches_filter(
+                _make_msg(sender_level=AgentLevel.STRATEGIC),
+                {"sender_level": "strategic"},
+            )
+            is True
+        )
 
     def test_sender_level_filter_no_match(self, topic):
-        assert topic._matches_filter(
-            _make_msg(sender_level=AgentLevel.TACTICAL), {"sender_level": "strategic"}
-        ) is False
+        assert (
+            topic._matches_filter(
+                _make_msg(sender_level=AgentLevel.TACTICAL),
+                {"sender_level": "strategic"},
+            )
+            is False
+        )
 
     def test_content_filter_match(self, topic):
         msg = _make_msg(content={"info_type": "result", "value": 42})
@@ -208,9 +238,10 @@ class TestTopicFilter:
 
     def test_content_filter_list_value(self, topic):
         msg = _make_msg(content={"info_type": "result"})
-        assert topic._matches_filter(
-            msg, {"content": {"info_type": ["result", "status"]}}
-        ) is True
+        assert (
+            topic._matches_filter(msg, {"content": {"info_type": ["result", "status"]}})
+            is True
+        )
 
 
 class TestTopicRecentMessages:
@@ -262,6 +293,7 @@ class TestTopicInfo:
 
 
 # ── PublishSubscribeProtocol ──
+
 
 class TestProtocolInit:
     def test_init(self):
@@ -331,7 +363,9 @@ class TestProtocolPublish:
         mw = MagicMock()
         proto = PublishSubscribeProtocol(mw)
         proto.subscribe("t1", "agent_1")
-        recipients = proto.publish("t1", "sender", AgentLevel.OPERATIONAL, {"data": "test"})
+        recipients = proto.publish(
+            "t1", "sender", AgentLevel.OPERATIONAL, {"data": "test"}
+        )
         assert "agent_1" in recipients
         proto.shutdown()
 

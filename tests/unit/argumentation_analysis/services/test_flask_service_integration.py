@@ -8,9 +8,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 
-
 # Patch heavy imports before importing the module
 import sys
+
 _mock_logic = MagicMock()
 _mock_group_chat = MagicMock()
 _orig_logic = sys.modules.get("argumentation_analysis.services.logic_service")
@@ -40,6 +40,7 @@ else:
 # Initialization
 # ============================================================
 
+
 class TestInit:
     def test_default_init(self):
         integrator = FlaskServiceIntegrator()
@@ -57,6 +58,7 @@ class TestInit:
 # ============================================================
 # get_health_status
 # ============================================================
+
 
 class TestGetHealthStatus:
     def test_empty_services(self):
@@ -110,6 +112,7 @@ class TestGetHealthStatus:
 # get_detailed_health_status
 # ============================================================
 
+
 class TestGetDetailedHealthStatus:
     def test_has_timestamp(self):
         integrator = FlaskServiceIntegrator()
@@ -135,6 +138,7 @@ class TestGetDetailedHealthStatus:
 # get_service_health
 # ============================================================
 
+
 class TestGetServiceHealth:
     def test_existing_service(self):
         integrator = FlaskServiceIntegrator()
@@ -157,6 +161,7 @@ class TestGetServiceHealth:
 # get_service
 # ============================================================
 
+
 class TestGetService:
     def test_existing_service(self):
         integrator = FlaskServiceIntegrator()
@@ -172,6 +177,7 @@ class TestGetService:
 # ============================================================
 # is_service_healthy
 # ============================================================
+
 
 class TestIsServiceHealthy:
     def test_healthy(self):
@@ -192,6 +198,7 @@ class TestIsServiceHealthy:
 # ============================================================
 # _register_services_to_app
 # ============================================================
+
 
 class TestRegisterServicesToApp:
     def test_no_app_raises(self):
@@ -225,6 +232,7 @@ class TestRegisterServicesToApp:
 # ============================================================
 # _perform_initial_healthcheck
 # ============================================================
+
 
 class TestPerformInitialHealthcheck:
     def test_updates_healthy_service(self):
@@ -260,6 +268,7 @@ class TestPerformInitialHealthcheck:
 # refresh_health_status
 # ============================================================
 
+
 class TestRefreshHealthStatus:
     def test_returns_health_status(self):
         integrator = FlaskServiceIntegrator()
@@ -271,6 +280,7 @@ class TestRefreshHealthStatus:
 # ============================================================
 # Module-level utilities
 # ============================================================
+
 
 class TestModuleUtilities:
     def test_service_integrator_singleton(self):

@@ -51,7 +51,6 @@ from argumentation_analysis.core.communication.pub_sub import (
     PublishSubscribeProtocol,
 )
 
-
 # ===========================================================================
 # Message Tests
 # ===========================================================================
@@ -93,20 +92,29 @@ class TestMessage:
     def test_message_priority_ordering(self):
         """Critical messages should sort before low-priority ones."""
         critical = Message(
-            MessageType.COMMAND, "a", AgentLevel.STRATEGIC, {},
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.STRATEGIC,
+            {},
             priority=MessagePriority.CRITICAL,
         )
         time.sleep(0.001)  # ensure different timestamps
         low = Message(
-            MessageType.INFORMATION, "b", AgentLevel.OPERATIONAL, {},
+            MessageType.INFORMATION,
+            "b",
+            AgentLevel.OPERATIONAL,
+            {},
             priority=MessagePriority.LOW,
         )
         assert critical < low  # critical should come first in sorted order
 
     def test_message_response_creation(self):
         original = Message(
-            MessageType.REQUEST, "agent-1", AgentLevel.TACTICAL,
-            {"request_type": "help"}, recipient="agent-2",
+            MessageType.REQUEST,
+            "agent-1",
+            AgentLevel.TACTICAL,
+            {"request_type": "help"},
+            recipient="agent-2",
         )
         response = original.create_response(content={"answer": "done"})
         assert response.recipient == "agent-1"
@@ -115,8 +123,11 @@ class TestMessage:
 
     def test_message_acknowledgement(self):
         msg = Message(
-            MessageType.COMMAND, "agent-1", AgentLevel.STRATEGIC,
-            {"action": "start"}, recipient="agent-2",
+            MessageType.COMMAND,
+            "agent-1",
+            AgentLevel.STRATEGIC,
+            {"action": "start"},
+            recipient="agent-2",
         )
         ack = msg.create_acknowledgement()
         assert ack.type == MessageType.RESPONSE  # ACK is a RESPONSE type
@@ -124,8 +135,10 @@ class TestMessage:
 
     def test_command_message(self):
         cmd = CommandMessage(
-            sender="strategic-1", sender_level=AgentLevel.STRATEGIC,
-            command_type="analyze", parameters={"text_id": "t1"},
+            sender="strategic-1",
+            sender_level=AgentLevel.STRATEGIC,
+            command_type="analyze",
+            parameters={"text_id": "t1"},
             recipient="tactical-1",
         )
         assert cmd.type == MessageType.COMMAND
@@ -134,25 +147,32 @@ class TestMessage:
 
     def test_information_message(self):
         info = InformationMessage(
-            sender="tactical-1", sender_level=AgentLevel.TACTICAL,
-            info_type="status_update", data={"progress": 50},
+            sender="tactical-1",
+            sender_level=AgentLevel.TACTICAL,
+            info_type="status_update",
+            data={"progress": 50},
         )
         assert info.type == MessageType.INFORMATION
         assert info.content["info_type"] == "status_update"
 
     def test_request_message(self):
         req = RequestMessage(
-            sender="tactical-1", sender_level=AgentLevel.TACTICAL,
-            request_type="guidance", description="Need help",
-            context={"task": "analysis"}, recipient="strategic-1",
+            sender="tactical-1",
+            sender_level=AgentLevel.TACTICAL,
+            request_type="guidance",
+            description="Need help",
+            context={"task": "analysis"},
+            recipient="strategic-1",
         )
         assert req.type == MessageType.REQUEST
         assert req.content["request_type"] == "guidance"
 
     def test_event_message(self):
         evt = EventMessage(
-            sender="system", sender_level=AgentLevel.SYSTEM,
-            event_type="resource_low", description="CPU at 95%",
+            sender="system",
+            sender_level=AgentLevel.SYSTEM,
+            event_type="resource_low",
+            description="CPU at 95%",
             details={"cpu": 95},
         )
         assert evt.type == MessageType.EVENT
@@ -173,8 +193,11 @@ class TestHierarchicalChannel:
 
     def test_send_and_receive(self, channel):
         msg = Message(
-            MessageType.COMMAND, "strategic-1", AgentLevel.STRATEGIC,
-            {"action": "analyze"}, recipient="tactical-1",
+            MessageType.COMMAND,
+            "strategic-1",
+            AgentLevel.STRATEGIC,
+            {"action": "analyze"},
+            recipient="tactical-1",
         )
         assert channel.send_message(msg) is True
 
@@ -189,12 +212,20 @@ class TestHierarchicalChannel:
     def test_priority_ordering(self, channel):
         """Higher priority messages should be received first."""
         low = Message(
-            MessageType.INFORMATION, "a", AgentLevel.TACTICAL,
-            {"p": "low"}, recipient="agent-1", priority=MessagePriority.LOW,
+            MessageType.INFORMATION,
+            "a",
+            AgentLevel.TACTICAL,
+            {"p": "low"},
+            recipient="agent-1",
+            priority=MessagePriority.LOW,
         )
         high = Message(
-            MessageType.COMMAND, "a", AgentLevel.STRATEGIC,
-            {"p": "high"}, recipient="agent-1", priority=MessagePriority.HIGH,
+            MessageType.COMMAND,
+            "a",
+            AgentLevel.STRATEGIC,
+            {"p": "high"},
+            recipient="agent-1",
+            priority=MessagePriority.HIGH,
         )
         channel.send_message(low)
         channel.send_message(high)
@@ -205,8 +236,11 @@ class TestHierarchicalChannel:
     def test_get_pending_messages(self, channel):
         for i in range(5):
             msg = Message(
-                MessageType.INFORMATION, "sender", AgentLevel.TACTICAL,
-                {"i": i}, recipient="agent-1",
+                MessageType.INFORMATION,
+                "sender",
+                AgentLevel.TACTICAL,
+                {"i": i},
+                recipient="agent-1",
             )
             channel.send_message(msg)
 
@@ -219,8 +253,11 @@ class TestHierarchicalChannel:
         assert sub_id is not None
 
         msg = Message(
-            MessageType.INFORMATION, "sender", AgentLevel.TACTICAL,
-            {"data": "test"}, recipient="agent-1",
+            MessageType.INFORMATION,
+            "sender",
+            AgentLevel.TACTICAL,
+            {"data": "test"},
+            recipient="agent-1",
         )
         channel.send_message(msg)
 
@@ -240,8 +277,11 @@ class TestHierarchicalChannel:
     def test_clear_queue(self, channel):
         for i in range(3):
             msg = Message(
-                MessageType.INFORMATION, "s", AgentLevel.TACTICAL,
-                {}, recipient="agent-1",
+                MessageType.INFORMATION,
+                "s",
+                AgentLevel.TACTICAL,
+                {},
+                recipient="agent-1",
             )
             channel.send_message(msg)
 
@@ -285,8 +325,11 @@ class TestCollaborationChannel:
 
     def test_send_direct_message(self, channel):
         msg = Message(
-            MessageType.INFORMATION, "agent-1", AgentLevel.TACTICAL,
-            {"info": "hello"}, recipient="agent-2",
+            MessageType.INFORMATION,
+            "agent-1",
+            AgentLevel.TACTICAL,
+            {"info": "hello"},
+            recipient="agent-2",
         )
         assert channel.send_message(msg) is True
 
@@ -297,7 +340,9 @@ class TestCollaborationChannel:
     def test_group_messaging(self, channel):
         group_id = channel.create_group(name="Team", members=["a1", "a2", "a3"])
         msg = Message(
-            MessageType.INFORMATION, "a1", AgentLevel.TACTICAL,
+            MessageType.INFORMATION,
+            "a1",
+            AgentLevel.TACTICAL,
             {"info": "group msg"},
             metadata={"group_id": group_id},  # routing via metadata
         )
@@ -367,7 +412,9 @@ class TestDataStore:
         assert store.get_versions("d1") == []
 
     def test_data_info(self, store):
-        store.store_data("d1", {"data": "x"}, metadata={"owner": "agent-1"}, compress=False)
+        store.store_data(
+            "d1", {"data": "x"}, metadata={"owner": "agent-1"}, compress=False
+        )
         info = store.get_data_info("d1")
         assert info is not None
         assert info["metadata"]["owner"] == "agent-1"
@@ -387,8 +434,11 @@ class TestDataChannel:
 
     def test_send_message_with_data(self, channel):
         msg = Message(
-            MessageType.INFORMATION, "agent-1", AgentLevel.TACTICAL,
-            {"data_id": "d1", "info": "dataset ready"}, recipient="agent-2",
+            MessageType.INFORMATION,
+            "agent-1",
+            AgentLevel.TACTICAL,
+            {"data_id": "d1", "info": "dataset ready"},
+            recipient="agent-2",
         )
         assert channel.send_message(msg) is True
 
@@ -421,7 +471,10 @@ class TestMessageMiddleware:
 
     def test_determine_channel_command(self, middleware):
         msg = Message(
-            MessageType.COMMAND, "s", AgentLevel.STRATEGIC, {},
+            MessageType.COMMAND,
+            "s",
+            AgentLevel.STRATEGIC,
+            {},
             recipient="t",
         )
         ch_type = middleware.determine_channel(msg)
@@ -429,7 +482,10 @@ class TestMessageMiddleware:
 
     def test_determine_channel_information(self, middleware):
         msg = Message(
-            MessageType.INFORMATION, "s", AgentLevel.TACTICAL, {},
+            MessageType.INFORMATION,
+            "s",
+            AgentLevel.TACTICAL,
+            {},
             recipient="t",
         )
         ch_type = middleware.determine_channel(msg)
@@ -438,13 +494,18 @@ class TestMessageMiddleware:
 
     def test_send_and_receive_via_middleware(self, middleware):
         msg = CommandMessage(
-            "strategic-1", AgentLevel.STRATEGIC, "analyze",
-            {"text": "hello"}, "tactical-1",
+            "strategic-1",
+            AgentLevel.STRATEGIC,
+            "analyze",
+            {"text": "hello"},
+            "tactical-1",
         )
         assert middleware.send_message(msg) is True
 
         received = middleware.receive_message(
-            "tactical-1", channel_type=ChannelType.HIERARCHICAL, timeout=1.0,
+            "tactical-1",
+            channel_type=ChannelType.HIERARCHICAL,
+            timeout=1.0,
         )
         assert received is not None
         assert received.id == msg.id
@@ -455,14 +516,19 @@ class TestMessageMiddleware:
         middleware.register_message_handler(MessageType.COMMAND, handler)
 
         msg = CommandMessage(
-            "strategic-1", AgentLevel.STRATEGIC, "test",
-            {}, "tactical-1",
+            "strategic-1",
+            AgentLevel.STRATEGIC,
+            "test",
+            {},
+            "tactical-1",
         )
         middleware.send_message(msg)
 
         # Handlers are triggered on receive_message, not send_message
         middleware.receive_message(
-            "tactical-1", channel_type=ChannelType.HIERARCHICAL, timeout=1.0,
+            "tactical-1",
+            channel_type=ChannelType.HIERARCHICAL,
+            timeout=1.0,
         )
         handler.assert_called_once()
 
@@ -472,20 +538,28 @@ class TestMessageMiddleware:
         middleware.register_global_handler(handler)
 
         msg = Message(
-            MessageType.INFORMATION, "s", AgentLevel.TACTICAL, {},
+            MessageType.INFORMATION,
+            "s",
+            AgentLevel.TACTICAL,
+            {},
             recipient="r",
         )
         middleware.send_message(msg)
 
         # Trigger handlers by receiving the message
         middleware.receive_message(
-            "r", channel_type=ChannelType.HIERARCHICAL, timeout=1.0,
+            "r",
+            channel_type=ChannelType.HIERARCHICAL,
+            timeout=1.0,
         )
         handler.assert_called_once()
 
     def test_statistics(self, middleware):
         msg = Message(
-            MessageType.COMMAND, "s", AgentLevel.STRATEGIC, {},
+            MessageType.COMMAND,
+            "s",
+            AgentLevel.STRATEGIC,
+            {},
             recipient="r",
         )
         middleware.send_message(msg)
@@ -495,13 +569,17 @@ class TestMessageMiddleware:
     def test_get_pending_messages(self, middleware):
         for i in range(3):
             msg = Message(
-                MessageType.INFORMATION, "s", AgentLevel.TACTICAL,
-                {"i": i}, recipient="agent-1",
+                MessageType.INFORMATION,
+                "s",
+                AgentLevel.TACTICAL,
+                {"i": i},
+                recipient="agent-1",
             )
             middleware.send_message(msg)
 
         pending = middleware.get_pending_messages(
-            "agent-1", channel_type=ChannelType.HIERARCHICAL,
+            "agent-1",
+            channel_type=ChannelType.HIERARCHICAL,
         )
         assert len(pending) >= 1
 
@@ -531,7 +609,9 @@ class TestTopic:
         assert sub_id is not None
 
         msg = Message(
-            MessageType.PUBLICATION, "system", AgentLevel.SYSTEM,
+            MessageType.PUBLICATION,
+            "system",
+            AgentLevel.SYSTEM,
             {"event": "update"},
         )
         notified = topic.publish_message(msg)
@@ -549,7 +629,9 @@ class TestTopic:
         topic = Topic("test-topic")
         for i in range(5):
             msg = Message(
-                MessageType.PUBLICATION, "system", AgentLevel.SYSTEM,
+                MessageType.PUBLICATION,
+                "system",
+                AgentLevel.SYSTEM,
                 {"i": i},
             )
             topic.publish_message(msg)
@@ -599,7 +681,9 @@ class TestPublishSubscribeProtocol:
         protocol.subscribe("test-topic", "agent-1", callback=callback)
 
         notified = protocol.publish(
-            "test-topic", "system", AgentLevel.SYSTEM,
+            "test-topic",
+            "system",
+            AgentLevel.SYSTEM,
             content={"event": "update"},
         )
         assert len(notified) >= 1
