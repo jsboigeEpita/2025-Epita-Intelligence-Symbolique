@@ -1,0 +1,45 @@
+{
+  "iter": 7,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection",
+    "argument_quality",
+    "counter_argument_generation",
+    "adversarial_debate",
+    "governance_simulation",
+    "propositional_logic",
+    "fol_reasoning"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 70.8,
+  "avg_non_empty_fields": 12.0,
+  "delta_vs_previous": {
+    "extracts": {
+      "prev": 7,
+      "curr": 3,
+      "delta": -4
+    },
+    "fol_analysis_results": {
+      "prev": 0,
+      "curr": 1,
+      "delta": 1
+    },
+    "identified_arguments": {
+      "prev": 7,
+      "curr": 4,
+      "delta": -3
+    },
+    "identified_fallacies": {
+      "prev": 8,
+      "curr": 4,
+      "delta": -4
+    },
+    "propositional_analysis_results": {
+      "prev": 0,
+      "curr": 1,
+      "delta": 1
+    }
+  },
+  "timestamp": "2026-03-20T23:57:48.845971"
+}

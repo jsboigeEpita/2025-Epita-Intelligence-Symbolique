@@ -1,0 +1,47 @@
+{
+  "iter": 12,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection",
+    "argument_quality",
+    "counter_argument_generation",
+    "adversarial_debate",
+    "governance_simulation",
+    "propositional_logic",
+    "fol_reasoning",
+    "aspic_plus_reasoning",
+    "ranking_semantics",
+    "dialogue_protocols",
+    "belief_revision",
+    "belief_maintenance",
+    "epistemic_argumentation",
+    "social_argumentation"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 34.1,
+  "avg_non_empty_fields": 18.0,
+  "delta_vs_previous": {
+    "dung_frameworks": {
+      "prev": 0,
+      "curr": 2,
+      "delta": 2
+    },
+    "extracts": {
+      "prev": 2,
+      "curr": 3,
+      "delta": 1
+    },
+    "identified_arguments": {
+      "prev": 4,
+      "curr": 5,
+      "delta": 1
+    },
+    "identified_fallacies": {
+      "prev": 2,
+      "curr": 4,
+      "delta": 2
+    }
+  },
+  "timestamp": "2026-03-21T00:11:39.830429"
+}

@@ -1,0 +1,21 @@
+{
+  "iter": 13,
+  "capabilities": "ALL",
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 35.2,
+  "avg_non_empty_fields": 18.0,
+  "delta_vs_previous": {
+    "identified_arguments": {
+      "prev": 5,
+      "curr": 3,
+      "delta": -2
+    },
+    "identified_fallacies": {
+      "prev": 4,
+      "curr": 3,
+      "delta": -1
+    }
+  },
+  "timestamp": "2026-03-21T00:14:04.978873"
+}
