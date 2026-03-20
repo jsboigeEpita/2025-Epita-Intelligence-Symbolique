@@ -1,6 +1,6 @@
 {
   "corpus_name": "capability_evaluation_baseline_v1",
-  "corpus_version": "1.0",
+  "corpus_version": "1.1",
   "created_date": "2026-03-13",
   "description": "Corpus de test pour l'évaluation baseline des capacités d'analyse d'argumentation",
   "documents": [
@@ -8,235 +8,835 @@
       "id": "corpus_001",
       "text": "Monsieur le Président, je vous demande de bien vouloir agir. La situation est intolérable. Les citoyens souffrent, et votre gouvernement reste silencieux. Il est temps de prendre des mesures décisives pour remédier à cette crise qui nous préoccupe tous.\n\nNous ne pouvons plus tolérer cette inaction. Chaque jour qui passe aggrave la situation. Les gens perdent confiance, et c'est votre responsabilité de réagir maintenant.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [7, 9],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "easy",
       "description": "Argument politique simple, structure claire, pas de sophisme évident",
       "argument_count": 3,
-      "complexity_factors": []
+      "complexity_factors": [],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_002",
       "text": "Je ne comprends pas pourquoi on refuse d'adopter cette politique économique. Vous savez, c'est exactement ce que proposait ce grand économiste russe, et on sait tous ce que pense ce pays de nos libertés. Vraiment, je m'étonne qu'on puisse écouter de telles idées.\n\nC'est comme ce politicien qui voulait nous faire croire que l'impôt est un bon outil. On sait où il va chercher ses arguments...",
-      "expected_fallacies": ["ad_hominem", "guilt_by_association"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "ad_hominem",
+        "guilt_by_association"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "medium",
       "description": "Contient des attaques ad hominem et une association fallacieuse (Russie)",
       "argument_count": 2,
-      "complexity_factors": ["implicit_stereotypes", "association_fallacy"]
+      "complexity_factors": [
+        "implicit_stereotypes",
+        "association_fallacy"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "ad_hominem",
+          "taxonomy_pk": 1398,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "guilt_by_association",
+          "taxonomy_pk": 1372,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction"
+      ]
     },
     {
       "id": "corpus_003",
       "text": "Si nous autorisons les élèves à utiliser des calculatrices en classe, bientôt ils voudront utiliser leurs téléphones portables. Et après, pourquoi pas des ordinateurs ? Et finalement, ils ne feront plus aucun calcul mental et deviendront totalement dépendants de la technologie. C'est la porte ouverte à la paresse intellectuelle.\n\nC'est la même logique que ceux qui disent qu'on peut être un peu enceinte. Soit on l'est, soit on ne l'est pas !",
-      "expected_fallacies": ["slippery_slope", "false_dilemma"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "slippery_slope",
+        "false_dilemma"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "medium",
       "description": "Pente savonneuse et faux dilemme",
       "argument_count": 2,
-      "complexity_factors": ["exaggeration_cascade", "binary_thinking"]
+      "complexity_factors": [
+        "exaggeration_cascade",
+        "binary_thinking"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "slippery_slope",
+          "taxonomy_pk": 661,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "false_dilemma",
+          "taxonomy_pk": 135,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 4
+        }
+      ],
+      "taxonomy_families": [
+        "insufficient_evidence",
+        "quantitative_errors"
+      ]
     },
     {
       "id": "corpus_004",
       "text": "La réforme des retraites est nécessaire. Premièrement, la démographie montre une augmentation constante du ratio retraités/actifs. Deuxièmement, le système actuel creuse un déficit structurel depuis dix ans. Troisièmement, tous les économistes s'accordent sur l'urgence d'une réforme.\n\nPar conséquent, nous devons agir maintenant. Les alternatives proposées par l'opposition ne permettent pas de résoudre le problème démographique fondamental.",
-      "expected_fallacies": ["appeal_to_authority"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "appeal_to_authority"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "medium",
       "description": "Argument structuré avec prémisses explicites mais contient un appel à l'autorité ('tous les économistes')",
       "argument_count": 4,
-      "complexity_factors": ["multi_premise", "appeal_to_expertise"]
+      "complexity_factors": [
+        "multi_premise",
+        "appeal_to_expertise"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "appeal_to_authority",
+          "taxonomy_pk": 71,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "insufficient_evidence"
+      ]
     },
     {
       "id": "corpus_005",
       "text": "Mon cher ami, je vous ai connu bien plus raisonnable que cela. Votre position sur ce sujet me surprend. Vous qui avez toujours prôné la prudence et la réflexion, comment pouvez-vous soutenir une pareille insanité ?\n\nRegardez plutôt ce que pense votre propre famille. Votre mère vous l'a dit assez clairement : on ne change pas une équipe qui gagne. Alors suivez son conseil, elle qui a tant d'expérience.",
-      "expected_fallacies": ["ad_hominem", "appeal_to_emotion", "appeal_to_tradition"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "ad_hominem",
+        "appeal_to_emotion",
+        "appeal_to_tradition"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "medium",
       "description": "Multi-fallacies : ad hominem, appel à l'émotion et à la tradition",
       "argument_count": 2,
-      "complexity_factors": ["personal_attack", "emotional_manipulation"]
+      "complexity_factors": [
+        "personal_attack",
+        "emotional_manipulation"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "ad_hominem",
+          "taxonomy_pk": 1398,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "appeal_to_emotion",
+          "taxonomy_pk": 300,
+          "taxonomy_family_pk": 175,
+          "taxonomy_family_id": "manipulation",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "appeal_to_tradition",
+          "taxonomy_pk": 97,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 4
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "insufficient_evidence",
+        "manipulation"
+      ]
     },
     {
       "id": "corpus_006",
       "text": "Je propose que nous investissions dans l'éducation. Cela réduira le chômage à long terme. En effet, une population mieux formée s'adapte plus facilement aux mutations économiques. De plus, des travailleurs qualifiés attirent les entreprises innovantes. Les entreprises innovantes créent des emplois stables et bien rémunérés. Les emplois stables et bien rémunérés stimulent la consommation. Et la consommation stimule la croissance.\n\nPar conséquent, l'investissement dans l'éducation crée un cercle vertueux de croissance et d'emploi.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [7, 9],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "hard",
       "description": "Argument complexe multi-prémisses avec chaîne causale déductive",
       "argument_count": 1,
-      "complexity_factors": ["causal_chain", "multi_step_reasoning"]
+      "complexity_factors": [
+        "causal_chain",
+        "multi_step_reasoning"
+      ],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_007",
       "text": "Cette mesure est absolument indispensable ! Tout le monde sait que les scientifiques sont unanimes sur ce sujet. Des milliers d'études le prouvent. Comment pouvez-vous encore douter ?\n\nC'est un fait établi. Ceux qui nient l'évidence sont soit ignorants, soit de mauvaise foi. La science a parlé, le débat est clos.",
-      "expected_fallacies": ["appeal_to_popularity", "appeal_to_authority", "poisoning_the_well"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "appeal_to_popularity",
+        "appeal_to_authority",
+        "poisoning_the_well"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "easy",
       "description": "Sophismes multiples mais très évidents",
       "argument_count": 1,
-      "complexity_factors": ["authoritarian_argument", "discredit_opponents"]
+      "complexity_factors": [
+        "authoritarian_argument",
+        "discredit_opponents"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "appeal_to_popularity",
+          "taxonomy_pk": 98,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "appeal_to_authority",
+          "taxonomy_pk": 71,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "poisoning_the_well",
+          "taxonomy_pk": 1352,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "insufficient_evidence"
+      ]
     },
     {
       "id": "corpus_008",
       "text": "Je ne comprends pas pourquoi on hésite à adopter cette loi. Regardez ce qui s'est passé dans le pays voisin quand ils ont fait la même chose. Tout le monde s'accorde à dire que c'était un succès total. Les chiffres sont là, indiscutables.\n\nPourquoi refuserions-nous une politique qui a fait ses preuves ailleurs ? Ce serait de l'inconséquence.",
-      "expected_fallacies": ["hasty_generalization", "false_analogy"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "hasty_generalization",
+        "false_analogy"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "medium",
       "description": "Généralisation hâtive et fausse analogie (pays voisin ≠ même contexte)",
       "argument_count": 2,
-      "complexity_factors": ["cross_context_comparison", "selective_evidence"]
+      "complexity_factors": [
+        "cross_context_comparison",
+        "selective_evidence"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "hasty_generalization",
+          "taxonomy_pk": 596,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "false_analogy",
+          "taxonomy_pk": 839,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "linguistic_subtleties",
+        "quantitative_errors"
+      ]
     },
     {
       "id": "corpus_009",
       "text": "Si nous ne gérons pas correctement nos ressources financières actuelles, il est rationnel de conclure que nous devrons augmenter nos revenus. Nos ressources financières actuelles ne sont pas gérées correctement, comme le montre la déficit budgétaire croissant. La seule façon d'augmenter nos revenus est soit d'augmenter la productivité, soit de réduire les coûts inutiles. Mais réduire les coûts inutiles ne suffit pas à compenser le déficit. Donc, nous devons augmenter la productivité. Or, la productivité ne peut augmenter sans investissement dans la formation. Il s'ensuit que nous devons investir dans la formation.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [5, 7],
+      "expected_quality_score_range": [
+        5,
+        7
+      ],
       "difficulty": "hard",
       "description": "Argument déductif complexe avec raisonnement conditionnel en chaîne (modus ponens)",
       "argument_count": 1,
-      "complexity_factors": ["conditional_reasoning", "logical_deduction_chain"]
+      "complexity_factors": [
+        "conditional_reasoning",
+        "logical_deduction_chain"
+      ],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_010",
       "text": "C'est une honte, vraiment une honte ! Comment peut-on proposer une telle chose ? C'est contre nos valeurs, contre notre histoire, contre tout ce que nous chérons.\n\nCes gens veulent détruire notre mode de vie. Ils sont dangereux. Ne les écoutez pas. Ils disent vouloir le progrès, mais en réalité ils veulent nous ramener à l'âge de pierre.",
-      "expected_fallacies": ["appeal_to_emotion", "straw_man", "loaded_language"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "appeal_to_emotion",
+        "straw_man",
+        "loaded_language"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "easy",
       "description": "Argument purement émotionnel avec langage chargé et homme de paille",
       "argument_count": 1,
-      "complexity_factors": ["emotional_appeal", "misrepresentation"]
+      "complexity_factors": [
+        "emotional_appeal",
+        "misrepresentation"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "appeal_to_emotion",
+          "taxonomy_pk": 300,
+          "taxonomy_family_pk": 175,
+          "taxonomy_family_id": "manipulation",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "straw_man",
+          "taxonomy_pk": 1365,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "loaded_language",
+          "taxonomy_pk": 176,
+          "taxonomy_family_pk": 175,
+          "taxonomy_family_id": "manipulation",
+          "taxonomy_depth": 2
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "manipulation"
+      ]
     },
     {
       "id": "corpus_011",
       "text": "On nous dit que cette politique est bonne pour l'économie. Mais réfléchissons un instant. Qui en profite vraiment ? Les grandes entreprises, bien sûr. Et qui dirige ces grandes entreprises ? Des gens qui n'ont jamais connu la précarité. Comment pourraient-ils comprendre les problèmes des travailleurs ?\n\nC'est toujours la même histoire. Les riches font les règles pour les riches. Et les pauvres paient. Cette soi-disant politique 'économique' n'est qu'un cadeau aux entreprises.",
-      "expected_fallacies": ["red_herring", "ad_hominem_circumstantial"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "red_herring",
+        "ad_hominem_circumstantial"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "medium",
       "description": "Détournement du sujet (red herring) et attaque ad hominem circonstancielle",
       "argument_count": 2,
-      "complexity_factors": ["conspiracy_thinking", "class_conflict_frame"]
+      "complexity_factors": [
+        "conspiracy_thinking",
+        "class_conflict_frame"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "red_herring",
+          "taxonomy_pk": 1314,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "ad_hominem_circumstantial",
+          "taxonomy_pk": 1371,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction"
+      ]
     },
     {
       "id": "corpus_012",
       "text": "P : Il pleut.\nQ : Si tu sors sans parapluie, tu seras mouillé.\nR : Tu ne veux pas être mouillé.\nConclusion : Tu ne devrais pas sortir sans parapluie.\n\nC'est un raisonnement valide. La prémisse P établit le fait qu'il pleut. La prémisse Q établit une relation conditionnelle : sortir sans parapluie implique être mouillé. La prémisse R exprime une préférence : ne pas être mouillé. La conclusion découle logiquement : étant donné P et Q et R, ne pas sortir sans parapluie est la conclusion rationnelle.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [4, 6],
+      "expected_quality_score_range": [
+        4,
+        6
+      ],
       "difficulty": "hard",
       "description": "Argument formel explicite avec méta-analyse du raisonnement",
       "argument_count": 1,
-      "complexity_factors": ["formal_logic", "meta_reasoning"]
+      "complexity_factors": [
+        "formal_logic",
+        "meta_reasoning"
+      ],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_013",
       "text": "Depuis que nous avons installé des panneaux solaires dans notre quartier, le nombre de vols a diminué de 30%. La preuve est évidente : les énergies renouvelables réduisent la criminalité. D'ailleurs, une étude a montré que dans les villes avec plus d'arbres, les habitants vivent plus longtemps. Donc planter des arbres sauve des vies. C'est la même logique : deux phénomènes qui coïncident sont nécessairement liés.\n\nNous devrions donc investir massivement dans le solaire et la reforestation pour résoudre nos problèmes sociaux. Les corrélations ne mentent pas.",
-      "expected_fallacies": ["post_hoc_ergo_propter_hoc", "hasty_generalization", "false_analogy"],
-      "expected_quality_score_range": [5, 7],
+      "expected_fallacies": [
+        "post_hoc_ergo_propter_hoc",
+        "hasty_generalization",
+        "false_analogy"
+      ],
+      "expected_quality_score_range": [
+        5,
+        7
+      ],
       "difficulty": "medium",
       "description": "Sophismes statistiques : confusion corrélation/causalité, généralisation hâtive et fausse analogie (famille STATISTICAL_PROBABILISTIC et GENERALIZATION_CAUSALITY)",
       "argument_count": 2,
-      "complexity_factors": ["correlation_causation_confusion", "spurious_correlation", "statistical_misuse"],
-      "fallacy_families": ["STATISTICAL_PROBABILISTIC", "GENERALIZATION_CAUSALITY"]
+      "complexity_factors": [
+        "correlation_causation_confusion",
+        "spurious_correlation",
+        "statistical_misuse"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "post_hoc_ergo_propter_hoc",
+          "taxonomy_pk": 635,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "hasty_generalization",
+          "taxonomy_pk": 596,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "false_analogy",
+          "taxonomy_pk": 839,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "linguistic_subtleties",
+        "quantitative_errors"
+      ]
     },
     {
       "id": "corpus_014",
       "text": "Le gouvernement dit vouloir plus de 'liberté' pour les entreprises. Mais la liberté, c'est sacré : c'est ce pour quoi nos ancêtres ont combattu. Or accorder de la liberté aux entreprises, c'est leur permettre d'exploiter les travailleurs librement. Donc le gouvernement veut autoriser l'exploitation.\n\nPar ailleurs, on nous parle de 'flexibilité' dans les contrats de travail. La flexibilité, c'est bien quand on fait du yoga. Mais dans le monde du travail, être 'flexible', c'est accepter d'être licencié du jour au lendemain. Ne vous laissez pas berner par ces mots.",
-      "expected_fallacies": ["equivocation", "loaded_language", "straw_man"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "equivocation",
+        "loaded_language",
+        "straw_man"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "medium",
       "description": "Équivoque sur 'liberté' et 'flexibilité', langage chargé, homme de paille (famille LANGUAGE_AMBIGUITY)",
       "argument_count": 2,
-      "complexity_factors": ["semantic_shift", "word_weaponization", "deliberate_ambiguity"],
-      "fallacy_families": ["LANGUAGE_AMBIGUITY", "DIVERSION_ATTACK"]
+      "complexity_factors": [
+        "semantic_shift",
+        "word_weaponization",
+        "deliberate_ambiguity"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "equivocation",
+          "taxonomy_pk": 855,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "loaded_language",
+          "taxonomy_pk": 176,
+          "taxonomy_family_pk": 175,
+          "taxonomy_family_id": "manipulation",
+          "taxonomy_depth": 2
+        },
+        {
+          "type": "straw_man",
+          "taxonomy_pk": 1365,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "linguistic_subtleties",
+        "manipulation"
+      ]
     },
     {
       "id": "corpus_015",
       "text": "Les statistiques sont formelles : 92% des accidents de voiture surviennent à moins de 50 km de chez soi. La conclusion s'impose : il est beaucoup plus dangereux de conduire près de chez soi que loin. On devrait donc interdire de conduire dans un rayon de 50 km de son domicile.\n\nDe même, on sait que 80% des noyades ont lieu en été. Donc l'été cause des noyades. Et puisque les noyades augmentent les jours où la vente de glaces est élevée, manger des glaces provoque des noyades. La corrélation est là, les chiffres parlent d'eux-mêmes.",
-      "expected_fallacies": ["post_hoc_ergo_propter_hoc", "misleading_statistics", "false_conclusion_from_statistics"],
-      "expected_quality_score_range": [5, 7],
+      "expected_fallacies": [
+        "post_hoc_ergo_propter_hoc",
+        "misleading_statistics",
+        "false_conclusion_from_statistics"
+      ],
+      "expected_quality_score_range": [
+        5,
+        7
+      ],
       "difficulty": "easy",
       "description": "Statistiques trompeuses classiques : biais de proximité, corrélation été/noyades/glaces (famille STATISTICAL_PROBABILISTIC)",
       "argument_count": 3,
-      "complexity_factors": ["base_rate_neglect", "survivorship_bias", "confounding_variables"],
-      "fallacy_families": ["STATISTICAL_PROBABILISTIC"]
+      "complexity_factors": [
+        "base_rate_neglect",
+        "survivorship_bias",
+        "confounding_variables"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "post_hoc_ergo_propter_hoc",
+          "taxonomy_pk": 635,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "misleading_statistics",
+          "taxonomy_pk": 632,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 2
+        },
+        {
+          "type": "false_conclusion_from_statistics",
+          "taxonomy_pk": 666,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 2
+        }
+      ],
+      "taxonomy_families": [
+        "quantitative_errors"
+      ]
     },
     {
       "id": "corpus_016",
       "text": "Soit on autorise la publicité pour les jeux vidéo violents auprès des mineurs, soit on les interdit complètement. Il n'y a pas de juste milieu : ou vous protégez les enfants, ou vous les abandonnez aux lobbies. Ceux qui proposent des 'régulations progressives' sont en réalité des partisans déguisés de l'industrie vidéoludique.\n\nEt ne me dites pas qu'une restriction partielle serait efficace. C'est comme essayer d'être 'un peu honnête'. Soit on l'est, soit on ne l'est pas. La morale ne se négocie pas.",
-      "expected_fallacies": ["false_dilemma", "poisoning_the_well", "false_analogy"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "false_dilemma",
+        "poisoning_the_well",
+        "false_analogy"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "easy",
       "description": "Faux dilemme explicite, empoisonnement du puits contre les modérés, fausse analogie (famille FALSE_DILEMMA_SIMPLIFICATION)",
       "argument_count": 2,
-      "complexity_factors": ["binary_thinking", "moderate_exclusion", "moral_absolutism"],
-      "fallacy_families": ["FALSE_DILEMMA_SIMPLIFICATION", "DIVERSION_ATTACK"]
+      "complexity_factors": [
+        "binary_thinking",
+        "moderate_exclusion",
+        "moral_absolutism"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "false_dilemma",
+          "taxonomy_pk": 135,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "poisoning_the_well",
+          "taxonomy_pk": 1352,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "false_analogy",
+          "taxonomy_pk": 839,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "insufficient_evidence",
+        "linguistic_subtleties"
+      ]
     },
     {
       "id": "corpus_017",
       "text": "Argument principal (A1) : Nous devrions adopter une taxe carbone.\nSupport (S1) : Les émissions de CO2 causent le réchauffement climatique [consensus scientifique].\nSupport (S2) : La taxe carbone réduit les émissions [études empiriques, Suède -25%].\nException (E1) : Sauf si elle nuit aux ménages modestes.\nRéfutation de E1 : Un mécanisme de redistribution progressive neutralise cet effet.\n\nArgument contraire (A2) : La taxe carbone pénalise la compétitivité.\nRéfutation de A2 via A1+S3 : S3 = Les pays sans taxe carbone subiront des pénalités douanières CBAM à partir de 2026, neutralisant l'avantage compétitif apparent.\n\nConclusion : A1 prévaut sur A2. La taxe carbone est préférable sous condition de redistribution.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [3, 5],
+      "expected_quality_score_range": [
+        3,
+        5
+      ],
       "difficulty": "hard",
       "description": "Argument formel structuré ASPIC+ avec supports, exceptions et réfutations. Structure de débat dialectique formelle pour workflow formal_debate",
       "argument_count": 4,
-      "complexity_factors": ["aspic_plus_structure", "dialectical_reasoning", "rebuttal_chain", "exception_handling"],
-      "fallacy_families": [],
+      "complexity_factors": [
+        "aspic_plus_structure",
+        "dialectical_reasoning",
+        "rebuttal_chain",
+        "exception_handling"
+      ],
       "formal_structure": "ASPIC+",
-      "workflow_target": ["formal_debate", "argument_strength"]
+      "workflow_target": [
+        "formal_debate",
+        "argument_strength"
+      ],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_018",
       "text": "Vous prétendez que notre pays va mal ? Regardez ces chiffres : le PIB a augmenté de 2,3% l'année dernière. Le taux de chômage officiel est à 7,1%. L'inflation est 'maîtrisée' à 4,2%. Tout va bien selon les indicateurs.\n\nMais attendez — le PIB par habitant, lui, a baissé. Le taux de chômage exclut les personnes découragées (le taux réel dépasse 14%). Et 4,2% d'inflation sur des biens essentiels représente une perte de pouvoir d'achat massive pour les plus précaires. Les chiffres ne mentent pas, mais on peut choisir lesquels montrer.",
-      "expected_fallacies": ["cherry_picking", "misleading_statistics", "appeal_to_authority"],
-      "expected_quality_score_range": [6, 8],
+      "expected_fallacies": [
+        "cherry_picking",
+        "misleading_statistics",
+        "appeal_to_authority"
+      ],
+      "expected_quality_score_range": [
+        6,
+        8
+      ],
       "difficulty": "hard",
       "description": "Sélection sélective de statistiques flatteuses (cherry picking), indicateurs tronqués, démontage de la manipulation — exercice à double niveau (famille STATISTICAL_PROBABILISTIC)",
       "argument_count": 2,
-      "complexity_factors": ["selective_evidence", "indicator_choice_manipulation", "meta_argument"],
-      "fallacy_families": ["STATISTICAL_PROBABILISTIC", "AUTHORITY_POPULARITY"]
+      "complexity_factors": [
+        "selective_evidence",
+        "indicator_choice_manipulation",
+        "meta_argument"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "cherry_picking",
+          "taxonomy_pk": 953,
+          "taxonomy_family_pk": 887,
+          "taxonomy_family_id": "breaking_debate_rules",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "misleading_statistics",
+          "taxonomy_pk": 632,
+          "taxonomy_family_pk": 594,
+          "taxonomy_family_id": "quantitative_errors",
+          "taxonomy_depth": 2
+        },
+        {
+          "type": "appeal_to_authority",
+          "taxonomy_pk": 71,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "breaking_debate_rules",
+        "insufficient_evidence",
+        "quantitative_errors"
+      ]
     },
     {
       "id": "corpus_019",
       "text": "— Vous qui défendez la réduction du temps de travail, comment expliquez-vous que votre propre entreprise fait travailler ses cadres 60 heures par semaine ?\n— C'est hors sujet. Ce qui compte, c'est l'argument, pas ma situation personnelle. Et d'ailleurs, vous qui critiquez les 35 heures, vous-même vous avez bénéficié de la RTT pendant dix ans. Qui êtes-vous pour donner des leçons ?\n— La question n'est pas là. Il faut voir la vraie menace : si on réduit le temps de travail, les entreprises vont délocaliser. C'est le vrai problème.\n— Et si elles restaient, elles embaucheraient plus. Vous changez de sujet à chaque fois.",
-      "expected_fallacies": ["tu_quoque", "red_herring", "ad_hominem"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "tu_quoque",
+        "red_herring",
+        "ad_hominem"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "medium",
       "description": "Dialogue simulant un contexte oral/débat télévisé : tu quoque, diversion (red herring) et ad hominem enchaînés (famille AUDIO_ORAL_CONTEXT + DIVERSION_ATTACK)",
       "argument_count": 4,
-      "complexity_factors": ["debate_format", "turn_taking_fallacies", "conversational_misdirection"],
-      "fallacy_families": ["AUDIO_ORAL_CONTEXT", "DIVERSION_ATTACK"]
+      "complexity_factors": [
+        "debate_format",
+        "turn_taking_fallacies",
+        "conversational_misdirection"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "tu_quoque",
+          "taxonomy_pk": 1362,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "red_herring",
+          "taxonomy_pk": 1314,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 4
+        },
+        {
+          "type": "ad_hominem",
+          "taxonomy_pk": 1398,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction"
+      ]
     },
     {
       "id": "corpus_020",
       "text": "La loi dit que tout homme est égal devant elle. Or les hommes riches ont accès à de meilleurs avocats. Donc les hommes riches sont plus égaux que les autres devant la loi. Ce qui contredit la loi elle-même. La loi est donc auto-contradictoire.\n\nDe même, on nous dit que 'la loi s'applique à tous sans distinction'. Mais 'sans distinction' signifie qu'on ne distingue pas les situations. Ne pas distinguer un mendiant d'un millionnaire, c'est une distinction en faveur du millionnaire. L'égalité formelle crée donc une inégalité réelle. CQFD.",
-      "expected_fallacies": ["equivocation", "amphiboly", "false_equivalence"],
-      "expected_quality_score_range": [5, 7],
+      "expected_fallacies": [
+        "equivocation",
+        "amphiboly",
+        "false_equivalence"
+      ],
+      "expected_quality_score_range": [
+        5,
+        7
+      ],
       "difficulty": "hard",
       "description": "Équivoque sophistiquée sur 'égal/égalité' et 'sans distinction', amphébologie, fausse équivalence — raisonnement spécieux formellement présenté (famille LANGUAGE_AMBIGUITY)",
       "argument_count": 2,
-      "complexity_factors": ["semantic_ambiguity_chain", "formal_appearance", "legal_reasoning_manipulation"],
-      "fallacy_families": ["LANGUAGE_AMBIGUITY"]
+      "complexity_factors": [
+        "semantic_ambiguity_chain",
+        "formal_appearance",
+        "legal_reasoning_manipulation"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "equivocation",
+          "taxonomy_pk": 855,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "amphiboly",
+          "taxonomy_pk": 847,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "false_equivalence",
+          "taxonomy_pk": 834,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        }
+      ],
+      "taxonomy_families": [
+        "linguistic_subtleties"
+      ]
     },
     {
       "id": "corpus_021",
       "text": "Cadre ASPIC+ — Débat sur l'intelligence artificielle générale (AGI) :\n\nThèse T : L'AGI représente un risque existentiel prioritaire.\n  Argument A1 (fort, p=0.8) : Les systèmes IA surpassent humains dans des domaines critiques [Bostrom 2014, LeCun 2022 contra].\n  Argument A2 (modéré, p=0.6) : L'alignement des valeurs est un problème ouvert non résolu.\n  Contre-argument C1 (fort, p=0.75) : L'AGI reste hypothétique à horizon 50 ans [Marcus 2022].\n  Contre-argument C2 (faible, p=0.3) : Les régulations actuelles suffisent.\n\nHiérarchie de force : A1 > C1 > A2 > C2.\nPréférences : A1 attaque C2 (victoire A1). C1 attaque A1 partiellement (draw). A2 non attaqué (victoire A2).\nConclusion grounded extension : {T, A2} — Thèse soutenue avec réserves.",
       "expected_fallacies": [],
-      "expected_quality_score_range": [2, 4],
+      "expected_quality_score_range": [
+        2,
+        4
+      ],
       "difficulty": "hard",
       "description": "Structure formelle ASPIC+ avec ranking d'arguments, probabilités, et grounded extension — texte cible pour workflow argument_strength et belief_dynamics",
       "argument_count": 5,
-      "complexity_factors": ["aspic_plus_structure", "argument_ranking", "grounded_extension", "probabilistic_weights"],
-      "fallacy_families": [],
+      "complexity_factors": [
+        "aspic_plus_structure",
+        "argument_ranking",
+        "grounded_extension",
+        "probabilistic_weights"
+      ],
       "formal_structure": "ASPIC+",
-      "workflow_target": ["argument_strength", "belief_dynamics", "formal_debate"]
+      "workflow_target": [
+        "argument_strength",
+        "belief_dynamics",
+        "formal_debate"
+      ],
+      "expected_fallacies_structured": []
     },
     {
       "id": "corpus_022",
       "text": "Le Premier ministre a déclaré : 'Nous voulons une école de l'excellence pour tous.' Excellente formule. Mais 'excellence pour tous', est-ce seulement possible ? L'excellence, par définition, c'est ce qui dépasse la moyenne. Si tout le monde est excellent, personne ne l'est. C'est une contradiction dans les termes.\n\nEt puis, ceux qui défendent cette réforme — j'ai fait une petite recherche — plusieurs ont envoyé leurs enfants dans des écoles privées. Je vous laisse tirer les conclusions. Quand les élites parlent d'école publique, méfiez-vous. Ce qu'ils veulent vraiment, c'est maintenir le système qui les a produits : une école à deux vitesses. Refuser ce constat, c'est être complice.",
-      "expected_fallacies": ["equivocation", "ad_hominem_circumstantial", "poisoning_the_well", "false_dilemma"],
-      "expected_quality_score_range": [7, 9],
+      "expected_fallacies": [
+        "equivocation",
+        "ad_hominem_circumstantial",
+        "poisoning_the_well",
+        "false_dilemma"
+      ],
+      "expected_quality_score_range": [
+        7,
+        9
+      ],
       "difficulty": "hard",
       "description": "Argument politique complexe multi-sophismes : équivoque sur 'excellence', ad hominem circonstanciel, empoisonnement du puits, faux dilemme implicite",
       "argument_count": 3,
-      "complexity_factors": ["definitional_manipulation", "personal_attack_chain", "conspiracy_framing", "implied_binary"],
-      "fallacy_families": ["LANGUAGE_AMBIGUITY", "DIVERSION_ATTACK", "FALSE_DILEMMA_SIMPLIFICATION"]
+      "complexity_factors": [
+        "definitional_manipulation",
+        "personal_attack_chain",
+        "conspiracy_framing",
+        "implied_binary"
+      ],
+      "expected_fallacies_structured": [
+        {
+          "type": "equivocation",
+          "taxonomy_pk": 855,
+          "taxonomy_family_pk": 798,
+          "taxonomy_family_id": "linguistic_subtleties",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "ad_hominem_circumstantial",
+          "taxonomy_pk": 1371,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "poisoning_the_well",
+          "taxonomy_pk": 1352,
+          "taxonomy_family_pk": 1280,
+          "taxonomy_family_id": "discussion_obstruction",
+          "taxonomy_depth": 3
+        },
+        {
+          "type": "false_dilemma",
+          "taxonomy_pk": 135,
+          "taxonomy_family_pk": 1,
+          "taxonomy_family_id": "insufficient_evidence",
+          "taxonomy_depth": 4
+        }
+      ],
+      "taxonomy_families": [
+        "discussion_obstruction",
+        "insufficient_evidence",
+        "linguistic_subtleties"
+      ]
     }
   ],
   "metadata": {
@@ -270,19 +870,104 @@
       "straw_man",
       "tu_quoque"
     ],
-    "fallacy_family_coverage": {
-      "AUTHORITY_POPULARITY": ["corpus_004", "corpus_007", "corpus_018"],
-      "EMOTIONAL_APPEALS": ["corpus_005", "corpus_010"],
-      "GENERALIZATION_CAUSALITY": ["corpus_003", "corpus_008", "corpus_013"],
-      "DIVERSION_ATTACK": ["corpus_002", "corpus_011", "corpus_016", "corpus_019", "corpus_022"],
-      "FALSE_DILEMMA_SIMPLIFICATION": ["corpus_003", "corpus_008", "corpus_016", "corpus_022"],
-      "LANGUAGE_AMBIGUITY": ["corpus_010", "corpus_014", "corpus_020", "corpus_022"],
-      "STATISTICAL_PROBABILISTIC": ["corpus_013", "corpus_015", "corpus_018"],
-      "AUDIO_ORAL_CONTEXT": ["corpus_019"]
-    },
-    "formal_argument_documents": ["corpus_009", "corpus_012", "corpus_017", "corpus_021"],
+    "formal_argument_documents": [
+      "corpus_009",
+      "corpus_012",
+      "corpus_017",
+      "corpus_021"
+    ],
     "language": "french",
     "target_use_case": "baseline_capability_evaluation",
-    "corpus_version_notes": "v1.1 — added 10 documents (corpus_013-022) covering STATISTICAL_PROBABILISTIC and LANGUAGE_AMBIGUITY families, 2 ASPIC+ formal argument structures for formal_debate/argument_strength/belief_dynamics workflows"
+    "corpus_version_notes": "v1.1 — added taxonomy_pk mappings for all 23 fallacy types (#136). Each expected_fallacy now has structured form with taxonomy_pk, taxonomy_family_pk, taxonomy_family_id, and taxonomy_depth. Replaced 7 ad-hoc meta-families with 6 canonical taxonomy families. Previous: v1.1 — added 10 documents (corpus_013-022) covering STATISTICAL_PROBABILISTIC and LANGUAGE_AMBIGUITY families, 2 ASPIC+ formal argument structures for formal_debate/argument_strength/belief_dynamics workflows",
+    "taxonomy_family_coverage": {
+      "breaking_debate_rules": [
+        "corpus_018"
+      ],
+      "discussion_obstruction": [
+        "corpus_002",
+        "corpus_005",
+        "corpus_007",
+        "corpus_010",
+        "corpus_011",
+        "corpus_014",
+        "corpus_016",
+        "corpus_019",
+        "corpus_022"
+      ],
+      "insufficient_evidence": [
+        "corpus_003",
+        "corpus_004",
+        "corpus_005",
+        "corpus_007",
+        "corpus_016",
+        "corpus_018",
+        "corpus_022"
+      ],
+      "linguistic_subtleties": [
+        "corpus_008",
+        "corpus_013",
+        "corpus_014",
+        "corpus_016",
+        "corpus_020",
+        "corpus_022"
+      ],
+      "manipulation": [
+        "corpus_005",
+        "corpus_010",
+        "corpus_014"
+      ],
+      "quantitative_errors": [
+        "corpus_003",
+        "corpus_008",
+        "corpus_013",
+        "corpus_015",
+        "corpus_018"
+      ]
+    },
+    "_deprecated_fallacy_family_coverage": {
+      "AUTHORITY_POPULARITY": [
+        "corpus_004",
+        "corpus_007",
+        "corpus_018"
+      ],
+      "EMOTIONAL_APPEALS": [
+        "corpus_005",
+        "corpus_010"
+      ],
+      "GENERALIZATION_CAUSALITY": [
+        "corpus_003",
+        "corpus_008",
+        "corpus_013"
+      ],
+      "DIVERSION_ATTACK": [
+        "corpus_002",
+        "corpus_011",
+        "corpus_016",
+        "corpus_019",
+        "corpus_022"
+      ],
+      "FALSE_DILEMMA_SIMPLIFICATION": [
+        "corpus_003",
+        "corpus_008",
+        "corpus_016",
+        "corpus_022"
+      ],
+      "LANGUAGE_AMBIGUITY": [
+        "corpus_010",
+        "corpus_014",
+        "corpus_020",
+        "corpus_022"
+      ],
+      "STATISTICAL_PROBABILISTIC": [
+        "corpus_013",
+        "corpus_015",
+        "corpus_018"
+      ],
+      "AUDIO_ORAL_CONTEXT": [
+        "corpus_019"
+      ]
+    },
+    "taxonomy_mapping_version": "1.0",
+    "taxonomy_source": "argumentation_analysis/data/taxonomy_full.json"
   }
 }
