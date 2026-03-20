@@ -1956,9 +1956,9 @@ def setup_registry(
         register_counter_arg(registry)
         # Wire invoke callable (registration was created by register_counter_arg)
         if "counter_argument_agent" in registry._registrations:
-            registry._registrations["counter_argument_agent"].invoke = (
-                _invoke_counter_argument
-            )
+            registry._registrations[
+                "counter_argument_agent"
+            ].invoke = _invoke_counter_argument
         registered.append("counter_argument_agent")
     except ImportError as e:
         skipped.append(("counter_argument_agent", str(e)))
@@ -2647,9 +2647,9 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_formal_verification_workflow,
             )
 
-            WORKFLOW_CATALOG["formal_verification"] = (
-                build_formal_verification_workflow()
-            )
+            WORKFLOW_CATALOG[
+                "formal_verification"
+            ] = build_formal_verification_workflow()
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
         # Comprehensive analysis (LLM-only, benchmark-optimized)
