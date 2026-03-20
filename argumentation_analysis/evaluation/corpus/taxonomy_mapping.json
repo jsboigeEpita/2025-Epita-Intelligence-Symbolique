@@ -1,0 +1,202 @@
+{
+  "_description": "Mapping between corpus fallacy type names and taxonomy_full.json node PKs",
+  "_version": "1.0",
+  "_created": "2026-03-20",
+  "_issue": "#136",
+  "_taxonomy_families": {
+    "0": "Deception - Votre discours vise a tromper votre auditoire",
+    "1": "Insufficient evidence - Les arguments ne suffisent pas a demontrer votre propos",
+    "175": "Manipulation - Vous manipulez votre auditoire pour le persuader",
+    "594": "Quantitative errors - Votre raisonnement comporte des inexactitudes quantitatives",
+    "696": "Incoherent reasoning - Votre these repose sur un raisonnement incoherent",
+    "798": "Linguistic subtleties - Vous usez de subtilites linguistiques",
+    "887": "Breaking debate rules - Vous vous affranchissez des regles du debat rationnel",
+    "1280": "Discussion obstruction - Par un artifice vous perturbez la discussion"
+  },
+  "mappings": {
+    "ad_hominem": {
+      "taxonomy_pk": 1398,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1360, 1398],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Au lieu de contrer les arguments, vous attaquez directement l'individu qui les porte"
+    },
+    "ad_hominem_circumstantial": {
+      "taxonomy_pk": 1371,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1360, 1371],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous rejetez une idee en critiquant son origine plutot que son contenu"
+    },
+    "amphiboly": {
+      "taxonomy_pk": 847,
+      "taxonomy_family_pk": 798,
+      "taxonomy_family_id": "linguistic_subtleties",
+      "taxonomy_path": [798, 846, 847],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Phrases dont la structure peut preter a confusion"
+    },
+    "appeal_to_authority": {
+      "taxonomy_pk": 71,
+      "taxonomy_family_pk": 1,
+      "taxonomy_family_id": "insufficient_evidence",
+      "taxonomy_path": [1, 70, 71],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous croyez qu'une affirmation est vraie uniquement parce qu'une autorite la soutient"
+    },
+    "appeal_to_emotion": {
+      "taxonomy_pk": 300,
+      "taxonomy_family_pk": 175,
+      "taxonomy_family_id": "manipulation",
+      "taxonomy_path": [175, 299, 300],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous instaurez une alliance emotionnelle avec votre auditoire pour inflechir son opinion"
+    },
+    "appeal_to_popularity": {
+      "taxonomy_pk": 98,
+      "taxonomy_family_pk": 1,
+      "taxonomy_family_id": "insufficient_evidence",
+      "taxonomy_path": [1, 70, 96, 98],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous justifiez une position par le fait qu'elle est partagee par le plus grand nombre"
+    },
+    "appeal_to_tradition": {
+      "taxonomy_pk": 97,
+      "taxonomy_family_pk": 1,
+      "taxonomy_family_id": "insufficient_evidence",
+      "taxonomy_path": [1, 70, 96, 97],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous croyez qu'une action est juste parce qu'elle est habituelle ou commune"
+    },
+    "cherry_picking": {
+      "taxonomy_pk": 953,
+      "taxonomy_family_pk": 887,
+      "taxonomy_family_id": "breaking_debate_rules",
+      "taxonomy_path": [887, 888, 953],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous ne presentez que les faits qui soutiennent votre these, en occultant ceux qui la contredisent"
+    },
+    "equivocation": {
+      "taxonomy_pk": 855,
+      "taxonomy_family_pk": 798,
+      "taxonomy_family_id": "linguistic_subtleties",
+      "taxonomy_path": [798, 846, 855],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous exploitez les differents sens d'un mot pour rendre votre propos ambigu"
+    },
+    "false_analogy": {
+      "taxonomy_pk": 839,
+      "taxonomy_family_pk": 798,
+      "taxonomy_family_id": "linguistic_subtleties",
+      "taxonomy_path": [798, 833, 839],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous etablissez un parallele entre deux choses en vous basant seulement sur un point commun superficiel"
+    },
+    "false_conclusion_from_statistics": {
+      "taxonomy_pk": 666,
+      "taxonomy_family_pk": 594,
+      "taxonomy_family_id": "quantitative_errors",
+      "taxonomy_path": [594, 666],
+      "taxonomy_depth": 2,
+      "taxonomy_description_fr": "Vous tirez des conclusions en vous basant sur des raisonnements mathematiques invalides"
+    },
+    "false_dilemma": {
+      "taxonomy_pk": 135,
+      "taxonomy_family_pk": 1,
+      "taxonomy_family_id": "insufficient_evidence",
+      "taxonomy_path": [1, 133, 134, 135],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous ignorez la complexite d'une situation en fournissant une explication trop simpliste"
+    },
+    "false_equivalence": {
+      "taxonomy_pk": 834,
+      "taxonomy_family_pk": 798,
+      "taxonomy_family_id": "linguistic_subtleties",
+      "taxonomy_path": [798, 833, 834],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous utilisez une comparaison qui n'est pas acceptable pour appuyer votre argument"
+    },
+    "guilt_by_association": {
+      "taxonomy_pk": 1372,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1360, 1371, 1372],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous attribuez a une personne ou une idee des qualites negatives d'une autre, juste par association"
+    },
+    "hasty_generalization": {
+      "taxonomy_pk": 596,
+      "taxonomy_family_pk": 594,
+      "taxonomy_family_id": "quantitative_errors",
+      "taxonomy_path": [594, 595, 596],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous tirez des conclusions d'un echantillonnage qui n'est pas representatif"
+    },
+    "loaded_language": {
+      "taxonomy_pk": 176,
+      "taxonomy_family_pk": 175,
+      "taxonomy_family_id": "manipulation",
+      "taxonomy_path": [175, 176],
+      "taxonomy_depth": 2,
+      "taxonomy_description_fr": "Vous utilisez des expressions et un style engageant pour convaincre, sans necessite argumentative"
+    },
+    "misleading_statistics": {
+      "taxonomy_pk": 632,
+      "taxonomy_family_pk": 594,
+      "taxonomy_family_id": "quantitative_errors",
+      "taxonomy_path": [594, 632],
+      "taxonomy_depth": 2,
+      "taxonomy_description_fr": "Vous etablissez des relations quantitatives inexactes entre divers elements"
+    },
+    "poisoning_the_well": {
+      "taxonomy_pk": 1352,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1312, 1352],
+      "taxonomy_depth": 3,
+      "taxonomy_description_fr": "Vous discreditez l'autre partie avec des informations prejudiciables pour affaiblir sa position"
+    },
+    "post_hoc_ergo_propter_hoc": {
+      "taxonomy_pk": 635,
+      "taxonomy_family_pk": 594,
+      "taxonomy_family_id": "quantitative_errors",
+      "taxonomy_path": [594, 632, 633, 635],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous supposez qu'un evenement est la cause d'un autre uniquement parce qu'il le precede"
+    },
+    "red_herring": {
+      "taxonomy_pk": 1314,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1312, 1313, 1314],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous detournez le debat de son objet premier afin d'echapper aux arguments adverses"
+    },
+    "slippery_slope": {
+      "taxonomy_pk": 661,
+      "taxonomy_family_pk": 594,
+      "taxonomy_family_id": "quantitative_errors",
+      "taxonomy_path": [594, 632, 658, 661],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Votre argument implique une appreciation impropre d'une sequence de justifications en cascade"
+    },
+    "straw_man": {
+      "taxonomy_pk": 1365,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1360, 1361, 1365],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous caricaturez l'argument de l'autre pour pouvoir le refuter plus facilement"
+    },
+    "tu_quoque": {
+      "taxonomy_pk": 1362,
+      "taxonomy_family_pk": 1280,
+      "taxonomy_family_id": "discussion_obstruction",
+      "taxonomy_path": [1280, 1360, 1361, 1362],
+      "taxonomy_depth": 4,
+      "taxonomy_description_fr": "Vous rejetez ce que dit quelqu'un en disant qu'il ne se comporte pas toujours en accord avec ses propres dires"
+    }
+  }
+}
