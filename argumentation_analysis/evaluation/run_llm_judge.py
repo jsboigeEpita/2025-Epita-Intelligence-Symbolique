@@ -157,9 +157,9 @@ async def run_judge_on_results(
         if max_docs is not None:
             doc_key = doc_name
             if doc_key not in seen_docs:
+                if len(seen_docs) >= max_docs:
+                    continue
                 seen_docs.add(doc_key)
-            if len(seen_docs) > max_docs and doc_key not in seen_docs:
-                continue
 
         state_snapshot = entry.get("state_snapshot", {})
         raw_text = state_snapshot.get("raw_text", "")

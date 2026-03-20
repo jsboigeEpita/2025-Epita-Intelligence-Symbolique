@@ -325,7 +325,15 @@ async def run_single_cell(
     state = UnifiedAnalysisState(initial_text=document_text)
 
     try:
-        results = await executor.execute(workflow, document_text, state=state)
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            CAPABILITY_STATE_WRITERS,
+        )
+        results = await executor.execute(
+            workflow,
+            document_text,
+            state=state,
+            state_writers=CAPABILITY_STATE_WRITERS,
+        )
     except Exception as e:
         logger.error(f"Workflow execution failed for {config.name}/{document_name}: {e}")
         results = {}
@@ -658,10 +666,9 @@ async def main_async(args: argparse.Namespace) -> int:
     total = len(configs) * len(documents)
     logger.info(f"Running {total} cells ({len(configs)} configs × {len(documents)} docs)...")
 
-    for doc in documents:
+    for doc_idx, doc in enumerate(documents):
         doc_text = doc.get("text", "")
-        doc_name = doc.get("id", f"doc_{documents.index(doc)}")
-        doc_idx = documents.index(doc)
+        doc_name = doc.get("id", f"doc_{doc_idx}")
 
         if not doc_text:
             logger.warning(f"Empty text for {doc_name}, skipping")
