@@ -1,0 +1,36 @@
+{
+  "iter": 8,
+  "capabilities": [
+    "fact_extraction",
+    "hierarchical_fallacy_detection",
+    "argument_quality",
+    "counter_argument_generation",
+    "adversarial_debate",
+    "governance_simulation",
+    "propositional_logic",
+    "fol_reasoning",
+    "aspic_plus_reasoning"
+  ],
+  "n_docs": 3,
+  "n_success": 3,
+  "avg_duration": 71.5,
+  "avg_non_empty_fields": 13.0,
+  "delta_vs_previous": {
+    "aspic_results": {
+      "prev": 0,
+      "curr": 1,
+      "delta": 1
+    },
+    "extracts": {
+      "prev": 8,
+      "curr": 9,
+      "delta": 1
+    },
+    "identified_arguments": {
+      "prev": 6,
+      "curr": 9,
+      "delta": 3
+    }
+  },
+  "timestamp": "2026-03-21T00:28:13.179288"
+}
