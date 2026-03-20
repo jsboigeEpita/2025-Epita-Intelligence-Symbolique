@@ -13,6 +13,7 @@ Tests cover:
 - write_cells_jsonl / write_report (file I/O)
 """
 
+import inspect
 import json
 import pytest
 from dataclasses import asdict
@@ -537,3 +538,58 @@ class TestWriteReport:
         md = (tmp_path / "capability_eval_report.md").read_text(encoding="utf-8")
         assert "Configuration Rankings" in md
         assert "Marginal Capability Contributions" in md
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for bugs fixed in cc726a98
+# ---------------------------------------------------------------------------
+
+
+class TestStateWritersRegression:
+    """Regression: run_single_cell must pass state_writers to executor.execute().
+
+    Bug: executor.execute() was called without state_writers, so the state
+    snapshot was empty → LLM judge scores were meaningless.
+    """
+
+    async def test_run_single_cell_passes_state_writers(self):
+        """Verify that CAPABILITY_STATE_WRITERS is passed to executor.execute()."""
+        import inspect
+
+        # Read the source code of run_single_cell to verify state_writers is passed
+        source = inspect.getsource(run_single_cell)
+        assert "state_writers" in source, (
+            "run_single_cell must pass state_writers to executor.execute()"
+        )
+        assert "CAPABILITY_STATE_WRITERS" in source, (
+            "run_single_cell must import and use CAPABILITY_STATE_WRITERS"
+        )
+
+
+class TestEnumerateRegression:
+    """Regression: main loop must use enumerate(), not documents.index().
+
+    Bug: documents.index(doc) was called twice per iteration — O(n²) and
+    semantically incorrect with duplicate documents.
+    """
+
+    def test_main_loop_uses_enumerate(self):
+        """Verify the main evaluation loop does not use .index()."""
+        import ast
+        from argumentation_analysis.evaluation import capability_eval
+
+        source = inspect.getsource(capability_eval)
+        # Ensure .index(doc) is NOT used in the main loop
+        assert "documents.index(doc)" not in source, (
+            "Main loop must use enumerate(documents), not documents.index(doc)"
+        )
+
+    def test_main_loop_has_enumerate(self):
+        """Verify enumerate(documents) is used."""
+        import inspect
+        from argumentation_analysis.evaluation import capability_eval
+
+        source = inspect.getsource(capability_eval)
+        assert "enumerate(documents)" in source, (
+            "Main loop must use enumerate(documents)"
+        )

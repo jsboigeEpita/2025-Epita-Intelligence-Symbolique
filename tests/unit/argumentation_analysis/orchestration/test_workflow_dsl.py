@@ -359,3 +359,84 @@ class TestLegoWorkflowExamples:
         # All phases independent — single execution level
         order = workflow.get_execution_order()
         assert len(order) == 1
+
+
+class TestFormalWorkflowsHaveExtraction:
+    """Verify formal workflows include fact_extraction phase (#133).
+
+    Formal workflows must start with fact_extraction to populate
+    phase_extract_output.arguments, which downstream invoke callables
+    rely on via _extract_arguments_from_context().
+    """
+
+    def test_formal_debate_has_extract_phase(self):
+        from argumentation_analysis.workflows.formal_debate import (
+            build_formal_debate_workflow,
+        )
+
+        wf = build_formal_debate_workflow()
+        phase_names = [p.name for p in wf.phases]
+        caps = [p.capability for p in wf.phases]
+        assert "extract" in phase_names, "formal_debate must have extract phase"
+        assert "fact_extraction" in caps, "formal_debate must use fact_extraction"
+        # extract must come before formalization
+        assert phase_names.index("extract") < phase_names.index("formalization")
+
+    def test_argument_strength_has_extract_phase(self):
+        from argumentation_analysis.workflows.argument_strength import (
+            build_argument_strength_workflow,
+        )
+
+        wf = build_argument_strength_workflow()
+        phase_names = [p.name for p in wf.phases]
+        caps = [p.capability for p in wf.phases]
+        assert "extract" in phase_names, "argument_strength must have extract phase"
+        assert "fact_extraction" in caps
+        assert phase_names.index("extract") < phase_names.index("formal_ranking")
+
+    def test_belief_dynamics_has_extract_phase(self):
+        from argumentation_analysis.workflows.belief_dynamics import (
+            build_belief_dynamics_workflow,
+        )
+
+        wf = build_belief_dynamics_workflow()
+        phase_names = [p.name for p in wf.phases]
+        caps = [p.capability for p in wf.phases]
+        assert "extract" in phase_names, "belief_dynamics must have extract phase"
+        assert "fact_extraction" in caps
+        assert phase_names.index("extract") < phase_names.index("adversarial_test")
+
+    def test_extract_arguments_uses_claims_fallback(self):
+        """_extract_arguments_from_context should use claims when arguments is empty."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _extract_arguments_from_context,
+        )
+
+        # Simulate heuristic extract output: arguments=[], claims=["real text"]
+        context = {
+            "phase_extract_output": {
+                "arguments": [],
+                "claims": ["This is a real claim from the text", "Another claim here"],
+            }
+        }
+        result = _extract_arguments_from_context("some text", context)
+        assert len(result) == 2
+        assert "real claim" in result[0]
+
+    def test_extract_arguments_prefers_extract_over_quality(self):
+        """phase_extract_output should be checked before phase_quality_baseline_output."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _extract_arguments_from_context,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": ["LLM extracted arg 1", "LLM extracted arg 2"],
+            },
+            "phase_quality_baseline_output": {
+                "note_finale": 7.5,
+                "scores_par_vertu": {"clarte": 0.8},
+            },
+        }
+        result = _extract_arguments_from_context("some text", context)
+        assert result == ["LLM extracted arg 1", "LLM extracted arg 2"]

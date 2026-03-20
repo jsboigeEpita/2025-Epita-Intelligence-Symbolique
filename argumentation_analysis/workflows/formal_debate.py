@@ -32,16 +32,22 @@ def build_formal_debate_workflow() -> WorkflowDefinition:
     """
     return (
         WorkflowBuilder("formal_debate")
+        # Phase 0: Extract arguments and claims from text
+        .add_phase(
+            "extract",
+            capability="fact_extraction",
+        )
         # Phase 1: Quality baseline
         .add_phase(
             "quality_baseline",
             capability="argument_quality",
+            depends_on=["extract"],
         )
         # Phase 2: Formalize arguments as ASPIC+ rules
         .add_phase(
             "formalization",
             capability="aspic_plus_reasoning",
-            depends_on=["quality_baseline"],
+            depends_on=["extract", "quality_baseline"],
         )
         # Phase 2b: ABA alternative formalization (optional, #85)
         .add_phase(
