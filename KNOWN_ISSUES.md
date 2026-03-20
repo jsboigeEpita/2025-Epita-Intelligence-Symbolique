@@ -39,6 +39,14 @@ Last updated: 2026-03-19
 - **Impact**: Low — passes in isolation, only fails when run after certain other tests
 - **Workaround**: Run in isolation if investigating: `pytest tests/integration/web/test_fastapi_gpt4o_authentique.py::test_backend_lifecycle -v`
 
+### Flaky Tests: `test_workflow_robustness.py` adversarial tests (~80-90 tests)
+
+- **Symptom**: ~87 tests fail when running the full `tests/unit/argumentation_analysis/orchestration/` suite (1h30-1h40m run). Affected tests: `debate_tournament-*`, `test_format_string_attack`, `test_state_not_corrupted_by_massive_input`, `test_concurrent_different_workflows`.
+- **Root cause**: Resource exhaustion after prolonged test execution. Each adversarial test is heavy (~40-60s individually). After 1.5h of continuous runs, async event loops or OS handles degrade.
+- **Proof**: Every failing test passes cleanly in isolation (1 passed, ~38s).
+- **Impact**: Low — individual tests are correct; only the marathon bulk run degrades.
+- **Workaround**: Run orchestration tests in smaller batches (e.g., by class), not as a full suite. Do NOT use this failure count as a regression signal — always verify individual test pass before investigating.
+
 ### 7 Skipped Tests in Unit Suite
 - **Breakdown** (as of 2026-03-19, 9265 passed / 7 skipped):
   - 7 phantom module tests (`test_configuration_cli.py` — `unified_production_analyzer` never existed)
