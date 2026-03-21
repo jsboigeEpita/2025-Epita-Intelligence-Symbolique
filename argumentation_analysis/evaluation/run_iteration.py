@@ -132,6 +132,7 @@ ITERATION_CAPABILITIES = {
     13: None,  # All available — no filtering
     14: None,  # Re-run ALL for LLM Judge scoring
     15: None,  # Re-run ALL with snapshot export
+    16: None,  # Post-fix validation (#158 language, #159 false positives)
 }
 
 
