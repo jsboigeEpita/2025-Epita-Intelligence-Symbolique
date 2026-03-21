@@ -292,7 +292,13 @@ class FallacyWorkflowPlugin:
                     "You are a fallacy classifier navigating a taxonomy tree. "
                     "Your ONLY purpose is to classify text by selecting the most specific "
                     "matching fallacy. You MUST call one of the available functions. "
-                    "Do NOT respond with text — only function calls."
+                    "Do NOT respond with text — only function calls.\n"
+                    "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
+                    "genuinely fallacious. Legitimate uses of authority, emotion, or "
+                    "tradition are NOT fallacies. A firsthand witness citing their own "
+                    "experience is not 'appeal to authority'. A speaker referencing "
+                    "historical leaders to provide context is not automatically fallacious. "
+                    "If unsure, prefer conclude_no_fallacy over a false positive."
                 )
             )
             history.add_user_message(prompt)
@@ -436,7 +442,11 @@ class FallacyWorkflowPlugin:
                     "You are a fallacy classifier. Your task is to select which taxonomy "
                     "branches might contain the fallacy present in the given text. "
                     "Call explore_branch for each candidate branch. "
-                    "Do NOT respond with text — only function calls."
+                    "Do NOT respond with text — only function calls.\n"
+                    "Note: Only select branches if you genuinely suspect fallacious "
+                    "reasoning. Legitimate rhetorical techniques (citing authority "
+                    "with proper credentials, emotional appeals grounded in facts, "
+                    "referencing tradition as context) are not fallacies."
                 )
             )
             history.add_user_message(selection_prompt)
