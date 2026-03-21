@@ -2482,7 +2482,8 @@ def build_quality_gated_counter_workflow() -> WorkflowDefinition:
 
     return (
         WorkflowBuilder("quality_gated_counter")
-        .add_phase("quality", capability="argument_quality")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_conditional_phase(
             "counter",
             capability="counter_argument_generation",
