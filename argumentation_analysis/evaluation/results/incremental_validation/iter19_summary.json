@@ -1,0 +1,12 @@
+{
+  "iter": 19,
+  "capabilities": "ALL",
+  "n_docs": 2,
+  "n_success": 2,
+  "avg_duration": 82.2,
+  "avg_non_empty_fields": 18.0,
+  "delta_vs_previous": {
+    "note": "baseline — no previous iteration"
+  },
+  "timestamp": "2026-03-22T00:50:04.064693"
+}

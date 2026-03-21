@@ -73,11 +73,19 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
 
             # Use extracted arguments from upstream phase if available
             extract_output = context.get("phase_extract_output", {})
-            arguments = extract_output.get("arguments", [])
-            args_context = (
-                "\n".join(f"- {a}" for a in arguments)
-                if arguments
-                else input_text[:1500]
+            raw_arguments = extract_output.get("arguments", [])
+            # Normalize to strings
+            arguments = []
+            for a in raw_arguments:
+                if isinstance(a, dict):
+                    arguments.append(a.get("text", str(a)))
+                else:
+                    arguments.append(str(a))
+
+            # Generate counter-arguments for top 3-5 arguments
+            target_args = arguments[:5] if arguments else [input_text[:500]]
+            args_numbered = "\n".join(
+                f"{i+1}. {a}" for i, a in enumerate(target_args)
             )
 
             response = await client.chat.completions.create(
@@ -87,15 +95,19 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
                         "role": "system",
                         "content": (
                             "You are an expert in argumentation and counter-argument generation. "
-                            "Generate a strong counter-argument using one of: reductio ad absurdum, "
-                            "counter-example, distinction, reformulation, or concession+pivot. "
+                            "For EACH of the arguments listed, generate a counter-argument using a "
+                            "DIFFERENT strategy from: reductio ad absurdum, counter-example, "
+                            "distinction, reformulation, concession+pivot. "
+                            "Use at least 3 different strategies across all CAs. "
                             "Respond with ONLY a JSON object:\n"
-                            '{"counter_argument": "text", "strategy_used": "name", '
-                            '"target_argument": "which argument", "strength": "weak|moderate|strong", '
-                            '"reasoning": "why this works"}'
+                            '{"counter_arguments": [\n'
+                            '  {"target_argument": "arg text", "counter_argument": "CA text", '
+                            '"strategy_used": "strategy name", "strength": "weak|moderate|strong", '
+                            '"reasoning": "why this works"}\n'
+                            "]}"
                         ),
                     },
-                    {"role": "user", "content": args_context},
+                    {"role": "user", "content": args_numbered},
                 ],
             )
             raw = response.choices[0].message.content or ""
@@ -107,7 +119,14 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
             start = text_content.find("{")
             end = text_content.rfind("}") + 1
             if start >= 0 and end > start:
-                llm_counter = json.loads(text_content[start:end])
+                parsed_response = json.loads(text_content[start:end])
+                # Handle both single CA and multi-CA formats
+                if "counter_arguments" in parsed_response:
+                    llm_counter = parsed_response["counter_arguments"]
+                elif "counter_argument" in parsed_response:
+                    llm_counter = [parsed_response]  # wrap single CA in list
+                else:
+                    llm_counter = [parsed_response]
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
 
@@ -117,7 +136,13 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
         "quality_context": context.get("phase_quality_output"),
     }
     if llm_counter:
-        result["llm_counter_argument"] = llm_counter
+        if isinstance(llm_counter, list):
+            result["llm_counter_arguments"] = llm_counter
+            # Keep backward compat: first CA as singular key
+            result["llm_counter_argument"] = llm_counter[0] if llm_counter else None
+        else:
+            result["llm_counter_argument"] = llm_counter
+            result["llm_counter_arguments"] = [llm_counter]
     return result
 
 
@@ -318,16 +343,88 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke JTMS belief maintenance — extract claims and track beliefs."""
+    """Invoke JTMS belief maintenance — build justified belief network from pipeline."""
     from argumentation_analysis.services.jtms.jtms_core import JTMS
 
     jtms = JTMS()
-    sentences = [s.strip() for s in input_text.split(".") if s.strip()]
-    for i, sentence in enumerate(sentences[:10]):  # cap at 10 beliefs
-        jtms.add_belief(f"claim_{i}")
+
+    # 1. Gather real arguments from upstream extract phase
+    extract_out = context.get("phase_extract_output", {})
+    raw_args = extract_out.get("arguments", [])
+    raw_claims = extract_out.get("claims", [])
+    raw_fallacies = extract_out.get("fallacies", [])
+
+    # Normalize to strings
+    def _text(item):
+        if isinstance(item, dict):
+            return item.get("text", str(item))
+        return str(item)
+
+    arguments = [_text(a) for a in raw_args if a][:10]
+    claims = [_text(c) for c in raw_claims if c][:10]
+    fallacy_types = set()
+    for f in raw_fallacies:
+        if isinstance(f, dict):
+            fallacy_types.add(_text(f.get("type", "")))
+
+    # Use arguments if available, else claims, else sentence split
+    belief_sources = arguments or claims
+    if not belief_sources:
+        belief_sources = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10][:10]
+
+    # 2. Create beliefs with real content as names
+    belief_names = []
+    for i, src in enumerate(belief_sources):
+        name = f"b{i}_{src[:60].replace(' ', '_')}"
+        jtms.add_belief(name)
+        belief_names.append(name)
+
+    # 3. Build justification chains: each claim supports the next (sequential reasoning)
+    for i in range(1, len(belief_names)):
+        jtms.add_justification([belief_names[i - 1]], [], belief_names[i])
+
+    # 4. Set initial validity: first belief is True (premise accepted)
+    if belief_names:
+        jtms.set_belief_validity(belief_names[0], True)
+
+    # 5. Invalidate beliefs associated with detected fallacies
+    fallacy_targets = set()
+    for f in raw_fallacies:
+        if isinstance(f, dict):
+            target = f.get("target_argument", "") or f.get("justification", "")
+            if target:
+                fallacy_targets.add(target.lower()[:40])
+
+    for name in belief_names:
+        name_lower = name.lower()
+        for ft in fallacy_targets:
+            if ft and ft in name_lower:
+                jtms.set_belief_validity(name, False)
+                break
+
+    # 6. Also check counter-arguments from upstream
+    counter_out = context.get("phase_counter_output", {})
+    if isinstance(counter_out, dict):
+        ca_target = counter_out.get("target_argument", "")
+        if ca_target:
+            for name in belief_names:
+                if ca_target.lower()[:30] in name.lower():
+                    jtms.set_belief_validity(name, False)
+                    break
+
     return {
-        "beliefs": {name: str(b.valid) for name, b in jtms.beliefs.items()},
+        "beliefs": {
+            name: {
+                "valid": b.valid,
+                "justifications": [repr(j.conclusion) for j in b.justifications],
+                "content": name.split("_", 1)[1].replace("_", " ") if "_" in name else name,
+            }
+            for name, b in jtms.beliefs.items()
+        },
         "belief_count": len(jtms.beliefs),
+        "justified_count": sum(1 for b in jtms.beliefs.values() if b.justifications),
+        "valid_count": sum(1 for b in jtms.beliefs.values() if b.valid is True),
+        "invalid_count": sum(1 for b in jtms.beliefs.values() if b.valid is False),
     }
 
 
@@ -1400,16 +1497,30 @@ def _write_counter_argument_to_state(output, state, ctx) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
-    # Use LLM-generated counter-argument if available
+    strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
+
+    # Use LLM-generated counter-arguments (multiple) if available
+    llm_cas = output.get("llm_counter_arguments", [])
+    if isinstance(llm_cas, list) and llm_cas:
+        for ca in llm_cas:
+            if isinstance(ca, dict) and ca.get("counter_argument"):
+                target = str(ca.get("target_argument", ""))[:200]
+                counter_text = str(ca.get("counter_argument", ""))
+                strategy_name = str(ca.get("strategy_used", "unknown"))
+                score = strength_map.get(str(ca.get("strength", "")).lower(), 0.5)
+                state.add_counter_argument(target, counter_text, strategy_name, score)
+        return
+
+    # Backward compat: single LLM counter-argument
     llm_ca = output.get("llm_counter_argument")
     if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
         target = str(llm_ca.get("target_argument", ""))[:200]
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
-        strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
         state.add_counter_argument(target, counter_text, strategy_name, score)
         return
+
     # Fallback to heuristic plugin output
     parsed = output.get("parsed_argument", {})
     strategy = output.get("suggested_strategy", {})
@@ -1432,11 +1543,18 @@ def _write_jtms_to_state(output, state, ctx) -> None:
     beliefs = output.get("beliefs", {})
     if not isinstance(beliefs, dict):
         return
-    for name, valid_str in beliefs.items():
-        valid = (
-            True if valid_str == "True" else (False if valid_str == "False" else None)
-        )
-        state.add_jtms_belief(str(name), valid, justifications=[])
+    for name, belief_data in beliefs.items():
+        if isinstance(belief_data, dict):
+            valid = belief_data.get("valid")
+            justifications = belief_data.get("justifications", [])
+            state.add_jtms_belief(str(name), valid, justifications=justifications)
+        else:
+            # Legacy format: belief_data is a string like "True"/"False"/"None"
+            valid = (
+                True if str(belief_data) == "True"
+                else (False if str(belief_data) == "False" else None)
+            )
+            state.add_jtms_belief(str(name), valid, justifications=[])
 
 
 def _write_debate_to_state(output, state, ctx) -> None:
