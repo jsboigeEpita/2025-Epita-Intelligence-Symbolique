@@ -130,6 +130,8 @@ ITERATION_CAPABILITIES = {
         "social_argumentation",
     ],
     13: None,  # All available — no filtering
+    14: None,  # Re-run ALL for LLM Judge scoring
+    15: None,  # Re-run ALL with snapshot export
 }
 
 
@@ -367,14 +369,32 @@ async def run_iteration(
     else:
         delta = {"error": "no results"}
 
-    # Write results
+    # Write results (lightweight JSONL without snapshots)
     results_path = out_path / f"iter{iter_num}_results.jsonl"
     with open(results_path, "w", encoding="utf-8") as f:
         for r in results:
-            # Remove full snapshot from JSONL (too large), keep richness
             r_out = {k: v for k, v in r.items() if k != "snapshot"}
             f.write(json.dumps(r_out, ensure_ascii=False, default=str) + "\n")
     logger.info(f"Results: {results_path}")
+
+    # Write full snapshots (LLM Judge compatible format)
+    snapshots_path = out_path / f"iter{iter_num}_snapshots.jsonl"
+    with open(snapshots_path, "w", encoding="utf-8") as f:
+        for r in results:
+            if "snapshot" not in r:
+                continue
+            judge_entry = {
+                "workflow_name": f"iter{iter_num}_validation",
+                "model_name": "default",
+                "document_name": r.get("doc_id", ""),
+                "document_index": r.get("doc_index", 0),
+                "success": "error" not in r,
+                "state_snapshot": r["snapshot"],
+                "duration_seconds": r.get("duration_seconds", 0),
+                "iter": iter_num,
+            }
+            f.write(json.dumps(judge_entry, ensure_ascii=False, default=str) + "\n")
+    logger.info(f"Snapshots (LLM Judge format): {snapshots_path}")
 
     # Write summary
     summary = {
