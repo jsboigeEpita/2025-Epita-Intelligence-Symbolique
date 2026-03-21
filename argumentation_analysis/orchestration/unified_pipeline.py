@@ -1381,13 +1381,18 @@ def _write_quality_to_state(output, state, ctx) -> None:
     if not output or not isinstance(output, dict):
         return
     arg_id = ctx.get("current_arg_id", "arg_input")
-    scores = {
-        k: v
-        for k, v in output.items()
-        if k != "note_finale" and isinstance(v, (int, float))
-    }
+    # scores_par_vertu is the nested dict with per-virtue scores
+    scores = output.get("scores_par_vertu", {})
+    if not scores:
+        # Fallback: try flat keys (legacy format)
+        scores = {
+            k: v
+            for k, v in output.items()
+            if k not in ("note_finale", "note_moyenne", "scores_par_vertu", "rapport_detaille")
+            and isinstance(v, (int, float))
+        }
     overall = output.get("note_finale", 0.0)
-    if isinstance(overall, (int, float)):
+    if isinstance(overall, (int, float)) and (scores or overall > 0):
         state.add_quality_score(arg_id, scores, float(overall))
 
 

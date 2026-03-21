@@ -58,7 +58,7 @@ class FallacyWorkflowPlugin:
     5. Fallback to one-shot if iterative approach fails
     """
 
-    MAX_DEPTH_PER_BRANCH = 5
+    MAX_DEPTH_PER_BRANCH = 8
     MAX_BRANCHES = 4
     MIN_CONFIRM_DEPTH = 2  # Don't accept confirmations at depth < 2 (too generic)
 
@@ -281,23 +281,24 @@ class FallacyWorkflowPlugin:
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
                 f"{options_text}\n"
                 "Choose ONE action:\n"
-                f"- Call confirm_fallacy(node_pk='{current_pk}', ...) if THIS level matches\n"
-                "- Call explore_branch(node_pk='<child_pk>') to go deeper into a child\n"
+                "- Call explore_branch(node_pk='<child_pk>') to go DEEPER into a more specific child — PREFERRED if children exist\n"
+                f"- Call confirm_fallacy(node_pk='{current_pk}', ...) ONLY if this is a LEAF node or no child is more specific\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
-                "You MUST call exactly one function."
+                "You MUST call exactly one function. ALWAYS prefer going deeper over confirming at a generic level."
             )
 
             history = ChatHistory(
                 system_message=(
                     "You are a fallacy classifier navigating a taxonomy tree. "
-                    "Your ONLY purpose is to classify text by selecting the most specific "
-                    "matching fallacy. You MUST call one of the available functions. "
+                    "Your goal is to find the MOST SPECIFIC (deepest) matching fallacy. "
+                    "Generic labels like 'ad hominem' or 'appeal to authority' are TOO SHALLOW. "
+                    "You MUST explore deeper to find the precise sub-type "
+                    "(e.g., 'ad hominem abusif > attaque du caractère'). "
+                    "You MUST call one of the available functions. "
                     "Do NOT respond with text — only function calls.\n"
                     "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
                     "genuinely fallacious. Legitimate uses of authority, emotion, or "
-                    "tradition are NOT fallacies. A firsthand witness citing their own "
-                    "experience is not 'appeal to authority'. A speaker referencing "
-                    "historical leaders to provide context is not automatically fallacious. "
+                    "tradition are NOT fallacies. "
                     "If unsure, prefer conclude_no_fallacy over a false positive."
                 )
             )
@@ -565,11 +566,14 @@ class FallacyWorkflowPlugin:
 
         kernel, settings = self._create_one_shot_kernel()
         # Use compact taxonomy (depth ≤ 4) to stay within token limits
-        compact_taxonomy = self._build_compact_taxonomy(max_depth=4)
+        compact_taxonomy = self._build_compact_taxonomy(max_depth=6)
 
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
+            "CRITICAL: Choose the MOST SPECIFIC (deepest) node that matches — "
+            "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
+            "Prefer leaf nodes or deep sub-types (e.g., 'Empoisonnement du puits' instead of 'Culpabilité par association'). "
             "IMPORTANT: Use the exact fallacy name as it appears in the taxonomy (in French). "
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", "confidence": 0.0-1.0}\n\n'
