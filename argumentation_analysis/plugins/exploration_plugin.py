@@ -27,8 +27,10 @@ class ExplorationPlugin:
     - conclude_no_fallacy: Abandon exploration — no fallacy found in this branch
     """
 
-    def __init__(self, taxonomy_navigator: TaxonomyNavigator):
+    def __init__(self, taxonomy_navigator: TaxonomyNavigator, language: str = "fr"):
         self.taxonomy_navigator = taxonomy_navigator
+        self.language = language
+        self._alt_lang = "en" if language == "fr" else "fr"
 
     @kernel_function(
         name="explore_branch",
@@ -48,26 +50,31 @@ class ExplorationPlugin:
             return json.dumps({"error": f"Node {node_pk} not found"})
 
         children = self.taxonomy_navigator.get_children(node_pk)
+        lang = self.language
         branch_info = {
             "node": {
                 "pk": node.get("PK", ""),
                 "path": node.get("path", ""),
-                "name_fr": node.get("text_fr", node.get("nom_vulgarisé", "")),
-                "name_en": node.get("text_en", node.get("Simple_name_en", "")),
-                "description_fr": node.get("desc_fr", ""),
-                "description_en": node.get("desc_en", ""),
-                "example_fr": node.get("example_fr", ""),
-                "example_en": node.get("example_en", ""),
+                "name": (
+                    node.get(f"text_{lang}", "")
+                    or node.get("nom_vulgarisé", "")
+                    or node.get(f"text_{self._alt_lang}", "")
+                ),
+                "description": node.get(f"desc_{lang}", "") or node.get(f"desc_{self._alt_lang}", ""),
+                "example": node.get(f"example_{lang}", "") or node.get(f"example_{self._alt_lang}", ""),
                 "depth": node.get("depth", ""),
                 "is_leaf": len(children) == 0,
             },
             "children": [
                 {
                     "pk": c.get("PK", ""),
-                    "name_fr": c.get("text_fr", c.get("nom_vulgarisé", "")),
-                    "name_en": c.get("text_en", c.get("Simple_name_en", "")),
-                    "description_fr": c.get("desc_fr", ""),
-                    "example_fr": c.get("example_fr", "")[:200],
+                    "name": (
+                        c.get(f"text_{lang}", "")
+                        or c.get("nom_vulgarisé", "")
+                        or c.get(f"text_{self._alt_lang}", "")
+                    ),
+                    "description": c.get(f"desc_{lang}", "") or c.get(f"desc_{self._alt_lang}", ""),
+                    "example": (c.get(f"example_{lang}", "") or c.get(f"example_{self._alt_lang}", ""))[:200],
                 }
                 for c in children
             ],
@@ -99,12 +106,17 @@ class ExplorationPlugin:
         confidence_map = {"high": 0.9, "medium": 0.7, "low": 0.4}
         confidence_score = confidence_map.get(confidence.lower().strip(), 0.5)
 
+        lang = self.language
         result = {
             "confirmed": True,
             "pk": node.get("PK", ""),
             "path": node.get("path", ""),
+            "name": (
+                node.get(f"text_{lang}", "")
+                or node.get("nom_vulgarisé", "")
+                or node.get(f"text_{self._alt_lang}", "")
+            ),
             "name_fr": node.get("text_fr", ""),
-            "name_en": node.get("text_en", ""),
             "confidence": confidence_score,
             "justification": justification,
         }

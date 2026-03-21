@@ -87,7 +87,7 @@ class FallacyWorkflowPlugin:
                 self.logger.error(f"Error reading taxonomy file: {e}")
 
         self.taxonomy_navigator = TaxonomyNavigator(taxonomy_data=data)
-        self.exploration_plugin = ExplorationPlugin(self.taxonomy_navigator)
+        self.exploration_plugin = ExplorationPlugin(self.taxonomy_navigator, language=self.language)
 
         if self.taxonomy_navigator.get_root_nodes():
             self.logger.info(
@@ -347,7 +347,7 @@ class FallacyWorkflowPlugin:
                         break  # continue outer loop with new current_pk
 
                     return IdentifiedFallacy(
-                        fallacy_type=result.get("name_fr", result.get("pk", "")),
+                        fallacy_type=result.get("name", result.get("name_fr", result.get("pk", ""))),
                         taxonomy_pk=confirmed_pk,
                         taxonomy_path=result.get("path", ""),
                         explanation=result.get("justification", ""),
@@ -369,7 +369,7 @@ class FallacyWorkflowPlugin:
                         current_pk = next_pk
                         navigation_trace.append(current_pk)
                         self.logger.info(
-                            f"  Exploring deeper: {node_info.get('name_fr', next_pk)}"
+                            f"  Exploring deeper: {node_info.get('name', node_info.get('name_fr', next_pk))}"
                         )
                     else:
                         self.logger.info("  explore_branch returned same/empty node")
@@ -560,6 +560,7 @@ class FallacyWorkflowPlugin:
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
+            "IMPORTANT: Use the exact fallacy name as it appears in the taxonomy (in French). "
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", "confidence": 0.0-1.0}\n\n'
             f"--- TAXONOMY ---\n{compact_taxonomy}\n--- END ---"

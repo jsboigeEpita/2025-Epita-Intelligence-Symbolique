@@ -339,7 +339,7 @@ class TestExplorationPlugin:
         plugin = ExplorationPlugin(taxonomy_nav)
         result = json.loads(plugin.explore_branch(node_pk="1"))
         assert result["node"]["pk"] == "1"
-        assert result["node"]["name_fr"] == "Insuffisance"
+        assert result["node"]["name"] == "Insuffisance"
         assert result["children_count"] == 1  # Argument bâclé
 
     def test_explore_branch_shows_children(self, taxonomy_nav):
