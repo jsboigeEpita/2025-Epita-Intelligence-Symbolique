@@ -396,12 +396,18 @@ def _extract_arguments_from_context(
             if "arguments" in phase_out:
                 args = phase_out["arguments"]
                 if isinstance(args, list) and args:
-                    return [str(a) for a in args]
+                    return [
+                        a.get("text", str(a)) if isinstance(a, dict) else str(a)
+                        for a in args
+                    ]
             # Secondary: claims list (from fact_extraction heuristic fallback)
             if "claims" in phase_out:
                 claims = phase_out["claims"]
                 if isinstance(claims, list) and claims:
-                    return [str(c) for c in claims[:8]]
+                    return [
+                        c.get("text", str(c)) if isinstance(c, dict) else str(c)
+                        for c in claims[:8]
+                    ]
             # Tertiary: scores dict keyed by argument ID
             if "scores" in phase_out and isinstance(phase_out["scores"], dict):
                 return list(phase_out["scores"].keys())
@@ -1089,6 +1095,35 @@ async def _invoke_hierarchical_fallacy(
 # --- Invoke callables for logic agent capabilities (#71 Formal Verification) ---
 
 
+def _normalize_items_with_quotes(items: list) -> list:
+    """Normalize argument/claim items: accept both str and dict with source_quote."""
+    result = []
+    for item in items:
+        if isinstance(item, str):
+            result.append({"text": item, "source_quote": ""})
+        elif isinstance(item, dict):
+            result.append({
+                "text": str(item.get("text", item.get("content", ""))),
+                "source_quote": str(item.get("source_quote", "")),
+            })
+    return result
+
+
+def _normalize_fallacies_with_quotes(items: list) -> list:
+    """Normalize fallacy items to include source_quote."""
+    result = []
+    for item in items:
+        if isinstance(item, dict):
+            result.append({
+                "type": str(item.get("type", "unknown")),
+                "justification": str(item.get("justification", "")),
+                "source_quote": str(item.get("source_quote", "")),
+            })
+        elif isinstance(item, str):
+            result.append({"type": item, "justification": "", "source_quote": ""})
+    return result
+
+
 async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> Dict:
     """Extract verifiable claims and arguments from text using LLM with heuristic fallback."""
     import os
@@ -1112,10 +1147,12 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
                         "content": (
                             "You are an expert argument analyst. Extract the key arguments, "
                             "claims, and rhetorical strategies from the text. "
+                            "For each argument and claim, include the exact quote from the "
+                            "source text that supports it (verbatim, max 150 chars). "
                             "Respond with ONLY a JSON object:\n"
-                            '{"arguments": ["arg1", "arg2", ...], '
-                            '"claims": ["claim1", "claim2", ...], '
-                            '"fallacies": [{"type": "name", "justification": "why"}], '
+                            '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
+                            '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
+                            '"fallacies": [{"type": "name", "justification": "why", "source_quote": "exact quote..."}], '
                             '"summary": "brief analysis summary"}'
                         ),
                     },
@@ -1133,13 +1170,20 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
             end = text_content.rfind("}") + 1
             if start >= 0 and end > start:
                 data = json.loads(text_content[start:end])
+                # Normalize arguments/claims: accept both str and dict formats
+                raw_args = data.get("arguments", [])
+                raw_claims = data.get("claims", [])
+                raw_fallacies = data.get("fallacies", [])
+                arguments = _normalize_items_with_quotes(raw_args)
+                claims = _normalize_items_with_quotes(raw_claims)
+                fallacies = _normalize_fallacies_with_quotes(raw_fallacies)
                 return {
-                    "arguments": data.get("arguments", []),
-                    "claims": data.get("claims", []),
-                    "fallacies": data.get("fallacies", []),
+                    "arguments": arguments,
+                    "claims": claims,
+                    "fallacies": fallacies,
                     "summary": data.get("summary", ""),
-                    "claim_count": len(data.get("claims", [])),
-                    "argument_count": len(data.get("arguments", [])),
+                    "claim_count": len(claims),
+                    "argument_count": len(arguments),
                     "source_length": len(input_text),
                     "extraction_method": "llm",
                 }
@@ -1664,26 +1708,46 @@ def _write_fact_extraction_to_state(output, state, ctx) -> None:
     """Write fact extraction results to state (populates extracts + base fields)."""
     if not output or not isinstance(output, dict):
         return
-    # Write claims to extracts
+    # Write claims to extracts (with source quotes when available)
     claims = output.get("claims", [])
     if isinstance(claims, list):
         for claim in claims:
-            if isinstance(claim, str) and claim.strip():
+            if isinstance(claim, dict):
+                text = claim.get("text", "").strip()
+                quote = claim.get("source_quote", "")
+                if text:
+                    entry = {"type": "claim", "content": text}
+                    if quote:
+                        entry["source_quote"] = quote
+                    state.extracts.append(entry)
+            elif isinstance(claim, str) and claim.strip():
                 state.extracts.append({"type": "claim", "content": claim.strip()})
     # Populate base identified_arguments from LLM extraction
     arguments = output.get("arguments", [])
     if isinstance(arguments, list):
         for arg in arguments:
-            if isinstance(arg, str) and arg.strip():
+            if isinstance(arg, dict):
+                text = arg.get("text", "").strip()
+                quote = arg.get("source_quote", "")
+                if text:
+                    arg_text = text
+                    if quote:
+                        arg_text = f"{text} [quote: \"{quote[:100]}\"]"
+                    state.add_argument(arg_text)
+            elif isinstance(arg, str) and arg.strip():
                 state.add_argument(arg.strip())
     # Populate base identified_fallacies from LLM extraction
     fallacies = output.get("fallacies", [])
     if isinstance(fallacies, list):
         for f in fallacies:
             if isinstance(f, dict):
+                justification = str(f.get("justification", ""))
+                quote = f.get("source_quote", "")
+                if quote:
+                    justification = f"{justification} [quote: \"{quote[:100]}\"]"
                 state.add_fallacy(
                     fallacy_type=str(f.get("type", "unknown")),
-                    justification=str(f.get("justification", "")),
+                    justification=justification,
                 )
     # Set summary as analysis task if present
     summary = output.get("summary", "")

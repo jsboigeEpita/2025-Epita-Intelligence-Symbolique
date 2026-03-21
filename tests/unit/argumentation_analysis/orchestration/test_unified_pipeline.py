@@ -2291,3 +2291,97 @@ class TestHierarchicalFallacyWorkflow:
         )
 
         assert "hierarchical_fallacy_detection" in CAPABILITY_STATE_WRITERS
+
+
+class TestTextualCitations:
+    """Tests for source_quote support in fact extraction (#160)."""
+
+    def test_normalize_items_with_quotes_strings(self):
+        """_normalize_items_with_quotes handles legacy string format."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _normalize_items_with_quotes,
+        )
+
+        result = _normalize_items_with_quotes(["arg1", "arg2"])
+        assert len(result) == 2
+        assert result[0] == {"text": "arg1", "source_quote": ""}
+        assert result[1] == {"text": "arg2", "source_quote": ""}
+
+    def test_normalize_items_with_quotes_dicts(self):
+        """_normalize_items_with_quotes handles new dict format with source_quote."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _normalize_items_with_quotes,
+        )
+
+        result = _normalize_items_with_quotes([
+            {"text": "argument one", "source_quote": "exact quote from text"},
+            {"text": "argument two"},
+        ])
+        assert result[0]["source_quote"] == "exact quote from text"
+        assert result[1]["source_quote"] == ""
+
+    def test_normalize_fallacies_with_quotes(self):
+        """_normalize_fallacies_with_quotes handles both formats."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _normalize_fallacies_with_quotes,
+        )
+
+        result = _normalize_fallacies_with_quotes([
+            {"type": "ad_hominem", "justification": "attacks person", "source_quote": "you fool"},
+            "bare_assertion",
+        ])
+        assert result[0]["source_quote"] == "you fool"
+        assert result[1]["type"] == "bare_assertion"
+        assert result[1]["source_quote"] == ""
+
+    def test_write_fact_extraction_with_quotes(self):
+        """_write_fact_extraction_to_state propagates source_quote to state."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        output = {
+            "claims": [
+                {"text": "Earth is flat", "source_quote": "the horizon looks flat"},
+            ],
+            "arguments": [
+                {"text": "visual argument", "source_quote": "horizon looks flat"},
+            ],
+            "fallacies": [
+                {"type": "hasty_gen", "justification": "insufficient evidence", "source_quote": "horizon looks flat"},
+            ],
+        }
+        _write_fact_extraction_to_state(output, state, {})
+
+        # Claims should have source_quote in extracts
+        assert len(state.extracts) == 1
+        assert state.extracts[0]["source_quote"] == "the horizon looks flat"
+
+        # Arguments: add_argument stores a string with embedded quote
+        args = list(state.identified_arguments.values())
+        assert len(args) == 1
+        assert "[quote:" in args[0]  # string with embedded quote
+
+        # Fallacies: add_fallacy stores {"type", "justification"} with embedded quote
+        fallacies = list(state.identified_fallacies.values())
+        assert len(fallacies) == 1
+        assert "[quote:" in fallacies[0]["justification"]
+
+    def test_write_fact_extraction_legacy_strings(self):
+        """_write_fact_extraction_to_state still works with legacy string format."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_fact_extraction_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        output = {
+            "claims": ["claim one", "claim two"],
+            "arguments": ["arg one"],
+            "fallacies": [{"type": "ad_hominem", "justification": "attacks person"}],
+        }
+        _write_fact_extraction_to_state(output, state, {})
+
+        assert len(state.extracts) == 2
+        assert len(state.identified_arguments) == 1
+        assert len(state.identified_fallacies) == 1
