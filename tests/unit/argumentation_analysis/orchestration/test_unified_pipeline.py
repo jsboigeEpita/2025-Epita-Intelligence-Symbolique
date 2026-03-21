@@ -1674,14 +1674,14 @@ class TestAdditionalWorkflows:
     """Test workflow builders not covered by TestPrebuiltWorkflows."""
 
     def test_build_quality_gated_counter_workflow(self):
-        """Quality-gated counter workflow has 3 phases."""
+        """Quality-gated counter workflow has 4 phases (extract + quality + counter + recheck)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_quality_gated_counter_workflow,
         )
 
         wf = build_quality_gated_counter_workflow()
         assert wf.name == "quality_gated_counter"
-        assert len(wf.phases) == 3
+        assert len(wf.phases) == 4
 
     def test_build_debate_governance_loop_workflow(self):
         """Debate-governance loop workflow has 3 phases."""
