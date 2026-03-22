@@ -2113,6 +2113,48 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
         }
 
 
+async def _invoke_nl_to_logic(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Translate extracted NL arguments to formal logic with validation (#173).
+
+    Uses LLM to generate propositional/FOL formulas, validates via Tweety
+    (or Python fallback), and retries on failure with error feedback.
+    Bridges the gap between informal LLM analysis and formal reasoning.
+    """
+    from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
+
+    args = _extract_arguments_from_context(input_text, context)
+    logic_type = context.get("logic_type", "propositional")
+
+    translator = NLToLogicTranslator(max_retries=3, logic_type=logic_type)
+    batch_result = await translator.translate_batch(
+        args[:6], logic_type=logic_type, check_consistency=True
+    )
+
+    translations = []
+    for t in batch_result.translations:
+        translations.append({
+            "original_text": t.original_text[:200],
+            "formula": t.formula,
+            "logic_type": t.logic_type,
+            "is_valid": t.is_valid,
+            "validation_message": t.validation_message,
+            "attempts": t.attempts,
+            "variables": t.variables,
+            "confidence": t.confidence,
+        })
+
+    valid_count = sum(1 for t in translations if t["is_valid"])
+    return {
+        "translations": translations,
+        "total": len(translations),
+        "valid_count": valid_count,
+        "overall_consistency": batch_result.overall_consistency,
+        "consistency_message": batch_result.consistency_message,
+        "method": batch_result.method,
+        "logic_type": logic_type,
+    }
+
+
 async def _invoke_modal_logic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke modal logic analysis via TweetyBridge (JVM required)."""
     try:
@@ -2694,6 +2736,25 @@ def _write_modal_to_state(output, state, ctx) -> None:
     state.add_modal_analysis_result(formulas, bool(valid), modalities)
 
 
+def _write_nl_to_logic_to_state(output, state, ctx) -> None:
+    """Write NL-to-formal-logic translation results to UnifiedAnalysisState (#173)."""
+    if not output or not isinstance(output, dict):
+        return
+    translations = output.get("translations", [])
+    if not isinstance(translations, list):
+        return
+    for t in translations:
+        if isinstance(t, dict) and t.get("formula"):
+            state.add_nl_to_logic_translation(
+                original_text=t.get("original_text", ""),
+                formula=t.get("formula", ""),
+                logic_type=t.get("logic_type", "propositional"),
+                is_valid=bool(t.get("is_valid", False)),
+                variables=t.get("variables", {}),
+                confidence=float(t.get("confidence", 0.0)),
+            )
+
+
 def _write_dung_extensions_to_state(output, state, ctx) -> None:
     """Write Dung extension computation results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
@@ -2897,6 +2958,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "defeasible_logic": _write_delp_to_state,
     "qbf_reasoning": _write_qbf_to_state,
     "collaborative_analysis": _write_collaborative_analysis_to_state,
+    "nl_to_logic_translation": _write_nl_to_logic_to_state,
 }
 
 
@@ -3185,6 +3247,13 @@ def setup_registry(
             "SAT/MaxSAT/MUS solver (PySAT + Z3)",
             _invoke_sat,
         ),
+        # NL-to-formal-logic translation (#173)
+        (
+            "nl_to_logic_service",
+            ["nl_to_logic_translation"],
+            "NL→formal logic with LLM + Tweety validation",
+            _invoke_nl_to_logic,
+        ),
     ]
     for name, caps, desc, invoke_fn in logic_capabilities:
         try:
@@ -3446,6 +3515,42 @@ def build_full_workflow() -> WorkflowDefinition:
             depends_on=["counter"],
             optional=True,
         )
+        .add_phase(
+            "nl_to_logic",
+            capability="nl_to_logic_translation",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .build()
+    )
+
+
+def build_nl_to_logic_workflow() -> WorkflowDefinition:
+    """NL-to-formal-logic pipeline: extract → translate → validate → reason (#173).
+
+    Bridges informal NL analysis and formal reasoning by translating
+    extracted arguments into propositional/FOL formulas with Tweety validation.
+    """
+    return (
+        WorkflowBuilder("nl_to_logic_analysis")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase(
+            "nl_to_logic",
+            capability="nl_to_logic_translation",
+            depends_on=["extract"],
+        )
+        .add_phase(
+            "pl",
+            capability="propositional_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "fol",
+            capability="fol_reasoning",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
         .build()
     )
 
@@ -3605,6 +3710,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "jtms_dung": build_jtms_dung_loop_workflow(),
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
             "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
+            "nl_to_logic": build_nl_to_logic_workflow(),
         }
         # Collaborative multi-agent debate (#175)
         try:

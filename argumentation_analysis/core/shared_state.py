@@ -396,6 +396,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.propositional_analysis_results: List[Dict[str, Any]] = []
         self.modal_analysis_results: List[Dict[str, Any]] = []
         self.formal_synthesis_reports: List[Dict[str, Any]] = []
+        # NL-to-formal-logic translations (#173)
+        self.nl_to_logic_translations: List[Dict[str, Any]] = []
         # Workflow execution results
         self.workflow_results: Dict[str, Any] = {}
 
@@ -722,6 +724,32 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})"
         )
         return fs_id
+
+    def add_nl_to_logic_translation(
+        self,
+        original_text: str,
+        formula: str,
+        logic_type: str,
+        is_valid: bool,
+        variables: Optional[Dict[str, str]] = None,
+        confidence: float = 0.0,
+    ) -> str:
+        """Add a NL-to-formal-logic translation result (#173)."""
+        tr_id = self._generate_id("nll", self.nl_to_logic_translations)
+        entry = {
+            "id": tr_id,
+            "original_text": original_text[:200],
+            "formula": formula,
+            "logic_type": logic_type,
+            "is_valid": is_valid,
+            "variables": variables or {},
+            "confidence": confidence,
+        }
+        self.nl_to_logic_translations.append(entry)
+        state_logger.info(
+            f"NL→logic translation added: {tr_id} ({logic_type}, valid={is_valid})"
+        )
+        return tr_id
 
     def set_workflow_results(self, workflow_name: str, results: Dict[str, Any]) -> None:
         """Store workflow execution results."""
