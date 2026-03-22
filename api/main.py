@@ -5,6 +5,7 @@ from .endpoints import router as api_router, framework_router, informal_router
 from .proposal_endpoints import proposal_router
 from .mobile_endpoints import mobile_router
 from .websocket_routes import ws_router
+from .agent_routes import agent_router
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 # --- Gestion du cycle de vie de la JVM et des services ---
@@ -47,6 +48,7 @@ app.include_router(informal_router)
 app.include_router(proposal_router, prefix="/api")
 app.include_router(mobile_router, prefix="/api")
 app.include_router(ws_router)
+app.include_router(agent_router)
 
 
 @app.get("/")
