@@ -1769,14 +1769,19 @@ async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict:
         handler = QBFHandler(initializer)
         return await asyncio.to_thread(handler.analyze_qbf, quantifiers, formula)
     except Exception as e:
-        logger.info(f"QBF handler unavailable ({e}), using Python fallback")
-        return {
-            "quantifiers": quantifiers,
-            "formula": formula[:100],
-            "satisfiable": True,
-            "message": "Fallback: satisfiability assumed (JVM unavailable)",
-            "fallback": "python",
-        }
+        logger.info(f"QBF JVM handler unavailable ({e}), using native Python fallback")
+        try:
+            from argumentation_analysis.agents.core.logic.qbf_native import analyze_qbf
+            return await asyncio.to_thread(analyze_qbf, quantifiers, formula)
+        except Exception as e2:
+            logger.warning(f"QBF native fallback also failed: {e2}")
+            return {
+                "quantifiers": quantifiers,
+                "formula": formula[:100],
+                "valid": False,
+                "message": f"QBF unavailable: {e2}",
+                "fallback": "error",
+            }
 
 
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---

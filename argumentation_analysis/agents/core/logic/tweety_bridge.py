@@ -68,6 +68,7 @@ class TweetyBridge:
     _belief_revision_handler: Optional[BeliefRevisionHandler] = None
     _probabilistic_handler: Optional[ProbabilisticHandler] = None
     _dialogue_handler: Optional[DialogueHandler] = None
+    _qbf_handler: Optional[Any] = None  # QBFHandler (lazy-loaded)
 
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
@@ -232,6 +233,16 @@ class TweetyBridge:
         if self._dialogue_handler is None:
             self._dialogue_handler = DialogueHandler(self._initializer)
         return self._dialogue_handler
+
+    @property
+    def qbf_handler(self):
+        """QBF (Quantified Boolean Formulas) handler — lazy-loaded."""
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("JVM not started.")
+        if self._qbf_handler is None:
+            from .qbf_handler import QBFHandler
+            self._qbf_handler = QBFHandler(self._initializer)
+        return self._qbf_handler
 
     # ============================================================================
     # Compatibility wrappers for backward compatibility with agents
