@@ -476,6 +476,184 @@ class NLIFallacyDetector:
             return []
 
 
+# ── Tier 2.5: CamemBERT Fine-Tuned Detection (#169) ─────────────────────
+
+# Maps CamemBERT's 13 output labels → standardized French labels
+_CAMEMBERT_LABEL_MAPPING = {
+    0: "Attaque personnelle (Ad Hominem)",
+    1: "Appel à la popularité (Ad Populum)",
+    2: "Appel à l'émotion (Appeal to Emotion)",
+    3: "Fallacy de crédibilité",
+    4: "Fallacy d'extension",
+    5: "Fallacy de logique",
+    6: "Généralisation hâtive (Hasty Generalization)",
+    7: "Fausse causalité (False Cause)",
+    8: "Faux dilemme (False Dilemma)",
+    9: "Intentionnel",
+    10: "Raisonnement circulaire (Circular Reasoning)",
+    11: "Sophisme de pertinence",
+    12: "Équivoque (Equivocation)",
+}
+
+
+class CamemBERTFallacyDetector:
+    """Fine-tuned CamemBERT for 13-category French fallacy classification.
+
+    Uses the model trained by student project 2.3.2 (Hamard) on a French
+    fallacy dataset. Gracefully degrades if the model or dependencies are
+    not available.
+
+    The model can be loaded from:
+    - A local directory (fine_tuned_camembert/)
+    - The student project directory (2.3.2-detection-sophismes/fine_tuned_camembert/)
+
+    Integration: Issue #169.
+    """
+
+    # Default model search paths (relative to project root)
+    _MODEL_SEARCH_PATHS = [
+        "fine_tuned_camembert",
+        "2.3.2-detection-sophismes/fine_tuned_camembert",
+        "models/camembert_fallacy",
+    ]
+
+    def __init__(
+        self,
+        model_path: Optional[str] = None,
+        threshold: float = 0.3,
+        max_length: int = 128,
+    ):
+        self._model_path = model_path
+        self._threshold = threshold
+        self._max_length = max_length
+        self._tokenizer = None
+        self._model = None
+        self._available = None
+
+    def _find_model_path(self) -> Optional[str]:
+        """Search for the fine-tuned model in known locations."""
+        if self._model_path:
+            p = Path(self._model_path)
+            if p.exists() and (p / "config.json").exists():
+                return str(p)
+            return None
+
+        # Search in known locations relative to project root
+        project_root = Path(__file__).resolve().parent.parent.parent
+        for rel_path in self._MODEL_SEARCH_PATHS:
+            candidate = project_root / rel_path
+            if candidate.exists() and (candidate / "config.json").exists():
+                logger.info(f"Found CamemBERT model at: {candidate}")
+                return str(candidate)
+        return None
+
+    def is_available(self) -> bool:
+        """Check if fine-tuned model exists and dependencies are installed."""
+        if self._available is not None:
+            return self._available
+
+        try:
+            import torch  # noqa: F401
+            from transformers import (  # noqa: F401
+                CamembertTokenizer,
+                CamembertForSequenceClassification,
+            )
+        except ImportError:
+            logger.debug("CamemBERT dependencies not available (torch/transformers)")
+            self._available = False
+            return False
+
+        model_path = self._find_model_path()
+        if model_path is None:
+            logger.info(
+                "CamemBERT fine-tuned model not found. "
+                "Tier 2.5 will be skipped. "
+                "To enable: place model in fine_tuned_camembert/ or "
+                "2.3.2-detection-sophismes/fine_tuned_camembert/"
+            )
+            self._available = False
+            return False
+
+        try:
+            from transformers import (
+                CamembertTokenizer,
+                CamembertForSequenceClassification,
+            )
+
+            self._tokenizer = CamembertTokenizer.from_pretrained(model_path)
+            self._model = CamembertForSequenceClassification.from_pretrained(model_path)
+            self._model.eval()
+            self._available = True
+            logger.info(f"CamemBERT fallacy detector loaded from {model_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load CamemBERT model: {e}")
+            self._available = False
+
+        return self._available
+
+    def detect(self, text: str) -> List[FallacyDetection]:
+        """Classify text using fine-tuned CamemBERT.
+
+        Returns at most one detection (the highest-confidence class).
+        """
+        if not self.is_available():
+            return []
+
+        try:
+            import torch
+
+            inputs = self._tokenizer(
+                text,
+                return_tensors="pt",
+                truncation=True,
+                max_length=self._max_length,
+                padding=True,
+            )
+
+            with torch.no_grad():
+                outputs = self._model(**inputs)
+
+            logits = outputs.logits
+            probabilities = torch.softmax(logits, dim=1)
+            predicted_class_id = torch.argmax(probabilities, dim=1).item()
+            confidence = probabilities[0][predicted_class_id].item()
+
+            if confidence < self._threshold:
+                return []
+
+            fallacy_type = _CAMEMBERT_LABEL_MAPPING.get(
+                predicted_class_id, f"unknown_class_{predicted_class_id}"
+            )
+            taxonomy_pk = _TAXONOMY_LABEL_TO_PK.get(fallacy_type)
+
+            return [
+                FallacyDetection(
+                    fallacy_type=fallacy_type,
+                    confidence=round(confidence, 3),
+                    source="camembert",
+                    description=(
+                        f"CamemBERT fine-tuned classifier "
+                        f"[class={predicted_class_id}, conf={confidence:.3f}]"
+                    ),
+                    taxonomy_pk=taxonomy_pk,
+                )
+            ]
+
+        except Exception as e:
+            logger.error(f"CamemBERT detection failed: {e}")
+            return []
+
+    def get_status_details(self) -> Dict[str, Any]:
+        """Return detector status details."""
+        return {
+            "detector_type": "CamemBERTFallacyDetector",
+            "available": self.is_available(),
+            "model_path": self._find_model_path(),
+            "threshold": self._threshold,
+            "num_labels": len(_CAMEMBERT_LABEL_MAPPING),
+        }
+
+
 # ── Tier 1: LLM Zero-Shot Detection ─────────────────────────────────────
 
 
@@ -556,11 +734,18 @@ Si aucun sophisme n'est détecté, réponds: {"fallacies": []}"""
 
 
 class FrenchFallacyAdapter(AbstractFallacyDetector):
-    """3-tier French fallacy detection adapter.
+    """4-tier French fallacy detection adapter.
 
-    Combines symbolic rules, NLI zero-shot, and LLM zero-shot with
-    automatic fallback. Results are merged using an ensemble strategy
-    where symbolic matches (confidence=1.0) override neural/LLM scores.
+    Combines symbolic rules, CamemBERT fine-tuned, NLI zero-shot, and
+    LLM zero-shot with automatic fallback. Results are merged using an
+    ensemble strategy where symbolic matches (confidence=1.0) override
+    neural/LLM scores.
+
+    Tier hierarchy (fastest → most capable):
+      Tier 3:   Symbolic (spaCy Matcher, always available)
+      Tier 2.5: CamemBERT fine-tuned (13-class, offline, #169)
+      Tier 2:   NLI zero-shot (mDeBERTa, 28-class)
+      Tier 1:   LLM zero-shot (via ServiceDiscovery)
 
     Register with CapabilityRegistry:
         registry.register_service(
@@ -574,13 +759,24 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
     def __init__(
         self,
         enable_symbolic: bool = True,
+        enable_camembert: bool = True,
         enable_nli: bool = True,
         enable_llm: bool = True,
+        camembert_model_path: Optional[str] = None,
+        camembert_threshold: float = 0.3,
         nli_model: Optional[str] = None,
         nli_threshold: float = 0.5,
         service_discovery=None,
     ):
         self._symbolic = SymbolicFallacyDetector() if enable_symbolic else None
+        self._camembert = (
+            CamemBERTFallacyDetector(
+                model_path=camembert_model_path,
+                threshold=camembert_threshold,
+            )
+            if enable_camembert
+            else None
+        )
         self._nli = (
             NLIFallacyDetector(model_name=nli_model, threshold=nli_threshold)
             if enable_nli
@@ -596,7 +792,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         """At least one tier must be available."""
         return any(
             t is not None and t.is_available()
-            for t in [self._symbolic, self._nli, self._llm]
+            for t in [self._symbolic, self._camembert, self._nli, self._llm]
         )
 
     def get_available_tiers(self) -> List[str]:
@@ -604,6 +800,8 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         tiers = []
         if self._symbolic and self._symbolic.is_available():
             tiers.append("symbolic")
+        if self._camembert and self._camembert.is_available():
+            tiers.append("camembert")
         if self._nli and self._nli.is_available():
             tiers.append("nli")
         if self._llm and self._llm.is_available():
@@ -632,6 +830,13 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             all_detections.extend(symbolic_results)
             if symbolic_results:
                 result.tiers_used.append("symbolic")
+
+        # Tier 2.5: CamemBERT fine-tuned (#169)
+        if self._camembert and self._camembert.is_available():
+            camembert_results = self._camembert.detect(text)
+            all_detections.extend(camembert_results)
+            if camembert_results:
+                result.tiers_used.append("camembert")
 
         # Tier 2: NLI zero-shot
         if self._nli and self._nli.is_available():
