@@ -727,7 +727,7 @@ class TestInvokeCallables:
         assert result["conflict_count"] == 0
 
     async def test_invoke_jtms(self):
-        """_invoke_jtms creates beliefs from real argument content."""
+        """_invoke_jtms creates beliefs from real argument content with JTMS API."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_jtms,
         )
@@ -737,12 +737,17 @@ class TestInvokeCallables:
         )
         assert result["belief_count"] == 3
         assert isinstance(result["beliefs"], dict)
-        # New format: beliefs keyed by real content, with validity and justifications
+        # New format: beliefs with validity, justifications (repr), and content
         for name, data in result["beliefs"].items():
             assert isinstance(data, dict)
             assert "valid" in data
             assert "justifications" in data
+            assert "content" in data
             assert isinstance(data["justifications"], list)
+        # Cherry-picked from PR #191: justified_count and valid_count metrics
+        assert "justified_count" in result
+        assert "valid_count" in result
+        assert "undermined_count" in result
 
     async def test_invoke_jtms_with_upstream_args(self):
         """_invoke_jtms uses upstream extracted arguments when available."""

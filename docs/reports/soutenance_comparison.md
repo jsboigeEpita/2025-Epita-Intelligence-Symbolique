@@ -1,8 +1,9 @@
-# Comparaison Soutenances Etudiantes vs Systeme Integre
+# Comparaison Soutenances Étudiantes vs Système Intégré
 
 **Issue:** #131
 **Date:** 2026-03-21
-**Sources:** Transcripts ChatGPT (IASY-1, IASY-2, PrCon), sous-titres video (VTT x3), READMEs projets, code source integre, CSV inscriptions
+**Sources:** Transcripts ChatGPT (IASY-1, IASY-2, PrCon), sous-titres vidéo (VTT x3), READMEs projets, code source intégré, CSV inscriptions
+**Revue:** Corrections appliquées par le coordinateur (accents, scores ajustés, section fallbacks)
 
 ---
 
@@ -20,7 +21,7 @@
 | Projets standalone (non integres) | 3 |
 | Projets sans code soumis | 2 |
 | BaseAgent subclasses | 7 |
-| Plugins Semantic Kernel | 9 |
+| Plugins Semantic Kernel | 10+ |
 | Services adapters | 3 |
 | Endpoints API mobile | 4 |
 
@@ -124,7 +125,7 @@
 | Agent Dung standalone | Oui | `abs_arg_dung/agent.py` (standalone) | **STANDALONE** |
 | Integration pipeline (ranking_semantics) | Non | Via `_invoke_ranking_semantics()` dans pipeline | **AMELIORE** |
 
-**Score d'integration: 60%** — Les semantiques Dung sont accessibles via Tweety (ameliore), mais l'agent Python natif de l'etudiant reste standalone. Les formats d'export et la visualisation ne sont pas integres.
+**Score d'intégration: 70%** — Les sémantiques Dung sont accessibles via Tweety (amélioré) et intégrées dans le pipeline unifié (`_invoke_ranking_semantics`). L'agent Python natif de l'étudiant reste standalone. Les formats d'export et la visualisation ne sont pas intégrés. Score relevé de 60% à 70% car les capabilities Dung sont fonctionnelles dans le pipeline avec fallback Python quand Tweety est indisponible.
 
 ---
 
@@ -473,7 +474,7 @@
 | Interface jeu Phaser.js | Oui | Standalone dans `CaseAI/` (non integree) | **STANDALONE** |
 | Mind map | Oui | Non integre | **ABSENT** |
 
-**Score d'integration: 50%** — L'idee d'investigation a ete transformee en un paradigme different (Oracle/Moriarty pour le systeme multi-agent d'argumentation) qui est plus puissant que le jeu original. Le jeu Phaser.js reste standalone. L'integration est conceptuelle plus que directe.
+**Score d'intégration: 60%** — L'idée d'investigation a été transformée en un paradigme différent (Oracle/Moriarty pour le système multi-agent d'argumentation) qui est plus puissant que le jeu original. Le jeu Phaser.js reste standalone. Score relevé de 50% à 60% car la transformation conceptuelle (dataset Cluedo + paradigme Sherlock/Watson/Moriarty + gestion permissions) représente un apport architecturel significatif même si l'intégration est indirecte.
 
 ---
 
@@ -532,7 +533,7 @@
 |---|--------|-----------|-----------|-------------|-------|-------------------------------|
 | 1 | 1.4.1 TMS/JTMS | Zebic, Leguere, Shan, Breant | Oui | **85%** | Plugin SK, WebSocket, pipeline |
 | 2 | 1.2.7 Argumentation Dialogique | Daudin, Mili, Bocquillion | Oui | **90%** | BaseAgent, protocoles Walton-Krabbe |
-| 3 | 1.2.1 Dung Semantics | Da Silva, Badraoui, Jeyakumar | Oui | **60%** | Tweety bridge (Java > Python natif) |
+| 3 | 1.2.1 Dung Semantics | Da Silva, Badraoui, Jeyakumar | Oui | **70%** | Tweety bridge (Java > Python natif), Python fallback |
 | 4 | 2.1.6 Gouvernance | Guelennoc | Oui | **85%** | Plugin SK, pipeline, 7 methodes vote |
 | 5 | 2.3.2 Detection Sophismes | Hamard | Oui | **90%** | 3-tier, 28 labels taxonomy, corpus |
 | 6 | 2.3.3 Contre-Arguments | Sambrook | Oui | **95%** | 5 strategies, BaseAgent, evaluator |
@@ -544,11 +545,11 @@
 | 12 | 3.1.5 Interface Mobile | Saade, Blin, Arnold | Oui | **70%** | API reelle vs ChatGPT wrapper |
 | 13 | 3.1.1 Interface Web | Rodrigues, De Bastos | Oui | **65%** | Starlette, WebSocket |
 | 14 | [Custom] Speech-to-Text | Damais, Calvente, Ayral, Benihaddadene | Oui | **75%** | 2-tier service, async |
-| 15 | [Custom] Enquete Policiere | Senigout, Braud | Oui | **50%** | Paradigme Oracle/Moriarty |
+| 15 | [Custom] Enquete Policiere | Senigout, Braud | Oui | **60%** | Paradigme Oracle/Moriarty, Cluedo dataset |
 | 16 | 1.1.5 QBF | Monteillard, Saadi, Villeneuve, Nagaishi | **Non** | **5%** | — |
 | 17 | 2.1.4 Documentation | Labbe, Duport, Galbez, Jales | Partiel | **30%** | Templates docs |
 
-### Score moyen d'integration : **67%** (excluant les 2 projets non soumis : **76%**)
+### Score moyen d'intégration : **69%** (excluant les 2 projets non soumis : **78%**)
 
 ---
 
@@ -563,16 +564,18 @@
 6. **1.4.1 TMS/JTMS** (85%) — JTMS complet + plugin SK + WebSocket
 7. **2.1.6 Gouvernance** (85%) — 7 methodes de vote, plugin SK, pipeline
 
-### Projets bien integres (65-84%)
+### Projets bien intégrés (65-84%)
 8. **2.3.6 LLMs Locaux** (80%) — Service adapter multi-backend
-9. **2.4.1 Index Semantique** (80%) — Service adapter avec CapabilityRegistry
+9. **2.4.1 Index Sémantique** (80%) — Service adapter avec CapabilityRegistry
 10. **[Custom] Speech-to-Text** (75%) — Service transcription 2-tier
-11. **3.1.5 Interface Mobile** (70%) — API reecrite pour utiliser le vrai pipeline
-12. **3.1.1 Interface Web** (65%) — Migration Flask→Starlette, focus JTMS
+11. **3.1.5 Interface Mobile** (70%) — API réécrite pour utiliser le vrai pipeline
+12. **1.2.1 Dung Semantics** (70%) — Via Tweety + Python fallback, pipeline intégré
+13. **3.1.1 Interface Web** (65%) — Migration Flask→Starlette, focus JTMS
 
-### Projets faiblement integres (<65%)
-13. **1.2.1 Dung Semantics** (60%) — Via Tweety, agent Python standalone
-14. **[Custom] Enquete Policiere** (50%) — Transformation conceptuelle Oracle/Moriarty
+### Projets moyennement intégrés (50-69%)
+13. **[Custom] Enquête Policière** (60%) — Transformation conceptuelle Oracle/Moriarty
+
+### Projets faiblement intégrés (<50%)
 15. **2.1.4 Documentation** (30%) — Templates non remplis
 
 ### Projets non soumis
@@ -595,14 +598,18 @@ L'integration dans le systeme unifie a apporte des ameliorations systematiques q
 7. **Benchmark pipeline** — Validation incrementale sur 14 iterations (#138)
 8. **LLM Judge** — Evaluation qualitative automatisee des sorties
 
+### Améliorations transversales additionnelles (post-rapport)
+9. **Python fallbacks** (commit ac5bf041) — Les 14 invoke callables Tweety ont des fallbacks Python gracieux quand la JVM est indisponible, permettant au pipeline de fonctionner sur toute machine sans Java
+10. **Cross-component enrichment** (commit 6e89de40, Epic #176) — Les 10 composants principaux du pipeline lisent les résultats upstream pour produire des sorties enrichies et croisées au lieu de tourner en isolation
+
 ### Ce qui manque encore
-1. **Visualisations** — Aucun projet n'a ses visualisations integrees dans le pipeline
-2. **UIs standalone** — PyQt5, Streamlit, Vue.js restent dans les repertoires etudiants
-3. **CamemBERT fine-tuned** — Modele entreine non utilise (trop lourd pour le pipeline)
-4. **AI Shield** — Framework de securite non soumis (potentiellement utile)
-5. **QBF solver** — Raisonnement quantifie non disponible
-6. **ATMS** — Seul le JTMS est integre, pas l'ATMS
-7. **Routes web** — La plupart des agents n'ont pas de routes web dediees (seul JTMS)
+1. **Visualisations** — Aucun projet n'a ses visualisations intégrées dans le pipeline
+2. **UIs standalone** — PyQt5, Streamlit, Vue.js restent dans les répertoires étudiants
+3. **CamemBERT fine-tuned** — Modèle entraîné non utilisé (trop lourd pour le pipeline)
+4. **AI Shield** — Framework de sécurité non soumis (potentiellement utile, voir #166)
+5. **QBF solver** — Raisonnement quantifié non disponible (voir #167)
+6. **ATMS** — Seul le JTMS est intégré, pas l'ATMS (voir #164)
+7. **Routes web** — La plupart des agents n'ont pas de routes web dédiées (seul JTMS, voir #168)
 
 ---
 

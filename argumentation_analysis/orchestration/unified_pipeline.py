@@ -449,41 +449,40 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         f.get("fallacy_type", "") for f in detected_fallacies if isinstance(f, dict)
     }
 
+    # Build beliefs using proper JTMS API (cherry-picked from PR #191)
+    belief_names = []
     for i, name in enumerate(arg_names[:12]):
-        belief_name = name
-        jtms.add_belief(belief_name)
+        jtms.add_belief(name)
+        belief_names.append(name)
 
-        # Check if this argument is undermined by a detected fallacy
+    # Build justification chains: each belief supports the next (sequential reasoning)
+    for i in range(1, len(belief_names)):
+        jtms.add_justification([belief_names[i - 1]], [], belief_names[i])
+
+    # Set initial validity: first belief is True (premise accepted)
+    if belief_names:
+        jtms.set_belief_validity(belief_names[0], True)
+
+    # Invalidate beliefs associated with detected fallacies
+    for i, name in enumerate(belief_names):
         is_undermined = any(
-            ft.lower() in belief_name.lower() for ft in fallacy_types if ft
+            ft.lower() in name.lower() for ft in fallacy_types if ft
         )
-        # Justifications: supported by extraction, potentially undermined by fallacy
-        justifications = [f"extracted_from_text (position {i+1})"]
         if is_undermined:
-            justifications.append("undermined_by_fallacy_detection")
-
-        # Set validity based on whether the claim is undermined
-        if is_undermined:
-            jtms.beliefs[belief_name].valid = False
-            jtms.beliefs[belief_name].justifications = justifications
-        elif i < len(raw_args):
-            # Arguments directly extracted get positive validity
-            jtms.beliefs[belief_name].valid = True
-            jtms.beliefs[belief_name].justifications = justifications
-        else:
-            # Claims without direct support remain uncertain
-            jtms.beliefs[belief_name].valid = None
-            jtms.beliefs[belief_name].justifications = justifications
+            jtms.set_belief_validity(name, False)
 
     return {
         "beliefs": {
             name: {
                 "valid": b.valid,
-                "justifications": getattr(b, "justifications", []),
+                "justifications": [repr(j.conclusion) for j in b.justifications],
+                "content": name,
             }
             for name, b in jtms.beliefs.items()
         },
         "belief_count": len(jtms.beliefs),
+        "justified_count": sum(1 for b in jtms.beliefs.values() if b.justifications),
+        "valid_count": sum(1 for b in jtms.beliefs.values() if b.valid is True),
         "undermined_count": sum(1 for b in jtms.beliefs.values() if b.valid is False),
     }
 
