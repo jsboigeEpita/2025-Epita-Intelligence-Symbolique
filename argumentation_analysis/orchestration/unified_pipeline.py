@@ -677,8 +677,103 @@ def _python_ranking_fallback(
     }
 
 
+def _enrich_ranking_with_justification(
+    result: Dict[str, Any],
+    args: List[str],
+    attacks: List[List[str]],
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Enrich ranking output with strength justification based on upstream data.
+
+    Uses Dung extensions, quality scores, and fallacy data to explain
+    WHY each argument is ranked where it is.
+    """
+    scores = result.get("scores", {})
+    ranking = result.get("ranking", [])
+
+    # Gather upstream quality scores
+    quality_output = context.get("phase_quality_output", {})
+    quality_scores = {}
+    if isinstance(quality_output, dict):
+        qs = quality_output.get("quality_scores", quality_output.get("scores", {}))
+        if isinstance(qs, dict):
+            quality_scores = qs
+
+    # Gather fallacy targets
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacy_targets = set()
+    if isinstance(fallacy_output, dict):
+        for f in fallacy_output.get("fallacies", []):
+            if isinstance(f, dict):
+                target = f.get("target_argument", "")
+                if target:
+                    fallacy_targets.add(target.lower()[:30])
+
+    # Build per-argument strength justification
+    strength_analysis = []
+    for rank_pos, arg in enumerate(ranking):
+        arg_score = scores.get(arg, 0.0)
+        # Count attacks on this argument
+        incoming = sum(1 for src, tgt in attacks if tgt == arg)
+        outgoing = sum(1 for src, tgt in attacks if src == arg)
+
+        reasons = []
+        if incoming == 0:
+            reasons.append("unattacked (no incoming attacks)")
+        elif incoming >= 2:
+            reasons.append(f"heavily attacked ({incoming} incoming)")
+        else:
+            reasons.append(f"{incoming} incoming attack(s)")
+
+        if outgoing > 0:
+            reasons.append(f"attacks {outgoing} other argument(s)")
+
+        # Check if targeted by fallacy
+        is_fallacious = any(
+            ft in arg.lower()[:30] for ft in fallacy_targets
+        )
+        if is_fallacious:
+            reasons.append("targeted by detected fallacy (weakened)")
+
+        # Check quality score
+        arg_quality = quality_scores.get(arg)
+        if isinstance(arg_quality, (int, float)):
+            reasons.append(f"quality score: {arg_quality:.2f}")
+        elif isinstance(arg_quality, dict) and "overall" in arg_quality:
+            reasons.append(f"quality score: {arg_quality['overall']:.2f}")
+
+        strength_analysis.append(
+            {
+                "rank": rank_pos + 1,
+                "argument": arg[:80],
+                "score": round(arg_score, 4),
+                "reasons": reasons,
+            }
+        )
+
+    result["strength_analysis"] = strength_analysis
+    if not result.get("comparisons"):
+        # Generate comparisons from ranking
+        comparisons = []
+        for i in range(len(ranking) - 1):
+            s1 = scores.get(ranking[i], 0)
+            s2 = scores.get(ranking[i + 1], 0)
+            comparisons.append(
+                {
+                    "stronger": ranking[i][:60],
+                    "weaker": ranking[i + 1][:60],
+                    "score_diff": round(s1 - s2, 4),
+                }
+            )
+        result["comparisons"] = comparisons
+    return result
+
+
 async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke ranking semantics handler with JVM fallback."""
+    """Invoke ranking semantics handler with JVM fallback.
+
+    Enriches ranking with Dung extension data and strength justification.
+    """
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
@@ -691,10 +786,17 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
         )
 
         handler = RankingHandler()
-        return await asyncio.to_thread(handler.rank_arguments, args, attacks, method)
+        result = await asyncio.to_thread(
+            handler.rank_arguments, args, attacks, method
+        )
+        # Enrich Tweety result with strength justification
+        if isinstance(result, dict) and "ranking" in result:
+            result = _enrich_ranking_with_justification(result, args, attacks, context)
+        return result
     except Exception as e:
         logger.info(f"Ranking handler unavailable ({e}), using Python fallback")
-        return _python_ranking_fallback(args, attacks, method)
+        result = _python_ranking_fallback(args, attacks, method)
+        return _enrich_ranking_with_justification(result, args, attacks, context)
 
 
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -782,6 +884,106 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict:
         }
 
 
+def _python_aspic_fallback(
+    args: List[str],
+    strict: List[str],
+    defeasible: List[str],
+    fallacies: List,
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Pure-Python ASPIC+ fallback that interprets defensibility.
+
+    Determines which arguments survive based on whether they are undermined
+    by detected fallacies or successfully rebutted by counter-arguments.
+    """
+    # Identify undermined arguments (targeted by fallacies)
+    undermined_indices = set()
+    for f in fallacies:
+        if isinstance(f, dict):
+            target = f.get("target_argument", "")
+            for i, arg in enumerate(args):
+                if target and target.lower()[:30] in arg.lower():
+                    undermined_indices.add(i)
+                    break
+            else:
+                # Fallacy without explicit target: assign to positional index
+                idx = min(len(undermined_indices), len(args) - 1)
+                if idx not in undermined_indices:
+                    undermined_indices.add(idx)
+
+    # Check counter-arguments for rebuttal
+    ca_output = context.get("phase_counter_output", {})
+    rebutted_indices = set()
+    if isinstance(ca_output, dict):
+        cas = ca_output.get("llm_counter_arguments", [])
+        if isinstance(cas, list):
+            for ca in cas:
+                if not isinstance(ca, dict):
+                    continue
+                target = ca.get("target_argument", "")
+                for i, arg in enumerate(args):
+                    if target and target.lower()[:30] in arg.lower():
+                        rebutted_indices.add(i)
+                        break
+
+    # Compute defensibility for each argument
+    defensibility = []
+    surviving = []
+    defeated = []
+    for i, arg in enumerate(args):
+        is_undermined = i in undermined_indices
+        is_rebutted = i in rebutted_indices
+        has_strict_support = any(
+            f"claim_{i+1}" in r or f"supported_{i+1}" in r for r in strict
+        )
+        status = "accepted"
+        reasons = []
+        if is_undermined:
+            status = "undermined"
+            matching_fallacies = [
+                f.get("fallacy_type", "unknown")
+                for f in fallacies
+                if isinstance(f, dict)
+            ]
+            reasons.append(f"undermined by fallacy: {', '.join(matching_fallacies[:2])}")
+        if is_rebutted:
+            status = "defeated" if is_undermined else "challenged"
+            reasons.append("rebutted by counter-argument")
+        if has_strict_support and not is_undermined:
+            status = "strictly_supported"
+            reasons.append("backed by strict rule (factual claim)")
+
+        defensibility.append(
+            {
+                "argument": arg[:80],
+                "status": status,
+                "reasons": reasons or ["no attack detected"],
+            }
+        )
+        if status in ("accepted", "strictly_supported"):
+            surviving.append(arg[:80])
+        else:
+            defeated.append(arg[:80])
+
+    return {
+        "strict_rules": strict,
+        "defeasible_rules": defeasible,
+        "extensions": [surviving] if surviving else [args[:1]],
+        "defensibility_analysis": defensibility,
+        "surviving_arguments": surviving,
+        "defeated_arguments": defeated,
+        "statistics": {
+            "total_arguments": len(args),
+            "surviving": len(surviving),
+            "defeated": len(defeated),
+            "strict_rules": len(strict),
+            "defeasible_rules": len(defeasible),
+            "fallacies_applied": len(fallacies),
+        },
+        "fallback": "python",
+    }
+
+
 async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke ASPIC+ handler with JVM fallback.
 
@@ -837,17 +1039,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
         )
     except Exception as e:
         logger.info(f"ASPIC+ handler unavailable ({e}), using Python fallback")
-        return {
-            "strict_rules": strict,
-            "defeasible_rules": defeasible,
-            "extensions": [args[:2]] if len(args) >= 2 else [args],
-            "statistics": {
-                "arguments": len(args),
-                "strict_rules": len(strict),
-                "defeasible_rules": len(defeasible),
-            },
-            "fallback": "python",
-        }
+        return _python_aspic_fallback(args, strict, defeasible, fallacies, context)
 
 
 async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -1218,20 +1410,192 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
         )
     except Exception as e:
         logger.info(f"Social handler unavailable ({e}), using Python fallback")
-        # Simple majority-based social ranking
-        social_scores = (
-            {a: votes.get(a, (1, 0))[0] for a in args}
-            if votes
-            else {a: len(args) - i for i, a in enumerate(args)}
-        )
-        return {
-            "arguments": args,
-            "attacks": attacks,
-            "votes": votes,
-            "social_ranking": sorted(social_scores, key=lambda a: -social_scores[a]),
-            "social_scores": social_scores,
-            "fallback": "python",
+        return _python_social_fallback(args, attacks, votes, context)
+
+
+def _python_social_fallback(
+    args: List[str],
+    attacks: List[List[str]],
+    votes: Dict,
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Pure-Python Social AF fallback using upstream data as social votes.
+
+    Derives social acceptability from:
+    - Governance decisions (if available): voting results as social preference
+    - Quality scores: higher quality = more social support
+    - Counter-argument effectiveness: arguments that survive CAs are socially stronger
+    """
+    # Derive votes from upstream governance if available
+    gov_output = context.get("phase_governance_output", {})
+    if isinstance(gov_output, dict) and not votes:
+        decisions = gov_output.get("governance_decisions", [])
+        if isinstance(decisions, list):
+            for d in decisions:
+                if isinstance(d, dict) and "scores" in d:
+                    for arg_id, score in d["scores"].items():
+                        if isinstance(score, (int, float)):
+                            votes[arg_id] = (score, 1.0 - score)
+
+    # Derive social scores from quality scores and attack resilience
+    quality_output = context.get("phase_quality_output", {})
+    quality_scores = {}
+    if isinstance(quality_output, dict):
+        qs = quality_output.get("quality_scores", quality_output.get("scores", {}))
+        if isinstance(qs, dict):
+            quality_scores = qs
+
+    # Compute social scores combining multiple signals
+    social_scores = {}
+    for i, arg in enumerate(args):
+        base_score = 0.5
+        # Signal 1: votes (if available)
+        if arg in votes:
+            v = votes[arg]
+            base_score = v[0] / (v[0] + v[1]) if isinstance(v, tuple) and sum(v) > 0 else 0.5
+        # Signal 2: quality score boost
+        q = quality_scores.get(arg)
+        quality_boost = 0.0
+        if isinstance(q, (int, float)):
+            quality_boost = q * 0.3  # quality contributes 30%
+        elif isinstance(q, dict) and "overall" in q:
+            quality_boost = q["overall"] * 0.3
+        # Signal 3: attack resilience (fewer incoming attacks = stronger)
+        incoming = sum(1 for src, tgt in attacks if tgt == arg)
+        resilience = 1.0 / (1.0 + incoming) * 0.2  # resilience contributes 20%
+
+        social_scores[arg] = round(base_score + quality_boost + resilience, 4)
+
+    sorted_args = sorted(social_scores, key=lambda a: -social_scores[a])
+
+    return {
+        "arguments": args,
+        "attacks": attacks,
+        "votes": votes,
+        "social_ranking": sorted_args,
+        "social_scores": social_scores,
+        "social_analysis": [
+            {
+                "argument": arg[:80],
+                "social_score": social_scores.get(arg, 0),
+                "rank": rank + 1,
+            }
+            for rank, arg in enumerate(sorted_args)
+        ],
+        "fallback": "python",
+    }
+
+
+def _python_eaf_fallback(
+    args: List[str],
+    attacks: List[List[str]],
+    semantics: str,
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Pure-Python Epistemic AF fallback using upstream data for belief states.
+
+    Computes epistemic confidence for each argument based on:
+    - Whether it was identified as fallacious (lower confidence)
+    - Quality scores (higher quality = higher confidence)
+    - Whether it survived counter-arguments (higher confidence)
+    - Whether it has strict support (ASPIC+)
+    """
+    # Gather fallacy data
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacy_targets = {}
+    if isinstance(fallacy_output, dict):
+        for f in fallacy_output.get("fallacies", []):
+            if isinstance(f, dict):
+                target = f.get("target_argument", "")
+                ftype = f.get("fallacy_type", "unknown")
+                if target:
+                    fallacy_targets[target.lower()[:30]] = ftype
+
+    # Gather quality scores
+    quality_output = context.get("phase_quality_output", {})
+    quality_scores = {}
+    if isinstance(quality_output, dict):
+        qs = quality_output.get("quality_scores", quality_output.get("scores", {}))
+        if isinstance(qs, dict):
+            quality_scores = qs
+
+    # Gather ASPIC defensibility
+    aspic_output = context.get("phase_aspic_output", {})
+    surviving = set()
+    if isinstance(aspic_output, dict):
+        for a in aspic_output.get("surviving_arguments", []):
+            surviving.add(str(a).lower()[:30])
+
+    # Compute epistemic states
+    epistemic = {}
+    believed_args = []
+    disbelieved_args = []
+    for arg in args:
+        confidence = 0.6  # base confidence
+        believed = True
+        reasons = []
+
+        # Check fallacy targeting
+        is_fallacious = any(ft in arg.lower()[:30] for ft in fallacy_targets)
+        if is_fallacious:
+            confidence -= 0.3
+            reasons.append("targeted by fallacy")
+
+        # Check quality score
+        q = quality_scores.get(arg)
+        if isinstance(q, (int, float)):
+            confidence += (q - 0.5) * 0.4  # quality shifts confidence
+            reasons.append(f"quality={q:.2f}")
+        elif isinstance(q, dict) and "overall" in q:
+            confidence += (q["overall"] - 0.5) * 0.4
+            reasons.append(f"quality={q['overall']:.2f}")
+
+        # Check ASPIC survival
+        if arg.lower()[:30] in surviving:
+            confidence += 0.15
+            reasons.append("survives ASPIC+ analysis")
+
+        # Check attack count
+        incoming = sum(1 for src, tgt in attacks if tgt == arg)
+        if incoming >= 2:
+            confidence -= 0.15
+            reasons.append(f"heavily attacked ({incoming}x)")
+
+        confidence = max(0.0, min(1.0, confidence))
+        believed = confidence >= 0.4
+
+        epistemic[arg] = {
+            "believed": believed,
+            "confidence": round(confidence, 3),
+            "reasons": reasons or ["no specific evidence"],
         }
+        if believed:
+            believed_args.append(arg)
+        else:
+            disbelieved_args.append(arg)
+
+    # Compute extensions based on epistemic states
+    extensions = [believed_args] if believed_args else [args[:1]]
+
+    return {
+        "arguments": args,
+        "attacks": attacks,
+        "semantics": semantics,
+        "epistemic_states": epistemic,
+        "extensions": extensions,
+        "believed_arguments": believed_args,
+        "disbelieved_arguments": disbelieved_args,
+        "epistemic_summary": {
+            "total": len(args),
+            "believed": len(believed_args),
+            "disbelieved": len(disbelieved_args),
+            "avg_confidence": round(
+                sum(e["confidence"] for e in epistemic.values()) / max(len(epistemic), 1),
+                3,
+            ),
+        },
+        "fallback": "python",
+    }
 
 
 # --- EAF / DeLP / QBF invoke functions (#88, #89, #90) ---
@@ -1259,15 +1623,7 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict:
         )
     except Exception as e:
         logger.info(f"EAF handler unavailable ({e}), using Python fallback")
-        epistemic = {a: {"believed": True, "confidence": 0.7} for a in args}
-        return {
-            "arguments": args,
-            "attacks": attacks,
-            "semantics": semantics,
-            "epistemic_states": epistemic,
-            "extensions": [args[:2]] if len(args) >= 2 else [args],
-            "fallback": "python",
-        }
+        return _python_eaf_fallback(args, attacks, semantics, context)
 
 
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict:
