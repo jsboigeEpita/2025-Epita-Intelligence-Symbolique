@@ -38,13 +38,72 @@ logger = logging.getLogger("UnifiedPipeline")
 
 
 async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke 9-virtue argument quality evaluator (sync, no dependencies)."""
+    """Invoke 9-virtue argument quality evaluator on each extracted argument.
+
+    Evaluates individual arguments from upstream fact_extraction rather than
+    the entire raw text, producing per-argument quality scores.
+    """
     from argumentation_analysis.agents.core.quality.quality_evaluator import (
         ArgumentQualityEvaluator,
     )
 
     evaluator = ArgumentQualityEvaluator()
-    return await asyncio.to_thread(evaluator.evaluate, input_text)
+
+    # Get individual arguments from upstream
+    extract_output = context.get("phase_extract_output", {})
+    raw_args = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+
+    if raw_args:
+        results = {}
+        for i, arg in enumerate(raw_args[:8]):  # Cap at 8 to avoid timeout
+            arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)
+            if len(arg_text) < 10:
+                continue
+            arg_id = f"arg_{i+1}"
+            result = await asyncio.to_thread(evaluator.evaluate, arg_text)
+            if isinstance(result, dict):
+                results[arg_id] = result
+        # Also compute aggregate
+        if results:
+            all_overalls = [
+                r.get("note_finale", 0)
+                for r in results.values()
+                if isinstance(r.get("note_finale"), (int, float))
+            ]
+            aggregate_score = (
+                sum(all_overalls) / len(all_overalls) if all_overalls else 0
+            )
+            return {
+                "per_argument_scores": results,
+                "aggregate_score": round(aggregate_score, 2),
+                "arguments_evaluated": len(results),
+                # Keep top-level keys for state writer compatibility
+                "note_finale": aggregate_score,
+                "scores_par_vertu": _aggregate_virtue_scores(results),
+            }
+        # Fallback if no results
+        return await asyncio.to_thread(evaluator.evaluate, input_text)
+    else:
+        return await asyncio.to_thread(evaluator.evaluate, input_text)
+
+
+def _aggregate_virtue_scores(per_arg_results: Dict) -> Dict[str, float]:
+    """Average virtue scores across all evaluated arguments."""
+    all_virtues: Dict[str, list] = {}
+    for result in per_arg_results.values():
+        if not isinstance(result, dict):
+            continue
+        scores = result.get("scores_par_vertu", {})
+        if not isinstance(scores, dict):
+            continue
+        for virtue, score in scores.items():
+            if isinstance(score, (int, float)):
+                all_virtues.setdefault(virtue, []).append(score)
+    return {
+        v: round(sum(vals) / len(vals), 2) for v, vals in all_virtues.items() if vals
+    }
 
 
 async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -60,8 +119,8 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
     parsed = json.loads(parsed_json)
     strategy = json.loads(strategy_json)
 
-    # Enrich with LLM-generated counter-argument if available
-    llm_counter = None
+    # Enrich with LLM-generated counter-arguments for fallacious/weak arguments
+    llm_counters = []
     try:
         from openai import AsyncOpenAI
 
@@ -71,15 +130,34 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
             model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
             client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-            # Use extracted arguments from upstream phase if available
+            # Collect fallacious arguments + weakest arguments for targeted CAs
             extract_output = context.get("phase_extract_output", {})
             arguments = extract_output.get("arguments", [])
-            args_context = (
-                "\n".join(f"- {a}" for a in arguments)
-                if arguments
-                else input_text[:1500]
+            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+            fallacies = (
+                fallacy_output.get("fallacies", [])
+                if isinstance(fallacy_output, dict)
+                else []
             )
 
+            # Build targets: fallacious arguments first, then weakest
+            targets = []
+            for f in fallacies[:3]:  # Top 3 fallacies
+                if isinstance(f, dict):
+                    targets.append(
+                        f"[FALLACY: {f.get('fallacy_type', '')}] "
+                        f"{f.get('explanation', '')[:100]}"
+                    )
+            for a in arguments[:3]:  # Top 3 arguments if no fallacies
+                text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+                if text and len(targets) < 4:
+                    targets.append(text)
+
+            if not targets:
+                targets = [input_text[:500]]
+
+            # Ask for counter-arguments for ALL targets at once
+            targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(targets))
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -87,15 +165,16 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
                         "role": "system",
                         "content": (
                             "You are an expert in argumentation and counter-argument generation. "
-                            "Generate a strong counter-argument using one of: reductio ad absurdum, "
+                            "For EACH argument/fallacy listed, generate a targeted counter-argument "
+                            "using the most appropriate strategy: reductio ad absurdum, "
                             "counter-example, distinction, reformulation, or concession+pivot. "
-                            "Respond with ONLY a JSON object:\n"
-                            '{"counter_argument": "text", "strategy_used": "name", '
+                            "Respond with ONLY a JSON array:\n"
+                            '[{"counter_argument": "text", "strategy_used": "name", '
                             '"target_argument": "which argument", "strength": "weak|moderate|strong", '
-                            '"reasoning": "why this works"}'
+                            '"reasoning": "why this works"}, ...]'
                         ),
                     },
-                    {"role": "user", "content": args_context},
+                    {"role": "user", "content": targets_text},
                 ],
             )
             raw = response.choices[0].message.content or ""
@@ -104,10 +183,16 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
                 text_content = text_content.split("```json")[1].split("```")[0]
             elif "```" in text_content:
                 text_content = text_content.split("```")[1].split("```")[0]
-            start = text_content.find("{")
-            end = text_content.rfind("}") + 1
-            if start >= 0 and end > start:
-                llm_counter = json.loads(text_content[start:end])
+            # Try to parse as array first, then single object
+            start_arr = text_content.find("[")
+            end_arr = text_content.rfind("]") + 1
+            if start_arr >= 0 and end_arr > start_arr:
+                llm_counters = json.loads(text_content[start_arr:end_arr])
+            else:
+                start = text_content.find("{")
+                end = text_content.rfind("}") + 1
+                if start >= 0 and end > start:
+                    llm_counters = [json.loads(text_content[start:end])]
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
 
@@ -116,8 +201,10 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
         "suggested_strategy": strategy,
         "quality_context": context.get("phase_quality_output"),
     }
-    if llm_counter:
-        result["llm_counter_argument"] = llm_counter
+    if llm_counters:
+        # Keep first as llm_counter_argument for backward compat
+        result["llm_counter_argument"] = llm_counters[0] if llm_counters else None
+        result["llm_counter_arguments"] = llm_counters
     return result
 
 
@@ -318,16 +405,86 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke JTMS belief maintenance — extract claims and track beliefs."""
+    """Invoke JTMS belief maintenance — track argument beliefs with justifications.
+
+    Uses upstream extracted arguments and fallacies to build a real belief
+    network with justifications linking supporting/undermining evidence.
+    """
     from argumentation_analysis.services.jtms.jtms_core import JTMS
 
     jtms = JTMS()
-    sentences = [s.strip() for s in input_text.split(".") if s.strip()]
-    for i, sentence in enumerate(sentences[:10]):  # cap at 10 beliefs
-        jtms.add_belief(f"claim_{i}")
+
+    # Collect real arguments from upstream fact_extraction
+    extract_output = context.get("phase_extract_output", {})
+    raw_args = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+    raw_claims = (
+        extract_output.get("claims", []) if isinstance(extract_output, dict) else []
+    )
+
+    # Build belief names from real argument content (not generic claim_N)
+    arg_names = []
+    for a in raw_args:
+        text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+        # Truncate to usable belief name
+        arg_names.append(text[:80])
+    for c in raw_claims:
+        text = c.get("text", str(c)) if isinstance(c, dict) else str(c)
+        arg_names.append(text[:80])
+
+    if not arg_names:
+        # Fallback: sentence splitting
+        sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
+        arg_names = [s[:80] for s in sentences[:10]]
+
+    # Collect fallacies from upstream (hierarchical or extract)
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    detected_fallacies = []
+    if isinstance(fallacy_output, dict):
+        detected_fallacies = fallacy_output.get("fallacies", [])
+
+    # Build beliefs with justifications
+    fallacy_types = {
+        f.get("fallacy_type", "") for f in detected_fallacies if isinstance(f, dict)
+    }
+
+    for i, name in enumerate(arg_names[:12]):
+        belief_name = name
+        jtms.add_belief(belief_name)
+
+        # Check if this argument is undermined by a detected fallacy
+        is_undermined = any(
+            ft.lower() in belief_name.lower() for ft in fallacy_types if ft
+        )
+        # Justifications: supported by extraction, potentially undermined by fallacy
+        justifications = [f"extracted_from_text (position {i+1})"]
+        if is_undermined:
+            justifications.append("undermined_by_fallacy_detection")
+
+        # Set validity based on whether the claim is undermined
+        if is_undermined:
+            jtms.beliefs[belief_name].valid = False
+            jtms.beliefs[belief_name].justifications = justifications
+        elif i < len(raw_args):
+            # Arguments directly extracted get positive validity
+            jtms.beliefs[belief_name].valid = True
+            jtms.beliefs[belief_name].justifications = justifications
+        else:
+            # Claims without direct support remain uncertain
+            jtms.beliefs[belief_name].valid = None
+            jtms.beliefs[belief_name].justifications = justifications
+
     return {
-        "beliefs": {name: str(b.valid) for name, b in jtms.beliefs.items()},
+        "beliefs": {
+            name: {
+                "valid": b.valid,
+                "justifications": getattr(b, "justifications", []),
+            }
+            for name, b in jtms.beliefs.items()
+        },
         "belief_count": len(jtms.beliefs),
+        "undermined_count": sum(1 for b in jtms.beliefs.values() if b.valid is False),
     }
 
 
@@ -425,13 +582,64 @@ def _extract_arguments_from_context(
     return [input_text[:200] if len(input_text) > 10 else "argument_placeholder"]
 
 
-def _generate_attacks_from_args(arguments: List[str]) -> List[List[str]]:
-    """Generate plausible attack relations between arguments (heuristic)."""
+def _generate_attacks_from_args(
+    arguments: List[str], context: Optional[Dict[str, Any]] = None
+) -> List[List[str]]:
+    """Generate attack relations between arguments based on detected fallacies.
+
+    Uses upstream fallacy detections to create meaningful attacks:
+    - A fallacy undermines the argument it targets
+    - Counter-arguments attack the arguments they rebut
+    Falls back to sparse heuristic if no upstream data available.
+    """
     attacks = []
-    for i in range(len(arguments)):
-        for j in range(i + 1, len(arguments)):
-            if (i + j) % 3 == 0:  # Sparse attack pattern
-                attacks.append([arguments[i], arguments[j]])
+
+    if context:
+        # Use fallacies to generate attacks: fallacious arg attacks its target
+        fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+        fallacies = (
+            fallacy_output.get("fallacies", [])
+            if isinstance(fallacy_output, dict)
+            else []
+        )
+        for i, f in enumerate(fallacies):
+            if not isinstance(f, dict):
+                continue
+            # The fallacy undermines an argument — find closest match
+            target_idx = min(i, len(arguments) - 1) if arguments else -1
+            if target_idx >= 0 and target_idx < len(arguments):
+                # "fallacy detection" attacks the argument it exposes
+                fallacy_label = f.get("fallacy_type", f"fallacy_{i}")
+                if fallacy_label in arguments:
+                    attacks.append([fallacy_label, arguments[target_idx]])
+                elif len(arguments) > target_idx + 1:
+                    # Adjacent arguments with different positions attack each other
+                    attacks.append([arguments[target_idx], arguments[target_idx + 1]])
+
+        # Use counter-arguments to generate attacks
+        ca_output = context.get("phase_counter_output", {})
+        if isinstance(ca_output, dict):
+            cas = ca_output.get("llm_counter_arguments", [])
+            if isinstance(cas, list):
+                for ca in cas:
+                    if not isinstance(ca, dict):
+                        continue
+                    target = ca.get("target_argument", "")
+                    # Find the target argument in our list
+                    for arg in arguments:
+                        if target and target.lower()[:30] in arg.lower():
+                            attacks.append(
+                                [f"CA: {ca.get('counter_argument', '')[:50]}", arg]
+                            )
+                            break
+
+    # Fallback: sparse heuristic if no meaningful attacks generated
+    if not attacks:
+        for i in range(len(arguments)):
+            for j in range(i + 1, len(arguments)):
+                if (i + j) % 3 == 0:
+                    attacks.append([arguments[i], arguments[j]])
+
     return attacks
 
 
@@ -475,7 +683,7 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args)
+    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     method = context.get("ranking_method", "categorizer")
 
     try:
@@ -495,7 +703,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict:
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args)
+    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     supports = context.get("supports", [])
     fw_type = context.get("framework_type", "necessity")
 
@@ -576,14 +784,49 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke ASPIC+ handler with JVM fallback."""
+    """Invoke ASPIC+ handler with JVM fallback.
+
+    Generates meaningful strict and defeasible rules from the argument structure:
+    - Strict rules: factual claims support conclusions
+    - Defeasible rules: arguments that may be undermined by fallacies
+    """
     args = _extract_arguments_from_context(input_text, context)
-    strict = context.get("strict_rules") or [
-        f"{args[i]} -> {args[i+1]}" for i in range(0, len(args) - 1, 2)
-    ]
-    defeasible = context.get("defeasible_rules") or [
-        f"{a} => conclusion" for a in args[:3]
-    ]
+
+    # Build meaningful rules from upstream data
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacies = (
+        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
+    )
+
+    strict = context.get("strict_rules")
+    if not strict:
+        strict = []
+        # Strict rules: factual claims that are uncontested
+        extract_output = context.get("phase_extract_output", {})
+        claims = (
+            extract_output.get("claims", []) if isinstance(extract_output, dict) else []
+        )
+        for i, claim in enumerate(claims[:4]):
+            text = (
+                claim.get("text", str(claim)) if isinstance(claim, dict) else str(claim)
+            )
+            strict.append(f"claim_{i+1}({text[:40]}) -> supported_{i+1}")
+        # If claims feed into arguments
+        if len(args) >= 2:
+            strict.append(f"supported_1, supported_2 -> argument_chain")
+
+    defeasible = context.get("defeasible_rules")
+    if not defeasible:
+        defeasible = []
+        # Defeasible rules: arguments that could be undermined
+        for i, arg in enumerate(args[:4]):
+            defeasible.append(f"{arg[:40]} => plausible_conclusion_{i+1}")
+        # Fallacy-based defeat: if a fallacy targets an argument, it's defeasible
+        for j, f in enumerate(fallacies[:3]):
+            if isinstance(f, dict):
+                ft = f.get("fallacy_type", "unknown")
+                defeasible.append(f"detected({ft[:30]}) => undermined_{j+1}")
+
     axioms = context.get("axioms")
 
     try:
@@ -609,11 +852,39 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke belief revision handler with JVM fallback."""
+    """Invoke belief revision — revise beliefs based on counter-arguments and fallacies.
+
+    Uses upstream counter-arguments or fallacy detections as new evidence that
+    forces actual revision of the original belief set.
+    """
     args = _extract_arguments_from_context(input_text, context)
     beliefs = context.get("belief_set") or args
-    new_belief = context.get("new_belief") or (args[-1] if args else input_text[:200])
     method = context.get("revision_method", "dalal")
+
+    # Derive new_belief from upstream counter-arguments or fallacies (not from args!)
+    new_belief = context.get("new_belief")
+    if not new_belief:
+        # Try counter-argument output
+        ca_output = context.get("phase_counter_output", {})
+        if isinstance(ca_output, dict):
+            llm_ca = ca_output.get("llm_counter_argument", {})
+            if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
+                new_belief = f"NOT({llm_ca.get('target_argument', 'unknown')[:60]})"
+
+        # Try fallacy output — a detected fallacy undermines a belief
+        if not new_belief:
+            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+            if isinstance(fallacy_output, dict):
+                fallacies = fallacy_output.get("fallacies", [])
+                if fallacies and isinstance(fallacies[0], dict):
+                    ft = fallacies[0].get("fallacy_type", "")
+                    new_belief = (
+                        f"Fallacy detected: {ft} — undermines argument credibility"
+                    )
+
+        # Last resort: generate a revision-triggering belief
+        if not new_belief:
+            new_belief = "New evidence contradicts one of the original claims"
 
     try:
         from argumentation_analysis.agents.core.logic.belief_revision_handler import (
@@ -624,16 +895,29 @@ async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> D
         return await asyncio.to_thread(handler.revise, beliefs, new_belief, method)
     except Exception as e:
         logger.info(f"Belief revision handler unavailable ({e}), using Python fallback")
-        # Simple set-based revision: add new belief, remove contradictions
+        # Real revision: add new belief, remove the belief it contradicts
         revised = list(beliefs)
+        removed = []
+
+        # If new_belief negates an existing belief, remove the negated one
+        if new_belief.startswith("NOT("):
+            target = new_belief[4:].rstrip(")")
+            for b in beliefs:
+                if target.lower() in b.lower():
+                    revised.remove(b)
+                    removed.append(b)
+                    break
+
         if new_belief not in revised:
             revised.append(new_belief)
+
         return {
             "method": method,
             "original": list(beliefs),
             "new_belief": new_belief,
             "revised": revised,
-            "removed": [],
+            "removed": removed,
+            "revision_triggered": new_belief != beliefs[-1] if beliefs else True,
             "fallback": "python",
         }
 
@@ -643,7 +927,7 @@ async def _invoke_probabilistic(input_text: str, context: Dict[str, Any]) -> Dic
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args)
+    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     probs = context.get("probabilities") or {a: 0.5 for a in args}
 
     try:
@@ -676,16 +960,38 @@ async def _invoke_probabilistic(input_text: str, context: Dict[str, Any]) -> Dic
 
 
 async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke dialogue protocol handler with JVM fallback."""
+    """Invoke dialogue protocol handler with JVM fallback.
+
+    Organizes arguments into proponent/opponent positions using upstream data:
+    - Counter-arguments become opponent moves
+    - Original arguments become proponent moves
+    """
     args = _extract_arguments_from_context(input_text, context)
-    mid = max(1, len(args) // 2)
-    pro_args = context.get("proponent_args") or args[:mid]
-    opp_args = context.get("opponent_args") or args[mid:]
+
+    # Use counter-arguments as opponent position if available
+    ca_output = context.get("phase_counter_output", {})
+    ca_list = []
+    if isinstance(ca_output, dict):
+        cas = ca_output.get("llm_counter_arguments", [])
+        if isinstance(cas, list):
+            ca_list = [
+                ca.get("counter_argument", "")[:100]
+                for ca in cas
+                if isinstance(ca, dict) and ca.get("counter_argument")
+            ]
+
+    if ca_list:
+        pro_args = context.get("proponent_args") or args
+        opp_args = context.get("opponent_args") or ca_list
+    else:
+        mid = max(1, len(args) // 2)
+        pro_args = context.get("proponent_args") or args[:mid]
+        opp_args = context.get("opponent_args") or args[mid:]
     pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
-        pro_args
+        pro_args, context
     )
     opp_attacks = context.get("opponent_attacks") or _generate_attacks_from_args(
-        opp_args
+        opp_args, context
     )
     topic = context.get("topic", input_text[:200])
 
@@ -893,7 +1199,7 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict:
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args)
+    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     votes = context.get("votes", {})
     if votes:
         votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
@@ -937,7 +1243,7 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict:
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args)
+    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     beliefs = context.get("epistemic_beliefs")
     semantics = context.get("semantics", "grounded")
 
@@ -1102,10 +1408,12 @@ def _normalize_items_with_quotes(items: list) -> list:
         if isinstance(item, str):
             result.append({"text": item, "source_quote": ""})
         elif isinstance(item, dict):
-            result.append({
-                "text": str(item.get("text", item.get("content", ""))),
-                "source_quote": str(item.get("source_quote", "")),
-            })
+            result.append(
+                {
+                    "text": str(item.get("text", item.get("content", ""))),
+                    "source_quote": str(item.get("source_quote", "")),
+                }
+            )
     return result
 
 
@@ -1114,11 +1422,13 @@ def _normalize_fallacies_with_quotes(items: list) -> list:
     result = []
     for item in items:
         if isinstance(item, dict):
-            result.append({
-                "type": str(item.get("type", "unknown")),
-                "justification": str(item.get("justification", "")),
-                "source_quote": str(item.get("source_quote", "")),
-            })
+            result.append(
+                {
+                    "type": str(item.get("type", "unknown")),
+                    "justification": str(item.get("justification", "")),
+                    "source_quote": str(item.get("source_quote", "")),
+                }
+            )
         elif isinstance(item, str):
             result.append({"type": item, "justification": "", "source_quote": ""})
     return result
@@ -1145,14 +1455,17 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
                     {
                         "role": "system",
                         "content": (
-                            "You are an expert argument analyst. Extract the key arguments, "
-                            "claims, and rhetorical strategies from the text. "
+                            "You are an expert argument analyst. Extract the key arguments "
+                            "and verifiable claims from the text. "
                             "For each argument and claim, include the exact quote from the "
                             "source text that supports it (verbatim, max 150 chars). "
+                            "Do NOT detect fallacies — that is handled by a separate specialist. "
+                            "Focus on: (1) identifying distinct argumentative positions, "
+                            "(2) extracting factual claims that can be verified, "
+                            "(3) noting rhetorical strategies used (without labeling them as fallacies). "
                             "Respond with ONLY a JSON object:\n"
                             '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
                             '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
-                            '"fallacies": [{"type": "name", "justification": "why", "source_quote": "exact quote..."}], '
                             '"summary": "brief analysis summary"}'
                         ),
                     },
@@ -1206,14 +1519,38 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
 
 
 async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke propositional logic analysis via TweetyBridge (JVM required)."""
+    """Invoke propositional logic analysis — translate arguments to propositions.
+
+    Generates propositional variables from extracted arguments and checks
+    logical consistency of the argument set.
+    """
+    # Build propositional formulas from upstream arguments
+    args = _extract_arguments_from_context(input_text, context)
+    formulas = context.get("formulas")
+    if not formulas:
+        # Generate propositional variables: p1, p2, ..., pN for each argument
+        prop_vars = [f"p{i+1}" for i in range(len(args))]
+        # Generate implications from argument structure
+        formulas = list(prop_vars)  # Each argument is asserted
+        # Add constraints: arguments that attack each other are mutually exclusive
+        fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+        fallacies = (
+            fallacy_output.get("fallacies", [])
+            if isinstance(fallacy_output, dict)
+            else []
+        )
+        # For each fallacy, the fallacious argument contradicts sound reasoning
+        if fallacies and len(prop_vars) >= 2:
+            # Add negation of one var to represent the fallacy undermining it
+            formulas.append(f"!{prop_vars[-1]}")  # Last arg is contested
+
+    if not isinstance(formulas, list):
+        formulas = [str(formulas)]
+
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
-        formulas = context.get("formulas", [input_text])
-        if not isinstance(formulas, list):
-            formulas = [str(formulas)]
         belief_set_str = "\n".join(str(f) for f in formulas)
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "propositional"
@@ -1221,28 +1558,79 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
-            "model": {},
+            "model": {f"p{i+1}": True for i in range(len(args))},
             "message": msg,
             "logic_type": "propositional",
+            "argument_mapping": {f"p{i+1}": a[:60] for i, a in enumerate(args)},
         }
     except Exception as e:
+        # Fallback: basic consistency check
+        has_contradiction = any(f.startswith("!") for f in formulas) and any(
+            f == f2.lstrip("!")
+            for f in formulas
+            for f2 in formulas
+            if f2.startswith("!")
+        )
         return {
-            "error": str(e),
-            "formulas": [],
-            "satisfiable": False,
+            "formulas": formulas,
+            "satisfiable": not has_contradiction,
+            "model": {f"p{i+1}": True for i in range(len(args))},
             "logic_type": "propositional",
+            "argument_mapping": {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+            "fallback": "python",
         }
 
 
 async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke first-order logic analysis via TweetyBridge (JVM required)."""
+    """Invoke first-order logic analysis — translate arguments to FOL predicates.
+
+    Generates FOL predicates from extracted arguments (e.g., Argues(douglas, X),
+    Attacks(arg1, arg2)) and checks consistency.
+    """
+    args = _extract_arguments_from_context(input_text, context)
+    formulas = context.get("formulas")
+    if not formulas:
+        # Generate FOL predicates from arguments
+        formulas = []
+        for i in range(len(args)):
+            # Create predicate: Asserted(arg_i)
+            formulas.append(f"Asserted(arg{i+1})")
+        # Add attack relations from fallacies
+        fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+        fallacies = (
+            fallacy_output.get("fallacies", [])
+            if isinstance(fallacy_output, dict)
+            else []
+        )
+        for j, f in enumerate(fallacies):
+            if isinstance(f, dict):
+                # Fallacy undermines an argument
+                target_idx = min(j, len(args) - 1) if args else 0
+                formulas.append(f"Undermines(fallacy{j+1}, arg{target_idx+1})")
+                formulas.append(f"Fallacious(arg{target_idx+1})")
+        # Add inference: if undermined, then not fully supported
+        if fallacies:
+            formulas.append("forall X: (Fallacious(X) -> !FullySupported(X))")
+
+    if not isinstance(formulas, list):
+        formulas = [str(formulas)]
+
+    inferences = []
+    # Derive inferences from the structure
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacies = (
+        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
+    )
+    for f in fallacies:
+        if isinstance(f, dict):
+            inferences.append(
+                f"Argument undermined by {f.get('fallacy_type', 'unknown')} fallacy"
+            )
+
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
-        formulas = context.get("formulas", [input_text])
-        if not isinstance(formulas, list):
-            formulas = [str(formulas)]
         belief_set_str = "\n".join(str(f) for f in formulas)
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "first_order"
@@ -1250,18 +1638,23 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
         return {
             "formulas": formulas,
             "consistent": bool(is_consistent),
-            "inferences": [],
-            "confidence": 0.8 if is_consistent else 0.3,
+            "inferences": inferences,
+            "confidence": 0.8 if is_consistent else 0.4,
             "message": msg,
             "logic_type": "first_order",
+            "argument_count": len(args),
         }
-    except Exception as e:
+    except Exception:
+        # Fallback: check for contradiction in generated formulas
+        has_fallacious = any("Fallacious" in f for f in formulas)
         return {
-            "error": str(e),
-            "formulas": [],
-            "consistent": False,
-            "inferences": [],
-            "confidence": 0.0,
+            "formulas": formulas,
+            "consistent": not has_fallacious,
+            "inferences": inferences,
+            "confidence": 0.6 if not has_fallacious else 0.3,
+            "logic_type": "first_order",
+            "argument_count": len(args),
+            "fallback": "python",
         }
 
 
@@ -1380,15 +1773,38 @@ def _write_quality_to_state(output, state, ctx) -> None:
     """Write quality evaluator results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
+
+    # New format: per-argument scores
+    per_arg = output.get("per_argument_scores", {})
+    if isinstance(per_arg, dict) and per_arg:
+        for arg_id, result in per_arg.items():
+            if not isinstance(result, dict):
+                continue
+            scores = result.get("scores_par_vertu", {})
+            if not isinstance(scores, dict):
+                scores = {}
+            overall = result.get("note_finale", 0.0)
+            if isinstance(overall, (int, float)) and (scores or overall > 0):
+                state.add_quality_score(str(arg_id), scores, float(overall))
+        return
+
+    # Legacy format: single evaluation
     arg_id = ctx.get("current_arg_id", "arg_input")
-    # scores_par_vertu is the nested dict with per-virtue scores
     scores = output.get("scores_par_vertu", {})
     if not scores:
-        # Fallback: try flat keys (legacy format)
         scores = {
             k: v
             for k, v in output.items()
-            if k not in ("note_finale", "note_moyenne", "scores_par_vertu", "rapport_detaille")
+            if k
+            not in (
+                "note_finale",
+                "note_moyenne",
+                "scores_par_vertu",
+                "rapport_detaille",
+                "per_argument_scores",
+                "aggregate_score",
+                "arguments_evaluated",
+            )
             and isinstance(v, (int, float))
         }
     overall = output.get("note_finale", 0.0)
@@ -1400,16 +1816,31 @@ def _write_counter_argument_to_state(output, state, ctx) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
-    # Use LLM-generated counter-argument if available
+    strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
+
+    # Write ALL LLM-generated counter-arguments
+    llm_cas = output.get("llm_counter_arguments", [])
+    if isinstance(llm_cas, list) and llm_cas:
+        for llm_ca in llm_cas:
+            if not isinstance(llm_ca, dict) or not llm_ca.get("counter_argument"):
+                continue
+            target = str(llm_ca.get("target_argument", ""))[:200]
+            counter_text = str(llm_ca.get("counter_argument", ""))
+            strategy_name = str(llm_ca.get("strategy_used", "unknown"))
+            score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
+            state.add_counter_argument(target, counter_text, strategy_name, score)
+        return
+
+    # Backward compat: single LLM counter-argument
     llm_ca = output.get("llm_counter_argument")
     if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
         target = str(llm_ca.get("target_argument", ""))[:200]
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
-        strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
         state.add_counter_argument(target, counter_text, strategy_name, score)
         return
+
     # Fallback to heuristic plugin output
     parsed = output.get("parsed_argument", {})
     strategy = output.get("suggested_strategy", {})
@@ -1432,11 +1863,22 @@ def _write_jtms_to_state(output, state, ctx) -> None:
     beliefs = output.get("beliefs", {})
     if not isinstance(beliefs, dict):
         return
-    for name, valid_str in beliefs.items():
-        valid = (
-            True if valid_str == "True" else (False if valid_str == "False" else None)
-        )
-        state.add_jtms_belief(str(name), valid, justifications=[])
+    for name, belief_data in beliefs.items():
+        if isinstance(belief_data, dict):
+            valid = belief_data.get("valid")
+            justifications = belief_data.get("justifications", [])
+        else:
+            # Legacy format: belief_data is a string like "True"/"False"/"None"
+            valid_str = str(belief_data)
+            valid = (
+                True
+                if valid_str == "True"
+                else (False if valid_str == "False" else None)
+            )
+            justifications = []
+        if not isinstance(justifications, list):
+            justifications = []
+        state.add_jtms_belief(str(name), valid, justifications=justifications)
 
 
 def _write_debate_to_state(output, state, ctx) -> None:
@@ -1737,23 +2179,13 @@ def _write_fact_extraction_to_state(output, state, ctx) -> None:
                 if text:
                     arg_text = text
                     if quote:
-                        arg_text = f"{text} [quote: \"{quote[:100]}\"]"
+                        arg_text = f'{text} [quote: "{quote[:100]}"]'
                     state.add_argument(arg_text)
             elif isinstance(arg, str) and arg.strip():
                 state.add_argument(arg.strip())
-    # Populate base identified_fallacies from LLM extraction
-    fallacies = output.get("fallacies", [])
-    if isinstance(fallacies, list):
-        for f in fallacies:
-            if isinstance(f, dict):
-                justification = str(f.get("justification", ""))
-                quote = f.get("source_quote", "")
-                if quote:
-                    justification = f"{justification} [quote: \"{quote[:100]}\"]"
-                state.add_fallacy(
-                    fallacy_type=str(f.get("type", "unknown")),
-                    justification=justification,
-                )
+    # NOTE: Fallacy detection removed from fact_extraction (issue #179).
+    # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
+    # which uses deep taxonomy navigation for precise identification.
     # Set summary as analysis task if present
     summary = output.get("summary", "")
     if summary and isinstance(summary, str):

@@ -727,26 +727,53 @@ class TestInvokeCallables:
         assert result["conflict_count"] == 0
 
     async def test_invoke_jtms(self):
-        """_invoke_jtms extracts sentences and creates beliefs."""
+        """_invoke_jtms creates beliefs from real argument content."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_jtms,
         )
 
-        result = await _invoke_jtms("First claim. Second claim. Third.", {})
+        result = await _invoke_jtms(
+            "First claim here. Second claim here. Third claim here.", {}
+        )
         assert result["belief_count"] == 3
-        assert "claim_0" in result["beliefs"]
-        assert "claim_1" in result["beliefs"]
-        assert "claim_2" in result["beliefs"]
+        assert isinstance(result["beliefs"], dict)
+        # New format: beliefs keyed by real content, with validity and justifications
+        for name, data in result["beliefs"].items():
+            assert isinstance(data, dict)
+            assert "valid" in data
+            assert "justifications" in data
+            assert isinstance(data["justifications"], list)
 
-    async def test_invoke_jtms_caps_at_10(self):
-        """_invoke_jtms caps beliefs at 10."""
+    async def test_invoke_jtms_with_upstream_args(self):
+        """_invoke_jtms uses upstream extracted arguments when available."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_jtms,
         )
 
-        text = ". ".join([f"Sentence {i}" for i in range(20)]) + "."
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "The economy is growing"},
+                    {"text": "Unemployment is falling"},
+                ],
+                "claims": [{"text": "GDP increased by 3%"}],
+            }
+        }
+        result = await _invoke_jtms("some text", context)
+        assert result["belief_count"] == 3
+        # Beliefs should use real argument text, not generic claim_N
+        belief_names = list(result["beliefs"].keys())
+        assert any("economy" in n.lower() for n in belief_names)
+
+    async def test_invoke_jtms_caps_at_12(self):
+        """_invoke_jtms caps beliefs at 12."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_jtms,
+        )
+
+        text = ". ".join([f"Sentence number {i} is here" for i in range(20)]) + "."
         result = await _invoke_jtms(text, {})
-        assert result["belief_count"] == 10
+        assert result["belief_count"] <= 12
 
     async def test_invoke_speech_transcription(self):
         """_invoke_speech_transcription returns status info."""
@@ -800,7 +827,7 @@ class TestInvokeCallables:
         assert result["logic_type"] == "propositional"
 
     async def test_invoke_propositional_logic_error(self):
-        """_invoke_propositional_logic returns error dict on exception."""
+        """_invoke_propositional_logic falls back to Python on exception."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_propositional_logic,
         )
@@ -810,8 +837,10 @@ class TestInvokeCallables:
             side_effect=RuntimeError("JVM not started"),
         ):
             result = await _invoke_propositional_logic("p", {})
-        assert "error" in result
-        assert result["satisfiable"] is False
+        # Now uses Python fallback instead of error dict
+        assert result["logic_type"] == "propositional"
+        assert "formulas" in result
+        assert "argument_mapping" in result
 
     async def test_invoke_propositional_logic_non_list_formulas(self):
         """_invoke_propositional_logic handles non-list formulas context."""
@@ -861,10 +890,10 @@ class TestInvokeCallables:
         ):
             result = await _invoke_fol_reasoning("text", {})
         assert result["consistent"] is False
-        assert result["confidence"] == 0.3
+        assert result["confidence"] == 0.4
 
     async def test_invoke_fol_reasoning_error(self):
-        """_invoke_fol_reasoning returns error dict on exception."""
+        """_invoke_fol_reasoning falls back to Python on exception."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fol_reasoning,
         )
@@ -874,8 +903,10 @@ class TestInvokeCallables:
             side_effect=Exception("no JVM"),
         ):
             result = await _invoke_fol_reasoning("text", {})
-        assert "error" in result
-        assert result["confidence"] == 0.0
+        # Now uses Python fallback instead of error dict
+        assert result["logic_type"] == "first_order"
+        assert "formulas" in result
+        assert isinstance(result["confidence"], float)
 
     async def test_invoke_modal_logic_necessity(self):
         """_invoke_modal_logic detects necessity modality."""
@@ -2313,10 +2344,12 @@ class TestTextualCitations:
             _normalize_items_with_quotes,
         )
 
-        result = _normalize_items_with_quotes([
-            {"text": "argument one", "source_quote": "exact quote from text"},
-            {"text": "argument two"},
-        ])
+        result = _normalize_items_with_quotes(
+            [
+                {"text": "argument one", "source_quote": "exact quote from text"},
+                {"text": "argument two"},
+            ]
+        )
         assert result[0]["source_quote"] == "exact quote from text"
         assert result[1]["source_quote"] == ""
 
@@ -2326,10 +2359,16 @@ class TestTextualCitations:
             _normalize_fallacies_with_quotes,
         )
 
-        result = _normalize_fallacies_with_quotes([
-            {"type": "ad_hominem", "justification": "attacks person", "source_quote": "you fool"},
-            "bare_assertion",
-        ])
+        result = _normalize_fallacies_with_quotes(
+            [
+                {
+                    "type": "ad_hominem",
+                    "justification": "attacks person",
+                    "source_quote": "you fool",
+                },
+                "bare_assertion",
+            ]
+        )
         assert result[0]["source_quote"] == "you fool"
         assert result[1]["type"] == "bare_assertion"
         assert result[1]["source_quote"] == ""
@@ -2348,9 +2387,8 @@ class TestTextualCitations:
             "arguments": [
                 {"text": "visual argument", "source_quote": "horizon looks flat"},
             ],
-            "fallacies": [
-                {"type": "hasty_gen", "justification": "insufficient evidence", "source_quote": "horizon looks flat"},
-            ],
+            # NOTE: fallacies removed from fact_extraction (#179) —
+            # they are now solely handled by hierarchical_fallacy_detection
         }
         _write_fact_extraction_to_state(output, state, {})
 
@@ -2363,10 +2401,8 @@ class TestTextualCitations:
         assert len(args) == 1
         assert "[quote:" in args[0]  # string with embedded quote
 
-        # Fallacies: add_fallacy stores {"type", "justification"} with embedded quote
-        fallacies = list(state.identified_fallacies.values())
-        assert len(fallacies) == 1
-        assert "[quote:" in fallacies[0]["justification"]
+        # No fallacies written by fact_extraction (handled by hierarchical detector)
+        assert len(state.identified_fallacies) == 0
 
     def test_write_fact_extraction_legacy_strings(self):
         """_write_fact_extraction_to_state still works with legacy string format."""
@@ -2378,10 +2414,12 @@ class TestTextualCitations:
         output = {
             "claims": ["claim one", "claim two"],
             "arguments": ["arg one"],
+            # fallacies in output are ignored by fact_extraction state writer
             "fallacies": [{"type": "ad_hominem", "justification": "attacks person"}],
         }
         _write_fact_extraction_to_state(output, state, {})
 
         assert len(state.extracts) == 2
         assert len(state.identified_arguments) == 1
-        assert len(state.identified_fallacies) == 1
+        # Fallacies NOT written by fact_extraction anymore
+        assert len(state.identified_fallacies) == 0

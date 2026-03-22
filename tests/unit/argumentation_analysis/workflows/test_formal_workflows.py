@@ -61,8 +61,8 @@ class TestBuildFormalDebateWorkflow:
     def test_phase_count(self):
         wf = build_formal_debate_workflow()
         assert (
-            len(wf.phases) == 8
-        )  # 5 original + 3 optional (ABA #85, Social #87, EAF #88)
+            len(wf.phases) == 9
+        )  # 5 original + 4 optional (ABA #85, Social #87, EAF #88, Epistemic)
 
     def test_required_capabilities(self):
         wf = build_formal_debate_workflow()
@@ -155,7 +155,7 @@ class TestBuildBeliefDynamicsWorkflow:
 
     def test_phase_count(self):
         wf = build_belief_dynamics_workflow()
-        assert len(wf.phases) == 5
+        assert len(wf.phases) == 6
 
     def test_required_capabilities(self):
         wf = build_belief_dynamics_workflow()
@@ -262,8 +262,8 @@ class TestBuildArgumentStrengthWorkflow:
     def test_phase_count(self):
         wf = build_argument_strength_workflow()
         assert (
-            len(wf.phases) == 6
-        )  # 4 original + 2 optional (bipolar #85, weighted #87)
+            len(wf.phases) == 7
+        )  # 4 original + 3 optional (bipolar #85, weighted #87, uncertainty)
 
     def test_required_capabilities(self):
         wf = build_argument_strength_workflow()
