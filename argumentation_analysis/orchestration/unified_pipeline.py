@@ -227,14 +227,34 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
             model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
             client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-            # Use extracted arguments from upstream
+            # Build adversarial debate from upstream analysis
             extract_output = context.get("phase_extract_output", {})
-            arguments = extract_output.get("arguments", [])
-            args_text = (
-                "\n".join(f"- {a}" for a in arguments)
-                if arguments
-                else input_text[:1500]
-            )
+            raw_arguments = extract_output.get("arguments", [])
+            raw_fallacies = extract_output.get("fallacies", [])
+            counter_output = context.get("phase_counter_output", {})
+            raw_cas = counter_output.get("llm_counter_arguments", []) if isinstance(counter_output, dict) else []
+
+            def _txt(item):
+                return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+
+            # Build structured debate material
+            debate_parts = []
+            if raw_arguments:
+                debate_parts.append("ARGUMENTS identified:\n" + "\n".join(
+                    f"  A{i+1}. {_txt(a)}" for i, a in enumerate(raw_arguments[:6])
+                ))
+            if raw_fallacies:
+                debate_parts.append("FALLACIES detected:\n" + "\n".join(
+                    f"  F{i+1}. {_txt(f)} — {f.get('justification', '')[:80] if isinstance(f, dict) else ''}"
+                    for i, f in enumerate(raw_fallacies[:5])
+                ))
+            if raw_cas:
+                debate_parts.append("COUNTER-ARGUMENTS available:\n" + "\n".join(
+                    f"  CA{i+1}. [{ca.get('strategy_used', '?')}] {ca.get('counter_argument', '')[:100]}"
+                    for i, ca in enumerate(raw_cas[:5]) if isinstance(ca, dict)
+                ))
+
+            debate_material = "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
 
             response = await client.chat.completions.create(
                 model=model_id,
@@ -242,18 +262,22 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
                     {
                         "role": "system",
                         "content": (
-                            "You are a debate judge. Analyze the arguments presented, "
-                            "identify the strongest and weakest positions, and assess "
-                            "the overall quality of the argumentation. "
+                            "You are a debate moderator running an adversarial analysis. "
+                            "Agent A DEFENDS the strongest arguments. "
+                            "Agent B ATTACKS using detected fallacies and counter-arguments. "
+                            "Produce a structured debate with new analytical insights "
+                            "(perspectives the raw extraction alone doesn't reveal). "
                             "Respond with ONLY a JSON object:\n"
-                            '{"strongest_argument": "text", "weakest_argument": "text", '
-                            '"winner": "which side/position wins", '
+                            '{"strongest_argument": "which argument Agent A defends", '
+                            '"weakest_argument": "which argument Agent B targets", '
+                            '"winner": "Agent A|Agent B|draw", '
                             '"debate_quality": 1-5, '
-                            '"key_exchanges": [{"point": "text", "rebuttal": "text"}], '
-                            '"reasoning": "brief assessment"}'
+                            '"key_exchanges": [{"agent_a_point": "text", "agent_b_rebuttal": "text", "judge_note": "text"}], '
+                            '"new_insights": ["insight 1 not obvious from extraction alone", ...], '
+                            '"reasoning": "assessment of argumentative quality"}'
                         ),
                     },
-                    {"role": "user", "content": args_text},
+                    {"role": "user", "content": debate_material},
                 ],
             )
             raw = response.choices[0].message.content or ""
@@ -336,7 +360,19 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
                     f"Debate winner: {da.get('winner', 'unknown')}, "
                     f"quality: {da.get('debate_quality', 'N/A')}/5"
                 )
-            if counter_output.get("llm_counter_argument"):
+            cas = counter_output.get("llm_counter_arguments", [])
+            if isinstance(cas, list) and cas:
+                ca_lines = []
+                for ca in cas[:5]:
+                    if isinstance(ca, dict):
+                        ca_lines.append(
+                            f"  - [{ca.get('strategy_used', '?')}] "
+                            f"{ca.get('counter_argument', '')[:150]}"
+                        )
+                context_parts.append(
+                    f"Counter-arguments ({len(ca_lines)}):\n" + "\n".join(ca_lines)
+                )
+            elif counter_output.get("llm_counter_argument"):
                 ca = counter_output["llm_counter_argument"]
                 context_parts.append(
                     f"Counter-argument ({ca.get('strategy_used', 'unknown')}): "
@@ -1010,19 +1046,54 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
         )
     except Exception as e:
         logger.info(f"Dialogue handler unavailable ({e}), using Python fallback")
-        # Simulate a simple dialogue trace
-        trace = []
-        for i, arg in enumerate(pro_args):
-            trace.append({"turn": i * 2 + 1, "speaker": "proponent", "move": arg})
-            if i < len(opp_args):
-                trace.append(
-                    {"turn": i * 2 + 2, "speaker": "opponent", "move": opp_args[i]}
+        # Build substantive dialogue using fallacies as attack moves
+        extract_output = context.get("phase_extract_output", {})
+        raw_fallacies = extract_output.get("fallacies", [])
+
+        # Enrich opponent moves with fallacy-based attacks
+        fallacy_attacks = []
+        for f in raw_fallacies[:5]:
+            if isinstance(f, dict):
+                ftype = f.get("type", "unknown")
+                justification = f.get("justification", "")
+                fallacy_attacks.append(
+                    f"[CHALLENGE: {ftype}] {justification[:120]}"
                 )
-        winner = "proponent" if len(pro_args) >= len(opp_args) else "opponent"
+
+        trace = []
+        turn = 1
+        for i, arg in enumerate(pro_args):
+            trace.append({
+                "turn": turn, "speaker": "proponent",
+                "move_type": "assert", "move": arg,
+            })
+            turn += 1
+            # Opponent responds with CA if available, fallacy attack, or counter-arg
+            if i < len(opp_args):
+                trace.append({
+                    "turn": turn, "speaker": "opponent",
+                    "move_type": "counter", "move": opp_args[i],
+                })
+                turn += 1
+            if i < len(fallacy_attacks):
+                trace.append({
+                    "turn": turn, "speaker": "opponent",
+                    "move_type": "challenge", "move": fallacy_attacks[i],
+                })
+                turn += 1
+
+        # Determine winner based on move balance
+        pro_moves = sum(1 for t in trace if t["speaker"] == "proponent")
+        opp_moves = sum(1 for t in trace if t["speaker"] == "opponent")
+        winner = "proponent" if pro_moves > opp_moves else (
+            "opponent" if opp_moves > pro_moves else "draw"
+        )
+
         return {
             "topic": topic[:100],
             "proponent_args": pro_args,
             "opponent_args": opp_args,
+            "fallacy_attacks": fallacy_attacks,
             "dialogue_trace": trace,
             "outcome": winner,
             "turns": len(trace),
