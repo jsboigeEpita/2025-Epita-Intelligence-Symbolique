@@ -198,47 +198,47 @@ Il existe des dossiers avec des noms identiques mais des fonctions distinctes :
 
 ## Premier Pas avec le Système
 
-### Comment Exécuter une Analyse Simple
+### Comment Executer une Analyse Simple
 
-Pour lancer une analyse argumentative simple, vous pouvez utiliser le script `run_analysis.py` :
+Le projet offre plusieurs points d'entree selon votre besoin :
+
+#### Option 1 : API REST (recommande pour l'integration)
 
 ```bash
-# Avec l'interface utilisateur
-python run_analysis.py --ui
+# Lancer le serveur FastAPI
+conda run -n projet-is-roo-new --no-capture-output uvicorn api.main:app --reload --port 8000
 
+# Puis dans un autre terminal, tester :
+curl -X POST http://localhost:8000/api/v1/agents/quality \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Les chats sont meilleurs que les chiens car ils sont plus independants."}'
+
+# Documentation interactive : http://localhost:8000/docs
+```
+
+#### Option 2 : Interface Web (recommande pour les etudiants)
+
+```bash
+# Lancer le serveur Starlette
+conda run -n projet-is-roo-new --no-capture-output uvicorn interface_web.app:app --reload --port 5003
+
+# Ouvrir http://localhost:5003 dans un navigateur
+```
+
+#### Option 3 : CLI (mode headless)
+
+```bash
 # Avec un fichier texte
-python run_analysis.py --file chemin/vers/fichier.txt
+conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis/run_orchestration.py --file chemin/vers/fichier.txt
 
 # Avec du texte direct
-python run_analysis.py --text "Votre texte à analyser ici"
+conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis/run_orchestration.py --text "Votre texte a analyser"
 
-# Avec logs détaillés
-python run_analysis.py --ui --verbose
+# Avec l'interface Tkinter
+conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis/main_orchestrator.py
 ```
 
-### Utilisation des Scripts Principaux
-
-Le projet propose plusieurs scripts pour différentes fonctionnalités :
-
-#### Orchestrateur Principal
-
-```bash
-# Avec l'interface utilisateur (comportement par défaut)
-python main_orchestrator.py
-
-# Sans l'interface, avec un fichier texte
-python main_orchestrator.py --skip-ui --text-file chemin/vers/fichier.txt
-```
-
-#### Outils d'Édition et de Réparation des Extraits
-
-```bash
-# Éditeur de marqueurs d'extraits
-python run_extract_editor.py
-
-# Réparation des bornes défectueuses
-python run_extract_repair.py
-```
+> **Note** : Les commandes CLI utilisent le pipeline legacy (AnalysisRunner). Pour acceder aux 17 workflows modernes (CapabilityRegistry + UnifiedPipeline), utilisez l'API REST.
 
 ### Interprétation des Résultats
 
@@ -270,12 +270,18 @@ Pour une prise en main optimale du projet, nous vous recommandons de suivre ce p
 
 5. **Découvrez les outils d'analyse** : Explorez les outils disponibles dans `argumentation_analysis/agents/tools/`
 
-### Points d'Entrée Importants
+### Points d'Entree Importants
 
-- **`main_orchestrator.py`** : Point d'entrée principal pour l'orchestration des agents
-- **`run_analysis.py`** : Script simplifié pour lancer une analyse
-- **`argumentation_analysis/core/state.py`** : Définition de l'état partagé entre les agents
-- **`argumentation_analysis/agents/core/`** : Implémentation des agents spécialistes
+- **`api/main.py`** : API REST FastAPI (RECOMMANDE) — 7 routers, 25+ routes, 17 workflows
+- **`interface_web/app.py`** : Interface web Starlette avec frontend React
+- **`argumentation_analysis/main_orchestrator.py`** : Orchestrateur CLI interactif (legacy)
+- **`argumentation_analysis/run_orchestration.py`** : CLI runner flexible (legacy)
+- **`examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py`** : Demo pedagogique
+- **`argumentation_analysis/core/capability_registry.py`** : CapabilityRegistry + ServiceDiscovery (Lego architecture)
+- **`argumentation_analysis/orchestration/unified_pipeline.py`** : Pipeline unifie (17 workflows, 46 capabilities)
+- **`argumentation_analysis/agents/core/`** : Implementation des agents specialises
+
+Voir `docs/reports/CARTOGRAPHIE_5_POINTS_ENTREE_PRINCIPAUX.md` pour la cartographie complete.
 
 ### Tutoriels Disponibles
 

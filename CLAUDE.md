@@ -17,7 +17,7 @@ Multi-agent argumentation analysis system for EPITA (student project platform). 
 conda env list
 
 # Activate dev environment (preferred — most recent deps)
-conda activate projet-is-roo-new    # SK 1.37, Pydantic 2.11, JPype 1.6
+conda activate projet-is-roo-new    # SK 1.40, Pydantic 2.11, JPype 1.6
 
 # Alternative (CI environment)
 conda activate projet-is            # SK 1.35, Pydantic 2.11
@@ -203,9 +203,20 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 
 ### Entry Points
 
-- `argumentation_analysis/main_orchestrator.py` — Web orchestrator
-- `argumentation_analysis/run_orchestration.py` — CLI orchestration runner
-- `examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py` — Interactive pedagogical demo
+**Modern (fully integrated with Lego Architecture):**
+- `api/main.py` — **FastAPI REST API** (RECOMMENDED). 7 routers, 25+ routes. Agent capabilities, proposals, mobile, WebSocket streaming. Uses CapabilityRegistry + UnifiedPipeline + WorkflowDSL. Launch: `uvicorn api.main:app --reload --port 8000`
+
+**Web UI:**
+- `interface_web/app.py` — **Starlette web app** (formerly Flask). Serves React frontend + analysis API. Uses ServiceManager (not UnifiedPipeline). Launch: `uvicorn interface_web.app:app --port 5003`
+
+**Legacy CLI (use AnalysisRunner, not UnifiedPipeline):**
+- `argumentation_analysis/main_orchestrator.py` — Interactive orchestrator with Tkinter UI
+- `argumentation_analysis/run_orchestration.py` — CLI runner (--file, --text, or --ui)
+
+**Pedagogical:**
+- `examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py` — Interactive demo for courses/soutenances
+
+See `docs/reports/CARTOGRAPHIE_5_POINTS_ENTREE_PRINCIPAUX.md` for full details, routes, and workflows.
 
 ## CI/CD
 
