@@ -320,3 +320,251 @@ class SemanticIndexService:
             "available": self.is_available(),
             "default_index": self._default_index,
         }
+
+    # ── Argument-level chunking (#174) ──────────────────────────────────
+
+    def index_arguments(
+        self,
+        arguments: List[Dict[str, Any]],
+        source_name: str = "pipeline",
+        quality_scores: Optional[Dict[str, Dict]] = None,
+        fallacies: Optional[List[Dict[str, Any]]] = None,
+        index: Optional[str] = None,
+    ) -> List[str]:
+        """Index individual arguments as separate vectors with metadata.
+
+        Instead of chunking by fixed token count, each argument from
+        fact_extraction is indexed as its own vector with quality and
+        fallacy metadata attached for filtered search.
+
+        Args:
+            arguments: List of argument dicts from fact_extraction
+                       (each has 'text' and optionally 'source_quote').
+            source_name: Name of the source document.
+            quality_scores: Per-argument quality scores from quality evaluator
+                           {arg_id: {scores_par_vertu: {...}, note_finale: float}}.
+            fallacies: List of detected fallacies with target_argument references.
+            index: Index to store in (defaults to service default).
+
+        Returns:
+            List of document IDs for indexed arguments.
+        """
+        quality_scores = quality_scores or {}
+        fallacies = fallacies or []
+        doc_ids = []
+
+        # Build fallacy lookup: arg_index → fallacy type
+        fallacy_by_arg: Dict[int, str] = {}
+        for f in fallacies:
+            if isinstance(f, dict):
+                target = f.get("target_argument_id", f.get("argument_index", -1))
+                ftype = f.get("type", f.get("fallacy_type", "unknown"))
+                if isinstance(target, int) and target >= 0:
+                    fallacy_by_arg[target] = str(ftype)
+                elif isinstance(target, str) and target.startswith("arg_"):
+                    try:
+                        idx = int(target.split("_")[1]) - 1
+                        fallacy_by_arg[idx] = str(ftype)
+                    except (ValueError, IndexError):
+                        pass
+
+        for i, arg in enumerate(arguments):
+            arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)
+            if not arg_text or len(arg_text) < 5:
+                continue
+
+            arg_id = f"arg_{i+1}"
+            source_quote = (
+                arg.get("source_quote", "") if isinstance(arg, dict) else ""
+            )
+
+            # Build metadata tags
+            tags: Dict[str, str] = {
+                "chunk_type": "argument",
+                "argument_index": str(i),
+                "argument_id": arg_id,
+                "source_name": source_name,
+            }
+
+            # Add quality metadata
+            q_scores = quality_scores.get(arg_id, {})
+            if isinstance(q_scores, dict):
+                overall = q_scores.get("note_finale", 0)
+                if isinstance(overall, (int, float)):
+                    tags["quality_score"] = f"{float(overall):.2f}"
+                    # Bin into categories for filtered search
+                    if overall >= 0.7:
+                        tags["quality_level"] = "high"
+                    elif overall >= 0.4:
+                        tags["quality_level"] = "medium"
+                    else:
+                        tags["quality_level"] = "low"
+
+                virtues = q_scores.get("scores_par_vertu", {})
+                if isinstance(virtues, dict):
+                    # Store weakest virtue for targeted search
+                    weakest = min(
+                        ((k, v) for k, v in virtues.items() if isinstance(v, (int, float))),
+                        key=lambda x: x[1],
+                        default=None,
+                    )
+                    if weakest:
+                        tags["weakest_virtue"] = weakest[0]
+
+            # Add fallacy metadata
+            if i in fallacy_by_arg:
+                tags["fallacy_type"] = fallacy_by_arg[i]
+                tags["has_fallacy"] = "true"
+            else:
+                tags["has_fallacy"] = "false"
+
+            if source_quote:
+                tags["source_quote"] = source_quote[:200]
+
+            try:
+                doc_id = self.upload_document(
+                    name=f"{source_name}__{arg_id}",
+                    text=arg_text,
+                    source_type="argument",
+                    tags=tags,
+                )
+                doc_ids.append(doc_id)
+            except Exception as e:
+                logger.warning(f"Failed to index argument {arg_id}: {e}")
+
+        logger.info(
+            f"Indexed {len(doc_ids)}/{len(arguments)} arguments from '{source_name}'"
+        )
+        return doc_ids
+
+    def search_arguments(
+        self,
+        query: str,
+        index: Optional[str] = None,
+        fallacy_type: Optional[str] = None,
+        quality_level: Optional[str] = None,
+        has_fallacy: Optional[bool] = None,
+        limit: int = 5,
+    ) -> List[SearchResult]:
+        """Search indexed arguments with metadata filtering.
+
+        Args:
+            query: Semantic search query.
+            index: Index to search in.
+            fallacy_type: Filter by specific fallacy type.
+            quality_level: Filter by quality level ("high", "medium", "low").
+            has_fallacy: Filter for arguments with/without fallacies.
+            limit: Max results.
+
+        Returns:
+            List of SearchResult objects with metadata tags.
+        """
+        requests = self._get_requests()
+        payload: Dict[str, Any] = {
+            "index": index or self._default_index,
+            "query": query,
+            "limit": limit,
+        }
+
+        # Build filters
+        filters = []
+        if fallacy_type:
+            filters.append({"fallacy_type": [fallacy_type]})
+        if quality_level:
+            filters.append({"quality_level": [quality_level]})
+        if has_fallacy is not None:
+            filters.append({"has_fallacy": ["true" if has_fallacy else "false"]})
+        filters.append({"chunk_type": ["argument"]})
+
+        if filters:
+            payload["filters"] = filters
+
+        resp = requests.post(
+            f"{self._km_url}/search",
+            json=payload,
+            headers=self._headers(),
+            timeout=self._timeout,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+
+        results = []
+        for item in body.get("results", []):
+            for partition in item.get("partitions", []):
+                results.append(
+                    SearchResult(
+                        text=partition.get("text", ""),
+                        relevance=partition.get("relevance", 0.0),
+                        document_id=item.get("documentId", ""),
+                        source_name=item.get("sourceName", ""),
+                        tags={
+                            t.split(":", 1)[0]: t.split(":", 1)[1]
+                            for t in item.get("tags", {}).get("tags", [])
+                            if ":" in t
+                        },
+                    )
+                )
+        return results
+
+    @staticmethod
+    def chunk_by_arguments(
+        text: str,
+        fact_extraction_output: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Split text into argument-level chunks.
+
+        Uses fact_extraction output if available, otherwise falls back
+        to sentence-level splitting with heuristic argument detection.
+
+        Args:
+            text: Raw input text.
+            fact_extraction_output: Output from fact_extraction phase
+                containing 'arguments' and 'claims' lists.
+
+        Returns:
+            List of argument dicts with 'text' and 'source_quote' fields.
+        """
+        if fact_extraction_output and isinstance(fact_extraction_output, dict):
+            arguments = fact_extraction_output.get("arguments", [])
+            claims = fact_extraction_output.get("claims", [])
+
+            chunks = []
+            for arg in arguments:
+                if isinstance(arg, dict):
+                    chunks.append({
+                        "text": arg.get("text", str(arg)),
+                        "source_quote": arg.get("source_quote", ""),
+                        "chunk_type": "argument",
+                    })
+                elif isinstance(arg, str) and len(arg) >= 10:
+                    chunks.append({
+                        "text": arg,
+                        "source_quote": "",
+                        "chunk_type": "argument",
+                    })
+
+            for claim in claims:
+                if isinstance(claim, dict):
+                    chunks.append({
+                        "text": claim.get("text", str(claim)),
+                        "source_quote": claim.get("source_quote", ""),
+                        "chunk_type": "claim",
+                    })
+                elif isinstance(claim, str) and len(claim) >= 10:
+                    chunks.append({
+                        "text": claim,
+                        "source_quote": "",
+                        "chunk_type": "claim",
+                    })
+
+            if chunks:
+                return chunks
+
+        # Fallback: sentence-level splitting
+        import re
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        return [
+            {"text": s.strip(), "source_quote": "", "chunk_type": "sentence"}
+            for s in sentences
+            if len(s.strip()) >= 15
+        ]
