@@ -232,29 +232,47 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
             raw_arguments = extract_output.get("arguments", [])
             raw_fallacies = extract_output.get("fallacies", [])
             counter_output = context.get("phase_counter_output", {})
-            raw_cas = counter_output.get("llm_counter_arguments", []) if isinstance(counter_output, dict) else []
+            raw_cas = (
+                counter_output.get("llm_counter_arguments", [])
+                if isinstance(counter_output, dict)
+                else []
+            )
 
             def _txt(item):
-                return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+                return (
+                    item.get("text", str(item)) if isinstance(item, dict) else str(item)
+                )
 
             # Build structured debate material
             debate_parts = []
             if raw_arguments:
-                debate_parts.append("ARGUMENTS identified:\n" + "\n".join(
-                    f"  A{i+1}. {_txt(a)}" for i, a in enumerate(raw_arguments[:6])
-                ))
+                debate_parts.append(
+                    "ARGUMENTS identified:\n"
+                    + "\n".join(
+                        f"  A{i+1}. {_txt(a)}" for i, a in enumerate(raw_arguments[:6])
+                    )
+                )
             if raw_fallacies:
-                debate_parts.append("FALLACIES detected:\n" + "\n".join(
-                    f"  F{i+1}. {_txt(f)} — {f.get('justification', '')[:80] if isinstance(f, dict) else ''}"
-                    for i, f in enumerate(raw_fallacies[:5])
-                ))
+                debate_parts.append(
+                    "FALLACIES detected:\n"
+                    + "\n".join(
+                        f"  F{i+1}. {_txt(f)} — {f.get('justification', '')[:80] if isinstance(f, dict) else ''}"
+                        for i, f in enumerate(raw_fallacies[:5])
+                    )
+                )
             if raw_cas:
-                debate_parts.append("COUNTER-ARGUMENTS available:\n" + "\n".join(
-                    f"  CA{i+1}. [{ca.get('strategy_used', '?')}] {ca.get('counter_argument', '')[:100]}"
-                    for i, ca in enumerate(raw_cas[:5]) if isinstance(ca, dict)
-                ))
+                debate_parts.append(
+                    "COUNTER-ARGUMENTS available:\n"
+                    + "\n".join(
+                        f"  CA{i+1}. [{ca.get('strategy_used', '?')}] {ca.get('counter_argument', '')[:100]}"
+                        for i, ca in enumerate(raw_cas[:5])
+                        if isinstance(ca, dict)
+                    )
+                )
 
-            debate_material = "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
+            debate_material = (
+                "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
+            )
 
             response = await client.chat.completions.create(
                 model=model_id,
@@ -501,9 +519,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
 
     # Invalidate beliefs associated with detected fallacies
     for i, name in enumerate(belief_names):
-        is_undermined = any(
-            ft.lower() in name.lower() for ft in fallacy_types if ft
-        )
+        is_undermined = any(ft.lower() in name.lower() for ft in fallacy_types if ft)
         if is_undermined:
             jtms.set_belief_validity(name, False)
 
@@ -765,9 +781,7 @@ def _enrich_ranking_with_justification(
             reasons.append(f"attacks {outgoing} other argument(s)")
 
         # Check if targeted by fallacy
-        is_fallacious = any(
-            ft in arg.lower()[:30] for ft in fallacy_targets
-        )
+        is_fallacious = any(ft in arg.lower()[:30] for ft in fallacy_targets)
         if is_fallacious:
             reasons.append("targeted by detected fallacy (weakened)")
 
@@ -822,9 +836,7 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict:
         )
 
         handler = RankingHandler()
-        result = await asyncio.to_thread(
-            handler.rank_arguments, args, attacks, method
-        )
+        result = await asyncio.to_thread(handler.rank_arguments, args, attacks, method)
         # Enrich Tweety result with strength justification
         if isinstance(result, dict) and "ranking" in result:
             result = _enrich_ranking_with_justification(result, args, attacks, context)
@@ -981,7 +993,9 @@ def _python_aspic_fallback(
                 for f in fallacies
                 if isinstance(f, dict)
             ]
-            reasons.append(f"undermined by fallacy: {', '.join(matching_fallacies[:2])}")
+            reasons.append(
+                f"undermined by fallacy: {', '.join(matching_fallacies[:2])}"
+            )
         if is_rebutted:
             status = "defeated" if is_undermined else "challenged"
             reasons.append("rebutted by counter-argument")
@@ -1248,37 +1262,49 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
             if isinstance(f, dict):
                 ftype = f.get("type", "unknown")
                 justification = f.get("justification", "")
-                fallacy_attacks.append(
-                    f"[CHALLENGE: {ftype}] {justification[:120]}"
-                )
+                fallacy_attacks.append(f"[CHALLENGE: {ftype}] {justification[:120]}")
 
         trace = []
         turn = 1
         for i, arg in enumerate(pro_args):
-            trace.append({
-                "turn": turn, "speaker": "proponent",
-                "move_type": "assert", "move": arg,
-            })
+            trace.append(
+                {
+                    "turn": turn,
+                    "speaker": "proponent",
+                    "move_type": "assert",
+                    "move": arg,
+                }
+            )
             turn += 1
             # Opponent responds with CA if available, fallacy attack, or counter-arg
             if i < len(opp_args):
-                trace.append({
-                    "turn": turn, "speaker": "opponent",
-                    "move_type": "counter", "move": opp_args[i],
-                })
+                trace.append(
+                    {
+                        "turn": turn,
+                        "speaker": "opponent",
+                        "move_type": "counter",
+                        "move": opp_args[i],
+                    }
+                )
                 turn += 1
             if i < len(fallacy_attacks):
-                trace.append({
-                    "turn": turn, "speaker": "opponent",
-                    "move_type": "challenge", "move": fallacy_attacks[i],
-                })
+                trace.append(
+                    {
+                        "turn": turn,
+                        "speaker": "opponent",
+                        "move_type": "challenge",
+                        "move": fallacy_attacks[i],
+                    }
+                )
                 turn += 1
 
         # Determine winner based on move balance
         pro_moves = sum(1 for t in trace if t["speaker"] == "proponent")
         opp_moves = sum(1 for t in trace if t["speaker"] == "opponent")
-        winner = "proponent" if pro_moves > opp_moves else (
-            "opponent" if opp_moves > pro_moves else "draw"
+        winner = (
+            "proponent"
+            if pro_moves > opp_moves
+            else ("opponent" if opp_moves > pro_moves else "draw")
         )
 
         return {
@@ -1523,7 +1549,9 @@ def _python_social_fallback(
         # Signal 1: votes (if available)
         if arg in votes:
             v = votes[arg]
-            base_score = v[0] / (v[0] + v[1]) if isinstance(v, tuple) and sum(v) > 0 else 0.5
+            base_score = (
+                v[0] / (v[0] + v[1]) if isinstance(v, tuple) and sum(v) > 0 else 0.5
+            )
         # Signal 2: quality score boost
         q = quality_scores.get(arg)
         quality_boost = 0.0
@@ -1661,7 +1689,8 @@ def _python_eaf_fallback(
             "believed": len(believed_args),
             "disbelieved": len(disbelieved_args),
             "avg_confidence": round(
-                sum(e["confidence"] for e in epistemic.values()) / max(len(epistemic), 1),
+                sum(e["confidence"] for e in epistemic.values())
+                / max(len(epistemic), 1),
                 3,
             ),
         },
@@ -2825,6 +2854,15 @@ def _write_qbf_to_state(output, state, ctx) -> None:
     )
 
 
+def _write_collaborative_analysis_to_state(output, state, ctx) -> None:
+    """Write collaborative multi-agent debate results to state (#175)."""
+    from argumentation_analysis.orchestration.collaborative_debate import (
+        _write_collaborative_to_state,
+    )
+
+    _write_collaborative_to_state(output, state, ctx)
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -2858,6 +2896,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "epistemic_argumentation": _write_eaf_to_state,
     "defeasible_logic": _write_delp_to_state,
     "qbf_reasoning": _write_qbf_to_state,
+    "collaborative_analysis": _write_collaborative_analysis_to_state,
 }
 
 
@@ -2893,9 +2932,9 @@ def setup_registry(
         register_counter_arg(registry)
         # Wire invoke callable (registration was created by register_counter_arg)
         if "counter_argument_agent" in registry._registrations:
-            registry._registrations["counter_argument_agent"].invoke = (
-                _invoke_counter_argument
-            )
+            registry._registrations[
+                "counter_argument_agent"
+            ].invoke = _invoke_counter_argument
         registered.append("counter_argument_agent")
     except ImportError as e:
         skipped.append(("counter_argument_agent", str(e)))
@@ -3159,6 +3198,28 @@ def setup_registry(
             registered.append(name)
         except Exception as e:
             skipped.append((name, str(e)))
+
+    # --- Collaborative multi-agent debate (#175) ---
+    try:
+        from argumentation_analysis.orchestration.collaborative_debate import (
+            _invoke_collaborative_analysis,
+        )
+
+        registry.register_service(
+            name="collaborative_debate_service",
+            service_class=type("collaborative_debate_service", (), {}),
+            capabilities=["collaborative_analysis"],
+            metadata={
+                "description": (
+                    "Multi-agent collaborative debate with 4 distinct roles "
+                    "(critic, validator, devil's advocate, synthesizer)"
+                )
+            },
+            invoke=_invoke_collaborative_analysis,
+        )
+        registered.append("collaborative_debate_service")
+    except ImportError as e:
+        skipped.append(("collaborative_debate_service", str(e)))
 
     logger.info(
         f"Registry setup complete: {len(registered)} registered, "
@@ -3545,6 +3606,15 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
             "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
         }
+        # Collaborative multi-agent debate (#175)
+        try:
+            from argumentation_analysis.orchestration.collaborative_debate import (
+                build_collaborative_analysis_workflow,
+            )
+
+            WORKFLOW_CATALOG["collaborative"] = build_collaborative_analysis_workflow()
+        except Exception as e:
+            logger.warning(f"Collaborative workflow not registered: {e}")
         # Macro workflows (Track D)
         try:
             from argumentation_analysis.workflows.democratech import (
@@ -3585,9 +3655,9 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_formal_verification_workflow,
             )
 
-            WORKFLOW_CATALOG["formal_verification"] = (
-                build_formal_verification_workflow()
-            )
+            WORKFLOW_CATALOG[
+                "formal_verification"
+            ] = build_formal_verification_workflow()
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
         # Comprehensive analysis (LLM-only, benchmark-optimized)
