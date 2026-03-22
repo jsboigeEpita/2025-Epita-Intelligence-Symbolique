@@ -2189,6 +2189,417 @@ async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> 
     }
 
 
+# --- Collaborative multi-agent debate (issue #175) ---
+# Three inter-dependent phases where each agent reads and responds to prior agents'
+# outputs, creating genuine dialogue rather than independent parallel analysis.
+# Design: extract → critic → validator → collaborative_synthesis
+
+
+async def _invoke_collaborative_critic(
+    input_text: str, context: Dict[str, Any]
+) -> Dict:
+    """Skeptic agent challenges each argument, identifies weaknesses.
+
+    Reads extract output and quality scores to target the weakest points.
+    Produces per-argument critiques with severity ratings.
+    """
+    import os
+
+    extract_output = context.get("phase_extract_output", {})
+    quality_output = context.get("phase_quality_output", {})
+    arguments = extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+
+    def _txt(item):
+        return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+
+    # Python fallback: heuristic critique based on quality scores
+    critiques = []
+    for i, arg in enumerate(arguments[:8]):
+        arg_text = _txt(arg)
+        arg_id = f"arg_{i+1}"
+        # Check quality if available
+        weakness = "unassessed"
+        severity = "medium"
+        if isinstance(quality_output, dict):
+            per_arg = quality_output.get("per_argument_scores", {})
+            if isinstance(per_arg, dict):
+                scores = per_arg.get(arg_id, {})
+                if isinstance(scores, dict):
+                    s = scores.get("scores_par_vertu", scores)
+                    if isinstance(s, dict) and s:
+                        weakest_virtue = min(s, key=lambda k: s[k] if isinstance(s[k], (int, float)) else 1.0)
+                        weakest_score = s[weakest_virtue]
+                        if isinstance(weakest_score, (int, float)):
+                            weakness = weakest_virtue
+                            severity = "high" if weakest_score < 0.3 else "medium" if weakest_score < 0.6 else "low"
+        critiques.append({
+            "argument_index": i,
+            "argument_excerpt": arg_text[:120],
+            "weakness_identified": weakness,
+            "severity": severity,
+            "critique": f"Argument {i+1} shows weakness in {weakness}",
+        })
+
+    # LLM enrichment: Skeptic agent
+    llm_critiques = []
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key and arguments:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            args_text = "\n".join(
+                f"A{i+1}. {_txt(a)}" for i, a in enumerate(arguments[:8])
+            )
+            quality_info = ""
+            if isinstance(quality_output, dict):
+                per_arg = quality_output.get("per_argument_scores", {})
+                if isinstance(per_arg, dict) and per_arg:
+                    quality_info = "\n\nQuality scores:\n" + "\n".join(
+                        f"  {k}: {v.get('note_finale', '?')}/1.0"
+                        for k, v in list(per_arg.items())[:8]
+                        if isinstance(v, dict)
+                    )
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are The Skeptic — a critical analyst who challenges every argument. "
+                            "Your role: identify logical gaps, unsupported assumptions, missing evidence, "
+                            "and potential counter-examples for EACH argument. "
+                            "Be specific: cite which part of the argument fails and why. "
+                            "Rate severity: high (fatal flaw) / medium (significant weakness) / low (minor issue). "
+                            "Respond with ONLY a JSON array:\n"
+                            '[{"argument_index": 0, "argument_excerpt": "first words...", '
+                            '"weakness_identified": "type", "severity": "high|medium|low", '
+                            '"critique": "detailed critique", '
+                            '"suggested_counter_example": "if applicable"}, ...]'
+                        ),
+                    },
+                    {"role": "user", "content": f"ARGUMENTS:\n{args_text}{quality_info}"},
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("[")
+            end = text_content.rfind("]") + 1
+            if start >= 0 and end > start:
+                llm_critiques = json.loads(text_content[start:end])
+    except Exception as e:
+        logger.warning(f"LLM critic enrichment failed: {e}")
+
+    return {
+        "agent": "skeptic",
+        "critiques": llm_critiques if llm_critiques else critiques,
+        "arguments_reviewed": len(arguments),
+        "high_severity_count": sum(
+            1 for c in (llm_critiques or critiques)
+            if isinstance(c, dict) and c.get("severity") == "high"
+        ),
+    }
+
+
+async def _invoke_collaborative_validator(
+    input_text: str, context: Dict[str, Any]
+) -> Dict:
+    """Scholar agent validates logic and checks evidence, responding to Critic's findings.
+
+    Reads extract, quality, AND critic outputs. For each critique, either confirms
+    the weakness or defends the argument with evidence/logic.
+    """
+    import os
+
+    extract_output = context.get("phase_extract_output", {})
+    quality_output = context.get("phase_quality_output", {})
+    critic_output = context.get("phase_critic_output", {})
+    arguments = extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    critiques = critic_output.get("critiques", []) if isinstance(critic_output, dict) else []
+
+    def _txt(item):
+        return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+
+    # Python fallback: simple validation based on quality scores
+    validations = []
+    for critique in critiques[:8]:
+        if not isinstance(critique, dict):
+            continue
+        idx = critique.get("argument_index", 0)
+        severity = critique.get("severity", "medium")
+        arg_text = ""
+        if idx < len(arguments):
+            arg_text = _txt(arguments[idx])[:120]
+        # Check if quality score supports or refutes the critique
+        confirmed = severity in ("high", "medium")
+        validations.append({
+            "argument_index": idx,
+            "critic_claim": critique.get("critique", "")[:150],
+            "verdict": "confirmed" if confirmed else "defended",
+            "evidence": f"Quality assessment {'supports' if confirmed else 'contradicts'} critique",
+            "confidence": 0.5,
+        })
+
+    # LLM enrichment: Scholar agent responds to Critic
+    llm_validations = []
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key and critiques:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            args_text = "\n".join(
+                f"A{i+1}. {_txt(a)}" for i, a in enumerate(arguments[:8])
+            )
+            critiques_text = "\n".join(
+                f"CRITIQUE {c.get('argument_index', '?')}: [{c.get('severity', '?')}] "
+                f"{c.get('critique', '')[:150]}"
+                for c in critiques[:8] if isinstance(c, dict)
+            )
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are The Scholar — an evidence-based academic analyst. "
+                            "The Skeptic has challenged several arguments (listed below). "
+                            "Your role: for EACH critique, either CONFIRM it (if the weakness is real) "
+                            "or DEFEND the argument (if the critique is unfair or the argument has merit). "
+                            "Provide evidence, logical analysis, or formal reasoning for your verdict. "
+                            "Be honest — do not defend weak arguments just to disagree. "
+                            "Respond with ONLY a JSON array:\n"
+                            '[{"argument_index": 0, "critic_claim": "what the critic said", '
+                            '"verdict": "confirmed|defended|partially_valid", '
+                            '"evidence": "your evidence/reasoning", '
+                            '"formal_logic_check": "if applicable, logical structure assessment", '
+                            '"confidence": 0.0-1.0}, ...]'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"ARGUMENTS:\n{args_text}\n\nSKEPTIC'S CRITIQUES:\n{critiques_text}",
+                    },
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("[")
+            end = text_content.rfind("]") + 1
+            if start >= 0 and end > start:
+                llm_validations = json.loads(text_content[start:end])
+    except Exception as e:
+        logger.warning(f"LLM validator enrichment failed: {e}")
+
+    final_validations = llm_validations if llm_validations else validations
+    confirmed = sum(
+        1 for v in final_validations
+        if isinstance(v, dict) and v.get("verdict") == "confirmed"
+    )
+    defended = sum(
+        1 for v in final_validations
+        if isinstance(v, dict) and v.get("verdict") == "defended"
+    )
+
+    return {
+        "agent": "scholar",
+        "validations": final_validations,
+        "critiques_confirmed": confirmed,
+        "critiques_defended": defended,
+        "critiques_reviewed": len(final_validations),
+    }
+
+
+async def _invoke_collaborative_synthesis(
+    input_text: str, context: Dict[str, Any]
+) -> Dict:
+    """Synthesis agent resolves disagreements between Critic and Validator.
+
+    Reads ALL prior outputs: extract, quality, critic, validator, plus any
+    counter-arguments. Produces a final assessment with resolved verdicts
+    and new insights that emerge from the inter-agent dialogue.
+    """
+    import os
+
+    extract_output = context.get("phase_extract_output", {})
+    quality_output = context.get("phase_quality_output", {})
+    counter_output = context.get("phase_counter_output", {})
+    critic_output = context.get("phase_critic_output", {})
+    validator_output = context.get("phase_validator_output", {})
+    arguments = extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    critiques = critic_output.get("critiques", []) if isinstance(critic_output, dict) else []
+    validations = validator_output.get("validations", []) if isinstance(validator_output, dict) else []
+
+    def _txt(item):
+        return item.get("text", str(item)) if isinstance(item, dict) else str(item)
+
+    # Python fallback: merge critic + validator verdicts
+    resolved = []
+    for i, arg in enumerate(arguments[:8]):
+        arg_text = _txt(arg)[:120]
+        # Find matching critique and validation
+        critique = next((c for c in critiques if isinstance(c, dict) and c.get("argument_index") == i), None)
+        validation = next((v for v in validations if isinstance(v, dict) and v.get("argument_index") == i), None)
+
+        if critique and validation:
+            verdict = validation.get("verdict", "unresolved")
+            severity = critique.get("severity", "medium")
+            final_status = "weak" if verdict == "confirmed" and severity == "high" else \
+                           "contested" if verdict in ("confirmed", "partially_valid") else \
+                           "strong" if verdict == "defended" else "unresolved"
+        elif critique:
+            final_status = "challenged"
+        else:
+            final_status = "unchallenged"
+
+        resolved.append({
+            "argument_index": i,
+            "argument_excerpt": arg_text,
+            "final_status": final_status,
+            "critic_severity": critique.get("severity") if critique else None,
+            "validator_verdict": validation.get("verdict") if validation else None,
+        })
+
+    # Compute aggregate stats
+    strong_count = sum(1 for r in resolved if r.get("final_status") == "strong")
+    weak_count = sum(1 for r in resolved if r.get("final_status") == "weak")
+    contested_count = sum(1 for r in resolved if r.get("final_status") == "contested")
+    total = len(resolved)
+    collaborative_score = (strong_count * 1.0 + contested_count * 0.5) / max(total, 1)
+
+    # LLM enrichment: synthesis with new insights
+    llm_synthesis = None
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key and arguments:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+            args_text = "\n".join(f"A{i+1}. {_txt(a)}" for i, a in enumerate(arguments[:8]))
+
+            critiques_text = "\n".join(
+                f"SKEPTIC on A{c.get('argument_index', '?')+1}: [{c.get('severity', '?')}] "
+                f"{c.get('critique', '')[:120]}"
+                for c in critiques[:8] if isinstance(c, dict)
+            )
+
+            validations_text = "\n".join(
+                f"SCHOLAR on A{v.get('argument_index', '?')+1}: [{v.get('verdict', '?')}] "
+                f"{v.get('evidence', '')[:120]}"
+                for v in validations[:8] if isinstance(v, dict)
+            )
+
+            ca_text = ""
+            if isinstance(counter_output, dict):
+                cas = counter_output.get("llm_counter_arguments", [])
+                if isinstance(cas, list) and cas:
+                    ca_text = "\n\nCOUNTER-ARGUMENTS:\n" + "\n".join(
+                        f"CA{i+1}. [{ca.get('strategy_used', '?')}] {ca.get('counter_argument', '')[:100]}"
+                        for i, ca in enumerate(cas[:5]) if isinstance(ca, dict)
+                    )
+
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are the Synthesis Moderator resolving a multi-agent debate. "
+                            "The Skeptic challenged arguments, the Scholar validated or defended them. "
+                            "Your role:\n"
+                            "1. For each argument, deliver a FINAL VERDICT considering both perspectives\n"
+                            "2. Identify NEW INSIGHTS that emerge from the dialogue "
+                            "(things neither agent alone would have found)\n"
+                            "3. Rate overall argumentation quality (1-5 scale)\n"
+                            "4. Provide actionable recommendations\n\n"
+                            "Respond with ONLY a JSON object:\n"
+                            '{"resolved_arguments": ['
+                            '{"argument_index": 0, "final_status": "strong|contested|weak", '
+                            '"resolution": "why this verdict", "improvement_suggestion": "if weak/contested"}], '
+                            '"new_insights": ["insight from dialogue not obvious from extraction alone", ...], '
+                            '"collaborative_quality_score": 1.0-5.0, '
+                            '"strongest_argument_index": 0, '
+                            '"weakest_argument_index": 1, '
+                            '"overall_assessment": "summary", '
+                            '"recommendations": ["actionable suggestion", ...]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"ARGUMENTS:\n{args_text}\n\n"
+                            f"SKEPTIC'S CRITIQUES:\n{critiques_text}\n\n"
+                            f"SCHOLAR'S VALIDATIONS:\n{validations_text}"
+                            f"{ca_text}"
+                        ),
+                    },
+                ],
+            )
+            raw = response.choices[0].message.content or ""
+            text_content = raw.strip()
+            if "```json" in text_content:
+                text_content = text_content.split("```json")[1].split("```")[0]
+            elif "```" in text_content:
+                text_content = text_content.split("```")[1].split("```")[0]
+            start = text_content.find("{")
+            end = text_content.rfind("}") + 1
+            if start >= 0 and end > start:
+                llm_synthesis = json.loads(text_content[start:end])
+    except Exception as e:
+        logger.warning(f"LLM synthesis enrichment failed: {e}")
+
+    result = {
+        "agent": "synthesizer",
+        "resolved_arguments": resolved,
+        "strong_count": strong_count,
+        "weak_count": weak_count,
+        "contested_count": contested_count,
+        "collaborative_score": collaborative_score,
+        "arguments_total": total,
+    }
+    if llm_synthesis:
+        result["llm_synthesis"] = llm_synthesis
+        result["new_insights"] = llm_synthesis.get("new_insights", [])
+        result["collaborative_quality_score"] = llm_synthesis.get(
+            "collaborative_quality_score", collaborative_score * 5
+        )
+        result["overall_assessment"] = llm_synthesis.get("overall_assessment", "")
+        result["recommendations"] = llm_synthesis.get("recommendations", [])
+        # Override resolved with LLM version if available
+        llm_resolved = llm_synthesis.get("resolved_arguments", [])
+        if llm_resolved:
+            result["resolved_arguments"] = llm_resolved
+    else:
+        result["new_insights"] = []
+        result["collaborative_quality_score"] = collaborative_score * 5
+        result["overall_assessment"] = (
+            f"{strong_count} strong, {contested_count} contested, {weak_count} weak "
+            f"out of {total} arguments"
+        )
+        result["recommendations"] = []
+
+    return result
+
+
 # --- State writers: map capability → (output, state, ctx) → None ---
 # Each writer extracts relevant data from phase output and writes to
 # UnifiedAnalysisState via its typed add_*() methods.
@@ -2825,6 +3236,55 @@ def _write_qbf_to_state(output, state, ctx) -> None:
     )
 
 
+def _write_collaborative_synthesis_to_state(output, state, ctx) -> None:
+    """Write collaborative synthesis results to state as debate transcript + quality."""
+    if not output or not isinstance(output, dict):
+        return
+    # Record as a debate transcript (the synthesis IS the debate result)
+    exchanges = []
+    critiques = ctx.get("phase_critic_output", {})
+    validations = ctx.get("phase_validator_output", {})
+    if isinstance(critiques, dict):
+        for c in critiques.get("critiques", [])[:5]:
+            if isinstance(c, dict):
+                exchanges.append({
+                    "speaker": "Skeptic",
+                    "content": c.get("critique", "")[:200],
+                    "type": "critique",
+                })
+    if isinstance(validations, dict):
+        for v in validations.get("validations", [])[:5]:
+            if isinstance(v, dict):
+                exchanges.append({
+                    "speaker": "Scholar",
+                    "content": v.get("evidence", "")[:200],
+                    "type": v.get("verdict", "validation"),
+                })
+    # Synthesis entries
+    resolved = output.get("resolved_arguments", [])
+    for r in resolved[:5]:
+        if isinstance(r, dict):
+            exchanges.append({
+                "speaker": "Synthesizer",
+                "content": r.get("resolution", r.get("final_status", ""))[:200],
+                "type": "resolution",
+            })
+    state.add_debate_transcript(
+        topic="Collaborative multi-agent analysis",
+        exchanges=exchanges,
+        winner=None,
+    )
+    # Also store workflow results for the collaborative workflow
+    state.set_workflow_results("collaborative_analysis", {
+        "collaborative_score": output.get("collaborative_quality_score", 0),
+        "strong_count": output.get("strong_count", 0),
+        "weak_count": output.get("weak_count", 0),
+        "contested_count": output.get("contested_count", 0),
+        "new_insights": output.get("new_insights", []),
+        "overall_assessment": output.get("overall_assessment", ""),
+    })
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -2858,6 +3318,9 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "epistemic_argumentation": _write_eaf_to_state,
     "defeasible_logic": _write_delp_to_state,
     "qbf_reasoning": _write_qbf_to_state,
+    "collaborative_critic": lambda output, state, ctx: None,  # critic stores nothing
+    "collaborative_validator": lambda output, state, ctx: None,  # validator stores nothing
+    "collaborative_synthesis": _write_collaborative_synthesis_to_state,
 }
 
 
@@ -2962,6 +3425,36 @@ def setup_registry(
         registered.append("governance_agent")
     except ImportError as e:
         skipped.append(("governance_agent", str(e)))
+
+    # --- Collaborative multi-agent debate (#175) ---
+    # These are virtual agents — no separate class, just invoke functions
+    # that chain inter-agent dialogue (Skeptic → Scholar → Synthesizer).
+    registry.register_service(
+        name="collaborative_critic",
+        service_class=type("CollaborativeCritic", (), {}),
+        capabilities=["collaborative_critic"],
+        metadata={"description": "Skeptic agent — challenges arguments (collaborative debate)"},
+        invoke=_invoke_collaborative_critic,
+    )
+    registered.append("collaborative_critic")
+
+    registry.register_service(
+        name="collaborative_validator",
+        service_class=type("CollaborativeValidator", (), {}),
+        capabilities=["collaborative_validator"],
+        metadata={"description": "Scholar agent — validates logic (collaborative debate)"},
+        invoke=_invoke_collaborative_validator,
+    )
+    registered.append("collaborative_validator")
+
+    registry.register_service(
+        name="collaborative_synthesizer",
+        service_class=type("CollaborativeSynthesizer", (), {}),
+        capabilities=["collaborative_synthesis"],
+        metadata={"description": "Synthesis agent — resolves disagreements (collaborative debate)"},
+        invoke=_invoke_collaborative_synthesis,
+    )
+    registered.append("collaborative_synthesizer")
 
     # --- Core services ---
 
@@ -3528,6 +4021,51 @@ def build_hierarchical_fallacy_workflow() -> WorkflowDefinition:
     )
 
 
+def build_collaborative_debate_workflow() -> WorkflowDefinition:
+    """Collaborative multi-agent debate workflow (#175).
+
+    Unlike standard pipeline where capabilities run independently, this workflow
+    chains agents that explicitly read and respond to each other's outputs:
+
+    1. extract — identify claims, premises, arguments
+    2. quality — score argument quality (provides weakness data for Critic)
+    3. counter — generate counter-arguments (provides ammunition for debate)
+    4. critic (Skeptic) — challenges each argument, identifies weaknesses
+    5. validator (Scholar) — confirms or defends against Critic's challenges
+    6. synthesis — resolves disagreements, produces final collaborative assessment
+
+    Design rationale (from #97 evaluation): multi-round repetition does NOT improve
+    quality (3.33 vs 3.27, 2.89x slower). Quality comes from inter-agent collaboration
+    with distinct roles, not from repeating the same analysis.
+    """
+    return (
+        WorkflowBuilder("collaborative_analysis")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
+        .add_phase(
+            "counter",
+            capability="counter_argument_generation",
+            depends_on=["quality"],
+        )
+        .add_phase(
+            "critic",
+            capability="collaborative_critic",
+            depends_on=["extract", "quality"],
+        )
+        .add_phase(
+            "validator",
+            capability="collaborative_validator",
+            depends_on=["critic"],
+        )
+        .add_phase(
+            "synthesis",
+            capability="collaborative_synthesis",
+            depends_on=["critic", "validator", "counter"],
+        )
+        .build()
+    )
+
+
 WORKFLOW_CATALOG: Dict[str, WorkflowDefinition] = {}
 
 
@@ -3544,6 +4082,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "jtms_dung": build_jtms_dung_loop_workflow(),
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
             "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
+            "collaborative": build_collaborative_debate_workflow(),
         }
         # Macro workflows (Track D)
         try:

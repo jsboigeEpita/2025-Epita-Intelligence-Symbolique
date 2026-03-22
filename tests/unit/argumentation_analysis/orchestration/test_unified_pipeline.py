@@ -2428,3 +2428,194 @@ class TestTextualCitations:
         assert len(state.identified_arguments) == 1
         # Fallacies NOT written by fact_extraction anymore
         assert len(state.identified_fallacies) == 0
+
+
+# ============================================================
+# Test: Collaborative multi-agent debate workflow (#175)
+# ============================================================
+
+
+class TestCollaborativeDebateWorkflow:
+    """Test the collaborative multi-agent debate workflow."""
+
+    def test_build_collaborative_workflow(self):
+        """Collaborative workflow has 6 phases with correct dependencies."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_collaborative_debate_workflow,
+        )
+
+        wf = build_collaborative_debate_workflow()
+        assert wf.name == "collaborative_analysis"
+        phase_names = [p.name for p in wf.phases]
+        assert "extract" in phase_names
+        assert "quality" in phase_names
+        assert "counter" in phase_names
+        assert "critic" in phase_names
+        assert "validator" in phase_names
+        assert "synthesis" in phase_names
+
+    def test_collaborative_workflow_dependencies(self):
+        """Critic depends on extract+quality, validator on critic, synthesis on all."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            build_collaborative_debate_workflow,
+        )
+
+        wf = build_collaborative_debate_workflow()
+        critic = wf.get_phase("critic")
+        validator = wf.get_phase("validator")
+        synthesis = wf.get_phase("synthesis")
+
+        assert "extract" in critic.depends_on
+        assert "quality" in critic.depends_on
+        assert "critic" in validator.depends_on
+        assert "critic" in synthesis.depends_on
+        assert "validator" in synthesis.depends_on
+        assert "counter" in synthesis.depends_on
+
+    def test_workflow_catalog_includes_collaborative(self):
+        """Workflow catalog includes the collaborative workflow."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            get_workflow_catalog,
+        )
+
+        catalog = get_workflow_catalog()
+        assert "collaborative" in catalog
+
+    def test_registry_includes_collaborative_capabilities(self):
+        """Setup registry registers the 3 collaborative capabilities."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        registry = setup_registry()
+        # Should find providers for collaborative capabilities
+        critic_providers = registry.find_for_capability("collaborative_critic")
+        validator_providers = registry.find_for_capability("collaborative_validator")
+        synthesis_providers = registry.find_for_capability("collaborative_synthesis")
+
+        assert len(critic_providers) > 0
+        assert len(validator_providers) > 0
+        assert len(synthesis_providers) > 0
+
+    async def test_invoke_collaborative_critic_fallback(self):
+        """Critic invoke produces critiques from extract+quality context."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_collaborative_critic,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "All birds can fly"},
+                    {"text": "The earth is flat because it looks flat"},
+                ],
+            },
+            "phase_quality_output": {
+                "per_argument_scores": {
+                    "arg_1": {"scores_par_vertu": {"sources": 0.2, "pertinence": 0.8}},
+                    "arg_2": {"scores_par_vertu": {"sources": 0.1, "pertinence": 0.3}},
+                },
+            },
+        }
+        result = await _invoke_collaborative_critic("test text", context)
+        assert result["agent"] == "skeptic"
+        assert len(result["critiques"]) == 2
+        assert result["arguments_reviewed"] == 2
+
+    async def test_invoke_collaborative_validator_fallback(self):
+        """Validator invoke responds to critic's critiques."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_collaborative_validator,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "All birds can fly"},
+                ],
+            },
+            "phase_quality_output": {},
+            "phase_critic_output": {
+                "critiques": [
+                    {
+                        "argument_index": 0,
+                        "critique": "Penguins are birds that cannot fly",
+                        "severity": "high",
+                    },
+                ],
+            },
+        }
+        result = await _invoke_collaborative_validator("test text", context)
+        assert result["agent"] == "scholar"
+        assert len(result["validations"]) == 1
+        assert result["critiques_reviewed"] == 1
+
+    async def test_invoke_collaborative_synthesis_fallback(self):
+        """Synthesis invoke resolves critic vs validator disagreements."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_collaborative_synthesis,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "All birds can fly"},
+                    {"text": "Water boils at 100C"},
+                ],
+            },
+            "phase_quality_output": {},
+            "phase_counter_output": {},
+            "phase_critic_output": {
+                "critiques": [
+                    {"argument_index": 0, "severity": "high", "critique": "Penguins"},
+                    {"argument_index": 1, "severity": "low", "critique": "Minor"},
+                ],
+            },
+            "phase_validator_output": {
+                "validations": [
+                    {"argument_index": 0, "verdict": "confirmed", "evidence": "True"},
+                    {"argument_index": 1, "verdict": "defended", "evidence": "Correct at sea level"},
+                ],
+            },
+        }
+        result = await _invoke_collaborative_synthesis("test text", context)
+        assert result["agent"] == "synthesizer"
+        assert result["arguments_total"] == 2
+        # Arg 0: confirmed + high severity = weak
+        # Arg 1: defended = strong
+        assert result["strong_count"] == 1
+        assert result["weak_count"] == 1
+
+    def test_write_collaborative_synthesis_to_state(self):
+        """Collaborative synthesis state writer creates debate transcript."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_collaborative_synthesis_to_state,
+        )
+
+        state = UnifiedAnalysisState("Test text")
+        output = {
+            "resolved_arguments": [
+                {"argument_index": 0, "final_status": "strong", "resolution": "Well-supported"},
+            ],
+            "collaborative_quality_score": 4.2,
+            "new_insights": ["Insight 1"],
+            "overall_assessment": "Good quality",
+        }
+        ctx = {
+            "phase_critic_output": {
+                "critiques": [
+                    {"critique": "Challenged premise A", "severity": "medium"},
+                ],
+            },
+            "phase_validator_output": {
+                "validations": [
+                    {"evidence": "Evidence supports A", "verdict": "defended"},
+                ],
+            },
+        }
+        _write_collaborative_synthesis_to_state(output, state, ctx)
+
+        assert len(state.debate_transcripts) == 1
+        assert state.debate_transcripts[0]["topic"] == "Collaborative multi-agent analysis"
+        assert len(state.debate_transcripts[0]["exchanges"]) == 3  # critic + validator + synthesizer
+        assert state.workflow_results["collaborative_analysis"]["collaborative_score"] == 4.2
