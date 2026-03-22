@@ -41,6 +41,7 @@ class Belief:
         self.non_monotonic: bool = False
         self.justifications: List["Justification"] = []
         self.implications: List["Justification"] = []
+        self._propagating: bool = False  # Guard against re-entrant propagation cycles
 
     def __str__(self):
         status = (
@@ -73,7 +74,10 @@ class Belief:
         if self.non_monotonic:
             self.valid = None
             return
+        if self._propagating:
+            return  # Break re-entrant cycle
 
+        old_valid = self.valid
         self.valid = None
         for justification in self.justifications:
             if all(b.valid for b in justification.in_list) and not any(
@@ -82,11 +86,16 @@ class Belief:
                 self.valid = True
                 break
 
-        self.propagate()
+        if self.valid != old_valid:
+            self.propagate()
 
     def propagate(self):
-        for justification in self.implications:
-            justification.conclusion.compute_truth_statement()
+        self._propagating = True
+        try:
+            for justification in self.implications:
+                justification.conclusion.compute_truth_statement()
+        finally:
+            self._propagating = False
 
 
 class Justification:
