@@ -82,6 +82,12 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
                 # Keep top-level keys for state writer compatibility
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
+                # Alias for downstream context consumers (#177 key mismatch fix)
+                "quality_scores": {
+                    arg_id: r.get("note_finale", 0)
+                    for arg_id, r in results.items()
+                    if isinstance(r, dict)
+                },
             }
         # Fallback if no results
         return await asyncio.to_thread(evaluator.evaluate, input_text)
