@@ -243,6 +243,7 @@ Exemples:
   %(prog)s --list-workflows                    # Lister les workflows
   %(prog)s --file texte.txt --output results.json  # Sauvegarder résultats
   %(prog)s --file texte.txt --legacy           # Mode legacy (AnalysisRunner)
+  %(prog)s --text "Mon argument" --mode conversational  # Mode conversationnel (agents dialoguent)
         """,
     )
 
@@ -281,11 +282,21 @@ Exemples:
         help="Chemin pour sauvegarder les résultats en JSON",
     )
 
-    # Options générales
+    # Mode d'orchestration
+    parser.add_argument(
+        "--mode",
+        "-m",
+        type=str,
+        choices=["pipeline", "conversational", "legacy"],
+        default="pipeline",
+        help="Mode d'orchestration: pipeline (séquentiel, défaut), "
+        "conversational (agents dialoguent via AgentGroupChat), "
+        "legacy (ancien AnalysisRunner)",
+    )
     parser.add_argument(
         "--legacy",
         action="store_true",
-        help="Utiliser l'ancien pipeline (AnalysisRunner) au lieu de UnifiedPipeline",
+        help="Raccourci pour --mode legacy",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
@@ -361,9 +372,52 @@ Exemples:
         logging.error("Aucun texte à analyser.")
         return
 
-    # Exécution de l'analyse
+    # Déterminer le mode d'orchestration
+    mode = args.mode
     if args.legacy:
+        mode = "legacy"
+
+    # Exécution de l'analyse
+    if mode == "legacy":
         await run_legacy_analysis(text_content, llm_service)
+    elif mode == "conversational":
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+
+        logging.info("Mode CONVERSATIONNEL : agents dialoguent via AgentGroupChat")
+        results = await run_conversational_analysis(
+            text=text_content,
+            max_turns_per_phase=5,
+        )
+
+        # Afficher le résumé
+        print(f"\n{'='*60}")
+        print(f" Mode conversationnel — {results['total_messages']} messages")
+        print(f"{'='*60}")
+        print(f"  Phases : {', '.join(results['phases'])}")
+        print(f"  Messages total : {results['total_messages']}")
+        print(f"  Champs état non-vides : {results['state_non_empty_fields']}")
+        print(f"  Durée : {results['duration_seconds']:.1f}s")
+
+        # Aperçu des messages
+        for msg in results.get("conversation_log", [])[:10]:
+            phase = msg.get("phase", "")
+            agent = msg.get("agent", "?")
+            content = msg.get("content", "")[:120]
+            print(f"  [{phase}] {agent}: {content}...")
+        if len(results.get("conversation_log", [])) > 10:
+            print(f"  ... et {len(results['conversation_log']) - 10} messages de plus")
+
+        print(f"{'='*60}\n")
+
+        # Sauvegarder si demandé
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2, default=str)
+            logging.info(f"Résultats sauvegardés dans {output_path}")
     else:
         await run_modern_analysis(
             text_content,
