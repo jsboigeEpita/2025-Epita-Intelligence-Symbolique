@@ -179,13 +179,56 @@ class AgentFactory:
         )
 
     def _create_agent(
-        self, agent_class: Type[Agent], trace_log_path: Optional[str] = None, **kwargs
+        self,
+        agent_class: Type[Agent],
+        trace_log_path: Optional[str] = None,
+        enable_auto_function_calling: bool = False,
+        **kwargs,
     ) -> Agent:
-        # kwargs devrait contenir 'service_id' ou d'autres paramètres spécifiques à l'agent
+        """Create an agent instance with optional auto function calling.
+
+        Args:
+            agent_class: The agent class to instantiate.
+            trace_log_path: Optional path for execution tracing.
+            enable_auto_function_calling: If True, configure the agent's kernel
+                execution settings so it can auto-invoke @kernel_function plugins
+                during AgentGroupChat conversations. Required for conversational mode.
+            **kwargs: Additional agent-specific parameters.
+        """
         if "service_id" not in kwargs:
             kwargs["service_id"] = self.llm_service_id
 
         agent = agent_class(kernel=self.kernel, **kwargs)
+
+        if enable_auto_function_calling:
+            self._enable_function_choice_behavior(agent)
+
         if trace_log_path:
             return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
         return agent
+
+    def _enable_function_choice_behavior(self, agent: Agent) -> None:
+        """Enable FunctionChoiceBehavior.Auto() on an agent.
+
+        In SK 1.40, function_choice_behavior is set directly on the
+        ChatCompletionAgent instance. This allows the agent to auto-invoke
+        @kernel_function plugins as tool calls during AgentGroupChat
+        conversations, rather than only producing text.
+        """
+        try:
+            fcb = FunctionChoiceBehavior.Auto(
+                auto_invoke_kernel_functions=True,
+                maximum_auto_invoke_attempts=5,
+            )
+            # SK 1.40: function_choice_behavior is a direct attribute on ChatCompletionAgent
+            if hasattr(agent, "function_choice_behavior"):
+                object.__setattr__(agent, "function_choice_behavior", fcb)
+            else:
+                # Fallback: store for manual use by orchestrator
+                agent._function_choice_behavior = fcb
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                f"Could not enable FunctionChoiceBehavior on {getattr(agent, 'name', '?')}: {e}"
+            )
