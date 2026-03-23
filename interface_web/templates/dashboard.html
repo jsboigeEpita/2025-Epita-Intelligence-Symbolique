@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Dashboard - Argumentation Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+        }
+        body { background: var(--primary-gradient); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar {
+            background: rgba(30, 30, 60, 0.95); min-height: 100vh; padding: 1rem 0;
+            position: fixed; width: 240px; overflow-y: auto;
+        }
+        .sidebar .brand { color: #fff; padding: 1rem 1.2rem; font-size: 1.1rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.5rem; }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7); padding: 0.6rem 1.2rem; border-radius: 0; transition: all 0.2s;
+            display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .sidebar .nav-link.active { border-left: 3px solid #8f94fb; }
+        .sidebar .nav-link i { width: 20px; text-align: center; }
+        .sidebar .section-title { color: rgba(255,255,255,0.4); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.8rem 1.2rem 0.3rem; }
+        .main-content { margin-left: 240px; padding: 1.5rem 2rem; min-height: 100vh; }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); background: rgba(255,255,255,0.97); }
+        .card-header { background: var(--secondary-gradient); color: #fff; border-radius: 12px 12px 0 0 !important; padding: 1rem 1.5rem; }
+        .card-header h5 { margin: 0; font-weight: 600; }
+        .btn-analyze { background: var(--primary-gradient); border: none; border-radius: 8px; padding: 10px 24px; color: #fff; font-weight: 500; }
+        .btn-analyze:hover { opacity: 0.9; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .result-box { background: #f8f9fa; border-radius: 8px; padding: 1.2rem; margin-top: 1rem; max-height: 500px; overflow-y: auto; }
+        .result-box pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 0.85rem; }
+        .spinner-overlay { display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 10; border-radius: 12px; }
+        .spinner-overlay.show { display: flex; align-items: center; justify-content: center; }
+        .stat-card { text-align: center; padding: 1.2rem; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 700; color: #4e54c8; }
+        .stat-card .stat-label { font-size: 0.8rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .capability-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .capability-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .capability-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+        .capability-card .icon-circle { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #fff; }
+        .badge-status { font-size: 0.7rem; padding: 3px 8px; }
+        textarea.form-control { border-radius: 8px; }
+        @media (max-width: 768px) {
+            .sidebar { position: relative; width: 100%; min-height: auto; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="brand"><i class="fas fa-brain me-2"></i>Argumentation</div>
+        <div class="section-title">Overview</div>
+        <a class="nav-link active" href="#" data-page="overview"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <div class="section-title">Analysis</div>
+        <a class="nav-link" href="#" data-page="quality"><i class="fas fa-star-half-alt"></i> Quality</a>
+        <a class="nav-link" href="#" data-page="counter-args"><i class="fas fa-exchange-alt"></i> Counter-Arguments</a>
+        <a class="nav-link" href="#" data-page="fallacy"><i class="fas fa-exclamation-triangle"></i> Fallacy Detection</a>
+        <div class="section-title">Debate</div>
+        <a class="nav-link" href="#" data-page="debate"><i class="fas fa-comments"></i> Adversarial Debate</a>
+        <a class="nav-link" href="#" data-page="collaborative"><i class="fas fa-users"></i> Collaborative</a>
+        <a class="nav-link" href="#" data-page="governance"><i class="fas fa-balance-scale"></i> Governance</a>
+        <div class="section-title">Logic</div>
+        <a class="nav-link" href="#" data-page="jtms"><i class="fas fa-project-diagram"></i> JTMS</a>
+        <a class="nav-link" href="#" data-page="full-analysis"><i class="fas fa-flask"></i> Full Pipeline</a>
+        <div class="section-title">System</div>
+        <a class="nav-link" href="#" data-page="status"><i class="fas fa-heartbeat"></i> Status</a>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- ==================== OVERVIEW ==================== -->
+        <div id="page-overview" class="page-section active">
+            <h4 class="text-white mb-3">Dashboard</h4>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><div class="stat-card"><div class="stat-value" id="stat-capabilities">15</div><div class="stat-label">Capabilities</div></div></div>
+                <div class="col-md-3"><div class="stat-card"><div class="stat-value" id="stat-agents">4</div><div class="stat-label">Agent Roles</div></div></div>
+                <div class="col-md-3"><div class="stat-card"><div class="stat-value" id="stat-workflows">17</div><div class="stat-label">Workflows</div></div></div>
+                <div class="col-md-3"><div class="stat-card"><div class="stat-value" id="stat-status"><i class="fas fa-circle text-success"></i></div><div class="stat-label">API Status</div></div></div>
+            </div>
+            <h5 class="text-white mb-3">Capabilities</h5>
+            <div class="capability-grid">
+                <div class="card capability-card" data-nav="quality">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><i class="fas fa-star"></i></div>
+                        <div><strong>Argument Quality</strong><br><small class="text-muted">9-virtue evaluation scoring</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="counter-args">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="fas fa-exchange-alt"></i></div>
+                        <div><strong>Counter-Arguments</strong><br><small class="text-muted">5 rhetorical strategies</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="fallacy">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#fa709a,#fee140)"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div><strong>Fallacy Detection</strong><br><small class="text-muted">8-family taxonomy + CamemBERT</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="debate">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#a18cd1,#fbc2eb)"><i class="fas fa-comments"></i></div>
+                        <div><strong>Adversarial Debate</strong><br><small class="text-muted">Multi-agent A/B + judge</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="collaborative">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="fas fa-users"></i></div>
+                        <div><strong>Collaborative Analysis</strong><br><small class="text-muted">Critic + Validator + DA + Synth</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="governance">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="fas fa-balance-scale"></i></div>
+                        <div><strong>Governance</strong><br><small class="text-muted">7 voting methods + consensus</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="jtms">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#ffecd2,#fcb69f)"><i class="fas fa-project-diagram"></i></div>
+                        <div><strong>JTMS / Logic</strong><br><small class="text-muted">Belief maintenance + Tweety</small></div>
+                    </div>
+                </div>
+                <div class="card capability-card" data-nav="full-analysis">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="icon-circle" style="background:linear-gradient(135deg,#30cfd0,#330867)"><i class="fas fa-flask"></i></div>
+                        <div><strong>Full Pipeline</strong><br><small class="text-muted">All 15 capabilities at once</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== QUALITY ==================== -->
+        <div id="page-quality" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-star-half-alt me-2"></i>Argument Quality Evaluation</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-quality"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Evaluates arguments on 9 dimensions: clarity, coherence, relevance, sufficiency, accuracy, depth, originality, fairness, and persuasiveness.</p>
+                    <textarea class="form-control mb-3" id="input-quality" rows="5" placeholder="Enter argumentative text to evaluate...">L'intelligence artificielle transforme la medecine en ameliorant les diagnostics. Les algorithmes de deep learning surpassent les radiologues dans la detection de certains cancers. Cependant, la question de la responsabilite juridique reste non resolue.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('quality')"><i class="fas fa-play me-1"></i> Evaluate Quality</button>
+                    <div class="result-box" id="result-quality" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== COUNTER-ARGUMENTS ==================== -->
+        <div id="page-counter-args" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-exchange-alt me-2"></i>Counter-Argument Generation</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-counter-args"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Generates counter-arguments using 5 strategies: reductio ad absurdum, counter-example, distinction, reformulation, and concession+pivot.</p>
+                    <textarea class="form-control mb-3" id="input-counter-args" rows="5" placeholder="Enter an argument to challenge...">L'education gratuite pour tous est un droit fondamental car elle reduit les inegalites sociales et favorise la mobilite economique.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('counter-args')"><i class="fas fa-play me-1"></i> Generate Counter-Arguments</button>
+                    <div class="result-box" id="result-counter-args" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== FALLACY ==================== -->
+        <div id="page-fallacy" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Fallacy Detection</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-fallacy"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Detects fallacies using 3-tier hybrid detection: heuristic rules, CamemBERT classifier, and 8-family taxonomy (Ad Hominem, Red Herring, False Cause, etc.).</p>
+                    <textarea class="form-control mb-3" id="input-fallacy" rows="5" placeholder="Enter text that may contain fallacies...">Tout le monde sait que le changement climatique est une conspiration. Mon voisin, qui est plombier, dit que c'est faux. De plus, les scientifiques se trompent souvent, donc on ne peut pas leur faire confiance.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('fallacy')"><i class="fas fa-play me-1"></i> Detect Fallacies</button>
+                    <div class="result-box" id="result-fallacy" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== DEBATE ==================== -->
+        <div id="page-debate" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-comments me-2"></i>Adversarial Debate</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-debate"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Agent A defends the strongest arguments while Agent B attacks using identified weaknesses. A judge evaluates each exchange.</p>
+                    <textarea class="form-control mb-3" id="input-debate" rows="5" placeholder="Enter a topic or thesis for debate...">La surveillance de masse est necessaire pour la securite nationale, meme si elle porte atteinte a la vie privee des citoyens.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('debate')"><i class="fas fa-play me-1"></i> Start Debate</button>
+                    <div class="result-box" id="result-debate" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== COLLABORATIVE ==================== -->
+        <div id="page-collaborative" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-users me-2"></i>Collaborative Multi-Agent Analysis</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-collaborative"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Four specialized agents collaborate sequentially: <strong>Critic</strong> (identifies weaknesses), <strong>Validator</strong> (checks evidence), <strong>Devil's Advocate</strong> (generates counter-arguments), and <strong>Synthesizer</strong> (resolves disagreements).</p>
+                    <textarea class="form-control mb-3" id="input-collaborative" rows="5" placeholder="Enter text for collaborative analysis...">Les energies renouvelables sont la seule solution viable au changement climatique. Le nucleaire est trop dangereux et trop couteux. L'investissement massif dans le solaire et l'eolien permettrait une transition complete d'ici 2050.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('collaborative')"><i class="fas fa-play me-1"></i> Run Collaborative Analysis</button>
+                    <div class="result-box" id="result-collaborative" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== GOVERNANCE ==================== -->
+        <div id="page-governance" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-balance-scale me-2"></i>Governance Simulation</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-governance"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Applies 7 voting methods (majority, Borda, Condorcet, approval, etc.) to evaluate competing arguments and reach a collective decision.</p>
+                    <textarea class="form-control mb-3" id="input-governance" rows="5" placeholder="Enter competing proposals or arguments...">Proposition A: Investir dans les transports en commun. Proposition B: Developper les pistes cyclables. Proposition C: Subventionner les vehicules electriques. Chaque option a des avantages et des couts differents.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('governance')"><i class="fas fa-play me-1"></i> Run Governance Simulation</button>
+                    <div class="result-box" id="result-governance" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== JTMS ==================== -->
+        <div id="page-jtms" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-project-diagram me-2"></i>JTMS / Logic Reasoning</h4>
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-muted">The JTMS (Justification-based Truth Maintenance System) provides belief management with dependency tracking and consistency checking.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-project-diagram fa-2x text-primary mb-2"></i>
+                                    <h6>JTMS Dashboard</h6>
+                                    <p class="text-muted small">Network visualization, belief status, statistics</p>
+                                    <a href="/jtms/dashboard" class="btn btn-outline-primary btn-sm" target="_blank">Open Dashboard</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-gamepad fa-2x text-success mb-2"></i>
+                                    <h6>JTMS Playground</h6>
+                                    <p class="text-muted small">Free-form testing with pre-built examples</p>
+                                    <a href="/jtms/playground" class="btn btn-outline-success btn-sm" target="_blank">Open Playground</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-secret fa-2x text-warning mb-2"></i>
+                                    <h6>Sherlock &amp; Watson</h6>
+                                    <p class="text-muted small">Agent orchestration and investigation</p>
+                                    <a href="/jtms/sherlock_watson" class="btn btn-outline-warning btn-sm" target="_blank">Open Investigation</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-graduation-cap fa-2x text-info mb-2"></i>
+                                    <h6>Tutorial</h6>
+                                    <p class="text-muted small">Step-by-step pedagogical guide</p>
+                                    <a href="/jtms/tutorial" class="btn btn-outline-info btn-sm" target="_blank">Open Tutorial</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== FULL PIPELINE ==================== -->
+        <div id="page-full-analysis" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-flask me-2"></i>Full Unified Pipeline</h4>
+            <div class="card position-relative">
+                <div class="spinner-overlay" id="spinner-full-analysis"><div class="spinner-border text-primary" role="status"></div></div>
+                <div class="card-body">
+                    <p class="text-muted">Runs all 15 pipeline capabilities: fact extraction, fallacy detection, quality evaluation, counter-arguments, debate, governance, formal logic, and more. This may take 30-60 seconds.</p>
+                    <textarea class="form-control mb-3" id="input-full-analysis" rows="5" placeholder="Enter text for full pipeline analysis...">L'intelligence artificielle est a la fois une opportunite et un defi majeur pour notre societe. Elle peut revolutionner la medecine et l'education, mais pose des questions ethiques fondamentales sur la vie privee, l'emploi et l'autonomie humaine.</textarea>
+                    <button class="btn btn-analyze" onclick="runAnalysis('full-analysis')"><i class="fas fa-play me-1"></i> Run Full Pipeline</button>
+                    <div class="result-box" id="result-full-analysis" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== STATUS ==================== -->
+        <div id="page-status" class="page-section">
+            <h4 class="text-white mb-3"><i class="fas fa-heartbeat me-2"></i>System Status</h4>
+            <div class="card">
+                <div class="card-body">
+                    <div id="status-content"><p class="text-muted">Loading status...</p></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // === API Configuration ===
+    const API_BASE = window.location.origin;
+
+    // Map page IDs to FastAPI endpoint paths
+    const ENDPOINT_MAP = {
+        'quality':       '/api/v1/agents/quality',
+        'counter-args':  '/api/v1/agents/counter-arguments',
+        'debate':        '/api/v1/agents/debate',
+        'governance':    '/api/v1/agents/governance',
+        'collaborative': '/api/v1/agents/full-analysis',  // uses full pipeline for now
+        'fallacy':       '/api/v1/agents/full-analysis',
+        'full-analysis': '/api/v1/agents/full-analysis',
+    };
+
+    // === Navigation ===
+    document.querySelectorAll('[data-page]').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            navigateTo(link.dataset.page);
+        });
+    });
+
+    document.querySelectorAll('[data-nav]').forEach(card => {
+        card.addEventListener('click', () => navigateTo(card.dataset.nav));
+    });
+
+    function navigateTo(pageId) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+        const page = document.getElementById('page-' + pageId);
+        if (page) page.classList.add('active');
+        const navLink = document.querySelector(`[data-page="${pageId}"]`);
+        if (navLink) navLink.classList.add('active');
+        if (pageId === 'status') loadStatus();
+    }
+
+    // === Analysis Runner ===
+    async function runAnalysis(pageId) {
+        const input = document.getElementById('input-' + pageId);
+        const resultBox = document.getElementById('result-' + pageId);
+        const spinner = document.getElementById('spinner-' + pageId);
+        const text = input ? input.value.trim() : '';
+
+        if (!text || text.length < 10) {
+            showResult(resultBox, {error: 'Please enter at least 10 characters.'}, true);
+            return;
+        }
+
+        spinner.classList.add('show');
+        resultBox.style.display = 'none';
+
+        const endpoint = ENDPOINT_MAP[pageId];
+        if (!endpoint) {
+            spinner.classList.remove('show');
+            showResult(resultBox, {error: 'Unknown capability: ' + pageId}, true);
+            return;
+        }
+
+        try {
+            const resp = await fetch(API_BASE + endpoint, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: text, max_text: 5000}),
+            });
+            const data = await resp.json();
+            spinner.classList.remove('show');
+
+            if (!resp.ok) {
+                showResult(resultBox, {error: data.detail || `HTTP ${resp.status}`}, true);
+            } else {
+                showResult(resultBox, data, false);
+            }
+        } catch (err) {
+            spinner.classList.remove('show');
+            showResult(resultBox, {error: 'Network error: ' + err.message}, true);
+        }
+    }
+
+    function showResult(box, data, isError) {
+        if (!box) return;
+        box.style.display = 'block';
+
+        if (isError) {
+            box.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i>${escapeHtml(data.error)}</div>`;
+            return;
+        }
+
+        // Render structured results
+        let html = '';
+
+        // Quality scores
+        if (data.scores && Array.isArray(data.scores)) {
+            html += '<h6>Quality Scores</h6>';
+            data.scores.forEach(s => {
+                html += `<div class="mb-2"><strong>${escapeHtml(s.argument)}</strong> — Overall: <span class="badge bg-primary">${s.overall}</span>`;
+                if (s.scores) {
+                    html += '<div class="small text-muted">';
+                    Object.entries(s.scores).forEach(([k,v]) => {
+                        html += `${k}: ${typeof v === 'number' ? v.toFixed(2) : v} | `;
+                    });
+                    html += '</div>';
+                }
+                html += '</div>';
+            });
+            if (data.aggregate) {
+                html += '<h6 class="mt-3">Aggregate</h6><div class="small">';
+                Object.entries(data.aggregate).forEach(([k,v]) => {
+                    html += `<span class="badge bg-secondary me-1">${k}: ${v}</span>`;
+                });
+                html += '</div>';
+            }
+        }
+
+        // Counter-arguments
+        if (data.llm_counter_arguments && data.llm_counter_arguments.length > 0) {
+            html += '<h6>Counter-Arguments</h6>';
+            data.llm_counter_arguments.forEach((ca, i) => {
+                html += `<div class="mb-2"><strong>${i+1}.</strong> `;
+                if (ca.strategy) html += `<span class="badge bg-info">${escapeHtml(ca.strategy)}</span> `;
+                html += escapeHtml(ca.counter);
+                if (ca.target) html += ` <small class="text-muted">(target: ${escapeHtml(ca.target)})</small>`;
+                html += '</div>';
+            });
+        }
+
+        // Debate
+        if (data.winner !== undefined && data.key_exchanges) {
+            html += `<h6>Debate Result</h6><p>Winner: <strong>${escapeHtml(data.winner || 'undecided')}</strong></p>`;
+            if (data.key_exchanges.length > 0) {
+                html += '<h6>Key Exchanges</h6>';
+                data.key_exchanges.forEach((ex, i) => {
+                    html += `<div class="mb-2 p-2 border rounded"><strong>Round ${i+1}</strong><br>`;
+                    html += `<span class="text-success">A:</span> ${escapeHtml(ex.agent_a_point)}<br>`;
+                    html += `<span class="text-danger">B:</span> ${escapeHtml(ex.agent_b_rebuttal)}<br>`;
+                    if (ex.judge_note) html += `<span class="text-info">Judge:</span> ${escapeHtml(ex.judge_note)}`;
+                    html += '</div>';
+                });
+            }
+            if (data.new_insights && data.new_insights.length > 0) {
+                html += '<h6>New Insights</h6><ul>';
+                data.new_insights.forEach(i => html += `<li>${escapeHtml(i)}</li>`);
+                html += '</ul>';
+            }
+        }
+
+        // Governance
+        if (data.decisions && Array.isArray(data.decisions)) {
+            html += `<h6>Governance Decisions</h6><p>Consensus: <strong>${data.consensus_score}</strong></p>`;
+            data.decisions.forEach(d => {
+                html += `<div class="mb-1"><span class="badge bg-dark">${escapeHtml(d.method)}</span> Winner: <strong>${escapeHtml(d.winner)}</strong></div>`;
+            });
+            if (data.summary) html += `<p class="mt-2 text-muted">${escapeHtml(data.summary)}</p>`;
+        }
+
+        // Full analysis
+        if (data.fields_populated !== undefined) {
+            html += `<h6>Full Pipeline Result</h6>`;
+            html += `<p>Fields populated: <span class="badge bg-success">${data.fields_populated}</span></p>`;
+        }
+
+        // Duration
+        if (data.duration_seconds) {
+            html += `<div class="text-muted small mt-2"><i class="fas fa-clock me-1"></i>${data.duration_seconds}s</div>`;
+        }
+
+        // Fallback: raw JSON
+        if (!html) {
+            html = '<pre>' + escapeHtml(JSON.stringify(data, null, 2)) + '</pre>';
+        }
+
+        box.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        if (typeof text !== 'string') return String(text);
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // === Status ===
+    async function loadStatus() {
+        const container = document.getElementById('status-content');
+        try {
+            const [statusResp, healthResp] = await Promise.allSettled([
+                fetch(API_BASE + '/api/status').then(r => r.json()),
+                fetch(API_BASE + '/health').then(r => r.json()),
+            ]);
+            let html = '<div class="row g-3">';
+            if (statusResp.status === 'fulfilled') {
+                const s = statusResp.value;
+                html += `<div class="col-md-6"><div class="card border"><div class="card-body">`;
+                html += `<h6>Starlette App</h6>`;
+                html += `<p>Status: <span class="badge bg-${s.status === 'operational' ? 'success' : 'warning'}">${s.status || 'unknown'}</span></p>`;
+                if (s.services) {
+                    Object.entries(s.services).forEach(([k,v]) => {
+                        html += `<div class="small">${k}: <span class="badge bg-secondary">${v}</span></div>`;
+                    });
+                }
+                html += `</div></div></div>`;
+            }
+            if (healthResp.status === 'fulfilled') {
+                const h = healthResp.value;
+                html += `<div class="col-md-6"><div class="card border"><div class="card-body">`;
+                html += `<h6>FastAPI</h6>`;
+                html += `<p>Status: <span class="badge bg-${h.status === 'healthy' ? 'success' : 'warning'}">${h.status || 'unknown'}</span></p>`;
+                if (h.details) {
+                    Object.entries(h.details).forEach(([k,v]) => {
+                        html += `<div class="small">${k}: <span class="badge bg-secondary">${v}</span></div>`;
+                    });
+                }
+                html += `</div></div></div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        } catch (err) {
+            container.innerHTML = `<div class="alert alert-warning">Could not load status: ${escapeHtml(err.message)}</div>`;
+        }
+    }
+
+    // Load status on page load
+    loadStatus();
+    </script>
+</body>
+</html>

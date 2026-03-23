@@ -292,6 +292,14 @@ async def examples_endpoint(request: Request):
     return JSONResponse({"examples": examples})
 
 
+async def dashboard_endpoint(request: Request):
+    """Serve the unified analysis dashboard."""
+    template_path = Path(__file__).parent / "templates" / "dashboard.html"
+    if template_path.exists():
+        return HTMLResponse(template_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>Dashboard template not found</h1>", status_code=404)
+
+
 async def framework_analyze_endpoint(request: Request):
     """Route pour l'analyse d'un A.F. de Dung."""
     service_manager = request.app.state.service_manager
@@ -355,6 +363,7 @@ async def framework_analyze_endpoint(request: Request):
 # --- Définition des Routes ---
 # On combine les routes de l'API et le service des fichiers statiques.
 routes = [
+    Route("/dashboard", endpoint=dashboard_endpoint, methods=["GET"]),
     Route("/api/status", endpoint=status_endpoint, methods=["GET"]),
     Route("/api/health", endpoint=status_endpoint, methods=["GET"]),
     Route("/api/analyze", endpoint=analyze_endpoint, methods=["POST"]),
