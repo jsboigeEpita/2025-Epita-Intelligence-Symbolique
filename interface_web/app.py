@@ -32,6 +32,14 @@ from starlette.routing import Mount, Route
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
+# --- Load .env for API keys (#208-A) ---
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(override=False)
+except ImportError:
+    pass
+
 # --- Activation de l'environnement et imports du projet ---
 try:
     from scripts.core.auto_env import ensure_env

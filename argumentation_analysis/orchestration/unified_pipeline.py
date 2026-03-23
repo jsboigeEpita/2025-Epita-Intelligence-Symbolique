@@ -15,6 +15,7 @@ This module ties together the Lego architecture built in Phases 0-4:
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, Any, Optional, List
 
 from argumentation_analysis.core.capability_registry import (
@@ -31,6 +32,29 @@ from argumentation_analysis.orchestration.workflow_dsl import (
 )
 
 logger = logging.getLogger("UnifiedPipeline")
+
+# ── .env loading (#208-A) ────────────────────────────────────────────────
+# Ensure .env is loaded before any invoke callable reads OPENAI_API_KEY.
+# This is idempotent — calling load_dotenv() multiple times is safe.
+_dotenv_loaded = False
+
+
+def _ensure_dotenv() -> None:
+    """Load .env file if not already loaded. Idempotent, no-op if dotenv missing."""
+    global _dotenv_loaded
+    if _dotenv_loaded:
+        return
+    _dotenv_loaded = True
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(override=False)
+        if os.environ.get("OPENAI_API_KEY"):
+            logger.debug(".env loaded — OPENAI_API_KEY is set")
+        else:
+            logger.debug(".env loaded but OPENAI_API_KEY not found")
+    except ImportError:
+        pass  # python-dotenv not installed — env vars must come from elsewhere
 
 
 # --- Invoke callables for registered components ---
@@ -2984,6 +3008,8 @@ def setup_registry(
     Returns:
         Populated CapabilityRegistry instance.
     """
+    _ensure_dotenv()  # Load .env before registering LLM-dependent components (#208-A)
+
     registry = CapabilityRegistry()
     registered = []
     skipped = []
@@ -3816,6 +3842,8 @@ async def run_unified_analysis(
             - unified_state: UnifiedAnalysisState (if state tracking enabled)
             - state_snapshot: Dict snapshot of the state (if state tracking enabled)
     """
+    _ensure_dotenv()  # Load .env before any LLM calls (#208-A)
+
     if registry is None:
         registry = setup_registry()
 

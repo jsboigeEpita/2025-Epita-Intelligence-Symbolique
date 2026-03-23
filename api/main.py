@@ -1,6 +1,15 @@
 import glob
 import logging
 from pathlib import Path
+
+# Load .env for API keys before any other imports (#208-A)
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(override=False)
+except ImportError:
+    pass
+
 from .factory import create_app
 from .endpoints import router as api_router, framework_router, informal_router
 from .proposal_endpoints import proposal_router

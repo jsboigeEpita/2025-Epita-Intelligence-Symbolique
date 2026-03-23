@@ -87,11 +87,27 @@ def list_workflows() -> None:
 async def setup_environment() -> Any:
     """Initialise l'environnement nécessaire pour l'orchestration.
 
-    Charge les variables d'environnement, initialise la JVM et crée le service LLM.
+    Charge les variables d'environnement depuis .env, initialise la JVM
+    et crée le service LLM.
 
     :return: L'instance du service LLM si la création est réussie, sinon None.
     :rtype: Any
     """
+    # Load .env BEFORE any os.environ.get() calls (#208-A)
+    try:
+        from dotenv import load_dotenv
+
+        loaded = load_dotenv(override=False)
+        if loaded:
+            logging.info(".env chargé avec succès.")
+        else:
+            logging.debug(".env non trouvé ou déjà chargé.")
+    except ImportError:
+        logging.warning(
+            "python-dotenv non installé — les variables .env ne seront pas chargées. "
+            "Installez avec: pip install python-dotenv"
+        )
+
     logging.info(
         "Initialisation de l'environnement (chargement des settings implicite)..."
     )
