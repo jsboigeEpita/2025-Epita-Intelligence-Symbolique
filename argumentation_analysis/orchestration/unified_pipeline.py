@@ -15,7 +15,8 @@ This module ties together the Lego architecture built in Phases 0-4:
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, List
+import os
+from typing import Dict, Any, Optional, List, Tuple
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -30,7 +31,33 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     PhaseStatus,
 )
 
+# Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass  # dotenv optional in CI environments
+
 logger = logging.getLogger("UnifiedPipeline")
+
+
+def _get_openai_client() -> Tuple[Any, str]:
+    """Create an AsyncOpenAI client from environment variables.
+
+    Returns (client, model_id) or (None, "") if API key unavailable.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        return None, ""
+    try:
+        from openai import AsyncOpenAI
+
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id
+    except ImportError:
+        return None, ""
 
 
 # --- Invoke callables for registered components ---
@@ -108,7 +135,6 @@ def _aggregate_virtue_scores(per_arg_results: Dict) -> Dict[str, float]:
 
 async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke counter-argument analysis via plugin + LLM enrichment."""
-    import os
     from argumentation_analysis.agents.core.counter_argument.counter_agent import (
         CounterArgumentPlugin,
     )
@@ -122,13 +148,8 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
     # Enrich with LLM-generated counter-arguments for fallacious/weak arguments
     llm_counters = []
     try:
-        from openai import AsyncOpenAI
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if api_key:
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client, model_id = _get_openai_client()
+        if client:
 
             # Collect fallacious arguments + weakest arguments for targeted CAs
             extract_output = context.get("phase_extract_output", {})
@@ -210,7 +231,6 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
 
 async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke debate argument analysis via plugin + LLM adversarial assessment."""
-    import os
     from argumentation_analysis.agents.core.debate.debate_agent import DebatePlugin
 
     plugin = DebatePlugin()
@@ -219,13 +239,8 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
 
     # Enrich with LLM-based adversarial debate assessment
     try:
-        from openai import AsyncOpenAI
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if api_key:
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client, model_id = _get_openai_client()
+        if client:
 
             # Build adversarial debate from upstream analysis
             extract_output = context.get("phase_extract_output", {})
@@ -319,7 +334,6 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
 
 async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke governance analysis via plugin + LLM-powered deliberation assessment."""
-    import os
     from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
 
     plugin = GovernancePlugin()
@@ -358,13 +372,8 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
     # Enrich with LLM-based governance and deliberation assessment
     llm_governance = None
     try:
-        from openai import AsyncOpenAI
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if api_key:
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client, model_id = _get_openai_client()
+        if client:
 
             # Build context from upstream phases
             context_parts = []
@@ -1796,8 +1805,6 @@ async def _invoke_hierarchical_fallacy(
     and one-shot fallback. Requires a Semantic Kernel service + taxonomy CSV.
     Falls back to heuristic extraction if SK/API is unavailable.
     """
-    import os
-
     taxonomy_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
         "data",
@@ -1896,19 +1903,13 @@ def _normalize_fallacies_with_quotes(items: list) -> list:
 
 async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> Dict:
     """Extract verifiable claims and arguments from text using LLM with heuristic fallback."""
-    import os
     import re
 
     # Try LLM-based extraction first
     try:
-        from openai import AsyncOpenAI
+        client, model_id = _get_openai_client()
 
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-
-        if api_key:
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        if client:
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[

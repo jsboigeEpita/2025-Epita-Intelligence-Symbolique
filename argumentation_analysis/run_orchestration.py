@@ -33,6 +33,14 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Ensure .env is loaded BEFORE any other import that might need API keys
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
