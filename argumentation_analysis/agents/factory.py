@@ -43,6 +43,44 @@ class AgentFactory:
     def __init__(self, kernel: Kernel, llm_service_id: str):
         self.kernel = kernel
         self.llm_service_id = llm_service_id
+        self._fcb_configured = False
+
+    def enable_auto_function_calling(
+        self, max_auto_invoke_attempts: int = 5
+    ) -> "AgentFactory":
+        """Configure FunctionChoiceBehavior.Auto() on the kernel's execution settings.
+
+        This enables agents in AgentGroupChat to auto-invoke @kernel_function
+        plugins as tools. Must be called BEFORE creating agents for
+        conversational mode. (#208-B)
+
+        Args:
+            max_auto_invoke_attempts: Max tool call attempts per turn.
+
+        Returns:
+            self (for chaining).
+        """
+        try:
+            prompt_exec_settings = (
+                self.kernel.get_prompt_execution_settings_from_service_id(
+                    self.llm_service_id
+                )
+            )
+            prompt_exec_settings.function_choice_behavior = (
+                FunctionChoiceBehavior.Auto(
+                    auto_invoke_kernel_functions=True,
+                    max_auto_invoke_attempts=max_auto_invoke_attempts,
+                )
+            )
+            self._fcb_configured = True
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                f"Could not configure FunctionChoiceBehavior.Auto(): {e}. "
+                "Agents will not auto-invoke kernel functions."
+            )
+        return self
 
     def create_informal_fallacy_agent(
         self,

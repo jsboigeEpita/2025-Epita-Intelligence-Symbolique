@@ -218,7 +218,9 @@ class AnalysisRunnerV2:
         self.kernel.add_plugin(self.state_manager_plugin, plugin_name="StateManager")
 
         self.logger.info("Création des agents via la AgentFactory...")
-        factory = AgentFactory(kernel=self.kernel, settings=settings)
+        llm_service_id = llm_service.service_id if hasattr(llm_service, 'service_id') else "default"
+        factory = AgentFactory(kernel=self.kernel, llm_service_id=llm_service_id)
+        factory.enable_auto_function_calling()  # #208-B: enable tool calls in GroupChat
 
         agent_classes_to_create = {
             "ProjectManager": ProjectManagerAgent,
