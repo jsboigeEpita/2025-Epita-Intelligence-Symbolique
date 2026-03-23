@@ -1982,28 +1982,80 @@ async def _invoke_fact_extraction(input_text: str, context: Dict[str, Any]) -> D
 async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke propositional logic analysis — translate arguments to propositions.
 
-    Generates propositional variables from extracted arguments and checks
-    logical consistency of the argument set.
+    If NL-to-logic translations are available from an upstream phase, uses
+    those validated formulas. Otherwise falls back to template generation.
+    (#208-H: wire NL-to-logic as pre-processing)
     """
     # Build propositional formulas from upstream arguments
     args = _extract_arguments_from_context(input_text, context)
     formulas = context.get("formulas")
+    argument_mapping = {}
+
     if not formulas:
-        # Generate propositional variables: p1, p2, ..., pN for each argument
-        prop_vars = [f"p{i+1}" for i in range(len(args))]
-        # Generate implications from argument structure
-        formulas = list(prop_vars)  # Each argument is asserted
-        # Add constraints: arguments that attack each other are mutually exclusive
-        fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-        fallacies = (
-            fallacy_output.get("fallacies", [])
-            if isinstance(fallacy_output, dict)
+        # (#208-H) Check if NL-to-logic phase already produced PL translations
+        nl_output = context.get("phase_nl_to_logic_output", {})
+        nl_translations = (
+            nl_output.get("translations", [])
+            if isinstance(nl_output, dict)
             else []
         )
-        # For each fallacy, the fallacious argument contradicts sound reasoning
-        if fallacies and len(prop_vars) >= 2:
-            # Add negation of one var to represent the fallacy undermining it
-            formulas.append(f"!{prop_vars[-1]}")  # Last arg is contested
+        pl_translations = [
+            t for t in nl_translations
+            if isinstance(t, dict)
+            and t.get("logic_type") == "propositional"
+            and t.get("is_valid")
+        ]
+
+        if pl_translations:
+            # Use validated NL-to-logic formulas
+            formulas = [t["formula"] for t in pl_translations]
+            argument_mapping = {
+                t["formula"][:30]: t.get("original_text", "")[:60]
+                for t in pl_translations
+            }
+            logger.info(
+                f"Using {len(formulas)} NL-to-logic PL translations "
+                f"(from upstream phase)"
+            )
+        else:
+            # Fallback: try on-the-fly NL translation if LLM available
+            try:
+                from argumentation_analysis.services.nl_to_logic import (
+                    NLToLogicTranslator,
+                )
+
+                translator = NLToLogicTranslator(
+                    max_retries=2, logic_type="propositional"
+                )
+                batch = await translator.translate_batch(
+                    args[:4], logic_type="propositional", check_consistency=False
+                )
+                valid = [t for t in batch.translations if t.is_valid]
+                if valid:
+                    formulas = [t.formula for t in valid]
+                    argument_mapping = {
+                        t.formula[:30]: t.original_text[:60] for t in valid
+                    }
+                    logger.info(
+                        f"NL-to-logic translated {len(valid)}/{len(args)} "
+                        f"arguments to PL"
+                    )
+            except Exception as e:
+                logger.debug(f"NL-to-logic PL translation unavailable: {e}")
+
+        if not formulas:
+            # Final fallback: template-based variables
+            prop_vars = [f"p{i+1}" for i in range(len(args))]
+            formulas = list(prop_vars)
+            argument_mapping = {f"p{i+1}": a[:60] for i, a in enumerate(args)}
+            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+            fallacies = (
+                fallacy_output.get("fallacies", [])
+                if isinstance(fallacy_output, dict)
+                else []
+            )
+            if fallacies and len(prop_vars) >= 2:
+                formulas.append(f"!{prop_vars[-1]}")
 
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
@@ -2022,7 +2074,7 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
             "model": {f"p{i+1}": True for i in range(len(args))},
             "message": msg,
             "logic_type": "propositional",
-            "argument_mapping": {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+            "argument_mapping": argument_mapping or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
         }
     except Exception as e:
         # Fallback: basic consistency check
@@ -2037,7 +2089,7 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
             "satisfiable": not has_contradiction,
             "model": {f"p{i+1}": True for i in range(len(args))},
             "logic_type": "propositional",
-            "argument_mapping": {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+            "argument_mapping": argument_mapping or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
             "fallback": "python",
         }
 
@@ -2045,33 +2097,83 @@ async def _invoke_propositional_logic(input_text: str, context: Dict[str, Any]) 
 async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke first-order logic analysis — translate arguments to FOL predicates.
 
-    Generates FOL predicates from extracted arguments (e.g., Argues(douglas, X),
-    Attacks(arg1, arg2)) and checks consistency.
+    If NL-to-logic translations are available from an upstream phase, uses
+    those validated formulas. Otherwise falls back to template generation.
+    (#208-H: wire NL-to-logic as pre-processing)
     """
     args = _extract_arguments_from_context(input_text, context)
     formulas = context.get("formulas")
     if not formulas:
-        # Generate FOL predicates from arguments
-        formulas = []
-        for i in range(len(args)):
-            # Create predicate: Asserted(arg_i)
-            formulas.append(f"Asserted(arg{i+1})")
-        # Add attack relations from fallacies
-        fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-        fallacies = (
-            fallacy_output.get("fallacies", [])
-            if isinstance(fallacy_output, dict)
+        # (#208-H) Check if NL-to-logic phase already produced FOL translations
+        nl_output = context.get("phase_nl_to_logic_output", {})
+        nl_translations = (
+            nl_output.get("translations", [])
+            if isinstance(nl_output, dict)
             else []
         )
-        for j, f in enumerate(fallacies):
-            if isinstance(f, dict):
-                # Fallacy undermines an argument
-                target_idx = min(j, len(args) - 1) if args else 0
-                formulas.append(f"Undermines(fallacy{j+1}, arg{target_idx+1})")
-                formulas.append(f"Fallacious(arg{target_idx+1})")
-        # Add inference: if undermined, then not fully supported
-        if fallacies:
-            formulas.append("forall X: (Fallacious(X) -> !FullySupported(X))")
+        fol_translations = [
+            t for t in nl_translations
+            if isinstance(t, dict)
+            and t.get("logic_type") == "fol"
+            and t.get("is_valid")
+        ]
+
+        if fol_translations:
+            formulas = []
+            for t in fol_translations:
+                # FOL formulas may be semicolon-separated
+                for f in t["formula"].split(";"):
+                    f = f.strip()
+                    if f:
+                        formulas.append(f)
+            logger.info(
+                f"Using {len(formulas)} NL-to-logic FOL translations "
+                f"(from upstream phase)"
+            )
+        else:
+            # Fallback: try on-the-fly NL translation
+            try:
+                from argumentation_analysis.services.nl_to_logic import (
+                    NLToLogicTranslator,
+                )
+
+                translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
+                batch = await translator.translate_batch(
+                    args[:4], logic_type="fol", check_consistency=False
+                )
+                valid = [t for t in batch.translations if t.is_valid]
+                if valid:
+                    formulas = []
+                    for t in valid:
+                        for f in t.formula.split(";"):
+                            f = f.strip()
+                            if f:
+                                formulas.append(f)
+                    logger.info(
+                        f"NL-to-logic translated {len(valid)}/{len(args)} "
+                        f"arguments to FOL"
+                    )
+            except Exception as e:
+                logger.debug(f"NL-to-logic FOL translation unavailable: {e}")
+
+        if not formulas:
+            # Final fallback: template-based FOL predicates
+            formulas = []
+            for i in range(len(args)):
+                formulas.append(f"Asserted(arg{i+1})")
+            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+            fallacies = (
+                fallacy_output.get("fallacies", [])
+                if isinstance(fallacy_output, dict)
+                else []
+            )
+            for j, f in enumerate(fallacies):
+                if isinstance(f, dict):
+                    target_idx = min(j, len(args) - 1) if args else 0
+                    formulas.append(f"Undermines(fallacy{j+1}, arg{target_idx+1})")
+                    formulas.append(f"Fallacious(arg{target_idx+1})")
+            if fallacies:
+                formulas.append("forall X: (Fallacious(X) -> !FullySupported(X))")
 
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
