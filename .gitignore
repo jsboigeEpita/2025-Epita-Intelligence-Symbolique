@@ -74,6 +74,7 @@ target/
 # === Temporary Files ===
 _*/
 temp*/
+!**/templates/
 tmp/
 *.tmp
 *.bak
