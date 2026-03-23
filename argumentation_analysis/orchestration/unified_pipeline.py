@@ -3444,10 +3444,16 @@ def build_light_workflow() -> WorkflowDefinition:
 
 
 def build_standard_workflow() -> WorkflowDefinition:
-    """Standard 5-phase workflow with fact extraction and quality-gated counter-arguments."""
+    """Standard workflow with fact extraction, fallacy detection, and quality-gated counter-arguments."""
     return (
         WorkflowBuilder("standard_analysis")
         .add_phase("extract", capability="fact_extraction")
+        .add_phase(
+            "neural_fallacy",
+            capability="neural_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
