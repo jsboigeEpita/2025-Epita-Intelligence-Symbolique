@@ -32,6 +32,108 @@ from .agents import (
 from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
 
 
+import logging
+
+_factory_logger = logging.getLogger("AgentFactory")
+
+# ---------------------------------------------------------------------------
+# Plugin-per-agent mapping (#221, Epic #208-E)
+#
+# Each agent speciality gets ONLY its relevant plugins + StateManager
+# (the shared communication medium). This prevents agents from having
+# access to tools outside their expertise, improving tool-call accuracy.
+# ---------------------------------------------------------------------------
+
+AGENT_PLUGIN_MAP = {
+    "project_manager": [],  # PM only gets StateManager
+    "informal_fallacy": ["french_fallacy"],
+    "extract": [],  # Extractor uses StateManager only
+    "formal_logic": ["tweety_logic"],
+    "quality": ["quality_scoring"],
+    "debate": [],  # Debate agent has its own internal plugin
+    "counter_argument": [],  # Counter-arg agent has its own internal plugin
+    "governance": ["governance"],
+    "sherlock": [],  # Sherlock uses its own investigation tools
+    "watson": ["tweety_logic"],
+}
+
+# Registry of plugin name → (module_path, class_name) for lazy loading
+_PLUGIN_REGISTRY = {
+    "french_fallacy": (
+        "argumentation_analysis.plugins.french_fallacy_plugin",
+        "FrenchFallacyPlugin",
+    ),
+    "tweety_logic": (
+        "argumentation_analysis.plugins.tweety_logic_plugin",
+        "TweetyLogicPlugin",
+    ),
+    "quality_scoring": (
+        "argumentation_analysis.plugins.quality_scoring_plugin",
+        "QualityScoringPlugin",
+    ),
+    "governance": (
+        "argumentation_analysis.plugins.governance_plugin",
+        "GovernancePlugin",
+    ),
+    "state_manager": (
+        "argumentation_analysis.core.state_manager_plugin",
+        "StateManagerPlugin",
+    ),
+}
+
+
+def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) -> list:
+    """Load only the plugins relevant to an agent's speciality onto its kernel.
+
+    Always loads StateManagerPlugin (if state is provided) as the shared
+    communication medium.  Then loads speciality-specific plugins from
+    AGENT_PLUGIN_MAP.
+
+    Args:
+        kernel: The Semantic Kernel instance.
+        agent_speciality: Key into AGENT_PLUGIN_MAP.
+        state: Optional RhetoricalAnalysisState for StateManagerPlugin.
+
+    Returns:
+        List of loaded plugin names.
+    """
+    loaded = []
+
+    # Always load StateManager if state is available
+    if state is not None:
+        try:
+            mod = importlib.import_module(
+                "argumentation_analysis.core.state_manager_plugin"
+            )
+            plugin_cls = getattr(mod, "StateManagerPlugin")
+            kernel.add_plugin(plugin_cls(state=state), plugin_name="state_manager")
+            loaded.append("state_manager")
+        except Exception as e:
+            _factory_logger.debug("StateManagerPlugin not loaded: %s", e)
+
+    # Load speciality plugins
+    plugin_names = AGENT_PLUGIN_MAP.get(agent_speciality, [])
+    for plugin_name in plugin_names:
+        entry = _PLUGIN_REGISTRY.get(plugin_name)
+        if entry is None:
+            _factory_logger.warning("Unknown plugin '%s' in registry", plugin_name)
+            continue
+        module_path, class_name = entry
+        try:
+            mod = importlib.import_module(module_path)
+            plugin_cls = getattr(mod, class_name)
+            instance = plugin_cls()
+            kernel.add_plugin(instance, plugin_name=plugin_name)
+            loaded.append(plugin_name)
+        except Exception as e:
+            _factory_logger.debug(
+                "Plugin '%s' not loaded for '%s': %s", plugin_name, agent_speciality, e
+            )
+
+    _factory_logger.info("Plugins for '%s': %s", agent_speciality, loaded or ["(none)"])
+    return loaded
+
+
 class AgentFactory:
     """
     Usine pour la création et la configuration centralisée des agents.
