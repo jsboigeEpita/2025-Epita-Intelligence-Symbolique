@@ -102,7 +102,11 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
             aggregate_score = (
                 sum(all_overalls) / len(all_overalls) if all_overalls else 0
             )
-            return {
+
+            # LLM enrichment pass (#208-F): deeper qualitative analysis
+            llm_enrichment = await _llm_enrich_quality(results, raw_args)
+
+            output = {
                 "per_argument_scores": results,
                 "aggregate_score": round(aggregate_score, 2),
                 "arguments_evaluated": len(results),
@@ -110,6 +114,9 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
             }
+            if llm_enrichment:
+                output["llm_enrichment"] = llm_enrichment
+            return output
         # Fallback if no results
         return await asyncio.to_thread(evaluator.evaluate, input_text)
     else:
@@ -131,6 +138,97 @@ def _aggregate_virtue_scores(per_arg_results: Dict) -> Dict[str, float]:
     return {
         v: round(sum(vals) / len(vals), 2) for v, vals in all_virtues.items() if vals
     }
+
+
+async def _llm_enrich_quality(
+    heuristic_results: Dict[str, Any],
+    raw_args: List,
+) -> Optional[Dict[str, Any]]:
+    """LLM enrichment pass for quality evaluation (#208-F).
+
+    Sends heuristic scores + argument text to LLM for deeper analysis:
+    implicit assumptions, reasoning strength, evidence quality.
+    The LLM enriches — it does NOT replace heuristic scores.
+
+    Returns None if LLM is unavailable or fails.
+    """
+    import os
+
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(override=False)
+    except ImportError:
+        pass
+
+    try:
+        from openai import AsyncOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            return None
+
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+        # Build summary of heuristic scores for LLM context
+        score_summary = []
+        for arg_id, scores in list(heuristic_results.items())[:4]:
+            if not isinstance(scores, dict):
+                continue
+            virtues = scores.get("scores_par_vertu", {})
+            note = scores.get("note_finale", 0)
+            # Find the corresponding argument text
+            idx = int(arg_id.split("_")[-1]) - 1 if "_" in arg_id else 0
+            arg_text = ""
+            if idx < len(raw_args):
+                a = raw_args[idx]
+                arg_text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+            weakest = min(virtues, key=virtues.get) if virtues else "unknown"
+            score_summary.append(
+                f"[{arg_id}] score={note:.1f}/9, weakest={weakest}\n"
+                f"  Text: {arg_text[:120]}"
+            )
+
+        if not score_summary:
+            return None
+
+        response = await client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an argument quality expert. Given heuristic quality scores "
+                        "for arguments, provide deeper qualitative analysis. For each argument:\n"
+                        "1. Identify implicit assumptions\n"
+                        "2. Assess reasoning strength (beyond what regex can detect)\n"
+                        "3. Evaluate evidence quality\n"
+                        "4. Suggest how the weakest virtue could be improved\n\n"
+                        "Respond with ONLY a JSON object:\n"
+                        '{"enrichments": [{"arg_id": "arg_1", '
+                        '"implicit_assumptions": ["..."], '
+                        '"reasoning_assessment": "strong/moderate/weak", '
+                        '"evidence_quality": "strong/moderate/weak/none", '
+                        '"improvement_suggestion": "..."}]}'
+                    ),
+                },
+                {"role": "user", "content": "\n\n".join(score_summary)},
+            ],
+        )
+        raw = response.choices[0].message.content or ""
+        text_content = raw.strip()
+        if "```json" in text_content:
+            text_content = text_content.split("```json")[1].split("```")[0]
+        elif "```" in text_content:
+            text_content = text_content.split("```")[1].split("```")[0]
+        start = text_content.find("{")
+        end = text_content.rfind("}") + 1
+        if start >= 0 and end > start:
+            return json.loads(text_content[start:end])
+    except Exception as e:
+        logger.debug(f"LLM quality enrichment skipped: {e}")
+    return None
 
 
 async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> Dict:
