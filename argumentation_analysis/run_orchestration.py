@@ -153,7 +153,9 @@ async def run_modern_analysis(
     print(f"\n{'='*60}")
     print(f" Résultats — Workflow: {results.get('workflow_name', workflow_name)}")
     print(f"{'='*60}")
-    print(f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}")
+    print(
+        f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}"
+    )
     print(f"  Phases échouées   : {summary.get('failed', 0)}")
     print(f"  Phases sautées    : {summary.get('skipped', 0)}")
 
@@ -174,11 +176,11 @@ async def run_modern_analysis(
     state_snapshot = results.get("state_snapshot")
     if state_snapshot:
         non_empty = sum(
-            1
-            for v in state_snapshot.values()
-            if v and v not in ([], {}, "", None, 0)
+            1 for v in state_snapshot.values() if v and v not in ([], {}, "", None, 0)
         )
-        print(f"\n  État unifié : {non_empty} champs non-vides sur {len(state_snapshot)}")
+        print(
+            f"\n  État unifié : {non_empty} champs non-vides sur {len(state_snapshot)}"
+        )
 
     print(f"{'='*60}\n")
 
@@ -232,6 +234,7 @@ Exemples:
   %(prog)s --file texte.txt                    # Workflow standard (défaut)
   %(prog)s --text "Mon argument" --workflow light  # Workflow light
   %(prog)s --file texte.txt --workflow collaborative  # Débat multi-agents
+  %(prog)s --file texte.txt --mode conversational  # Multi-agent dialogue (SK)
   %(prog)s --list-workflows                    # Lister les workflows
   %(prog)s --file texte.txt --output results.json  # Sauvegarder résultats
   %(prog)s --file texte.txt --legacy           # Mode legacy (AnalysisRunner)
@@ -271,6 +274,21 @@ Exemples:
         "-o",
         type=str,
         help="Chemin pour sauvegarder les résultats en JSON",
+    )
+
+    # Mode conversationnel (multi-agent dialogue avec SK AgentGroupChat)
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["pipeline", "conversational"],
+        default="pipeline",
+        help="Mode d'orchestration: pipeline (défaut) ou conversational (multi-agent dialogue)",
+    )
+    parser.add_argument(
+        "--max-rounds",
+        type=int,
+        default=3,
+        help="Nombre max de tours de conversation par phase (mode conversational, défaut: 3)",
     )
 
     # Options générales
@@ -356,6 +374,32 @@ Exemples:
     # Exécution de l'analyse
     if args.legacy:
         await run_legacy_analysis(text_content, llm_service)
+    elif args.mode == "conversational":
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+
+        logging.info(
+            "Mode conversationnel — multi-agent dialogue avec SK AgentGroupChat"
+        )
+        result = await run_conversational_analysis(
+            text_content, max_rounds=args.max_rounds
+        )
+        logging.info(
+            "Résultat: status=%s, phases=%d/%d, durée=%.1fs",
+            result.get("status"),
+            result.get("completed_phases", 0),
+            result.get("total_phases", 0),
+            result.get("duration_seconds", 0),
+        )
+        if args.output:
+            import json as json_mod
+
+            Path(args.output).write_text(
+                json_mod.dumps(result, indent=2, default=str, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            logging.info("Résultats sauvegardés dans %s", args.output)
     else:
         await run_modern_analysis(
             text_content,
