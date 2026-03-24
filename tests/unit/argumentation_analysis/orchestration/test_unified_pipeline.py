@@ -278,14 +278,14 @@ class TestPrebuiltWorkflows:
         assert "counter_argument_generation" in caps
 
     def test_build_standard_workflow(self):
-        """Standard workflow has 6 phases with fact extraction and dependencies."""
+        """Standard workflow has 8 phases (incl. optional CamemBERT + hierarchical fallacy)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
         )
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        assert len(wf.phases) == 6
+        assert len(wf.phases) == 8
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on
