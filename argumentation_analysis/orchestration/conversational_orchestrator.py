@@ -35,6 +35,9 @@ from semantic_kernel.contents.chat_history import ChatHistory
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
+from argumentation_analysis.orchestration.trace_analyzer import (
+    ConversationalTraceAnalyzer,
+)
 
 logger = logging.getLogger("ConversationalOrchestrator")
 
@@ -305,7 +308,11 @@ async def run_conversational_analysis(
     )
     agent_by_name = {a.name: a for a in all_agents}
 
-    # 4. Run 3 macro-phases
+    # 4. Setup trace analyzer (#208-S)
+    trace = ConversationalTraceAnalyzer()
+    trace.start()
+
+    # 5. Run 3 macro-phases
     conversation_log = []
 
     phase_configs = [
@@ -359,6 +366,12 @@ async def run_conversational_analysis(
             f"max {max_turns_per_phase} turns) ==="
         )
 
+        # Trace: capture state before phase
+        try:
+            trace.begin_phase(phase_name, state.get_state_snapshot(summarize=False))
+        except Exception:
+            trace.begin_phase(phase_name)
+
         phase_log = await _run_phase(
             phase_agents,
             phase_cfg["initial_prompt"],
@@ -367,7 +380,21 @@ async def run_conversational_analysis(
         )
         conversation_log.extend(phase_log)
 
-    # 5. Build results
+        # Trace: record turns and capture state after phase
+        for msg in phase_log:
+            trace.record_turn(
+                phase=msg.get("phase", phase_name),
+                turn=msg.get("turn", 0),
+                agent=msg.get("agent", "?"),
+                content=msg.get("content", ""),
+            )
+        try:
+            trace.end_phase(phase_name, state.get_state_snapshot(summarize=False))
+        except Exception:
+            trace.end_phase(phase_name)
+
+    # 6. Stop trace and build results
+    trace.stop()
     duration = time.time() - start_time
 
     try:
@@ -381,6 +408,9 @@ async def run_conversational_analysis(
         if v and v not in ([], {}, "", None, 0)
     )
 
+    # Generate trace report (#208-S)
+    trace_report = trace.generate_report()
+
     result = {
         "mode": "conversational",
         "phases": [p["name"] for p in phase_configs],
@@ -390,6 +420,7 @@ async def run_conversational_analysis(
         "state_snapshot": state_snapshot,
         "state_non_empty_fields": non_empty,
         "unified_state": state,
+        "trace_report": trace_report,
     }
 
     logger.info(
