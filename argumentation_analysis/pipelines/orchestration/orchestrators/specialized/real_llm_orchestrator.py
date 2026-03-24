@@ -1,59 +1,50 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+# Archived: 2026-03-24 — Minimal shim for backward compatibility (#215)
+# Original: 60-line wrapper around RealLLMOrchestrator
+# Full archive: docs/archives/orchestration_legacy/real_llm_orchestrator_wrapper.py
 """
-Specialized Real LLM Orchestrator Core Module.
+Shim module for RealLLMOrchestratorWrapper backward compatibility.
+
+DEPRECATED: Use these alternatives instead:
+- For pipeline orchestration: argumentation_analysis.orchestration.unified_pipeline.UnifiedPipeline
+- For conversational analysis: argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator
 """
-
-import logging
-from typing import Dict, Any, Optional
-import semantic_kernel as sk
-
-logger = logging.getLogger(__name__)
-
-try:
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
-except ImportError as e:
-    logger.warning(f"RealLLMOrchestrator not available: {e}")
-    RealLLMOrchestrator = None
+import warnings
 
 
 class RealLLMOrchestratorWrapper:
-    def __init__(self, kernel: Optional[sk.Kernel] = None):
-        if not RealLLMOrchestrator or not kernel:
-            raise ImportError("RealLLMOrchestrator or SK Kernel is not available.")
-        self.orchestrator = RealLLMOrchestrator(mode="real", llm_service=kernel)
-        self.initialized = False
+    """DEPRECATED: Use UnifiedPipeline or ConversationOrchestrator instead.
+
+    This class was a wrapper around RealLLMOrchestrator which has been archived.
+    See docs/architecture/ORCHESTRATION_MODES.md for migration guidance.
+    """
+
+    def __init__(self, kernel=None):
+        warnings.warn(
+            "RealLLMOrchestratorWrapper is deprecated and will be removed in a future version. "
+            "Use UnifiedPipeline for pipeline orchestration or ConversationOrchestrator "
+            "for conversational multi-agent analysis. "
+            "See docs/architecture/ORCHESTRATION_MODES.md for migration guidance.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     async def initialize(self):
-        """Initializes the underlying orchestrator."""
-        if hasattr(self.orchestrator, "initialize"):
-            await self.orchestrator.initialize()
-        self.initialized = True
-        logger.info("[REAL_LLM] RealLLMOrchestrator initialized.")
+        raise NotImplementedError(
+            "RealLLMOrchestratorWrapper has been archived. Use:\n"
+            "  - UnifiedPipeline.run_unified_analysis() for pipeline orchestration\n"
+            "  - run_conversational_analysis() for multi-agent dialogue\n"
+            "See docs/architecture/ORCHESTRATION_MODES.md for details."
+        )
 
-    async def analyze(
-        self, text: str, context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Runs a comprehensive analysis using the real LLM.
-        """
-        if not self.initialized:
-            await self.initialize()
+    async def analyze(self, text, context=None):
+        raise NotImplementedError(
+            "RealLLMOrchestratorWrapper has been archived. Use:\n"
+            "  - UnifiedPipeline.run_unified_analysis() for pipeline orchestration\n"
+            "  - run_conversational_analysis() for multi-agent dialogue\n"
+            "See docs/architecture/ORCHESTRATION_MODES.md for details."
+        )
 
-        logger.info("[REAL_LLM] Running comprehensive analysis...")
-        if not hasattr(self.orchestrator, "analyze_text_comprehensive"):
-            return {
-                "status": "error",
-                "error": "Method 'analyze_text_comprehensive' not found in orchestrator.",
-            }
 
-        try:
-            return await self.orchestrator.analyze_text_comprehensive(
-                text, context=context
-            )
-        except Exception as e:
-            logger.error(f"Error during Real LLM analysis: {e}", exc_info=True)
-            return {"status": "error", "error": str(e)}
+__all__ = ['RealLLMOrchestratorWrapper']
