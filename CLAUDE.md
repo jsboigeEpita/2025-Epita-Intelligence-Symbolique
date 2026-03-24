@@ -209,14 +209,23 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 **Web UI:**
 - `interface_web/app.py` — **Starlette web app** (formerly Flask). Serves React frontend + analysis API. Uses ServiceManager (not UnifiedPipeline). Launch: `uvicorn interface_web.app:app --port 5003`
 
-**Legacy CLI (use AnalysisRunner, not UnifiedPipeline):**
+**CLI (multi-mode orchestration):**
+- `argumentation_analysis/run_orchestration.py` — CLI runner with `--mode pipeline|conversational|legacy` and `--workflow light|standard|full|collaborative`
 - `argumentation_analysis/main_orchestrator.py` — Interactive orchestrator with Tkinter UI
-- `argumentation_analysis/run_orchestration.py` — CLI runner (--file, --text, or --ui)
 
 **Pedagogical:**
 - `examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py` — Interactive demo for courses/soutenances
 
-See `docs/reports/CARTOGRAPHIE_5_POINTS_ENTREE_PRINCIPAUX.md` for full details, routes, and workflows.
+### Orchestration Modes
+
+The system supports 4 orchestration modes. See `docs/architecture/ORCHESTRATION_MODES.md` for full details.
+
+| Mode | Status | Entry Point | Description |
+|------|--------|-------------|-------------|
+| Sequential (Pipeline) | ACTIVE | `--mode pipeline` (default) | Phases run in DAG order via WorkflowExecutor |
+| Conversational | ACTIVE | `--mode conversational` | Multi-agent dialogue via SK AgentGroupChat |
+| Hierarchical | DORMANT | — | Strategic → Tactical → Operational delegation |
+| Cluedo | ACTIVE | Dedicated scripts | Sherlock-Watson investigation game |
 
 ## CI/CD
 
