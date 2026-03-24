@@ -1,3 +1,17 @@
+# Archived: 2026-03-24 - Superseded by argumentation_analysis/agents/core/abc/agent_bases.py
+# Issue: #213 (consolidate duplicate factories and base_agent files)
+# Features merged: BaseAgent ABC, get_agent_capabilities(), get_plugins()
+#
+# All functionality (and more) exists in:
+#   - argumentation_analysis/agents/core/abc/agent_bases.py (BaseAgent + BaseLogicAgent)
+# Migration:
+#   - Replace base_agent.BaseAgent with agent_bases.BaseAgent
+#   - Add kernel parameter to constructors (required for SK integration)
+#   - Remove get_plugins() calls — use @kernel_function + factory injection instead
+# Incompatibilities:
+#   - Old BaseAgent does NOT inherit ChatCompletionAgent (required for AgentGroupChat)
+#   - Old BaseAgent has no Pydantic V2 support, no Kernel integration
+
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
 
@@ -12,6 +26,8 @@ class BaseAgent(ABC):
     Classe de base abstraite pour tous les agents métier.
     Garantit que les agents implémentent les méthodes nécessaires sans
     dépendre directement de la logique d'exécution de `semantic-kernel`.
+
+    ARCHIVED: Use argumentation_analysis/agents/core/abc/agent_bases.py instead.
     """
 
     def __init__(self, name: str, **kwargs: Any):
