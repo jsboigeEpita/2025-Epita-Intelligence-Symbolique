@@ -3720,10 +3720,27 @@ def build_light_workflow() -> WorkflowDefinition:
 
 
 def build_standard_workflow() -> WorkflowDefinition:
-    """Standard 5-phase workflow with fact extraction and quality-gated counter-arguments."""
+    """Standard workflow with fact extraction, fallacy detection, and quality-gated counter-arguments.
+
+    CamemBERT Tier 2.5 and hierarchical fallacy detection run as optional
+    phases after extraction (#208-J). Downstream phases (quality, counter,
+    JTMS) read fallacy results via context['phase_hierarchical_fallacy_output'].
+    """
     return (
         WorkflowBuilder("standard_analysis")
         .add_phase("extract", capability="fact_extraction")
+        .add_phase(
+            "neural_detect",
+            capability="neural_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "hierarchical_fallacy",
+            capability="hierarchical_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
