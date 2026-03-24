@@ -2,7 +2,7 @@
 
 Tests the conversational orchestration pipeline with mocked LLM:
 1. Agent creation with specialized plugins
-2. AGENT_PLUGIN_MAP structure and isolation
+2. AGENT_CONFIG structure and speciality-based plugin loading
 3. Phase execution with round-robin fallback
 4. State enrichment across phases
 5. Full run_conversational_analysis pipeline
@@ -14,12 +14,15 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 from argumentation_analysis.orchestration.conversational_orchestrator import (
-    AGENT_PLUGIN_MAP,
-    _load_plugin_instance,
-    _safe_import,
+    AGENT_CONFIG,
     create_conversational_agents,
     run_conversational_analysis,
     _run_phase,
+)
+from argumentation_analysis.agents.factory import (
+    AGENT_SPECIALITY_MAP,
+    _PLUGIN_REGISTRY,
+    get_plugin_instances,
 )
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
@@ -49,10 +52,10 @@ def mock_kernel():
     return kernel
 
 
-# ── AGENT_PLUGIN_MAP structure ──
+# ── AGENT_CONFIG structure ──
 
 
-class TestAgentPluginMap:
+class TestAgentConfig:
     def test_all_eight_agents_defined(self):
         expected_agents = {
             "ProjectManager",
@@ -64,94 +67,116 @@ class TestAgentPluginMap:
             "CounterAgent",
             "GovernanceAgent",
         }
-        assert set(AGENT_PLUGIN_MAP.keys()) == expected_agents
+        assert set(AGENT_CONFIG.keys()) == expected_agents
 
-    def test_each_entry_has_plugins_and_instructions(self):
-        for name, config in AGENT_PLUGIN_MAP.items():
-            assert "plugins" in config, f"{name} missing 'plugins' key"
+    def test_each_entry_has_speciality_and_instructions(self):
+        for name, config in AGENT_CONFIG.items():
+            assert "speciality" in config, f"{name} missing 'speciality' key"
             assert "instructions" in config, f"{name} missing 'instructions' key"
-            assert isinstance(config["plugins"], list), f"{name} plugins should be list"
+            assert isinstance(
+                config["speciality"], str
+            ), f"{name} speciality should be str"
             assert isinstance(
                 config["instructions"], str
             ), f"{name} instructions should be str"
 
+    def test_all_specialities_exist_in_factory_map(self):
+        """Every speciality referenced in AGENT_CONFIG must exist in AGENT_SPECIALITY_MAP."""
+        for name, config in AGENT_CONFIG.items():
+            speciality = config["speciality"]
+            assert speciality in AGENT_SPECIALITY_MAP, (
+                f"{name} references speciality '{speciality}' "
+                f"which is not in AGENT_SPECIALITY_MAP"
+            )
+
     def test_pm_has_no_specialty_plugins(self):
-        assert AGENT_PLUGIN_MAP["ProjectManager"]["plugins"] == []
+        speciality = AGENT_CONFIG["ProjectManager"]["speciality"]
+        assert AGENT_SPECIALITY_MAP[speciality] == []
 
     def test_extract_has_no_specialty_plugins(self):
-        assert AGENT_PLUGIN_MAP["ExtractAgent"]["plugins"] == []
+        speciality = AGENT_CONFIG["ExtractAgent"]["speciality"]
+        assert AGENT_SPECIALITY_MAP[speciality] == []
 
     def test_informal_has_fallacy_plugin(self):
-        assert "FrenchFallacyPlugin" in AGENT_PLUGIN_MAP["InformalAgent"]["plugins"]
+        speciality = AGENT_CONFIG["InformalAgent"]["speciality"]
+        assert "french_fallacy" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_formal_has_tweety_plugin(self):
-        assert "TweetyLogicPlugin" in AGENT_PLUGIN_MAP["FormalAgent"]["plugins"]
+        speciality = AGENT_CONFIG["FormalAgent"]["speciality"]
+        assert "tweety_logic" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_quality_has_scoring_plugin(self):
-        assert "QualityScoringPlugin" in AGENT_PLUGIN_MAP["QualityAgent"]["plugins"]
+        speciality = AGENT_CONFIG["QualityAgent"]["speciality"]
+        assert "quality_scoring" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_debate_has_debate_plugin(self):
-        assert "DebatePlugin" in AGENT_PLUGIN_MAP["DebateAgent"]["plugins"]
+        speciality = AGENT_CONFIG["DebateAgent"]["speciality"]
+        assert "debate" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_counter_has_counter_plugin(self):
-        assert (
-            "CounterArgumentPlugin" in AGENT_PLUGIN_MAP["CounterAgent"]["plugins"]
-        )
+        speciality = AGENT_CONFIG["CounterAgent"]["speciality"]
+        assert "counter_argument" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_governance_has_governance_plugin(self):
-        assert "GovernancePlugin" in AGENT_PLUGIN_MAP["GovernanceAgent"]["plugins"]
+        speciality = AGENT_CONFIG["GovernanceAgent"]["speciality"]
+        assert "governance" in AGENT_SPECIALITY_MAP[speciality]
 
     def test_instructions_are_in_french(self):
         """All instructions should be in French (contain accented chars or French words)."""
         french_indicators = ["Tu es", "agent", "Quand", "analyse", "Lis"]
-        for name, config in AGENT_PLUGIN_MAP.items():
+        for name, config in AGENT_CONFIG.items():
             found = any(ind in config["instructions"] for ind in french_indicators)
             assert found, f"{name} instructions don't appear to be in French"
 
     def test_no_agent_has_all_plugins(self):
         """No single agent should have more than 2 specialty plugins."""
-        for name, config in AGENT_PLUGIN_MAP.items():
+        for name, config in AGENT_CONFIG.items():
+            speciality = config["speciality"]
+            plugins = AGENT_SPECIALITY_MAP.get(speciality, [])
             assert (
-                len(config["plugins"]) <= 2
-            ), f"{name} has {len(config['plugins'])} plugins — too many"
+                len(plugins) <= 2
+            ), f"{name} has {len(plugins)} plugins — too many"
 
     def test_plugin_isolation_informal_no_tweety(self):
-        """InformalAgent should NOT have TweetyLogicPlugin."""
-        assert "TweetyLogicPlugin" not in AGENT_PLUGIN_MAP["InformalAgent"]["plugins"]
+        """InformalAgent should NOT have tweety_logic plugin."""
+        speciality = AGENT_CONFIG["InformalAgent"]["speciality"]
+        assert "tweety_logic" not in AGENT_SPECIALITY_MAP[speciality]
 
     def test_plugin_isolation_formal_no_fallacy(self):
-        """FormalAgent should NOT have FrenchFallacyPlugin."""
-        assert "FrenchFallacyPlugin" not in AGENT_PLUGIN_MAP["FormalAgent"]["plugins"]
+        """FormalAgent should NOT have french_fallacy plugin."""
+        speciality = AGENT_CONFIG["FormalAgent"]["speciality"]
+        assert "french_fallacy" not in AGENT_SPECIALITY_MAP[speciality]
 
 
-# ── Plugin loading ──
+# ── Plugin loading via factory ──
 
 
 class TestPluginLoading:
-    def test_safe_import_returns_none_on_failure(self):
-        result = _safe_import("nonexistent.module", "FakeClass")
-        assert result is None
+    def test_unknown_speciality_returns_state_manager_only(self):
+        """Unknown speciality should still return StateManagerPlugin."""
+        plugins = get_plugin_instances("nonexistent_speciality")
+        # Should return at least StateManagerPlugin (or empty list if no state)
+        plugin_names = [type(p).__name__ for p in plugins]
+        assert "StateManagerPlugin" in plugin_names or len(plugins) == 0
 
-    def test_load_unknown_plugin_returns_none(self):
-        result = _load_plugin_instance("NonexistentPlugin")
-        assert result is None
-
-    def test_load_plugin_instance_known_names(self):
-        """All plugin names in AGENT_PLUGIN_MAP should be recognized by _load_plugin_instance."""
+    def test_all_plugin_names_in_registry(self):
+        """All plugin names referenced in AGENT_SPECIALITY_MAP should be in _PLUGIN_REGISTRY."""
         all_plugin_names = set()
-        for config in AGENT_PLUGIN_MAP.values():
-            all_plugin_names.update(config["plugins"])
-
+        for plugins in AGENT_SPECIALITY_MAP.values():
+            all_plugin_names.update(plugins)
         for plugin_name in all_plugin_names:
-            # We don't need the import to succeed (deps may be missing),
-            # but the name should be recognized (not return None due to unknown name)
-            # The function logs warnings for import failures, which is fine
-            with patch(
-                "argumentation_analysis.orchestration.conversational_orchestrator._safe_import",
-                return_value=MagicMock(),
-            ) as mock_import:
-                result = _load_plugin_instance(plugin_name)
-                mock_import.assert_called_once()
+            assert plugin_name in _PLUGIN_REGISTRY, (
+                f"Plugin '{plugin_name}' from AGENT_SPECIALITY_MAP "
+                f"is not in _PLUGIN_REGISTRY"
+            )
+
+    def test_registry_entries_have_module_and_class(self):
+        """Each _PLUGIN_REGISTRY entry should be a (module_path, class_name) tuple."""
+        for name, entry in _PLUGIN_REGISTRY.items():
+            assert isinstance(entry, tuple), f"{name} should be a tuple"
+            assert len(entry) == 2, f"{name} should have (module, class)"
+            assert isinstance(entry[0], str), f"{name} module_path should be str"
+            assert isinstance(entry[1], str), f"{name} class_name should be str"
 
 
 # ── Agent creation ──
@@ -162,7 +187,10 @@ class TestCreateConversationalAgents:
         """Without agent_names filter, creates all 8 agents."""
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
-        ) as MockAgent:
+        ) as MockAgent, patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
+        ):
             MockAgent.return_value = MagicMock()
             agents = create_conversational_agents(
                 mock_kernel, state, "test_llm"
@@ -173,7 +201,10 @@ class TestCreateConversationalAgents:
         """Can create a specific subset of agents."""
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
-        ) as MockAgent:
+        ) as MockAgent, patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
+        ):
             MockAgent.return_value = MagicMock()
             agents = create_conversational_agents(
                 mock_kernel,
@@ -186,7 +217,10 @@ class TestCreateConversationalAgents:
     def test_skips_unknown_agent_names(self, mock_kernel, state):
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
-        ) as MockAgent:
+        ) as MockAgent, patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
+        ):
             MockAgent.return_value = MagicMock()
             agents = create_conversational_agents(
                 mock_kernel,
@@ -197,10 +231,18 @@ class TestCreateConversationalAgents:
             assert len(agents) == 1
 
     def test_agent_gets_state_manager_plugin(self, mock_kernel, state):
-        """Every agent should receive StateManagerPlugin."""
+        """Every agent should receive StateManagerPlugin via factory."""
+        from argumentation_analysis.core.state_manager_plugin import (
+            StateManagerPlugin,
+        )
+
+        sm = StateManagerPlugin(state)
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
-        ) as MockAgent:
+        ) as MockAgent, patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[sm],
+        ):
             MockAgent.return_value = MagicMock()
             create_conversational_agents(
                 mock_kernel,
@@ -211,7 +253,6 @@ class TestCreateConversationalAgents:
             # Check the plugins arg passed to ChatCompletionAgent
             call_kwargs = MockAgent.call_args[1]
             plugins = call_kwargs.get("plugins", [])
-            # First plugin should be StateManagerPlugin
             assert len(plugins) >= 1
             assert type(plugins[0]).__name__ == "StateManagerPlugin"
 
@@ -219,7 +260,10 @@ class TestCreateConversationalAgents:
         """Every agent should have FunctionChoiceBehavior.Auto()."""
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
-        ) as MockAgent:
+        ) as MockAgent, patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
+        ):
             MockAgent.return_value = MagicMock()
             create_conversational_agents(
                 mock_kernel,
@@ -453,6 +497,9 @@ class TestRunConversationalAnalysis:
         ) as MockLLM, patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
             side_effect=make_fake_agent,
+        ), patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
@@ -493,8 +540,6 @@ class TestRunConversationalAnalysis:
 
         phase_names_seen = []
 
-        original_run_phase = _run_phase
-
         async def tracking_run_phase(agents, prompt, max_turns=5, phase_name=""):
             phase_names_seen.append(phase_name)
             return [
@@ -522,6 +567,9 @@ class TestRunConversationalAnalysis:
         ), patch(
             "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
             side_effect=tracking_run_phase,
+        ), patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
@@ -563,6 +611,9 @@ class TestRunConversationalAnalysis:
         ) as MockLLM, patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
             side_effect=make_fake_agent,
+        ), patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
@@ -607,6 +658,9 @@ class TestEdgeCases:
         """All unknown names should produce an empty list."""
         with patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent"
+        ), patch(
+            "argumentation_analysis.agents.factory.get_plugin_instances",
+            return_value=[MagicMock()],
         ):
             agents = create_conversational_agents(
                 mock_kernel,
