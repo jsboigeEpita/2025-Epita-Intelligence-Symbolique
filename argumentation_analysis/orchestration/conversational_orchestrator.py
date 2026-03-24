@@ -52,7 +52,13 @@ AGENT_PLUGIN_MAP = {
             "1. Lis l'etat courant via get_current_state_snapshot()\n"
             "2. Identifie ce qui manque (arguments? sophismes? formalisation? qualite?)\n"
             "3. Designe l'agent suivant via designate_next_agent(nom_exact)\n"
-            "4. Formule une question precise pour cet agent\n"
+            "4. Formule une question precise pour cet agent\n\n"
+            "CROSS-KB ENRICHMENT (#208-I) — tu dois diriger les synergies entre agents :\n"
+            "- Apres InformalAgent : demande a QualityAgent de TENIR COMPTE des sophismes detectes\n"
+            "- Apres QualityAgent : demande a CounterAgent de CIBLER les arguments faibles (score < 5/9)\n"
+            "- Apres FormalAgent : signale aux autres si des INCONSISTANCES logiques ont ete trouvees\n"
+            "- Apres DebateAgent : demande a GovernanceAgent d'evaluer le CONSENSUS du debat\n"
+            "- Si JTMS retracte une croyance, signale-le et demande re-evaluation\n\n"
             "Quand tous les aspects sont couverts, appelle set_final_conclusion() avec ta synthese."
         ),
     },
@@ -75,7 +81,9 @@ AGENT_PLUGIN_MAP = {
             "faux dilemme, pente glissante, ad populum, fausse analogie, tu quoque, etc.)\n"
             "3. Utilise detect_fallacies() pour la detection automatique\n"
             "4. Pour chaque sophisme trouve, appelle add_identified_fallacy(type, justification, target_arg_id)\n"
-            "Sois rigoureux : cite le texte exact et explique pourquoi c'est un sophisme."
+            "Sois rigoureux : cite le texte exact et explique pourquoi c'est un sophisme.\n\n"
+            "CROSS-KB (#208-I) : Si FormalAgent a deja identifie des inconsistances logiques, "
+            "verifie si elles correspondent a des sophismes formels (non sequitur, affirmation du consequent)."
         ),
     },
     "FormalAgent": {
@@ -87,18 +95,24 @@ AGENT_PLUGIN_MAP = {
             "3. Utilise add_belief_set() pour enregistrer la formalisation\n"
             "4. Verifie la consistance et les implications logiques\n"
             "5. Enregistre les resultats via log_query_result()\n"
-            "Si Tweety n'est pas disponible, fais l'analyse logique manuellement."
+            "Si Tweety n'est pas disponible, fais l'analyse logique manuellement.\n\n"
+            "CROSS-KB (#208-I) : Lis les sophismes detectes par InformalAgent — si un argument "
+            "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee). "
+            "Si NL-to-logic est disponible, utilise-le pour traduire les arguments."
         ),
     },
     "QualityAgent": {
         "plugins": ["QualityScoringPlugin"],
         "instructions": (
             "Tu es l'agent d'evaluation de qualite. Quand le PM te donne la parole :\n"
-            "1. Lis les arguments et sophismes identifies dans l'etat\n"
+            "1. Lis les arguments ET les sophismes identifies dans l'etat\n"
             "2. Evalue chaque argument sur les 9 vertus (clarte, pertinence, sources, "
             "refutation, structure logique, analogie, fiabilite, exhaustivite, redondance)\n"
-            "3. Utilise evaluate_argument_quality() pour le scoring\n"
-            "4. Tiens compte des sophismes detectes : un argument fallacieux a une qualite reduite\n"
+            "3. Utilise evaluate_argument_quality() pour le scoring\n\n"
+            "CROSS-KB (#208-I) — ajustements bases sur les autres agents :\n"
+            "- Sophismes detectes → REDUIS le score de 'structure logique' et 'fiabilite'\n"
+            "- Inconsistances formelles → REDUIS le score de 'coherence'\n"
+            "- Argument sans sources citees → REDUIS 'sources' et 'exhaustivite'\n"
             "Fournis un rapport detaille avec scores et justifications."
         ),
     },
@@ -109,7 +123,10 @@ AGENT_PLUGIN_MAP = {
             "1. Lis les arguments, sophismes et scores de qualite dans l'etat\n"
             "2. Mene un debat contradictoire : identifie l'argument le plus fort et le plus faible\n"
             "3. Utilise analyze_argument_quality() et suggest_debate_strategy()\n"
-            "4. Produis un transcript avec les echanges cles\n"
+            "4. Produis un transcript avec les echanges cles\n\n"
+            "CROSS-KB (#208-I) : Utilise les scores de qualite pour calibrer l'intensite du debat. "
+            "Les arguments faibles (score < 5) meritent un challenge fort. "
+            "Les sophismes detectes sont des cibles prioritaires. "
             "Sois critique et constructif."
         ),
     },
@@ -117,10 +134,18 @@ AGENT_PLUGIN_MAP = {
         "plugins": ["CounterArgumentPlugin"],
         "instructions": (
             "Tu es l'agent de contre-argumentation. Quand le PM te donne la parole :\n"
-            "1. Lis les arguments et sophismes dans l'etat\n"
-            "2. Cible les arguments les plus faibles ou les plus fallacieux\n"
+            "1. Lis les arguments, sophismes ET scores de qualite dans l'etat\n"
+            "2. CIBLE en priorite :\n"
+            "   a. Les arguments marques comme fallacieux par InformalAgent\n"
+            "   b. Les arguments avec le score de qualite le plus bas\n"
+            "   c. Les arguments formellement inconsistants (si FormalAgent l'a signale)\n"
             "3. Utilise parse_argument() et suggest_strategy() pour choisir ta strategie\n"
-            "4. Genere des contre-arguments precis (reductio, contre-exemple, distinction, reformulation)\n"
+            "4. Genere des contre-arguments precis (reductio, contre-exemple, distinction, reformulation)\n\n"
+            "CROSS-KB (#208-I) : Adapte ta strategie au type de faiblesse :\n"
+            "- Sophisme ad hominem → reformulation\n"
+            "- Generalisation hative → contre-exemple\n"
+            "- Faux dilemme → distinction\n"
+            "- Inconsistance logique → reductio ad absurdum\n"
             "Fournis des contre-arguments substantiels, pas des templates."
         ),
     },
@@ -128,10 +153,15 @@ AGENT_PLUGIN_MAP = {
         "plugins": ["GovernancePlugin"],
         "instructions": (
             "Tu es l'agent de gouvernance et vote. Quand le PM te donne la parole :\n"
-            "1. Lis les resultats du debat et les contre-arguments dans l'etat\n"
+            "1. Lis les resultats du debat, contre-arguments et scores de qualite dans l'etat\n"
             "2. Evalue le consensus entre les differentes positions\n"
             "3. Utilise detect_conflicts() et compute_consensus_metrics()\n"
-            "4. Si necessaire, lance un vote via social_choice_vote()\n"
+            "4. Si necessaire, lance un vote via social_choice_vote()\n\n"
+            "CROSS-KB (#208-I) : Base ton evaluation de consensus sur :\n"
+            "- Nombre de sophismes detectes (beaucoup = debat de mauvaise qualite)\n"
+            "- Scores de qualite moyens (< 5 = consensus fragile)\n"
+            "- Resultats du debat adversarial (positions convergentes/divergentes)\n"
+            "- Force des contre-arguments (forts = positions contestees)\n"
             "Fournis une evaluation de la solidite du consensus."
         ),
     },
@@ -291,18 +321,24 @@ async def run_conversational_analysis(
             "name": "Formal Analysis & Quality",
             "agents": ["ProjectManager", "FormalAgent", "QualityAgent"],
             "initial_prompt": (
-                "Continuez l'analyse. Formalisez les arguments en logique, "
-                "evaluez la qualite de chaque argument en tenant compte des "
-                "sophismes deja detectes."
+                "Continuez l'analyse en tenant compte des resultats de Phase 1.\n"
+                "CROSS-KB: Les sophismes detectes doivent influencer :\n"
+                "- FormalAgent : premisses contestees dans la formalisation\n"
+                "- QualityAgent : scores reduits pour les arguments fallacieux\n"
+                "Formalisez les arguments en logique et evaluez la qualite."
             ),
         },
         {
             "name": "Synthesis & Debate",
             "agents": ["ProjectManager", "DebateAgent", "CounterAgent", "GovernanceAgent"],
             "initial_prompt": (
-                "Finalisez l'analyse. Menez un debat adversarial, generez des "
-                "contre-arguments cibles, evaluez le consensus, et produisez "
-                "une conclusion finale."
+                "Finalisez l'analyse en exploitant TOUTES les contributions precedentes.\n"
+                "CROSS-KB: Utilisez les resultats des phases 1 et 2 :\n"
+                "- DebateAgent : ciblez les arguments avec les scores les plus bas\n"
+                "- CounterAgent : ciblez en priorite les arguments fallacieux\n"
+                "- GovernanceAgent : evaluez le consensus en tenant compte de la qualite globale\n"
+                "Menez un debat adversarial, generez des contre-arguments, evaluez le consensus, "
+                "et produisez une conclusion finale."
             ),
         },
     ]
