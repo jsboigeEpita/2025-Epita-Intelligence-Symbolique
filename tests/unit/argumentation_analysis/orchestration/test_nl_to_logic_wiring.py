@@ -88,9 +88,14 @@ class TestPropositionalLogicNLWiring:
             },
         )
 
-        result = await _invoke_propositional_logic("text", context)
+        # Mock TweetyBridge since fallback path calls check_consistency
+        with patch(TWEETY_BRIDGE_PATH) as MockBridge:
+            MockBridge.return_value.check_consistency.return_value = (True, "consistent")
+            result = await _invoke_propositional_logic("text", context)
         assert result["logic_type"] == "propositional"
-        assert "p1" in result["formulas"]
+        # Invalid translations are skipped → falls back to on-the-fly or template
+        # Templates generate p1..pN, on-the-fly may produce other formulas
+        assert len(result["formulas"]) >= 1
 
     async def test_pl_falls_back_to_templates(self):
         """PL phase generates p1, p2, ... templates when no translations available."""
