@@ -245,8 +245,14 @@ class GroupChatTurnStrategy(TurnStrategy):
     """
     Execute an AgentGroupChat round as one conversational turn.
 
-    Wraps SK-compatible AgentGroupChat with SelectionStrategy and
-    TerminationStrategy from orchestration/base.py.
+    Uses the **native SK AgentGroupChat** (async generator API) when
+    available, falling back to the sequential compatibility shim in
+    ``cluedo_extended_orchestrator`` only when the SK import fails.
+
+    Accepts SelectionStrategy / TerminationStrategy from either
+    ``orchestration/base.py`` (project-local) or ``semantic_kernel``
+    directly.  Project-local strategies are wrapped automatically via
+    ``_wrap_selection_strategy`` / ``_wrap_termination_strategy``.
     """
 
     def __init__(
@@ -254,10 +260,88 @@ class GroupChatTurnStrategy(TurnStrategy):
         agents: List[Any],
         selection_strategy: Optional[Any] = None,
         termination_strategy: Optional[Any] = None,
+        maximum_iterations: int = 25,
     ):
         self._agents = agents
         self._selection = selection_strategy
         self._termination = termination_strategy
+        self._maximum_iterations = maximum_iterations
+
+    # ------------------------------------------------------------------
+    # Strategy adapters: project base.py → SK native
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _wrap_selection_strategy(strategy: Any) -> Any:
+        """Wrap a base.py SelectionStrategy as an SK-native one if needed."""
+        if strategy is None:
+            return None
+        try:
+            from semantic_kernel.agents.strategies.selection.selection_strategy import (
+                SelectionStrategy as SKSelectionStrategy,
+            )
+
+            if isinstance(strategy, SKSelectionStrategy):
+                return strategy
+        except ImportError:
+            return strategy
+
+        # Build an SK-compatible adapter
+        try:
+            from semantic_kernel.agents.strategies.selection.selection_strategy import (
+                SelectionStrategy as SKSelectionStrategy,
+            )
+
+            class _Adapter(SKSelectionStrategy):
+                _inner: Any
+
+                def __init__(self, inner: Any, **kwargs: Any):
+                    super().__init__(**kwargs)
+                    object.__setattr__(self, "_inner", inner)
+
+                async def next(self, agents: list, history: list) -> Any:
+                    return await self._inner.next(agents, history)
+
+            return _Adapter(inner=strategy)
+        except Exception:
+            return strategy
+
+    def _wrap_termination_strategy(self, strategy: Any) -> Any:
+        """Wrap a base.py TerminationStrategy as an SK-native one if needed."""
+        if strategy is None:
+            return None
+        try:
+            from semantic_kernel.agents.strategies.termination.termination_strategy import (
+                TerminationStrategy as SKTerminationStrategy,
+            )
+
+            if isinstance(strategy, SKTerminationStrategy):
+                return strategy
+        except ImportError:
+            return strategy
+
+        try:
+            from semantic_kernel.agents.strategies.termination.termination_strategy import (
+                TerminationStrategy as SKTerminationStrategy,
+            )
+
+            class _Adapter(SKTerminationStrategy):
+                _inner: Any
+
+                def __init__(self, inner: Any, **kwargs: Any):
+                    super().__init__(**kwargs)
+                    object.__setattr__(self, "_inner", inner)
+
+                async def should_terminate(self, agent: Any, history: list) -> bool:
+                    return await self._inner.should_terminate(agent, history)
+
+            return _Adapter(inner=strategy, maximum_iterations=self._maximum_iterations)
+        except Exception:
+            return strategy
+
+    # ------------------------------------------------------------------
+    # Core execution
+    # ------------------------------------------------------------------
 
     async def execute_turn(
         self,
@@ -268,12 +352,11 @@ class GroupChatTurnStrategy(TurnStrategy):
         """Run AgentGroupChat and convert messages to TurnResult."""
         start = time.time()
 
-        # Import AgentGroupChat (fallback implementation)
-        try:
-            from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
-                AgentGroupChat,
-            )
-        except ImportError:
+        messages = await self._run_sk_native(input_data, context)
+        if messages is None:
+            messages = await self._run_fallback(input_data)
+
+        if messages is None:
             logger.warning("AgentGroupChat not available — returning empty turn")
             return TurnResult(
                 turn_number=context.get("turn_number", 1),
@@ -283,19 +366,8 @@ class GroupChatTurnStrategy(TurnStrategy):
                 duration_seconds=time.time() - start,
             )
 
-        chat = AgentGroupChat(
-            agents=self._agents,
-            selection_strategy=self._selection,
-            termination_strategy=self._termination,
-        )
-
-        # Run the group chat
-        raw_results = await chat.invoke(str(input_data) if input_data else None)
-
         duration = time.time() - start
-
-        # Convert agent messages to PhaseResult dict
-        phase_results = self._messages_to_phase_results(raw_results)
+        phase_results = self._messages_to_phase_results(messages)
         confidence = _extract_confidence(phase_results)
         questions = _extract_questions(phase_results)
 
@@ -307,6 +379,75 @@ class GroupChatTurnStrategy(TurnStrategy):
             questions_for_user=questions,
             duration_seconds=duration,
         )
+
+    async def _run_sk_native(
+        self, input_data: Any, context: Dict[str, Any]
+    ) -> Optional[List[Any]]:
+        """Try running with the real SK AgentGroupChat (async generator)."""
+        try:
+            from semantic_kernel.agents.group_chat.agent_group_chat import (
+                AgentGroupChat,
+            )
+            from semantic_kernel.contents.chat_message_content import (
+                ChatMessageContent,
+            )
+            from semantic_kernel.contents.utils.author_role import AuthorRole
+        except ImportError:
+            return None
+
+        try:
+            selection = self._wrap_selection_strategy(self._selection)
+            termination = self._wrap_termination_strategy(self._termination)
+
+            kwargs: Dict[str, Any] = {"agents": list(self._agents)}
+            if selection is not None:
+                kwargs["selection_strategy"] = selection
+            if termination is not None:
+                kwargs["termination_strategy"] = termination
+
+            chat = AgentGroupChat(**kwargs)
+
+            # Seed the chat history with the user input so agents have
+            # something to respond to.
+            if input_data is not None:
+                await chat.add_chat_message(
+                    ChatMessageContent(
+                        role=AuthorRole.USER,
+                        content=str(input_data),
+                    )
+                )
+
+            # Collect messages from the async generator
+            collected: List[ChatMessageContent] = []
+            async for msg in chat.invoke():
+                collected.append(msg)
+
+            logger.info(
+                "SK AgentGroupChat produced %d messages from %d agents",
+                len(collected),
+                len(self._agents),
+            )
+            return collected
+
+        except Exception as exc:
+            logger.warning("SK native AgentGroupChat failed (%s), falling back", exc)
+            return None
+
+    async def _run_fallback(self, input_data: Any) -> Optional[List[Any]]:
+        """Fallback to the compatibility shim in cluedo_extended_orchestrator."""
+        try:
+            from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+                AgentGroupChat as FallbackGroupChat,
+            )
+        except ImportError:
+            return None
+
+        chat = FallbackGroupChat(
+            agents=self._agents,
+            selection_strategy=self._selection,
+            termination_strategy=self._termination,
+        )
+        return await chat.invoke(str(input_data) if input_data else None)
 
     def _messages_to_phase_results(self, messages: Any) -> Dict[str, PhaseResult]:
         """Convert AgentGroupChat messages to PhaseResult dict."""
