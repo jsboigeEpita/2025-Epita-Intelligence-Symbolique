@@ -59,17 +59,13 @@ def test_agent_performance(agent_factory, agent_type, test_case):
     """
     Parametrized test to run each agent against each test case.
     """
-    # Known broken agent types: METHODICAL_AUDITOR and PARALLEL_EXPLORER have
-    # GuidingPlugin.__init__() missing 'kernel' arg (plugin loaded via from_directory),
     # INFORMAL_FALLACY uses model_id="test_model" which doesn't exist at OpenAI.
     _broken_types = {
-        AgentType.METHODICAL_AUDITOR,
-        AgentType.PARALLEL_EXPLORER,
         AgentType.INFORMAL_FALLACY,
     }
     if agent_type in _broken_types:
         pytest.xfail(
-            f"{agent_type.name}: plugin loading TypeError or invalid model_id in test environment"
+            f"{agent_type.name}: invalid model_id in test environment"
         )
 
     # Arrange
@@ -85,14 +81,6 @@ def test_agent_performance(agent_factory, agent_type, test_case):
     assert result is not None, "Agent returned a null result."
     assert "summary" in result, "Response is missing 'summary' key."
     assert "findings" in result, "Response is missing 'findings' key."
-
-    # For the placeholder agent, we don't need to check further
-    if agent_type == AgentType.RESEARCH_ASSISTANT:
-        assert (
-            result["summary"]
-            == "This agent is a placeholder and is not yet implemented."
-        )
-        return
 
     # 2. Check if findings are plausible
     if not expected_fallacies:

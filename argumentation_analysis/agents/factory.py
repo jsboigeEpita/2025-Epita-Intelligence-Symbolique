@@ -24,13 +24,10 @@ from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
     WatsonLogicAssistant,
 )
 
-# L'Enum AgentType et les classes d'agents de base sont nécessaires pour les signatures
+# L'Enum AgentType et la classe de base sont nécessaires pour les signatures
 from .agents import (
     AgentType,
     FallacyAgentBase,
-    MethodicalAuditorAgent,
-    ParallelExplorerAgent,
-    ResearchAssistantAgent,
 )
 from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
 
@@ -78,9 +75,6 @@ class AgentFactory:
         from .sherlock_jtms_agent import SherlockJTMSAgent
 
         agent_map = {
-            AgentType.METHODICAL_AUDITOR: MethodicalAuditorAgent,
-            AgentType.PARALLEL_EXPLORER: ParallelExplorerAgent,
-            AgentType.RESEARCH_ASSISTANT: ResearchAssistantAgent,
             AgentType.SHERLOCK_JTMS: SherlockJTMSAgent,
         }
         agent_class = agent_map.get(agent_type)

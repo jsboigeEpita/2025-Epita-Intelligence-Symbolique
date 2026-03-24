@@ -86,39 +86,6 @@ class TestCreateAgentDispatch:
         )
         assert result is mock_agent
 
-    @patch("argumentation_analysis.agents.factory.MethodicalAuditorAgent")
-    def test_dispatch_methodical_auditor(self, MockAgent, factory):
-        mock_agent = MagicMock()
-        MockAgent.return_value = mock_agent
-
-        result = factory.create_agent(AgentType.METHODICAL_AUDITOR)
-        MockAgent.assert_called_once_with(
-            kernel=factory.kernel, llm_service_id="test-service"
-        )
-        assert result is mock_agent
-
-    @patch("argumentation_analysis.agents.factory.ParallelExplorerAgent")
-    def test_dispatch_parallel_explorer(self, MockAgent, factory):
-        mock_agent = MagicMock()
-        MockAgent.return_value = mock_agent
-
-        result = factory.create_agent(AgentType.PARALLEL_EXPLORER)
-        MockAgent.assert_called_once_with(
-            kernel=factory.kernel, llm_service_id="test-service"
-        )
-        assert result is mock_agent
-
-    @patch("argumentation_analysis.agents.factory.ResearchAssistantAgent")
-    def test_dispatch_research_assistant(self, MockAgent, factory):
-        mock_agent = MagicMock()
-        MockAgent.return_value = mock_agent
-
-        result = factory.create_agent(AgentType.RESEARCH_ASSISTANT)
-        MockAgent.assert_called_once_with(
-            kernel=factory.kernel, llm_service_id="test-service"
-        )
-        assert result is mock_agent
-
     def test_dispatch_unknown_type_raises(self, factory):
         """Unknown AgentType raises ValueError."""
         # Use a mock enum value that's not in the agent_map
@@ -127,14 +94,6 @@ class TestCreateAgentDispatch:
         # Since it won't match INFORMAL_FALLACY or any key, it should raise
         with pytest.raises(ValueError, match="Unknown agent type"):
             factory.create_agent(fake_type)
-
-    @patch("argumentation_analysis.agents.factory.MethodicalAuditorAgent")
-    def test_dispatch_passes_custom_llm_service_id(self, MockAgent, factory):
-        """If llm_service_id is in kwargs, it overrides the factory default."""
-        factory.create_agent(AgentType.METHODICAL_AUDITOR, llm_service_id="custom-svc")
-        MockAgent.assert_called_once_with(
-            kernel=factory.kernel, llm_service_id="custom-svc"
-        )
 
 
 # ===========================================================================
