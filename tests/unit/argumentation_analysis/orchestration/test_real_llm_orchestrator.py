@@ -10,6 +10,13 @@ Couvre:
 - Error handling and edge cases
 
 Issue: #36 (test coverage)
+
+DEPRECATION NOTICE (#215):
+RealLLMOrchestrator has been archived. Tests that test the orchestrator
+behavior are skipped. Use tests for UnifiedPipeline or ConversationOrchestrator
+instead.
+
+Only dataclass tests (TestLLMAnalysisRequest, TestLLMAnalysisResult) remain active.
 """
 
 import pytest
@@ -155,9 +162,11 @@ class TestLLMAnalysisResult:
 
 # ============================================================================
 # RealLLMOrchestrator construction
+# DEPRECATED (#215): Skip all orchestrator tests - class archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestRealLLMOrchestratorInit:
     """Tests for RealLLMOrchestrator initialization."""
 
@@ -205,9 +214,11 @@ class TestRealLLMOrchestratorInit:
 
 # ============================================================================
 # Metrics and cache management
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestMetricsAndCache:
     """Tests for metrics tracking and cache operations."""
 
@@ -285,9 +296,11 @@ class TestMetricsAndCache:
 
 # ============================================================================
 # Initialize
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestInitialize:
     """Tests for the initialize() async method."""
 
@@ -324,9 +337,11 @@ class TestInitialize:
 
 # ============================================================================
 # Basic analyzer factories
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestBasicAnalyzerFactories:
     """Tests for the _create_basic_*_analyzer factory methods."""
 
@@ -377,9 +392,11 @@ class TestBasicAnalyzerFactories:
 
 # ============================================================================
 # analyze_text dispatch
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestAnalyzeText:
     """Tests for analyze_text() with various analysis types."""
 
@@ -532,9 +549,11 @@ class TestAnalyzeText:
 
 # ============================================================================
 # Caching behavior
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestCachingBehavior:
     """Tests for cache integration in analyze_text."""
 
@@ -598,9 +617,11 @@ class TestCachingBehavior:
 
 # ============================================================================
 # batch_analyze
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestBatchAnalyze:
     """Tests for batch_analyze() method."""
 
@@ -641,9 +662,11 @@ class TestBatchAnalyze:
 
 # ============================================================================
 # orchestrate_analysis
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestOrchestrateAnalysis:
     """Tests for orchestrate_analysis() high-level method."""
 
@@ -675,9 +698,11 @@ class TestOrchestrateAnalysis:
 
 # ============================================================================
 # Error handling
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestErrorHandling:
     """Tests for error handling in analyze_text."""
 
@@ -717,9 +742,11 @@ class TestErrorHandling:
 
 # ============================================================================
 # _analyze_logical (requires kernel)
+# DEPRECATED (#215): Skip - RealLLMOrchestrator archived
 # ============================================================================
 
 
+@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
 class TestLogicalAnalysis:
     """Tests for _analyze_logical which requires PropositionalLogicAgent."""
 
