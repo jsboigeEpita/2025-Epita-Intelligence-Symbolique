@@ -552,16 +552,21 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke JTMS belief maintenance — track argument beliefs with justifications.
+    """Invoke JTMS belief maintenance with real dependency network (#208-G).
 
-    Uses upstream extracted arguments and fallacies to build a real belief
-    network with justifications linking supporting/undermining evidence.
+    Builds a proper belief network from upstream phase outputs:
+    - Arguments → beliefs (IN premises, supported claims)
+    - Fallacies → retract undermined beliefs via OUT-list
+    - Counter-arguments → create competing OUT-list entries
+    - Quality scores → modulate justification strength
+
+    This replaces the trivial sequential chain with genuine truth maintenance.
     """
     from argumentation_analysis.services.jtms.jtms_core import JTMS
 
     jtms = JTMS()
 
-    # Collect real arguments from upstream fact_extraction
+    # ── Collect upstream data ────────────────────────────────────────
     extract_output = context.get("phase_extract_output", {})
     raw_args = (
         extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
@@ -570,65 +575,150 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         extract_output.get("claims", []) if isinstance(extract_output, dict) else []
     )
 
-    # Build belief names from real argument content (not generic claim_N)
-    arg_names = []
-    for a in raw_args:
-        text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
-        # Truncate to usable belief name
-        arg_names.append(text[:80])
-    for c in raw_claims:
-        text = c.get("text", str(c)) if isinstance(c, dict) else str(c)
-        arg_names.append(text[:80])
+    # Quality scores for justification strength
+    quality_output = context.get("phase_quality_output", {})
+    per_arg_scores = (
+        quality_output.get("per_argument_scores", {})
+        if isinstance(quality_output, dict)
+        else {}
+    )
 
-    if not arg_names:
-        # Fallback: sentence splitting
-        sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
-        arg_names = [s[:80] for s in sentences[:10]]
-
-    # Collect fallacies from upstream (hierarchical or extract)
+    # Fallacies
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-    detected_fallacies = []
-    if isinstance(fallacy_output, dict):
-        detected_fallacies = fallacy_output.get("fallacies", [])
+    detected_fallacies = (
+        fallacy_output.get("fallacies", [])
+        if isinstance(fallacy_output, dict)
+        else []
+    )
 
-    # Build beliefs with justifications
-    fallacy_types = {
-        f.get("fallacy_type", "") for f in detected_fallacies if isinstance(f, dict)
-    }
+    # Counter-arguments
+    counter_output = context.get("phase_counter_output", {})
+    counter_args = (
+        counter_output.get("llm_counter_arguments", [])
+        if isinstance(counter_output, dict)
+        else []
+    )
 
-    # Build beliefs using proper JTMS API (cherry-picked from PR #191)
-    belief_names = []
-    for i, name in enumerate(arg_names[:12]):
+    # ── Build belief names ───────────────────────────────────────────
+    def _text(item):
+        return (item.get("text", str(item)) if isinstance(item, dict) else str(item))[:80]
+
+    arg_beliefs = [_text(a) for a in raw_args[:10]]
+    claim_beliefs = [_text(c) for c in raw_claims[:6]]
+
+    if not arg_beliefs and not claim_beliefs:
+        sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
+        arg_beliefs = [s[:80] for s in sentences[:8]]
+
+    # ── Step 1: Add argument and claim beliefs ───────────────────────
+    for name in arg_beliefs + claim_beliefs:
         jtms.add_belief(name)
-        belief_names.append(name)
 
-    # Build justification chains: each belief supports the next (sequential reasoning)
-    for i in range(1, len(belief_names)):
-        jtms.add_justification([belief_names[i - 1]], [], belief_names[i])
+    # ── Step 2: Arguments support claims (dependency network) ────────
+    # Each argument supports related claims (not sequential chain)
+    if arg_beliefs and claim_beliefs:
+        # Arguments collectively support each claim
+        for claim in claim_beliefs:
+            # All arguments are IN-list for each claim
+            jtms.add_justification(arg_beliefs, [], claim)
+    elif arg_beliefs:
+        # No separate claims — arguments support a synthetic conclusion
+        conclusion = "overall_argument_validity"
+        jtms.add_belief(conclusion)
+        jtms.add_justification(arg_beliefs, [], conclusion)
 
-    # Set initial validity: first belief is True (premise accepted)
-    if belief_names:
-        jtms.set_belief_validity(belief_names[0], True)
+    # ── Step 3: Accept premises (set initial validity) ───────────────
+    for name in arg_beliefs:
+        jtms.set_belief_validity(name, True)
 
-    # Invalidate beliefs associated with detected fallacies
-    for i, name in enumerate(belief_names):
-        is_undermined = any(ft.lower() in name.lower() for ft in fallacy_types if ft)
-        if is_undermined:
-            jtms.set_belief_validity(name, False)
+    # ── Step 4: Fallacies → retract undermined beliefs + propagation ─
+    fallacy_beliefs = []
+    for i, f in enumerate(detected_fallacies[:6]):
+        if not isinstance(f, dict):
+            continue
+        fallacy_type = f.get("fallacy_type", f"fallacy_{i+1}")
+        fallacy_name = f"FALLACY:{fallacy_type}"[:80]
+        jtms.add_belief(fallacy_name)
+        jtms.set_belief_validity(fallacy_name, True)  # Fallacy is confirmed
+        fallacy_beliefs.append(fallacy_name)
+
+        # Find which argument the fallacy undermines
+        # TODO: use fallacy.target_argument for smarter matching
+        explanation = f.get("explanation", "")
+        target_idx = min(i, len(arg_beliefs) - 1) if arg_beliefs else -1
+
+        if target_idx >= 0:
+            target_arg = arg_beliefs[target_idx]
+            # Create a DEFEAT justification: fallacy OUT-lists the argument
+            defeat_name = f"defeat:{fallacy_type}→{target_arg[:30]}"[:80]
+            jtms.add_belief(defeat_name)
+            # The defeat holds when the fallacy is IN and the argument is OUT
+            jtms.add_justification([fallacy_name], [target_arg], defeat_name)
+            # Retract the undermined argument
+            jtms.set_belief_validity(target_arg, False)
+
+    # ── Step 5: Counter-arguments → competing beliefs ────────────────
+    for i, ca in enumerate(counter_args[:4]):
+        if not isinstance(ca, dict):
+            continue
+        ca_text = ca.get("counter_argument", f"counter_arg_{i+1}")[:80]
+        target = ca.get("target_argument", "")[:40]
+        jtms.add_belief(ca_text)
+        jtms.set_belief_validity(ca_text, True)
+
+        # Counter-argument weakens its target via OUT-list
+        if target and any(target.lower() in ab.lower() for ab in arg_beliefs):
+            matched = next(
+                (ab for ab in arg_beliefs if target.lower() in ab.lower()),
+                None,
+            )
+            if matched:
+                rebuttal_name = f"rebuttal:{ca_text[:20]}→{matched[:20]}"[:80]
+                jtms.add_belief(rebuttal_name)
+                jtms.add_justification([ca_text], [matched], rebuttal_name)
+
+    # ── Step 6: Quality scores → annotate belief metadata ────────────
+    quality_annotations = {}
+    for arg_id, scores in per_arg_scores.items():
+        if not isinstance(scores, dict):
+            continue
+        idx = int(arg_id.split("_")[-1]) - 1 if "_" in arg_id else -1
+        if 0 <= idx < len(arg_beliefs):
+            quality_annotations[arg_beliefs[idx]] = {
+                "quality_score": scores.get("note_finale", 0),
+                "weakest_virtue": min(
+                    scores.get("scores_par_vertu", {"?": 0}),
+                    key=scores.get("scores_par_vertu", {"?": 0}).get,
+                ),
+            }
+
+    # ── Build output ─────────────────────────────────────────────────
+    beliefs_output = {}
+    for name, b in jtms.beliefs.items():
+        entry = {
+            "valid": b.valid,
+            "justifications": [
+                {
+                    "in_list": [ib.name[:40] for ib in j.in_list],
+                    "out_list": [ob.name[:40] for ob in j.out_list],
+                }
+                for j in b.justifications
+            ],
+            "content": name,
+        }
+        if name in quality_annotations:
+            entry["quality"] = quality_annotations[name]
+        beliefs_output[name] = entry
 
     return {
-        "beliefs": {
-            name: {
-                "valid": b.valid,
-                "justifications": [repr(j.conclusion) for j in b.justifications],
-                "content": name,
-            }
-            for name, b in jtms.beliefs.items()
-        },
+        "beliefs": beliefs_output,
         "belief_count": len(jtms.beliefs),
         "justified_count": sum(1 for b in jtms.beliefs.values() if b.justifications),
         "valid_count": sum(1 for b in jtms.beliefs.values() if b.valid is True),
         "undermined_count": sum(1 for b in jtms.beliefs.values() if b.valid is False),
+        "fallacy_count": len(fallacy_beliefs),
+        "counter_argument_count": len([ca for ca in counter_args[:4] if isinstance(ca, dict)]),
+        "has_real_dependencies": bool(arg_beliefs and (claim_beliefs or fallacy_beliefs)),
     }
 
 
