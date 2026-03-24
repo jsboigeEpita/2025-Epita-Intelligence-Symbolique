@@ -174,7 +174,7 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
     print(f"[AUTHENTIC] Ensemble de croyances généré: {belief_set.content}")
 
     if authentic_pl_agent["tweety_available"]:
-        valid = agent.tweety_bridge.validate_belief_set(belief_set.content)
+        valid = agent.tweety_bridge.validate_pl_formula(belief_set.content)
         print(f"[AUTHENTIC] Validation TweetyBridge: {valid}")
 
     execution_time = time.time() - start_time
