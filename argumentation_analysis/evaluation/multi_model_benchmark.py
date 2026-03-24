@@ -420,15 +420,22 @@ async def run_multi_model_benchmark(
 
 
 def list_available_workflows() -> List[str]:
-    """List all registered workflow names from the catalog."""
+    """List all registered workflow names from the catalog.
+
+    Includes 'conversational' as a special mode (uses ConversationalOrchestrator
+    instead of UnifiedPipeline). (#208-L)
+    """
     try:
         from argumentation_analysis.orchestration.unified_pipeline import (
             get_workflow_catalog,
         )
 
-        return list(get_workflow_catalog().keys())
+        workflows = list(get_workflow_catalog().keys())
+        if "conversational" not in workflows:
+            workflows.append("conversational")
+        return workflows
     except Exception:
-        return ["light", "standard", "full"]
+        return ["light", "standard", "full", "conversational"]
 
 
 def main():

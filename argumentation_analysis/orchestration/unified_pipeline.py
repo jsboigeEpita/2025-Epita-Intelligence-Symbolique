@@ -3844,12 +3844,27 @@ async def run_unified_analysis(
             logger.warning("Auto-routing failed, falling back to standard: %s", e)
             catalog = get_workflow_catalog()
             workflow = catalog["standard"]
+    elif workflow_name == "conversational":
+        # Special mode: use ConversationalOrchestrator (#208-L)
+        try:
+            from argumentation_analysis.orchestration.conversational_orchestrator import (
+                run_conversational_analysis,
+            )
+
+            conv_result = await run_conversational_analysis(text)
+            return conv_result
+        except Exception as e:
+            logger.warning(
+                f"Conversational mode failed ({e}), falling back to standard"
+            )
+            catalog = get_workflow_catalog()
+            workflow = catalog["standard"]
     else:
         catalog = get_workflow_catalog()
         if workflow_name not in catalog:
             raise ValueError(
                 f"Unknown workflow '{workflow_name}'. "
-                f"Available: {list(catalog.keys())}"
+                f"Available: {list(catalog.keys()) + ['conversational']}"
             )
         workflow = catalog[workflow_name]
 
