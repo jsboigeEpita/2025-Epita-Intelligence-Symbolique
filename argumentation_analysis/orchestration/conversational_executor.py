@@ -260,10 +260,12 @@ class GroupChatTurnStrategy(TurnStrategy):
         agents: List[Any],
         selection_strategy: Optional[Any] = None,
         termination_strategy: Optional[Any] = None,
+        maximum_iterations: int = 25,
     ):
         self._agents = agents
         self._selection = selection_strategy
         self._termination = termination_strategy
+        self._maximum_iterations = maximum_iterations
 
     # ------------------------------------------------------------------
     # Strategy adapters: project base.py → SK native
@@ -304,8 +306,7 @@ class GroupChatTurnStrategy(TurnStrategy):
         except Exception:
             return strategy
 
-    @staticmethod
-    def _wrap_termination_strategy(strategy: Any) -> Any:
+    def _wrap_termination_strategy(self, strategy: Any) -> Any:
         """Wrap a base.py TerminationStrategy as an SK-native one if needed."""
         if strategy is None:
             return None
@@ -334,7 +335,7 @@ class GroupChatTurnStrategy(TurnStrategy):
                 async def should_terminate(self, agent: Any, history: list) -> bool:
                     return await self._inner.should_terminate(agent, history)
 
-            return _Adapter(inner=strategy, maximum_iterations=100)
+            return _Adapter(inner=strategy, maximum_iterations=self._maximum_iterations)
         except Exception:
             return strategy
 
@@ -409,7 +410,7 @@ class GroupChatTurnStrategy(TurnStrategy):
             # Seed the chat history with the user input so agents have
             # something to respond to.
             if input_data is not None:
-                chat.add_chat_message(
+                await chat.add_chat_message(
                     ChatMessageContent(
                         role=AuthorRole.USER,
                         content=str(input_data),

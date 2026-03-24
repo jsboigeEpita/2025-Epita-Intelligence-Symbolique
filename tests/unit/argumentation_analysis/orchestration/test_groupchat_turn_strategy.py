@@ -38,7 +38,8 @@ class TestStrategyAdapters:
         assert GroupChatTurnStrategy._wrap_selection_strategy(None) is None
 
     def test_wrap_none_termination_returns_none(self):
-        assert GroupChatTurnStrategy._wrap_termination_strategy(None) is None
+        strategy = GroupChatTurnStrategy(agents=[])
+        assert strategy._wrap_termination_strategy(None) is None
 
     def test_wrap_sk_native_selection_passes_through(self):
         """If already an SK strategy, return as-is."""
@@ -61,7 +62,8 @@ class TestStrategyAdapters:
             )
 
             sk_strategy = DefaultTerminationStrategy(maximum_iterations=5)
-            result = GroupChatTurnStrategy._wrap_termination_strategy(sk_strategy)
+            strategy = GroupChatTurnStrategy(agents=[])
+            result = strategy._wrap_termination_strategy(sk_strategy)
             assert result is sk_strategy
         except ImportError:
             pytest.skip("SK not available")
@@ -104,7 +106,8 @@ class TestStrategyAdapters:
                 return len(history) > 5
 
         strategy = DummyTermination()
-        result = GroupChatTurnStrategy._wrap_termination_strategy(strategy)
+        gcs = GroupChatTurnStrategy(agents=[])
+        result = gcs._wrap_termination_strategy(strategy)
         assert isinstance(result, SKTerminationStrategy)
 
 
@@ -285,3 +288,55 @@ class TestIntegrationWithSK:
         assert len(result.phase_results) >= 2
         assert result.needs_refinement is False
         assert result.duration_seconds >= 0
+
+    def test_maximum_iterations_parameter(self):
+        """maximum_iterations should be configurable, not hardcoded."""
+        strategy = GroupChatTurnStrategy(agents=[], maximum_iterations=42)
+        assert strategy._maximum_iterations == 42
+
+    def test_default_maximum_iterations(self):
+        """Default maximum_iterations should be 25."""
+        strategy = GroupChatTurnStrategy(agents=[])
+        assert strategy._maximum_iterations == 25
+
+    @pytest.mark.asyncio
+    async def test_await_add_chat_message(self):
+        """Verify add_chat_message is awaited (regression test for #219 review)."""
+        strategy = GroupChatTurnStrategy(agents=[MagicMock(), MagicMock()])
+
+        # We can't run a real SK AgentGroupChat without an LLM, but we can
+        # verify the code path calls await on add_chat_message by checking
+        # it doesn't produce a RuntimeWarning about unawaited coroutines.
+        try:
+            from semantic_kernel.agents.group_chat.agent_group_chat import (
+                AgentGroupChat,
+            )
+        except ImportError:
+            pytest.skip("SK AgentGroupChat not available")
+
+        import warnings
+
+        # Patch AgentGroupChat to track the call without needing a real LLM
+        mock_chat = AsyncMock()
+        mock_chat.add_chat_message = AsyncMock()
+
+        async def empty_invoke():
+            return
+            yield  # make it an async generator
+
+        mock_chat.invoke = empty_invoke
+
+        with patch(
+            "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat",
+            return_value=mock_chat,
+        ):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                result = await strategy._run_sk_native("test input", {"turn_number": 1})
+                # Check no RuntimeWarning about unawaited coroutine
+                coroutine_warnings = [
+                    x for x in w if "coroutine" in str(x.message).lower()
+                ]
+                assert (
+                    len(coroutine_warnings) == 0
+                ), f"Unawaited coroutine warnings detected: {coroutine_warnings}"
