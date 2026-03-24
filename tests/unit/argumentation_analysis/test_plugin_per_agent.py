@@ -1,20 +1,23 @@
 """Tests for plugin-per-agent speciality mapping (#221, Epic #208-E).
 
 Validates:
-- AGENT_PLUGIN_MAP has entries for all known agent specialities
+- AGENT_SPECIALITY_MAP has entries for all known agent specialities
 - _PLUGIN_REGISTRY maps plugin names to importable modules
 - load_plugins_for_agent loads correct plugins per speciality
+- get_plugin_instances returns correct plugin objects per speciality
 - StateManagerPlugin always loaded when state is provided
 - Unknown agent speciality returns empty (+ StateManager if state)
 - Plugin load failures are handled gracefully
+- conversational_orchestrator.AGENT_CONFIG uses factory speciality keys
 """
 
 import pytest
 from unittest.mock import MagicMock, patch
 
 from argumentation_analysis.agents.factory import (
-    AGENT_PLUGIN_MAP,
+    AGENT_SPECIALITY_MAP,
     _PLUGIN_REGISTRY,
+    get_plugin_instances,
     load_plugins_for_agent,
 )
 
@@ -22,7 +25,7 @@ from argumentation_analysis.agents.factory import (
 # --- Plugin map structure ---
 
 
-class TestAgentPluginMap:
+class TestAgentSpecialityMap:
     def test_all_specialities_defined(self):
         expected = {
             "project_manager",
@@ -36,26 +39,32 @@ class TestAgentPluginMap:
             "sherlock",
             "watson",
         }
-        assert set(AGENT_PLUGIN_MAP.keys()) == expected
+        assert set(AGENT_SPECIALITY_MAP.keys()) == expected
 
     def test_all_values_are_lists(self):
-        for key, plugins in AGENT_PLUGIN_MAP.items():
+        for key, plugins in AGENT_SPECIALITY_MAP.items():
             assert isinstance(plugins, list), f"{key} should map to a list"
 
     def test_informal_has_fallacy_plugin(self):
-        assert "french_fallacy" in AGENT_PLUGIN_MAP["informal_fallacy"]
+        assert "french_fallacy" in AGENT_SPECIALITY_MAP["informal_fallacy"]
 
     def test_formal_has_tweety(self):
-        assert "tweety_logic" in AGENT_PLUGIN_MAP["formal_logic"]
+        assert "tweety_logic" in AGENT_SPECIALITY_MAP["formal_logic"]
 
     def test_quality_has_scoring(self):
-        assert "quality_scoring" in AGENT_PLUGIN_MAP["quality"]
+        assert "quality_scoring" in AGENT_SPECIALITY_MAP["quality"]
 
     def test_governance_has_governance_plugin(self):
-        assert "governance" in AGENT_PLUGIN_MAP["governance"]
+        assert "governance" in AGENT_SPECIALITY_MAP["governance"]
+
+    def test_debate_has_debate_plugin(self):
+        assert "debate" in AGENT_SPECIALITY_MAP["debate"]
+
+    def test_counter_argument_has_counter_plugin(self):
+        assert "counter_argument" in AGENT_SPECIALITY_MAP["counter_argument"]
 
     def test_pm_has_no_speciality_plugins(self):
-        assert AGENT_PLUGIN_MAP["project_manager"] == []
+        assert AGENT_SPECIALITY_MAP["project_manager"] == []
 
 
 # --- Plugin registry ---
@@ -63,9 +72,9 @@ class TestAgentPluginMap:
 
 class TestPluginRegistry:
     def test_all_mapped_plugins_in_registry(self):
-        """Every plugin name referenced in AGENT_PLUGIN_MAP should exist in _PLUGIN_REGISTRY."""
+        """Every plugin name referenced in AGENT_SPECIALITY_MAP should exist in _PLUGIN_REGISTRY."""
         all_plugin_names = set()
-        for plugins in AGENT_PLUGIN_MAP.values():
+        for plugins in AGENT_SPECIALITY_MAP.values():
             all_plugin_names.update(plugins)
         for name in all_plugin_names:
             assert name in _PLUGIN_REGISTRY, f"Plugin '{name}' missing from registry"
@@ -77,6 +86,12 @@ class TestPluginRegistry:
 
     def test_state_manager_in_registry(self):
         assert "state_manager" in _PLUGIN_REGISTRY
+
+    def test_debate_plugin_in_registry(self):
+        assert "debate" in _PLUGIN_REGISTRY
+
+    def test_counter_argument_plugin_in_registry(self):
+        assert "counter_argument" in _PLUGIN_REGISTRY
 
 
 # --- load_plugins_for_agent ---
@@ -156,10 +171,75 @@ class TestLoadPluginsForAgent:
             loaded = load_plugins_for_agent(mock_kernel, "watson")
         assert "tweety_logic" in loaded
 
-    def test_debate_has_no_external_plugins(self):
+    def test_debate_loads_debate_plugin(self):
         mock_kernel = MagicMock()
-        loaded = load_plugins_for_agent(mock_kernel, "debate")
-        assert loaded == []
+        with patch("importlib.import_module") as mock_import:
+            mock_module = MagicMock()
+            mock_import.return_value = mock_module
+            loaded = load_plugins_for_agent(mock_kernel, "debate")
+        assert "debate" in loaded
+
+
+# --- get_plugin_instances ---
+
+
+class TestGetPluginInstances:
+    def test_returns_state_manager_when_state_provided(self):
+        mock_state = MagicMock()
+        instances = get_plugin_instances("project_manager", state=mock_state)
+        assert len(instances) == 1
+        assert type(instances[0]).__name__ == "StateManagerPlugin"
+
+    def test_returns_empty_without_state_for_pm(self):
+        instances = get_plugin_instances("project_manager", state=None)
+        assert instances == []
+
+    def test_returns_speciality_plugins(self):
+        with patch("importlib.import_module") as mock_import:
+            mock_module = MagicMock()
+            mock_import.return_value = mock_module
+            instances = get_plugin_instances("informal_fallacy")
+        assert len(instances) >= 1  # at least french_fallacy
+
+    def test_import_failure_returns_partial(self):
+        with patch("importlib.import_module", side_effect=ImportError("not found")):
+            instances = get_plugin_instances("informal_fallacy")
+        assert instances == []  # all failed gracefully
+
+    def test_unknown_speciality_returns_empty(self):
+        instances = get_plugin_instances("nonexistent")
+        assert instances == []
+
+
+# --- Conversational orchestrator integration ---
+
+
+class TestConvOrchestratorIntegration:
+    def test_agent_config_specialities_exist_in_factory(self):
+        """All speciality keys in AGENT_CONFIG must exist in AGENT_SPECIALITY_MAP."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            AGENT_CONFIG,
+        )
+
+        for agent_name, config in AGENT_CONFIG.items():
+            speciality = config["speciality"]
+            assert speciality in AGENT_SPECIALITY_MAP, (
+                f"Agent '{agent_name}' references speciality '{speciality}' "
+                f"not found in AGENT_SPECIALITY_MAP"
+            )
+
+    def test_agent_config_has_instructions(self):
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            AGENT_CONFIG,
+        )
+
+        for agent_name, config in AGENT_CONFIG.items():
+            assert (
+                "instructions" in config
+            ), f"Agent '{agent_name}' missing instructions"
+            assert (
+                len(config["instructions"]) > 20
+            ), f"Agent '{agent_name}' has suspiciously short instructions"
 
 
 # --- Integration: plugin count per agent ---
@@ -168,7 +248,7 @@ class TestLoadPluginsForAgent:
 class TestPluginCounts:
     def test_no_agent_has_more_than_3_plugins(self):
         """No agent should be loaded with too many plugins — focused speciality."""
-        for speciality, plugins in AGENT_PLUGIN_MAP.items():
+        for speciality, plugins in AGENT_SPECIALITY_MAP.items():
             assert (
                 len(plugins) <= 3
             ), f"Agent '{speciality}' has {len(plugins)} plugins — too many"

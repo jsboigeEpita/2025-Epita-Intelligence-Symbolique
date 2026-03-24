@@ -42,13 +42,15 @@ from argumentation_analysis.orchestration.trace_analyzer import (
 logger = logging.getLogger("ConversationalOrchestrator")
 
 # ---------------------------------------------------------------------------
-# Agent-plugin mapping (each agent gets ONLY its specialty + StateManager)
+# Agent configuration: instructions + speciality key for plugin loading.
+# Plugin instances are loaded via factory.get_plugin_instances() using the
+# speciality key, ensuring a single source of truth for plugin→module mapping.
 # See ARCHEOLOGIE_ORCHESTRATION.md section 3 for rationale.
 # ---------------------------------------------------------------------------
 
-AGENT_PLUGIN_MAP = {
+AGENT_CONFIG = {
     "ProjectManager": {
-        "plugins": [],  # PM uses only StateManager to coordinate
+        "speciality": "project_manager",
         "instructions": (
             "Tu es le chef de projet d'analyse argumentative. Tu coordonnes l'equipe "
             "d'agents specialises. A chaque tour :\n"
@@ -66,7 +68,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "ExtractAgent": {
-        "plugins": [],  # Uses StateManager to write arguments/claims
+        "speciality": "extract",
         "instructions": (
             "Tu es l'agent d'extraction d'arguments. Quand le PM te donne la parole :\n"
             "1. Analyse le texte pour identifier les arguments, premisses et conclusions\n"
@@ -76,7 +78,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "InformalAgent": {
-        "plugins": ["FrenchFallacyPlugin"],
+        "speciality": "informal_fallacy",
         "instructions": (
             "Tu es l'agent de detection de sophismes. Quand le PM te donne la parole :\n"
             "1. Lis les arguments identifies via get_current_state_snapshot()\n"
@@ -90,7 +92,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "FormalAgent": {
-        "plugins": ["TweetyLogicPlugin"],
+        "speciality": "formal_logic",
         "instructions": (
             "Tu es l'agent de logique formelle. Quand le PM te donne la parole :\n"
             "1. Lis les arguments identifies dans l'etat\n"
@@ -105,7 +107,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "QualityAgent": {
-        "plugins": ["QualityScoringPlugin"],
+        "speciality": "quality",
         "instructions": (
             "Tu es l'agent d'evaluation de qualite. Quand le PM te donne la parole :\n"
             "1. Lis les arguments ET les sophismes identifies dans l'etat\n"
@@ -120,7 +122,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "DebateAgent": {
-        "plugins": ["DebatePlugin"],
+        "speciality": "debate",
         "instructions": (
             "Tu es l'agent de debat adversarial. Quand le PM te donne la parole :\n"
             "1. Lis les arguments, sophismes et scores de qualite dans l'etat\n"
@@ -134,7 +136,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "CounterAgent": {
-        "plugins": ["CounterArgumentPlugin"],
+        "speciality": "counter_argument",
         "instructions": (
             "Tu es l'agent de contre-argumentation. Quand le PM te donne la parole :\n"
             "1. Lis les arguments, sophismes ET scores de qualite dans l'etat\n"
@@ -153,7 +155,7 @@ AGENT_PLUGIN_MAP = {
         ),
     },
     "GovernanceAgent": {
-        "plugins": ["GovernancePlugin"],
+        "speciality": "governance",
         "instructions": (
             "Tu es l'agent de gouvernance et vote. Quand le PM te donne la parole :\n"
             "1. Lis les resultats du debat, contre-arguments et scores de qualite dans l'etat\n"
@@ -171,49 +173,6 @@ AGENT_PLUGIN_MAP = {
 }
 
 
-def _load_plugin_instance(plugin_name: str) -> Any:
-    """Lazy-load a plugin instance by name."""
-    loaders = {
-        "FrenchFallacyPlugin": lambda: _safe_import(
-            "argumentation_analysis.plugins.french_fallacy_plugin", "FrenchFallacyPlugin"
-        ),
-        "TweetyLogicPlugin": lambda: _safe_import(
-            "argumentation_analysis.plugins.tweety_logic_plugin", "TweetyLogicPlugin"
-        ),
-        "QualityScoringPlugin": lambda: _safe_import(
-            "argumentation_analysis.plugins.quality_scoring_plugin", "QualityScoringPlugin"
-        ),
-        "DebatePlugin": lambda: _safe_import(
-            "argumentation_analysis.agents.core.debate.debate_agent", "DebatePlugin"
-        ),
-        "CounterArgumentPlugin": lambda: _safe_import(
-            "argumentation_analysis.agents.core.counter_argument.counter_agent",
-            "CounterArgumentPlugin",
-        ),
-        "GovernancePlugin": lambda: _safe_import(
-            "argumentation_analysis.plugins.governance_plugin", "GovernancePlugin"
-        ),
-    }
-    loader = loaders.get(plugin_name)
-    if loader is None:
-        logger.warning(f"Unknown plugin: {plugin_name}")
-        return None
-    return loader()
-
-
-def _safe_import(module_path: str, class_name: str) -> Any:
-    """Import and instantiate a class, returning None on failure."""
-    try:
-        import importlib
-
-        mod = importlib.import_module(module_path)
-        cls = getattr(mod, class_name)
-        return cls()
-    except Exception as e:
-        logger.warning(f"Could not load {class_name} from {module_path}: {e}")
-        return None
-
-
 def create_conversational_agents(
     kernel: sk.Kernel,
     state: RhetoricalAnalysisState,
@@ -224,28 +183,29 @@ def create_conversational_agents(
 
     Each agent gets:
     - StateManagerPlugin (shared, for reading/writing analysis state)
-    - Its own specialized plugins (per AGENT_PLUGIN_MAP)
+    - Its own specialized plugins (loaded via factory.get_plugin_instances())
     - FunctionChoiceBehavior.Auto() for auto tool invocation
+
+    Plugin loading is delegated to the central factory registry
+    (AGENT_SPECIALITY_MAP + _PLUGIN_REGISTRY) to avoid duplication.
     """
-    state_manager = StateManagerPlugin(state)
+    from argumentation_analysis.agents.factory import get_plugin_instances
+
     llm_service = kernel.get_service(llm_service_id)
 
     if agent_names is None:
-        agent_names = list(AGENT_PLUGIN_MAP.keys())
+        agent_names = list(AGENT_CONFIG.keys())
 
     agents = []
     for name in agent_names:
-        config = AGENT_PLUGIN_MAP.get(name)
+        config = AGENT_CONFIG.get(name)
         if config is None:
             logger.warning(f"Unknown agent name: {name}, skipping")
             continue
 
-        # Build plugin list: StateManager (always) + specialized plugins
-        plugins = [state_manager]
-        for plugin_name in config["plugins"]:
-            plugin = _load_plugin_instance(plugin_name)
-            if plugin is not None:
-                plugins.append(plugin)
+        # Get plugin instances from central factory registry
+        speciality = config["speciality"]
+        plugins = get_plugin_instances(speciality, state=state)
 
         agent = ChatCompletionAgent(
             kernel=kernel,
@@ -259,9 +219,9 @@ def create_conversational_agents(
             ),
         )
         agents.append(agent)
+        plugin_names = [type(p).__name__ for p in plugins]
         logger.info(
-            f"Created agent '{name}' with plugins: "
-            f"[StateManager, {', '.join(config['plugins'])}]"
+            f"Created agent '{name}' (speciality={speciality}) with plugins: {plugin_names}"
         )
 
     return agents
@@ -337,7 +297,12 @@ async def run_conversational_analysis(
         },
         {
             "name": "Synthesis & Debate",
-            "agents": ["ProjectManager", "DebateAgent", "CounterAgent", "GovernanceAgent"],
+            "agents": [
+                "ProjectManager",
+                "DebateAgent",
+                "CounterAgent",
+                "GovernanceAgent",
+            ],
             "initial_prompt": (
                 "Finalisez l'analyse en exploitant TOUTES les contributions precedentes.\n"
                 "CROSS-KB: Utilisez les resultats des phases 1 et 2 :\n"
@@ -404,8 +369,7 @@ async def run_conversational_analysis(
 
     # Count non-empty fields
     non_empty = sum(
-        1 for v in state_snapshot.values()
-        if v and v not in ([], {}, "", None, 0)
+        1 for v in state_snapshot.values() if v and v not in ([], {}, "", None, 0)
     )
 
     # Generate trace report (#208-S)
@@ -501,21 +465,25 @@ async def _run_phase(
             if content:
                 chat_history.add_assistant_message(content)
 
-            messages.append({
-                "phase": phase_name,
-                "turn": turn,
-                "agent": agent.name,
-                "content": content[:500] if content else "(empty)",
-            })
+            messages.append(
+                {
+                    "phase": phase_name,
+                    "turn": turn,
+                    "agent": agent.name,
+                    "content": content[:500] if content else "(empty)",
+                }
+            )
             logger.info(f"  [{phase_name}] Turn {turn}: {agent.name}")
 
         except Exception as exc:
             logger.error(f"  [{phase_name}] Turn {turn}: {agent.name} failed: {exc}")
-            messages.append({
-                "phase": phase_name,
-                "turn": turn,
-                "agent": agent.name,
-                "content": f"ERROR: {exc}",
-            })
+            messages.append(
+                {
+                    "phase": phase_name,
+                    "turn": turn,
+                    "agent": agent.name,
+                    "content": f"ERROR: {exc}",
+                }
+            )
 
     return messages

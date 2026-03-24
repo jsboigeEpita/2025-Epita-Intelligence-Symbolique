@@ -44,14 +44,14 @@ _factory_logger = logging.getLogger("AgentFactory")
 # access to tools outside their expertise, improving tool-call accuracy.
 # ---------------------------------------------------------------------------
 
-AGENT_PLUGIN_MAP = {
+AGENT_SPECIALITY_MAP = {
     "project_manager": [],  # PM only gets StateManager
     "informal_fallacy": ["french_fallacy"],
     "extract": [],  # Extractor uses StateManager only
     "formal_logic": ["tweety_logic"],
     "quality": ["quality_scoring"],
-    "debate": [],  # Debate agent has its own internal plugin
-    "counter_argument": [],  # Counter-arg agent has its own internal plugin
+    "debate": ["debate"],
+    "counter_argument": ["counter_argument"],
     "governance": ["governance"],
     "sherlock": [],  # Sherlock uses its own investigation tools
     "watson": ["tweety_logic"],
@@ -75,6 +75,14 @@ _PLUGIN_REGISTRY = {
         "argumentation_analysis.plugins.governance_plugin",
         "GovernancePlugin",
     ),
+    "debate": (
+        "argumentation_analysis.agents.core.debate.debate_agent",
+        "DebatePlugin",
+    ),
+    "counter_argument": (
+        "argumentation_analysis.agents.core.counter_argument.counter_agent",
+        "CounterArgumentPlugin",
+    ),
     "state_manager": (
         "argumentation_analysis.core.state_manager_plugin",
         "StateManagerPlugin",
@@ -82,16 +90,64 @@ _PLUGIN_REGISTRY = {
 }
 
 
+def get_plugin_instances(agent_speciality: str, state=None) -> list:
+    """Return instantiated plugin objects for an agent's speciality.
+
+    Useful for ChatCompletionAgent(plugins=[...]) scoping where each agent
+    gets its own plugin instances rather than sharing via kernel.
+
+    Args:
+        agent_speciality: Key into AGENT_SPECIALITY_MAP.
+        state: Optional RhetoricalAnalysisState for StateManagerPlugin.
+
+    Returns:
+        List of plugin instances (StateManagerPlugin first if state provided).
+    """
+    instances = []
+
+    # Always include StateManager if state is available
+    if state is not None:
+        try:
+            mod = importlib.import_module(
+                "argumentation_analysis.core.state_manager_plugin"
+            )
+            plugin_cls = getattr(mod, "StateManagerPlugin")
+            instances.append(plugin_cls(state=state))
+        except Exception as e:
+            _factory_logger.debug("StateManagerPlugin not instantiated: %s", e)
+
+    # Load speciality plugins
+    plugin_names = AGENT_SPECIALITY_MAP.get(agent_speciality, [])
+    for plugin_name in plugin_names:
+        entry = _PLUGIN_REGISTRY.get(plugin_name)
+        if entry is None:
+            continue
+        module_path, class_name = entry
+        try:
+            mod = importlib.import_module(module_path)
+            plugin_cls = getattr(mod, class_name)
+            instances.append(plugin_cls())
+        except Exception as e:
+            _factory_logger.debug(
+                "Plugin '%s' not instantiated for '%s': %s",
+                plugin_name,
+                agent_speciality,
+                e,
+            )
+
+    return instances
+
+
 def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) -> list:
     """Load only the plugins relevant to an agent's speciality onto its kernel.
 
     Always loads StateManagerPlugin (if state is provided) as the shared
     communication medium.  Then loads speciality-specific plugins from
-    AGENT_PLUGIN_MAP.
+    AGENT_SPECIALITY_MAP.
 
     Args:
         kernel: The Semantic Kernel instance.
-        agent_speciality: Key into AGENT_PLUGIN_MAP.
+        agent_speciality: Key into AGENT_SPECIALITY_MAP.
         state: Optional RhetoricalAnalysisState for StateManagerPlugin.
 
     Returns:
@@ -112,7 +168,7 @@ def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) ->
             _factory_logger.debug("StateManagerPlugin not loaded: %s", e)
 
     # Load speciality plugins
-    plugin_names = AGENT_PLUGIN_MAP.get(agent_speciality, [])
+    plugin_names = AGENT_SPECIALITY_MAP.get(agent_speciality, [])
     for plugin_name in plugin_names:
         entry = _PLUGIN_REGISTRY.get(plugin_name)
         if entry is None:
