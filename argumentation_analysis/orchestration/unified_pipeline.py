@@ -152,24 +152,10 @@ async def _llm_enrich_quality(
 
     Returns None if LLM is unavailable or fails.
     """
-    import os
-
     try:
-        from dotenv import load_dotenv
-        load_dotenv(override=False)
-    except ImportError:
-        pass
-
-    try:
-        from openai import AsyncOpenAI
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
+        client, model_id = _get_openai_client()
+        if not client:
             return None
-
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
         # Build summary of heuristic scores for LLM context
         score_summary = []
