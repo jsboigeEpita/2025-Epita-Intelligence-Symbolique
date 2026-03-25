@@ -3,6 +3,9 @@
 
 """
 Configuration pytest pour les tests de l'API web.
+
+DEPRECATED: Flask app archived in #242. These fixtures are kept for legacy
+service tests only. Use FastAPI tests via api/main.py for new tests.
 """
 
 import os
@@ -17,22 +20,18 @@ root_dir = current_dir.parent.parent.parent
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
-# L'import de 'app' est déplacé dans les fixtures pour éviter
-# l'initialisation précoce des dépendances (ex: JVM)
-# from argumentation_analysis.services.web_api.app import app
+# Flask app has been archived - client fixture now raises NotImplementedError
+# Tests that need Flask client should be skipped or migrated to FastAPI
 
 
 @pytest.fixture
 def client():
-    """Client de test Flask."""
-    from argumentation_analysis.services.web_api.app import app
-
-    app.config["TESTING"] = True
-    app.config["DEBUG"] = False
-
-    with app.test_client() as client:
-        with app.app_context():
-            yield client
+    """Client de test Flask - DEPRECATED, use FastAPI TestClient instead."""
+    pytest.skip(
+        "Flask app archived (#242). Use FastAPI TestClient: "
+        "from fastapi.testclient import TestClient; from api.main import app; "
+        "client = TestClient(app)"
+    )
 
 
 @pytest.fixture

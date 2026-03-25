@@ -2,6 +2,9 @@
 # tests/integration/argumentation_analysis/workers/worker_hardening_cases.py
 """
 Worker pour l'exécution des tests d'intégration "durcis" dans un sous-processus.
+
+DEPRECATED: Flask app archived in #242. Use FastAPI tests via api/main.py instead.
+Archive: docs/archives/flask_tests_249/worker_hardening_cases.py
 """
 
 import pytest
@@ -9,7 +12,11 @@ import logging
 import os
 import sys
 import importlib
-from argumentation_analysis.core.jvm_setup import JvmManager
+
+# Flask app has been archived - skip all tests in this module
+pytestmark = pytest.mark.skip(
+    reason="Flask app archived (#242). Use FastAPI: uvicorn api.main:app --port 8000",
+)
 
 # Configuration du logging
 logger = logging.getLogger(__name__)

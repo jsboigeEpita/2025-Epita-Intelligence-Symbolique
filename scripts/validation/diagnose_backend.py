@@ -106,10 +106,11 @@ def test_launch_simple():
     if not os.path.exists(python_exe):
         python_exe = "python"
 
+    # Updated: test FastAPI app instead of deprecated Flask app
     cmd = [
         python_exe,
         "-c",
-        "import uvicorn; print('Uvicorn available'); from argumentation_analysis.services.web_api.app import app; print('App importable')",
+        "import uvicorn; print('Uvicorn available'); from api.main import app; print('FastAPI app importable')",
     ]
 
     try:

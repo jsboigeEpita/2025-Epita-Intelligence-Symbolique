@@ -2,9 +2,6 @@
 """
 Tests d'intégration "durcis" pour le pipeline d'analyse rhétorique.
 
-DEPRECATED: Flask app archived in #242. Use FastAPI tests via api/main.py instead.
-Archive: docs/archives/flask_tests_249/test_hardening_cases.py
-
 Ces tests valident le comportement du système face à des cas limites et complexes,
 en utilisant une configuration d'intégration complète (LLM + JVM réels).
 """
@@ -21,10 +18,8 @@ from argumentation_analysis.core.bootstrap import initialize_project_environment
 # Configuration du logging
 logger = logging.getLogger(__name__)
 
-# Flask app has been archived - skip all tests in this module
-pytestmark = pytest.mark.skip(
-    reason="Flask app archived (#242). Use FastAPI: uvicorn api.main:app --port 8000",
-)
+# Marque tous les tests de ce fichier pour utiliser une JVM et un LLM réel.
+pytestmark = [pytest.mark.usefixtures("jvm_session"), pytest.mark.real_llm]
 
 
 @pytest.fixture(scope="module")
