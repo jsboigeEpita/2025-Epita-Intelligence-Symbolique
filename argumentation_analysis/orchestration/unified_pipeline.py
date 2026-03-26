@@ -552,7 +552,7 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke JTMS belief maintenance with real dependency network (#208-G).
+    """Invoke JTMS belief maintenance with real dependency network (#208-G, #214).
 
     Builds a proper belief network from upstream phase outputs:
     - Arguments → beliefs (IN premises, supported claims)
@@ -560,11 +560,12 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     - Counter-arguments → create competing OUT-list entries
     - Quality scores → modulate justification strength
 
-    This replaces the trivial sequential chain with genuine truth maintenance.
+    Uses JTMSSession with ExtendedBelief for agent source tracking and confidence (#214).
     """
-    from argumentation_analysis.services.jtms.jtms_core import JTMS
+    from argumentation_analysis.services.jtms.extended_belief import JTMSSession
 
-    jtms = JTMS()
+    session = JTMSSession(session_id="pipeline_jtms", owner_agent="unified_pipeline")
+    jtms = session.jtms
 
     # ── Collect upstream data ────────────────────────────────────────
     extract_output = context.get("phase_extract_output", {})
@@ -610,26 +611,24 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
         arg_beliefs = [s[:80] for s in sentences[:8]]
 
-    # ── Step 1: Add argument and claim beliefs ───────────────────────
-    for name in arg_beliefs + claim_beliefs:
-        jtms.add_belief(name)
+    # ── Step 1: Add argument and claim beliefs with agent metadata ────
+    for name in arg_beliefs:
+        session.add_belief(name, agent_source="extract", confidence=0.7)
+    for name in claim_beliefs:
+        session.add_belief(name, agent_source="extract", confidence=0.6)
 
     # ── Step 2: Arguments support claims (dependency network) ────────
-    # Each argument supports related claims (not sequential chain)
     if arg_beliefs and claim_beliefs:
-        # Arguments collectively support each claim
         for claim in claim_beliefs:
-            # All arguments are IN-list for each claim
-            jtms.add_justification(arg_beliefs, [], claim)
+            session.add_justification(arg_beliefs, [], claim, agent_source="pipeline")
     elif arg_beliefs:
-        # No separate claims — arguments support a synthetic conclusion
         conclusion = "overall_argument_validity"
-        jtms.add_belief(conclusion)
-        jtms.add_justification(arg_beliefs, [], conclusion)
+        session.add_belief(conclusion, agent_source="pipeline", confidence=0.5)
+        session.add_justification(arg_beliefs, [], conclusion, agent_source="pipeline")
 
     # ── Step 3: Accept premises (set initial validity) ───────────────
     for name in arg_beliefs:
-        jtms.set_belief_validity(name, True)
+        session.set_fact(name, True)
 
     # ── Step 4: Fallacies → retract undermined beliefs + propagation ─
     fallacy_beliefs = []
@@ -638,23 +637,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
             continue
         fallacy_type = f.get("fallacy_type", f"fallacy_{i+1}")
         fallacy_name = f"FALLACY:{fallacy_type}"[:80]
-        jtms.add_belief(fallacy_name)
-        jtms.set_belief_validity(fallacy_name, True)  # Fallacy is confirmed
+        session.add_belief(fallacy_name, agent_source="informal", confidence=0.8)
+        session.set_fact(fallacy_name, True)
         fallacy_beliefs.append(fallacy_name)
 
-        # Find which argument the fallacy undermines
-        # TODO: use fallacy.target_argument for smarter matching
-        explanation = f.get("explanation", "")
         target_idx = min(i, len(arg_beliefs) - 1) if arg_beliefs else -1
-
         if target_idx >= 0:
             target_arg = arg_beliefs[target_idx]
-            # Create a DEFEAT justification: fallacy OUT-lists the argument
             defeat_name = f"defeat:{fallacy_type}→{target_arg[:30]}"[:80]
-            jtms.add_belief(defeat_name)
-            # The defeat holds when the fallacy is IN and the argument is OUT
-            jtms.add_justification([fallacy_name], [target_arg], defeat_name)
-            # Retract the undermined argument
+            session.add_belief(defeat_name, agent_source="informal")
+            session.add_justification(
+                [fallacy_name], [target_arg], defeat_name, agent_source="informal"
+            )
             jtms.set_belief_validity(target_arg, False)
 
     # ── Step 5: Counter-arguments → competing beliefs ────────────────
@@ -663,36 +657,38 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
             continue
         ca_text = ca.get("counter_argument", f"counter_arg_{i+1}")[:80]
         target = ca.get("target_argument", "")[:40]
-        jtms.add_belief(ca_text)
-        jtms.set_belief_validity(ca_text, True)
+        session.add_belief(ca_text, agent_source="counter", confidence=0.7)
+        session.set_fact(ca_text, True)
 
-        # Counter-argument weakens its target via OUT-list
         if target and any(target.lower() in ab.lower() for ab in arg_beliefs):
             matched = next(
-                (ab for ab in arg_beliefs if target.lower() in ab.lower()),
-                None,
+                (ab for ab in arg_beliefs if target.lower() in ab.lower()), None
             )
             if matched:
                 rebuttal_name = f"rebuttal:{ca_text[:20]}→{matched[:20]}"[:80]
-                jtms.add_belief(rebuttal_name)
-                jtms.add_justification([ca_text], [matched], rebuttal_name)
+                session.add_belief(rebuttal_name, agent_source="counter")
+                session.add_justification(
+                    [ca_text], [matched], rebuttal_name, agent_source="counter"
+                )
 
-    # ── Step 6: Quality scores → annotate belief metadata ────────────
-    quality_annotations = {}
+    # ── Step 6: Quality scores → update belief confidence ─────────────
     for arg_id, scores in per_arg_scores.items():
         if not isinstance(scores, dict):
             continue
         idx = int(arg_id.split("_")[-1]) - 1 if "_" in arg_id else -1
         if 0 <= idx < len(arg_beliefs):
-            quality_annotations[arg_beliefs[idx]] = {
-                "quality_score": scores.get("note_finale", 0),
-                "weakest_virtue": min(
+            belief_name = arg_beliefs[idx]
+            quality_score = scores.get("note_finale", 0)
+            if belief_name in session.extended_beliefs:
+                eb = session.extended_beliefs[belief_name]
+                eb.confidence = max(eb.confidence, quality_score / 10.0)
+                eb.context["quality_score"] = quality_score
+                eb.context["weakest_virtue"] = min(
                     scores.get("scores_par_vertu", {"?": 0}),
                     key=scores.get("scores_par_vertu", {"?": 0}).get,
-                ),
-            }
+                )
 
-    # ── Build output ─────────────────────────────────────────────────
+    # ── Build output (backward-compatible + extended metadata) ────────
     beliefs_output = {}
     for name, b in jtms.beliefs.items():
         entry = {
@@ -706,9 +702,22 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
             ],
             "content": name,
         }
-        if name in quality_annotations:
-            entry["quality"] = quality_annotations[name]
+        # Add extended metadata from JTMSSession (#214)
+        if name in session.extended_beliefs:
+            eb = session.extended_beliefs[name]
+            entry["agent_source"] = eb.agent_source
+            entry["confidence"] = eb.confidence
+            if eb.context:
+                entry["quality"] = {
+                    k: v for k, v in eb.context.items()
+                    if k in ("quality_score", "weakest_virtue")
+                } or None
+                if entry["quality"] is None:
+                    del entry["quality"]
         beliefs_output[name] = entry
+
+    # Session consistency check
+    consistency = session.check_consistency()
 
     return {
         "beliefs": beliefs_output,
@@ -719,6 +728,8 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         "fallacy_count": len(fallacy_beliefs),
         "counter_argument_count": len([ca for ca in counter_args[:4] if isinstance(ca, dict)]),
         "has_real_dependencies": bool(arg_beliefs and (claim_beliefs or fallacy_beliefs)),
+        "session_summary": session.get_session_summary(),
+        "consistency": consistency,
     }
 
 

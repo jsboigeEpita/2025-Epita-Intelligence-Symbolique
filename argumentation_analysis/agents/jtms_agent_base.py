@@ -14,7 +14,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 
-# Import du système JTMS depuis services/jtms/
+# Import du système JTMS canonique (services/jtms/)
 from argumentation_analysis.services.jtms import JTMS, Belief, Justification
 
 
