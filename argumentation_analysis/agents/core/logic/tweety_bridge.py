@@ -39,7 +39,7 @@ class TweetyBridge:
     Gère le cycle de vie de la JVM et fournit un accès aux fonctionnalités logiques.
     """
     _instance = None
-    _lock = threading.Lock()
+    _lock = asyncio.Lock()
     _jvm_started = False
     _jvm_path: Optional[str] = None
     
@@ -50,24 +50,35 @@ class TweetyBridge:
     _initializer: Optional[TweetyInitializer] = None
 
     def __new__(cls, *args, **kwargs):
+        # Le __new__ reste synchrone et simple
         if cls._instance is None:
-            with cls._lock:
+            # Note: le verrou est maintenant asyncio.Lock, mais __new__ est synchrone.
+            # Pour la création d'instance, un verrou de thread est plus approprié si
+            # l'instanciation peut se produire depuis plusieurs threads.
+            # On garde un verrou de thread juste pour la création.
+            with threading.Lock():
                 if cls._instance is None:
                     cls._instance = super(TweetyBridge, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, jar_directory: Optional[str] = None):
         """
-        Initialise le pont. La JVM n'est pas démarrée ici, mais dans `initialize_jvm`.
-        Les handlers sont chargés paresseusement (lazy-loaded) lors du premier accès.
+        Initialise le pont de manière synchrone. L'initialisation de la JVM est différée.
         """
         if not hasattr(self, '_initialized'):
             self.jar_directory = jar_directory or self._find_default_jar_dir()
             self._initializer = TweetyInitializer(self)
-            # L'initialisation de la JVM et des composants est maintenant gérée par une méthode unifiée
-            self._initializer.ensure_jvm_and_components_are_ready()
-            # Les handlers ne sont plus initialisés ici pour éviter les erreurs de JVM
             self._initialized = True
+            
+    async def async_initialize(self):
+        """
+        Initialise de manière asynchrone la JVM et les composants.
+        Cette méthode doit être appelée après la création de l'instance.
+        """
+        async with self._lock:
+            if self.initializer.is_jvm_ready():
+                return
+            await self._initializer.ensure_jvm_and_components_are_ready()
 
     def _find_default_jar_dir(self) -> str:
         """
@@ -81,12 +92,17 @@ class TweetyBridge:
         return os.path.normpath(relative_jar_path)
 
     @classmethod
-    def get_instance(cls, jar_directory: Optional[str] = None) -> 'TweetyBridge':
+    async def get_instance(cls, jar_directory: Optional[str] = None) -> 'TweetyBridge':
         """
-        Méthode d'accès au singleton, avec initialisation si nécessaire.
+        Méthode d'accès asynchrone au singleton, qui garantit l'initialisation.
         """
         if cls._instance is None:
+            # Le __new__ s'assure que l'instance est créée de manière thread-safe
             cls._instance = TweetyBridge(jar_directory)
+        
+        # On attend que l'initialisation asynchrone soit terminée
+        await cls._instance.async_initialize()
+        
         return cls._instance
 
     @property

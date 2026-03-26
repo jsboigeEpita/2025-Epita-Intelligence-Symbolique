@@ -21,7 +21,6 @@ markdown
 
 # Testing Dependencies
 pytest
-mcp-client
 pytest-asyncio
 pytest-mock
 pytest-playwright

@@ -13,7 +13,7 @@ _JVM_INIT_LOCK = threading.Lock()
 # Configuration du logger pour ce module
 logger = logging.getLogger(__name__)
 if not logger.handlers:
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stderr)
     formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -54,8 +54,11 @@ ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, No
 
 try:
     from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_func
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 except ImportError as e:
-    logger.error(f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}")
+    logger.error(f"Failed to import jvm_setup or tweety_bridge: {e}")
+    initialize_jvm_func = None
+    TweetyBridge = None
 
 try:
     from argumentation_analysis.services.crypto_service import CryptoService as CryptoService_class
@@ -127,6 +130,7 @@ class ProjectContext:
         self.llm_service = None
         self._fallacy_detector_instance = None
         self._fallacy_detector_lock = threading.Lock()
+        self.tweety_bridge = None
         self.tweety_classes = {}
         self.config = {}
         self.settings = None
@@ -386,6 +390,33 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     
     logger.info("--- Fin de l'initialisation de l'environnement du projet ---")
     return context
+
+async def async_bootstrap_jvm(context: ProjectContext):
+    """
+    Initialise la JVM de manière asynchrone et centralisée.
+    """
+    if context.jvm_initialized:
+        logger.info("JVM déjà initialisée, pas d'action nécessaire.")
+        return
+
+    if TweetyBridge:
+        logger.info("Démarrage de l'initialisation asynchrone de TweetyBridge...")
+        try:
+            # get_instance est maintenant une coroutine
+            tweety_bridge_instance = await TweetyBridge.get_instance()
+            context.tweety_bridge = tweety_bridge_instance
+            context.jvm_initialized = tweety_bridge_instance.initializer.is_jvm_ready()
+            if context.jvm_initialized:
+                logger.info("Bootstrap asynchrone de la JVM réussi.")
+                _load_tweety_classes(context)
+            else:
+                logger.error("L'initialisation asynchrone de TweetyBridge s'est terminée mais la JVM n'est pas prête.")
+        except Exception as e:
+            logger.critical(f"Échec critique du bootstrap asynchrone de la JVM: {e}", exc_info=True)
+            context.jvm_initialized = False
+    else:
+        logger.error("Impossible de démarrer la JVM : la classe TweetyBridge n'a pas été importée.")
+
 
 if __name__ == '__main__':
     print("Test direct du module de bootstrap:")

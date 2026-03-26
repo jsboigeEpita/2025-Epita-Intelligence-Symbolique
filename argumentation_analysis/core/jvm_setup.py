@@ -1,9 +1,12 @@
+import sys
 # -*- coding: utf-8 -*-
 # core/jvm_setup.py
 import os
 import jpype
 import jpype.imports
 import logging
+import asyncio
+import time
 import threading
 import platform
 import re
@@ -19,7 +22,7 @@ from tqdm.auto import tqdm
 # Il est crucial de configurer le logger au tout début.
 # Si le logger parent est déjà configuré, ces lignes n'auront pas d'effet
 # mais garantissent que le logging est actif si ce module est importé en premier.
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', stream=sys.stderr)
 logger = logging.getLogger("Orchestration.JPype.Setup")
 try:
     from argumentation_analysis.config.settings import settings
@@ -27,8 +30,12 @@ except ImportError as e:
     logger.critical(f"CRASH POTENTIEL: Échec de l'importation de 'settings'. Erreur: {e}", exc_info=True)
     raise
 
-# Verrou global pour rendre l'initialisation de la JVM thread-safe
-_jvm_lock = threading.Lock()
+class JVMStartupTimeoutError(Exception):
+    """Exception levée lorsque le démarrage de la JVM dépasse le timeout imparti."""
+    pass
+
+# Verrou global pour rendre l'initialisation de la JVM thread-safe et async-safe
+_jvm_lock = asyncio.Lock()
 
 # --- Gestion d'état de la JVM ---
 _JVM_INITIALIZED_THIS_SESSION = False
@@ -320,14 +327,14 @@ def get_jvm_options() -> List[str]:
     logger.info(f"Options JVM de base: {options}")
     return options
 
-def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
+async def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
-    Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
-    La logique est thread-safe.
+    Démarre la JVM avec le CLASSPATH configuré, de manière asynchrone, robuste et avec un timeout.
+    La logique est thread-safe et asyncio-safe.
     """
     global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM, _JVM_WAS_SHUTDOWN
 
-    with _jvm_lock:
+    async with _jvm_lock:
         _SESSION_FIXTURE_OWNS_JVM = session_fixture_owns_jvm
         logger.info("=" * 50)
         logger.info(f"Tentative d'initialisation de la JVM (force_restart={force_restart}, session_owner={session_fixture_owns_jvm})")
@@ -338,24 +345,18 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 return True
             else:
                 logger.warning("Forçage du redémarrage de la JVM. Arrêt de la JVM actuelle...")
-                shutdown_jvm(called_by_session_fixture=True) # On simule l'appel par la fixture pour permettre l'arrêt
+                shutdown_jvm(called_by_session_fixture=True)
 
         if _JVM_WAS_SHUTDOWN and not force_restart:
             logger.critical("NON SUPPORTÉ: Tentative de ré-initialisation après un arrêt complet de la JVM sans forçage.")
             return False
 
-        # Remise à zéro de l'état d'arrêt si on force le redémarrage
         _JVM_WAS_SHUTDOWN = False
 
         logger.info("--- Début du processus de démarrage de la JVM ---")
         if not download_tweety_jars():
             logger.critical("Échec du téléchargement des JARs Tweety. Arrêt.")
             return False
-        
-        # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
-        # Empêche jpype de tenter un arrêt automatique, ce qui causerait des conflits.
-        # La configuration via jpype.config.destroy_jvm est obsolète.
-        # Le comportement par défaut est maintenant géré par le code.
         
         java_home = find_valid_java_home()
         if not java_home:
@@ -365,59 +366,61 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
 
         tweety_libs_dir = PROJ_ROOT / settings.jvm.tweety_libs_dir
         uber_jars = [jar for jar in tweety_libs_dir.glob("*.jar") if "full" in jar.name.lower()]
-        if uber_jars:
-            classpath = [str(uber_jars[0].resolve())]
-        else:
-            logger.warning("Aucun uber-jar trouvé, chargement de tous les JARs.")
-            classpath = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
-            if not classpath:
-                logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
-                return False
+        classpath = [str(uber_jars[0].resolve())] if uber_jars else [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
+        if not classpath:
+            logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
+            return False
 
-        try:
-            jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.exe' if platform.system() == 'Windows' else 'java'))
-            if not Path(jvm_path_explicit).exists():
-                 jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.dll' if platform.system() == 'Windows' else 'libjvm.so'))
-            
-            jvm_options = get_jvm_options()
-            
-            logger.info("--- Paramètres de Démarrage JVM ---")
-            logger.info(f"  Chemin JVM: {jvm_path_explicit}")
-            logger.info(f"  Options: {jvm_options}")
-            logger.info(f"  Classpath: {classpath[0] if classpath else 'Vide'}")
-            logger.info("------------------------------------")
-
+        def _blocking_start_jvm():
+            """Fonction interne pour l'appel bloquant à jpype.startJVM."""
+            logger.info("Appel bloquant à jpype.startJVM dans un thread séparé...")
+            # time.sleep(40) # Décommenter pour simuler un blocage
             jpype.startJVM(
-                *jvm_options,
+                *get_jvm_options(),
                 classpath=classpath,
                 ignoreUnrecognized=True,
                 convertStrings=False,
             )
+
+        try:
+            logger.info("--- Paramètres de Démarrage JVM ---")
+            logger.info(f"  Options: {get_jvm_options()}")
+            logger.info(f"  Classpath: {classpath[0] if classpath else 'Vide'}")
+            logger.info("------------------------------------")
+            
+            logger.info("Lancement de startJVM avec un timeout de 30 secondes...")
+            await asyncio.wait_for(
+                asyncio.to_thread(_blocking_start_jvm),
+                timeout=30.0
+            )
             
             _JVM_INITIALIZED_THIS_SESSION = True
-            logger.info("[SUCCESS] JVM démarrée avec succès.")
+            logger.info("[SUCCESS] JVM démarrée avec succès dans le temps imparti.")
             return True
+        except asyncio.TimeoutError:
+            logger.critical("TIMEOUT: Le démarrage de la JVM a dépassé les 30 secondes.")
+            raise JVMStartupTimeoutError("Le démarrage de la JVM a dépassé le timeout de 30 secondes.")
         except Exception as e:
             logger.critical(f"CRASH: Échec critique du démarrage de la JVM: {e}", exc_info=True)
-            # Potentiellement marquer la JVM comme non initialisable pour éviter des boucles
             return False
 
 def shutdown_jvm(called_by_session_fixture=False):
     global _JVM_WAS_SHUTDOWN
-    with _jvm_lock:
-        if not jpype.isJVMStarted():
-            return
-        if _SESSION_FIXTURE_OWNS_JVM and not called_by_session_fixture:
-            logger.warning("Arrêt de la JVM demandé, mais elle est gérée par une fixture de session.")
-            return
-        logger.info("Tentative d'arrêt de la JVM...")
-        try:
-            jpype.shutdownJVM()
-            logger.info("[SUCCESS] JVM arrêtée.")
-            _JVM_WAS_SHUTDOWN = True
-        except Exception as e:
-            logger.error(f"Erreur lors de l'arrêt de la JVM: {e}", exc_info=True)
-            _JVM_WAS_SHUTDOWN = True
+    # Note: Le verrou n'est pas async ici car shutdown est synchrone et rapide.
+    # Si cela pose problème, il faudra le rendre async également.
+    if not jpype.isJVMStarted():
+        return
+    if _SESSION_FIXTURE_OWNS_JVM and not called_by_session_fixture:
+        logger.warning("Arrêt de la JVM demandé, mais elle est gérée par une fixture de session.")
+        return
+    logger.info("Tentative d'arrêt de la JVM...")
+    try:
+        jpype.shutdownJVM()
+        logger.info("[SUCCESS] JVM arrêtée.")
+        _JVM_WAS_SHUTDOWN = True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'arrêt de la JVM: {e}", exc_info=True)
+        _JVM_WAS_SHUTDOWN = True
 
 def is_jvm_started() -> bool:
     try:

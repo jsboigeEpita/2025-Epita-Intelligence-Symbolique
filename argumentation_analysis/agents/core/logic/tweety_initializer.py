@@ -47,7 +47,7 @@ class TweetyInitializer:
         if tweety_bridge_instance:
             self._tweety_bridge = tweety_bridge_instance
 
-    def ensure_jvm_and_components_are_ready(self):
+    async def ensure_jvm_and_components_are_ready(self):
         """
         Garantit que la JVM est démarrée ET que les classes Java de Tweety sont chargées.
         Cette méthode gère le cas spécial où les tests sont exécutés via pytest.
@@ -72,7 +72,7 @@ class TweetyInitializer:
             else:
                 # Contexte normal (hors test), on démarre la JVM nous-mêmes.
                 logger.info("JVM not started. Calling the robust initializer.")
-                if not self.initialize_jvm():
+                if not await self.initialize_jvm():
                     raise RuntimeError("Échec du démarrage de la JVM par l'initialiseur robuste.")
         
         self.__class__._jvm_started = True
@@ -91,7 +91,7 @@ class TweetyInitializer:
             logger.debug("Java components were already initialized.")
 
     @staticmethod
-    def initialize_jvm():
+    async def initialize_jvm():
         """
         Delegates JVM initialization to the robust, centralized jvm_setup.py script.
         This script handles JDK provisioning (download, unzip) and proper JVM startup.
@@ -99,7 +99,7 @@ class TweetyInitializer:
         logger.info("Delegating JVM initialization to core.jvm_setup.initialize_jvm...")
         try:
             # On appelle la fonction renommée pour plus de clarté
-            if initialize_jvm_robustly():
+            if await initialize_jvm_robustly():
                 logger.info("Robust JVM initialization successful.")
                 TweetyInitializer._jvm_started = True
                 return True

@@ -9,13 +9,18 @@ async def app_lifespan(app: "FastMCP"):
     yield
 
 # Création directe de l'instance du serveur avec le lifespan
-mcp_server = FastMCP(lifespan=app_lifespan)
+mcp_server = FastMCP(
+    service_name="minimal_server",
+    host="127.0.0.1",
+    port=8000,
+    lifespan=app_lifespan
+)
 
-@mcp_server.tool(name="ping", description="A simple tool that returns 'pong'")
+@mcp_server.tool()
 async def ping():
     """A simple tool that returns 'pong'."""
     return "pong"
 
 if __name__ == "__main__":
-    # La méthode .run() gère la boucle d'événements asyncio.
-    mcp_server.run()
+    # On force le transport stdio pour les tests
+    mcp_server.run(transport='streamable-http')

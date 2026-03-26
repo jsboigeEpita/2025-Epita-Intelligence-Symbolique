@@ -16,7 +16,7 @@ from .strategies.base_strategy import BaseStrategy
 from project_core.environment.conda_manager import CondaManager
 
 # Configuration du logger
-logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class EnvironmentManager:

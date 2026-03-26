@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
-print("Importation des modules...")
+print("Importation des modules...", file=sys.stderr)
 
 from fastapi import Response
 from mcp.server.fastmcp import FastMCP, Context
@@ -31,7 +31,7 @@ from argumentation_analysis.services.web_api.models.response_models import (
 )
 
 # Bootstrap pour initialiser l'environnement
-from argumentation_analysis.core.bootstrap import initialize_project_environment
+from argumentation_analysis.core.bootstrap import initialize_project_environment, async_bootstrap_jvm
 
 
 class AppServices:
@@ -43,8 +43,8 @@ class AppServices:
         self.logic_service = LogicService(llm_service=self.llm_service)
         self.analysis_service = AnalysisService(llm_service=self.llm_service)
         self.validation_service = ValidationService(self.logic_service)
-        self.fallacy_service = FallacyService()
-        self.framework_service = FrameworkService()
+        # self.fallacy_service = FallacyService()
+        # self.framework_service = FrameworkService()
         self.logger.info("App services container initialized.")
     
     def is_healthy(self) -> Dict[str, Any]:
@@ -66,6 +66,10 @@ async def app_lifespan(app: "FastMCP"):
     """Gère le cycle de vie de l'application et les dépendances."""
     logging.info("Initialisation de l'environnement du projet pour le serveur MCP...")
     project_context = initialize_project_environment(force_mock_llm=True)
+    
+    logging.info("Démarrage du bootstrap asynchrone de la JVM...")
+    await async_bootstrap_jvm(project_context)
+    
     services = AppServices(llm_service=project_context.llm_service)
     logging.info("Services MCP initialisés avec succès.")
     yield services
@@ -173,7 +177,7 @@ class MCPService:
 
 # Point d'entrée principal
 if __name__ == "__main__":
-    print("Lancement du serveur MCP...")
+    print("Lancement du serveur MCP...", file=sys.stderr)
     mcp_service = MCPService()
-    print(f"Serveur MCP initialisé avec 10 outils disponibles")
+    # print(f"Serveur MCP initialisé avec {len(mcp_service.mcp.tool)} outils disponibles", file=sys.stderr)
     mcp_service.run(transport='streamable-http')
