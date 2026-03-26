@@ -218,3 +218,35 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 | Cross-KB enrichment | Via context dict | Via state reads + prompts | Via interfaces | N/A |
 | Convergence | Phase completion | PM designation + trace | Level completion | Oracle termination |
 | Best for | Batch analysis, API | Deep interactive analysis | Goal decomposition | Investigation game |
+
+---
+
+## Post-Consolidation Status (Epic #208, March 2026)
+
+### Archived Components
+| Component | Archived To | Replacement | PR |
+|-----------|-------------|-------------|-----|
+| `RealLLMOrchestrator` (668 lines) | `docs/archives/orchestration_legacy/` | `UnifiedPipeline` / `ConversationalOrchestrator` | #246 |
+| `RealLLMOrchestratorWrapper` (60 lines) | Deprecation shim in `pipelines/` | Same as above | #247 |
+| Dead code in `pipeline_utils.py` | Removed (EnhancedPipeline, singletons) | `AnalysisCache` + `PipelineMetrics` kept | #255 |
+
+### Consolidated Components
+| Component | New Location | Description | PR |
+|-----------|-------------|-------------|-----|
+| `ExtendedBelief` + `JTMSSession` | `services/jtms/extended_belief.py` | Agent-aware beliefs with confidence and audit trail | #254 |
+| `ConflictResolver` (5 strategies) | `services/jtms/conflict_resolution.py` | Standalone conflict resolution for multi-agent JTMS | #254 |
+| JTMS imports | `services/jtms/` | Fixed from `1.4.1-JTMS/` sys.path hack to canonical import | #254 |
+
+### Confirmed Active (NOT archived)
+| File | Why Active |
+|------|-----------|
+| `enhanced_pm_analysis_runner.py` | Used by `analysis_runner_v2.py`, `trace_analyzer.py`, integration tests |
+| `hierarchy_bridge.py` | Used by `conversational_executor.py`, `run_agentic_eval.py` |
+| `turn_protocol.py` | Used by `conversational_executor.py`, evaluation module, 7 files total |
+| `direct_executor.py` | Used by `MainOrchestrator` (hierarchical mode), 3 test files |
+| `conversational_executor.py` | Used by hierarchy_bridge, evaluation modules |
+
+### Pipeline Utilities (added #215)
+- `AnalysisCache`: TTL-based caching with LFU eviction
+- `PipelineMetrics`: Structured metrics collection with per-type aggregation
+- `run_batch_analysis()`: Semaphore-controlled concurrent batch processing
