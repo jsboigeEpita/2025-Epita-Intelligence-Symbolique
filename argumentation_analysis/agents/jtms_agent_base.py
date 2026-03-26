@@ -15,7 +15,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 
 # Import du système JTMS canonique (services/jtms/)
-from argumentation_analysis.services.jtms.jtms_core import JTMS, Belief, Justification
+from argumentation_analysis.services.jtms import JTMS, Belief, Justification
 
 
 class ExtendedBelief:
