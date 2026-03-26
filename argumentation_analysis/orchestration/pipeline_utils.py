@@ -18,13 +18,9 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, ParamSpec
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("PipelineUtils")
-
-P = ParamSpec("P")
-T = TypeVar("T")
 
 
 # =============================================================================
@@ -67,7 +63,7 @@ class AnalysisCache:
 
         Args:
             ttl_seconds: Time-to-live for cache entries (default: 1 hour)
-            max_size: Maximum number of entries before LRU eviction
+            max_size: Maximum number of entries before LFU eviction (least frequently used)
         """
         self._cache: Dict[str, CacheEntry] = {}
         self._ttl_seconds = ttl_seconds
@@ -136,10 +132,10 @@ class AnalysisCache:
             parameters: Optional parameters used
             ttl_override: Override default TTL for this entry
         """
-        # Evict if at capacity (LRU: remove entry with fewest hits)
+        # Evict if at capacity (LFU: remove entry with fewest hits)
         if len(self._cache) >= self._max_size:
-            lru_key = min(self._cache.keys(), key=lambda k: self._cache[k].hits)
-            del self._cache[lru_key]
+            lfu_key = min(self._cache.keys(), key=lambda k: self._cache[k].hits)
+            del self._cache[lfu_key]
             self._stats["evictions"] += 1
 
         key = self._generate_key(text, analysis_type, parameters)
@@ -179,42 +175,6 @@ class AnalysisCache:
         }
 
 
-def cached_analysis(
-    cache: AnalysisCache,
-    analysis_type: str,
-    parameters: Optional[Dict[str, Any]] = None
-):
-    """
-    Decorator to cache analysis function results.
-
-    Usage:
-        cache = AnalysisCache()
-
-        @cached_analysis(cache, "informal")
-        async def analyze_informal(text: str) -> Dict:
-            ...
-    """
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            # Assume first arg is text
-            text = args[0] if args else kwargs.get("text", "")
-
-            # Check cache
-            cached_result = cache.get(text, analysis_type, parameters)
-            if cached_result is not None:
-                logger.debug(f"Cache hit for {analysis_type}")
-                return cached_result
-
-            # Execute function
-            result = await func(*args, **kwargs)
-
-            # Cache result
-            cache.set(text, analysis_type, result, parameters)
-            return result
-
-        return wrapper
-    return decorator
 
 
 # =============================================================================
@@ -569,153 +529,10 @@ async def run_batch_analysis(
     return list(results)
 
 
-# =============================================================================
-# 4. INTEGRATED PIPELINE ENHANCEMENT
-# =============================================================================
-
-class EnhancedPipeline:
-    """
-    UnifiedPipeline wrapper with caching, metrics, and batch support.
-
-    This class wraps the UnifiedPipeline to provide feature parity with
-    the archived RealLLMOrchestrator while using the modern Lego architecture.
-
-    Usage:
-        from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
-        from argumentation_analysis.orchestration.pipeline_utils import EnhancedPipeline
-
-        # Create enhanced pipeline
-        pipeline = EnhancedPipeline(
-            cache_ttl=3600,
-            max_concurrent=10,
-        )
-
-        # Single analysis with caching
-        result = await pipeline.analyze("Some text", workflow="standard")
-
-        # Batch analysis
-        requests = [BatchRequest(...), ...]
-        results = await pipeline.batch_analyze(requests)
-
-        # Get metrics
-        print(pipeline.get_metrics_summary())
-    """
-
-    def __init__(
-        self,
-        cache_ttl: float = 3600,
-        cache_max_size: int = 1000,
-        max_concurrent: int = 10,
-        metrics_max_entries: int = 10000,
-    ):
-        self._cache = AnalysisCache(ttl_seconds=cache_ttl, max_size=cache_max_size)
-        self._metrics = PipelineMetrics(max_entries=metrics_max_entries)
-        self._max_concurrent = max_concurrent
-
-    async def analyze(
-        self,
-        text: str,
-        workflow: str = "standard",
-        use_cache: bool = True,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Run analysis with optional caching and metrics tracking.
-        """
-        from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
-
-        # Check cache
-        if use_cache:
-            cached = self._cache.get(text, workflow, kwargs)
-            if cached is not None:
-                logger.debug(f"Cache hit for workflow {workflow}")
-                return cached
-
-        # Run analysis with metrics tracking
-        with self._metrics.track(workflow, {"text_length": len(text)}) as ctx:
-            result = await run_unified_analysis(
-                text=text,
-                workflow_name=workflow,
-                **kwargs
-            )
-            ctx.set_result(result)
-
-        # Cache result
-        if use_cache:
-            self._cache.set(text, workflow, result, kwargs)
-
-        return result
-
-    async def batch_analyze(
-        self,
-        requests: List[BatchRequest],
-        workflow: str = "standard",
-        fail_fast: bool = False,
-    ) -> List[BatchResult]:
-        """
-        Run batch analyses with concurrency control.
-        """
-        async def analyze_fn(text: str, analysis_type: str, params: Optional[Dict]) -> Any:
-            return await self.analyze(text, workflow=analysis_type, **(params or {}))
-
-        return await run_batch_analysis(
-            requests=requests,
-            analyze_fn=analyze_fn,
-            max_concurrent=self._max_concurrent,
-            fail_fast=fail_fast,
-        )
-
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
-        return self._cache.get_stats()
-
-    def get_metrics_summary(self) -> Dict[str, Any]:
-        """Get metrics summary."""
-        return self._metrics.get_summary()
-
-    def get_recent_metrics(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get recent metrics entries."""
-        return self._metrics.get_recent(limit)
-
-    def clear_cache(self) -> None:
-        """Clear the analysis cache."""
-        self._cache.clear()
-
-    def reset_metrics(self) -> None:
-        """Reset metrics collection."""
-        self._metrics.reset()
-
-
-# =============================================================================
-# MODULE-LEVEL CONVENIENCE INSTANCES
-# =============================================================================
-
-# Default shared instances for easy import
-_default_cache: Optional[AnalysisCache] = None
-_default_metrics: Optional[PipelineMetrics] = None
-
-
-def get_default_cache() -> AnalysisCache:
-    """Get or create the default shared cache instance."""
-    global _default_cache
-    if _default_cache is None:
-        _default_cache = AnalysisCache()
-    return _default_cache
-
-
-def get_default_metrics() -> PipelineMetrics:
-    """Get or create the default shared metrics instance."""
-    global _default_metrics
-    if _default_metrics is None:
-        _default_metrics = PipelineMetrics()
-    return _default_metrics
-
-
 __all__ = [
     # Caching
     "AnalysisCache",
     "CacheEntry",
-    "cached_analysis",
     # Metrics
     "PipelineMetrics",
     "AnalysisMetric",
@@ -723,9 +540,4 @@ __all__ = [
     "BatchRequest",
     "BatchResult",
     "run_batch_analysis",
-    # Integrated
-    "EnhancedPipeline",
-    # Convenience
-    "get_default_cache",
-    "get_default_metrics",
 ]

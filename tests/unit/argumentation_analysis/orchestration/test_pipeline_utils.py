@@ -53,8 +53,8 @@ class TestAnalysisCache:
         assert stats["hits"] == 2
         assert stats["misses"] == 1
 
-    def test_cache_lru_eviction(self):
-        """Test LRU eviction when cache is full."""
+    def test_cache_lfu_eviction(self):
+        """Test LFU (Least Frequently Used) eviction when cache is full."""
         cache = AnalysisCache(ttl_seconds=3600, max_size=3)
 
         # Fill cache
