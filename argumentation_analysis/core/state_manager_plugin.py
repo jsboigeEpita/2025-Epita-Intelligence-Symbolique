@@ -316,6 +316,175 @@ class StateManagerPlugin:
             )
             return f"FUNC_ERROR: Erreur désignation agent {agent_name}: {e}"
 
+    # =========================================================================
+    # JTMS Hub Integration (#214)
+    # =========================================================================
+
+    @kernel_function(
+        description="Create a JTMS belief with extended metadata (agent_source, confidence).",
+        name="jtms_create_belief",
+    )
+    def jtms_create_belief(
+        self,
+        belief_name: str,
+        agent_source: str = "unknown",
+        confidence: float = 0.5,
+        context: Optional[str] = None,
+    ) -> str:
+        """Create an ExtendedBelief in the JTMS session via StateManagerPlugin (#214)."""
+        self._logger.info(
+            f"Appel jtms_create_belief: '{belief_name}', source={agent_source}, conf={confidence}"
+        )
+        try:
+            # Import here to avoid circular dependency
+            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            import json
+
+            # Get or create JTMS session from state
+            if not hasattr(self._state, "_jtms_session"):
+                self._state._jtms_session = JTMSSession(
+                    strict=False, agent_id="state_manager_plugin"
+                )
+
+            session = self._state._jtms_session
+
+            # Parse context if JSON string
+            context_dict = {}
+            if context:
+                try:
+                    context_dict = json.loads(context)
+                except:
+                    context_dict = {"raw": context}
+
+            # Create extended belief
+            ext_belief = session.add_belief(
+                belief_name,
+                agent_source=agent_source,
+                context=context_dict,
+                confidence=confidence,
+            )
+
+            self._logger.info(f" -> Belief '{belief_name}' created with ExtendedBelief metadata")
+            return f"OK: Belief '{belief_name}' created by {agent_source}"
+
+        except Exception as e:
+            self._logger.error(f"Error creating JTMS belief '{belief_name}': {e}", exc_info=True)
+            return f"FUNC_ERROR: Error creating belief: {e}"
+
+    @kernel_function(
+        description="Add a JTMS justification between beliefs (IN-list and OUT-list).",
+        name="jtms_add_justification",
+    )
+    def jtms_add_justification(
+        self,
+        in_list: List[str],
+        out_list: List[str],
+        conclusion: str,
+        agent_source: str = "unknown",
+    ) -> str:
+        """Add a justification with ExtendedBelief tracking via StateManagerPlugin (#214)."""
+        self._logger.info(
+            f"Appel jtms_add_justification: IN={len(in_list)}, OUT={len(out_list)}, conclusion={conclusion}"
+        )
+        try:
+            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+
+            # Get or create JTMS session
+            if not hasattr(self._state, "_jtms_session"):
+                self._state._jtms_session = JTMSSession(
+                    strict=False, agent_id="state_manager_plugin"
+                )
+
+            session = self._state._jtms_session
+
+            # Add justification with agent source tracking
+            session.add_justification(in_list, out_list, conclusion, agent_source=agent_source)
+
+            self._logger.info(f" -> Justification for '{conclusion}' added by {agent_source}")
+            return f"OK: Justification for '{conclusion}' added by {agent_source}"
+
+        except Exception as e:
+            self._logger.error(f"Error adding JTMS justification: {e}", exc_info=True)
+            return f"FUNC_ERROR: Error adding justification: {e}"
+
+    @kernel_function(
+        description="Query JTMS beliefs with ExtendedBelief metadata (agent_source, confidence, history).",
+        name="jtms_query_beliefs",
+    )
+    def jtms_query_beliefs(self, agent_filter: Optional[str] = None) -> str:
+        """Query JTMS beliefs with ExtendedBelief metadata via StateManagerPlugin (#214)."""
+        self._logger.info(f"Appel jtms_query_beliefs: filter={agent_filter}")
+        try:
+            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            import json
+
+            # Get JTMS session
+            if not hasattr(self._state, "_jtms_session"):
+                return "FUNC_ERROR: No JTMS session initialized. Call jtms_create_belief first."
+
+            session = self._state._jtms_session
+
+            # Build query results with ExtendedBelief metadata
+            results = []
+            for name, ext_belief in session.extended_beliefs.items():
+                # Apply filter if specified
+                if agent_filter and ext_belief.agent_source != agent_filter:
+                    continue
+
+                belief_data = {
+                    "name": name,
+                    "valid": ext_belief.valid,
+                    "agent_source": ext_belief.agent_source,
+                    "confidence": ext_belief.confidence,
+                    "context": ext_belief.context,
+                    "creation_timestamp": ext_belief.creation_timestamp.isoformat(),
+                    "modification_count": len(ext_belief.modification_history),
+                    "justification_count": len(ext_belief.justifications),
+                }
+                results.append(belief_data)
+
+            self._logger.info(f" -> Found {len(results)} beliefs matching filter")
+            return json.dumps(results, ensure_ascii=False, indent=2)
+
+        except Exception as e:
+            self._logger.error(f"Error querying JTMS beliefs: {e}", exc_info=True)
+            return f"FUNC_ERROR: Error querying beliefs: {e}"
+
+    @kernel_function(
+        description="Check JTMS session consistency and return conflict report.",
+        name="jtms_check_consistency",
+    )
+    def jtms_check_consistency(self) -> str:
+        """Check JTMS consistency and return conflict report via StateManagerPlugin (#214)."""
+        self._logger.info("Appel jtms_check_consistency")
+        try:
+            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            import json
+
+            # Get JTMS session
+            if not hasattr(self._state, "_jtms_session"):
+                return "FUNC_ERROR: No JTMS session initialized."
+
+            session = self._state._jtms_session
+
+            # Check consistency
+            consistency_result = session.check_consistency()
+
+            result = {
+                "is_consistent": consistency_result.get("is_consistent", True),
+                "conflicts_detected": consistency_result.get("conflicts", []),
+                "total_beliefs": len(session.extended_beliefs),
+                "consistency_checks": session.consistency_checks,
+                "session_version": session.version,
+            }
+
+            self._logger.info(f" -> Consistency check: {result['is_consistent']}")
+            return json.dumps(result, ensure_ascii=False, indent=2)
+
+        except Exception as e:
+            self._logger.error(f"Error checking JTMS consistency: {e}", exc_info=True)
+            return f"FUNC_ERROR: Error checking consistency: {e}"
+
 
 # Optionnel : Log de chargement
 module_logger = logging.getLogger(__name__)
