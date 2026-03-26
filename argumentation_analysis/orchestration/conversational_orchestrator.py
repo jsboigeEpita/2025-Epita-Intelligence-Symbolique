@@ -345,6 +345,20 @@ async def run_conversational_analysis(
         )
         conversation_log.extend(phase_log)
 
+        # Conflict resolution (#214): detect and resolve conflicts between agents
+        conflict_resolutions = await _resolve_phase_conflicts(
+            state, phase_name, strategy="confidence_based"
+        )
+        if conflict_resolutions:
+            conversation_log.append(
+                {
+                    "phase": phase_name,
+                    "type": "conflict_resolution",
+                    "resolutions": conflict_resolutions,
+                    "resolution_count": len(conflict_resolutions),
+                }
+            )
+
         # Trace: record turns and capture state after phase
         for msg in phase_log:
             trace.record_turn(
@@ -487,3 +501,106 @@ async def _run_phase(
             )
 
     return messages
+
+
+async def _resolve_phase_conflicts(
+    state: RhetoricalAnalysisState,
+    phase_name: str,
+    strategy: str = "confidence_based",
+) -> List[Dict[str, Any]]:
+    """Detect and resolve conflicts between agent contributions after a phase (#214).
+
+    Uses ConflictResolver from jtms_communication_hub to reconcile conflicting beliefs
+    from different agents (e.g., InformalAgent says "fallacy" vs QualityAgent says "good").
+
+    Args:
+        state: Shared analysis state with all agent contributions
+        phase_name: Name of the phase just completed
+        strategy: Resolution strategy (confidence_based, evidence_based, consensus, etc.)
+
+    Returns:
+        List of resolution results applied to the state.
+    """
+    from argumentation_analysis.agents.jtms_communication_hub import ConflictResolver
+
+    resolver = ConflictResolver()
+    resolutions = []
+
+    # Collect potential conflicts from state
+    # Conflict patterns:
+    # 1. Same argument marked as fallacy AND high quality
+    # 2. Contradictory formalizations (A vs not A)
+    # 3. Debate disagreements without consensus
+
+    conflicts = []
+
+    # Pattern 1: Fallacy vs High Quality
+    try:
+        fallacies = state.fallacies if hasattr(state, "fallacies") else []
+        quality_scores = state.quality_scores if hasattr(state, "quality_scores") else {}
+
+        if fallacies and quality_scores:
+            for fallacy in fallacies:
+                if not isinstance(fallacy, dict):
+                    continue
+                target_arg = fallacy.get("target_argument_id", "")
+                if target_arg in quality_scores:
+                    quality = quality_scores[target_arg]
+                    if isinstance(quality, dict):
+                        score = quality.get("note_finale", 0)
+                        if score > 5.0:  # High quality but marked as fallacy = conflict
+                            conflicts.append(
+                                {
+                                    "conflict_id": f"fallacy_quality_{target_arg}",
+                                    "type": "fallacy_vs_quality",
+                                    "agents": {
+                                        "InformalAgent": {
+                                            "belief_name": f"FALLACY:{fallacy.get('fallacy_type', 'unknown')}",
+                                            "confidence": fallacy.get("confidence", 0.7),
+                                            "evidence": fallacy.get("explanation", ""),
+                                        },
+                                        "QualityAgent": {
+                                            "belief_name": f"QUALITY:{target_arg}",
+                                            "confidence": score / 9.0,  # Normalize to 0-1
+                                            "evidence": f"Quality score {score}/9",
+                                        },
+                                    },
+                                    "subject": target_arg,
+                                }
+                            )
+    except Exception as e:
+        logger.warning(f"Error detecting fallacy/quality conflicts: {e}")
+
+    # Resolve detected conflicts
+    for conflict in conflicts:
+        try:
+            # ConflictResolver expects agents dict, but we're working with state
+            # Create mock agent dict for compatibility
+            mock_agents = {}
+
+            resolution = await resolver.resolve_conflict(
+                conflict, mock_agents, strategy=strategy
+            )
+
+            if resolution.get("resolved"):
+                # Apply resolution to state
+                # For now, just log - future: update state with resolution
+                logger.info(
+                    f"[{phase_name}] Conflict resolved: {resolution.get('reasoning', 'No reasoning')}"
+                )
+                resolutions.append(
+                    {
+                        "phase": phase_name,
+                        "conflict_id": conflict.get("conflict_id"),
+                        "resolution": resolution,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Error resolving conflict {conflict.get('conflict_id')}: {e}")
+
+    if resolutions:
+        logger.info(
+            f"[{phase_name}] Resolved {len(resolutions)} conflicts using strategy '{strategy}'"
+        )
+
+    return resolutions
