@@ -50,7 +50,8 @@ class TweetyBridge:
     """
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.Lock()  # Thread-safe lock for singleton creation (__new__)
+    _async_lock: Optional["asyncio.Lock"] = None  # Async lock for JVM operations
     _jvm_started = False
     _jvm_path: Optional[str] = None
 
@@ -292,6 +293,33 @@ class TweetyBridge:
             raise TimeoutError(
                 f"La JVM n'a pas démarré dans le temps imparti de {timeout} secondes."
             )
+
+    @classmethod
+    def _get_async_lock(cls) -> "asyncio.Lock":
+        """
+        Get or create the asyncio.Lock for async JVM operations.
+        Must be called from an async context (requires running event loop).
+        """
+        if cls._async_lock is None:
+            cls._async_lock = asyncio.Lock()
+        return cls._async_lock
+
+    async def async_initialize_jvm(self, jvm_path: Optional[str] = None) -> None:
+        """
+        Async version of initialize_jvm using asyncio.Lock.
+        Prevents concurrent JVM startup in async contexts without blocking the event loop.
+        """
+        async with self._get_async_lock():
+            # Delegate to sync method (which has its own threading.Lock for actual JVM start)
+            self.initialize_jvm(jvm_path)
+
+    async def async_shutdown_jvm(self) -> None:
+        """
+        Async version of shutdown_jvm using asyncio.Lock.
+        Prevents concurrent JVM shutdown in async contexts.
+        """
+        async with self._get_async_lock():
+            self.shutdown_jvm()
 
     def set_jvm_path(self, jvm_path: str):
         """Définit manuellement le chemin vers la bibliothèque de la JVM (dll, so, etc.)."""
