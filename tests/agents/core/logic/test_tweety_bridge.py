@@ -8,7 +8,8 @@ import sys
 import os
 from pathlib import Path
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
+import asyncio
 
 # Ajout pour forcer la reconnaissance du package principal
 current_script_path = Path(__file__).resolve()
@@ -173,6 +174,99 @@ class TestTweetyBridge(unittest.TestCase):
                     sig_mock, "forall X p(X)"
                 )[0]
             )
+
+    def test_async_lock_singleton(self):
+        """Vérifie que _get_async_lock retourne toujours la même instance."""
+        lock1 = TweetyBridge._get_async_lock()
+        lock2 = TweetyBridge._get_async_lock()
+        self.assertIs(lock1, lock2)
+
+    def test_async_lock_is_asyncio_lock(self):
+        """Vérifie que _get_async_lock retourne un asyncio.Lock."""
+        import asyncio
+        lock = TweetyBridge._get_async_lock()
+        self.assertIsInstance(lock, asyncio.Lock)
+
+
+class TestTweetyBridgeAsync(unittest.IsolatedAsyncioTestCase):
+    """Tests async pour la classe TweetyBridge."""
+
+    def setUp(self):
+        """Initialisation avant chaque test."""
+        # Reset async_lock for test isolation
+        TweetyBridge._async_lock = None
+
+    async def test_async_initialize_jvm_uses_async_lock(self):
+        """Vérifie que async_initialize_jvm utilise l'async lock."""
+        import asyncio
+
+        # Create a spy to track lock acquisition
+        acquired = []
+
+        original_acquire = asyncio.Lock.acquire
+        original_release = asyncio.Lock.release
+
+        async def tracked_acquire(self):
+            result = await original_acquire(self)
+            acquired.append("acquired")
+            return result
+
+        def tracked_release(self):
+            acquired.append("released")
+            original_release(self)
+
+        # Patch temporarily
+        asyncio.Lock.acquire = tracked_acquire
+        asyncio.Lock.release = tracked_release
+
+        try:
+            # Mock the sync initialize_jvm to avoid actual JVM startup
+            with patch.object(TweetyBridge, 'initialize_jvm') as mock_init:
+                bridge = TweetyBridge.get_instance()
+                await bridge.async_initialize_jvm()
+                mock_init.assert_called_once()
+                self.assertIn("acquired", acquired)
+                self.assertIn("released", acquired)
+        finally:
+            asyncio.Lock.acquire = original_acquire
+            asyncio.Lock.release = original_release
+
+        # Reset singleton
+        TweetyBridge._instance = None
+
+    async def test_async_shutdown_jvm_uses_async_lock(self):
+        """Vérifie que async_shutdown_jvm utilise l'async lock."""
+        import asyncio
+
+        acquired = []
+
+        original_acquire = asyncio.Lock.acquire
+        original_release = asyncio.Lock.release
+
+        async def tracked_acquire(self):
+            result = await original_acquire(self)
+            acquired.append("acquired")
+            return result
+
+        def tracked_release(self):
+            acquired.append("released")
+            original_release(self)
+
+        asyncio.Lock.acquire = tracked_acquire
+        asyncio.Lock.release = tracked_release
+
+        try:
+            with patch.object(TweetyBridge, 'shutdown_jvm') as mock_shutdown:
+                bridge = TweetyBridge.get_instance()
+                await bridge.async_shutdown_jvm()
+                mock_shutdown.assert_called_once()
+                self.assertIn("acquired", acquired)
+                self.assertIn("released", acquired)
+        finally:
+            asyncio.Lock.acquire = original_acquire
+            asyncio.Lock.release = original_release
+
+        TweetyBridge._instance = None
 
 
 if __name__ == "__main__":

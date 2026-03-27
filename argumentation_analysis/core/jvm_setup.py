@@ -11,9 +11,19 @@ import requests
 import shutil
 import subprocess
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
 from typing import List, Optional, Dict
 from tqdm.auto import tqdm
+
+
+class JVMStartupTimeoutError(TimeoutError):
+    """Exception raised when JVM startup exceeds the configured timeout."""
+    pass
+
+
+# Default timeout for JVM startup (can be overridden via settings)
+DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS = 60
 
 # --- Configuration initiale du Logger ---
 # Il est crucial de configurer le logger au tout début.
@@ -871,13 +881,32 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 f"Appel à jpype.startJVM sur le point d'être exécuté depuis le thread ID: {current_thread_id}"
             )
 
-            jpype.startJVM(
-                *jvm_options,
-                classpath=classpath,
-                jvmpath=jvm_path_explicit,
-                ignoreUnrecognized=True,
-                convertStrings=False,
-            )
+            # Get timeout from settings or use default
+            startup_timeout = getattr(settings.jvm, 'startup_timeout_seconds', DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS)
+
+            def _do_start_jvm():
+                """Inner function to start JVM for timeout wrapper."""
+                jpype.startJVM(
+                    *jvm_options,
+                    classpath=classpath,
+                    jvmpath=jvm_path_explicit,
+                    ignoreUnrecognized=True,
+                    convertStrings=False,
+                )
+
+            # Execute JVM startup with timeout to prevent silent hangs
+            try:
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(_do_start_jvm)
+                    future.result(timeout=startup_timeout)
+            except FuturesTimeoutError:
+                logger.critical(
+                    f"JVM startup timed out after {startup_timeout} seconds. "
+                    "Possible causes: slow disk, corrupted JARs, or JVM crash."
+                )
+                raise JVMStartupTimeoutError(
+                    f"JVM startup exceeded timeout of {startup_timeout} seconds"
+                )
 
             logger.info(
                 f"Appel à jpype.startJVM terminé (Thread ID: {current_thread_id})."
