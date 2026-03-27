@@ -243,6 +243,110 @@ def _load_tweety_classes(context: "ProjectContext"):
         )
 
 
+def _pre_init_safety_checks(project_root: Path, env_path: Path) -> bool:
+    """
+    Pre-initialization safety checks to detect common issues before JVM startup.
+
+    Performs critical validation to prevent silent failures and hangs during
+    initialization. Returns True if all checks pass, False otherwise.
+
+    Args:
+        project_root: Path to the project root directory
+        env_path: Path to the .env configuration file
+
+    Returns:
+        True if all safety checks pass, False if any critical check fails
+    """
+    checks_passed = True
+    warnings = []
+
+    # Check 1: Python version compatibility
+    python_version = sys.version_info
+    if python_version < (3, 10):
+        logger.critical(
+            f"Python version {python_version[0]}.{python_version[1]} is not supported. "
+            f"Required: Python 3.10+"
+        )
+        return False
+    elif python_version >= (3, 13):
+        warnings.append(
+            f"Python {python_version[0]}.{python_version[1]} is not yet fully tested. "
+            f"Recommended: Python 3.10-3.12"
+        )
+
+    # Check 2: jpype availability (critical for JVM)
+    try:
+        import jpype
+        logger.debug(f"jpype version {jpype.__version__} is available")
+    except ImportError as e:
+        logger.critical(
+            f"jpype is not installed but is required for JVM operations: {e}"
+        )
+        logger.critical("Install with: pip install jpype1")
+        return False
+
+    # Check 3: File system accessibility
+    if not project_root.exists():
+        logger.critical(f"Project root directory does not exist: {project_root}")
+        return False
+
+    if not project_root.is_dir():
+        logger.critical(f"Project root path is not a directory: {project_root}")
+        return False
+
+    # Check 4: Configuration file accessibility
+    if env_path and env_path.exists():
+        if not env_path.is_file():
+            logger.warning(f"Environment path exists but is not a file: {env_path}")
+            checks_passed = False
+    else:
+        warnings.append(f"Environment file not found (may be optional): {env_path}")
+
+    # Check 5: Available memory (basic check)
+    psutil_available = False
+    try:
+        import psutil
+        psutil_available = True
+        available_memory_gb = psutil.virtual_memory().available / (1024**3)
+        if available_memory_gb < 0.5:  # Less than 512MB
+            logger.warning(
+                f"Low available memory: {available_memory_gb:.2f}GB. "
+                f"JVM initialization may fail or be slow."
+            )
+    except ImportError:
+        logger.debug("psutil not available, skipping memory check")
+
+    # Check 6: Disk space (basic check)
+    if psutil_available:
+        try:
+            disk_usage = psutil.disk_usage(str(project_root))
+            free_gb = disk_usage.free / (1024**3)
+            if free_gb < 0.1:  # Less than 100MB
+                logger.warning(
+                    f"Low disk space: {free_gb:.2f}GB free at {project_root}"
+                )
+        except OSError as e:
+            logger.debug(f"Could not check disk space: {e}")
+
+    # Check 7: Known problematic environments
+    # Detect if running in certain IDEs with known issues
+    if any(name in sys.executable.lower() for name in ["pycharm", "idea"]):
+        warnings.append(
+            "Running from PyCharm/IntelliJ IDE. Ensure 'Emulate terminal in output console' is enabled."
+        )
+
+    # Log warnings and return result
+    for warning in warnings:
+        logger.warning(f"[PRE-INIT CHECK] {warning}")
+
+    if checks_passed:
+        logger.info("[PRE-INIT CHECK] All critical safety checks passed")
+    else:
+        logger.error("[PRE-INIT CHECK] Some safety checks failed")
+
+    return checks_passed
+
+
 def initialize_project_environment(
     env_path_str: str = None,
     root_path_str: str = None,
@@ -310,6 +414,17 @@ def initialize_project_environment(
         actual_env_path = current_project_root / ".env"
         # Ou si vous voulez le garder dans argumentation_analysis:
         # actual_env_path = current_project_root / "argumentation_analysis" / ".env"
+
+    # Pre-initialization safety checks (#253)
+    # Run critical validation before JVM startup to prevent silent failures
+    if not _pre_init_safety_checks(current_project_root, actual_env_path):
+        logger.critical(
+            "Pre-initialization safety checks failed. Aborting initialization."
+        )
+        raise RuntimeError(
+            "Bootstrap failed: Pre-initialization safety checks did not pass. "
+            "Check logs for details."
+        )
 
     # La configuration est maintenant chargée via le module `settings` à l'import.
     # On peuple `context.config` pour la compatibilité avec le reste du code.

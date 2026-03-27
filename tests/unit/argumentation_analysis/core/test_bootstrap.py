@@ -18,6 +18,7 @@ from pathlib import Path
 from argumentation_analysis.core.bootstrap import (
     ProjectContext,
     _load_tweety_classes,
+    _pre_init_safety_checks,
 )
 
 # ===========================================================================
@@ -378,3 +379,101 @@ class TestInitializeProjectEnvironment:
             assert "definition_service" in ctx.services
             assert "llm_service" in ctx.services
             assert "fallacy_detector" in ctx.services
+
+
+# ===========================================================================
+# _pre_init_safety_checks Tests (#253)
+# ===========================================================================
+
+
+class TestPreInitSafetyChecks:
+    """Tests for _pre_init_safety_checks() pre-initialization validation."""
+
+    def test_checks_python_version(self):
+        """Fails when Python version is below 3.10."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("sys.version_info", (3, 9)), patch(
+            "sys.executable", "/usr/bin/python3.9"
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is False
+
+    def test_accepts_python_3_10(self):
+        """Passes when Python version is 3.10 or higher."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("sys.version_info", (3, 10)), patch(
+            "sys.executable", "/usr/bin/python3.10"
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is True
+
+    def test_warns_for_python_3_13(self):
+        """Warns but passes when Python version is 3.13+ (not fully tested)."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("sys.version_info", (3, 13)), patch(
+            "sys.executable", "/usr/bin/python3.13"
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is True  # Should pass with warning
+
+    def test_fails_when_jpype_not_available(self):
+        """Fails when jpype module is not available."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch.dict("sys.modules", {"jpype": None}):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is False
+
+    def test_checks_project_root_exists(self):
+        """Fails when project root directory does not exist."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("pathlib.Path.exists", return_value=False):
+            result = _pre_init_safety_checks(
+                Path("C:/nonexistent"), Path("C:/nonexistent/.env")
+            )
+            assert result is False
+
+    def test_checks_project_root_is_directory(self):
+        """Fails when project root path is not a directory."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("pathlib.Path.exists", return_value=True), patch(
+            "pathlib.Path.is_dir", return_value=False
+        ):
+            result = _pre_init_safety_checks(Path("C:/test/file.txt"), Path("C:/test/.env"))
+            assert result is False
+
+    def test_warns_for_pycharm_environment(self):
+        """Warns when running from PyCharm IDE."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("sys.version_info", (3, 11)), patch(
+            "sys.executable", "/opt/pycharm/bin/python3"
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is True  # Should pass with warning
+
+    def test_passes_all_checks(self):
+        """Passes when all critical checks are satisfied."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch("sys.version_info", (3, 11)), patch(
+            "sys.executable", "/usr/bin/python3"
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            assert result is True
+
+    def test_skips_memory_check_when_psutil_unavailable(self):
+        """Gracefully skips memory check when psutil is not installed."""
+        from argumentation_analysis.core.bootstrap import _pre_init_safety_checks
+
+        with patch.dict("sys.modules", {"psutil": None}), patch(
+            "sys.version_info", (3, 11)
+        ):
+            result = _pre_init_safety_checks(Path.cwd(), Path.cwd() / ".env")
+            # Should not fail, just skip the check
+            assert result is True
