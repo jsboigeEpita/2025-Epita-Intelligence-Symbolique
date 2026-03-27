@@ -560,11 +560,11 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     - Counter-arguments → create competing OUT-list entries
     - Quality scores → modulate justification strength
 
-    Now uses JTMSSession with ExtendedBelief for agent source tracking and confidence.
+    Uses JTMSSession with ExtendedBelief for agent source tracking and confidence (#214).
     """
-    from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+    from argumentation_analysis.services.jtms.extended_belief import JTMSSession
 
-    session = JTMSSession(strict=False, agent_id="unified_pipeline")
+    session = JTMSSession(session_id="pipeline_jtms", owner_agent="unified_pipeline")
 
     # ── Collect upstream data ────────────────────────────────────────
     extract_output = context.get("phase_extract_output", {})
@@ -740,7 +740,8 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     # ── Build output with ExtendedBelief metadata ────────────────────
     beliefs_output = {}
     for name, ext_belief in session.extended_beliefs.items():
-        b = ext_belief._jtms_belief  # Access wrapped JTMS belief
+        # Use JTMS belief (has justifications) not ExtendedBelief wrapper
+        b = session.jtms.beliefs.get(name, ext_belief._jtms_belief)
         entry = {
             "valid": b.valid,
             "justifications": [

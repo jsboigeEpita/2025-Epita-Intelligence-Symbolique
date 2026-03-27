@@ -235,7 +235,7 @@ Modifications: {len(extended_belief.modification_history)}
 
         # Force la propagation des valeurs de vérité à travers le réseau de justifications.
         # C'est cette étape qui révèle les contradictions latentes.
-        self.jtms.update_non_monotonic_befielfs()
+        self.jtms.update_non_monotonic_beliefs()
 
         conflicts = []
         contradiction_belief_name = "_CONTRADICTION_"

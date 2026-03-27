@@ -735,7 +735,7 @@ class TestInvokeCallables:
         result = await _invoke_jtms(
             "First claim here. Second claim here. Third claim here.", {}
         )
-        assert result["belief_count"] == 3
+        assert result["belief_count"] >= 3  # 3 sentences + possible synthetic conclusion
         assert isinstance(result["beliefs"], dict)
         # New format: beliefs with validity, justifications (repr), and content
         for name, data in result["beliefs"].items():
