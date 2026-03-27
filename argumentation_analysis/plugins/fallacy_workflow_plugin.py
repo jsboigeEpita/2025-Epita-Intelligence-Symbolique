@@ -295,11 +295,18 @@ class FallacyWorkflowPlugin:
                     "You MUST explore deeper to find the precise sub-type "
                     "(e.g., 'ad hominem abusif > attaque du caractère'). "
                     "You MUST call one of the available functions. "
-                    "Do NOT respond with text — only function calls.\n"
+                    "Do NOT respond with text — only function calls.\n\n"
+                    "CRITICAL MULTI-BRANCH INSTRUCTION:\n"
+                    "1. When selecting among children, PREFER exploring MULTIPLE children (call explore_branch "
+                    "   multiple times) rather than confirming immediately at the current level.\n"
+                    "2. Only confirm at the current level if you are at a LEAF node or if NO child "
+                    "   matches even partially.\n"
+                    "3. Do NOT call conclude_no_fallacy prematurely. The text likely contains "
+                    "   fallacies in multiple branches. Abandon a branch only if you are CERTAIN "
+                    "   there is no match at ANY descendant.\n\n"
                     "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
-                    "genuinely fallacious. Legitimate uses of authority, emotion, or "
-                    "tradition are NOT fallacies. "
-                    "If unsure, prefer conclude_no_fallacy over a false positive."
+                    "genuinely fallacious. Legitimate uses of authority, emotion, "
+                    "tradition are NOT fallacies."
                 )
             )
             history.add_user_message(prompt)
@@ -433,9 +440,11 @@ class FallacyWorkflowPlugin:
                 f'Text to analyze: "{argument_text[:800]}"\n\n'
                 f"Below are the ROOT CATEGORIES of the fallacy taxonomy:\n"
                 f"{root_presentation}\n\n"
-                "Select up to 3 candidate branches by calling explore_branch(node_pk='<ID>') "
-                "for each branch that MIGHT contain the relevant fallacy. "
-                "You MUST call at least one explore_branch function."
+                "CRITICAL: You MUST select EXACTLY 2-3 DIFFERENT candidate branches by calling "
+                "explore_branch(node_pk='<ID>') for EACH branch that COULD POTENTIALLY contain "
+                "a fallacy. Even if you think one branch is most likely, still explore 1-2 others "
+                "as backup. Do NOT stop at a single branch selection.\n"
+                "Call explore_branch for at least 2 different root categories."
             )
 
             history = ChatHistory(
