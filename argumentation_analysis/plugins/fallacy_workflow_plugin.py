@@ -208,6 +208,7 @@ class FallacyWorkflowPlugin:
         start_pk: str,
         slave_kernel: Kernel,
         slave_settings: OpenAIPromptExecutionSettings,
+        reasoning_history: Optional[List[str]] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -215,11 +216,18 @@ class FallacyWorkflowPlugin:
         - The PARENT node (marked "CONFIRM this if it matches")
         - All CHILD nodes (marked "EXPLORE deeper")
 
+        Memory of reasons: The LLM's justification at each level is captured
+        and passed to the next level's prompt for context continuity.
+
+        Double intention: After exploring to a node, the LLM sees BOTH the
+        parent (to confirm/stop) AND children (to explore deeper).
+
         The LLM calls confirm_fallacy to stop, explore_branch to go deeper,
         or conclude_no_fallacy to abandon the branch.
         """
         current_pk = start_pk
         navigation_trace = [start_pk]
+        reasoning_history = reasoning_history or []
 
         for iteration in range(self.MAX_DEPTH_PER_BRANCH):
             current_node = self.taxonomy_navigator.get_node(current_pk)
@@ -235,6 +243,10 @@ class FallacyWorkflowPlugin:
                     f"({current_node.get(f'text_{self.language}', '')})"
                 )
                 # Auto-confirm leaf as the most specific match
+                explanation = (
+                    f"Leaf node reached after {iteration + 1} iterations. "
+                    f"Reasoning history: {'; '.join(reasoning_history[-3:])}"
+                )
                 return IdentifiedFallacy(
                     fallacy_type=current_node.get(
                         f"text_{self.language}",
@@ -242,29 +254,43 @@ class FallacyWorkflowPlugin:
                     ),
                     taxonomy_pk=current_pk,
                     taxonomy_path=current_node.get("path", ""),
-                    explanation=f"Leaf node reached after {iteration + 1} iterations",
+                    explanation=explanation,
                     confidence=0.7,
                     navigation_trace=navigation_trace,
                 )
 
-            # Build double-selection prompt
+            # Build double-selection prompt with memory of reasons
             parent_name = current_node.get(
                 f"text_{self.language}", current_node.get("nom_vulgarisé", current_pk)
             )
             parent_desc = current_node.get(f"desc_{self.language}", "")
             parent_example = current_node.get(f"example_{self.language}", "")
 
+            # Memory of reasons: include previous reasoning
+            reasoning_context = ""
+            if reasoning_history:
+                reasoning_context = (
+                    "\n--- PREVIOUS REASONING (for context) ---\n"
+                    + "\n".join(f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:]))
+                    + "\n"
+                )
+
             options_text = (
                 f"\n--- OPTIONS at depth {current_node.get('depth', '?')} ---\n"
             )
+            # Double intention: Parent can be re-selected to confirm
             options_text += (
-                f"CONFIRM THIS LEVEL: {parent_name} (ID: {current_pk})\n"
+                f"[CONFIRM] {parent_name} (ID: {current_pk})\n"
                 f"  Description: {parent_desc}\n"
             )
             if parent_example:
                 options_text += f"  Example: {parent_example[:200]}\n"
+            options_text += (
+                "  → Select this node AGAIN (confirm_fallacy with pk='{current_pk}') "
+                "if this level matches and you want to STOP here.\n"
+            )
 
-            options_text += "\nOR EXPLORE DEEPER:\n"
+            options_text += "\n[EXPLORE DEEPER] Select one of these children:\n"
             for child in children:
                 cpk = child.get("PK", "")
                 cname = child.get(
@@ -275,25 +301,26 @@ class FallacyWorkflowPlugin:
                 options_text += f"  - {cname} (ID: {cpk}): {cdesc}\n"
                 if cexample:
                     options_text += f"    Example: {cexample}\n"
+                options_text += (
+                    f"    → Call explore_branch(node_pk='{cpk}') to explore this branch.\n"
+                )
 
             prompt = (
                 f'Text to analyze: "{argument_text[:500]}"\n\n'
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
+                f"{reasoning_context}"
                 f"{options_text}\n"
                 "Choose ONE action:\n"
-                "- Call explore_branch(node_pk='<child_pk>') to go DEEPER into a more specific child — PREFERRED if children exist\n"
-                f"- Call confirm_fallacy(node_pk='{current_pk}', ...) ONLY if this is a LEAF node or no child is more specific\n"
+                "- Call explore_branch(node_pk='<child_pk>') to explore a child branch\n"
+                f"- Call confirm_fallacy(node_pk='{current_pk}', ...) to confirm THIS level and stop\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
-                "You MUST call exactly one function. ALWAYS prefer going deeper over confirming at a generic level."
+                "You MUST call exactly one function."
             )
 
             history = ChatHistory(
                 system_message=(
                     "You are a fallacy classifier navigating a taxonomy tree. "
                     "Your goal is to find the MOST SPECIFIC (deepest) matching fallacy. "
-                    "Generic labels like 'ad hominem' or 'appeal to authority' are TOO SHALLOW. "
-                    "You MUST explore deeper to find the precise sub-type "
-                    "(e.g., 'ad hominem abusif > attaque du caractère'). "
                     "You MUST call one of the available functions. "
                     "Do NOT respond with text — only function calls.\n\n"
                     "CRITICAL MULTI-BRANCH INSTRUCTION:\n"
@@ -347,6 +374,14 @@ class FallacyWorkflowPlugin:
                     confirmed_depth = (
                         int(confirmed_node.get("depth", 0)) if confirmed_node else 0
                     )
+                    justification = result.get("justification", "")
+
+                    # Capture reasoning for memory
+                    reasoning_summary = (
+                        f"Confirmed {current_node.get(f'text_{self.language}', current_pk)} "
+                        f"at depth {confirmed_depth}: {justification}"
+                    )
+                    reasoning_history.append(reasoning_summary)
 
                     # Reject too-shallow confirmations — force deeper exploration
                     if confirmed_depth < self.MIN_CONFIRM_DEPTH and children:
@@ -360,19 +395,30 @@ class FallacyWorkflowPlugin:
                         navigation_trace.append(current_pk)
                         break  # continue outer loop with new current_pk
 
+                    # Build full explanation with reasoning history
+                    full_explanation = justification
+                    if reasoning_history:
+                        full_explanation += (
+                            f" | Reasoning path: {'; '.join(reasoning_history)}"
+                        )
+
                     return IdentifiedFallacy(
                         fallacy_type=result.get("name", result.get("name_fr", result.get("pk", ""))),
                         taxonomy_pk=confirmed_pk,
                         taxonomy_path=result.get("path", ""),
-                        explanation=result.get("justification", ""),
+                        explanation=full_explanation,
                         confidence=result.get("confidence", 0.7),
                         navigation_trace=navigation_trace,
                     )
 
                 elif func_name == "conclude_no_fallacy":
-                    self.logger.info(
-                        f"  Branch abandoned: {result.get('reason', 'no reason')}"
+                    reason = result.get("reason", "no reason")
+                    # Capture reasoning for memory
+                    reasoning_summary = (
+                        f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
                     )
+                    reasoning_history.append(reasoning_summary)
+                    self.logger.info(f"  Branch abandoned: {reason}")
                     return None
 
                 elif func_name == "explore_branch":
@@ -380,10 +426,18 @@ class FallacyWorkflowPlugin:
                     node_info = result.get("node", {})
                     next_pk = node_info.get("pk", "")
                     if next_pk and next_pk != current_pk:
+                        # Capture reasoning for memory - why this branch was chosen
+                        branch_name = node_info.get('name', node_info.get('name_fr', next_pk))
+                        reasoning_summary = (
+                            f"Explored {branch_name} from {current_node.get(f'text_{self.language}', current_pk)}"
+                        )
+                        reasoning_history.append(reasoning_summary)
+
                         current_pk = next_pk
                         navigation_trace.append(current_pk)
                         self.logger.info(
-                            f"  Exploring deeper: {node_info.get('name', node_info.get('name_fr', next_pk))}"
+                            f"  Exploring deeper: {branch_name} "
+                            f"(reasoning history: {len(reasoning_history)} steps)"
                         )
                     else:
                         self.logger.info("  explore_branch returned same/empty node")
@@ -440,17 +494,24 @@ class FallacyWorkflowPlugin:
                 f'Text to analyze: "{argument_text[:800]}"\n\n'
                 f"Below are the ROOT CATEGORIES of the fallacy taxonomy:\n"
                 f"{root_presentation}\n\n"
-                "CRITICAL: You MUST select EXACTLY 2-3 DIFFERENT candidate branches by calling "
-                "explore_branch(node_pk='<ID>') for EACH branch that COULD POTENTIALLY contain "
-                "a fallacy. Even if you think one branch is most likely, still explore 1-2 others "
-                "as backup. Do NOT stop at a single branch selection.\n"
-                "Call explore_branch for at least 2 different root categories."
+                "CRITICAL MULTI-BRANCH SELECTION:\n"
+                "You MUST select 2-3 DIFFERENT candidate branches by calling explore_branch(node_pk='<ID>') "
+                "for EACH branch that COULD POTENTIALLY contain a fallacy.\n\n"
+                "Why multi-branch? The text may contain MULTIPLE fallacies from different families. "
+                "Exploring multiple branches in parallel ensures comprehensive coverage.\n\n"
+                "Instructions:\n"
+                "- Call explore_branch 2-3 times with DIFFERENT root category IDs\n"
+                "- Even if one branch seems most likely, explore 1-2 others as backup\n"
+                "- Do NOT stop after a single branch selection\n"
+                "- Consider: Appeal to authority (relevance), Ad hominem (attack), Slippery slope (relevance), etc."
             )
 
             history = ChatHistory(
                 system_message=(
                     "You are a fallacy classifier. Your task is to select which taxonomy "
-                    "branches might contain the fallacy present in the given text. "
+                    "branches might contain fallacies present in the given text.\n\n"
+                    "IMPORTANT: The text likely contains MULTIPLE fallacies from DIFFERENT families. "
+                    "You MUST call explore_branch 2-3 times for DIFFERENT root categories.\n\n"
                     "Call explore_branch for each candidate branch. "
                     "Do NOT respond with text — only function calls.\n"
                     "Note: Only select branches if you genuinely suspect fallacious "
@@ -504,9 +565,11 @@ class FallacyWorkflowPlugin:
             )
 
             # Phase 2: Parallel iterative deepening
+            # Each branch gets its own reasoning history (no shared state)
             exploration_tasks = [
                 self._explore_single_branch(
-                    argument_text, pk, slave_kernel, slave_settings
+                    argument_text, pk, slave_kernel, slave_settings,
+                    reasoning_history=None  # Each branch starts fresh
                 )
                 for pk in candidate_pks
             ]
