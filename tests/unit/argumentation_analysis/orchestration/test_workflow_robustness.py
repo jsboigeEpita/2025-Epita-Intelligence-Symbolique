@@ -26,6 +26,7 @@ import pytest
 from argumentation_analysis.orchestration.unified_pipeline import (
     run_unified_analysis,
     setup_registry,
+    reset_workflow_catalog,
 )
 
 # ============================================================
@@ -37,6 +38,20 @@ from argumentation_analysis.orchestration.unified_pipeline import (
 def shared_registry():
     """Create a single registry for the entire module (no optional deps)."""
     return setup_registry(include_optional=False)
+
+
+@pytest.fixture(autouse=True)
+def reset_global_workflow_catalog():
+    """
+    Reset the global WORKFLOW_CATALOG before each test to prevent state pollution.
+
+    This fixture addresses issue #260 where tests were flaky due to the global
+    WORKFLOW_CATALOG variable in unified_pipeline.py retaining state between
+    tests. By resetting it before each test, we ensure test isolation.
+    """
+    reset_workflow_catalog()
+    yield
+    # No cleanup needed - the catalog will be reset again before the next test
 
 
 # ============================================================

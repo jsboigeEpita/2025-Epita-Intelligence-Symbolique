@@ -4132,6 +4132,21 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
     return WORKFLOW_CATALOG
 
 
+def reset_workflow_catalog() -> None:
+    """
+    Reset the global workflow catalog to an empty state.
+
+    This is primarily useful for testing to ensure that tests don't pollute
+    each other's state through the global WORKFLOW_CATALOG variable.
+
+    After calling this function, the next call to get_workflow_catalog() will
+    re-initialize the catalog with all available workflows.
+    """
+    global WORKFLOW_CATALOG
+    WORKFLOW_CATALOG = {}
+    logger.debug("Workflow catalog reset to empty state")
+
+
 async def run_unified_analysis(
     text: str,
     workflow_name: str = "standard",
