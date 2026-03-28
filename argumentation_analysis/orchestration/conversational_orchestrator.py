@@ -627,7 +627,7 @@ async def _resolve_phase_conflicts(
     Returns:
         List of resolution results applied to the state.
     """
-    from argumentation_analysis.agents.jtms_communication_hub import ConflictResolver
+    from argumentation_analysis.services.jtms.conflict_resolution import ConflictResolver
 
     resolver = ConflictResolver()
     resolutions = []
