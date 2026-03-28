@@ -37,6 +37,12 @@ Last updated: 2026-03-28
 - **Fix**: PR #262 extracted `ConflictResolver` to `argumentation_analysis/services/jtms/conflict_resolution.py` as the canonical location; all callers updated
 - **Status**: RESOLVED
 
+### Async Mock Failures in test_fallacy_workflow_calibration.py
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: `MagicMock` used for `get_chat_message_content` (singular) which is awaited — raises `TypeError: object MagicMock can't be used in 'await' expression`
+- **Fix**: PR #270 (#269) replaced with context-aware async mocks simulating the full 2-phase hierarchical workflow
+- **Status**: RESOLVED
+
 ---
 
 ## Active Issues
@@ -67,14 +73,12 @@ Last updated: 2026-03-28
 - **Status**: Monitoring — exact runtime skip count pending full suite run
 - **Related**: #28, #30, #94, #112
 
-### Async Mock Failures in test_fallacy_workflow_calibration.py (2 tests)
-- **Identified**: 2026-03-28 | **Introduced**: PR #261
-- **Symptom**: `object MagicMock can't be used in 'await' expression` in one-shot fallback path of `FallacyWorkflowPlugin`
-- **Affected tests**: `TestFallacyWorkflowCalibration::test_calibrated_text_8_fallacies`, `TestFallacyWorkflowCalibration::test_epita_text_2_fallacies`
-- **Root cause**: Test fixtures use `MagicMock` for async kernel calls that require `AsyncMock` (the one-shot fallback path calls `await kernel.invoke(...)`)
-- **Impact**: Medium — 2 tests fail in isolation. Core fallacy detection logic is unaffected; only the test harness is broken.
-- **Fix needed**: Replace `MagicMock` with `AsyncMock` (or `unittest.mock.AsyncMock`) for kernel invocation mocks in the calibration test file
-- **Related**: PR #261, Issue #259
+### Dead E2E Tests: Logic Graph Component (5 tests removed/updated)
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: Logic Graph frontend component removed during Flask→FastAPI refactor (Oct 2025). No `/api/logic/*` endpoints in FastAPI, no `[data-testid="logic-graph-*"]` in dashboard.
+- **Fix**: PR #271 deleted `test_logic_graph.py` (3 dead tests), removed `test_logic_graph_fallacy_integration` from integration workflows, updated skip reasons on 2 remaining API tests
+- **Related**: Issue #264
+- **Status**: RESOLVED
 
 ### Pytest Markers Not Registered (cosmetic warnings)
 - **Symptom**: `PytestUnknownMarkWarning` for `debuglog`, `use_mock_numpy` markers
