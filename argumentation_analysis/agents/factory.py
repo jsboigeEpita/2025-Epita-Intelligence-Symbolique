@@ -46,7 +46,7 @@ _factory_logger = logging.getLogger("AgentFactory")
 
 AGENT_SPECIALITY_MAP = {
     "project_manager": [],  # PM only gets StateManager
-    "informal_fallacy": ["french_fallacy"],
+    "informal_fallacy": ["french_fallacy", "fallacy_workflow"],
     "extract": [],  # Extractor uses StateManager only
     "formal_logic": ["tweety_logic"],
     "quality": ["quality_scoring"],
@@ -83,6 +83,10 @@ _PLUGIN_REGISTRY = {
         "argumentation_analysis.agents.core.counter_argument.counter_agent",
         "CounterArgumentPlugin",
     ),
+    "fallacy_workflow": (
+        "argumentation_analysis.plugins.fallacy_workflow_plugin",
+        "FallacyWorkflowPlugin",
+    ),
     "state_manager": (
         "argumentation_analysis.core.state_manager_plugin",
         "StateManagerPlugin",
@@ -90,7 +94,9 @@ _PLUGIN_REGISTRY = {
 }
 
 
-def get_plugin_instances(agent_speciality: str, state=None) -> list:
+def get_plugin_instances(
+    agent_speciality: str, state=None, kernel=None, llm_service=None
+) -> list:
     """Return instantiated plugin objects for an agent's speciality.
 
     Useful for ChatCompletionAgent(plugins=[...]) scoping where each agent
@@ -99,6 +105,8 @@ def get_plugin_instances(agent_speciality: str, state=None) -> list:
     Args:
         agent_speciality: Key into AGENT_SPECIALITY_MAP.
         state: Optional RhetoricalAnalysisState for StateManagerPlugin.
+        kernel: Optional SK Kernel for complex plugins (e.g. FallacyWorkflowPlugin).
+        llm_service: Optional LLM service for complex plugins.
 
     Returns:
         List of plugin instances (StateManagerPlugin first if state provided).
@@ -126,7 +134,19 @@ def get_plugin_instances(agent_speciality: str, state=None) -> list:
         try:
             mod = importlib.import_module(module_path)
             plugin_cls = getattr(mod, class_name)
-            instances.append(plugin_cls())
+            # Complex plugins need kernel + llm_service (e.g. FallacyWorkflowPlugin)
+            if plugin_name == "fallacy_workflow":
+                if kernel is not None and llm_service is not None:
+                    instances.append(
+                        plugin_cls(master_kernel=kernel, llm_service=llm_service)
+                    )
+                else:
+                    _factory_logger.debug(
+                        "Skipping '%s': requires kernel and llm_service", plugin_name
+                    )
+                    continue
+            else:
+                instances.append(plugin_cls())
         except Exception as e:
             _factory_logger.debug(
                 "Plugin '%s' not instantiated for '%s': %s",
@@ -138,7 +158,9 @@ def get_plugin_instances(agent_speciality: str, state=None) -> list:
     return instances
 
 
-def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) -> list:
+def load_plugins_for_agent(
+    kernel: Kernel, agent_speciality: str, state=None, llm_service=None
+) -> list:
     """Load only the plugins relevant to an agent's speciality onto its kernel.
 
     Always loads StateManagerPlugin (if state is provided) as the shared
@@ -149,6 +171,7 @@ def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) ->
         kernel: The Semantic Kernel instance.
         agent_speciality: Key into AGENT_SPECIALITY_MAP.
         state: Optional RhetoricalAnalysisState for StateManagerPlugin.
+        llm_service: Optional LLM service for complex plugins.
 
     Returns:
         List of loaded plugin names.
@@ -178,7 +201,19 @@ def load_plugins_for_agent(kernel: Kernel, agent_speciality: str, state=None) ->
         try:
             mod = importlib.import_module(module_path)
             plugin_cls = getattr(mod, class_name)
-            instance = plugin_cls()
+            # Complex plugins need kernel + llm_service
+            if plugin_name == "fallacy_workflow":
+                if llm_service is not None:
+                    instance = plugin_cls(
+                        master_kernel=kernel, llm_service=llm_service
+                    )
+                else:
+                    _factory_logger.debug(
+                        "Skipping '%s': requires llm_service", plugin_name
+                    )
+                    continue
+            else:
+                instance = plugin_cls()
             kernel.add_plugin(instance, plugin_name=plugin_name)
             loaded.append(plugin_name)
         except Exception as e:
