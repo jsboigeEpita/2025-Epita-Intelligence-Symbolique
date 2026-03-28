@@ -303,7 +303,7 @@ class MCPSession:
         if self._server_capabilities is None:
             raise MCPSessionError("Server capabilities not available")
 
-        if not hasattr(self._server_capabilities, capability):
+        if getattr(self._server_capabilities, capability, None) is None:
             raise MCPSessionError(f"Capability '{capability}' is not supported")
 
     @property

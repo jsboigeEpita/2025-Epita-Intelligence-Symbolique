@@ -210,24 +210,12 @@ async def run_legacy_analysis(
     :param text_content: Le contenu textuel à analyser.
     :param llm_service: L'instance du service LLM initialisée.
     """
-    if not text_content or not llm_service:
-        logging.error(
-            "Orchestration impossible: texte vide ou service LLM non disponible."
-        )
-        return
-
-    logging.info(
-        f"Lancement de l'orchestration legacy sur un texte de {len(text_content)} caractères..."
+    logging.error(
+        "Le mode legacy (AnalysisRunner) a été supprimé. "
+        "Utilisez --mode pipeline (défaut) ou --mode conversational. "
+        "Voir docs/architecture/ORCHESTRATION_MODES.md pour les détails."
     )
-
-    try:
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis
-
-        await run_analysis(text_content=text_content, llm_service=llm_service)
-
-        logging.info("Orchestration legacy terminée avec succès.")
-    except Exception as e:
-        logging.error(f"Erreur lors de l'orchestration legacy: {e}", exc_info=True)
+    raise SystemExit(1)
 
 
 async def main():

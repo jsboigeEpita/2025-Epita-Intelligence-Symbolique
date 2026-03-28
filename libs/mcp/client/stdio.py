@@ -58,8 +58,12 @@ class StdioTransport:
         if self._write_hook:
             self._write_hook(message)
 
-        self._stdout.write(data)
-        self._stdout.flush()
+        self._stdin.write(data)
+        # asyncio StreamWriter uses drain(), regular file objects use flush()
+        if hasattr(self._stdin, "drain"):
+            await self._stdin.drain()
+        else:
+            self._stdin.flush()
 
     async def receive(self) -> JSONRPCResponse:
         """Receive a JSON-RPC response from the server.
@@ -85,14 +89,20 @@ class StdioTransport:
         return JSONRPCResponse.from_dict(data)
 
     async def _readline(self) -> bytes:
-        """Read a line from stdin asynchronously.
+        """Read a line from stdout asynchronously.
 
-        This is a workaround for Python's lack of async stdin.
-        In a real implementation, this would use proper async I/O.
+        Supports both asyncio StreamReader (subprocess) and regular
+        file objects (blocking fallback via executor).
         """
-        # For now, use blocking read - in production, use proper async
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._stdin.readline)
+        if hasattr(self._stdout, "readline") and asyncio.iscoroutinefunction(
+            getattr(self._stdout, "readline", None)
+        ):
+            # asyncio StreamReader — readline is already async
+            return await self._stdout.readline()
+        else:
+            # Regular file object — run blocking readline in executor
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self._stdout.readline)
 
     def close(self) -> None:
         """Close the transport."""
