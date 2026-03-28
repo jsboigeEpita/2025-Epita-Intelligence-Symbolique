@@ -821,7 +821,8 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             jar for jar in tweety_libs_dir.glob("*.jar") if "full" in jar.name.lower()
         ]
         if uber_jars:
-            classpath = [str(uber_jars[0].resolve())]
+            # Sort to pick the latest version (alphabetical = version order for tweety jars)
+            classpath = [str(sorted(uber_jars)[-1].resolve())]
         else:
             logger.warning("Aucun uber-jar trouvé, chargement de tous les JARs.")
             classpath = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]

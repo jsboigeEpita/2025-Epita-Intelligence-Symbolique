@@ -198,6 +198,27 @@ class ProcessStdioTransport(StdioTransport):
         """Check if the subprocess is running."""
         return self._process is not None and self._process.returncode is None
 
+    async def send(self, request: JSONRPCRequest) -> None:
+        """Send a JSON-RPC request to the subprocess.
+
+        Args:
+            request: The JSON-RPC request to send
+
+        Raises:
+            IOError: If the transport is closed
+        """
+        if self._closed:
+            raise IOError("Transport is closed")
+
+        message = json.dumps(request.to_dict())
+        data = (message + "\n").encode("utf-8")
+
+        if self._write_hook:
+            self._write_hook(message)
+
+        self._process.stdin.write(data)
+        await self._process.stdin.drain()
+
     async def _readline(self) -> bytes:
         """Read a line from the subprocess stdout."""
         if self._process is None or self._process.stdout is None:
