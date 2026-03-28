@@ -237,7 +237,8 @@ def integration_helpers(page_with_console_logs: "Page") -> IntegrationWorkflowHe
 @pytest.mark.integration
 @pytest.mark.e2e
 @pytest.mark.skip(
-    reason="Ce test est également obsolète et envoie des données dans un format que l'API refactorisée ne prend plus en charge, provoquant un timeout."
+    reason="Désynchronisé avec l'API refactorisée (format de données obsolète). "
+    "Voir Issue #264 investigation report. À réécrire quand le frontend sera stabilisé."
 )
 def test_full_argument_analysis_workflow(
     page_with_console_logs: "Page",
@@ -336,7 +337,8 @@ def test_full_argument_analysis_workflow(
 @pytest.mark.integration
 @pytest.mark.e2e
 @pytest.mark.skip(
-    reason="Ce test est obsolète et ne correspond plus au workflow de l'API. Il envoie un format de données complexe alors que l'API attend des ID de chaînes."
+    reason="Désynchronisé avec l'API refactorisée (envoi d'objets complexes, l'API attend des string IDs). "
+    "Voir Issue #264 investigation report. Le code a été partiellement corrigé, à retester."
 )
 def test_framework_based_validation_workflow(
     page_with_console_logs: "Page",
@@ -426,83 +428,6 @@ def test_framework_based_validation_workflow(
     assert (
         framework_performance["framework_workflow"] < 45
     ), "Le workflow framework ne doit pas dépasser 45 secondes"
-
-
-@pytest.mark.integration
-@pytest.mark.e2e
-@pytest.mark.skip(reason="Dépend du composant logic_graph qui est défectueux.")
-def test_logic_graph_fallacy_integration(
-    page_with_console_logs: "Page",
-    e2e_servers,
-    integration_helpers: IntegrationWorkflowHelpers,
-    complex_test_data: Dict[str, Any],
-):
-    """
-    Test C: Intégration Logic Graph → Fallacies.
-    Analyse logique puis détection de sophismes sur le même contenu.
-    """
-    _, frontend_url = e2e_servers
-    page = page_with_console_logs
-    page.goto(frontend_url)
-    expect(page.locator(".api-status.connected")).to_be_visible(
-        timeout=WORKFLOW_TIMEOUT
-    )
-
-    integration_helpers.start_performance_timer("logic_fallacy_integration")
-
-    logic_data = complex_test_data["complex_logic_formula"]
-    fallacy_text = complex_test_data["multiple_fallacies_text"]["text"]
-
-    # ÉTAPE 1: Logic Graph - Analyse logique
-    integration_helpers.navigate_with_validation(
-        "logic_graph", '[data-testid="logic-graph-text-input"]'
-    )
-
-    # Tester une formule logique complexe
-    page.locator('[data-testid="logic-graph-text-input"]').fill(logic_data["formula"])
-    page.locator('[data-testid="logic-graph-submit-button"]').click()
-
-    # Attendre l'analyse logique
-    expect(page.locator('[data-testid="logic-graph-container"]')).to_be_visible(
-        timeout=WORKFLOW_TIMEOUT
-    )
-
-    # Vérifier que le graphe est généré
-    expect(page.locator('[data-testid="logic-graph-svg"]')).to_be_visible(timeout=10000)
-
-    # ÉTAPE 2: Fallacies - Analyse des sophismes sur le même domaine
-    integration_helpers.navigate_with_validation(
-        "fallacy_detector", '[data-testid="fallacy-text-input"]'
-    )
-
-    # Analyser un texte contenant plusieurs sophismes
-    page.locator('[data-testid="fallacy-text-input"]').fill(fallacy_text)
-    page.locator('[data-testid="fallacy-submit-button"]').click()
-
-    # Attendre les résultats de détection
-    expect(page.locator('[data-testid="fallacy-results-container"]')).to_be_visible(
-        timeout=WORKFLOW_TIMEOUT
-    )
-
-    # VALIDATION: Vérifier la cohérence entre analyse logique et détection de fallacies
-    # Les résultats doivent être complémentaires
-
-    # Retourner au Logic Graph pour comparaison
-    integration_helpers.navigate_with_validation(
-        "logic_graph", '[data-testid="logic-graph-text-input"]'
-    )
-
-    # Vérifier que les données logiques sont toujours présentes
-    logic_results = page.locator('[data-testid="logic-graph-container"]')
-    expect(logic_results).to_be_visible()
-
-    integration_helpers.end_performance_timer("logic_fallacy_integration")
-
-    # Validation de cohérence
-    performance = integration_helpers.get_performance_report()
-    assert (
-        performance["logic_fallacy_integration"] < 45
-    ), "L'intégration logique-sophismes ne doit pas dépasser 45 secondes"
 
 
 @pytest.mark.integration
