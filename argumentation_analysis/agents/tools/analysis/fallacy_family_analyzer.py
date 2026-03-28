@@ -355,9 +355,8 @@ class FallacyFamilyAnalyzer:
         # Calculer la sévérité pondérée
         weighted_severity = family_score * base_severity
 
-        # Ajuster basé sur le contexte
+        # Context multiplier — defaults to 1.0 (no adjustment)
         context_multiplier = 1.0
-        # TODO: Détecter automatiquement le contexte du texte
 
         final_severity = weighted_severity * context_multiplier
 

@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-03-19
+Last updated: 2026-03-28
 
 ---
 
@@ -22,6 +22,19 @@ Last updated: 2026-03-19
 - **Identified**: 2026-03-14 | **Resolved**: 2026-03-14
 - **Cause**: libs/portable_octave/, libs/tweety/, node directories not in .gitignore
 - **Fix**: Updated .gitignore (PR #104)
+- **Status**: RESOLVED
+
+### Stale JTMS Imports
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: `state_manager_plugin.py` imported JTMS symbols from stale paths that diverged from canonical `services/jtms/` location
+- **Fix**: PR #262 updated imports in `argumentation_analysis/core/state_manager_plugin.py` to canonical `argumentation_analysis/services/jtms/` paths
+- **Related**: Issue #263
+- **Status**: RESOLVED
+
+### ConflictResolver Import Path
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: `ConflictResolver` was only accessible via `agents/jtms_communication_hub.py`, an indirect and fragile import path
+- **Fix**: PR #262 extracted `ConflictResolver` to `argumentation_analysis/services/jtms/conflict_resolution.py` as the canonical location; all callers updated
 - **Status**: RESOLVED
 
 ---
@@ -47,11 +60,21 @@ Last updated: 2026-03-19
 - **Impact**: Low — individual tests are correct; only the marathon bulk run degrades.
 - **Workaround**: Run orchestration tests in smaller batches (e.g., by class), not as a full suite. Do NOT use this failure count as a regression signal — always verify individual test pass before investigating.
 
-### 7 Skipped Tests in Unit Suite
-- **Breakdown** (as of 2026-03-19, 9265 passed / 7 skipped):
-  - 7 phantom module tests (`test_configuration_cli.py` — `unified_production_analyzer` never existed)
-- **Status**: At theoretical minimum — phantom module skips documented in #112
+### Skipped Tests in Unit Suite
+- **Breakdown** (as of 2026-03-28, 10085 collected):
+  - Phantom module skips from `test_configuration_cli.py` (`unified_production_analyzer`) appear resolved — 0 skips observed in that file
+  - Remaining skips are test-body skips (conditional on platform/env), not module-level skips
+- **Status**: Monitoring — exact runtime skip count pending full suite run
 - **Related**: #28, #30, #94, #112
+
+### Async Mock Failures in test_fallacy_workflow_calibration.py (2 tests)
+- **Identified**: 2026-03-28 | **Introduced**: PR #261
+- **Symptom**: `object MagicMock can't be used in 'await' expression` in one-shot fallback path of `FallacyWorkflowPlugin`
+- **Affected tests**: `TestFallacyWorkflowCalibration::test_calibrated_text_8_fallacies`, `TestFallacyWorkflowCalibration::test_epita_text_2_fallacies`
+- **Root cause**: Test fixtures use `MagicMock` for async kernel calls that require `AsyncMock` (the one-shot fallback path calls `await kernel.invoke(...)`)
+- **Impact**: Medium — 2 tests fail in isolation. Core fallacy detection logic is unaffected; only the test harness is broken.
+- **Fix needed**: Replace `MagicMock` with `AsyncMock` (or `unittest.mock.AsyncMock`) for kernel invocation mocks in the calibration test file
+- **Related**: PR #261, Issue #259
 
 ### Pytest Markers Not Registered (cosmetic warnings)
 - **Symptom**: `PytestUnknownMarkWarning` for `debuglog`, `use_mock_numpy` markers
@@ -73,9 +96,11 @@ Last updated: 2026-03-19
 
 ---
 
-## Test Statistics (as of 2026-03-19)
+## Test Statistics (as of 2026-03-28)
 
-- **Unit suite**: 9265 passed, 0 failed, 7 skipped
+- **Unit suite**: 10085 collected (+820 since 2026-03-19, Epic #208 additions); 2 currently failing (async mock, PR #261)
+- **Epic #208 tests**: 158+ passed (conv_orch, groupchat, plugin, trace, quality, NL-logic, JTMS, benchmark, CamemBERT, integration)
+- **Orchestration modes**: 3 active — pipeline (default), conversational, legacy
 - **Sherlock Watson validation**: 43/43 passed
 - **Black formatting**: 0 files to reformat (fully compliant)
 

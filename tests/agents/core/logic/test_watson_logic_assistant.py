@@ -194,83 +194,47 @@ async def test_get_agent_belief_set_content(
         )
 
 
-# @pytest.mark.asyncio
-# async def test_add_new_deduction_result(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock) -> None:
-#     """
-#     Teste la méthode add_new_deduction_result de WatsonLogicAssistant.
-#     NOTE: Cette méthode n'existe pas directement sur l'agent. L'agent est censé
-#     appeler une fonction sémantique via kernel.invoke. Ce test doit être réécrit
-#     pour refléter cela.
-#     """
-#     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
-#         agent = WatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
-#
-#     query_id = "deduction_query_001"
-#     formal_result = "Conclusion: X -> Y"
-#     natural_language_interpretation = "Si X est vrai, alors Y est vrai."
-#     belief_set_id = "bs_alpha"
-#
-#     expected_content_arg = {
-#         "reponse_formelle": formal_result,
-#         "interpretation_ln": natural_language_interpretation,
-#         "belief_set_id_utilise": belief_set_id,
-#         "status_deduction": "success"
-#     }
-#     expected_invoke_result = {"id": "res_456", "query_id": query_id, "content": expected_content_arg}
-#
-#     # Cas 1: invoke retourne un objet avec un attribut 'value'
-#     mock_invoke_result_value_attr = MagicMock()
-#     mock_invoke_result_value_attr.value = expected_invoke_result
-#     mock_kernel.invoke = AsyncMock(return_value=mock_invoke_result_value_attr)
-#
-#     # result = await agent.add_new_deduction_.result(query_id, formal_result, natural_language_interpretation, belief_set_id)
-#     # TODO: Réécrire ce test pour vérifier l'appel à kernel.invoke avec les bons paramètres
-#     # pour EnqueteStatePlugin.add_result
-#
-#     # mock_kernel.invoke.assert_called_once_with(
-#     #     plugin_name="EnqueteStatePlugin",
-#     #     function_name="add_result", # ou le nom correct de la fonction du plugin
-#     #     query_id=query_id,
-#     #     agent_source="WatsonLogicAssistant", # ou self.name
-#     #     content=expected_content_arg
-#     # )
-#     # assert result == expected_invoke_result
-#
-#     # Réinitialiser le mock pour le cas suivant
-#     mock_kernel.invoke.reset_mock()
-#
-#     # Cas 2: invoke retourne directement la valeur
-#     mock_kernel.invoke = AsyncMock(return_value=expected_invoke_result)
-#
-#     # result_direct = await agent.add_new_deduction_result(query_id, formal_result, natural_language_interpretation, belief_set_id)
-#     # TODO: Réécrire ce test
-#
-#     # mock_kernel.invoke.assert_called_once_with(
-#     #     plugin_name="EnqueteStatePlugin",
-#     #     function_name="add_result",
-#     #     query_id=query_id,
-#     #     agent_source="WatsonLogicAssistant",
-#     #     content=expected_content_arg
-#     # )
-#     # assert result_direct == expected_invoke_result
-#
-#     # Réinitialiser le mock pour le cas d'erreur
-#     mock_kernel.invoke.reset_mock()
-#
-#     # Cas 3: Gestion d'erreur si invoke échoue
-#     mock_kernel.invoke = AsyncMock(side_effect=Exception("Test error adding deduction result"))
-#
-#     # with patch.object(agent.logger, 'error') as mock_logger_error:
-#         # error_result = await agent.add_new_deduction_result(query_id, formal_result, natural_language_interpretation, belief_set_id)
-#         # TODO: Réécrire ce test
-#
-#         # mock_kernel.invoke.assert_called_once_with(
-#         #     plugin_name="EnqueteStatePlugin",
-#         #     function_name="add_result",
-#         #     query_id=query_id,
-#         #     agent_source="WatsonLogicAssistant",
-#         #     content=expected_content_arg
-#         # )
-#         # assert error_result is None
-#         # mock_logger_error.assert_called_once()
-#         # assert f"Erreur lors de l'ajout du résultat de déduction pour la requête {query_id}: Test error adding deduction result" in mock_logger_error.call_args[0][0]
+@pytest.mark.llm_integration
+def test_watson_tools_validate_formula(mock_tweety_bridge: MagicMock) -> None:
+    """Test WatsonTools.validate_formula calls TweetyBridge correctly."""
+    from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
+        WatsonTools,
+    )
+
+    mock_tweety_bridge.validate_formula.return_value = (True, "Valid")
+    tools = WatsonTools(tweety_bridge=mock_tweety_bridge, constants=["A", "B"])
+
+    result = tools.validate_formula("A & B")
+    assert result is True
+    mock_tweety_bridge.validate_formula.assert_called_once()
+
+
+@pytest.mark.llm_integration
+def test_watson_tools_validate_formula_invalid(mock_tweety_bridge: MagicMock) -> None:
+    """Test WatsonTools.validate_formula returns False for invalid formulas."""
+    from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
+        WatsonTools,
+    )
+
+    mock_tweety_bridge.validate_formula.return_value = (False, "Syntax error")
+    tools = WatsonTools(tweety_bridge=mock_tweety_bridge, constants=[])
+
+    result = tools.validate_formula("A &&& B")
+    assert result is False
+
+
+@pytest.mark.llm_integration
+def test_watson_tools_formal_step_by_step_analysis(
+    mock_tweety_bridge: MagicMock,
+) -> None:
+    """Test WatsonTools.formal_step_by_step_analysis returns structured JSON."""
+    from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
+        WatsonTools,
+    )
+
+    tools = WatsonTools(tweety_bridge=mock_tweety_bridge)
+    result = tools.formal_step_by_step_analysis(
+        problem_description="Si A alors B\nA et C\nNon D ou E"
+    )
+    assert "Voyons..." in result
+    assert "formal_step_by_step_analysis" in result or "RIGOROUS_FORMAL" in result

@@ -35,13 +35,11 @@ from datetime import datetime
 current_dir = Path(__file__).parent
 
 # Importer l'analyseur contextuel de base
-# TODO: Vérifier si ce chemin est toujours valide après le refactoring
 from argumentation_analysis.core.interfaces.fallacy_detector import (
     AbstractFallacyDetector,
 )
 
 # Importations pour les modèles de langage avancés
-# TODO: Rendre ce chemin configurable ou propre au plugin
 from argumentation_analysis.paths import DATA_DIR
 
 # Importations pour les modèles de langage avancés, avec fallback
@@ -134,16 +132,31 @@ class EnhancedContextualFallacyAnalyzer:
         Returns:
             Dictionnaire contenant les modèles de langage initialisés
         """
-        # [MODIFICATION TEMPORAIRE]
-        # Désactivation du chargement des modèles NLP pour éviter le timeout
-        # dans l'environnement de CI/CD qui semble être bloqué par Hugging Face (Erreur 429).
-        # Cette modification permet de débloquer les tests fonctionnels qui ne dépendent
-        # pas directement de ces modèles.
-        # TODO: Rétablir le chargement, potentiellement conditionné par une variable d'environnement.
-        self.logger.warning(
-            "CHARGEMENT DES MODÈLES NLP DÉSACTIVÉ TEMPORAIREMENT POUR LES TESTS."
-        )
-        return {}
+        if not HAS_TRANSFORMERS or os.environ.get("DISABLE_NLP_MODELS", "0") == "1":
+            self.logger.info(
+                "NLP models disabled (HAS_TRANSFORMERS=%s, DISABLE_NLP_MODELS=%s).",
+                HAS_TRANSFORMERS,
+                os.environ.get("DISABLE_NLP_MODELS", "0"),
+            )
+            return {}
+
+        models = {}
+        try:
+            self.logger.info("Loading NLP models for contextual fallacy analysis...")
+            models["sentiment"] = pipeline(
+                "sentiment-analysis",
+                model="nlptown/bert-base-multilingual-uncased-sentiment",
+            )
+            models["ner"] = pipeline(
+                "ner",
+                model="Jean-Baptiste/camembert-ner",
+                aggregation_strategy="simple",
+            )
+            self.logger.info("NLP models loaded successfully.")
+        except Exception as e:
+            self.logger.warning("Could not load NLP models, falling back to heuristic: %s", e)
+            models = {}
+        return models
 
     def _load_learning_data(self) -> Dict[str, Any]:
         """
@@ -829,12 +842,7 @@ class EnhancedContextualFallacyAnalyzer:
         Returns:
             Liste d'exemples enrichis de sophismes contextuels
         """
-        # Obtenir les exemples de base
-        # TODO: Cette méthode n'existe pas sur l'interface, il faudra la recréer ou la déplacer.
-        # Pour l'instant, on retourne une liste vide pour ne pas casser.
-        basic_examples = (
-            []
-        )  # super().get_contextual_fallacy_examples(fallacy_type, context_type)
+        basic_examples = []
 
         # Enrichir les exemples avec des explications et des suggestions
         enriched_examples = []
