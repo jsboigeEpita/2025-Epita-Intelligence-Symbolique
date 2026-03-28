@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-03-19
+Last updated: 2026-03-28
 
 ---
 
@@ -73,9 +73,26 @@ Last updated: 2026-03-19
 
 ---
 
-## Test Statistics (as of 2026-03-19)
+## Recently Resolved (2026-03-28)
+
+### Fallacy Workflow Calibration Tests (Issue #269)
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: Mock LLM was too simplistic — all branches confirmed same fallacy; missing `get_chat_message_content` (singular) for one-shot path
+- **Fix**: Branch-aware mock with per-branch confirmations + neutral text detection (PR #278)
+- **Status**: RESOLVED
+
+### Stale JTMS Imports (Issue #263)
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: 4 files imported JTMSSession/ExtendedBelief from old `agents/jtms_agent_base` instead of canonical `services/jtms/`
+- **Fix**: Migrated all 7 import sites to `argumentation_analysis.services.jtms` (PR #279)
+- **Status**: RESOLVED
+
+---
+
+## Test Statistics (as of 2026-03-28)
 
 - **Unit suite**: 9265 passed, 0 failed, 7 skipped
+- **Fallacy calibration**: 3/3 passed (branch-aware mock)
 - **Sherlock Watson validation**: 43/43 passed
 - **Black formatting**: 0 files to reformat (fully compliant)
 
