@@ -15,7 +15,8 @@ from enum import Enum
 import semantic_kernel as sk
 from semantic_kernel import Kernel
 
-from .jtms_agent_base import JTMSAgentBase, JTMSSession
+from .jtms_agent_base import JTMSAgentBase
+from argumentation_analysis.services.jtms.extended_belief import JTMSSession
 from .sherlock_jtms_agent import SherlockJTMSAgent
 from .watson_jtms_agent import WatsonJTMSAgent
 

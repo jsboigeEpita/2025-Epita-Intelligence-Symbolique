@@ -669,8 +669,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         fallacy_beliefs.append(fallacy_name)
 
         # Find which argument the fallacy undermines
-        # TODO: use fallacy.target_argument for smarter matching
-        target_idx = min(i, len(arg_beliefs) - 1) if arg_beliefs else -1
+        target_idx = -1
+        target_arg_text = f.get("target_argument", "")
+        if target_arg_text and arg_beliefs:
+            # Try substring matching against belief names
+            target_lower = target_arg_text.lower()[:80]
+            for idx, ab in enumerate(arg_beliefs):
+                if target_lower in ab.lower() or ab.lower() in target_lower:
+                    target_idx = idx
+                    break
+        # Fallback: index-based matching
+        if target_idx < 0 and arg_beliefs:
+            target_idx = min(i, len(arg_beliefs) - 1)
 
         if target_idx >= 0:
             target_arg = arg_beliefs[target_idx]

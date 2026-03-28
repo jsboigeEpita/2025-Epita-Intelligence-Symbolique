@@ -30,7 +30,6 @@ from datetime import datetime
 from collections import defaultdict
 
 # Importer l'analyseur de sophismes complexes de base
-# TODO: Vérifier si ce chemin est toujours valide après le refactoring
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
     ComplexFallacyAnalyzer as BaseAnalyzer,
 )

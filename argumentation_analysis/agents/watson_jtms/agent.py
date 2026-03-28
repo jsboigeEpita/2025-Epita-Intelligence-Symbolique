@@ -1,4 +1,5 @@
-from argumentation_analysis.agents.jtms_agent_base import JTMSSession, JTMSAgentBase
+from argumentation_analysis.agents.jtms_agent_base import JTMSAgentBase
+from argumentation_analysis.services.jtms.extended_belief import JTMSSession
 from .consistency import ConsistencyChecker
 from .validation import FormalValidator
 from .critique import CritiqueEngine
