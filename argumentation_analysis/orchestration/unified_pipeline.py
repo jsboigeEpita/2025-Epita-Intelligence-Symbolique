@@ -669,11 +669,21 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         fallacy_beliefs.append(fallacy_name)
 
         # Find which argument the fallacy undermines
-        # TODO: use fallacy.target_argument for smarter matching
-        target_idx = min(i, len(arg_beliefs) - 1) if arg_beliefs else -1
+        # Use target_argument for smarter matching if available
+        target_argument = f.get("target_argument")
+        if target_argument:
+            # Find the matching argument belief by name/substring
+            target_arg = next(
+                (ab for ab in arg_beliefs
+                if target_argument.lower() in ab.lower() or ab.lower() in target_argument.lower()),
+                None,
+            )
+        else:
+            # Fallback: positional matching
+            target_idx = min(i, len(arg_beliefs) - 1) if arg_beliefs else -1
+            target_arg = arg_beliefs[target_idx] if target_idx >= 0 else None
 
-        if target_idx >= 0:
-            target_arg = arg_beliefs[target_idx]
+        if target_arg:
             # Create a DEFEAT justification: fallacy OUT-lists the argument
             defeat_name = f"defeat:{fallacy_type}→{target_arg[:30]}"[:80]
             session.add_belief(

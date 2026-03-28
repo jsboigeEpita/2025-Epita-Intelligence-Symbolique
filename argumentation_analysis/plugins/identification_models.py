@@ -26,6 +26,10 @@ class IdentifiedFallacy(BaseModel):
     confidence: float = Field(
         default=0.0, ge=0.0, le=1.0, description="Confidence score (0.0 to 1.0)"
     )
+    target_argument: Optional[str] = Field(
+        default=None,
+        description="The argument or claim that this fallacy targets (for JTMS defeat matching)",
+    )
     navigation_trace: List[str] = Field(
         default_factory=list,
         description="List of taxonomy node PKs visited during iterative deepening",
