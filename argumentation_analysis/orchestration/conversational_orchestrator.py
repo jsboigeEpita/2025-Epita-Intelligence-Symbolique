@@ -55,16 +55,21 @@ AGENT_CONFIG = {
             "Tu es le chef de projet d'analyse argumentative. Tu coordonnes l'equipe "
             "d'agents specialises. A chaque tour :\n"
             "1. Lis l'etat courant via get_current_state_snapshot()\n"
-            "2. Identifie ce qui manque (arguments? sophismes? formalisation? qualite?)\n"
+            "2. Identifie ce qui manque (arguments? sophismes? formalisation? qualite? JTMS?)\n"
             "3. Designe l'agent suivant via designate_next_agent(nom_exact)\n"
             "4. Formule une question precise pour cet agent\n\n"
             "CROSS-KB ENRICHMENT (#208-I) — tu dois diriger les synergies entre agents :\n"
-            "- Apres InformalAgent : demande a QualityAgent de TENIR COMPTE des sophismes detectes\n"
+            "- Apres ExtractAgent : demande-lui de creer des croyances JTMS pour chaque argument "
+            "(jtms_create_belief) et des justifications entre premisses et conclusions\n"
+            "- Apres InformalAgent : demande a QualityAgent de TENIR COMPTE des sophismes detectes "
+            "en utilisant evaluate_with_cross_kb_context() avec les sophismes en contexte\n"
             "- Apres QualityAgent : demande a CounterAgent de CIBLER les arguments faibles (score < 5/9)\n"
             "- Apres FormalAgent : signale aux autres si des INCONSISTANCES logiques ont ete trouvees\n"
-            "- Apres DebateAgent : demande a GovernanceAgent d'evaluer le CONSENSUS du debat\n"
-            "- Si JTMS retracte une croyance, signale-le et demande re-evaluation\n\n"
-            "Quand tous les aspects sont couverts, appelle set_final_conclusion() avec ta synthese."
+            "- Apres DebateAgent : demande a GovernanceAgent d'evaluer le CONSENSUS avec "
+            "detect_conflicts() puis social_choice_vote() si des positions divergent\n"
+            "- Si JTMS retracte une croyance (jtms_check_consistency), signale-le et demande re-evaluation\n\n"
+            "CONVERGENCE : Quand tous les aspects sont couverts et que le consensus est evalue, "
+            "appelle set_final_conclusion() avec ta synthese. Cela signalera la fin de la phase."
         ),
     },
     "ExtractAgent": {
@@ -73,19 +78,34 @@ AGENT_CONFIG = {
             "Tu es l'agent d'extraction d'arguments. Quand le PM te donne la parole :\n"
             "1. Analyse le texte pour identifier les arguments, premisses et conclusions\n"
             "2. Pour chaque argument, appelle add_identified_argument(description)\n"
-            "3. Identifie les relations entre arguments (support, attaque)\n"
+            "3. Identifie les relations entre arguments (support, attaque)\n\n"
+            "JTMS : Pour chaque argument extrait, cree aussi une croyance JTMS :\n"
+            "- jtms_create_belief(belief_name='arg_N', agent_source='ExtractAgent', confidence=0.7)\n"
+            "- Si un argument A soutient B, ajoute : "
+            "jtms_add_justification(in_list=['arg_A'], out_list=[], conclusion='arg_B', agent_source='ExtractAgent')\n"
+            "Cela permet au systeme de maintenir un reseau de dependances entre arguments.\n"
             "Sois precis et exhaustif dans tes extractions."
         ),
     },
     "InformalAgent": {
         "speciality": "informal_fallacy",
         "instructions": (
-            "Tu es l'agent de detection de sophismes. Quand le PM te donne la parole :\n"
+            "Tu es l'agent de detection de sophismes. Tu disposes de 2 outils de detection :\n"
+            "- detect_fallacies() : detection rapide par heuristiques\n"
+            "- run_guided_analysis() : detection approfondie via navigation hierarchique dans la taxonomie "
+            "(explore les familles de sophismes branche par branche)\n\n"
+            "Quand le PM te donne la parole :\n"
             "1. Lis les arguments identifies via get_current_state_snapshot()\n"
             "2. Pour chaque argument, cherche des sophismes (appel a l'autorite, ad hominem, "
             "faux dilemme, pente glissante, ad populum, fausse analogie, tu quoque, etc.)\n"
-            "3. Utilise detect_fallacies() pour la detection automatique\n"
-            "4. Pour chaque sophisme trouve, appelle add_identified_fallacy(type, justification, target_arg_id)\n"
+            "3. Utilise d'abord detect_fallacies() pour un scan rapide\n"
+            "4. Pour les arguments suspects, lance run_guided_analysis() pour une identification precise\n"
+            "5. Pour chaque sophisme trouve, appelle add_identified_fallacy(type, justification, target_arg_id)\n\n"
+            "JTMS : Quand tu detectes un sophisme sur un argument :\n"
+            "- jtms_create_belief(belief_name='fallacy_on_arg_N', agent_source='InformalAgent', confidence=0.8)\n"
+            "- jtms_add_justification(in_list=['fallacy_on_arg_N'], out_list=['arg_N'], "
+            "conclusion='arg_N_weakened', agent_source='InformalAgent')\n"
+            "Cela permet au JTMS de retracter les arguments affectes par des sophismes.\n\n"
             "Sois rigoureux : cite le texte exact et explique pourquoi c'est un sophisme.\n\n"
             "CROSS-KB (#208-I) : Si FormalAgent a deja identifie des inconsistances logiques, "
             "verifie si elles correspondent a des sophismes formels (non sequitur, affirmation du consequent)."
@@ -97,28 +117,35 @@ AGENT_CONFIG = {
             "Tu es l'agent de logique formelle. Quand le PM te donne la parole :\n"
             "1. Lis les arguments identifies dans l'etat\n"
             "2. Traduis les arguments en logique propositionnelle ou du premier ordre\n"
-            "3. Utilise add_belief_set() pour enregistrer la formalisation\n"
+            "3. Utilise add_belief_set(logic_type='propositional', content='...') pour enregistrer la formalisation\n"
             "4. Verifie la consistance et les implications logiques\n"
-            "5. Enregistre les resultats via log_query_result()\n"
+            "5. Enregistre les resultats via log_query_result(belief_set_id, query, raw_result)\n"
             "Si Tweety n'est pas disponible, fais l'analyse logique manuellement.\n\n"
+            "JTMS : Apres formalisation, ajoute des justifications logiques :\n"
+            "- Pour chaque implication P → Q, ajoute :\n"
+            "  jtms_add_justification(in_list=['P'], out_list=[], conclusion='Q', agent_source='FormalAgent')\n"
+            "- Verifie la consistance JTMS via jtms_check_consistency()\n\n"
             "CROSS-KB (#208-I) : Lis les sophismes detectes par InformalAgent — si un argument "
-            "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee). "
-            "Si NL-to-logic est disponible, utilise-le pour traduire les arguments."
+            "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee)."
         ),
     },
     "QualityAgent": {
         "speciality": "quality",
         "instructions": (
             "Tu es l'agent d'evaluation de qualite. Quand le PM te donne la parole :\n"
-            "1. Lis les arguments ET les sophismes identifies dans l'etat\n"
-            "2. Evalue chaque argument sur les 9 vertus (clarte, pertinence, sources, "
-            "refutation, structure logique, analogie, fiabilite, exhaustivite, redondance)\n"
-            "3. Utilise evaluate_argument_quality() pour le scoring\n\n"
+            "1. Lis les arguments ET les sophismes identifies dans l'etat via get_current_state_snapshot()\n"
+            "2. Pour chaque argument, obtiens d'abord les scores heuristiques de base :\n"
+            "   evaluate_argument_quality(text='...') → scores sur 9 vertus\n"
+            "3. PUIS, utilise evaluate_with_cross_kb_context(text='...', cross_kb_context=JSON) "
+            "en passant les sophismes detectes et resultats formels en contexte JSON :\n"
+            "   cross_kb_context = '{\"fallacies\": [...], \"formal_inconsistencies\": [...]}'\n"
+            "4. Le plugin retourne des scores de base + des recommandations d'ajustement\n"
+            "5. Applique ton propre raisonnement LLM pour produire des scores AJUSTES finaux\n\n"
             "CROSS-KB (#208-I) — ajustements bases sur les autres agents :\n"
-            "- Sophismes detectes → REDUIS le score de 'structure logique' et 'fiabilite'\n"
-            "- Inconsistances formelles → REDUIS le score de 'coherence'\n"
+            "- Sophismes detectes → REDUIS le score de 'structure logique' et 'fiabilite' de 2-3 points\n"
+            "- Inconsistances formelles → REDUIS le score de 'coherence' de 1-2 points\n"
             "- Argument sans sources citees → REDUIS 'sources' et 'exhaustivite'\n"
-            "Fournis un rapport detaille avec scores et justifications."
+            "Fournis un rapport detaille avec scores heuristiques, scores ajustes, et justifications."
         ),
     },
     "DebateAgent": {
@@ -157,17 +184,31 @@ AGENT_CONFIG = {
     "GovernanceAgent": {
         "speciality": "governance",
         "instructions": (
-            "Tu es l'agent de gouvernance et vote. Quand le PM te donne la parole :\n"
-            "1. Lis les resultats du debat, contre-arguments et scores de qualite dans l'etat\n"
-            "2. Evalue le consensus entre les differentes positions\n"
-            "3. Utilise detect_conflicts() et compute_consensus_metrics()\n"
-            "4. Si necessaire, lance un vote via social_choice_vote()\n\n"
+            "Tu es l'agent de gouvernance et vote. Tu disposes de ces outils SPECIFIQUES :\n"
+            "- detect_conflicts(positions_json) : detecte les conflits entre positions d'agents. "
+            "Input: JSON mapping noms d'agents → positions (ex: '{\"DebateAgent\": \"pour\", \"CounterAgent\": \"contre\"}')\n"
+            "- compute_consensus_metrics(results_json) : calcule taux de consensus. "
+            "Input: JSON avec 'votes' et 'winner'\n"
+            "- social_choice_vote(input_json) : lance un vote formel. "
+            "Input: JSON avec 'method' (copeland/schulze/stv/approval), 'ballots' (listes de preferences), 'options' (candidats). "
+            "Ex: '{\"method\": \"copeland\", \"ballots\": [[\"A\",\"B\",\"C\"],[\"B\",\"A\",\"C\"]], \"options\": [\"A\",\"B\",\"C\"]}'\n"
+            "- find_condorcet_winner(input_json) : trouve le vainqueur de Condorcet. "
+            "Input: JSON avec 'ballots' et 'options'\n\n"
+            "Quand le PM te donne la parole :\n"
+            "1. Lis l'etat via get_current_state_snapshot() pour voir les positions des agents\n"
+            "2. Construis le JSON des positions a partir du debat et des contre-arguments\n"
+            "3. Appelle detect_conflicts() pour identifier les divergences\n"
+            "4. Si des positions divergent, organise un VOTE formel via social_choice_vote() :\n"
+            "   - Definis les options (les positions en concurrence)\n"
+            "   - Construis les ballots a partir des preferences des agents\n"
+            "   - Lance le vote avec la methode copeland ou schulze\n"
+            "5. Appelle compute_consensus_metrics() sur les resultats du vote\n\n"
             "CROSS-KB (#208-I) : Base ton evaluation de consensus sur :\n"
             "- Nombre de sophismes detectes (beaucoup = debat de mauvaise qualite)\n"
             "- Scores de qualite moyens (< 5 = consensus fragile)\n"
             "- Resultats du debat adversarial (positions convergentes/divergentes)\n"
             "- Force des contre-arguments (forts = positions contestees)\n"
-            "Fournis une evaluation de la solidite du consensus."
+            "Fournis une evaluation de la solidite du consensus avec les metriques calculees."
         ),
     },
 }
@@ -205,7 +246,9 @@ def create_conversational_agents(
 
         # Get plugin instances from central factory registry
         speciality = config["speciality"]
-        plugins = get_plugin_instances(speciality, state=state)
+        plugins = get_plugin_instances(
+            speciality, state=state, kernel=kernel, llm_service=llm_service
+        )
 
         agent = ChatCompletionAgent(
             kernel=kernel,
@@ -279,6 +322,7 @@ async def run_conversational_analysis(
         {
             "name": "Extraction & Detection",
             "agents": ["ProjectManager", "ExtractAgent", "InformalAgent"],
+            "max_turns": 7,  # More turns for thorough extraction
             "initial_prompt": (
                 f"Analysez ce texte argumentatif. Identifiez les arguments, "
                 f"claims et sophismes.\n\nTexte:\n{text}"
@@ -287,6 +331,7 @@ async def run_conversational_analysis(
         {
             "name": "Formal Analysis & Quality",
             "agents": ["ProjectManager", "FormalAgent", "QualityAgent"],
+            "max_turns": 5,
             "initial_prompt": (
                 "Continuez l'analyse en tenant compte des resultats de Phase 1.\n"
                 "CROSS-KB: Les sophismes detectes doivent influencer :\n"
@@ -303,6 +348,7 @@ async def run_conversational_analysis(
                 "CounterAgent",
                 "GovernanceAgent",
             ],
+            "max_turns": 8,  # More turns for debate + vote + conclusion
             "initial_prompt": (
                 "Finalisez l'analyse en exploitant TOUTES les contributions precedentes.\n"
                 "CROSS-KB: Utilisez les resultats des phases 1 et 2 :\n"
@@ -326,9 +372,12 @@ async def run_conversational_analysis(
             logger.warning(f"No agents available for phase '{phase_name}', skipping")
             continue
 
+        # Per-phase turn limit (falls back to global max_turns_per_phase)
+        phase_max_turns = phase_cfg.get("max_turns", max_turns_per_phase)
+
         logger.info(
             f"=== Phase: {phase_name} ({len(phase_agents)} agents, "
-            f"max {max_turns_per_phase} turns) ==="
+            f"max {phase_max_turns} turns) ==="
         )
 
         # Trace: capture state before phase
@@ -340,8 +389,9 @@ async def run_conversational_analysis(
         phase_log = await _run_phase(
             phase_agents,
             phase_cfg["initial_prompt"],
-            max_turns=max_turns_per_phase,
+            max_turns=phase_max_turns,
             phase_name=phase_name,
+            state=state,
         )
         conversation_log.extend(phase_log)
 
@@ -409,16 +459,65 @@ async def run_conversational_analysis(
     return result
 
 
+def _check_convergence(state, phase_name: str, messages: list) -> bool:
+    """Check if the phase has converged and can exit early.
+
+    Convergence signals:
+    1. Final conclusion has been set (Synthesis phase)
+    2. State hasn't changed in last 2 agent turns (stagnation)
+    3. Agent explicitly signals completion in content
+    """
+    # Signal 1: conclusion set during Synthesis
+    if state and state.final_conclusion:
+        logger.info(f"  [{phase_name}] CONVERGENCE: final conclusion set, exiting early")
+        return True
+
+    # Signal 2: stagnation detection (last 2 messages empty or identical)
+    if len(messages) >= 3:
+        recent = [m.get("content", "") for m in messages[-2:]]
+        if all(c in ("(empty)", "", "ERROR") or len(c) < 10 for c in recent):
+            logger.info(f"  [{phase_name}] CONVERGENCE: stagnation detected, exiting early")
+            return True
+
+    return False
+
+
+def _select_next_agent(
+    state, agents: list, turn: int, agent_by_name: dict = None
+) -> "ChatCompletionAgent":
+    """Select next agent, honoring PM's designation if available.
+
+    Falls back to round-robin if no designation or designated agent not in phase.
+    """
+    # Check if PM designated a specific agent
+    if state and hasattr(state, "_next_agent_designated") and state._next_agent_designated:
+        designated = state._next_agent_designated
+        state._next_agent_designated = None  # Consume the designation
+
+        # Look up by name in agents list
+        for agent in agents:
+            if agent.name == designated:
+                logger.debug(f"  PM designated agent: {designated}")
+                return agent
+
+        # Designated agent not in this phase, fall through to round-robin
+        logger.debug(f"  PM designated '{designated}' but not in phase agents, using round-robin")
+
+    # Round-robin fallback
+    return agents[turn % len(agents)]
+
+
 async def _run_phase(
     agents: List[ChatCompletionAgent],
     initial_prompt: str,
     max_turns: int = 5,
     phase_name: str = "",
+    state=None,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
     Uses SK AgentGroupChat if available, otherwise falls back to
-    round-robin invocation.
+    round-robin invocation with PM designation support and convergence detection.
     """
     messages = []
     chat_history = ChatHistory()
@@ -447,6 +546,9 @@ async def _run_phase(
             messages.append(msg_entry)
             logger.info(f"  [{phase_name}] Turn {turn}: {msg_entry['agent']}")
 
+            # Convergence check
+            if _check_convergence(state, phase_name, messages):
+                break
             if turn >= max_turns:
                 break
 
@@ -459,10 +561,10 @@ async def _run_phase(
             f"SK AgentGroupChat failed ({type(e).__name__}: {e}), using round-robin fallback"
         )
 
-    # Fallback: round-robin invocation
+    # Fallback: round-robin invocation with PM designation support
     # In SK 1.40, ChatCompletionAgent.invoke() returns an AsyncGenerator
     for turn in range(1, max_turns + 1):
-        agent = agents[turn % len(agents)]
+        agent = _select_next_agent(state, agents, turn)
         try:
             content = ""
             # SK 1.40: invoke() is an async generator, iterate to collect messages
@@ -488,6 +590,10 @@ async def _run_phase(
                 }
             )
             logger.info(f"  [{phase_name}] Turn {turn}: {agent.name}")
+
+            # Convergence check after each turn
+            if _check_convergence(state, phase_name, messages):
+                break
 
         except Exception as exc:
             logger.error(f"  [{phase_name}] Turn {turn}: {agent.name} failed: {exc}")

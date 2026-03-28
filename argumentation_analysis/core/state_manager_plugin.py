@@ -337,13 +337,13 @@ class StateManagerPlugin:
         )
         try:
             # Import here to avoid circular dependency
-            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            from argumentation_analysis.services.jtms.extended_belief import JTMSSession
             import json
 
             # Get or create JTMS session from state
             if not hasattr(self._state, "_jtms_session"):
                 self._state._jtms_session = JTMSSession(
-                    strict=False, agent_id="state_manager_plugin"
+                    session_id="shared_jtms", owner_agent="state_manager_plugin"
                 )
 
             session = self._state._jtms_session
@@ -387,12 +387,12 @@ class StateManagerPlugin:
             f"Appel jtms_add_justification: IN={len(in_list)}, OUT={len(out_list)}, conclusion={conclusion}"
         )
         try:
-            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            from argumentation_analysis.services.jtms.extended_belief import JTMSSession
 
             # Get or create JTMS session
             if not hasattr(self._state, "_jtms_session"):
                 self._state._jtms_session = JTMSSession(
-                    strict=False, agent_id="state_manager_plugin"
+                    session_id="shared_jtms", owner_agent="state_manager_plugin"
                 )
 
             session = self._state._jtms_session
@@ -415,7 +415,7 @@ class StateManagerPlugin:
         """Query JTMS beliefs with ExtendedBelief metadata via StateManagerPlugin (#214)."""
         self._logger.info(f"Appel jtms_query_beliefs: filter={agent_filter}")
         try:
-            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            from argumentation_analysis.services.jtms.extended_belief import JTMSSession
             import json
 
             # Get JTMS session
@@ -458,7 +458,7 @@ class StateManagerPlugin:
         """Check JTMS consistency and return conflict report via StateManagerPlugin (#214)."""
         self._logger.info("Appel jtms_check_consistency")
         try:
-            from argumentation_analysis.agents.jtms_agent_base import JTMSSession
+            from argumentation_analysis.services.jtms.extended_belief import JTMSSession
             import json
 
             # Get JTMS session

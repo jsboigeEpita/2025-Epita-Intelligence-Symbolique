@@ -57,6 +57,61 @@ class QualityScoringPlugin:
         )
 
     @kernel_function(
+        name="evaluate_with_cross_kb_context",
+        description=(
+            "Evaluate argument quality with cross-KB context for LLM-enriched scoring. "
+            "Takes the argument text and optional JSON context (detected fallacies, "
+            "formal inconsistencies). Returns heuristic base scores PLUS adjustment "
+            "recommendations based on cross-KB findings. The agent should use its own "
+            "reasoning to produce final adjusted scores."
+        ),
+    )
+    def evaluate_with_cross_kb_context(
+        self, text: str, cross_kb_context: str = "{}"
+    ) -> str:
+        """Evaluate with cross-KB enrichment context.
+
+        Returns base heuristic scores plus adjustment recommendations
+        informed by fallacies, formal results, and other agent findings.
+        The calling agent (QualityAgent) applies its LLM reasoning to
+        produce the final adjusted scores.
+        """
+        base_result = self.evaluator.evaluate(text)
+
+        try:
+            context = json.loads(cross_kb_context)
+        except (json.JSONDecodeError, TypeError):
+            context = {}
+
+        # Build adjustment recommendations based on cross-KB context
+        adjustments = []
+        fallacies = context.get("fallacies", [])
+        formal_issues = context.get("formal_inconsistencies", [])
+
+        if fallacies:
+            adjustments.append(
+                f"DETECTED {len(fallacies)} FALLACIES — reduce 'structure_logique' "
+                f"and 'fiabilite_sources' by 2-3 points for affected arguments. "
+                f"Fallacy types: {', '.join(f.get('type', '?') for f in fallacies if isinstance(f, dict))}"
+            )
+        if formal_issues:
+            adjustments.append(
+                f"FORMAL INCONSISTENCIES detected — reduce 'coherence' and "
+                f"'structure_logique' by 1-2 points. Issues: {len(formal_issues)}"
+            )
+
+        enriched = {
+            "base_heuristic_scores": base_result,
+            "cross_kb_adjustments": adjustments,
+            "instruction": (
+                "Use these base scores as a starting point. Apply your LLM reasoning "
+                "to adjust scores based on the cross-KB context. Report both the "
+                "original heuristic scores AND your adjusted scores with justifications."
+            ),
+        }
+        return json.dumps(enriched, ensure_ascii=False)
+
+    @kernel_function(
         name="list_virtues",
         description="List the 9 argumentative virtues used for evaluation.",
     )
