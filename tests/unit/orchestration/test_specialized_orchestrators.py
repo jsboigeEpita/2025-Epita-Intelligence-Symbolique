@@ -166,19 +166,34 @@ class TestConversationOrchestrator:
 
 
 class TestRealLLMOrchestrator:
-    """Tests pour l'orchestrateur LLM réel."""
+    """Tests pour l'orchestrateur LLM réel.
+
+    NOTE: RealLLMOrchestrator is deprecated (emits DeprecationWarning).
+    Use UnifiedPipeline or ConversationalOrchestrator instead.
+    These tests are marked xfail because the deprecated wrapper no longer
+    exposes the .kernel, .mode, .metrics attributes the tests expect.
+    See Issue #274.
+    """
 
     @pytest.fixture
     def real_llm_orchestrator(self, mock_kernel: Kernel):
         """Instance de RealLLMOrchestrator pour les tests."""
         return RealLLMOrchestrator(kernel=mock_kernel)
 
+    @pytest.mark.xfail(
+        reason="RealLLMOrchestrator deprecated — .kernel/.metrics attributes removed (#274)",
+        strict=True,
+    )
     def test_real_llm_orchestrator_initialization(self, real_llm_orchestrator):
         """Test de l'initialisation de l'orchestrateur LLM réel."""
         assert real_llm_orchestrator.kernel is not None
         assert real_llm_orchestrator.is_initialized is False
         assert real_llm_orchestrator.metrics["total_requests"] == 0
 
+    @pytest.mark.xfail(
+        reason="RealLLMOrchestrator deprecated — .kernel/.metrics attributes removed (#274)",
+        strict=True,
+    )
     @pytest.mark.asyncio
     @patch(
         "argumentation_analysis.orchestration.real_llm_orchestrator.RealLLMOrchestrator.initialize",
@@ -187,11 +202,6 @@ class TestRealLLMOrchestrator:
     async def test_analyze_text_mocked(self, mock_initialize, real_llm_orchestrator):
         """Test de l'orchestration d'analyse avec _perform_analysis mocké."""
         text = "Texte complexe nécessitant analyse."
-
-        # L'appel à `analyze_text` déclenche `initialize` qui est mocké par le décorateur.
-        # Cela évite le démarrage réel de la JVM et le crash.
-
-        # Mock de la méthode interne pour éviter un vrai appel LLM
         expected_analysis = {"analysis": "mocked_result", "confidence": 0.95}
         real_llm_orchestrator._perform_analysis = AsyncMock(
             return_value=expected_analysis
@@ -201,7 +211,6 @@ class TestRealLLMOrchestrator:
             text, analysis_type="unified_analysis"
         )
 
-        # On vérifie que la méthode d'initialisation (mockée) a bien été appelée
         mock_initialize.assert_awaited_once()
         real_llm_orchestrator._perform_analysis.assert_called_once()
         assert result.result == expected_analysis

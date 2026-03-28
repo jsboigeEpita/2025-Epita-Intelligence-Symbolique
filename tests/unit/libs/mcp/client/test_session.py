@@ -262,9 +262,10 @@ class TestMCPSession:
     @pytest.mark.asyncio
     async def test_list_resources_raises_without_capability(self):
         """MCPSession.list_resources() raises without resources capability."""
-        transport = MagicMock()
+        transport = AsyncMock()
         session = MCPSession(transport)
         session._initialized = True
+        # ServerCapabilities() defaults resources=None → capability check should raise
         session._server_capabilities = ServerCapabilities()
 
         with pytest.raises(MCPSessionError, match="not supported"):

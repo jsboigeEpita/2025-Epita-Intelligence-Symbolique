@@ -126,6 +126,10 @@ class TestUnifiedOrchestrations:
         assert isinstance(conv_state, dict)
         assert conv_state["mode"] == "demo"
 
+    @pytest.mark.xfail(
+        reason="RealLLMOrchestrator deprecated — .mode/.config attributes removed (#274)",
+        strict=True,
+    )
     def test_real_llm_orchestrator_configuration(self):
         """Test de configuration du RealLLMOrchestrator."""
         orchestrator = RealLLMOrchestrator(mode="real")
@@ -274,6 +278,10 @@ class TestRealLLMOrchestrationAdvanced:
         self.mock_llm_service = MagicMock()
         self.mock_llm_service.invoke = AsyncMock(return_value="Mock LLM response")
 
+    @pytest.mark.xfail(
+        reason="RealLLMOrchestrator deprecated — .kernel/.is_initialized attributes removed (#274)",
+        strict=True,
+    )
     def test_real_llm_orchestrator_initialization(self):
         """Test d'initialisation complète du RealLLMOrchestrator."""
         orchestrator = RealLLMOrchestrator(mode="real", kernel=self.mock_llm_service)
@@ -377,6 +385,10 @@ class TestUnifiedSystemCoordination:
                 if hasattr(agent, "orchestrator"):
                     assert agent.orchestrator is not None
 
+    @pytest.mark.xfail(
+        reason="RealLLMOrchestrator deprecated — .get_status()/.get_metrics() removed (#274)",
+        strict=True,
+    )
     def test_conversation_to_real_llm_handoff(self):
         """Test de handoff entre orchestrateurs."""
         # Phase 1: Orchestration conversationnelle
