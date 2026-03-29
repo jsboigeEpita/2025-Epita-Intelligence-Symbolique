@@ -169,6 +169,19 @@ class TestInitializeProjectEnvironment:
         elif hasattr(sys, "_jvm_initialized"):
             delattr(sys, "_jvm_initialized")
 
+    @pytest.fixture(autouse=True)
+    def _bypass_safety_checks(self):
+        """Bypass _pre_init_safety_checks which validates real filesystem paths.
+
+        These tests focus on initialization logic, not path validation.
+        Path validation is tested separately in TestPreInitSafetyChecks.
+        """
+        with patch(
+            "argumentation_analysis.core.bootstrap._pre_init_safety_checks",
+            return_value=True,
+        ):
+            yield
+
     def test_returns_project_context(self):
         """initialize_project_environment returns a ProjectContext."""
         with patch(

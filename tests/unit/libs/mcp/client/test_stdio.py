@@ -16,10 +16,17 @@ class TestStdioTransport:
 
     def test_init_default_streams(self):
         """StdioTransport initializes with sys.stdin/stdout by default."""
-        transport = StdioTransport()
+        mock_stdin_buf = MagicMock()
+        mock_stdout_buf = MagicMock()
+        with patch("libs.mcp.client.stdio.sys") as mock_sys:
+            mock_sys.stdin.buffer = mock_stdin_buf
+            mock_sys.stdout.buffer = mock_stdout_buf
+            transport = StdioTransport()
 
         assert transport is not None
         assert not transport.is_closed
+        assert transport._stdin is mock_stdin_buf
+        assert transport._stdout is mock_stdout_buf
 
     def test_init_custom_streams(self):
         """StdioTransport accepts custom streams."""
@@ -40,6 +47,8 @@ class TestStdioTransport:
         write_hook = MagicMock()
 
         transport = StdioTransport(
+            stdin=MagicMock(),
+            stdout=MagicMock(),
             read_hook=read_hook,
             write_hook=write_hook,
         )
@@ -50,10 +59,13 @@ class TestStdioTransport:
     @pytest.mark.asyncio
     async def test_send_calls_write_hook(self):
         """StdioTransport.send() calls write_hook if provided."""
-        mock_stdout = MagicMock()
+        # Use spec=[] to prevent MagicMock from having 'drain' attribute,
+        # so send() uses the flush() path (file-like behavior, not asyncio StreamWriter)
+        mock_stdin = MagicMock(spec=["write", "flush"])
         write_hook = MagicMock()
 
-        transport = StdioTransport(stdout=mock_stdout, write_hook=write_hook)
+        # send() writes to _stdin (the subprocess's stdin stream)
+        transport = StdioTransport(stdin=mock_stdin, stdout=MagicMock(), write_hook=write_hook)
 
         request = JSONRPCRequest(id=1, method="test")
         await transport.send(request)
@@ -63,27 +75,27 @@ class TestStdioTransport:
         assert '"method": "test"' in args[0]
 
     @pytest.mark.asyncio
-    async def test_send_writes_to_stdout(self):
-        """StdioTransport.send() writes JSON to stdout."""
-        mock_stdout = MagicMock()
-        mock_stdout.write = MagicMock()
-        mock_stdout.flush = MagicMock()
+    async def test_send_writes_to_stdin(self):
+        """StdioTransport.send() writes JSON to the subprocess stdin stream."""
+        # Use spec=[] to prevent MagicMock from having 'drain' attribute
+        mock_stdin = MagicMock(spec=["write", "flush"])
 
-        transport = StdioTransport(stdout=mock_stdout)
+        # send() writes to _stdin (the subprocess's stdin stream)
+        transport = StdioTransport(stdin=mock_stdin, stdout=MagicMock())
 
         request = JSONRPCRequest(id=1, method="test", params={"key": "value"})
         await transport.send(request)
 
-        mock_stdout.write.assert_called_once()
-        written_data = mock_stdout.write.call_args[0][0]
+        mock_stdin.write.assert_called_once()
+        written_data = mock_stdin.write.call_args[0][0]
         assert b'"method": "test"' in written_data
         assert b'"key": "value"' in written_data
-        mock_stdout.flush.assert_called_once()
+        mock_stdin.flush.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_send_raises_when_closed(self):
         """StdioTransport.send() raises IOError when closed."""
-        transport = StdioTransport()
+        transport = StdioTransport(stdin=MagicMock(), stdout=MagicMock())
         transport.close()
 
         request = JSONRPCRequest(id=1, method="test")
@@ -94,13 +106,13 @@ class TestStdioTransport:
     @pytest.mark.asyncio
     async def test_receive_calls_read_hook(self):
         """StdioTransport.receive() calls read_hook if provided."""
-        mock_stdin = MagicMock()
+        mock_stdout = MagicMock()
         read_hook = MagicMock()
 
-        # Mock readline to return valid JSON
-        mock_stdin.readline = MagicMock(return_value=b'{"jsonrpc":"2.0","id":1,"result":{}}\n')
+        # receive() reads from _stdout (the subprocess's stdout stream)
+        mock_stdout.readline = MagicMock(return_value=b'{"jsonrpc":"2.0","id":1,"result":{}}\n')
 
-        transport = StdioTransport(stdin=mock_stdin, read_hook=read_hook)
+        transport = StdioTransport(stdin=MagicMock(), stdout=mock_stdout, read_hook=read_hook)
 
         await transport.receive()
 
@@ -109,12 +121,13 @@ class TestStdioTransport:
     @pytest.mark.asyncio
     async def test_receive_parses_json_response(self):
         """StdioTransport.receive() parses JSON into JSONRPCResponse."""
-        mock_stdin = MagicMock()
-        mock_stdin.readline = MagicMock(
+        mock_stdout = MagicMock()
+        mock_stdout.readline = MagicMock(
             return_value=b'{"jsonrpc":"2.0","id":1,"result":{"status":"ok"}}\n'
         )
 
-        transport = StdioTransport(stdin=mock_stdin)
+        # receive() reads from _stdout (the subprocess's stdout stream)
+        transport = StdioTransport(stdin=MagicMock(), stdout=mock_stdout)
 
         response = await transport.receive()
 
@@ -125,7 +138,7 @@ class TestStdioTransport:
     @pytest.mark.asyncio
     async def test_receive_raises_when_closed(self):
         """StdioTransport.receive() raises IOError when closed."""
-        transport = StdioTransport()
+        transport = StdioTransport(stdin=MagicMock(), stdout=MagicMock())
         transport.close()
 
         with pytest.raises(IOError, match="Transport is closed"):
@@ -133,7 +146,7 @@ class TestStdioTransport:
 
     def test_close_sets_closed_flag(self):
         """StdioTransport.close() sets is_closed flag."""
-        transport = StdioTransport()
+        transport = StdioTransport(stdin=MagicMock(), stdout=MagicMock())
         transport.close()
 
         assert transport.is_closed
