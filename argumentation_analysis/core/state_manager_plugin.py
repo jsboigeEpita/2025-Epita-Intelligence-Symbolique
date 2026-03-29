@@ -33,8 +33,6 @@ class StateManagerPlugin:
             f"StateManagerPlugin initialisé avec l'instance RhetoricalAnalysisState (id: {id(self._state)})."
         )
 
-    # ... (Le code complet de la classe StateManagerPlugin avec ses @kernel_function va ici) ...
-    # ... (Reprendre le code de la réponse précédente pour cette classe) ...
     @kernel_function(
         description="Récupère un aperçu (complet ou résumé) de l'état actuel de l'analyse.",
         name="get_current_state_snapshot",
@@ -206,7 +204,7 @@ class StateManagerPlugin:
         self._logger.info(
             f"Appel add_belief_set (state id: {id(self._state)}): Type='{logic_type}'..."
         )
-        valid_logic_types = {"propositional": "Propositional", "pl": "Propositional"}
+        valid_logic_types = {"propositional": "Propositional", "pl": "Propositional", "fol": "FOL", "first_order": "FOL"}
         normalized_logic_type = logic_type.strip().lower()
 
         if normalized_logic_type not in valid_logic_types:
@@ -571,20 +569,24 @@ class StateManagerPlugin:
             ext_belief = session.extended_beliefs[belief_name]
 
             # Record retraction in history
-            was_valid = ext_belief.is_valid
+            was_valid = ext_belief.valid
 
             # Use core JTMS set_belief_validity to propagate
             session.jtms.set_belief_validity(belief_name, None)
 
-            # Update extended belief metadata
-            ext_belief.metadata["retracted"] = True
-            ext_belief.metadata["retraction_reason"] = reason
-            ext_belief.metadata["retraction_timestamp"] = __import__("datetime").datetime.now().isoformat()
+            # Record retraction in extended belief via modification history
+            import datetime as _dt
+            ext_belief.record_modification("retract", {
+                "reason": reason,
+                "timestamp": _dt.datetime.now().isoformat(),
+            })
+            ext_belief.context["retracted"] = True
+            ext_belief.context["retraction_reason"] = reason
 
             # Count affected beliefs (beliefs that lost their justification)
             affected = []
             for name, b in session.extended_beliefs.items():
-                if name != belief_name and not b.is_valid:
+                if name != belief_name and not b.valid:
                     # Check if this belief was justified by the retracted one
                     for j in b.justifications:
                         if belief_name in j.get("in_list", []):

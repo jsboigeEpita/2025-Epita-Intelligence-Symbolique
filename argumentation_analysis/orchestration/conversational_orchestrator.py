@@ -666,8 +666,9 @@ async def _resolve_phase_conflicts(
 
     # Pattern 1: Fallacy vs High Quality
     try:
-        fallacies = state.fallacies if hasattr(state, "fallacies") else []
-        quality_scores = state.quality_scores if hasattr(state, "quality_scores") else {}
+        fallacies_dict = state.identified_fallacies if hasattr(state, "identified_fallacies") else {}
+        fallacies = list(fallacies_dict.values()) if isinstance(fallacies_dict, dict) else fallacies_dict
+        quality_scores = state.argument_quality_scores if hasattr(state, "argument_quality_scores") else {}
 
         if fallacies and quality_scores:
             for fallacy in fallacies:
@@ -756,7 +757,8 @@ def _retract_fallacious_beliefs(
     if not hasattr(state, "_jtms_session"):
         return None
 
-    fallacies = getattr(state, "fallacies", [])
+    fallacies_dict = getattr(state, "identified_fallacies", {})
+    fallacies = list(fallacies_dict.values()) if isinstance(fallacies_dict, dict) else fallacies_dict
     if not fallacies:
         return None
 
@@ -793,7 +795,7 @@ def _retract_fallacious_beliefs(
         ext_belief = session.extended_beliefs[belief_name]
 
         # Only retract if currently valid (avoid double retraction)
-        if not ext_belief.is_valid:
+        if not ext_belief.valid:
             continue
 
         reason = f"fallacy:{fallacy_type} detected by InformalAgent"
@@ -802,16 +804,19 @@ def _retract_fallacious_beliefs(
             # Core TMS retraction: set validity to None and propagate
             session.jtms.set_belief_validity(belief_name, None)
 
-            # Update extended belief metadata
-            ext_belief.metadata["retracted"] = True
-            ext_belief.metadata["retraction_reason"] = reason
+            # Record retraction in extended belief via modification history
             import datetime
-            ext_belief.metadata["retraction_timestamp"] = datetime.datetime.now().isoformat()
+            ext_belief.record_modification("retract", {
+                "reason": reason,
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
+            ext_belief.context["retracted"] = True
+            ext_belief.context["retraction_reason"] = reason
 
             # Count affected beliefs
             affected = []
             for name, b in session.extended_beliefs.items():
-                if name != belief_name and not b.is_valid:
+                if name != belief_name and not b.valid:
                     for j in b.justifications:
                         if belief_name in j.get("in_list", []):
                             affected.append(name)

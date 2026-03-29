@@ -43,7 +43,7 @@ class TestNLToLogicPlugin:
         mock_result.confidence = 0.85
 
         with patch(
-            "argumentation_analysis.plugins.nl_to_logic_plugin.NLToLogicTranslator"
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
             result_str = await plugin.translate_to_pl("If it rains then the ground is wet")
@@ -70,7 +70,7 @@ class TestNLToLogicPlugin:
         mock_result.confidence = 0.9
 
         with patch(
-            "argumentation_analysis.plugins.nl_to_logic_plugin.NLToLogicTranslator"
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
             result_str = await plugin.translate_to_fol("All humans are mortal")
@@ -96,7 +96,7 @@ class TestNLToLogicPlugin:
         mock_result.confidence = 0.0
 
         with patch(
-            "argumentation_analysis.plugins.nl_to_logic_plugin.NLToLogicTranslator"
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
             result_str = await plugin.translate_to_pl("bad argument")
@@ -132,7 +132,7 @@ class TestNLToLogicPlugin:
         mock_batch.method = "llm"
 
         with patch(
-            "argumentation_analysis.plugins.nl_to_logic_plugin.NLToLogicTranslator"
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate_batch = AsyncMock(return_value=mock_batch)
             result_str = await plugin.translate_batch_to_pl(
@@ -172,7 +172,7 @@ class TestNLToLogicPlugin:
         mock_batch.method = "llm"
 
         with patch(
-            "argumentation_analysis.plugins.nl_to_logic_plugin.NLToLogicTranslator"
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate_batch = AsyncMock(return_value=mock_batch)
             result_str = await plugin.translate_batch_to_fol(
