@@ -258,7 +258,18 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - **Machine ID:** myia-po-2025
 - **Workspace ID:** 2025-Epita-Intelligence-Symbolique
 - **Format d'adresse:** `myia-po-2025:2025-Epita-Intelligence-Symbolique`
-- **INTERCOM:** `.claude/local/INTERCOM-myia-po-2025.md`
+- **Coordinateur:** `myia-ai-01:2025-Epita-Intelligence-Symbolique`
+- **Dashboard workspace:** `roosync_dashboard(action: "read", type: "workspace")`
+
+### Project Status (Round 79 — 2026-03-29)
+
+- **Branche**: `main` @ `44071ae0`, CI GREEN
+- **PRs ouvertes**: 0
+- **Issues ouvertes**: 2
+  - **#276** (P3 LOW) — Starlette tests: 18 ERRORs en suite complète mais passent en isolation. Piste: event loops async non nettoyées entre tests
+  - **#78** (backlog) — ROADMAP: Democratech
+- **Repo stable**, pas de travail urgent
+- **Round 79 complet**: #272-#275 toutes résolues (PR #277 + commits directs)
 
 ### MCPs Disponibles
 
@@ -270,7 +281,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 ```bash
 roosync_send(
   action: "send",
-  to: "myia-ai-01:roo-extensions",  # ou "all"
+  to: "myia-ai-01:2025-Epita-Intelligence-Symbolique",  # coordinateur EPITA
   subject: "[EPITA] Titre",
   body: "Message..."
 )
