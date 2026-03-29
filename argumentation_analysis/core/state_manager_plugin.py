@@ -249,6 +249,47 @@ class StateManagerPlugin:
             return f"FUNC_ERROR: Erreur logging requête: {e}"
 
     @kernel_function(
+        description=(
+            "Enregistre une traduction NL → logique formelle dans l'état. "
+            "Paramètres: original_text, formula, logic_type (propositional/fol), "
+            "is_valid, variables (JSON), confidence (0-1)."
+        ),
+        name="add_nl_to_logic_translation",
+    )
+    def add_nl_to_logic_translation(
+        self,
+        original_text: str,
+        formula: str,
+        logic_type: str,
+        is_valid: str = "true",
+        variables: str = "{}",
+        confidence: str = "0.7",
+    ) -> str:
+        """Interface Kernel Function pour enregistrer une traduction NL→logique."""
+        self._logger.info(
+            f"Appel add_nl_to_logic_translation: logic_type='{logic_type}', valid='{is_valid}'"
+        )
+        try:
+            import json as _json
+
+            parsed_vars = _json.loads(variables) if isinstance(variables, str) else variables
+            tr_id = self._state.add_nl_to_logic_translation(
+                original_text=original_text[:200],
+                formula=formula,
+                logic_type=logic_type,
+                is_valid=is_valid.lower() in ("true", "1", "yes"),
+                variables=parsed_vars,
+                confidence=float(confidence),
+            )
+            self._logger.info(f" -> Traduction '{tr_id}' enregistrée via l'état.")
+            return tr_id
+        except Exception as e:
+            self._logger.error(
+                f"Erreur lors de l'ajout traduction NL→logique: {e}", exc_info=True
+            )
+            return f"FUNC_ERROR: Erreur ajout traduction: {e}"
+
+    @kernel_function(
         description="Ajoute une réponse d'un agent à une tâche d'analyse spécifique dans l'état.",
         name="add_answer",
     )
@@ -484,6 +525,88 @@ class StateManagerPlugin:
         except Exception as e:
             self._logger.error(f"Error checking JTMS consistency: {e}", exc_info=True)
             return f"FUNC_ERROR: Error checking consistency: {e}"
+
+    @kernel_function(
+        description=(
+            "Retract a JTMS belief by setting its validity to False and propagating. "
+            "Use this when a fallacy is detected on an argument — the belief and all "
+            "beliefs that depend solely on it will be marked as defeated. "
+            "Parameters: belief_name (str), reason (str, e.g. 'fallacy: appeal to authority')."
+        ),
+        name="jtms_retract_belief",
+    )
+    def jtms_retract_belief(self, belief_name: str, reason: str = "") -> str:
+        """Retract a JTMS belief, propagating to dependent beliefs (#287).
+
+        This is the core TMS retraction mechanism: when a fallacy is detected
+        on argument N, calling jtms_retract_belief('arg_N', 'fallacy: ...') will:
+        1. Set the belief's truth value to None (unknown/defeated)
+        2. Propagate: all beliefs justified solely by arg_N become OUT
+        3. Record the retraction in the belief's modification history
+        """
+        self._logger.info(
+            f"Appel jtms_retract_belief: '{belief_name}', reason='{reason[:60]}'"
+        )
+        try:
+            from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
+            if not hasattr(self._state, "_jtms_session"):
+                return "FUNC_ERROR: No JTMS session initialized. Call jtms_create_belief first."
+
+            session = self._state._jtms_session
+
+            # Check belief exists
+            if belief_name not in session.extended_beliefs:
+                # Try partial match (agents may use slightly different names)
+                candidates = [
+                    name for name in session.extended_beliefs
+                    if belief_name.lower() in name.lower() or name.lower() in belief_name.lower()
+                ]
+                if candidates:
+                    belief_name = candidates[0]
+                    self._logger.info(f" -> Partial match: using '{belief_name}'")
+                else:
+                    return f"FUNC_ERROR: Belief '{belief_name}' not found in JTMS session."
+
+            ext_belief = session.extended_beliefs[belief_name]
+
+            # Record retraction in history
+            was_valid = ext_belief.is_valid
+
+            # Use core JTMS set_belief_validity to propagate
+            session.jtms.set_belief_validity(belief_name, None)
+
+            # Update extended belief metadata
+            ext_belief.metadata["retracted"] = True
+            ext_belief.metadata["retraction_reason"] = reason
+            ext_belief.metadata["retraction_timestamp"] = __import__("datetime").datetime.now().isoformat()
+
+            # Count affected beliefs (beliefs that lost their justification)
+            affected = []
+            for name, b in session.extended_beliefs.items():
+                if name != belief_name and not b.is_valid:
+                    # Check if this belief was justified by the retracted one
+                    for j in b.justifications:
+                        if belief_name in j.get("in_list", []):
+                            affected.append(name)
+
+            result = {
+                "retracted_belief": belief_name,
+                "was_valid": was_valid,
+                "reason": reason,
+                "affected_beliefs": affected,
+                "affected_count": len(affected),
+            }
+
+            self._logger.info(
+                f" -> Belief '{belief_name}' retracted. {len(affected)} dependent beliefs affected."
+            )
+            import json
+            return json.dumps(result, ensure_ascii=False, indent=2)
+
+        except Exception as e:
+            self._logger.error(f"Error retracting belief '{belief_name}': {e}", exc_info=True)
+            return f"FUNC_ERROR: Error retracting belief: {e}"
 
 
 # Optionnel : Log de chargement

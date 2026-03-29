@@ -105,7 +105,8 @@ AGENT_CONFIG = {
             "- jtms_create_belief(belief_name='fallacy_on_arg_N', agent_source='InformalAgent', confidence=0.8)\n"
             "- jtms_add_justification(in_list=['fallacy_on_arg_N'], out_list=['arg_N'], "
             "conclusion='arg_N_weakened', agent_source='InformalAgent')\n"
-            "Cela permet au JTMS de retracter les arguments affectes par des sophismes.\n\n"
+            "- jtms_retract_belief(belief_name='arg_N', reason='fallacy: type_du_sophisme') "
+            "pour retracter la croyance et propager la defaite\n\n"
             "Sois rigoureux : cite le texte exact et explique pourquoi c'est un sophisme.\n\n"
             "CROSS-KB (#208-I) : Si FormalAgent a deja identifie des inconsistances logiques, "
             "verifie si elles correspondent a des sophismes formels (non sequitur, affirmation du consequent)."
@@ -114,19 +115,36 @@ AGENT_CONFIG = {
     "FormalAgent": {
         "speciality": "formal_logic",
         "instructions": (
-            "Tu es l'agent de logique formelle. Quand le PM te donne la parole :\n"
-            "1. Lis les arguments identifies dans l'etat\n"
-            "2. Traduis les arguments en logique propositionnelle ou du premier ordre\n"
-            "3. Utilise add_belief_set(logic_type='propositional', content='...') pour enregistrer la formalisation\n"
-            "4. Verifie la consistance et les implications logiques\n"
-            "5. Enregistre les resultats via log_query_result(belief_set_id, query, raw_result)\n"
+            "Tu es l'agent de logique formelle. Quand le PM te donne la parole :\n\n"
+            "WORKFLOW OBLIGATOIRE (3 etapes) :\n\n"
+            "ETAPE 1 — NL → Traduction Formelle :\n"
+            "1. Lis les arguments identifies dans l'etat via get_current_state_snapshot()\n"
+            "2. Pour chaque argument cle, appeelle translate_to_pl(text='argument text') "
+            "   pour obtenir une formule propositionnelle\n"
+            "3. Si l'argument contient des quantificateurs (tous, certains, aucun)), "
+            "   appeelle translate_to_fol(text='argument text') pour du premier ordre\n"
+            "4. Stock la traduction via add_nl_to_logic_translation(\n"
+            "   original_text='...', formula='...', logic_type='propositional'|'fol',\n"
+            "   is_valid=True/False, variables=JSON. confidence=0.0-1.0)\n\n"
+            "ETAPE 2 — Validation Tweety :\n"
+            "1. Pour les formules valides, appeelle check_propositional_consistency(\n"
+            "   input='{\"formulas\": [\"p => q\", \"q\"]}') \n"
+            "2. Pour FOL: check_fol_consistency(input='{\"formulas\": [...]}')\n"
+            "3. Pour les modalites (possibilite/obligation): check_modal_satisfiability(\n"
+            "   input='{\"formula\": \"<>P\", \"logic_type\": \"S5\"}')\n"
+            "4. Si inconstistances: signalez au PM\n\n"
+            "ETAPE 3 — Stockage Resultats :\n"
+            "1. Utilise add_belief_set(logic_type='propositional', content='formulas')\n"
+            "2. Enregistre les resultats via log_query_result(belief_set_id, query, raw_result)\n"
+            "3. Stocke FOL results with add_belief_set(logic_type='fol', ...)\n\n"
             "Si Tweety n'est pas disponible, fais l'analyse logique manuellement.\n\n"
             "JTMS : Apres formalisation, ajoute des justifications logiques :\n"
-            "- Pour chaque implication P → Q, ajoute :\n"
+            "- Pour chaque implication P => Q, ajoute :\n"
             "  jtms_add_justification(in_list=['P'], out_list=[], conclusion='Q', agent_source='FormalAgent')\n"
             "- Verifie la consistance JTMS via jtms_check_consistency()\n\n"
             "CROSS-KB (#208-I) : Lis les sophismes detectes par InformalAgent — si un argument "
-            "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee)."
+            "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee).\n"
+            "Modal: Si tu detectes des modalites (possibilite/necessite), utilise check_modal_satisfiability()."
         ),
     },
     "QualityAgent": {
@@ -408,6 +426,12 @@ async def run_conversational_analysis(
                     "resolution_count": len(conflict_resolutions),
                 }
             )
+
+        # JTMS retraction on fallacies (#287): automatically retract beliefs
+        # associated with detected fallacies between phases.
+        retraction_log = _retract_fallacious_beliefs(state, phase_name)
+        if retraction_log:
+            conversation_log.append(retraction_log)
 
         # Trace: record turns and capture state after phase
         for msg in phase_log:
@@ -710,3 +734,112 @@ async def _resolve_phase_conflicts(
         )
 
     return resolutions
+
+
+def _retract_fallacious_beliefs(
+    state: RhetoricalAnalysisState,
+    phase_name: str,
+) -> Optional[Dict[str, Any]]:
+    """Retract JTMS beliefs associated with detected fallacies (#287).
+
+    After a phase completes, scans the state for detected fallacies and
+    automatically retracts the corresponding JTMS beliefs. This is the core
+    TMS behavior that justifies the student project: fallacy → retraction → propagation.
+
+    Args:
+        state: Shared analysis state with fallacies and JTMS session.
+        phase_name: Name of the phase just completed.
+
+    Returns:
+        Dict with retraction log if any retractions occurred, None otherwise.
+    """
+    if not hasattr(state, "_jtms_session"):
+        return None
+
+    fallacies = getattr(state, "fallacies", [])
+    if not fallacies:
+        return None
+
+    session = state._jtms_session
+    retractions = []
+
+    for fallacy in fallacies:
+        if not isinstance(fallacy, dict):
+            continue
+
+        target_arg = fallacy.get("target_argument_id", "")
+        fallacy_type = fallacy.get("fallacy_type", "unknown")
+
+        if not target_arg:
+            continue
+
+        # Try exact match then partial match for JTMS belief names
+        belief_name = None
+        if target_arg in session.extended_beliefs:
+            belief_name = target_arg
+        else:
+            # Try common patterns: arg_N, argument_N, belief about arg_N
+            candidates = [
+                name for name in session.extended_beliefs
+                if target_arg.lower() in name.lower()
+                or name.lower() in target_arg.lower()
+            ]
+            if candidates:
+                belief_name = candidates[0]
+
+        if belief_name is None:
+            continue
+
+        ext_belief = session.extended_beliefs[belief_name]
+
+        # Only retract if currently valid (avoid double retraction)
+        if not ext_belief.is_valid:
+            continue
+
+        reason = f"fallacy:{fallacy_type} detected by InformalAgent"
+
+        try:
+            # Core TMS retraction: set validity to None and propagate
+            session.jtms.set_belief_validity(belief_name, None)
+
+            # Update extended belief metadata
+            ext_belief.metadata["retracted"] = True
+            ext_belief.metadata["retraction_reason"] = reason
+            import datetime
+            ext_belief.metadata["retraction_timestamp"] = datetime.datetime.now().isoformat()
+
+            # Count affected beliefs
+            affected = []
+            for name, b in session.extended_beliefs.items():
+                if name != belief_name and not b.is_valid:
+                    for j in b.justifications:
+                        if belief_name in j.get("in_list", []):
+                            affected.append(name)
+
+            retraction = {
+                "belief": belief_name,
+                "fallacy_type": fallacy_type,
+                "reason": reason,
+                "affected_beliefs": affected,
+                "affected_count": len(affected),
+            }
+            retractions.append(retraction)
+            logger.info(
+                f"[{phase_name}] JTMS retracted '{belief_name}' "
+                f"(fallacy: {fallacy_type}, affected: {len(affected)})"
+            )
+
+        except Exception as e:
+            logger.warning(
+                f"[{phase_name}] Failed to retract belief '{belief_name}': {e}"
+            )
+
+    if not retractions:
+        return None
+
+    return {
+        "phase": phase_name,
+        "type": "jtms_retraction",
+        "retraction_count": len(retractions),
+        "retractions": retractions,
+    }
