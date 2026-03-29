@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ---
 
@@ -43,6 +43,25 @@ Last updated: 2026-03-28
 - **Fix**: PR #270 (#269) replaced with context-aware async mocks simulating the full 2-phase hierarchical workflow
 - **Status**: RESOLVED
 
+### Bootstrap Tests: _pre_init_safety_checks on Windows (7 tests)
+- **Identified**: 2026-03-29 | **Resolved**: 2026-03-29
+- **Cause**: `TestInitializeProjectEnvironment` tests passed fake paths (`/tmp/test`, `/my/project`) to `initialize_project_environment()`, but `_pre_init_safety_checks()` validates real filesystem paths — all fail on Windows
+- **Fix**: Commit `88af060f` added autouse fixture to mock `_pre_init_safety_checks` → 24/24 bootstrap tests pass
+- **Status**: RESOLVED
+
+### MCP Stdio Tests: stdin/stdout Swap + pytest Capture (8 tests)
+- **Identified**: 2026-03-29 | **Resolved**: 2026-03-29
+- **Cause**: (1) Test mocks passed to wrong parameter (`stdout=` for send tests, `stdin=` for receive tests), (2) `StdioTransport()` without args accesses `sys.stdin.buffer` which pytest captures, (3) `MagicMock()` has spurious `drain` attribute triggering wrong async path
+- **Fix**: Commit `88af060f` — corrected param names, patched `sys` module, used `MagicMock(spec=["write", "flush"])` → 17/17 stdio tests pass
+- **Status**: RESOLVED
+
+### Dead E2E Tests: Logic Graph Component (5 tests removed/updated)
+- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
+- **Cause**: Logic Graph frontend component removed during Flask→FastAPI refactor (Oct 2025). No `/api/logic/*` endpoints in FastAPI, no `[data-testid="logic-graph-*"]` in dashboard.
+- **Fix**: PR #271 deleted `test_logic_graph.py` (3 dead tests), removed `test_logic_graph_fallacy_integration` from integration workflows, updated skip reasons on 2 remaining API tests
+- **Related**: Issue #264
+- **Status**: RESOLVED
+
 ---
 
 ## Active Issues
@@ -73,12 +92,12 @@ Last updated: 2026-03-28
 - **Status**: Monitoring — exact runtime skip count pending full suite run
 - **Related**: #28, #30, #94, #112
 
-### Dead E2E Tests: Logic Graph Component (5 tests removed/updated)
-- **Identified**: 2026-03-28 | **Resolved**: 2026-03-28
-- **Cause**: Logic Graph frontend component removed during Flask→FastAPI refactor (Oct 2025). No `/api/logic/*` endpoints in FastAPI, no `[data-testid="logic-graph-*"]` in dashboard.
-- **Fix**: PR #271 deleted `test_logic_graph.py` (3 dead tests), removed `test_logic_graph_fallacy_integration` from integration workflows, updated skip reasons on 2 remaining API tests
-- **Related**: Issue #264
-- **Status**: RESOLVED
+### Starlette Tests: Event Loop Contamination in Full Suite
+- **Symptom**: 18 ERRORs in `test_interface_web_starlette.py` when running full suite, but all 18 pass in isolation
+- **Impact**: Low — cosmetic failures only in marathon suite runs
+- **Root cause**: Suspected async event loop pollution from prior tests
+- **Workaround**: Run in isolation: `pytest tests/unit/test_interface_web_starlette.py -v`
+- **Related**: Issue #276
 
 ### Pytest Markers Not Registered (cosmetic warnings)
 - **Symptom**: `PytestUnknownMarkWarning` for `debuglog`, `use_mock_numpy` markers
@@ -100,13 +119,14 @@ Last updated: 2026-03-28
 
 ---
 
-## Test Statistics (as of 2026-03-28)
+## Test Statistics (as of 2026-03-29)
 
-- **Unit suite**: 10085 collected (+820 since 2026-03-19, Epic #208 additions); 2 currently failing (async mock, PR #261)
+- **Unit suite**: 10085+ collected; 0 known regressions (15 fixes in commit `88af060f`)
 - **Epic #208 tests**: 158+ passed (conv_orch, groupchat, plugin, trace, quality, NL-logic, JTMS, benchmark, CamemBERT, integration)
-- **Orchestration modes**: 3 active — pipeline (default), conversational, legacy
+- **Orchestration modes**: 2 active — pipeline (default), conversational (legacy removed round 79)
 - **Sherlock Watson validation**: 43/43 passed
-- **Black formatting**: 0 files to reformat (fully compliant)
+- **CI**: GREEN on main (`88af060f`)
+- **Known flaky in full suite**: Starlette (18 ERRORs, pass in isolation — #276), robustness adversarial (~87 tests, resource exhaustion)
 
 ## Test Commands
 
