@@ -95,7 +95,7 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
         if not isinstance(f, dict):
             continue
         target_text = f.get("target_argument", "")
-        fallacy_type = f.get("fallacy_type", f.get("type", "unknown"))
+        fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))
         if target_text and raw_args:
             target_lower = target_text.lower()[:80]
             for idx, a in enumerate(raw_args[:8]):
@@ -968,7 +968,7 @@ def _generate_attacks_from_args(
             target_idx = min(i, len(arguments) - 1) if arguments else -1
             if target_idx >= 0 and target_idx < len(arguments):
                 # "fallacy detection" attacks the argument it exposes
-                fallacy_label = f.get("fallacy_type", f"fallacy_{i}")
+                fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
                 if fallacy_label in arguments:
                     attacks.append([fallacy_label, arguments[target_idx]])
                 elif len(arguments) > target_idx + 1:
@@ -1297,7 +1297,7 @@ def _python_aspic_fallback(
         if is_undermined:
             status = "undermined"
             matching_fallacies = [
-                f.get("fallacy_type", "unknown")
+                f.get("type", f.get("fallacy_type", "unknown"))
                 for f in fallacies
                 if isinstance(f, dict)
             ]
@@ -1383,7 +1383,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict:
         # Fallacy-based defeat: if a fallacy targets an argument, it's defeasible
         for j, f in enumerate(fallacies[:3]):
             if isinstance(f, dict):
-                ft = f.get("fallacy_type", "unknown")
+                ft = f.get("type", f.get("fallacy_type", "unknown"))
                 defeasible.append(f"detected({ft[:30]}) => undermined_{j+1}")
 
     axioms = context.get("axioms")
@@ -1426,7 +1426,7 @@ async def _invoke_belief_revision(input_text: str, context: Dict[str, Any]) -> D
             if isinstance(fallacy_output, dict):
                 fallacies = fallacy_output.get("fallacies", [])
                 if fallacies and isinstance(fallacies[0], dict):
-                    ft = fallacies[0].get("fallacy_type", "")
+                    ft = fallacies[0].get("type", fallacies[0].get("fallacy_type", ""))
                     new_belief = (
                         f"Fallacy detected: {ft} — undermines argument credibility"
                     )
@@ -1568,7 +1568,7 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict:
         fallacy_attacks = []
         for f in raw_fallacies[:5]:
             if isinstance(f, dict):
-                ftype = f.get("type", "unknown")
+                ftype = f.get("type", f.get("fallacy_type", "unknown"))
                 justification = f.get("justification", "")
                 fallacy_attacks.append(f"[CHALLENGE: {ftype}] {justification[:120]}")
 
@@ -1914,7 +1914,7 @@ def _python_eaf_fallback(
         for f in fallacy_output.get("fallacies", []):
             if isinstance(f, dict):
                 target = f.get("target_argument", "")
-                ftype = f.get("fallacy_type", "unknown")
+                ftype = f.get("type", f.get("fallacy_type", "unknown"))
                 if target:
                     fallacy_targets[target.lower()[:30]] = ftype
 
@@ -2890,7 +2890,7 @@ def _write_hierarchical_fallacy_to_state(output, state, ctx) -> None:
     for f in fallacies:
         if not isinstance(f, dict):
             continue
-        fallacy_type = f.get("fallacy_type", "unknown")
+        fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))
         justification = f.get("explanation", "")
         taxonomy_pk = f.get("taxonomy_pk", "")
         confidence = f.get("confidence", 0.0)
