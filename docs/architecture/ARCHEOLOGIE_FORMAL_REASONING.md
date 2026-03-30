@@ -115,9 +115,11 @@ FormalAgent (ChatCompletionAgent)
 ## 5. Gaps Still to Address (Recommendations for #285, #287)
 
 ### For #285 (Tweety wiring in conversational mode)
-- **Gap**: JVM not auto-initialized in conversational entry point. Add `jvm_setup.initialize_jvm()` at start of `run_conversational_analysis()`.
-- **Gap**: FormalAgent's translate→validate→store workflow depends on LLM following instructions. Consider adding a system check that warns if no Tweety queries were made.
-- **Mostly done**: NLToLogicPlugin wired (`ffb8d6bb`), TweetyLogicPlugin already in factory.
+- **Critical gap**: The `standard` and `full` workflows do NOT include PL/FOL phases or `nl_to_logic` phase. Formal reasoning only exists in `formal_verification` and `nl_to_logic` specialized workflows. The NL→Logic→Tweety bridge is dormant for the default analysis path.
+- **Gap**: The `full` workflow includes `nl_to_logic` but NOT PL/FOL — translations are made but never validated.
+- **Gap**: `_invoke_propositional_logic` creates a new `NLToLogicTranslator` on each call — should be memoized.
+- **Gap**: Pipeline retraction uses `set_belief_validity(target, False)` but conversational uses `None` — semantics should be unified.
+- **Mostly done for conversational**: NLToLogicPlugin wired (`ffb8d6bb`), TweetyLogicPlugin already in factory, JVM init done by `run_orchestration.py`.
 
 ### For #287 (JTMS retraction)
 - **Fixed**: Attribute-name bugs (`085b513b`). Retraction code should now work.
