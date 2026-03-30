@@ -705,13 +705,8 @@ async def _resolve_phase_conflicts(
     # Resolve detected conflicts
     for conflict in conflicts:
         try:
-            # ConflictResolver expects agents dict, but we're working with state
-            # Create mock agent dict for compatibility
-            mock_agents = {}
-
-            resolution = await resolver.resolve_conflict(
-                conflict, mock_agents, strategy=strategy
-            )
+            # Use standalone ConflictResolver.resolve() (sync, no agents param)
+            resolution = resolver.resolve(conflict, strategy=strategy)
 
             if resolution.get("resolved"):
                 # Apply resolution to state
