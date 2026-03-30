@@ -82,6 +82,28 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
         extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
     )
 
+    # (#289) Read fallacy output to penalize arguments affected by fallacies
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    detected_fallacies = (
+        fallacy_output.get("fallacies", [])
+        if isinstance(fallacy_output, dict)
+        else []
+    )
+    # Build a map: arg_index → list of fallacy types targeting that argument
+    fallacy_targets: Dict[int, list] = {}
+    for f in detected_fallacies:
+        if not isinstance(f, dict):
+            continue
+        target_text = f.get("target_argument", "")
+        fallacy_type = f.get("fallacy_type", f.get("type", "unknown"))
+        if target_text and raw_args:
+            target_lower = target_text.lower()[:80]
+            for idx, a in enumerate(raw_args[:8]):
+                a_text = (a.get("text", str(a)) if isinstance(a, dict) else str(a)).lower()
+                if target_lower in a_text or a_text[:40] in target_lower:
+                    fallacy_targets.setdefault(idx, []).append(fallacy_type)
+                    break
+
     if raw_args:
         results = {}
         for i, arg in enumerate(raw_args[:8]):  # Cap at 8 to avoid timeout
@@ -91,6 +113,17 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
             arg_id = f"arg_{i+1}"
             result = await asyncio.to_thread(evaluator.evaluate, arg_text)
             if isinstance(result, dict):
+                # (#289) Penalize score if argument is targeted by a fallacy
+                if i in fallacy_targets:
+                    penalty = min(0.3 * len(fallacy_targets[i]), 0.6)
+                    original_score = result.get("note_finale", 0)
+                    result["note_finale"] = max(0, original_score - original_score * penalty)
+                    result["fallacy_penalty"] = {
+                        "applied": True,
+                        "fallacies": fallacy_targets[i],
+                        "penalty_factor": penalty,
+                        "original_score": original_score,
+                    }
                 results[arg_id] = result
         # Also compute aggregate
         if results:
@@ -114,6 +147,11 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
             }
+            if detected_fallacies:
+                output["fallacy_cross_reference"] = {
+                    "fallacies_found": len(detected_fallacies),
+                    "arguments_penalized": len(fallacy_targets),
+                }
             if llm_enrichment:
                 output["llm_enrichment"] = llm_enrichment
             return output
@@ -599,6 +637,13 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         else []
     )
 
+    # Formal reasoning results (#285 — cross-KB: formal feeds JTMS)
+    pl_output = context.get("phase_pl_output", {})
+    fol_output = context.get("phase_fol_output", {})
+    formal_consistency = (
+        pl_output.get("satisfiable", True) if isinstance(pl_output, dict) else True
+    )
+
     # ── Build belief names ───────────────────────────────────────────
     def _text(item):
         return (item.get("text", str(item)) if isinstance(item, dict) else str(item))[:80]
@@ -614,7 +659,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     for i, name in enumerate(arg_beliefs + claim_beliefs):
         is_arg = i < len(arg_beliefs)
         belief_type = "premise" if is_arg else "claim"
-        confidence = per_arg_scores.get(f"argument_{i+1}", {}).get("note_finale", 0.5)
+        confidence = per_arg_scores.get(f"arg_{i+1}", per_arg_scores.get(f"argument_{i+1}", {})).get("note_finale", 0.5)
         session.add_belief(
             name,
             agent_source="unified_pipeline",
@@ -653,7 +698,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     for i, f in enumerate(detected_fallacies[:6]):
         if not isinstance(f, dict):
             continue
-        fallacy_type = f.get("fallacy_type", f"fallacy_{i+1}")
+        fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
         fallacy_name = f"FALLACY:{fallacy_type}"[:80]
         confidence = f.get("confidence", f.get("severity", 0.7))
         session.add_belief(
@@ -732,6 +777,20 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
                     [ca_text], [matched], rebuttal_name, agent_source="counter_argument_generator"
                 )
 
+    # ── Step 5b: Formal inconsistency → flag in belief network (#285) ─
+    if not formal_consistency and arg_beliefs:
+        inconsistency_name = "FORMAL_INCONSISTENCY"
+        session.add_belief(
+            inconsistency_name,
+            agent_source="formal_logic",
+            context={
+                "pl_satisfiable": pl_output.get("satisfiable") if isinstance(pl_output, dict) else None,
+                "fol_satisfiable": fol_output.get("satisfiable") if isinstance(fol_output, dict) else None,
+            },
+            confidence=0.9,
+        )
+        session.set_fact(inconsistency_name, is_true=True)
+
     # ── Step 6: Quality scores → annotate belief metadata ────────────
     quality_annotations = {}
     for arg_id, scores in per_arg_scores.items():
@@ -782,6 +841,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         "fallacy_count": len(fallacy_beliefs),
         "counter_argument_count": len([ca for ca in counter_args[:4] if isinstance(ca, dict)]),
         "has_real_dependencies": bool(arg_beliefs and (claim_beliefs or fallacy_beliefs)),
+        "formal_consistency": formal_consistency,
         "session_version": session.version,
         "consistency_checks": session.consistency_checks,
     }
@@ -3806,6 +3866,24 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["extract"],
             optional=True,
         )
+        .add_phase(
+            "nl_to_logic",
+            capability="nl_to_logic_translation",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "pl",
+            capability="propositional_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "fol",
+            capability="fol_reasoning",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
@@ -3883,6 +3961,18 @@ def build_full_workflow() -> WorkflowDefinition:
             "nl_to_logic",
             capability="nl_to_logic_translation",
             depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "pl",
+            capability="propositional_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "fol",
+            capability="fol_reasoning",
+            depends_on=["nl_to_logic"],
             optional=True,
         )
         .build()
