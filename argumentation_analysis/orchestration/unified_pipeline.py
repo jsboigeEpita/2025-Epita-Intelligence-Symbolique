@@ -288,7 +288,7 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
             for f in fallacies[:3]:  # Top 3 fallacies
                 if isinstance(f, dict):
                     targets.append(
-                        f"[FALLACY: {f.get('fallacy_type', '')}] "
+                        f"[FALLACY: {f.get('type', f.get('fallacy_type', ''))}] "
                         f"{f.get('explanation', '')[:100]}"
                     )
             for a in arguments[:3]:  # Top 3 arguments if no fallacies
@@ -367,7 +367,13 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
             # Build adversarial debate from upstream analysis
             extract_output = context.get("phase_extract_output", {})
             raw_arguments = extract_output.get("arguments", [])
-            raw_fallacies = extract_output.get("fallacies", [])
+            # (#289) Read fallacies from hierarchical fallacy phase, not extract
+            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+            raw_fallacies = (
+                fallacy_output.get("fallacies", [])
+                if isinstance(fallacy_output, dict)
+                else []
+            )
             counter_output = context.get("phase_counter_output", {})
             raw_cas = (
                 counter_output.get("llm_counter_arguments", [])
@@ -2486,7 +2492,7 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
     for f in fallacies:
         if isinstance(f, dict):
             inferences.append(
-                f"Argument undermined by {f.get('fallacy_type', 'unknown')} fallacy"
+                f"Argument undermined by {f.get('type', f.get('fallacy_type', 'unknown'))} fallacy"
             )
 
     try:
