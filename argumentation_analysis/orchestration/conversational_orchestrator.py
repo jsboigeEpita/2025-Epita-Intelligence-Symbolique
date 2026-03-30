@@ -686,7 +686,7 @@ async def _resolve_phase_conflicts(
                                     "type": "fallacy_vs_quality",
                                     "agents": {
                                         "InformalAgent": {
-                                            "belief_name": f"FALLACY:{fallacy.get('fallacy_type', 'unknown')}",
+                                            "belief_name": f"FALLACY:{fallacy.get('type', fallacy.get('fallacy_type', 'unknown'))}",
                                             "confidence": fallacy.get("confidence", 0.7),
                                             "evidence": fallacy.get("explanation", ""),
                                         },
@@ -770,7 +770,7 @@ def _retract_fallacious_beliefs(
             continue
 
         target_arg = fallacy.get("target_argument_id", "")
-        fallacy_type = fallacy.get("fallacy_type", "unknown")
+        fallacy_type = fallacy.get("type", fallacy.get("fallacy_type", "unknown"))
 
         if not target_arg:
             continue
