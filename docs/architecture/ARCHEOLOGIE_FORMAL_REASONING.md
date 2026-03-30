@@ -151,4 +151,37 @@ Conversational Wiring:
   5620e1eb                            ConflictResolver integration
   ffb8d6bb                            JTMS methods in StateManagerPlugin
   085b513b                            Fix 8 attribute bugs (retraction now works)
+  5ca3cd41                            Fix fallacy key mismatch + 21 retraction tests
+  10fe11a1                            Fix ExtendedBelief dual-Belief desync (#296)
+  f71689dc                            Fix dead ConflictResolver API call (#289)
 ```
+
+---
+
+## 7. Cross-KB Wiring Archaeology (#284)
+
+### 6 Cross-KB Data Flows (by design)
+
+| Flow | Source | Target | Mechanism | Status |
+|------|--------|--------|-----------|--------|
+| 1 | Extract → JTMS | Beliefs for arguments | jtms_create_belief + jtms_add_justification | Prompt-guided |
+| 2 | Informal → Quality | Fallacies reduce scores | evaluate_with_cross_kb_context() | Plugin exists, pipeline not wired |
+| 3 | Informal → JTMS | Retract undermined beliefs | jtms_retract_belief + _retract_fallacious_beliefs | ✅ Working (f71689dc) |
+| 4 | Quality → Counter | Target weak arguments | CounterAgent instructions | Prompt-guided |
+| 5 | Formal → All | Signal inconsistencies | FormalAgent instructions | Prompt-guided |
+| 6 | Debate → Governance | Vote on positions | detect_conflicts + social_choice_vote | Prompt-guided |
+
+### Broken/Missing Wiring (found by archaeology)
+
+1. **Pipeline quality ignores fallacies**: `_invoke_quality_evaluator()` reads only `phase_extract_output`, not `phase_hierarchical_fallacy_output`
+2. **JTMS output not fed back**: No `depends_on=["jtms"]` in standard workflow for debate/governance
+3. **JTMSCommunicationHub (54KB) unwired**: Has global consistency + inter-agent conflict detection but unused
+4. **Collaborative debate unwired**: `collaborative_debate.py` (Critic/Validator/Synthesizer) not in workflow catalog
+
+### ConflictResolver: Three Implementations
+
+| Location | API | Status |
+|----------|-----|--------|
+| `agents/jtms_communication_hub.py` | async resolve_conflict(conflict, agents, strategy) | Original, unwired |
+| `services/jtms/conflict_resolution.py` | sync resolve(conflict, strategy) | Canonical, used by orchestrator |
+| `orchestration/hierarchical/tactical/resolver.py` | Hierarchical mode | Dormant |
