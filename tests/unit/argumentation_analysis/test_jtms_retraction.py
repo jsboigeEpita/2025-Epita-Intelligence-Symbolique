@@ -89,28 +89,26 @@ class TestStateManagerJTMSMethods:
         assert parsed["total_beliefs"] == 1
 
     def test_jtms_retract_belief_success(self):
-        """jtms_retract_belief records retraction in context and modification history.
+        """jtms_retract_belief sets validity to None and records retraction.
 
-        Known issue: ExtendedBelief.valid reads from _jtms_belief (created in __init__),
-        which is separate from JTMSSession.jtms.beliefs[name]. set_fact() only updates
-        the core belief. was_valid will reflect the wrapper's state, not the core's.
+        After fix #296, ExtendedBelief.valid now reads from the same core JTMS
+        belief object, so set_fact and retraction work correctly via the wrapper.
         """
         self.plugin.jtms_create_belief("arg_1", agent_source="Extract", confidence=0.8)
         session = self.state._jtms_session
-        # Set as fact in core JTMS
         session.set_fact("arg_1", is_true=True)
-        core_belief = session.jtms.beliefs["arg_1"]
-        assert core_belief.valid is True
+        eb = session.extended_beliefs["arg_1"]
+        # After #296 fix, wrapper reads from core JTMS belief
+        assert eb.valid is True
 
         result = self.plugin.jtms_retract_belief(
             belief_name="arg_1", reason="fallacy: appeal to authority"
         )
         parsed = json.loads(result)
         assert parsed["retracted_belief"] == "arg_1"
-        # was_valid reads from ext_belief.valid (wrapper) — may be None due to dual-Belief issue
+        assert parsed["was_valid"] is True
         assert "appeal to authority" in parsed["reason"]
 
-        eb = session.extended_beliefs["arg_1"]
         # Verify retraction recorded in context
         assert eb.context.get("retracted") is True
         assert "appeal to authority" in eb.context.get("retraction_reason", "")
@@ -120,8 +118,8 @@ class TestStateManagerJTMSMethods:
         last_mod = eb.modification_history[-1]
         assert last_mod["action"] == "retract"
 
-        # Verify core JTMS belief was retracted (validity set to None)
-        assert core_belief.valid is None
+        # Verify belief is now retracted (validity set to None)
+        assert eb.valid is None
 
     def test_jtms_retract_belief_partial_match(self):
         """jtms_retract_belief finds beliefs by partial name match."""
@@ -200,12 +198,11 @@ class TestRetractFallaciousBeliefs:
             _retract_fallacious_beliefs,
         )
 
-        # Add a belief and set both core and wrapper to valid
+        # Add a belief and set to valid — after #296, wrapper syncs with core
         self.session.add_belief("arg_1", agent_source="Extract", confidence=0.8)
         self.session.set_fact("arg_1", is_true=True)
         eb = self.session.extended_beliefs["arg_1"]
-        eb._jtms_belief.set_truth_value(True)  # Sync wrapper's belief
-        assert eb.valid is True
+        assert eb.valid is True  # Works after #296 fix
 
         # Add a fallacy targeting arg_1
         self.state.add_fallacy(

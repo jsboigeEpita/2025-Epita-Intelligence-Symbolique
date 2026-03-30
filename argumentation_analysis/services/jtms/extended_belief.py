@@ -131,6 +131,9 @@ class JTMSSession:
             extended_belief = ExtendedBelief(name, agent_source, context, confidence)
             self.extended_beliefs[name] = extended_belief
             self.jtms.add_belief(name)
+            # Sync: point the wrapper's _jtms_belief to the core JTMS belief
+            # so that ext_belief.valid reads the actual truth value (#296)
+            extended_belief._jtms_belief = self.jtms.beliefs[name]
 
         self.last_modified = datetime.now()
         return self.extended_beliefs[name]
