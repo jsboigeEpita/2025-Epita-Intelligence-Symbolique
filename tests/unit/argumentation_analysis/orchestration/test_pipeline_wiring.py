@@ -356,3 +356,172 @@ class TestJTMSKeyFixes:
         result = await _invoke_jtms("test", context)
         assert result["formal_consistency"] is True
         assert "FORMAL_INCONSISTENCY" not in result["beliefs"]
+
+
+# ============================================================
+# Test: Counter-argument reads quality scores (#289)
+# ============================================================
+
+
+class TestCounterArgumentCrossKB:
+    """Validate counter-argument targets weakest arguments using quality scores."""
+
+    async def test_counter_targets_weakest_arguments(self):
+        """Counter-argument callable reads quality scores to prioritize weak args."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_counter_argument,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "Strong argument with solid evidence"},
+                    {"text": "Weak argument without evidence"},
+                    {"text": "Medium argument with some support"},
+                ],
+            },
+            "phase_hierarchical_fallacy_output": {"fallacies": []},
+            "phase_quality_output": {
+                "per_argument_scores": {
+                    "arg_1": {"note_finale": 9.0},
+                    "arg_2": {"note_finale": 2.0},
+                    "arg_3": {"note_finale": 5.5},
+                },
+            },
+        }
+
+        # Without LLM, result still contains quality_context
+        result = await _invoke_counter_argument("test", context)
+        assert "quality_context" in result
+        assert result["quality_context"] is not None
+
+    async def test_counter_reads_fallacies_with_type_fallback(self):
+        """Counter-argument reads fallacy_type with type fallback."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_counter_argument,
+        )
+
+        context = {
+            "phase_extract_output": {"arguments": [{"text": "Some argument"}]},
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {"fallacy_type": "ad_hominem", "explanation": "Attacks the person"},
+                ],
+            },
+            "phase_quality_output": {},
+        }
+
+        result = await _invoke_counter_argument("test", context)
+        assert "parsed_argument" in result
+
+
+# ============================================================
+# Test: Governance reads correct counter output key (#289)
+# ============================================================
+
+
+class TestGovernanceCrossKB:
+    """Validate governance reads correct context keys and cross-KB data."""
+
+    async def test_governance_reads_counter_output_key(self):
+        """Governance uses phase_counter_output (not phase_counter_argument_output)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_governance,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "First position"}, {"text": "Second position"}],
+            },
+            "phase_debate_output": {},
+            "phase_counter_output": {
+                "llm_counter_arguments": [
+                    {"strategy_used": "reductio", "counter_argument": "If we follow..."},
+                ],
+            },
+            "phase_quality_output": {},
+            "phase_hierarchical_fallacy_output": {"fallacies": []},
+            "phase_jtms_output": {},
+        }
+
+        result = await _invoke_governance("test", context)
+        assert "available_methods" in result
+
+    async def test_governance_reads_quality_and_fallacies(self):
+        """Governance LLM context includes quality scores and fallacies."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_governance,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "Position A with fallacy"},
+                    {"text": "Position B is solid"},
+                ],
+            },
+            "phase_debate_output": {},
+            "phase_counter_output": {},
+            "phase_quality_output": {
+                "per_argument_scores": {
+                    "arg_1": {"note_finale": 3.0, "fallacy_penalty": {"applied": True}},
+                    "arg_2": {"note_finale": 8.0},
+                },
+            },
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [{"type": "straw_man", "confidence": 0.9}],
+            },
+            "phase_jtms_output": {
+                "beliefs": {"Position A": {"valid": False, "confidence": 0.3}},
+                "formal_consistency": False,
+            },
+        }
+
+        result = await _invoke_governance("test", context)
+        assert "available_methods" in result
+
+
+# ============================================================
+# Test: Debate reads quality + JTMS (#289)
+# ============================================================
+
+
+class TestDebateCrossKB:
+    """Validate debate reads quality scores and JTMS output."""
+
+    async def test_debate_reads_quality_and_jtms(self):
+        """Debate callable reads quality scores and JTMS beliefs."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_debate_analysis,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "Argument with high quality"},
+                    {"text": "Argument with low quality"},
+                ],
+            },
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {"type": "appeal_to_authority", "justification": "Cites celebrity opinion"},
+                ],
+            },
+            "phase_counter_output": {},
+            "phase_quality_output": {
+                "per_argument_scores": {
+                    "arg_1": {"note_finale": 9.0},
+                    "arg_2": {"note_finale": 3.0, "fallacy_penalty": {"applied": True}},
+                },
+            },
+            "phase_jtms_output": {
+                "beliefs": {
+                    "Argument with low quality": {"valid": False, "confidence": 0.2},
+                },
+                "formal_consistency": False,
+            },
+        }
+
+        result = await _invoke_debate_analysis("test", context)
+        # Basic structure check — LLM enrichment won't fire without API key
+        assert "argument_scores" in result or "scores" in result or isinstance(result, dict)

@@ -283,7 +283,15 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
                 else []
             )
 
-            # Build targets: fallacious arguments first, then weakest
+            # (#289) Read quality scores to prioritize weakest arguments
+            quality_output = context.get("phase_quality_output", {})
+            per_arg_scores = (
+                quality_output.get("per_argument_scores", {})
+                if isinstance(quality_output, dict)
+                else {}
+            )
+
+            # Build targets: fallacious arguments first, then weakest by quality
             targets = []
             for f in fallacies[:3]:  # Top 3 fallacies
                 if isinstance(f, dict):
@@ -291,10 +299,19 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
                         f"[FALLACY: {f.get('type', f.get('fallacy_type', ''))}] "
                         f"{f.get('explanation', '')[:100]}"
                     )
-            for a in arguments[:3]:  # Top 3 arguments if no fallacies
+
+            # Sort arguments by quality score (ascending = weakest first)
+            scored_args = []
+            for i, a in enumerate(arguments):
                 text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
-                if text and len(targets) < 4:
-                    targets.append(text)
+                score_key = f"arg_{i+1}"
+                score = per_arg_scores.get(score_key, {}).get("note_finale", 5.0)
+                scored_args.append((score, text))
+            scored_args.sort(key=lambda x: x[0])  # weakest first
+
+            for score, text in scored_args:
+                if text and len(targets) < 5:
+                    targets.append(f"[quality={score:.1f}/10] {text}")
 
             if not targets:
                 targets = [input_text[:500]]
@@ -380,6 +397,14 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
                 if isinstance(counter_output, dict)
                 else []
             )
+            # (#289) Cross-KB: quality scores + JTMS beliefs inform debate
+            quality_output = context.get("phase_quality_output", {})
+            per_arg_scores = (
+                quality_output.get("per_argument_scores", {})
+                if isinstance(quality_output, dict)
+                else {}
+            )
+            jtms_output = context.get("phase_jtms_output", {})
 
             def _txt(item):
                 return (
@@ -412,6 +437,31 @@ async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> D
                         if isinstance(ca, dict)
                     )
                 )
+            # (#289) Cross-KB: quality scores tell debate which args are strong/weak
+            if per_arg_scores:
+                quality_lines = []
+                for key, scores in list(per_arg_scores.items())[:6]:
+                    if isinstance(scores, dict):
+                        note = scores.get("note_finale", "?")
+                        penalty = scores.get("fallacy_penalty", {})
+                        suffix = " [PENALIZED by fallacy]" if penalty.get("applied") else ""
+                        quality_lines.append(f"  {key}: {note}/10{suffix}")
+                if quality_lines:
+                    debate_parts.append(
+                        "QUALITY SCORES:\n" + "\n".join(quality_lines)
+                    )
+            # (#289) Cross-KB: JTMS beliefs inform debate about retracted claims
+            if isinstance(jtms_output, dict) and jtms_output.get("beliefs"):
+                retracted = [
+                    k for k, v in jtms_output["beliefs"].items()
+                    if isinstance(v, dict) and not v.get("valid", True)
+                ]
+                if retracted:
+                    debate_parts.append(
+                        f"RETRACTED BELIEFS (JTMS): {', '.join(retracted[:5])}"
+                    )
+                if not jtms_output.get("formal_consistency", True):
+                    debate_parts.append("WARNING: Formal inconsistency detected in PL/FOL analysis")
 
             debate_material = (
                 "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
@@ -468,10 +518,13 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
     methods_json = plugin.list_governance_methods()
     available_methods = json.loads(methods_json)
 
-    # Build positions from upstream phases (extract, debate, counter_argument)
+    # (#289) Build positions from upstream phases (extract, debate, counter, quality, fallacy, jtms)
     extract_output = context.get("phase_extract_output", {})
     debate_output = context.get("phase_debate_output", {})
-    counter_output = context.get("phase_counter_argument_output", {})
+    counter_output = context.get("phase_counter_output", {})
+    quality_output = context.get("phase_quality_output", {})
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    jtms_output = context.get("phase_jtms_output", {})
 
     arguments = extract_output.get("arguments", [])
     claims = extract_output.get("claims", [])
@@ -538,6 +591,48 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
                     f"Conflicts detected: {len(conflicts)} between "
                     + ", ".join(" vs ".join(c.get("agents", [])) for c in conflicts[:3])
                 )
+            # (#289) Cross-KB: quality scores, fallacies, JTMS inform governance
+            per_arg_scores = (
+                quality_output.get("per_argument_scores", {})
+                if isinstance(quality_output, dict)
+                else {}
+            )
+            if per_arg_scores:
+                avg_score = sum(
+                    s.get("note_finale", 0) for s in per_arg_scores.values()
+                    if isinstance(s, dict)
+                ) / max(len(per_arg_scores), 1)
+                penalized = sum(
+                    1 for s in per_arg_scores.values()
+                    if isinstance(s, dict) and s.get("fallacy_penalty", {}).get("applied")
+                )
+                context_parts.append(
+                    f"Quality assessment: avg score {avg_score:.1f}/10, "
+                    f"{penalized} argument(s) penalized by fallacies"
+                )
+            raw_fallacies = (
+                fallacy_output.get("fallacies", [])
+                if isinstance(fallacy_output, dict)
+                else []
+            )
+            if raw_fallacies:
+                ftypes = [
+                    f.get("type", f.get("fallacy_type", "unknown"))
+                    for f in raw_fallacies[:5]
+                    if isinstance(f, dict)
+                ]
+                context_parts.append(f"Fallacies detected: {', '.join(ftypes)}")
+            if isinstance(jtms_output, dict):
+                retracted = [
+                    k for k, v in jtms_output.get("beliefs", {}).items()
+                    if isinstance(v, dict) and not v.get("valid", True)
+                ]
+                if retracted:
+                    context_parts.append(
+                        f"JTMS retracted beliefs: {', '.join(retracted[:5])}"
+                    )
+                if not jtms_output.get("formal_consistency", True):
+                    context_parts.append("Formal inconsistency detected in PL/FOL")
 
             deliberation_input = (
                 "\n\n".join(context_parts) if context_parts else input_text[:2000]
