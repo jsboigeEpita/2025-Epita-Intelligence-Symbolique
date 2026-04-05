@@ -14,8 +14,9 @@ Formal Verification Workflow (#71) — Full pipeline using all logic agents + Tw
  10. DL Analysis: description logic ontological reasoning (optional, #86)
  11. CL Analysis: conditional logic non-monotonic reasoning (optional, #86)
  12. JTMS Tracking: belief maintenance for consistency monitoring
- 13. Belief Revision: AGM-style revision if inconsistency detected (conditional)
- 14. Formal Synthesis: aggregate all formal results into unified validity report
+ 13. ATMS Tracking: assumption-based environment tracking (optional, #292)
+ 14. Belief Revision: AGM-style revision if inconsistency detected (conditional)
+ 15. Formal Synthesis: aggregate all formal results into unified validity report
 
 Use cases: legal contract analysis, formal spec verification, scientific reasoning audit.
 """
@@ -155,6 +156,13 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
             capability="belief_maintenance",
             depends_on=["fol_analysis"],
         )
+        # ATMS assumption-based reasoning — complements JTMS with environment tracking (#292)
+        .add_phase(
+            "atms_tracking",
+            capability="assumption_based_reasoning",
+            depends_on=["jtms_tracking"],
+            optional=True,
+        )
         .add_conditional_phase(
             "belief_revision",
             capability="belief_revision",
@@ -168,6 +176,7 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
                 "ranking",
                 "aspic_analysis",
                 "belief_revision",
+                "atms_tracking",
                 "adf_analysis",
                 "bipolar_analysis",
                 "setaf_analysis",

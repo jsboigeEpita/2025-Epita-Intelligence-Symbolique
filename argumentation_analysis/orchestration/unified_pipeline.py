@@ -1108,6 +1108,112 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
     }
 
 
+async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke ATMS assumption-based reasoning (#292).
+
+    Builds an ATMS from upstream outputs: arguments and claims become assumption
+    nodes, fallacies create contradiction-environments, formal-logic results
+    constrain consistency. Returns minimal assumption environments per node.
+    """
+    from argumentation_analysis.services.jtms.atms_core import ATMS
+
+    atms = ATMS()
+
+    # ── Collect upstream data ────────────────────────────────────────
+    extract_output = context.get("phase_extract_output", {})
+    raw_args = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+    raw_claims = (
+        extract_output.get("claims", []) if isinstance(extract_output, dict) else []
+    )
+
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    detected_fallacies = (
+        fallacy_output.get("fallacies", [])
+        if isinstance(fallacy_output, dict)
+        else []
+    )
+
+    quality_output = context.get("phase_quality_output", {})
+    per_arg_scores = (
+        quality_output.get("per_argument_scores", {})
+        if isinstance(quality_output, dict)
+        else {}
+    )
+
+    # ── Helper ───────────────────────────────────────────────────────
+    def _text(item):
+        return (item.get("text", str(item)) if isinstance(item, dict) else str(item))[:60]
+
+    # ── Step 1: Arguments → assumptions ──────────────────────────────
+    arg_names = []
+    for a in raw_args[:8]:
+        name = _text(a)
+        atms.add_assumption(name)
+        arg_names.append(name)
+
+    if not arg_names:
+        sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
+        for s in sentences[:6]:
+            atms.add_assumption(s[:60])
+            arg_names.append(s[:60])
+
+    # ── Step 2: Claims → derived nodes with justifications ───────────
+    claim_names = []
+    for i, c in enumerate(raw_claims[:4]):
+        name = _text(c)
+        atms.add_node(name)
+        claim_names.append(name)
+        # Derive claim from supporting arguments
+        supporting = arg_names[: min(i + 2, len(arg_names))]
+        if supporting:
+            atms.add_justification(supporting, [], name)
+
+    # ── Step 3: Fallacies → contradictions ───────────────────────────
+    for i, f in enumerate(detected_fallacies[:4]):
+        if not isinstance(f, dict):
+            continue
+        fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
+        contra_name = f"CONTRA:{fallacy_type}"[:60]
+        atms.add_node(contra_name)
+        target_arg = arg_names[i] if i < len(arg_names) else arg_names[0] if arg_names else None
+        if target_arg:
+            atms.add_justification([target_arg], [], contra_name)
+            # Mark as contradiction — the assumption leads to inconsistency
+            atms.add_justification([contra_name], [], "\u22a5")  # ⊥
+
+    # ── Step 4: Build result ─────────────────────────────────────────
+    environments = {}
+    for name in arg_names + claim_names:
+        if name in atms.nodes:
+            envs = atms.get_environments(name)
+            environments[name] = {
+                "is_assumption": atms.nodes[name].is_assumption,
+                "environments": [sorted(e) for e in envs],
+                "env_count": len(envs),
+            }
+
+    assumptions = atms.get_assumptions()
+    consistent_envs = []
+    for node_name, node_data in environments.items():
+        if not node_data["is_assumption"]:
+            for env in node_data["environments"]:
+                if atms.is_consistent(frozenset(env)):
+                    consistent_envs.append(
+                        {"belief": node_name, "environment": env}
+                    )
+
+    return {
+        "assumption_count": len(assumptions),
+        "assumptions": assumptions,
+        "node_count": len(atms.nodes) - 1,  # exclude ⊥
+        "environments": environments,
+        "consistent_derivations": consistent_envs,
+        "has_contradictions": len(atms.nodes.get("\u22a5", ATMSNode("", False)).label) > 0,
+    }
+
+
 async def _invoke_camembert_fallacy(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke CamemBERT-based French fallacy detector (sync, heavy model)."""
     from argumentation_analysis.adapters.french_fallacy_adapter import (
@@ -3055,6 +3161,42 @@ def _write_jtms_to_state(output, state, ctx) -> None:
         state.add_jtms_belief(str(name), valid, justifications=justifications)
 
 
+def _write_atms_to_state(output, state, ctx) -> None:
+    """Write ATMS assumption-based reasoning results to UnifiedAnalysisState (#292).
+
+    Stores each node's environment info as a JTMS belief for compatibility.
+    """
+    if not output or not isinstance(output, dict):
+        return
+    environments = output.get("environments", {})
+    if not isinstance(environments, dict):
+        return
+    for name, env_data in environments.items():
+        if not isinstance(env_data, dict):
+            continue
+        is_assumption = env_data.get("is_assumption", False)
+        env_list = env_data.get("environments", [])
+        # For ATMS, "valid" = has at least one consistent environment
+        valid = len(env_list) > 0
+        justifications = [
+            f"assumption_env:{sorted(e)}" for e in env_list[:5]
+        ]
+        state.add_jtms_belief(
+            f"ATMS:{name}", valid, justifications=justifications
+        )
+    # Store summary metadata
+    state.add_jtms_belief(
+        "ATMS:summary",
+        True,
+        justifications=[
+            f"assumptions={output.get('assumption_count', 0)}",
+            f"nodes={output.get('node_count', 0)}",
+            f"consistent_derivations={len(output.get('consistent_derivations', []))}",
+            f"contradictions={'yes' if output.get('has_contradictions') else 'no'}",
+        ],
+    )
+
+
 def _write_debate_to_state(output, state, ctx) -> None:
     """Write debate analysis results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
@@ -3613,6 +3755,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,
+    "assumption_based_reasoning": _write_atms_to_state,
     "adversarial_debate": _write_debate_to_state,
     "governance_simulation": _write_governance_to_state,
     "neural_fallacy_detection": _write_camembert_to_state,
@@ -3765,6 +3908,27 @@ def setup_registry(
         registered.append("jtms_service")
     except ImportError as e:
         skipped.append(("jtms_service", str(e)))
+
+    # ATMS assumption-based reasoning (1.4.1) (#292)
+    try:
+        from argumentation_analysis.services.jtms.atms_core import ATMS as ATMSCore
+
+        registry.register_service(
+            name="atms_service",
+            service_class=ATMSCore,
+            capabilities=[
+                "assumption_based_reasoning",
+                "environment_tracking",
+                "atms_reasoning",
+            ],
+            metadata={
+                "description": "Assumption-based Truth Maintenance System (ATMS)"
+            },
+            invoke=_invoke_atms,
+        )
+        registered.append("atms_service")
+    except ImportError as e:
+        skipped.append(("atms_service", str(e)))
 
     # Local LLM service (2.3.6)
     try:
