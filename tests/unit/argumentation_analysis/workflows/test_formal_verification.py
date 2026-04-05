@@ -63,8 +63,8 @@ class TestBuildFormalVerificationWorkflow:
     def test_phase_count(self):
         wf = build_formal_verification_workflow()
         assert (
-            len(wf.phases) == 17
-        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
+            len(wf.phases) == 18
+        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90) + ATMS (#292)
 
     def test_required_capabilities(self):
         wf = build_formal_verification_workflow()
@@ -88,6 +88,8 @@ class TestBuildFormalVerificationWorkflow:
             "conditional_logic",
             "defeasible_logic",
             "qbf_reasoning",
+            # ATMS assumption-based reasoning (#292)
+            "assumption_based_reasoning",
         }
         assert expected == set(caps)
 
@@ -594,8 +596,8 @@ class TestCatalogRegistration:
         catalog = get_workflow_catalog()
         wf = catalog["formal_verification"]
         assert (
-            len(wf.phases) == 17
-        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90)
+            len(wf.phases) == 18
+        )  # 10 original + 7 new optional (#85/#86/#87/#89/#90) + ATMS (#292)
 
 
 # =====================================================================
