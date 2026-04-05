@@ -48,7 +48,7 @@ AGENT_SPECIALITY_MAP = {
     "project_manager": [],  # PM only gets StateManager
     "informal_fallacy": ["french_fallacy", "fallacy_workflow"],
     "extract": [],  # Extractor uses StateManager only
-    "formal_logic": ["tweety_logic", "nl_to_logic"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
@@ -90,6 +90,10 @@ _PLUGIN_REGISTRY = {
     "fallacy_workflow": (
         "argumentation_analysis.plugins.fallacy_workflow_plugin",
         "FallacyWorkflowPlugin",
+    ),
+    "atms": (
+        "argumentation_analysis.plugins.atms_plugin",
+        "ATMSPlugin",
     ),
     "state_manager": (
         "argumentation_analysis.core.state_manager_plugin",
