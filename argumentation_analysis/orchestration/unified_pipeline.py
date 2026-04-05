@@ -410,6 +410,10 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
 
+    # (#294) Auto-evaluate each LLM counter-argument
+    if llm_counters:
+        llm_counters = _evaluate_counter_arguments(llm_counters, input_text)
+
     result = {
         "parsed_argument": parsed,
         "suggested_strategy": strategy,
@@ -420,6 +424,87 @@ async def _invoke_counter_argument(input_text: str, context: Dict[str, Any]) -> 
         result["llm_counter_argument"] = llm_counters[0] if llm_counters else None
         result["llm_counter_arguments"] = llm_counters
     return result
+
+
+def _evaluate_counter_arguments(
+    llm_counters: List[Dict], input_text: str
+) -> List[Dict]:
+    """Auto-evaluate each LLM counter-argument using CounterArgumentEvaluator (#294).
+
+    Wraps each LLM-generated dict into proper Argument/CounterArgument dataclass
+    objects, runs the 5-criteria evaluator, and attaches the evaluation_score.
+    """
+    try:
+        from argumentation_analysis.agents.core.counter_argument.evaluator import (
+            CounterArgumentEvaluator,
+        )
+        from argumentation_analysis.agents.core.counter_argument.definitions import (
+            Argument,
+            CounterArgument as CADataclass,
+            CounterArgumentType,
+            ArgumentStrength,
+        )
+    except ImportError:
+        return llm_counters
+
+    evaluator = CounterArgumentEvaluator()
+    strength_map = {
+        "weak": ArgumentStrength.WEAK,
+        "moderate": ArgumentStrength.MODERATE,
+        "strong": ArgumentStrength.STRONG,
+        "decisive": ArgumentStrength.DECISIVE,
+    }
+    strategy_to_type = {
+        "reductio ad absurdum": CounterArgumentType.REDUCTIO_AD_ABSURDUM,
+        "counter-example": CounterArgumentType.COUNTER_EXAMPLE,
+        "distinction": CounterArgumentType.ALTERNATIVE_EXPLANATION,
+        "reformulation": CounterArgumentType.ALTERNATIVE_EXPLANATION,
+        "concession": CounterArgumentType.PREMISE_CHALLENGE,
+    }
+
+    for ca_dict in llm_counters:
+        if not isinstance(ca_dict, dict) or not ca_dict.get("counter_argument"):
+            continue
+        try:
+            target_text = ca_dict.get("target_argument", input_text[:200])
+            original = Argument(
+                content=str(target_text),
+                premises=[str(target_text)],
+                conclusion=str(target_text)[:100],
+                argument_type="claim",
+                confidence=0.5,
+            )
+            strategy_used = str(ca_dict.get("strategy_used", "")).lower()
+            ca_type = CounterArgumentType.DIRECT_REFUTATION
+            for key, val in strategy_to_type.items():
+                if key in strategy_used:
+                    ca_type = val
+                    break
+            ca_obj = CADataclass(
+                original_argument=original,
+                counter_type=ca_type,
+                counter_content=str(ca_dict["counter_argument"]),
+                target_component="premise",
+                strength=strength_map.get(
+                    str(ca_dict.get("strength", "moderate")).lower(),
+                    ArgumentStrength.MODERATE,
+                ),
+                confidence=0.5,
+                rhetorical_strategy=strategy_used,
+            )
+            evaluation = evaluator.evaluate(original, ca_obj)
+            ca_dict["evaluation"] = {
+                "overall_score": round(evaluation.overall_score, 3),
+                "relevance": round(evaluation.relevance, 3),
+                "logical_strength": round(evaluation.logical_strength, 3),
+                "persuasiveness": round(evaluation.persuasiveness, 3),
+                "originality": round(evaluation.originality, 3),
+                "clarity": round(evaluation.clarity, 3),
+                "recommendations": evaluation.recommendations,
+            }
+        except Exception as e:
+            logger.debug(f"Counter-argument evaluation skipped: {e}")
+    return llm_counters
 
 
 async def _invoke_debate_analysis(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -604,6 +689,25 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
             )
             resolutions.append(json.loads(resolution_json))
 
+    # (#294) Auto-run social choice vote when we have enough positions
+    vote_result = None
+    if len(positions) >= 2:
+        try:
+            options = list(positions.keys())
+            # Build preference ballots: each agent ranks others based on position order
+            ballots = []
+            for agent in options:
+                pref = [a for a in options if a != agent] + [agent]
+                ballots.append(pref)
+            vote_input = json.dumps({
+                "method": "copeland",
+                "ballots": ballots,
+                "options": options,
+            })
+            vote_result = json.loads(plugin.social_choice_vote(vote_input))
+        except Exception as e:
+            logger.debug(f"Social choice vote skipped: {e}")
+
     # Enrich with LLM-based governance and deliberation assessment
     llm_governance = None
     try:
@@ -737,6 +841,8 @@ async def _invoke_governance(input_text: str, context: Dict[str, Any]) -> Dict:
         "conflict_count": len(conflicts),
         "extraction_method": "llm" if llm_governance else "heuristic",
     }
+    if vote_result:
+        result["vote_result"] = vote_result
     if llm_governance:
         result["llm_governance_assessment"] = llm_governance
         result["recommended_method"] = llm_governance.get("recommended_method")
@@ -2890,7 +2996,12 @@ def _write_counter_argument_to_state(output, state, ctx) -> None:
             target = str(llm_ca.get("target_argument", ""))[:200]
             counter_text = str(llm_ca.get("counter_argument", ""))
             strategy_name = str(llm_ca.get("strategy_used", "unknown"))
-            score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
+            # (#294) Use evaluation score if available, else fallback to strength map
+            evaluation = llm_ca.get("evaluation", {})
+            if isinstance(evaluation, dict) and "overall_score" in evaluation:
+                score = float(evaluation["overall_score"])
+            else:
+                score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
             state.add_counter_argument(target, counter_text, strategy_name, score)
         return
 
@@ -3006,9 +3117,17 @@ def _write_governance_to_state(output, state, ctx) -> None:
         "recommended_method", "majority"
     )
 
-    # Determine winner from LLM assessment or conflict resolution
+    # Determine winner from vote result, LLM assessment, or conflict resolution
     winner = "N/A"
-    if llm_gov.get("recommended_resolution"):
+    vote_result = output.get("vote_result", {})
+    if isinstance(vote_result, dict) and vote_result.get("winner"):
+        winner = str(vote_result["winner"])
+        # (#294) Merge Copeland scores into scores dict
+        copeland_scores = vote_result.get("copeland_scores", {})
+        if isinstance(copeland_scores, dict):
+            for agent, cscore in copeland_scores.items():
+                scores[str(agent)] = float(cscore)
+    elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
     elif output.get("resolutions"):
         resolutions = output["resolutions"]
