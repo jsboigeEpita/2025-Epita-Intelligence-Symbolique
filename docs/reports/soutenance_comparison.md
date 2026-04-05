@@ -628,3 +628,227 @@ L'integration dans le systeme unifie a apporte des ameliorations systematiques q
 ### Priorite basse
 7. **Recuperer le solveur QBF** si les etudiants 1.1.5 ont leur code ailleurs
 8. **Remplir le suivi projets** (`SUIVI_PROJETS_ETUDIANTS.md`) avec les informations reelles
+
+---
+
+## Round 3 — Revue post-Epic #208 + #282 (2026-04-05)
+
+**Issue:** #293
+**Date:** 2026-04-05
+**Contexte:** Depuis le Round 1 (2026-03-21), deux Epics majeures ont transforme le systeme :
+- **Epic #208** (rounds 72-79) : Restauration de l'orchestration conversationnelle multi-agents
+- **Epic #282** (rounds 80-83) : Deep Multi-Agent Analysis — de l'execution structurelle au contenu substantiel
+
+**Methode:** Comparaison code source actuel (main @ 8e9b6dd4) + resultats baselines (6 cells, 3 docs x 2 workflows) + 222 tests unitaires passants.
+
+---
+
+### Changements systeme transversaux (post-Round 1)
+
+| Amelioration | Epic | Commits cles | Impact |
+|-------------|------|-------------|--------|
+| Mode conversationnel multi-agents | #208 | PR #262, #270, #271 | 8 agents dialoguent via round-robin, plugins specialises |
+| .env charge dans tous les points d'entree | #208 | round 72 | LLMs actifs partout (etaient silencieusement desactives) |
+| FunctionChoiceBehavior.Auto() | #208 | round 72 | Agents invoquent plugins comme outils |
+| Cross-KB wiring (10 composants) | #282 | c15592c0 | Chaque phase lit les resultats upstream |
+| NL-to-logic + PL + FOL dans standard/full | #282 | 3cadea34 | Raisonnement formel accessible dans les workflows courants |
+| Quality + fallacy cross-reference | #282 | 3cadea34 | Quality evaluator lit les sophismes detectes |
+| JTMS retraction fonctionnelle | #282 | 085b513b, 5ca3cd41 | 10 bugs corriges, croyances retractees quand sophismes detectes |
+| LLM enrichment quality | #282 | 90045d49 | Per-argument llm_assessment, reasoning, evidence, bias |
+| Auto-evaluate counter-arguments | #282 | 8e9b6dd4 | 5 criteres ponderes sur chaque CA genere |
+| Auto-trigger governance vote | #282 | 8e9b6dd4 | Copeland vote automatique avec 2+ positions |
+| ExtendedBelief desync fix | #282 | 10fe11a1 | Wrapper JTMS lit correctement depuis core belief |
+
+---
+
+### Revue par projet — Round 3 scores
+
+#### 1. Projet 1.4.1 — TMS/JTMS
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| JTMS core | INTEGRE | INTEGRE | Beliefs, justifications, propagation — inchange |
+| JTMS retraction dans pipeline | PARTIEL | **INTEGRE** | `_retract_fallacious_beliefs()` fonctionne (10 bugs corriges, 21 tests) |
+| JTMS cross-KB | ABSENT | **INTEGRE** | Lit quality scores + fallacies + formal consistency |
+| ATMS | PARTIEL | PARTIEL | `1.4.1-JTMS/atms.py` toujours non integre (issue #292 ouverte) |
+| JTMS beliefs en baseline | — | 18-26 beliefs/run | Substantiel (ExtendedBelief avec metadata) |
+| Plugin SK | AMELIORE | AMELIORE | 5 @kernel_function (create/query/retract/consistency/justification) |
+| ExtendedBelief fix | — | **INTEGRE** | Dual-Belief desync corrige (#296) |
+
+**Score Round 3: 90%** (was 85%) — JTMS retraction fonctionne, cross-KB cabled, seul ATMS manque.
+
+#### 2. Projet 1.2.7 — Argumentation Dialogique (Debate)
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| Multi-agent debate | INTEGRE | INTEGRE | 7 personnalites, 8 metriques |
+| Walton-Krabbe protocols | AMELIORE | AMELIORE | `protocols.py` present |
+| Cross-KB debate | ABSENT | **INTEGRE** | Lit quality scores + JTMS retracted beliefs + fallacies |
+| Pipeline wiring | AMELIORE | AMELIORE | `_invoke_debate_analysis()` produit dialectique LLM |
+| Debate en baseline | — | 1 round/run | Produit contenu reel (arguments adversariaux) |
+| Mode conversationnel | ABSENT | **INTEGRE** | DebateAgent dans ConversationalOrchestrator |
+
+**Score Round 3: 93%** (was 90%) — Cross-KB + conversational mode ajoutes.
+
+#### 3. Projet 1.2.1 — Argumentation Abstraite de Dung
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| Semantiques Dung via Tweety | INTEGRE | INTEGRE | TweetyBridge + DungTheory |
+| ASPIC+ handler | ABSENT | **INTEGRE** | `_invoke_aspic()` avec Python fallback (#285) |
+| Ranking semantics | AMELIORE | AMELIORE | Dans workflow via `ranking_semantics` capability |
+| Agent Python standalone | STANDALONE | STANDALONE | `abs_arg_dung/agent.py` non integre |
+| Dung dans workflow standard | ABSENT | ABSENT | Pas dans standard/full (dedies jtms_dung workflow) |
+
+**Score Round 3: 75%** (was 70%) — ASPIC+ handler ajoute avec fallback Python.
+
+#### 4. Projet 2.1.6 — Gouvernance Multi-Agents
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| 7 methodes de vote | INTEGRE | INTEGRE | Inchange |
+| Auto-trigger vote | ABSENT | **INTEGRE** | Copeland vote auto quand 2+ positions (#294) |
+| Cross-KB governance | ABSENT | **INTEGRE** | Lit quality/fallacy/JTMS pour decisions informees |
+| State writer vote result | ABSENT | **INTEGRE** | Winner + Copeland scores dans state |
+| Governance en baseline | — | 1 decision/run | Produit winner et scores |
+| Mode conversationnel | ABSENT | **INTEGRE** | GovernanceAgent dans ConversationalOrchestrator |
+
+**Score Round 3: 92%** (was 85%) — Auto-vote + cross-KB + conversational = gain majeur.
+
+#### 5. Projet 2.3.2 — Detection de Sophismes
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| 3-tier detection | AMELIORE | AMELIORE | Symbolic → NLI → LLM |
+| Taxonomy 28 labels | AMELIORE | AMELIORE | Inchange |
+| CamemBERT | ABSENT | ABSENT | Poids non deployes (#288 ouverte, #297 propose remplacement LLM) |
+| Hierarchical fallacy dans standard | ABSENT | **INTEGRE** | Phase optionnelle dans standard workflow |
+| Fallacies en baseline | — | 1-3/run (standard), 0 (full) | full utilise neural_fallacy qui echoue sans poids |
+| Quality cross-ref | ABSENT | **INTEGRE** | Quality evaluator lit fallacies detectees (#290) |
+
+**Score Round 3: 90%** (was 90%) — Stable. Hierarchical fallacy dans standard compense CamemBERT manquant.
+
+#### 6. Projet 2.3.3 — Generation de Contre-Arguments
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| 5 strategies rhetoriques | AMELIORE | AMELIORE | Inchange |
+| Auto-evaluation 5 criteres | ABSENT | **INTEGRE** | Wraps dicts → dataclasses, runs evaluator (#294) |
+| Cross-KB targeting | ABSENT | **INTEGRE** | Cible arguments les plus faibles (quality-sorted) |
+| State writer evaluation score | ABSENT | **INTEGRE** | Prefere evaluation.overall_score sur strength map |
+| CAs en baseline | — | 5/run | 5 contre-arguments reels avec evaluation |
+| Mode conversationnel | ABSENT | **INTEGRE** | CounterAgent dans ConversationalOrchestrator |
+
+**Score Round 3: 98%** (was 95%) — Auto-evaluation + cross-KB = quasi-complet.
+
+#### 7. Projet 2.3.5 — Qualite Argumentative
+
+| Aspect | Round 1 | Round 3 | Detail |
+|--------|---------|---------|--------|
+| 9 vertus heuristiques | INTEGRE | INTEGRE | Inchange |
+| LLM enrichment | ABSENT | **INTEGRE** | Per-argument llm_assessment, reasoning, evidence, bias (#290) |
+| Fallacy context | ABSENT | **INTEGRE** | LLM prompt inclut sophismes detectes (#290) |
+| Quality en baseline | — | 8 scores/run | 8 arguments evalues par run |
+| State writer llm_assessment | ABSENT | **INTEGRE** | `add_quality_score(llm_assessment=...)` |
+
+**Score Round 3: 95%** (was 90%) — LLM enrichment + fallacy context = gain significatif.
+
+#### 8-17. Projets sans changement significatif
+
+| # | Projet | Round 1 | Round 3 | Raison |
+|---|--------|---------|---------|--------|
+| 8 | 2.3.6 LLMs Locaux | 80% | 80% | Pas de changement |
+| 9 | 2.4.1 Index Semantique | 80% | 80% | Pas de changement |
+| 10 | 2.5.3 Serveur MCP | 90% | 90% | Pas de changement |
+| 11 | 2.5.6 Protection Adversariale | 0% | 0% | Toujours pas de code |
+| 12 | 3.1.5 Interface Mobile | 70% | 70% | Pas de changement |
+| 13 | 3.1.1 Interface Web | 65% | 65% | Pas de changement |
+| 14 | Speech-to-Text | 75% | 75% | Pas de changement |
+| 15 | Enquete Policiere | 60% | 60% | Pas de changement |
+| 16 | 1.1.5 QBF | 5% | 5% | Toujours pas de code |
+| 17 | 2.1.4 Documentation | 30% | 30% | Pas de changement |
+
+---
+
+### Tableau recapitulatif Round 3
+
+| # | Projet | Round 1 | Round 3 | Delta | Cause principale |
+|---|--------|---------|---------|-------|-----------------|
+| 1 | 1.4.1 TMS/JTMS | 85% | **90%** | +5 | Retraction fonctionnelle, cross-KB, ExtendedBelief fix |
+| 2 | 1.2.7 Debate | 90% | **93%** | +3 | Cross-KB, mode conversationnel |
+| 3 | 1.2.1 Dung | 70% | **75%** | +5 | ASPIC+ handler avec fallback Python |
+| 4 | 2.1.6 Governance | 85% | **92%** | +7 | Auto-vote Copeland, cross-KB, conversationnel |
+| 5 | 2.3.2 Fallacy | 90% | 90% | 0 | Stable (hierarchical compense CamemBERT) |
+| 6 | 2.3.3 Counter-Arg | 95% | **98%** | +3 | Auto-evaluation 5 criteres, cross-KB |
+| 7 | 2.3.5 Quality | 90% | **95%** | +5 | LLM enrichment + fallacy context |
+| 8 | 2.3.6 LLMs Locaux | 80% | 80% | 0 | — |
+| 9 | 2.4.1 Index Semantique | 80% | 80% | 0 | — |
+| 10 | 2.5.3 Serveur MCP | 90% | 90% | 0 | — |
+| 11 | 2.5.6 Protection Adversariale | 0% | 0% | 0 | — |
+| 12 | 3.1.5 Interface Mobile | 70% | 70% | 0 | — |
+| 13 | 3.1.1 Interface Web | 65% | 65% | 0 | — |
+| 14 | Speech-to-Text | 75% | 75% | 0 | — |
+| 15 | Enquete Policiere | 60% | 60% | 0 | — |
+| 16 | 1.1.5 QBF | 5% | 5% | 0 | — |
+| 17 | 2.1.4 Documentation | 30% | 30% | 0 | — |
+
+**Score moyen Round 3: 73%** (was 69%, +4 points)
+**Score moyen hors non-soumis: 81%** (was 78%, +3 points)
+
+---
+
+### Resultats baselines (Round 82, 3 docs x 2 workflows)
+
+| Metrique | Standard | Full |
+|----------|----------|------|
+| Arguments extraits | 8-9 | 8-13 |
+| Sophismes detectes | 1-3 | 0 |
+| JTMS beliefs | 23-26 | 18-24 |
+| Quality scores | 8 | 8 |
+| Contre-arguments | 5 | 5 |
+| NL→Logic formulas | 6 | 0 (pas dans full) |
+| PL formulas | 1 | 0 (pas dans full) |
+| FOL formulas | 1 | 0 (pas dans full) |
+| Debate rounds | 1 | 1 |
+| Governance decisions | 1 | 1 |
+| Non-empty fields | 14/32 | 14/32 |
+| State size | 26-30 KB | 23-31 KB |
+| Duration | 350-432s | 290-424s |
+
+**Observations:**
+1. `standard` detecte 1-3 sophismes (hierarchical_fallacy), `full` detecte 0 (neural_fallacy echoue sans poids CamemBERT)
+2. PL/FOL limites a 1 formule : Tweety necessite constantes pre-declarees dans la signature (#project_tweety_limitation)
+3. 14/32 champs non-vides = consistent, les 18 champs vides sont principalement : modal_logic, semantic_search, speech_transcription, coalition_data, ranking_extensions, atms-related
+4. Conversational mode non benchmark (pas dans baselines — issue #291)
+
+---
+
+### Gaps fonctionnels identifies (nouvelles issues potentielles)
+
+| Gap | Projets concernes | Severite | Issue existante? |
+|-----|------------------|----------|-----------------|
+| ATMS non integre dans pipeline | 1.4.1 | MEDIUM | #292 (ouverte) |
+| CamemBERT poids non deployes | 2.3.2 | LOW | #288 (ouverte), #297 (remplacement LLM) |
+| full workflow: 0 fallacies | 2.3.2 | MEDIUM | — NOUVEAU |
+| PL/FOL: 1 formule max (Tweety constants) | 1.2.1, formel | MEDIUM | #286 (Dung/ASPIC) |
+| Dung pas dans standard/full workflows | 1.2.1 | LOW | #286 (ouverte) |
+| Visualisations non integrees | tous | LOW | Non priorise |
+| UIs standalone non unifiees | 3.1.5, STT, CaseAI | LOW | Non priorise |
+| 18/32 champs vides | systeme | INFO | Certains par design (modal, speech, etc.) |
+
+---
+
+### Recommandations Round 3
+
+#### Priorite haute (actionnable maintenant)
+1. **Ajouter `hierarchical_fallacy` au full workflow** — corrigerait les 0 fallacies en full (2 lignes de code)
+2. **Run benchmarks conversationnel vs pipeline** — #291 permettrait de quantifier la valeur du mode conversationnel
+3. **Finir ATMS wiring** — #292 est le seul gap structurel du projet 1.4.1
+
+#### Priorite moyenne
+4. **Ameliorer PL/FOL** — le goulot est Tweety constant declaration, pas le pipeline
+5. **Remplacer CamemBERT par LLM self-hosted** — #297, approche plus pragmatique que deployer des poids
+6. **Ajouter Dung/ranking_semantics dans standard workflow** — actuellement dedies au workflow `jtms_dung`
+
+#### Constat positif
+Les Epics #208 et #282 ont produit des gains mesurables sur les 7 projets core (1-7), avec un delta moyen de +4 points. Le systeme passe de 14/32 a potentiellement 20+/32 champs non-vides en mode conversationnel. Les cross-KB synergies sont le gain le plus significatif : chaque phase exploite maintenant les resultats des phases precedentes au lieu de tourner en isolation.

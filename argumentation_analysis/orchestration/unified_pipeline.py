@@ -4207,6 +4207,12 @@ def build_full_workflow() -> WorkflowDefinition:
             optional=True,
         )
         .add_phase(
+            "hierarchical_fallacy",
+            capability="hierarchical_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
             "counter",
             capability="counter_argument_generation",
             depends_on=["quality"],
