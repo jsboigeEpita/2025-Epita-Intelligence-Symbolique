@@ -418,13 +418,24 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return ca_id
 
     def add_quality_score(
-        self, arg_id: str, scores: Dict[str, float], overall: float
+        self, arg_id: str, scores: Dict[str, float], overall: float,
+        llm_assessment: Optional[str] = None,
     ) -> None:
-        """Add quality evaluation scores for an argument."""
-        self.argument_quality_scores[arg_id] = {
+        """Add quality evaluation scores for an argument.
+
+        Args:
+            arg_id: Argument identifier.
+            scores: Per-virtue scores dict.
+            overall: Aggregated note_finale.
+            llm_assessment: Optional LLM-generated qualitative narrative (#290).
+        """
+        entry: Dict[str, Any] = {
             "scores": scores,
             "overall": overall,
         }
+        if llm_assessment:
+            entry["llm_assessment"] = llm_assessment
+        self.argument_quality_scores[arg_id] = entry
         state_logger.info(f"Quality score added for {arg_id}: {overall:.2f}")
 
     def add_jtms_belief(

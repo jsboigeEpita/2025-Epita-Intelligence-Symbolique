@@ -136,8 +136,30 @@ async def _invoke_quality_evaluator(input_text: str, context: Dict[str, Any]) ->
                 sum(all_overalls) / len(all_overalls) if all_overalls else 0
             )
 
-            # LLM enrichment pass (#208-F): deeper qualitative analysis
-            llm_enrichment = await _llm_enrich_quality(results, raw_args)
+            # LLM enrichment pass (#290): deeper qualitative analysis with fallacy context
+            llm_enrichment = await _llm_enrich_quality(
+                results, raw_args, detected_fallacies
+            )
+
+            # (#290) Merge per-argument LLM assessments back into results
+            if llm_enrichment and isinstance(llm_enrichment.get("enrichments"), list):
+                for enr in llm_enrichment["enrichments"]:
+                    if not isinstance(enr, dict):
+                        continue
+                    eid = enr.get("arg_id", "")
+                    if eid in results and isinstance(results[eid], dict):
+                        results[eid]["llm_assessment"] = enr.get(
+                            "llm_assessment", ""
+                        )
+                        results[eid]["reasoning_assessment"] = enr.get(
+                            "reasoning_assessment", ""
+                        )
+                        results[eid]["evidence_quality"] = enr.get(
+                            "evidence_quality", ""
+                        )
+                        results[eid]["bias_indicators"] = enr.get(
+                            "bias_indicators", []
+                        )
 
             output = {
                 "per_argument_scores": results,
@@ -181,11 +203,13 @@ def _aggregate_virtue_scores(per_arg_results: Dict) -> Dict[str, float]:
 async def _llm_enrich_quality(
     heuristic_results: Dict[str, Any],
     raw_args: List,
+    detected_fallacies: Optional[List] = None,
 ) -> Optional[Dict[str, Any]]:
-    """LLM enrichment pass for quality evaluation (#208-F).
+    """LLM enrichment pass for quality evaluation (#290).
 
-    Sends heuristic scores + argument text to LLM for deeper analysis:
-    implicit assumptions, reasoning strength, evidence quality.
+    Sends heuristic scores + argument text + fallacy context to LLM for
+    deeper qualitative analysis: implicit assumptions, reasoning strength,
+    evidence quality, bias indicators.
     The LLM enriches — it does NOT replace heuristic scores.
 
     Returns None if LLM is unavailable or fails.
@@ -209,13 +233,39 @@ async def _llm_enrich_quality(
                 a = raw_args[idx]
                 arg_text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
             weakest = min(virtues, key=virtues.get) if virtues else "unknown"
+            penalty_info = ""
+            fallacy_penalty = scores.get("fallacy_penalty", {})
+            if fallacy_penalty.get("applied"):
+                penalty_info = (
+                    f"\n  FALLACY PENALTY: {fallacy_penalty.get('fallacies', [])}, "
+                    f"penalty={fallacy_penalty.get('penalty_factor', 0):.0%}"
+                )
             score_summary.append(
                 f"[{arg_id}] score={note:.1f}/9, weakest={weakest}\n"
-                f"  Text: {arg_text[:120]}"
+                f"  Text: {arg_text[:200]}{penalty_info}"
             )
 
         if not score_summary:
             return None
+
+        # (#290) Include fallacy context in prompt
+        fallacy_context = ""
+        if detected_fallacies:
+            fallacy_lines = []
+            for f in detected_fallacies[:6]:
+                if not isinstance(f, dict):
+                    continue
+                ftype = f.get("type", f.get("fallacy_type", "unknown"))
+                target = f.get("target_argument", "")[:80]
+                fallacy_lines.append(f"  - {ftype}: \"{target}\"")
+            if fallacy_lines:
+                fallacy_context = (
+                    "\n\nDETECTED FALLACIES in this text:\n"
+                    + "\n".join(fallacy_lines)
+                    + "\n\nFactor these fallacies into your quality assessment. "
+                    "Arguments affected by fallacies should receive harsher assessments "
+                    "on reasoning_assessment and evidence_quality."
+                )
 
         response = await client.chat.completions.create(
             model=model_id,
@@ -228,16 +278,20 @@ async def _llm_enrich_quality(
                         "1. Identify implicit assumptions\n"
                         "2. Assess reasoning strength (beyond what regex can detect)\n"
                         "3. Evaluate evidence quality\n"
-                        "4. Suggest how the weakest virtue could be improved\n\n"
+                        "4. Note any bias indicators\n"
+                        "5. Suggest how the weakest virtue could be improved\n"
+                        "6. Write a brief qualitative assessment (2-3 sentences)\n\n"
                         "Respond with ONLY a JSON object:\n"
                         '{"enrichments": [{"arg_id": "arg_1", '
                         '"implicit_assumptions": ["..."], '
                         '"reasoning_assessment": "strong/moderate/weak", '
                         '"evidence_quality": "strong/moderate/weak/none", '
-                        '"improvement_suggestion": "..."}]}'
+                        '"bias_indicators": ["..."], '
+                        '"improvement_suggestion": "...", '
+                        '"llm_assessment": "Brief qualitative narrative..."}]}'
                     ),
                 },
-                {"role": "user", "content": "\n\n".join(score_summary)},
+                {"role": "user", "content": "\n\n".join(score_summary) + fallacy_context},
             ],
         )
         raw = response.choices[0].message.content or ""
@@ -2789,8 +2843,12 @@ def _write_quality_to_state(output, state, ctx) -> None:
             if not isinstance(scores, dict):
                 scores = {}
             overall = result.get("note_finale", 0.0)
+            llm_assessment = result.get("llm_assessment")  # (#290)
             if isinstance(overall, (int, float)) and (scores or overall > 0):
-                state.add_quality_score(str(arg_id), scores, float(overall))
+                state.add_quality_score(
+                    str(arg_id), scores, float(overall),
+                    llm_assessment=llm_assessment,
+                )
         return
 
     # Legacy format: single evaluation
