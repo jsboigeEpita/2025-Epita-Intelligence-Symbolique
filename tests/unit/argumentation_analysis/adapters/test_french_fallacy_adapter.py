@@ -229,23 +229,40 @@ class TestNLIDetector:
 
 
 class TestLLMDetector:
-    """Test the LLM zero-shot fallacy detector."""
+    """Test the LLM zero-shot fallacy detector (#297)."""
 
-    def test_unavailable_without_service_discovery(self):
+    def test_unavailable_without_api_key(self):
         from argumentation_analysis.adapters.french_fallacy_adapter import (
             LLMFallacyDetector,
         )
+        from unittest.mock import patch
 
-        detector = LLMFallacyDetector(service_discovery=None)
-        assert detector.is_available() is False
+        detector = LLMFallacyDetector()
+        detector._available = None  # reset cache
+        with patch.dict("os.environ", {}, clear=True):
+            assert detector.is_available() is False
+
+    def test_available_with_api_key(self):
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            LLMFallacyDetector,
+        )
+        from unittest.mock import patch
+
+        detector = LLMFallacyDetector()
+        detector._available = None  # reset cache
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}):
+            assert detector.is_available() is True
 
     def test_detect_empty_when_unavailable(self):
         from argumentation_analysis.adapters.french_fallacy_adapter import (
             LLMFallacyDetector,
         )
+        from unittest.mock import patch
 
         detector = LLMFallacyDetector()
-        assert detector.detect("test") == []
+        detector._available = None
+        with patch.dict("os.environ", {}, clear=True):
+            assert detector.detect("test") == []
 
 
 class TestFrenchFallacyAdapter:
