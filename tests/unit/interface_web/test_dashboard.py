@@ -8,6 +8,7 @@ Validates:
 - API endpoint mapping is complete
 """
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -162,6 +163,16 @@ class TestDashboardEndpointBehavior:
         from starlette.testclient import TestClient
 
         from interface_web.app import app
+
+        # Ensure a fresh event loop to avoid pollution from prior async tests
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         client = TestClient(app, raise_server_exceptions=False)
         response = client.get("/dashboard")
