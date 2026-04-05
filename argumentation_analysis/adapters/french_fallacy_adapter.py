@@ -4,15 +4,16 @@ French Fallacy Detection Adapter — 3-tier hybrid detection.
 Wraps and extends the student 2.3.2-detection-sophismes project.
 Provides fallacy detection through 3 tiers with automatic fallback:
 
-  Tier 1: LLM zero-shot (via ServiceDiscovery — Qwen 3.5 / OpenRouter / OpenAI)
+  Tier 1: LLM zero-shot (via OpenAI-compatible API — primary detector)
   Tier 2: NLI zero-shot (mDeBERTa or similar, auto-downloaded ~600MB)
   Tier 3: Symbolic rules (spaCy Matcher patterns, always available)
 
 Dependencies:
   - Tier 3 (symbolic): spacy + fr_core_news_lg (or sm)
   - Tier 2 (NLI): transformers + torch
-  - Tier 1 (LLM): An LLM provider in ServiceDiscovery
+  - Tier 1 (LLM): OPENAI_API_KEY env var + openai package
 
+CamemBERT Tier 2.5 was deprecated in #297 (model never deployed).
 All tiers degrade gracefully if their dependencies are missing.
 
 Integration from student project 2.3.2-detection-sophismes (GitHub #44).
@@ -658,58 +659,136 @@ class CamemBERTFallacyDetector:
 
 
 class LLMFallacyDetector:
-    """Zero-shot fallacy detection via LLM prompt.
+    """Zero-shot fallacy detection via LLM (OpenAI-compatible API).
 
-    Uses ServiceDiscovery to find the best available LLM provider
-    and sends a structured prompt for fallacy analysis.
+    Calls the same OpenAI-compatible endpoint used by the pipeline
+    (via OPENAI_API_KEY / OPENAI_BASE_URL env vars, or self-hosted vLLM).
+    Returns structured JSON with detected fallacies.
+
+    Replaces the defunct CamemBERT Tier 2.5 and the heavy NLI Tier 2
+    with a single, more capable inference path (#297).
     """
 
-    SYSTEM_PROMPT = """Tu es un expert en logique et argumentation. Analyse le texte fourni
-et identifie les sophismes (fallacies) présents. Pour chaque sophisme détecté, donne:
-- Le type de sophisme (utilise les noms français standardisés)
-- Un score de confiance entre 0 et 1
-- Une brève explication
+    SYSTEM_PROMPT = (
+        "Tu es un expert en logique et argumentation. Analyse le texte fourni "
+        "et identifie les sophismes (fallacies) presents. Pour chaque sophisme "
+        "detecte, donne:\n"
+        "- Le type de sophisme (utilise les noms francais standardises)\n"
+        "- Un score de confiance entre 0 et 1\n"
+        "- Une breve explication\n"
+        "- Le passage du texte concerne\n\n"
+        "Reponds UNIQUEMENT en JSON valide avec cette structure:\n"
+        '{"fallacies": [{"type": "...", "confidence": 0.XX, '
+        '"explanation": "...", "target_text": "..."}]}\n\n'
+        "Si aucun sophisme n'est detecte, reponds: {\"fallacies\": []}\n\n"
+        "Types de sophismes connus:\n"
+        "- Attaque personnelle (Ad Hominem)\n"
+        "- Appel a la popularite (Ad Populum)\n"
+        "- Appel a l'emotion (Appeal to Emotion)\n"
+        "- Generalisation hative (Hasty Generalization)\n"
+        "- Fausse causalite (False Cause)\n"
+        "- Faux dilemme (False Dilemma)\n"
+        "- Raisonnement circulaire (Circular Reasoning)\n"
+        "- Pente glissante (Slippery Slope)\n"
+        "- Argument d'autorite (Appeal to Authority)\n"
+        "- Appel a la tradition (Appeal to Tradition)\n"
+        "- Equivoque (Equivocation)\n"
+        "- Homme de paille (Straw Man)\n"
+        "- Sophisme de pertinence"
+    )
 
-Réponds UNIQUEMENT en JSON valide avec cette structure:
-{"fallacies": [{"type": "...", "confidence": 0.XX, "explanation": "..."}]}
-
-Si aucun sophisme n'est détecté, réponds: {"fallacies": []}"""
-
-    def __init__(self, service_discovery=None):
+    def __init__(self, service_discovery=None, confidence_threshold: float = 0.4):
         self._service_discovery = service_discovery
         self._available = None
+        self._threshold = confidence_threshold
+
+    def _get_openai_client(self):
+        """Get OpenAI-compatible client and model, same as unified_pipeline."""
+        import os
+
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return None, None
+        try:
+            from openai import AsyncOpenAI
+
+            base_url = os.environ.get("OPENAI_BASE_URL")
+            client = AsyncOpenAI(
+                api_key=api_key,
+                **({"base_url": base_url} if base_url else {}),
+            )
+            model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+            return client, model
+        except ImportError:
+            return None, None
 
     def is_available(self) -> bool:
         if self._available is None:
-            if self._service_discovery is None:
-                self._available = False
-            else:
-                try:
-                    provider = self._service_discovery.get_best_provider("llm")
-                    self._available = provider is not None
-                except Exception:
-                    self._available = False
+            client, _ = self._get_openai_client()
+            self._available = client is not None
         return self._available
 
     async def detect_async(self, text: str) -> List[FallacyDetection]:
         """Detect fallacies via LLM (async)."""
-        if not self.is_available():
+        client, model = self._get_openai_client()
+        if client is None:
             return []
 
         try:
-            import json
+            import json as _json
 
-            provider = self._service_discovery.get_best_provider("llm")
-            if provider is None:
-                return []
+            user_prompt = (
+                f"Analyse ce texte pour detecter les sophismes:\n\n{text[:3000]}"
+            )
 
-            # Build prompt
-            user_prompt = f"Analyse ce texte pour détecter les sophismes:\n\n{text}"
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": self.SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.1,
+                max_tokens=1024,
+            )
 
-            # The actual LLM call depends on the provider type
-            # For now, return empty — real integration needs ServiceDiscovery LLM client
-            logger.info(f"LLM fallacy detection via provider: {provider.name}")
-            return []
+            raw = response.choices[0].message.content.strip()
+            # Strip markdown code fences if present
+            if raw.startswith("```"):
+                lines = raw.split("\n")
+                raw = "\n".join(
+                    l for l in lines if not l.startswith("```")
+                )
+
+            data = _json.loads(raw)
+            fallacies_data = data.get("fallacies", [])
+
+            detections = []
+            for f in fallacies_data:
+                if not isinstance(f, dict):
+                    continue
+                ftype = f.get("type", "unknown")
+                conf = float(f.get("confidence", 0.5))
+                if conf < self._threshold:
+                    continue
+                explanation = f.get("explanation", "")
+                target = f.get("target_text", "")
+                taxonomy_pk = _TAXONOMY_LABEL_TO_PK.get(ftype)
+                detections.append(
+                    FallacyDetection(
+                        fallacy_type=ftype,
+                        confidence=round(conf, 3),
+                        source="llm",
+                        description=explanation,
+                        matched_rule=target[:200] if target else None,
+                        taxonomy_pk=taxonomy_pk,
+                    )
+                )
+
+            logger.info(
+                f"LLM fallacy detection: {len(detections)} fallacies "
+                f"from {len(fallacies_data)} candidates (model={model})"
+            )
+            return detections
 
         except Exception as e:
             logger.error(f"LLM detection failed: {e}")
@@ -722,10 +801,13 @@ Si aucun sophisme n'est détecté, réponds: {"fallacies": []}"""
         try:
             import asyncio
 
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                return []  # Can't await in running loop — skip tier
-            return loop.run_until_complete(self.detect_async(text))
+            try:
+                loop = asyncio.get_running_loop()
+                # Already in async context — can't nest; skip
+                return []
+            except RuntimeError:
+                pass
+            return asyncio.run(self.detect_async(text))
         except Exception:
             return []
 
@@ -734,18 +816,20 @@ Si aucun sophisme n'est détecté, réponds: {"fallacies": []}"""
 
 
 class FrenchFallacyAdapter(AbstractFallacyDetector):
-    """4-tier French fallacy detection adapter.
+    """3-tier French fallacy detection adapter.
 
-    Combines symbolic rules, CamemBERT fine-tuned, NLI zero-shot, and
-    LLM zero-shot with automatic fallback. Results are merged using an
-    ensemble strategy where symbolic matches (confidence=1.0) override
-    neural/LLM scores.
+    Combines symbolic rules, NLI zero-shot, and LLM zero-shot with
+    automatic fallback. Results are merged using an ensemble strategy
+    where symbolic matches (confidence=1.0) override neural/LLM scores.
 
     Tier hierarchy (fastest → most capable):
       Tier 3:   Symbolic (spaCy Matcher, always available)
-      Tier 2.5: CamemBERT fine-tuned (13-class, offline, #169)
-      Tier 2:   NLI zero-shot (mDeBERTa, 28-class)
-      Tier 1:   LLM zero-shot (via ServiceDiscovery)
+      Tier 2:   NLI zero-shot (mDeBERTa, 28-class, optional ~600MB model)
+      Tier 1:   LLM zero-shot (via OpenAI-compatible API — primary detector)
+
+    Note: CamemBERT Tier 2.5 was deprecated in #297 (model never deployed).
+    The LLM tier now uses the standard OpenAI-compatible API, which can
+    point to OpenAI, self-hosted vLLM, or any compatible endpoint.
 
     Register with CapabilityRegistry:
         registry.register_service(
@@ -759,7 +843,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
     def __init__(
         self,
         enable_symbolic: bool = True,
-        enable_camembert: bool = True,
+        enable_camembert: bool = False,  # Deprecated (#297): model never deployed
         enable_nli: bool = True,
         enable_llm: bool = True,
         camembert_model_path: Optional[str] = None,
@@ -767,6 +851,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         nli_model: Optional[str] = None,
         nli_threshold: float = 0.5,
         service_discovery=None,
+        llm_confidence_threshold: float = 0.4,
     ):
         self._symbolic = SymbolicFallacyDetector() if enable_symbolic else None
         self._camembert = (
@@ -783,7 +868,10 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             else None
         )
         self._llm = (
-            LLMFallacyDetector(service_discovery=service_discovery)
+            LLMFallacyDetector(
+                service_discovery=service_discovery,
+                confidence_threshold=llm_confidence_threshold,
+            )
             if enable_llm
             else None
         )
