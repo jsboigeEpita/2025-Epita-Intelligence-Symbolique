@@ -108,6 +108,7 @@ libs/jdk-*/
 libs/octave-*/
 libs/portable_octave/
 libs/node-v*/
+node-v*-win-x64/
 libs/portable_octave/
 libs/tweety/
 libs/*.jar

@@ -49,27 +49,58 @@ gh issue list --state open --limit 30 --json number,title,labels,body
 gh issue list --state closed --limit 10 --json number,title,closedAt --jq '.[] | "#\(.number) \(.title) (closed \(.closedAt | split("T")[0]))"'
 ```
 
-### Phase 3: Identify Next Steps — Issue-Driven Priority
+### Phase 2.5: Coordination Check (CRITICAL — before picking work)
 
-**The project uses GitHub issues as the primary work tracker.** Issues follow a dependency chain that MUST be respected:
+**This phase prevents duplicate work.** Always run it BEFORE Phase 3.
 
-#### Dependency Chain (Critical Path)
+The project uses RooSync multi-agent coordination. The workspace dashboard contains the coordinator's dispatches, merged PRs, and issue reassignments. Ignoring it leads to wasted effort on already-resolved issues.
+
+**Steps (sequential):**
+
+1. **Read workspace dashboard** via RooSync:
+   - `roosync_dashboard(action: "read", type: "workspace", section: "all")`
+   - Extract: current main commit, open issues, open PRs, recent dispatches
+   - Focus on the `status.markdown` field and the last 5 `intercom.messages`
+
+2. **Read unread inbox** via RooSync:
+   - `roosync_read(mode: "inbox", status: "unread")`
+   - Mark each message as read after processing
+   - Look for: new dispatches, rework requests, PR closure notifications
+
+3. **Cross-reference with GitHub**:
+   - For each issue the coordinator dispatched to this machine, verify its current state:
+     ```bash
+     gh issue view <number> --json state,title,assignees
+     ```
+   - If the issue is **closed** or **assigned to someone else**, skip it
+   - If a PR for this issue already exists and is open/closed, note it
+
+4. **Reconcile and decide**:
+   - If the dashboard says "repo stable, no urgent work" → respect that
+   - If issues were reassigned or closed by the coordinator → don't start them
+   - If new dispatches exist → follow the coordinator's priority order
+   - **Rule: Coordinator dispatches override local issue-driven priority**
+
+**Output a coordination summary** (silent, for your own context):
 ```
-#32 (Audit core features)
-  → #33 (Major cleanup: docs/, code hygiene)
-    → #34 (Consolidate core into argumentation_analysis/)
-      → #35 (Student project integration)
+Dashboard main: <hash> | Open PRs: N | Open issues: N
+Inbox: N unread → [list key items]
+Issues assigned to me: [list with current state]
+Conflicts: [any issues I was about to start but already resolved]
 ```
 
-**An issue's prerequisites (listed in its body) must be closed before starting it.**
+**Only after this reconciliation**, proceed to Phase 3.
+
+### Phase 3: Identify Next Steps — Coordination-Aware Priority
+
+**The project uses GitHub issues as the primary work tracker, coordinated via RooSync.**
 
 #### Priority Algorithm
 
-1. **Regressions**: Any new test failures since last session → fix immediately
-2. **Critical path issues**: Find the FIRST open issue in the dependency chain whose prerequisites are all closed. That's the current focus.
-3. **Parallel-track issues**: Issues NOT in the critical path (e.g., Tweety improvements #21/#24-#27/#31, test skip reduction #28/#30) can be worked on alongside critical path work.
-4. **Sub-tasks within an issue**: Read the issue body to find unchecked `- [ ]` items. Work on them in order.
-5. **New regressions or skip increases**: If test count drops or skips increase vs MEMORY.md baseline, investigate.
+1. **Coordinator dispatches**: If the workspace dashboard has assigned issues to this machine, those come first — in the coordinator's stated priority order
+2. **Regressions**: Any new test failures since last session → fix immediately
+3. **Open issues**: Check GitHub for unassigned or self-assigned issues not yet resolved
+4. **New regressions or skip increases**: If test count drops or skips increase vs MEMORY.md baseline, investigate
 
 #### How to Read an Issue
 
@@ -80,9 +111,10 @@ Each issue body contains:
 - **Related issues**: Context and parallel work
 
 **Before starting an issue**, verify:
-1. All prerequisite issues are closed (`gh issue view <number> --json state`)
-2. The issue hasn't been partially completed in a previous session (check MEMORY.md)
-3. You understand the full scope by reading the issue body
+1. The issue is still **open** (`gh issue view <number> --json state`)
+2. No existing PR already addresses it (`gh pr list --search "<issue number>"`)
+3. The coordinator hasn't reassigned it (check dashboard)
+4. You understand the full scope by reading the issue body
 
 ### Phase 4: Present Plan & Start Working
 
@@ -97,19 +129,19 @@ Output a concise summary to the user:
 - Branch: [branch]
 - Git status: clean / N modified files
 
-### Issue Roadmap
-| # | Issue | Status | Blocked by |
-|---|-------|--------|------------|
-| 32 | Audit core features | open/closed | — |
-| 33 | Major cleanup | open/closed | #32 |
-| 34 | Consolidate core | open/closed | #33 |
-| 35 | Student integration | open/closed | #34 |
+### Coordination (from RooSync dashboard)
+- Dashboard main: [hash] | Open PRs: N | Open issues: N
+- Inbox: N unread → [key items]
+- Assigned to me: [issues with state]
 
-Parallel: #28 (JVM skips), #30 (misc skips), #31 (Tweety stack)
+### Issue Roadmap
+| # | Issue | Status | Source |
+|---|-------|--------|--------|
+| XX | [Title] | open/closed | coordinator/local |
 
 ### Starting With
 **#XX: [Issue title]** — [Which sub-task / checklist item]
-[Why this is the right next step]
+[Why this is the right next step — reference coordinator dispatch or local priority]
 
 ---
 Working on it now...
@@ -165,6 +197,7 @@ When closing an issue, always:
 - **Grep/Glob**: Code exploration as needed
 - **TodoWrite**: Track progress on issue sub-tasks
 - **Task**: Subagents for parallel investigation
+- **RooSync (MCP)**: `roosync_dashboard`, `roosync_read` — coordination state, dispatches, inbox
 
 ---
 
