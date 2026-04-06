@@ -10,6 +10,7 @@ Test unitaire simplifié pour valider l'API FastAPI avec GPT-4o-mini authentique
 import os
 import sys
 import time
+import socket
 import requests
 import subprocess
 import threading
@@ -82,8 +83,12 @@ def test_api_startup_and_basic_functionality():
     """Test 2: Démarrage API et fonctionnalité de base."""
     print("\n=== Test 2: Démarrage API et fonctionnalités ===")
 
-    # Configuration
-    api_url = "http://localhost:8001"
+    # Find a free port to avoid conflicts with Docker or other services
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    free_port = sock.getsockname()[1]
+    sock.close()
+    api_url = f"http://localhost:{free_port}"
     api_process = None
 
     # Fonction pour lire les flux de sortie en continu
@@ -94,7 +99,7 @@ def test_api_startup_and_basic_functionality():
 
     try:
         # Démarrer l'API
-        print("Démarrage de l'API FastAPI...")
+        print(f"Démarrage de l'API FastAPI sur port {free_port}...")
         cmd = [
             sys.executable,
             "-m",
@@ -103,7 +108,7 @@ def test_api_startup_and_basic_functionality():
             "--host",
             "127.0.0.1",
             "--port",
-            "8001",
+            str(free_port),
             "--log-level",
             "info",
         ]

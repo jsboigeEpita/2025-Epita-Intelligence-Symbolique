@@ -6,6 +6,7 @@ Tests the API endpoints by creating a Starlette app with a mock lifespan
 that injects a mocked ServiceManager, avoiding heavy LLM/JVM initialization.
 """
 
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from contextlib import asynccontextmanager
@@ -38,9 +39,23 @@ def mock_service_manager():
 
 @pytest.fixture
 def client(mock_service_manager):
-    """Create a Starlette TestClient with mocked ServiceManager."""
+    """Create a Starlette TestClient with mocked ServiceManager.
+
+    Uses a fresh event loop to avoid pollution from prior async tests
+    in the same session (see Issue #276).
+    """
     # Import routes and middleware from the real app
     from interface_web.app import routes, middleware
+
+    # Ensure a fresh event loop for TestClient's internal async operations
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     @asynccontextmanager
     async def test_lifespan(app):
@@ -209,6 +224,16 @@ class TestServiceManagerUnavailable:
     @pytest.fixture
     def client_no_sm(self):
         from interface_web.app import routes, middleware
+
+        # Ensure a fresh event loop to avoid pollution from prior async tests
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         @asynccontextmanager
         async def test_lifespan(app):
