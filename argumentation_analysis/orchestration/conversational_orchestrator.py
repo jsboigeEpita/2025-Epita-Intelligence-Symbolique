@@ -446,6 +446,75 @@ async def run_conversational_analysis(
         except Exception:
             trace.end_phase(phase_name)
 
+    # 5b. Conditional Phase 4: Re-Analysis (#305)
+    # If the enrichment summary shows gaps (e.g., JTMS retracted beliefs not
+    # re-evaluated, arguments missing fallacy analysis), add an extra phase
+    # to re-analyze using informal + quality + governance agents.
+    reanalysis_added = False
+    if hasattr(state, "get_enrichment_summary"):
+        try:
+            enrichment = state.get_enrichment_summary()
+            needs_reanalysis = _should_add_reanalysis_phase(enrichment, state)
+            if needs_reanalysis:
+                reanalysis_cfg = {
+                    "name": "Re-Analysis",
+                    "agents": ["ProjectManager", "InformalAgent", "QualityAgent", "GovernanceAgent"],
+                    "max_turns": 5,
+                    "initial_prompt": (
+                        "Re-analysez en tenant compte des resultats de l'analyse formelle.\n"
+                        "JTMS a retracte certaines croyances. Re-evaluez :\n"
+                        "- InformalAgent : re-detectez les sophismes sur les arguments invalides\n"
+                        "- QualityAgent : ajustez les scores de qualite\n"
+                        "- GovernanceAgent : re-evaluez le consensus\n"
+                        "Basez-vous sur les retractations JTMS et les lacunes identifiees."
+                    ),
+                }
+
+                reanalysis_agents = [
+                    agent_by_name[n]
+                    for n in reanalysis_cfg["agents"]
+                    if n in agent_by_name
+                ]
+
+                if reanalysis_agents:
+                    reanalysis_added = True
+                    phase_name = reanalysis_cfg["name"]
+                    logger.info(
+                        f"=== Phase: {phase_name} ({len(reanalysis_agents)} agents, "
+                        f"max {reanalysis_cfg['max_turns']} turns) ==="
+                    )
+
+                    try:
+                        trace.begin_phase(phase_name, state.get_state_snapshot(summarize=False))
+                    except Exception:
+                        trace.begin_phase(phase_name)
+
+                    phase_log = await _run_phase(
+                        reanalysis_agents,
+                        reanalysis_cfg["initial_prompt"],
+                        max_turns=reanalysis_cfg["max_turns"],
+                        phase_name=phase_name,
+                        state=state,
+                    )
+                    conversation_log.extend(phase_log)
+
+                    # Trace recording
+                    for msg in phase_log:
+                        trace.record_turn(
+                            phase=msg.get("phase", phase_name),
+                            turn=msg.get("turn", 0),
+                            agent=msg.get("agent", "?"),
+                            content=msg.get("content", ""),
+                        )
+                    try:
+                        trace.end_phase(phase_name, state.get_state_snapshot(summarize=False))
+                    except Exception:
+                        trace.end_phase(phase_name)
+
+                    phase_configs.append(reanalysis_cfg)
+        except Exception as e:
+            logger.warning(f"Re-analysis phase check failed: {e}")
+
     # 6. Stop trace and build results
     trace.stop()
     duration = time.time() - start_time
@@ -481,6 +550,64 @@ async def run_conversational_analysis(
     )
 
     return result
+
+
+def _should_add_reanalysis_phase(
+    enrichment: Dict[str, Any],
+    state: Any,
+) -> bool:
+    """Determine whether a re-analysis phase is warranted (#305).
+
+    Returns True when the enrichment summary reveals gaps that could be
+    addressed by re-running informal + quality + governance analysis:
+    - Arguments that have no fallacy analysis
+    - JTMS retracted beliefs that haven't been re-evaluated
+
+    Args:
+        enrichment: Output of state.get_enrichment_summary().
+        state: The shared analysis state.
+
+    Returns:
+        True if re-analysis would be beneficial.
+    """
+    total = enrichment.get("total_arguments", 0)
+    if total == 0:
+        return False
+
+    # Gap 1: arguments with no fallacy analysis
+    with_fallacy = enrichment.get("with_fallacy_analysis", 0)
+    fallacy_coverage = with_fallacy / total if total > 0 else 1.0
+
+    # Gap 2: JTMS retracted beliefs (indicates formal analysis found issues)
+    has_jtms_retractions = False
+    jtms_beliefs = getattr(state, "jtms_beliefs", {})
+    if isinstance(jtms_beliefs, dict):
+        for _bid, bdata in jtms_beliefs.items():
+            if isinstance(bdata, dict) and bdata.get("valid") is False:
+                has_jtms_retractions = True
+                break
+
+    # Also check via JTMS session if available
+    if not has_jtms_retractions and hasattr(state, "_jtms_session"):
+        session = state._jtms_session
+        if hasattr(session, "extended_beliefs"):
+            for _name, ext_b in session.extended_beliefs.items():
+                if not ext_b.valid:
+                    has_jtms_retractions = True
+                    break
+
+    # Gap 3: explicit gaps list
+    gaps = enrichment.get("gaps", [])
+
+    # Trigger re-analysis if: low fallacy coverage OR JTMS retractions OR many gaps
+    if fallacy_coverage < 0.5 and total >= 2:
+        return True
+    if has_jtms_retractions:
+        return True
+    if len(gaps) >= 3:
+        return True
+
+    return False
 
 
 def _check_convergence(state, phase_name: str, messages: list) -> bool:

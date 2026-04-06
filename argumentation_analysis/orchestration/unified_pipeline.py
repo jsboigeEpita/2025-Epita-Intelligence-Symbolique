@@ -4439,6 +4439,127 @@ def build_full_workflow() -> WorkflowDefinition:
     )
 
 
+def _should_rerun_fallacy(context: Dict[str, Any]) -> bool:
+    """Check whether the fallacy detection phase should be re-run after JTMS.
+
+    Returns True when JTMS retracted beliefs AND we haven't exceeded the
+    maximum number of fallacy reruns (2). This prevents infinite loops while
+    allowing iterative enrichment when formal analysis invalidates beliefs.
+
+    Args:
+        context: Workflow execution context containing phase outputs.
+
+    Returns:
+        True if a fallacy re-run is warranted.
+    """
+    # Check rerun count limit
+    rerun_count = context.get("_fallacy_rerun_count", 0)
+    if rerun_count >= 2:
+        return False
+
+    # Check if JTMS phase produced retracted beliefs
+    jtms_output = context.get("phase_jtms_output", {})
+    if not isinstance(jtms_output, dict):
+        return False
+
+    # Method 1: explicit undermined_count field
+    undermined = jtms_output.get("undermined_count", 0)
+    if undermined > 0:
+        return True
+
+    # Method 2: scan beliefs dict for invalid entries
+    beliefs = jtms_output.get("beliefs", {})
+    if isinstance(beliefs, dict):
+        retracted = [name for name, bdata in beliefs.items()
+                     if isinstance(bdata, dict) and bdata.get("valid") is False]
+        if retracted:
+            return True
+
+    return False
+
+
+def _increment_fallacy_rerun(context: Dict[str, Any]) -> None:
+    """Increment the fallacy rerun counter in context."""
+    context["_fallacy_rerun_count"] = context.get("_fallacy_rerun_count", 0) + 1
+
+
+def build_iterative_analysis_workflow() -> WorkflowDefinition:
+    """Iterative workflow with JTMS-driven fallacy re-analysis (#305).
+
+    Runs the standard pipeline phases, then conditionally re-runs
+    hierarchical_fallacy after JTMS if beliefs were retracted. This
+    implements the PM re-prompting mechanism for the sequential pipeline:
+    formal analysis findings feed back into informal analysis.
+
+    Flow:
+        extract → hierarchical_fallacy → quality → counter → jtms
+        → [if retractions] fallacy_reanalysis → governance → debate
+    """
+
+    def _fallacy_rerun_condition(ctx: Dict[str, Any]) -> bool:
+        """Condition for the fallacy re-analysis phase."""
+        should_rerun = _should_rerun_fallacy(ctx)
+        if should_rerun:
+            _increment_fallacy_rerun(ctx)
+            logger.info(
+                "Iterative workflow: JTMS retracted beliefs detected, "
+                "re-running fallacy detection (rerun #%d)",
+                ctx.get("_fallacy_rerun_count", 1),
+            )
+        return should_rerun
+
+    return (
+        WorkflowBuilder("iterative_analysis")
+        # Phase 1: extraction
+        .add_phase("extract", capability="fact_extraction")
+        # Phase 2: initial fallacy detection
+        .add_phase(
+            "hierarchical_fallacy",
+            capability="hierarchical_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
+        # Phase 3: quality evaluation
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
+        # Phase 4: counter-argument generation
+        .add_phase(
+            "counter",
+            capability="counter_argument_generation",
+            depends_on=["quality"],
+        )
+        # Phase 5: JTMS belief maintenance
+        .add_phase(
+            "jtms",
+            capability="belief_maintenance",
+            depends_on=["counter"],
+            optional=True,
+        )
+        # Phase 6: CONDITIONAL fallacy re-analysis after JTMS
+        .add_conditional_phase(
+            "fallacy_reanalysis",
+            capability="hierarchical_fallacy_detection",
+            condition=_fallacy_rerun_condition,
+            depends_on=["jtms"],
+            optional=True,
+        )
+        # Phase 7: governance (depends on quality + optional reanalysis)
+        .add_phase(
+            "governance",
+            capability="governance_simulation",
+            depends_on=["quality"],
+            optional=True,
+        )
+        # Phase 8: debate
+        .add_phase(
+            "debate",
+            capability="adversarial_debate",
+            depends_on=["counter"],
+            optional=True,
+        )
+        .build()
+    )
+
+
 def build_nl_to_logic_workflow() -> WorkflowDefinition:
     """NL-to-formal-logic pipeline: extract → translate → validate → reason (#173).
 
@@ -4619,6 +4740,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "light": build_light_workflow(),
             "standard": build_standard_workflow(),
             "full": build_full_workflow(),
+            "iterative": build_iterative_analysis_workflow(),
             "quality_gated": build_quality_gated_counter_workflow(),
             "debate_governance": build_debate_governance_loop_workflow(),
             "jtms_dung": build_jtms_dung_loop_workflow(),

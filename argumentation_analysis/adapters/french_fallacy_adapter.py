@@ -51,9 +51,17 @@ _FALLACY_LABELS_LEGACY = [
 ]
 
 _TAXONOMY_CSV = Path(__file__).resolve().parent.parent / "data" / "taxonomy_medium.csv"
+_TAXONOMY_FULL_CSV = Path(__file__).resolve().parent.parent / "data" / "taxonomy_full.csv"
 
 # Maps taxonomy text_fr label → PK for downstream hierarchical descent
 _TAXONOMY_LABEL_TO_PK: Dict[str, int] = {}
+
+# Hierarchical taxonomy structure loaded from taxonomy_full.csv
+# Each node: {"pk": int, "label": str, "depth": int, "children": [...]}
+_TAXONOMY_HIERARCHY: Dict[str, Any] = {}
+
+# Maps PK → node dict for quick lookup
+_TAXONOMY_PK_TO_NODE: Dict[int, Dict[str, Any]] = {}
 
 
 def _load_taxonomy_labels() -> List[str]:
@@ -94,7 +102,77 @@ def _load_taxonomy_labels() -> List[str]:
     return list(_FALLACY_LABELS_LEGACY)
 
 
+def _load_taxonomy_hierarchy() -> Dict[str, Any]:
+    """Load hierarchical taxonomy from taxonomy_full.csv.
+
+    Builds a tree structure using the ``path`` column (e.g. "1.1.3")
+    to determine parent-child relationships.  Only the tree structure
+    is kept in memory -- the flat 28-label list used by default NLI
+    classification is NOT affected.
+
+    Returns the root node dict, or an empty dict on failure.
+    Also populates ``_TAXONOMY_PK_TO_NODE`` for quick PK lookups.
+    """
+    if _TAXONOMY_HIERARCHY:
+        return _TAXONOMY_HIERARCHY
+
+    try:
+        with open(_TAXONOMY_FULL_CSV, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            # Collect all rows, keyed by their path
+            nodes_by_path: Dict[str, Dict[str, Any]] = {}
+            for row in reader:
+                pk = int(row.get("PK", 0))
+                depth = int(row.get("depth", 0))
+                text_fr = row.get("text_fr", "").strip()
+                path = row.get("path", "").strip()
+                if not text_fr or not path:
+                    continue
+                node = {
+                    "pk": pk,
+                    "label": text_fr,
+                    "depth": depth,
+                    "path": path,
+                    "children": [],
+                }
+                nodes_by_path[path] = node
+                _TAXONOMY_PK_TO_NODE[pk] = node
+
+            # Build parent-child links using path hierarchy
+            # Path "1.1.3" is a child of "1.1"; path "1" is child of "0"
+            for path, node in nodes_by_path.items():
+                if path == "0":
+                    continue  # root has no parent
+                if "." in path:
+                    parent_path = path.rsplit(".", 1)[0]
+                else:
+                    # Depth-1 nodes (path "1", "2", ...) are children of root
+                    parent_path = "0"
+                parent = nodes_by_path.get(parent_path)
+                if parent is not None:
+                    parent["children"].append(node)
+
+            root = nodes_by_path.get("0")
+            if root:
+                _TAXONOMY_HIERARCHY.update(root)
+                family_count = len(root.get("children", []))
+                total = len(nodes_by_path)
+                logger.info(
+                    f"Loaded taxonomy hierarchy: {total} nodes, "
+                    f"{family_count} families from taxonomy_full.csv"
+                )
+                return _TAXONOMY_HIERARCHY
+
+    except Exception as e:
+        logger.warning(f"Could not load taxonomy_full.csv hierarchy: {e}")
+
+    return {}
+
+
 FALLACY_LABELS_FR = _load_taxonomy_labels()
+
+# Lazy-load hierarchy on first use (not at import time to keep startup fast)
+# Call _load_taxonomy_hierarchy() when needed.
 
 # Symbolic rules from student project (spaCy Matcher patterns)
 _SYMBOLIC_FALLACY_RULES = {
@@ -439,10 +517,22 @@ class NLIFallacyDetector:
             logger.info("NLI model loaded")
         return self._classifier
 
-    def detect(self, text: str) -> List[FallacyDetection]:
-        """Classify text against fallacy labels using NLI zero-shot."""
+    def detect(
+        self, text: str, *, hierarchical: bool = False
+    ) -> List[FallacyDetection]:
+        """Classify text against fallacy labels using NLI zero-shot.
+
+        Args:
+            text: Text to analyse.
+            hierarchical: When *True*, use 2-stage hierarchical
+                classification (family then sub-family) instead of
+                flat 28-label matching.  Requires taxonomy_full.csv.
+        """
         if not self.is_available():
             return []
+
+        if hierarchical:
+            return self._nli_hierarchical_classify(text)
 
         try:
             classifier = self._get_classifier()
@@ -474,6 +564,156 @@ class NLIFallacyDetector:
 
         except Exception as e:
             logger.error(f"NLI detection failed: {e}")
+            return []
+
+    # ── Hierarchical 2-stage NLI classification ────────────────────────
+
+    # Threshold for Stage 1: minimum confidence on a family to drill down
+    HIERARCHICAL_STAGE1_THRESHOLD = 0.3
+
+    def _nli_hierarchical_classify(
+        self, text: str
+    ) -> List[FallacyDetection]:
+        """2-stage hierarchical NLI classification.
+
+        Stage 1: classify against the 7 depth-1 families.
+        Stage 2: for each family above *HIERARCHICAL_STAGE1_THRESHOLD*,
+                 classify against its depth-2 (and optionally depth-3)
+                 children to get the most specific match.
+
+        Falls back to flat classification if hierarchy is unavailable.
+        """
+        hierarchy = _load_taxonomy_hierarchy()
+        if not hierarchy or not hierarchy.get("children"):
+            logger.info(
+                "Taxonomy hierarchy not available — "
+                "falling back to flat NLI classification"
+            )
+            return self.detect(text, hierarchical=False)
+
+        try:
+            classifier = self._get_classifier()
+            hypothesis_template = "Ce texte contient un sophisme de type {}."
+
+            # ── Stage 1: classify against depth-1 families ────────────
+            families = hierarchy["children"]
+            family_labels = [f["label"] for f in families]
+
+            stage1_result = classifier(
+                text,
+                candidate_labels=family_labels,
+                hypothesis_template=hypothesis_template,
+                multi_label=True,
+            )
+
+            detections: List[FallacyDetection] = []
+
+            for label, score in zip(
+                stage1_result["labels"], stage1_result["scores"]
+            ):
+                if score < self.HIERARCHICAL_STAGE1_THRESHOLD:
+                    continue
+
+                # Find the family node
+                family_node = None
+                for f in families:
+                    if f["label"] == label:
+                        family_node = f
+                        break
+
+                if family_node is None or not family_node.get("children"):
+                    # No children to drill into — report the family itself
+                    detections.append(
+                        FallacyDetection(
+                            fallacy_type=label,
+                            confidence=round(score, 3),
+                            source="nli_hierarchical",
+                            description=(
+                                f"NLI hierarchical stage-1 "
+                                f"({self._model_name})"
+                            ),
+                            taxonomy_pk=family_node["pk"]
+                            if family_node
+                            else None,
+                        )
+                    )
+                    continue
+
+                # ── Stage 2: classify against children ────────────────
+                # Collect depth-2 children, and optionally depth-3
+                child_labels_map: Dict[str, Dict[str, Any]] = {}
+                for child in family_node["children"]:
+                    child_labels_map[child["label"]] = child
+                    # Also include depth-3 grandchildren for finer grain
+                    for grandchild in child.get("children", []):
+                        child_labels_map[grandchild["label"]] = grandchild
+
+                if not child_labels_map:
+                    detections.append(
+                        FallacyDetection(
+                            fallacy_type=label,
+                            confidence=round(score, 3),
+                            source="nli_hierarchical",
+                            description=(
+                                f"NLI hierarchical stage-1 only "
+                                f"({self._model_name})"
+                            ),
+                            taxonomy_pk=family_node["pk"],
+                        )
+                    )
+                    continue
+
+                child_labels = list(child_labels_map.keys())
+                stage2_result = classifier(
+                    text,
+                    candidate_labels=child_labels,
+                    hypothesis_template=hypothesis_template,
+                    multi_label=False,
+                )
+
+                best_child_label = stage2_result["labels"][0]
+                best_child_score = stage2_result["scores"][0]
+                best_child_node = child_labels_map[best_child_label]
+
+                # Use the finer result if confident enough; else keep family
+                if best_child_score >= self.threshold:
+                    # Combined confidence: family_score * child_score
+                    combined = round(score * best_child_score, 3)
+                    detections.append(
+                        FallacyDetection(
+                            fallacy_type=best_child_label,
+                            confidence=combined,
+                            source="nli_hierarchical",
+                            description=(
+                                f"NLI hierarchical stage-2: "
+                                f"{label} → {best_child_label} "
+                                f"(s1={score:.3f}, s2={best_child_score:.3f}) "
+                                f"({self._model_name})"
+                            ),
+                            taxonomy_pk=best_child_node["pk"],
+                        )
+                    )
+                else:
+                    # Stage 2 not confident — report family level
+                    detections.append(
+                        FallacyDetection(
+                            fallacy_type=label,
+                            confidence=round(score, 3),
+                            source="nli_hierarchical",
+                            description=(
+                                f"NLI hierarchical stage-1 only "
+                                f"(stage-2 best={best_child_score:.3f} "
+                                f"< threshold={self.threshold}) "
+                                f"({self._model_name})"
+                            ),
+                            taxonomy_pk=family_node["pk"],
+                        )
+                    )
+
+            return detections
+
+        except Exception as e:
+            logger.error(f"NLI hierarchical detection failed: {e}")
             return []
 
 
@@ -852,6 +1092,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         nli_threshold: float = 0.5,
         service_discovery=None,
         llm_confidence_threshold: float = 0.4,
+        nli_hierarchical: bool = False,
     ):
         self._symbolic = SymbolicFallacyDetector() if enable_symbolic else None
         self._camembert = (
@@ -875,6 +1116,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             if enable_llm
             else None
         )
+        self._nli_hierarchical = nli_hierarchical
 
     def is_available(self) -> bool:
         """At least one tier must be available."""
@@ -926,12 +1168,19 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             if camembert_results:
                 result.tiers_used.append("camembert")
 
-        # Tier 2: NLI zero-shot
+        # Tier 2: NLI zero-shot (flat or hierarchical)
         if self._nli and self._nli.is_available():
-            nli_results = self._nli.detect(text)
+            nli_results = self._nli.detect(
+                text, hierarchical=self._nli_hierarchical
+            )
             all_detections.extend(nli_results)
             if nli_results:
-                result.tiers_used.append("nli")
+                tier_name = (
+                    "nli_hierarchical"
+                    if self._nli_hierarchical
+                    else "nli"
+                )
+                result.tiers_used.append(tier_name)
 
         # Tier 1: LLM zero-shot
         if self._llm and self._llm.is_available():
