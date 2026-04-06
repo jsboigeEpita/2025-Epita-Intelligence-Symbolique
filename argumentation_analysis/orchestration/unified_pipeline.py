@@ -2521,14 +2521,25 @@ async def _invoke_hierarchical_fallacy(
         result["extraction_method"] = result.get("exploration_method", "unknown")
         return result
 
-    except Exception as e:
-        logger.warning("Hierarchical fallacy detection failed, returning empty: %s", e)
+    except (ImportError, RuntimeError) as e:
+        # Expected failures: missing dependencies or API key — return empty gracefully
+        logger.warning("Hierarchical fallacy detection unavailable: %s", e)
         return {
             "fallacies": [],
-            "exploration_method": "error",
+            "exploration_method": "unavailable",
             "error": str(e),
-            "extraction_method": "error",
+            "extraction_method": "unavailable",
         }
+    except Exception as e:
+        # Unexpected failures: log full traceback and re-raise so the executor
+        # marks this phase as FAILED instead of silently returning empty results.
+        # This makes debugging possible when the phase produces 0 fallacies.
+        import traceback
+        logger.error(
+            "Hierarchical fallacy detection failed with unexpected error:\n%s",
+            traceback.format_exc(),
+        )
+        raise
 
 
 # --- Invoke callables for logic agent capabilities (#71 Formal Verification) ---
@@ -4368,6 +4379,7 @@ def build_full_workflow() -> WorkflowDefinition:
         .add_phase(
             "neural_fallacy",
             capability="neural_fallacy_detection",
+            depends_on=["extract"],
             optional=True,
         )
         .add_phase(

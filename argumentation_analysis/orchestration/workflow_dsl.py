@@ -374,7 +374,22 @@ class WorkflowExecutor:
                         )
 
                 # Resolve capability
-                providers = self._registry.find_for_capability(phase.capability)
+                try:
+                    providers = self._registry.find_for_capability(phase.capability)
+                except Exception as resolve_err:
+                    duration = time.time() - start
+                    results[phase_name] = PhaseResult(
+                        phase_name=phase_name,
+                        status=PhaseStatus.FAILED,
+                        capability=phase.capability,
+                        error=f"Capability resolution error: {resolve_err}",
+                        duration_seconds=duration,
+                    )
+                    logger.error(
+                        f"Phase '{phase_name}' FAILED — "
+                        f"capability resolution error for '{phase.capability}': {resolve_err}"
+                    )
+                    continue
 
                 if not providers:
                     if phase.optional:

@@ -47,6 +47,43 @@ def normalize_operators(formula: str) -> str:
     return result
 
 
+def _extract_fol_metadata(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract FOL metadata (sorts, predicates, constants) from parsed LLM response.
+
+    Handles both old format (constants as flat dict of descriptions) and new
+    format (sorts as dict of sort_name -> [constants], predicates as dict of
+    pred_name -> [arg_sort_names]).
+
+    Returns a normalized dict with:
+        - sorts: Dict[str, List[str]] — sort_name -> list of constant names
+        - predicates: Dict[str, List[str]] — pred_name -> list of arg sort names
+        - constants_raw: Dict[str, str] — const_name -> description
+    """
+    sorts = parsed.get("sorts", {})
+    predicates_raw = parsed.get("predicates", {})
+    constants_raw = parsed.get("constants", {})
+
+    # Normalize predicates: if values are strings (old format), convert to list
+    predicates = {}
+    for pred_name, pred_info in predicates_raw.items():
+        if isinstance(pred_info, list):
+            predicates[pred_name] = pred_info
+        else:
+            # Old format: {"Human": "is a human being"} — cannot infer sorts,
+            # will be handled by defensive scanning in _validate_fol_with_signature
+            pass
+
+    # If no sorts declared but we have constants, build a default 'Thing' sort
+    if not sorts and constants_raw:
+        sorts = {"Thing": list(constants_raw.keys())}
+
+    return {
+        "sorts": sorts,
+        "predicates": predicates,
+        "constants_raw": constants_raw,
+    }
+
+
 # ── Data classes ─────────────────────────────────────────────────────────
 
 
@@ -113,10 +150,15 @@ FOL_SYSTEM_PROMPT = (
     "- Quantifiers: forall X: (...) and exists X: (...)\n"
     "- Operators: && (and), || (or), => (implies), ! (not), <=> (iff)\n"
     "- Separate multiple formulas with semicolons\n\n"
+    "IMPORTANT: You MUST declare all constants with their sorts/types.\n"
+    "Group constants by sort (e.g., all people under 'Person', all cities "
+    "under 'City'). Every predicate must list the sort names of its arguments.\n"
+    "If unsure about the sort, use 'Thing' as a generic sort.\n\n"
     "Respond with ONLY a JSON object:\n"
     '{"formulas": ["forall X: (Human(X) => Mortal(X))", "Human(socrates)"], '
-    '"predicates": {"Human": "is a human being", "Mortal": "is mortal"}, '
-    '"constants": {"socrates": "the philosopher Socrates"}, '
+    '"predicates": {"Human": ["Person"], "Mortal": ["Person"]}, '
+    '"sorts": {"Person": ["socrates", "plato"]}, '
+    '"constants": {"socrates": "the philosopher Socrates", "plato": "the philosopher Plato"}, '
     '"confidence": 0.9}'
 )
 
@@ -280,6 +322,7 @@ class NLToLogicTranslator:
                     variables = parsed.get("variables", {})
                     confidence = parsed.get("confidence", 0.7)
                     last_formula = formula
+                    fol_metadata = None
                 else:
                     formulas = parsed.get("formulas", [])
                     formula = "; ".join(formulas) if formulas else ""
@@ -289,9 +332,13 @@ class NLToLogicTranslator:
                     }
                     confidence = parsed.get("confidence", 0.7)
                     last_formula = formula
+                    # Extract FOL metadata for Tweety signature building
+                    fol_metadata = _extract_fol_metadata(parsed)
 
                 # Validate via Tweety or Python fallback
-                is_valid, val_msg = await self._validate_formula(formula, logic_type)
+                is_valid, val_msg = await self._validate_formula(
+                    formula, logic_type, fol_metadata=fol_metadata
+                )
 
                 if is_valid:
                     return TranslationResult(
@@ -346,8 +393,18 @@ class NLToLogicTranslator:
         self,
         formula: str,
         logic_type: str,
+        fol_metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[bool, str]:
-        """Validate formula via Tweety (JVM) or Python fallback."""
+        """Validate formula via Tweety (JVM) or Python fallback.
+
+        Args:
+            formula: The formula string to validate.
+            logic_type: "propositional" or "fol".
+            fol_metadata: Optional FOL metadata with sorts, predicates, and
+                constants extracted from the LLM response. Used to build a
+                Tweety FolSignature so that constants are pre-declared before
+                parsing (required by Tweety's FOL parser).
+        """
         if not formula or not formula.strip():
             return False, "Empty formula"
 
@@ -355,7 +412,9 @@ class NLToLogicTranslator:
 
         # Try Tweety validation first
         try:
-            return await self._validate_with_tweety(formula, logic_type)
+            return await self._validate_with_tweety(
+                formula, logic_type, fol_metadata=fol_metadata
+            )
         except Exception as e:
             logger.debug(f"Tweety validation unavailable ({e}), using Python fallback")
             return self._validate_with_python(formula, logic_type)
@@ -364,8 +423,15 @@ class NLToLogicTranslator:
         self,
         formula: str,
         logic_type: str,
+        fol_metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[bool, str]:
-        """Validate using TweetyBridge (requires JVM)."""
+        """Validate using TweetyBridge (requires JVM).
+
+        For FOL formulas, builds a Tweety FolSignature from the LLM-provided
+        metadata (sorts, constants, predicates) before parsing. This ensures
+        that constants like 'socrates' are pre-declared in the signature,
+        which Tweety's FOL parser requires.
+        """
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
@@ -380,19 +446,170 @@ class NLToLogicTranslator:
             else:
                 return False, "Invalid propositional formula syntax"
         else:
-            # FOL: try parsing each formula
+            # FOL: build signature from metadata and validate all formulas together
             fol_formulas = [f.strip() for f in formula.split(";") if f.strip()]
+
+            if fol_metadata and (fol_metadata.get("sorts") or fol_metadata.get("constants_raw")):
+                # Use programmatic signature building for robust constant handling
+                return await asyncio.to_thread(
+                    self._validate_fol_with_signature, bridge, fol_formulas, fol_metadata
+                )
+            else:
+                # Fallback: try parsing each formula without signature (old behavior)
+                errors = []
+                for f in fol_formulas:
+                    try:
+                        await asyncio.to_thread(
+                            bridge.fol_handler.parse_fol_formula, f
+                        )
+                    except (ValueError, Exception) as e:
+                        errors.append(f"'{f}': {e}")
+                if errors:
+                    return False, "; ".join(errors)
+                return True, "Valid FOL formulas (Tweety)"
+
+    def _validate_fol_with_signature(
+        self,
+        bridge: Any,
+        fol_formulas: List[str],
+        fol_metadata: Dict[str, Any],
+    ) -> Tuple[bool, str]:
+        """Validate FOL formulas by building a Tweety signature with pre-declared constants.
+
+        This is the key fix for the Tweety FOL constant pre-declaration issue:
+        Tweety's FolParser requires all constants to be declared in a FolSignature
+        before they appear in formulas. Without this, only the first formula
+        (which implicitly declares constants) succeeds, and subsequent formulas
+        referencing the same constants fail.
+
+        Args:
+            bridge: TweetyBridge instance.
+            fol_formulas: List of individual FOL formula strings.
+            fol_metadata: Dict with 'sorts' (sort_name -> [constants]),
+                'predicates' (pred_name -> [arg_sort_names]),
+                and 'constants_raw' (const_name -> description).
+        """
+        import jpype
+
+        sorts_data = fol_metadata.get("sorts", {})
+        predicates_data = fol_metadata.get("predicates", {})
+        constants_raw = fol_metadata.get("constants_raw", {})
+
+        # If no sorts declared, create a default 'Thing' sort with all constants
+        if not sorts_data and constants_raw:
+            sorts_data = {"Thing": list(constants_raw.keys())}
+
+        # Also scan formulas for undeclared constants (lowercase identifiers
+        # inside predicates that aren't variables — variables are uppercase)
+        all_declared_constants = set()
+        for consts in sorts_data.values():
+            all_declared_constants.update(consts)
+
+        for f in fol_formulas:
+            # Find all arguments inside predicates: Pred(arg1, arg2, ...)
+            for match in re.finditer(r"[A-Z][a-zA-Z]*\(([^)]+)\)", f):
+                args = [a.strip() for a in match.group(1).split(",")]
+                for arg in args:
+                    # Constants are lowercase identifiers; variables are uppercase single letters
+                    if (
+                        re.match(r"^[a-z][a-z0-9_]*$", arg)
+                        and arg not in all_declared_constants
+                        and arg not in ("true", "false")
+                    ):
+                        logger.debug(
+                            f"Found undeclared constant '{arg}' in formula, adding to Thing sort"
+                        )
+                        if "Thing" not in sorts_data:
+                            sorts_data["Thing"] = []
+                        sorts_data["Thing"].append(arg)
+                        all_declared_constants.add(arg)
+
+        try:
+            FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+            Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
+            Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+            Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            ArrayList = jpype.JClass("java.util.ArrayList")
+            String = jpype.JClass("java.lang.String")
+
+            signature = FolSignature()
+            sorts_map = {}
+
+            # Step 1: Create and add all sorts
+            for sort_name in sorts_data.keys():
+                java_sort = Sort(String(sort_name))
+                signature.add(java_sort)
+                sorts_map[sort_name] = java_sort
+
+            # Step 2: Create and add constants to their sorts
+            for sort_name, constants_list in sorts_data.items():
+                parent_sort = sorts_map.get(sort_name)
+                if parent_sort:
+                    for const_name in constants_list:
+                        java_constant = Constant(String(const_name), parent_sort)
+                        signature.add(java_constant)
+
+            # Step 3: Create and add predicates with their argument sorts
+            # Handle both formats: {"Pred": ["Sort1"]} and {"Pred": "description"}
+            for pred_name, arg_info in predicates_data.items():
+                if isinstance(arg_info, list) and arg_info and isinstance(arg_info[0], str):
+                    # New format: list of sort names
+                    java_arg_sorts = ArrayList()
+                    for arg_sort_name in arg_info:
+                        java_sort = sorts_map.get(arg_sort_name)
+                        if not java_sort:
+                            # Create a fallback sort if referenced but not declared
+                            java_sort = Sort(String(arg_sort_name))
+                            signature.add(java_sort)
+                            sorts_map[arg_sort_name] = java_sort
+                        java_arg_sorts.add(java_sort)
+                    java_predicate = Predicate(String(pred_name), java_arg_sorts)
+                    signature.add(java_predicate)
+
+            # Step 4: Scan formulas for undeclared predicates and add them defensively
+            for f in fol_formulas:
+                for match in re.finditer(r"([A-Z][a-zA-Z]*)\(([^)]*)\)", f):
+                    pred_name = match.group(1)
+                    # Check if already in signature by checking predicates_data
+                    if pred_name not in predicates_data:
+                        args_str = match.group(2)
+                        arity = args_str.count(",") + 1 if args_str.strip() else 0
+                        # Default to Thing sort for all args
+                        if "Thing" not in sorts_map:
+                            thing_sort = Sort(String("Thing"))
+                            signature.add(thing_sort)
+                            sorts_map["Thing"] = thing_sort
+                        java_arg_sorts = ArrayList()
+                        for _ in range(arity):
+                            java_arg_sorts.add(sorts_map["Thing"])
+                        java_predicate = Predicate(String(pred_name), java_arg_sorts)
+                        signature.add(java_predicate)
+                        # Track so we don't re-add
+                        predicates_data[pred_name] = ["Thing"] * arity
+
+            # Step 5: Parse all formulas with the pre-configured signature
+            parser = FolParser()
+            parser.setSignature(signature)
+
             errors = []
             for f in fol_formulas:
                 try:
-                    await asyncio.to_thread(
-                        bridge.fol_handler.parse_fol_formula, f
-                    )
+                    bridge.fol_handler.parse_fol_formula(f, custom_parser=parser)
                 except (ValueError, Exception) as e:
                     errors.append(f"'{f}': {e}")
+
             if errors:
                 return False, "; ".join(errors)
-            return True, "Valid FOL formulas (Tweety)"
+
+            formula_count = len(fol_formulas)
+            return True, f"Valid FOL formulas ({formula_count} formulas, Tweety with signature)"
+
+        except jpype.JException as e:
+            error_msg = str(e.getMessage()) if hasattr(e, "getMessage") else str(e)
+            return False, f"Tweety signature building error: {error_msg}"
+        except Exception as e:
+            return False, f"FOL signature validation error: {e}"
 
     def _validate_with_python(
         self,

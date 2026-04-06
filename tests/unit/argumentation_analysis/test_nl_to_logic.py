@@ -169,7 +169,7 @@ class TestNLToLogicTranslator:
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        async def mock_validate(formula, logic_type):
+        async def mock_validate(formula, logic_type, **kwargs):
             return (True, "Valid (mocked)")
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False):

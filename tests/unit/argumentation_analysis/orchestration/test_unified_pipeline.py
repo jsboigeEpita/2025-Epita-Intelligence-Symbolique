@@ -2184,7 +2184,7 @@ class TestHierarchicalFallacyWorkflow:
         assert result["fallacies"] == []
 
     async def test_invoke_hierarchical_fallacy_no_api_key(self):
-        """_invoke_hierarchical_fallacy returns error when no API key."""
+        """_invoke_hierarchical_fallacy returns unavailable when no API key."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_hierarchical_fallacy,
         )
@@ -2193,8 +2193,50 @@ class TestHierarchicalFallacyWorkflow:
             "os.environ", {"OPENAI_API_KEY": ""}, clear=False
         ):
             result = await _invoke_hierarchical_fallacy("text", {})
-        assert result["exploration_method"] == "error"
+        assert result["exploration_method"] == "unavailable"
         assert result["fallacies"] == []
+
+    async def test_invoke_hierarchical_fallacy_unexpected_error_reraises(self):
+        """_invoke_hierarchical_fallacy re-raises unexpected errors (not ImportError/RuntimeError).
+
+        This ensures the executor marks the phase as FAILED instead of silently
+        returning empty results, making debugging possible (#301).
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_hierarchical_fallacy,
+        )
+
+        with patch("os.path.isfile", return_value=True), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False
+        ):
+            # Mock the plugin to raise a ValueError (unexpected error)
+            import argumentation_analysis.plugins.fallacy_workflow_plugin as fwp_mod
+            import semantic_kernel.connectors.ai.open_ai as sk_oai
+            import semantic_kernel.kernel as sk_kernel
+            import openai as openai_mod
+
+            orig_plugin = fwp_mod.FallacyWorkflowPlugin
+            orig_oai = sk_oai.OpenAIChatCompletion
+            orig_kernel = sk_kernel.Kernel
+            orig_async_client = openai_mod.AsyncOpenAI
+
+            from unittest.mock import AsyncMock
+            mock_plugin_instance = MagicMock()
+            mock_plugin_instance.run_guided_analysis = AsyncMock(
+                side_effect=ValueError("Unexpected LLM response format"),
+            )
+            fwp_mod.FallacyWorkflowPlugin = MagicMock(return_value=mock_plugin_instance)
+            sk_oai.OpenAIChatCompletion = MagicMock()
+            sk_kernel.Kernel = MagicMock()
+            openai_mod.AsyncOpenAI = MagicMock()
+            try:
+                with pytest.raises(ValueError, match="Unexpected LLM response format"):
+                    await _invoke_hierarchical_fallacy("some text", {})
+            finally:
+                fwp_mod.FallacyWorkflowPlugin = orig_plugin
+                sk_oai.OpenAIChatCompletion = orig_oai
+                sk_kernel.Kernel = orig_kernel
+                openai_mod.AsyncOpenAI = orig_async_client
 
     async def test_invoke_hierarchical_fallacy_success(self):
         """_invoke_hierarchical_fallacy returns parsed result on success.

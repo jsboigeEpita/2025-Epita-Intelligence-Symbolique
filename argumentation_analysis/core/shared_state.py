@@ -1,5 +1,6 @@
 # core/shared_state.py
 import json
+from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 import logging
 
@@ -14,6 +15,18 @@ if not state_logger.handlers and not state_logger.propagate:
     handler.setFormatter(formatter)
     state_logger.addHandler(handler)
     state_logger.setLevel(logging.INFO)
+
+
+@dataclass
+class ArgumentProfile:
+    """Aggregated view of all analysis data for a single argument."""
+    arg_id: str
+    description: str
+    fallacies: List[Dict[str, Any]] = field(default_factory=list)
+    quality_score: Optional[Dict[str, Any]] = None
+    counter_arguments: List[Dict[str, Any]] = field(default_factory=list)
+    jtms_beliefs: List[Dict[str, Any]] = field(default_factory=list)
+    formal_results: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class RhetoricalAnalysisState:
@@ -766,6 +779,145 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         """Store workflow execution results."""
         self.workflow_results[workflow_name] = results
         state_logger.info(f"Workflow results stored for '{workflow_name}'")
+
+    # ---- Cross-referencing query methods (#302) ----
+
+    def get_argument_profile(self, arg_id: str) -> ArgumentProfile:
+        """Build an aggregated ArgumentProfile for a single argument.
+
+        Scans fallacies, quality scores, counter-arguments, JTMS beliefs,
+        and formal analysis results to gather everything related to *arg_id*.
+        """
+        description = self.identified_arguments.get(arg_id, "")
+        profile = ArgumentProfile(arg_id=arg_id, description=description)
+
+        # Fallacies targeting this argument
+        for _fid, fdata in self.identified_fallacies.items():
+            if fdata.get("target_argument_id") == arg_id:
+                profile.fallacies.append(fdata)
+
+        # Quality score (keyed by arg_id)
+        if arg_id in self.argument_quality_scores:
+            profile.quality_score = self.argument_quality_scores[arg_id]
+
+        # Counter-arguments — matched by substring on original_argument text
+        arg_desc = description
+        if arg_desc:
+            match_prefix = arg_desc[:60]
+            for ca in self.counter_arguments:
+                original = ca.get("original_argument", "")
+                if original and (
+                    original == arg_desc
+                    or original[:60] == match_prefix
+                    or match_prefix in original
+                    or original in arg_desc
+                ):
+                    profile.counter_arguments.append(ca)
+
+        # JTMS beliefs referencing this argument (by name containing arg_id or description prefix)
+        for _bid, bdata in self.jtms_beliefs.items():
+            belief_name = bdata.get("name", "")
+            if arg_id in belief_name or (arg_desc and arg_desc[:40] in belief_name):
+                profile.jtms_beliefs.append(bdata)
+
+        # Formal results — NL-to-logic translations whose original_text matches
+        if arg_desc:
+            match_prefix = arg_desc[:60]
+            for tr in self.nl_to_logic_translations:
+                orig = tr.get("original_text", "")
+                if orig and (match_prefix in orig or orig in arg_desc):
+                    profile.formal_results.append(tr)
+
+        return profile
+
+    def get_weak_arguments(self, threshold: float = 5.0) -> List[ArgumentProfile]:
+        """Return ArgumentProfiles for arguments whose quality overall < threshold."""
+        weak = []
+        for arg_id in self.identified_arguments:
+            qs = self.argument_quality_scores.get(arg_id)
+            if qs is not None and qs.get("overall", 10.0) < threshold:
+                weak.append(self.get_argument_profile(arg_id))
+        return weak
+
+    def get_fallacious_arguments(self) -> List[ArgumentProfile]:
+        """Return ArgumentProfiles for arguments targeted by at least one fallacy."""
+        targeted_ids: set = set()
+        for _fid, fdata in self.identified_fallacies.items():
+            tid = fdata.get("target_argument_id")
+            if tid and tid in self.identified_arguments:
+                targeted_ids.add(tid)
+        return [self.get_argument_profile(aid) for aid in sorted(targeted_ids)]
+
+    def get_enrichment_summary(self) -> Dict[str, Any]:
+        """Return a summary of cross-referencing coverage across all arguments."""
+        total = len(self.identified_arguments)
+
+        # Collect sets of arg_ids that have each enrichment
+        with_fallacy: set = set()
+        for _fid, fdata in self.identified_fallacies.items():
+            tid = fdata.get("target_argument_id")
+            if tid and tid in self.identified_arguments:
+                with_fallacy.add(tid)
+
+        with_quality = set(self.argument_quality_scores.keys()) & set(
+            self.identified_arguments.keys()
+        )
+
+        # Counter-arguments use text matching
+        with_counter: set = set()
+        for arg_id, desc in self.identified_arguments.items():
+            if not desc:
+                continue
+            match_prefix = desc[:60]
+            for ca in self.counter_arguments:
+                original = ca.get("original_argument", "")
+                if original and (
+                    original == desc
+                    or original[:60] == match_prefix
+                    or match_prefix in original
+                    or original in desc
+                ):
+                    with_counter.add(arg_id)
+                    break
+
+        # Formal verification (NL-to-logic translations)
+        with_formal: set = set()
+        for arg_id, desc in self.identified_arguments.items():
+            if not desc:
+                continue
+            match_prefix = desc[:60]
+            for tr in self.nl_to_logic_translations:
+                orig = tr.get("original_text", "")
+                if orig and (match_prefix in orig or orig in desc):
+                    with_formal.add(arg_id)
+                    break
+
+        # JTMS beliefs
+        with_jtms: set = set()
+        for arg_id, desc in self.identified_arguments.items():
+            for _bid, bdata in self.jtms_beliefs.items():
+                belief_name = bdata.get("name", "")
+                if arg_id in belief_name or (desc and desc[:40] in belief_name):
+                    with_jtms.add(arg_id)
+                    break
+
+        # Build gaps list
+        gaps: List[str] = []
+        for arg_id in sorted(self.identified_arguments.keys()):
+            if arg_id not in with_quality:
+                gaps.append(f"{arg_id} has no quality score")
+            if arg_id not in with_formal:
+                gaps.append(f"{arg_id} has no formal verification")
+
+        return {
+            "total_arguments": total,
+            "with_fallacy_analysis": len(with_fallacy),
+            "with_quality_score": len(with_quality),
+            "with_counter_argument": len(with_counter),
+            "with_formal_verification": len(with_formal),
+            "with_jtms_belief": len(with_jtms),
+            "gaps": gaps,
+        }
 
     def get_state_snapshot(self, summarize: bool = False) -> Dict[str, Any]:
         """Extended snapshot including all unified dimensions."""
