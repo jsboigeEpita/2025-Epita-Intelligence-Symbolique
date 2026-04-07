@@ -1,12 +1,13 @@
-"""Comparative fallacy detection benchmark (#84 Phase 4).
+"""Comparative fallacy detection benchmark (#84 Phase 4, expanded #303).
 
 Compares three detection modes:
 - Mode A (Free): LLM detects fallacies with zero taxonomy context
 - Mode B (One-shot): LLM receives full taxonomy, picks freely
 - Mode C (Constrained): Hierarchical taxonomy navigation with iterative deepening
 
-Uses synthetic argument texts exhibiting specific taxonomy fallacies.
-Measures: precision (exact PK match), family match, depth reached, justification quality.
+Uses 30 synthetic argument texts covering all 7 taxonomy families at depths 2-6.
+Measures: precision (exact PK match), family match, depth reached, per-family
+precision/recall, justification quality.
 """
 
 import asyncio
@@ -21,11 +22,11 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("fallacy_benchmark")
 
 # ============================================================
-# Benchmark test cases: 10 fallacies across families and depths
+# Benchmark test cases: 30 fallacies across 7 families, depths 2-6
 # ============================================================
 
 BENCHMARK_CASES = [
-    # --- Easy (depth 3-4, common fallacies) ---
+    # ── Family 1: Insuffisance (PK=1, 174 nodes) ──────────────
     {
         "id": "case_01",
         "expected_pk": "4",
@@ -52,7 +53,6 @@ BENCHMARK_CASES = [
             "c'est forcément vrai. Il faut suivre ses conseils."
         ),
     },
-    # --- Medium (depth 4-5, less common) ---
     {
         "id": "case_03",
         "expected_pk": "34",
@@ -68,33 +68,6 @@ BENCHMARK_CASES = [
     },
     {
         "id": "case_04",
-        "expected_pk": "96",
-        "expected_name": "Sophisme naturaliste",
-        "expected_family": "Insuffisance",
-        "expected_depth": 3,
-        "difficulty": "medium",
-        "text": (
-            "L'être humain a toujours mangé de la viande depuis la préhistoire. "
-            "C'est donc naturel et bon pour la santé. Le végétarisme va contre "
-            "notre nature profonde et ne peut être qu'une mode passagère."
-        ),
-    },
-    {
-        "id": "case_05",
-        "expected_pk": "340",
-        "expected_name": "Appel aux conséquences",
-        "expected_family": "Influence",
-        "expected_depth": 3,
-        "difficulty": "medium",
-        "text": (
-            "Si nous autorisons le mariage homosexuel, bientôt les gens voudront "
-            "épouser leurs animaux de compagnie. Il faut penser aux conséquences "
-            "catastrophiques de cette décision sur la société tout entière."
-        ),
-    },
-    # --- Hard (depth 4-5, specialized/obscure) ---
-    {
-        "id": "case_06",
         "expected_pk": "56",
         "expected_name": "Le marteau d'or",
         "expected_family": "Insuffisance",
@@ -107,56 +80,350 @@ BENCHMARK_CASES = [
         ),
     },
     {
-        "id": "case_07",
-        "expected_pk": "134",
-        "expected_name": "Sophisme ludique",
-        "expected_family": "Insuffisance",
-        "expected_depth": 3,
-        "difficulty": "hard",
-        "text": (
-            "Gérer l'économie d'un pays, c'est comme gérer son budget familial. "
-            "Si une famille ne peut pas dépenser plus qu'elle ne gagne, "
-            "un gouvernement ne devrait pas non plus avoir de déficit budgétaire."
-        ),
-    },
-    {
-        "id": "case_08",
+        "id": "case_05",
         "expected_pk": "62",
         "expected_name": "Rationalisation",
         "expected_family": "Insuffisance",
         "expected_depth": 4,
-        "difficulty": "hard",
+        "difficulty": "medium",
         "text": (
             "Si je n'ai pas été retenu pour ce poste, c'est certainement parce que "
             "le recruteur avait déjà son candidat en tête. De toute façon, "
             "l'entreprise n'était pas assez innovante pour moi."
         ),
     },
-    # --- Very Hard (obscure, precise identification needed) ---
+    # ── Family 2: Influence (PK=175) ──────────────────────────
     {
-        "id": "case_09",
-        "expected_pk": "51",
-        "expected_name": "Sophisme du psychologue",
-        "expected_family": "Insuffisance",
-        "expected_depth": 4,
-        "difficulty": "very_hard",
+        "id": "case_06",
+        "expected_pk": "340",
+        "expected_name": "Appel aux conséquences",
+        "expected_family": "Influence",
+        "expected_depth": 3,
+        "difficulty": "easy",
         "text": (
-            "Je trouve cette musique insupportable, donc elle est objectivement "
-            "de mauvaise qualité. Tout le monde devrait reconnaître que ce genre "
-            "musical n'a aucune valeur artistique, c'est une évidence."
+            "Si nous autorisons le mariage homosexuel, bientôt les gens voudront "
+            "épouser leurs animaux de compagnie. Il faut penser aux conséquences "
+            "catastrophiques de cette décision sur la société tout entière."
         ),
     },
     {
-        "id": "case_10",
-        "expected_pk": "61",
-        "expected_name": "Argument par le scénario",
-        "expected_family": "Insuffisance",
+        "id": "case_07",
+        "expected_pk": "313",
+        "expected_name": "Flatterie",
+        "expected_family": "Influence",
         "expected_depth": 4,
+        "difficulty": "medium",
+        "text": (
+            "Vous qui êtes si intelligent et si bien informé, vous comprenez sûrement "
+            "pourquoi notre produit est le meilleur du marché. Une personne de votre "
+            "calibre ne peut qu'apprécier cette offre exceptionnelle."
+        ),
+    },
+    {
+        "id": "case_08",
+        "expected_pk": "433",
+        "expected_name": "Escalade d'engagement",
+        "expected_family": "Influence",
+        "expected_depth": 6,
+        "difficulty": "hard",
+        "text": (
+            "On a déjà investi 50 millions dans ce projet. Si on arrête maintenant, "
+            "tout cet argent sera perdu. Il faut continuer, même si les résultats "
+            "sont mauvais. Abandonner serait admettre notre échec."
+        ),
+    },
+    {
+        "id": "case_09",
+        "expected_pk": "300",
+        "expected_name": "Connivence",
+        "expected_family": "Influence",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "Vous et moi, on sait comment ça fonctionne vraiment, pas vrai ? "
+            "Entre nous, on sait bien que les politiques mentent toujours. "
+            "On n'est pas dupes, contrairement aux autres."
+        ),
+    },
+    # ── Family 3: Erreur mathématique (PK=594) ────────────────
+    {
+        "id": "case_10",
+        "expected_pk": "596",
+        "expected_name": "Échantillon biaisé",
+        "expected_family": "Erreur mathématique",
+        "expected_depth": 3,
+        "difficulty": "easy",
+        "text": (
+            "J'ai interrogé 100 personnes à la sortie du salon de l'automobile : "
+            "95% d'entre eux possèdent une voiture. Donc 95% des Français "
+            "sont propriétaires d'un véhicule. Les chiffres parlent d'eux-mêmes."
+        ),
+    },
+    {
+        "id": "case_11",
+        "expected_pk": "654",
+        "expected_name": "Erreur du parieur",
+        "expected_family": "Erreur mathématique",
+        "expected_depth": 5,
+        "difficulty": "medium",
+        "text": (
+            "Le numéro 7 n'est pas sorti au loto depuis 15 tirages consécutifs. "
+            "Statistiquement, il a beaucoup plus de chances de sortir au prochain "
+            "tirage. C'est la loi des grands nombres, il faut bien que ça arrive."
+        ),
+    },
+    {
+        "id": "case_12",
+        "expected_pk": "668",
+        "expected_name": "Fausse précision",
+        "expected_family": "Erreur mathématique",
+        "expected_depth": 4,
+        "difficulty": "medium",
+        "text": (
+            "Notre étude montre que 73,54% des habitants de cette ville sont "
+            "insatisfaits du transport public. Ce chiffre est très précis donc "
+            "il est forcément fiable. On ne peut pas contredire les statistiques."
+        ),
+    },
+    {
+        "id": "case_13",
+        "expected_pk": "633",
+        "expected_name": "Relation infondée",
+        "expected_family": "Erreur mathématique",
+        "expected_depth": 3,
+        "difficulty": "hard",
+        "text": (
+            "Les ventes de glaces ont augmenté en même temps que les attaques "
+            "de requins. Il y a donc un lien direct entre la consommation "
+            "de glaces et les attaques de requins. Les données le prouvent."
+        ),
+    },
+    # ── Family 4: Erreur de raisonnement (PK=696) ─────────────
+    {
+        "id": "case_14",
+        "expected_pk": "759",
+        "expected_name": "Conclusion hâtive",
+        "expected_family": "Erreur de raisonnement",
+        "expected_depth": 3,
+        "difficulty": "easy",
+        "text": (
+            "J'ai rencontré trois Parisiens et ils étaient tous impolis. "
+            "Tous les Parisiens sont donc impolis. On ne peut pas généraliser "
+            "mais quand même, c'est frappant."
+        ),
+    },
+    {
+        "id": "case_15",
+        "expected_pk": "719",
+        "expected_name": "Effet cigogne",
+        "expected_family": "Erreur de raisonnement",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "Les villes avec le plus de cigognes ont aussi le plus grand taux "
+            "de natalité. Les cigognes apportent donc des bébés, c'est logique. "
+            "Les populations rurales le savent depuis toujours."
+        ),
+    },
+    {
+        "id": "case_16",
+        "expected_pk": "698",
+        "expected_name": "Pétition de principe",
+        "expected_family": "Erreur de raisonnement",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "La Bible est vraie car elle est la parole de Dieu. Et nous savons "
+            "que c'est la parole de Dieu car la Bible le dit. C'est un cercle "
+            "vertueux de preuves qui se renforcent mutuellement."
+        ),
+    },
+    {
+        "id": "case_17",
+        "expected_pk": "730",
+        "expected_name": "Commutation des conditionnelles",
+        "expected_family": "Erreur de raisonnement",
+        "expected_depth": 4,
+        "difficulty": "hard",
+        "text": (
+            "S'il pleut, le sol est mouillé. Or le sol est mouillé, "
+            "donc il pleut forcément. Il n'y a pas d'autre explication "
+            "possible pour un sol mouillé."
+        ),
+    },
+    # ── Family 5: Abus de langage (PK=798) ─────────────────────
+    {
+        "id": "case_18",
+        "expected_pk": "839",
+        "expected_name": "Fausse analogie",
+        "expected_family": "Abus de langage",
+        "expected_depth": 3,
+        "difficulty": "easy",
+        "text": (
+            "Un employé est comme un enfant : il a besoin d'un parent "
+            "qui lui dise quoi faire. Le patron est donc comme un père "
+            "de famille, et l'entreprise est sa maison."
+        ),
+    },
+    {
+        "id": "case_19",
+        "expected_pk": "800",
+        "expected_name": "Acception vague",
+        "expected_family": "Abus de langage",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "La liberté est le plus grand bien. Donc supprimer les limitations "
+            "de vitesse, c'est défendre la liberté. Toute régulation est "
+            "une atteinte à la liberté fondamentale."
+        ),
+    },
+    {
+        "id": "case_20",
+        "expected_pk": "845",
+        "expected_name": "Amalgame",
+        "expected_family": "Abus de langage",
+        "expected_depth": 4,
+        "difficulty": "medium",
+        "text": (
+            "Il est musulman et les terroristes sont musulmans, donc il est "
+            "probablement un terroriste. Les deux vont ensemble, c'est évident. "
+            "Je ne fais que constater les faits."
+        ),
+    },
+    {
+        "id": "case_21",
+        "expected_pk": "847",
+        "expected_name": "Amphibologie",
+        "expected_family": "Abus de langage",
+        "expected_depth": 3,
+        "difficulty": "hard",
+        "text": (
+            "Je l'ai vu avec mes jumelles — enfin, je veux dire, "
+            "j'ai vu une femme avec des jumelles. Enfin, c'est ma sœur "
+            "qui est jumelle, pas la femme que j'ai vue."
+        ),
+    },
+    # ── Family 6: Tricherie (PK=887) ──────────────────────────
+    {
+        "id": "case_22",
+        "expected_pk": "974",
+        "expected_name": "Exigence renforcée",
+        "expected_family": "Tricherie",
+        "expected_depth": 3,
+        "difficulty": "easy",
+        "text": (
+            "OK, vous m'avez prouvé que l'économie se porte bien, mais qu'en est-il "
+            "du chômage des jeunes ? Et de la dette ? Et du pouvoir d'achat ? "
+            "Tant que tout n'est pas parfait, votre argument ne tient pas."
+        ),
+    },
+    {
+        "id": "case_23",
+        "expected_pk": "889",
+        "expected_name": "Mensonge",
+        "expected_family": "Tricherie",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "Je n'ai JAMAIS dit que les impôts allaient augmenter. Mes paroles "
+            "ont été déformées par les médias. Relisez mes déclarations : "
+            "je parlais de contribution volontaire, pas d'impôts."
+        ),
+    },
+    {
+        "id": "case_24",
+        "expected_pk": "983",
+        "expected_name": "Changement de Terrain",
+        "expected_family": "Tricherie",
+        "expected_depth": 5,
+        "difficulty": "hard",
+        "text": (
+            "— L'éducation nationale est en crise.\n"
+            "— Oui mais le vrai problème c'est l'immigration.\n"
+            "— On parlait de l'école.\n"
+            "— L'école ? Les enseignants sont tous en grève à cause de l'immigration."
+        ),
+    },
+    {
+        "id": "case_25",
+        "expected_pk": "936",
+        "expected_name": "Poudre aux yeux",
+        "expected_family": "Tricherie",
+        "expected_depth": 6,
         "difficulty": "very_hard",
         "text": (
-            "Imaginez : vous achetez cette voiture, vous roulez sur une route de "
-            "campagne au coucher du soleil, le vent dans les cheveux, libre et heureux. "
-            "Cette voiture changera votre vie, c'est certain. Tout commence par ce choix."
+            "Notre nouveau framework synergetique multi-paradigmatique optimise "
+            "la convergence des métriques agiles dans un écosystème disruptif. "
+            "En clair, cela veut dire qu'on fait mieux. Les benchmarks parlent d'eux-mêmes."
+        ),
+    },
+    # ── Family 7: Obstruction (PK=1280) ───────────────────────
+    {
+        "id": "case_26",
+        "expected_pk": "1398",
+        "expected_name": "Attaque personnelle",
+        "expected_family": "Obstruction",
+        "expected_depth": 3,
+        "difficulty": "easy",
+        "text": (
+            "Vous ne pouvez pas sérieusement parler de fiscalité : vous avez été "
+            "condamné pour fraude fiscale l'an dernier. Votre opinion sur le sujet "
+            "n'a aucune valeur. Porte-parole du peuple, vraiment ?"
+        ),
+    },
+    {
+        "id": "case_27",
+        "expected_pk": "1313",
+        "expected_name": "Evasion",
+        "expected_family": "Obstruction",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "— Pourquoi avez-vous voté contre la loi climat ?\n"
+            "— Le vrai sujet, c'est que cette question montre à quel point "
+            "nos concitoyens sont préoccupés par l'avenir. C'est remarquable. "
+            "Et moi, je suis à l'écoute de cette préoccupation."
+        ),
+    },
+    {
+        "id": "case_28",
+        "expected_pk": "1362",
+        "expected_name": "Tu quoque",
+        "expected_family": "Obstruction",
+        "expected_depth": 4,
+        "difficulty": "medium",
+        "text": (
+            "Vous me critiquez sur ma consommation de viande, mais vous conduisez "
+            "une voiture qui pollue ! Vous n'êtes pas en position de me donner "
+            "des leçons. Avant de critiquer les autres, commencez par vous-même."
+        ),
+    },
+    {
+        "id": "case_29",
+        "expected_pk": "1352",
+        "expected_name": "Empoisonner le puits",
+        "expected_family": "Obstruction",
+        "expected_depth": 3,
+        "difficulty": "hard",
+        "text": (
+            "Mon adversaire va vous présenter des statistiques, mais n'oubliez pas "
+            "qu'il a été payé par les industriels pour dire ça. Tout ce qu'il va "
+            "affirmer est biaisé et trompeur. Ne croyez rien de ce qu'il dit."
+        ),
+    },
+    # ── Cross-family / depth extremes ─────────────────────────
+    {
+        "id": "case_30",
+        "expected_pk": "96",
+        "expected_name": "Sophisme naturaliste",
+        "expected_family": "Insuffisance",
+        "expected_depth": 3,
+        "difficulty": "medium",
+        "text": (
+            "L'être humain a toujours mangé de la viande depuis la préhistoire. "
+            "C'est donc naturel et bon pour la santé. Le végétarisme va contre "
+            "notre nature profonde et ne peut être qu'une mode passagère."
         ),
     },
 ]
@@ -188,10 +455,13 @@ class BenchmarkReport:
 
     results: List[DetectionResult] = field(default_factory=list)
     mode_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    family_scores: Dict[str, Dict[str, Dict[str, float]]] = field(
+        default_factory=dict
+    )
     summary: str = ""
 
     def compute_scores(self):
-        """Compute aggregate scores per mode."""
+        """Compute aggregate scores per mode and per family."""
         for mode in ("free", "one_shot", "constrained"):
             mode_results = [r for r in self.results if r.mode == mode]
             if not mode_results:
@@ -206,6 +476,30 @@ class BenchmarkReport:
                 "avg_duration": sum(r.duration_seconds for r in mode_results) / n,
                 "error_rate": sum(1 for r in mode_results if r.error) / n,
             }
+
+        # Per-family scores per mode
+        for mode in ("free", "one_shot", "constrained"):
+            mode_results = [r for r in self.results if r.mode == mode]
+            if not mode_results:
+                continue
+            families: Dict[str, list] = {}
+            for r in mode_results:
+                case = next(
+                    (c for c in BENCHMARK_CASES if c["id"] == r.case_id), None
+                )
+                if case:
+                    fam = case["expected_family"]
+                    families.setdefault(fam, []).append(r)
+            self.family_scores[mode] = {}
+            for fam, fam_results in families.items():
+                n = len(fam_results)
+                self.family_scores[mode][fam] = {
+                    "precision": sum(r.exact_pk_match for r in fam_results) / n,
+                    "recall": sum(r.family_match for r in fam_results) / n,
+                    "avg_name_similarity": sum(r.name_similarity for r in fam_results)
+                    / n,
+                    "count": n,
+                }
 
 
 class FallacyBenchmarkRunner:
@@ -532,15 +826,46 @@ class FallacyBenchmarkRunner:
             lines.append(f"  Avg duration:      {scores['avg_duration']:.1f}s")
             lines.append(f"  Error rate:        {scores['error_rate']:.1%}")
             lines.append("")
+        # Per-family breakdown
+        lines.append("## Per-Family Breakdown\n")
+        all_families = sorted(
+            set(c["expected_family"] for c in BENCHMARK_CASES)
+        )
+        lines.append(f"{'Family':<25} {'Mode':<14} {'Prec':>6} {'Recall':>7} {'NameSim':>8} {'N':>3}")
+        lines.append("-" * 70)
+        for fam in all_families:
+            for mode in ("free", "one_shot", "constrained"):
+                fs = report.family_scores.get(mode, {}).get(fam)
+                if fs:
+                    lines.append(
+                        f"{fam:<25} {mode:<14} "
+                        f"{fs['precision']:>5.0%} "
+                        f"{fs['recall']:>6.0%} "
+                        f"{fs['avg_name_similarity']:>7.2f} "
+                        f"{fs['count']:>3}"
+                    )
+            lines.append("")
         report.summary = "\n".join(lines)
 
         return report
 
     def save_report(self, report: BenchmarkReport, path: str):
-        """Save benchmark report to JSON."""
+        """Save benchmark report to JSON (calibration_report.json)."""
+        # Gather per-family coverage
+        family_coverage = {}
+        for c in BENCHMARK_CASES:
+            fam = c["expected_family"]
+            family_coverage.setdefault(fam, {"cases": 0, "depths": set()})
+            family_coverage[fam]["cases"] += 1
+            family_coverage[fam]["depths"].add(c["expected_depth"])
+        for fam in family_coverage:
+            family_coverage[fam]["depths"] = sorted(family_coverage[fam]["depths"])
+
         data = {
             "results": [asdict(r) for r in report.results],
             "mode_scores": report.mode_scores,
+            "family_scores": report.family_scores,
+            "family_coverage": family_coverage,
             "summary": report.summary,
             "case_count": len(BENCHMARK_CASES),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
