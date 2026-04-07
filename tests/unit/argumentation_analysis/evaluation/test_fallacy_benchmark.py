@@ -34,8 +34,8 @@ class TestBenchmarkCases:
     """Test benchmark cases structure and validation."""
 
     def test_benchmark_cases_count(self):
-        """Test that there are exactly 10 benchmark cases."""
-        assert len(BENCHMARK_CASES) == 10
+        """Test that there are exactly 30 benchmark cases."""
+        assert len(BENCHMARK_CASES) == 30
 
     def test_benchmark_cases_structure(self):
         """Test that each case has required fields."""
@@ -53,8 +53,8 @@ class TestBenchmarkCases:
                 assert field in case
 
     def test_benchmark_case_ids(self):
-        """Test that case IDs follow the pattern case_01 to case_10."""
-        expected_ids = [f"case_{i:02d}" for i in range(1, 11)]
+        """Test that case IDs follow the pattern case_01 to case_30."""
+        expected_ids = [f"case_{i:02d}" for i in range(1, 31)]
         actual_ids = [case["id"] for case in BENCHMARK_CASES]
         assert actual_ids == expected_ids
 
@@ -67,19 +67,32 @@ class TestBenchmarkCases:
         assert "very_hard" in difficulties
 
     def test_expected_families(self):
-        """Test that all cases belong to expected families."""
+        """Test that all cases belong to the 7 taxonomy families."""
+        valid_families = {
+            "Insuffisance",
+            "Influence",
+            "Erreur mathématique",
+            "Erreur de raisonnement",
+            "Abus de langage",
+            "Tricherie",
+            "Obstruction",
+        }
         for case in BENCHMARK_CASES:
-            assert case["expected_family"] in [
-                "Insuffisance",
-                "Influence",
-                "Ambiguité",
-                "Déduction",
-            ]
+            assert case["expected_family"] in valid_families
+
+    def test_all_families_covered(self):
+        """Test that all 7 taxonomy families have at least 3 cases."""
+        from collections import Counter
+
+        families = Counter(c["expected_family"] for c in BENCHMARK_CASES)
+        assert len(families) == 7
+        for fam, count in families.items():
+            assert count >= 3, f"{fam} has only {count} cases (need >= 3)"
 
     def test_expected_depths(self):
-        """Test that expected depths are in valid range."""
+        """Test that expected depths are in valid range (3-6)."""
         for case in BENCHMARK_CASES:
-            assert 3 <= case["expected_depth"] <= 5
+            assert 3 <= case["expected_depth"] <= 6
 
     def test_case_texts_not_empty(self):
         """Test that all case texts are non-empty."""
@@ -264,6 +277,33 @@ class TestBenchmarkReport:
         for mode in ["free", "one_shot", "constrained"]:
             assert mode in report.mode_scores
             assert report.mode_scores[mode]["exact_pk_accuracy"] == pytest.approx(1 / 3)
+
+    def test_compute_family_scores(self):
+        """Test per-family precision/recall computation."""
+        report = BenchmarkReport()
+        # case_01 = Insuffisance, case_10 = Erreur mathématique
+        for case in [BENCHMARK_CASES[0], BENCHMARK_CASES[9]]:
+            report.results.append(
+                DetectionResult(
+                    case_id=case["id"],
+                    mode="free",
+                    exact_pk_match=True,
+                    family_match=True,
+                    name_similarity=1.0,
+                    depth_reached=case["expected_depth"],
+                    confidence=0.9,
+                    duration_seconds=1.0,
+                    error="",
+                )
+            )
+
+        report.compute_scores()
+
+        assert "free" in report.family_scores
+        assert "Insuffisance" in report.family_scores["free"]
+        assert "Erreur mathématique" in report.family_scores["free"]
+        assert report.family_scores["free"]["Insuffisance"]["precision"] == 1.0
+        assert report.family_scores["free"]["Insuffisance"]["count"] == 1
 
 
 @pytest.mark.unit
@@ -852,7 +892,7 @@ class TestBenchmarkExecution:
             # Use default cases and modes
             report = await runner.run_benchmark(concurrency=1)
 
-            # Should run all 10 cases x 3 modes = 30 results (but mocked, so simplified)
+            # Should run all 30 cases x 3 modes = 90 results
             assert len(report.results) == len(BENCHMARK_CASES) * 3
             assert len(report.mode_scores) == 3
 
@@ -896,7 +936,7 @@ class TestReportGeneration:
         with open(output_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        assert data["case_count"] == 10
+        assert data["case_count"] == 30
         assert len(data["results"]) == 1
         assert data["mode_scores"]["free"]["exact_pk_accuracy"] == 1.0
         assert "timestamp" in data
