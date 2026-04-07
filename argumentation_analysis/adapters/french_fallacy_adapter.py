@@ -895,6 +895,147 @@ class CamemBERTFallacyDetector:
         }
 
 
+# ── Tier 1.5: Self-Hosted LLM Fallacy Detection (#297) ───────────────────
+
+
+class SelfHostedLLMFallacyDetector:
+    """Fallacy detection via self-hosted LLM with function calling.
+
+    Uses an OpenAI-compatible endpoint (text-generation-webui / vLLM)
+    to perform structured fallacy classification. Replaces CamemBERT
+    (Tier 2.5, dead) and NLI (Tier 2, DLL crash on Windows).
+
+    Requires: SELF_HOSTED_LLM_ENDPOINT, SELF_HOSTED_LLM_API_KEY,
+              SELF_HOSTED_LLM_MODEL env vars.
+    """
+
+    def __init__(
+        self,
+        endpoint: Optional[str] = None,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: float = 60.0,
+    ):
+        import os
+
+        self._endpoint = endpoint or os.environ.get("SELF_HOSTED_LLM_ENDPOINT", "")
+        self._api_key = api_key or os.environ.get("SELF_HOSTED_LLM_API_KEY", "not-needed")
+        self._model = model or os.environ.get("SELF_HOSTED_LLM_MODEL", "")
+        self._timeout = timeout
+        self._available = None
+
+    def is_available(self) -> bool:
+        if self._available is None:
+            self._available = bool(self._endpoint and self._model)
+        return self._available
+
+    async def detect_async(self, text: str) -> List[FallacyDetection]:
+        """Detect fallacies via self-hosted LLM with structured output."""
+        if not self.is_available():
+            return []
+
+        import json
+        import httpx
+
+        prompt = (
+            "Tu es un expert en logique et argumentation. "
+            "Analyse le texte suivant et identifie les sophismes.\n\n"
+            "Pour chaque sophisme détecté, donne le type exact parmi:\n"
+            + "\n".join(f"- {label}" for label in FALLACY_LABELS_FR[:15])
+            + "\n\nRéponds UNIQUEMENT en JSON:\n"
+            '{"fallacies": [{"type": "...", "confidence": 0.XX, "explanation": "..."}]}\n'
+            'Si aucun sophisme: {"fallacies": []}\n\n'
+            f"Texte à analyser:\n{text}"
+        )
+
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": "Tu es un expert en logique et argumentation. Réponds en JSON uniquement."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.1,
+            "max_tokens": 2048,
+        }
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(
+                    f"{self._endpoint}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            content = data["choices"][0]["message"]["content"]
+
+            # Extract JSON from response (handle markdown code blocks)
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0]
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0]
+
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            if start < 0 or end <= start:
+                return []
+
+            parsed = json.loads(content[start:end])
+            fallacies = parsed.get("fallacies", [])
+
+            detections = []
+            for f in fallacies:
+                if not isinstance(f, dict):
+                    continue
+                ftype = f.get("type", "")
+                conf = float(f.get("confidence", 0.5))
+                explanation = f.get("explanation", "")
+                taxonomy_pk = _TAXONOMY_LABEL_TO_PK.get(ftype)
+                detections.append(
+                    FallacyDetection(
+                        fallacy_type=ftype,
+                        confidence=conf,
+                        source="self_hosted_llm",
+                        description=explanation,
+                        taxonomy_pk=taxonomy_pk,
+                    )
+                )
+            return detections
+
+        except Exception as e:
+            logger.warning("Self-hosted LLM fallacy detection failed: %s", e)
+            return []
+
+    def detect(self, text: str) -> List[FallacyDetection]:
+        """Synchronous wrapper for detect_async."""
+        if not self.is_available():
+            return []
+        try:
+            import asyncio
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, self.detect_async(text))
+                    return future.result(timeout=self._timeout)
+            else:
+                return asyncio.run(self.detect_async(text))
+        except Exception as e:
+            logger.warning("Self-hosted LLM sync detect failed: %s", e)
+            return []
+
+
 # ── Tier 1: LLM Zero-Shot Detection ─────────────────────────────────────
 
 
@@ -1056,20 +1197,18 @@ class LLMFallacyDetector:
 
 
 class FrenchFallacyAdapter(AbstractFallacyDetector):
-    """3-tier French fallacy detection adapter.
+    """Multi-tier French fallacy detection adapter.
 
-    Combines symbolic rules, NLI zero-shot, and LLM zero-shot with
-    automatic fallback. Results are merged using an ensemble strategy
-    where symbolic matches (confidence=1.0) override neural/LLM scores.
+    Combines symbolic rules, self-hosted LLM, and remote LLM with
+    automatic fallback. Deprecated tiers (CamemBERT, NLI) are kept for
+    backwards compat but shadowed when self-hosted LLM is enabled.
 
     Tier hierarchy (fastest → most capable):
       Tier 3:   Symbolic (spaCy Matcher, always available)
-      Tier 2:   NLI zero-shot (mDeBERTa, 28-class, optional ~600MB model)
-      Tier 1:   LLM zero-shot (via OpenAI-compatible API — primary detector)
-
-    Note: CamemBERT Tier 2.5 was deprecated in #297 (model never deployed).
-    The LLM tier now uses the standard OpenAI-compatible API, which can
-    point to OpenAI, self-hosted vLLM, or any compatible endpoint.
+      Tier 2:   NLI zero-shot (deprecated, shadowed by self-hosted LLM)
+      Tier 1.5: Self-hosted LLM (vLLM/text-generation-webui, #297)
+      Tier 1:   Remote LLM (OpenAI via ServiceDiscovery)
+      Tier 0.5: CamemBERT fine-tuned (deprecated, model never deployed)
 
     Register with CapabilityRegistry:
         registry.register_service(
@@ -1086,26 +1225,41 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         enable_camembert: bool = False,  # Deprecated (#297): model never deployed
         enable_nli: bool = True,
         enable_llm: bool = True,
+        enable_self_hosted_llm: bool = True,
         camembert_model_path: Optional[str] = None,
         camembert_threshold: float = 0.3,
         nli_model: Optional[str] = None,
         nli_threshold: float = 0.5,
+        self_hosted_endpoint: Optional[str] = None,
+        self_hosted_api_key: Optional[str] = None,
+        self_hosted_model: Optional[str] = None,
         service_discovery=None,
         llm_confidence_threshold: float = 0.4,
         nli_hierarchical: bool = False,
     ):
         self._symbolic = SymbolicFallacyDetector() if enable_symbolic else None
+        # Self-hosted LLM replaces CamemBERT + NLI (#297)
+        self._self_hosted_llm = (
+            SelfHostedLLMFallacyDetector(
+                endpoint=self_hosted_endpoint,
+                api_key=self_hosted_api_key,
+                model=self_hosted_model,
+            )
+            if enable_self_hosted_llm
+            else None
+        )
+        # Deprecated tiers — kept for backwards compat but not enabled by default
         self._camembert = (
             CamemBERTFallacyDetector(
                 model_path=camembert_model_path,
                 threshold=camembert_threshold,
             )
-            if enable_camembert
+            if enable_camembert and not enable_self_hosted_llm
             else None
         )
         self._nli = (
             NLIFallacyDetector(model_name=nli_model, threshold=nli_threshold)
-            if enable_nli
+            if enable_nli and not enable_self_hosted_llm
             else None
         )
         self._llm = (
@@ -1122,7 +1276,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         """At least one tier must be available."""
         return any(
             t is not None and t.is_available()
-            for t in [self._symbolic, self._camembert, self._nli, self._llm]
+            for t in [self._symbolic, self._self_hosted_llm, self._camembert, self._nli, self._llm]
         )
 
     def get_available_tiers(self) -> List[str]:
@@ -1130,6 +1284,8 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         tiers = []
         if self._symbolic and self._symbolic.is_available():
             tiers.append("symbolic")
+        if self._self_hosted_llm and self._self_hosted_llm.is_available():
+            tiers.append("self_hosted_llm")
         if self._camembert and self._camembert.is_available():
             tiers.append("camembert")
         if self._nli and self._nli.is_available():
@@ -1154,21 +1310,28 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         # Collect detections from all tiers
         all_detections: List[FallacyDetection] = []
 
-        # Tier 3: Symbolic (fastest, always tried first)
+        # Tier 2: Symbolic (fastest, always tried first)
         if self._symbolic and self._symbolic.is_available():
             symbolic_results = self._symbolic.detect(text)
             all_detections.extend(symbolic_results)
             if symbolic_results:
                 result.tiers_used.append("symbolic")
 
-        # Tier 2.5: CamemBERT fine-tuned (#169)
+        # Tier 1: Self-hosted LLM (#297)
+        if self._self_hosted_llm and self._self_hosted_llm.is_available():
+            self_hosted_results = self._self_hosted_llm.detect(text)
+            all_detections.extend(self_hosted_results)
+            if self_hosted_results:
+                result.tiers_used.append("self_hosted_llm")
+
+        # Tier 1.5: CamemBERT fine-tuned (#169, deprecated)
         if self._camembert and self._camembert.is_available():
             camembert_results = self._camembert.detect(text)
             all_detections.extend(camembert_results)
             if camembert_results:
                 result.tiers_used.append("camembert")
 
-        # Tier 2: NLI zero-shot (flat or hierarchical)
+        # Tier 2: NLI zero-shot (deprecated, shadowed by self-hosted LLM)
         if self._nli and self._nli.is_available():
             nli_results = self._nli.detect(
                 text, hierarchical=self._nli_hierarchical
@@ -1182,7 +1345,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
                 )
                 result.tiers_used.append(tier_name)
 
-        # Tier 1: LLM zero-shot
+        # Tier 0: Remote LLM zero-shot
         if self._llm and self._llm.is_available():
             llm_results = self._llm.detect(text)
             all_detections.extend(llm_results)

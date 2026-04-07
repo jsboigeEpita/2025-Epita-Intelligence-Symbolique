@@ -1,482 +1,351 @@
-"""
-Conversational vs Sequential baseline benchmarks (Issue #308, Epic #300 T2).
+"""Conversational vs Sequential benchmark (#308).
 
-Compares three orchestration modes on fixed benchmark texts:
-  - pipeline/standard
-  - pipeline/full
-  - conversational
+Compares 3 orchestration modes on benchmark texts:
+- standard: sequential pipeline (WorkflowExecutor)
+- full: extended sequential pipeline
+- conversational: multi-agent dialogue (AgentGroupChat)
 
-Metrics collected per run:
-  - state field fill rate (non-empty / total)
-  - fallacy count and precision
-  - quality score mean and variance
-  - cross-reference density (argument_profile enrichment coverage)
-  - wall-clock time
-  - PM designation rate (conversational only)
-  - phase completion rate (pipeline only)
-  - total messages / turns (conversational only)
-
-Usage:
-    conda run -n projet-is-roo-new --no-capture-output python -m \
-        argumentation_analysis.evaluation.conversational_benchmark
-
-    # Or via pytest for regression integration:
-    pytest tests/test_regression_golden.py -v -k "golden"
+Measures per run:
+- state_field_fill_rate: fraction of 32 possible state fields with data
+- fallacy_count: number of fallacies detected
+- quality_scores_count: number of arguments with quality evaluation
+- argument_count: number of extracted arguments
+- counter_argument_count: number of counter-arguments generated
+- jtms_belief_count: JTMS belief network size
+- cross_ref_density: enrichment coverage from get_enrichment_summary()
+- wall_clock_seconds: total execution time
+- total_messages: (conversational only) number of agent messages
 """
 
-import json
-import time
-import logging
-import os
 import asyncio
-from dataclasses import dataclass, field, asdict
-from typing import Dict, Any, List, Optional
-from pathlib import Path
-from datetime import datetime, timezone
+import json
+import logging
+import time
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("conversational_benchmark")
 
-# ============================================================
-# Benchmark texts
-# ============================================================
+
+# ── Benchmark texts ──────────────────────────────────────────────────────
 
 BENCHMARK_TEXTS = {
-    "vaccins": (
-        "Les vaccins sont indispensables pour la sante publique. "
-        "Les etudes scientifiques montrent que la vaccination a eradique la variole "
-        "et reduit considerablement la polio. Ceux qui affirment que les vaccins "
-        "sont dangereux ignorent les decades de recherche clinique. "
-        "L'argument selon lequel les produits pharmaceutiques cachent les effets "
-        "secondaires est une theorie du complot sans fondement. "
-        "Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas "
-        "etre vaccines grace a l'immunite collective."
+    "kremlin_reform": (
+        "Le Premier ministre a déclaré que la réforme des retraites est nécessaire "
+        "car tous les pays européens l'ont déjà faite. C'est un argument d'autorité "
+        "qui ne tient pas compte des différences structurelles entre les systèmes. "
+        "De plus, affirmer que « si nous n'agissons pas maintenant, le système "
+        "s'effondrera dans cinq ans » est un appel à la peur classique. "
+        "Les syndicats rétorquent que le gouvernement utilise un sophisme naturaliste "
+        "en prétendant que travailler plus longtemps est « dans l'ordre des choses ». "
+        "Par ailleurs, le ministre des finances a présenté des chiffres montrant "
+        "que le déficit atteindra 2.3% du PIB d'ici 2030, mais cette projection "
+        "repose sur des hypothèses de croissance optimistes de 1.8% par an."
     ),
-    "peine_de_mort": (
-        "La peine de mort est une sanction necessaire dans certains cas extremes. "
-        "Elle sert de dissuasion contre les crimes les plus graves comme le meurtre "
-        "de masse. Les opposants argumentent que le systeme judiciaire peut se tromper, "
-        "mais les avancees en ADN reduisent considerablement ce risque. "
-        "De plus, certains criminels sont irrecuperables et representent un danger "
-        "permanent pour la societe. Cependant, il faut reconnaitre que la peine de mort "
-        "est irreversible, ce qui rend toute erreur fatale. "
-        "Le cout des appels et procedures est souvent superieur a l'emprisonnement a vie."
+    "climate_debate": (
+        "Les climatosceptiques affirment que le réchauffement climatique est un cycle "
+        "naturel, invoquant le Moyen Âge chaud comme preuve. C'est un sophisme "
+        "d'échantillon biaisé : une période locale ne représente pas le climat global. "
+        "Ils ajoutent que « les scientifiques ne sont pas d'accord entre eux », "
+        "ce qui est un appel à la controverse fabriqué — 97% des climatologues "
+        "confirment l'origine anthropique. L'argument « la technologie résoudra tout » "
+        "est une pétition de principe qui suppose ce qu'elle devrait démontrer. "
+        "Enfin, accuser les écologistes d'être « anti-progrès » constitue un "
+        "homme de paille : personne ne propose de revenir à l'âge de pierre."
     ),
-    "climat": (
-        "Le changement climatique est une realite scientifique incontestable. "
-        "Les mesures de temperature globale montrent une augmentation de 1.1 degres "
-        "depuis l'ere preindustrielle. Les sceptiques affirment que le climat a toujours "
-        "change, mais ils omettent la vitesse sans precedent du changement actuel. "
-        "Les modeles predictifs sont unanimes sur l'impact des activites humaines. "
-        "Ceux qui minimisent la crise climatique utilisent souvent des donnees "
-        "selectives pour soutenir leur position. "
-        "La transition energetique est non seulement necessaire mais aussi "
-        "economiquement avantageuse a long terme."
+    "education_policy": (
+        "Le ministre de l'éducation prétend que les résultats PISA prouvent "
+        "l'efficacité de sa réforme, alors que les scores n'ont augmenté que "
+        "de 2 points sur 3 ans — une fausse précision statistique. Son opposant "
+        "rétorque avec un tu quoque : « vous avez fait pire quand vous étiez "
+        "au pouvoir ». Le syndicat enseignant dénonce un faux dilemme : "
+        "« soit on augmente les heures de cours, soit le niveau baisse » ignore "
+        "d'autres leviers comme la formation des enseignants. La presse commet "
+        "un amalgame en comparant le système français au système finlandais "
+        "sans tenir compte des différences culturelles et socio-économiques."
     ),
 }
 
-MODES = ["standard", "full", "conversational"]
+# All 32 possible state fields for fill rate computation
+ALL_STATE_FIELDS = [
+    "identified_arguments",
+    "identified_fallacies",
+    "belief_sets",
+    "query_log",
+    "answers",
+    "extracts",
+    "counter_arguments",
+    "argument_quality_scores",
+    "jtms_beliefs",
+    "dung_frameworks",
+    "governance_decisions",
+    "debate_transcripts",
+    "transcription_segments",
+    "semantic_index_refs",
+    "neural_fallacy_scores",
+    "ranking_results",
+    "aspic_results",
+    "belief_revision_results",
+    "dialogue_results",
+    "probabilistic_results",
+    "bipolar_results",
+    "fol_analysis_results",
+    "propositional_analysis_results",
+    "modal_analysis_results",
+    "formal_synthesis_reports",
+    "nl_to_logic_translations",
+    "workflow_results",
+    "analysis_tasks",
+    "final_conclusion",
+    "raw_text",
+]
+
+COUNTABLE_FIELDS = [
+    "identified_arguments",
+    "identified_fallacies",
+    "counter_arguments",
+    "argument_quality_scores",
+    "jtms_beliefs",
+    "governance_decisions",
+    "debate_transcripts",
+    "fol_analysis_results",
+    "propositional_analysis_results",
+    "nl_to_logic_translations",
+    "neural_fallacy_scores",
+]
 
 
-# ============================================================
-# Data classes
-# ============================================================
+# ── Data classes ─────────────────────────────────────────────────────────
 
 
 @dataclass
-class BenchmarkRun:
-    """Results from a single benchmark run."""
-    text_name: str
+class RunMetrics:
+    """Metrics from a single benchmark run."""
+
+    text_id: str
     mode: str
-    duration_seconds: float
-    # State field fill rate
-    non_empty_fields: int
-    total_fields: int
-    fill_rate: float = 0.0
-    # Counts
-    arguments_count: int = 0
-    fallacies_count: int = 0
+    wall_clock_seconds: float = 0.0
+    argument_count: int = 0
+    fallacy_count: int = 0
     quality_scores_count: int = 0
-    counter_arguments_count: int = 0
-    jtms_beliefs_count: int = 0
-    dung_frameworks_count: int = 0
-    governance_decisions_count: int = 0
-    debate_transcripts_count: int = 0
-    fol_results_count: int = 0
-    # Quality metrics
-    quality_score_mean: float = 0.0
-    quality_score_variance: float = 0.0
-    # Cross-reference density
-    enrichment_coverage: float = 0.0
-    enrichment_gaps: int = 0
-    # Pipeline-specific
-    phases_completed: int = 0
-    phases_total: int = 0
-    phase_completion_rate: float = 0.0
-    # Conversational-specific
-    total_messages: int = 0
-    pm_designations: int = 0
-    # Error tracking
-    error: Optional[str] = None
-    timestamp: str = ""
+    counter_argument_count: int = 0
+    jtms_belief_count: int = 0
+    debate_transcript_count: int = 0
+    governance_decision_count: int = 0
+    fol_count: int = 0
+    pl_count: int = 0
+    nl_to_logic_count: int = 0
+    neural_fallacy_count: int = 0
+    state_field_fill_rate: float = 0.0
+    cross_ref_density: float = 0.0
+    total_messages: int = 0  # conversational only
+    completed_phases: int = 0
+    failed_phases: int = 0
+    skipped_phases: int = 0
+    error: str = ""
 
 
 @dataclass
-class BenchmarkComparison:
-    """Aggregated comparison across modes for a single text."""
-    text_name: str
-    runs: Dict[str, BenchmarkRun] = field(default_factory=dict)
+class BenchmarkReport:
+    """Aggregated benchmark results."""
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "text_name": self.text_name,
-            "runs": {mode: asdict(run) for mode, run in self.runs.items()},
-        }
+    runs: List[RunMetrics] = field(default_factory=list)
+    mode_averages: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    summary: str = ""
 
-
-# ============================================================
-# Metric computation
-# ============================================================
-
-
-def _count_non_empty(state_dict: Dict[str, Any]) -> tuple:
-    """Count non-empty fields in a state snapshot dict."""
-    non_empty = 0
-    total = 0
-    for v in state_dict.values():
-        total += 1
-        if v and v not in ([], {}, "", None, 0):
-            non_empty += 1
-    return non_empty, total
-
-
-def _compute_quality_stats(quality_scores: Dict[str, Dict[str, Any]]) -> tuple:
-    """Compute mean and variance of quality overall scores."""
-    if not quality_scores:
-        return 0.0, 0.0
-    scores = [v.get("overall", 0.0) for v in quality_scores.values() if isinstance(v, dict)]
-    if not scores:
-        return 0.0, 0.0
-    mean = sum(scores) / len(scores)
-    if len(scores) < 2:
-        return mean, 0.0
-    variance = sum((s - mean) ** 2 for s in scores) / len(scores)
-    return round(mean, 3), round(variance, 3)
+    def compute_averages(self):
+        """Compute per-mode average metrics."""
+        for mode in ("standard", "full", "conversational"):
+            mode_runs = [r for r in self.runs if r.mode == mode and not r.error]
+            if not mode_runs:
+                continue
+            n = len(mode_runs)
+            self.mode_averages[mode] = {
+                "avg_wall_clock": sum(r.wall_clock_seconds for r in mode_runs) / n,
+                "avg_arguments": sum(r.argument_count for r in mode_runs) / n,
+                "avg_fallacies": sum(r.fallacy_count for r in mode_runs) / n,
+                "avg_quality_scores": sum(r.quality_scores_count for r in mode_runs) / n,
+                "avg_counter_args": sum(r.counter_argument_count for r in mode_runs) / n,
+                "avg_jtms_beliefs": sum(r.jtms_belief_count for r in mode_runs) / n,
+                "avg_field_fill_rate": sum(r.state_field_fill_rate for r in mode_runs) / n,
+                "avg_cross_ref": sum(r.cross_ref_density for r in mode_runs) / n,
+                "avg_messages": sum(r.total_messages for r in mode_runs) / n,
+                "run_count": n,
+                "error_rate": sum(1 for r in self.runs if r.mode == mode and r.error) / len([r for r in self.runs if r.mode == mode]),
+            }
 
 
-def _compute_enrichment_metrics(state) -> tuple:
-    """Compute enrichment coverage and gap count from state."""
-    try:
-        summary = state.get_enrichment_summary()
-        total = summary.get("total_arguments", 0)
-        if total == 0:
-            return 0.0, 0
-        enriched = (
-            summary.get("with_fallacy_analysis", 0)
-            + summary.get("with_quality_score", 0)
-            + summary.get("with_counter_argument", 0)
-            + summary.get("with_formal_verification", 0)
-            + summary.get("with_jtms_belief", 0)
-        )
-        max_possible = total * 5  # 5 enrichment dimensions
-        coverage = enriched / max_possible if max_possible > 0 else 0.0
-        gaps = len(summary.get("gaps", []))
-        return round(coverage, 3), gaps
-    except Exception:
-        return 0.0, 0
+def extract_metrics(
+    text_id: str,
+    mode: str,
+    result: Dict[str, Any],
+    duration: float,
+) -> RunMetrics:
+    """Extract RunMetrics from a pipeline result dict."""
+    metrics = RunMetrics(text_id=text_id, mode=mode, wall_clock_seconds=duration)
 
+    # Get state from result
+    state = result.get("unified_state")
+    if state is None:
+        metrics.error = "No unified_state in result"
+        return metrics
 
-# ============================================================
-# Runners
-# ============================================================
+    # Count fields
+    metrics.argument_count = len(getattr(state, "identified_arguments", {}))
+    metrics.fallacy_count = len(getattr(state, "identified_fallacies", {}))
+    metrics.quality_scores_count = len(getattr(state, "argument_quality_scores", {}))
+    metrics.counter_argument_count = len(getattr(state, "counter_arguments", []))
+    metrics.jtms_belief_count = len(getattr(state, "jtms_beliefs", {}))
+    metrics.debate_transcript_count = len(getattr(state, "debate_transcripts", []))
+    metrics.governance_decision_count = len(getattr(state, "governance_decisions", []))
+    metrics.fol_count = len(getattr(state, "fol_analysis_results", []))
+    metrics.pl_count = len(getattr(state, "propositional_analysis_results", []))
+    metrics.nl_to_logic_count = len(getattr(state, "nl_to_logic_translations", []))
+    metrics.neural_fallacy_count = len(getattr(state, "neural_fallacy_scores", []))
 
-
-async def run_pipeline_benchmark(
-    text: str, text_name: str, workflow: str,
-) -> BenchmarkRun:
-    """Run pipeline mode benchmark."""
-    from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
-
-    run = BenchmarkRun(
-        text_name=text_name,
-        mode=workflow,
-        duration_seconds=0.0,
-        non_empty_fields=0,
-        total_fields=0,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-    )
-
-    try:
-        start = time.time()
-        result = await run_unified_analysis(text=text, workflow_name=workflow)
-        run.duration_seconds = round(time.time() - start, 1)
-
-        state = result.get("unified_state")
-        snapshot = result.get("state_snapshot", {})
-
-        # Fill rate
-        non_empty, total = _count_non_empty(snapshot)
-        run.non_empty_fields = non_empty
-        run.total_fields = total
-        run.fill_rate = round(non_empty / total, 3) if total > 0 else 0.0
-
-        # Counts
-        if state:
-            run.arguments_count = len(state.identified_arguments)
-            run.fallacies_count = len(state.identified_fallacies)
-            run.quality_scores_count = len(state.argument_quality_scores)
-            run.counter_arguments_count = len(state.counter_arguments)
-            run.jtms_beliefs_count = len(state.jtms_beliefs)
-            run.dung_frameworks_count = len(state.dung_frameworks)
-            run.governance_decisions_count = len(state.governance_decisions)
-            run.debate_transcripts_count = len(state.debate_transcripts)
-            run.fol_results_count = len(state.fol_analysis_results)
-
-            # Quality stats
-            run.quality_score_mean, run.quality_score_variance = _compute_quality_stats(
-                state.argument_quality_scores
-            )
-
-            # Enrichment metrics
-            run.enrichment_coverage, run.enrichment_gaps = _compute_enrichment_metrics(state)
-
-        # Phase metrics
-        summary = result.get("summary", {})
-        run.phases_completed = summary.get("completed", 0)
-        run.phases_total = summary.get("total", 0)
-        run.phase_completion_rate = (
-            round(run.phases_completed / run.phases_total, 3)
-            if run.phases_total > 0 else 0.0
-        )
-
-    except Exception as e:
-        run.error = str(e)
-        logger.error(f"  FAILED {text_name}/{workflow}: {e}")
-
-    return run
-
-
-async def run_conversational_benchmark(
-    text: str, text_name: str,
-) -> BenchmarkRun:
-    """Run conversational mode benchmark."""
-    from argumentation_analysis.orchestration.conversational_orchestrator import (
-        run_conversational_analysis,
-    )
-
-    run = BenchmarkRun(
-        text_name=text_name,
-        mode="conversational",
-        duration_seconds=0.0,
-        non_empty_fields=0,
-        total_fields=0,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-    )
-
-    try:
-        start = time.time()
-        result = await run_conversational_analysis(text=text, max_turns_per_phase=5)
-        run.duration_seconds = round(time.time() - start, 1)
-
-        # Conversational-specific metrics
-        run.total_messages = result.get("total_messages", 0)
-
-        # State extraction
-        state = result.get("unified_state")
-        snapshot = {}
-        if state:
-            snapshot = state.get_state_snapshot(summarize=True)
-        elif "state_snapshot" in result:
-            snapshot = result["state_snapshot"]
-
-        non_empty, total = _count_non_empty(snapshot)
-        run.non_empty_fields = result.get("state_non_empty_fields", non_empty)
-        run.total_fields = total
-        run.fill_rate = round(run.non_empty_fields / total, 3) if total > 0 else 0.0
-
-        if state:
-            run.arguments_count = len(state.identified_arguments)
-            run.fallacies_count = len(state.identified_fallacies)
-            run.quality_scores_count = len(state.argument_quality_scores)
-            run.counter_arguments_count = len(state.counter_arguments)
-            run.jtms_beliefs_count = len(state.jtms_beliefs)
-            run.fol_results_count = len(state.fol_analysis_results)
-
-            run.quality_score_mean, run.quality_score_variance = _compute_quality_stats(
-                state.argument_quality_scores
-            )
-            run.enrichment_coverage, run.enrichment_gaps = _compute_enrichment_metrics(state)
-
-            # PM designation rate
-            conv_log = result.get("conversation_log", [])
-            pm_count = sum(
-                1 for msg in conv_log
-                if isinstance(msg, dict) and "ProjectManager" in str(msg.get("agent_name", ""))
-            )
-            run.pm_designations = pm_count
-
-    except Exception as e:
-        run.error = str(e)
-        logger.error(f"  FAILED {text_name}/conversational: {e}")
-
-    return run
-
-
-# ============================================================
-# Main runner
-# ============================================================
-
-
-async def run_full_benchmark(
-    text_names: Optional[List[str]] = None,
-    modes: Optional[List[str]] = None,
-    output_dir: Optional[Path] = None,
-) -> Dict[str, Any]:
-    """Run the full benchmark suite.
-
-    Args:
-        text_names: Subset of text names to benchmark (default: all).
-        modes: Subset of modes to run (default: all).
-        output_dir: Directory to save JSON results.
-
-    Returns:
-        Dict with comparisons and summary table.
-    """
-    texts = text_names or list(BENCHMARK_TEXTS.keys())
-    modes = modes or MODES
-
-    comparisons: List[BenchmarkComparison] = []
-    all_runs: List[BenchmarkRun] = []
-
-    for text_name in texts:
-        text = BENCHMARK_TEXTS[text_name]
-        comparison = BenchmarkComparison(text_name=text_name)
-
-        for mode in modes:
-            logger.info(f"Benchmark: {text_name} / {mode}")
-            if mode == "conversational":
-                br = await run_conversational_benchmark(text, text_name)
+    # State field fill rate
+    filled = 0
+    for field_name in ALL_STATE_FIELDS:
+        val = getattr(state, field_name, None)
+        if val is not None:
+            if isinstance(val, (dict, list)):
+                if len(val) > 0:
+                    filled += 1
+            elif isinstance(val, str):
+                if val.strip():
+                    filled += 1
             else:
-                br = await run_pipeline_benchmark(text, text_name, mode)
-            comparison.runs[mode] = br
-            all_runs.append(br)
+                filled += 1
+    metrics.state_field_fill_rate = filled / len(ALL_STATE_FIELDS) if ALL_STATE_FIELDS else 0
 
-        comparisons.append(comparison)
-
-    # Build summary
-    summary = _build_summary_table(comparisons)
-
-    # Save if output_dir provided
-    if output_dir:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        results_file = output_dir / f"conversational_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "comparisons": [c.to_dict() for c in comparisons],
-                    "summary_table": summary,
-                },
-                f,
-                ensure_ascii=False,
-                indent=2,
-                default=str,
+    # Cross-reference density
+    try:
+        enrichment = state.get_enrichment_summary()
+        total = enrichment.get("total_arguments", 0)
+        if total > 0:
+            with_quality = enrichment.get("with_quality_score", 0)
+            with_fallacy = enrichment.get("with_fallacy_analysis", 0)
+            with_counter = enrichment.get("with_counter_argument", 0)
+            with_formal = enrichment.get("with_formal_verification", 0)
+            # Density = average enrichment coverage across 4 dimensions
+            metrics.cross_ref_density = (
+                (with_quality + with_fallacy + with_counter + with_formal) / (4 * total)
             )
-        logger.info(f"Results saved: {results_file}")
+    except Exception:
+        pass
 
-    return {
-        "comparisons": comparisons,
-        "summary": summary,
-        "total_runs": len(all_runs),
-        "successful_runs": sum(1 for r in all_runs if r.error is None),
-        "failed_runs": sum(1 for r in all_runs if r.error is not None),
-    }
+    # Conversational-specific
+    metrics.total_messages = result.get("total_messages", 0)
 
+    # Phase summary
+    summary = result.get("summary", {})
+    metrics.completed_phases = summary.get("completed", 0)
+    metrics.failed_phases = summary.get("failed", 0)
+    metrics.skipped_phases = summary.get("skipped", 0)
 
-def _build_summary_table(comparisons: List[BenchmarkComparison]) -> List[Dict[str, Any]]:
-    """Build a flat summary table from comparisons."""
-    rows = []
-    for comp in comparisons:
-        for mode, run in comp.runs.items():
-            rows.append({
-                "text": run.text_name,
-                "mode": run.mode,
-                "duration_s": run.duration_seconds,
-                "fill_rate": run.fill_rate,
-                "args": run.arguments_count,
-                "fallacies": run.fallacies_count,
-                "quality_mean": run.quality_score_mean,
-                "quality_var": run.quality_score_variance,
-                "cross_ref_coverage": run.enrichment_coverage,
-                "phases": f"{run.phases_completed}/{run.phases_total}" if run.phases_total > 0 else "n/a",
-                "messages": run.total_messages,
-                "error": run.error,
-            })
-    return rows
+    return metrics
 
 
-def print_summary(result: Dict[str, Any]):
-    """Print a formatted summary table."""
-    print(f"\n{'='*100}")
-    print(f" CONVERSATIONAL BENCHMARK RESULTS")
-    print(f"{'='*100}")
-    print(f"  Runs: {result['successful_runs']}/{result['total_runs']} successful")
-    print()
+class ConversationalBenchmarkRunner:
+    """Run comparative benchmarks across orchestration modes."""
 
-    header = f"  {'Text':<15} {'Mode':<16} {'Time':>6} {'Fill%':>6} {'Args':>4} {'Fall':>4} {'QMean':>6} {'QCov':>6} {'Phases':>8} {'Msgs':>5}"
-    print(header)
-    print(f"  {'-'*90}")
+    def __init__(
+        self,
+        texts: Optional[Dict[str, str]] = None,
+        modes: Optional[List[str]] = None,
+    ):
+        self.texts = texts or BENCHMARK_TEXTS
+        self.modes = modes or ["standard", "full", "conversational"]
 
-    for row in result["summary"]:
-        if row.get("error"):
-            print(f"  {row['text']:<15} {row['mode']:<16} FAIL: {row['error'][:50]}")
-        else:
-            print(
-                f"  {row['text']:<15} {row['mode']:<16} "
-                f"{row['duration_s']:>5.1f}s "
-                f"{row['fill_rate']:>5.1%} "
-                f"{row['args']:>4} "
-                f"{row['fallacies']:>4} "
-                f"{row['quality_mean']:>6.2f} "
-                f"{row['cross_ref_coverage']:>5.1%} "
-                f"{row['phases']:>8} "
-                f"{row['messages']:>5}"
+    async def run_single(self, text_id: str, text: str, mode: str) -> RunMetrics:
+        """Run a single benchmark cell (text × mode)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        logger.info(f"Running benchmark: {text_id} × {mode}")
+        start = time.time()
+        try:
+            result = await run_unified_analysis(text, workflow_name=mode)
+            duration = time.time() - start
+            metrics = extract_metrics(text_id, mode, result, duration)
+        except Exception as e:
+            duration = time.time() - start
+            logger.error(f"Benchmark {text_id}×{mode} failed: {e}")
+            metrics = RunMetrics(
+                text_id=text_id,
+                mode=mode,
+                wall_clock_seconds=duration,
+                error=str(e),
             )
-    print(f"{'='*100}\n")
+        return metrics
 
+    async def run_benchmark(self) -> BenchmarkReport:
+        """Run full benchmark matrix: all texts × all modes."""
+        report = BenchmarkReport()
 
-async def main():
-    """CLI entry point."""
-    import argparse
+        for text_id, text in self.texts.items():
+            for mode in self.modes:
+                metrics = await self.run_single(text_id, text, mode)
+                report.runs.append(metrics)
+                logger.info(
+                    f"  {text_id}×{mode}: "
+                    f"args={metrics.argument_count} "
+                    f"fallacies={metrics.fallacy_count} "
+                    f"fill={metrics.state_field_fill_rate:.0%} "
+                    f"time={metrics.wall_clock_seconds:.1f}s"
+                )
 
-    parser = argparse.ArgumentParser(description="Conversational baseline benchmark (Issue #308)")
-    parser.add_argument(
-        "--mode", action="append", dest="modes",
-        choices=["standard", "full", "conversational"],
-        help="Which mode(s) to benchmark (repeatable, default: all)",
-    )
-    parser.add_argument(
-        "--text", action="append", dest="texts",
-        choices=list(BENCHMARK_TEXTS.keys()),
-        help="Which text(s) to benchmark (repeatable, default: all)",
-    )
-    parser.add_argument(
-        "--output-dir", type=str, default=".analysis_kb/results",
-        help="Output directory for JSON results",
-    )
-    args = parser.parse_args()
+        report.compute_averages()
+        report.summary = self._format_summary(report)
+        return report
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-    for name in ["httpx", "openai", "semantic_kernel"]:
-        logging.getLogger(name).setLevel(logging.WARNING)
+    def _format_summary(self, report: BenchmarkReport) -> str:
+        """Format benchmark report as markdown."""
+        lines = ["# Conversational vs Sequential Benchmark\n"]
 
-    result = await run_full_benchmark(
-        text_names=args.texts,
-        modes=args.modes,
-        output_dir=Path(args.output_dir),
-    )
-    print_summary(result)
+        # Per-run table
+        lines.append("## Per-Run Results\n")
+        lines.append(f"{'Text':<20} {'Mode':<15} {'Args':>5} {'Fall':>5} {'Qual':>5} "
+                      f"{'CAs':>5} {'JTMS':>5} {'Fill':>6} {'XRef':>6} {'Time':>7} {'Msgs':>5}")
+        lines.append("-" * 100)
+        for r in report.runs:
+            if r.error:
+                lines.append(f"{r.text_id:<20} {r.mode:<15} ERROR: {r.error[:50]}")
+            else:
+                lines.append(
+                    f"{r.text_id:<20} {r.mode:<15} "
+                    f"{r.argument_count:>5} {r.fallacy_count:>5} "
+                    f"{r.quality_scores_count:>5} {r.counter_argument_count:>5} "
+                    f"{r.jtms_belief_count:>5} {r.state_field_fill_rate:>5.0%} "
+                    f"{r.cross_ref_density:>5.1%} {r.wall_clock_seconds:>6.1f}s "
+                    f"{r.total_messages:>5}"
+                )
+        lines.append("")
 
+        # Per-mode averages
+        lines.append("## Mode Averages\n")
+        for mode, avgs in report.mode_averages.items():
+            lines.append(f"### {mode}")
+            for key, val in avgs.items():
+                if isinstance(val, float):
+                    lines.append(f"  {key}: {val:.2f}")
+                else:
+                    lines.append(f"  {key}: {val}")
+            lines.append("")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+        return "\n".join(lines)
+
+    def save_report(self, report: BenchmarkReport, path: str):
+        """Save report to JSON."""
+        data = {
+            "runs": [asdict(r) for r in report.runs],
+            "mode_averages": report.mode_averages,
+            "summary": report.summary,
+            "text_count": len(self.texts),
+            "modes": self.modes,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        logger.info(f"Report saved to {path}")

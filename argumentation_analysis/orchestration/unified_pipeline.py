@@ -1215,13 +1215,81 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_camembert_fallacy(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke CamemBERT-based French fallacy detector (sync, heavy model)."""
-    from argumentation_analysis.adapters.french_fallacy_adapter import (
-        FrenchFallacyAdapter,
-    )
+    """Invoke self-hosted LLM fallacy detector via SK function calling (#297).
 
-    adapter = FrenchFallacyAdapter(enable_nli=False, enable_llm=False)
-    return await asyncio.to_thread(adapter.detect, input_text)
+    Replaces the dead CamemBERT Tier 2.5 with a self-hosted LLM endpoint
+    using the same FallacyWorkflowPlugin infrastructure (function calling
+    for structured output). Falls back to symbolic-only if endpoint unavailable.
+    """
+    endpoint = os.environ.get("SELF_HOSTED_LLM_ENDPOINT", "")
+    api_key = os.environ.get("SELF_HOSTED_LLM_API_KEY", "not-needed")
+    model_id = os.environ.get("SELF_HOSTED_LLM_MODEL", "")
+
+    if not endpoint or not model_id:
+        return {
+            "detected_fallacies": {},
+            "arguments": {},
+            "tiers_used": ["none"],
+            "explanation": "Self-hosted LLM endpoint not configured",
+            "total_fallacies": 0,
+        }
+
+    try:
+        from openai import AsyncOpenAI
+        from semantic_kernel.kernel import Kernel
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+            FallacyWorkflowPlugin,
+        )
+
+        async_client = AsyncOpenAI(api_key=api_key, base_url=endpoint)
+        llm_service = OpenAIChatCompletion(
+            ai_model_id=model_id,
+            async_client=async_client,
+        )
+        master_kernel = Kernel()
+        master_kernel.add_service(llm_service)
+
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=master_kernel,
+            llm_service=llm_service,
+        )
+
+        result_json = await plugin.run_guided_analysis(argument_text=input_text)
+        result = json.loads(result_json)
+
+        # Map hierarchical result to adapter format
+        fallacies = result.get("fallacies", [])
+        detected = {}
+        for f in fallacies:
+            if isinstance(f, dict):
+                ftype = f.get("fallacy_type", f.get("fallacy_name", "unknown"))
+                detected[ftype] = {
+                    "source": "self_hosted_llm",
+                    "confidence": f.get("confidence", 0.5),
+                    "description": f.get("explanation", ""),
+                    "taxonomy_pk": f.get("taxonomy_pk", ""),
+                }
+
+        return {
+            "detected_fallacies": detected,
+            "arguments": {},
+            "tiers_used": ["self_hosted_llm"],
+            "explanation": f"Self-hosted LLM ({model_id}): {len(detected)} fallacy(ies) detected",
+            "total_fallacies": len(detected),
+            "extraction_method": result.get("exploration_method", "self_hosted"),
+        }
+
+    except Exception as e:
+        logger.warning("Self-hosted LLM fallacy detection failed: %s", e)
+        return {
+            "detected_fallacies": {},
+            "arguments": {},
+            "tiers_used": ["none"],
+            "explanation": f"Self-hosted LLM unavailable: {e}",
+            "total_fallacies": 0,
+            "error": str(e),
+        }
 
 
 async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -3961,25 +4029,22 @@ def setup_registry(
     # --- Optional adapters (may need heavy dependencies) ---
 
     if include_optional:
-        # CamemBERT fallacy detector (2.3.2)
+        # Self-hosted LLM fallacy detector (replaces CamemBERT, #297)
         try:
-            from argumentation_analysis.adapters.french_fallacy_adapter import (
-                FrenchFallacyAdapter,
-            )
-
-            registry.register_agent(
-                name="camembert_fallacy_detector",
-                agent_class=FrenchFallacyAdapter,
+            registry.register_service(
+                name="self_hosted_fallacy_detector",
                 capabilities=["neural_fallacy_detection", "fallacy_detection"],
-                requires=["camembert_model"],
                 metadata={
-                    "description": "CamemBERT-based neural fallacy detector (2.3.2)"
+                    "description": (
+                        "Self-hosted LLM fallacy detector via function calling "
+                        "(replaces CamemBERT Tier 2.5, #297)"
+                    )
                 },
                 invoke=_invoke_camembert_fallacy,
             )
-            registered.append("camembert_fallacy_detector")
-        except ImportError as e:
-            skipped.append(("camembert_fallacy_detector", str(e)))
+            registered.append("self_hosted_fallacy_detector")
+        except Exception as e:
+            skipped.append(("self_hosted_fallacy_detector", str(e)))
 
         # Hierarchical taxonomy-guided fallacy detection (#84)
         try:
@@ -4300,8 +4365,8 @@ def build_light_workflow() -> WorkflowDefinition:
 def build_standard_workflow() -> WorkflowDefinition:
     """Standard workflow with fact extraction, fallacy detection, and quality-gated counter-arguments.
 
-    CamemBERT Tier 2.5 and hierarchical fallacy detection run as optional
-    phases after extraction (#208-J). Downstream phases (quality, counter,
+    Self-hosted LLM (Tier 2) and hierarchical fallacy detection run as optional
+    phases after extraction (#297). Downstream phases (quality, counter,
     JTMS) read fallacy results via context['phase_hierarchical_fallacy_output'].
     """
     return (
@@ -4682,7 +4747,7 @@ def build_neural_symbolic_fallacy_workflow() -> WorkflowDefinition:
     """Neural-Symbolic-Hierarchical fallacy fusion (Loop 4).
 
     Three complementary fallacy detection approaches:
-    - Neural: CamemBERT French NLP classifier (fast, pattern-based)
+    - Neural: Self-hosted LLM with function calling (#297, replaces CamemBERT)
     - Hierarchical: Taxonomy-guided iterative deepening (precise, explainable)
     - Quality baseline: argument quality evaluation for context
     """
