@@ -469,7 +469,7 @@ class FallacyWorkflowPlugin:
         5. If no result, fall back to one-shot full-taxonomy approach
         """
         file_handler = None
-        if trace_log_path:
+        if trace_log_path and str(trace_log_path).strip() not in ("", "None", "null"):
             file_handler = logging.FileHandler(
                 trace_log_path, mode="w", encoding="utf-8"
             )

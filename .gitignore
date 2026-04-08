@@ -25,6 +25,7 @@ test-report.xml
 tests/reports/
 
 # === Logs ===
+# *.log covers hs_err_pid*.log (JVM crashes), trace_reelle_*.log, etc.
 *.log
 logs/
 _e2e_logs/
@@ -72,6 +73,8 @@ target/
 .gradle/
 
 # === Temporary Files ===
+# Prevent stray FileHandler(None) from creating a 'None' file
+/None
 _*/
 temp*/
 !**/templates/
