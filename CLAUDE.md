@@ -118,7 +118,7 @@ Several root-level directories contain code that should live under `argumentatio
 | `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
 | ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **DELETED** (PR #154) — was in `docs/archives/core_overflow/` |
 | ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
-| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **MIGRATED** — `mcp_server/` → `argumentation_analysis/services/mcp_server/`; legacy archived |
+| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **CONSOLIDATED** (#322) — `mcp_server/` migrated; `interface-simple/` archived; React frontend (`interface-web-argumentative/build/`) **KEPT** — load-bearing for `interface_web/app.py:92-94` (`STATIC_FILES_DIR`); management scripts kept |
 | ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **MIGRATED** — `AnalysisToolsPlugin` → `argumentation_analysis/plugins/analysis_tools/`; minor plugins archived |
 | ~~`src/`~~ | ~~`argumentation_analysis/agents/`~~ | **MIGRATED** → `argumentation_analysis/plugin_framework/` (duplicate orchestration_service deleted) |
 | `project_core/` | `argumentation_analysis/core/` | **KEPT** — infrastructure utilities (NOT business logic) |
@@ -207,7 +207,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - `api/main.py` — **FastAPI REST API** (RECOMMENDED). 7 routers, 25+ routes. Agent capabilities, proposals, mobile, WebSocket streaming. Uses CapabilityRegistry + UnifiedPipeline + WorkflowDSL. Launch: `uvicorn api.main:app --reload --port 8000`
 
 **Web UI:**
-- `interface_web/app.py` — **Starlette web app** (formerly Flask). Serves React frontend + analysis API. Uses ServiceManager (not UnifiedPipeline). Launch: `uvicorn interface_web.app:app --port 5003`
+- `interface_web/app.py` — **Starlette web app** (formerly Flask). Serves React frontend + analysis API. Uses ServiceManager (not UnifiedPipeline). **Note**: React build at `services/web_api/interface-web-argumentative/build/` is required (not in git — run `npm run build` in that dir first). Launch: `uvicorn interface_web.app:app --port 5003`
 
 **CLI (multi-mode orchestration):**
 - `argumentation_analysis/run_orchestration.py` — CLI runner with `--mode pipeline|conversational|legacy` and `--workflow light|standard|full|collaborative`
