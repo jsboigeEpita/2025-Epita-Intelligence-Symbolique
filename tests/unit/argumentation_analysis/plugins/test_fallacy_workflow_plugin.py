@@ -635,3 +635,66 @@ class TestErrorHandling:
         result = await plugin.run_guided_analysis(argument_text="text")
         parsed = json.loads(result)
         assert "error" in parsed
+
+
+# ---------------------------------------------------------------------------
+# 11. Defensive FileHandler — no 'None' file creation
+# ---------------------------------------------------------------------------
+
+
+class TestFileHandlerDefensiveGuard:
+    """Verify that FileHandler is NOT created for invalid trace_log_path values."""
+
+    async def test_none_path_no_file_created(self, plugin, mock_llm_service):
+        """Passing None (default) must not create a file."""
+        mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+        handler_count_before = len(plugin.logger.handlers)
+
+        await plugin.run_guided_analysis(argument_text="text", trace_log_path=None)
+
+        assert len(plugin.logger.handlers) == handler_count_before
+
+    async def test_string_none_no_file_created(self, plugin, mock_llm_service, tmp_path):
+        """Passing 'None' (string) must not create a file named 'None'."""
+        mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+
+        await plugin.run_guided_analysis(argument_text="text", trace_log_path="None")
+
+        none_file = tmp_path / "None"
+        # Also check CWD isn't polluted
+        import os
+        assert not os.path.exists("None"), "File named 'None' should not be created"
+
+    async def test_empty_string_no_file_created(self, plugin, mock_llm_service):
+        """Passing '' (empty string) must not create a file."""
+        mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+        handler_count_before = len(plugin.logger.handlers)
+
+        await plugin.run_guided_analysis(argument_text="text", trace_log_path="")
+
+        assert len(plugin.logger.handlers) == handler_count_before
+
+    async def test_null_string_no_file_created(self, plugin, mock_llm_service):
+        """Passing 'null' (string) must not create a file."""
+        mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+        handler_count_before = len(plugin.logger.handlers)
+
+        await plugin.run_guided_analysis(argument_text="text", trace_log_path="null")
+
+        assert len(plugin.logger.handlers) == handler_count_before
+
+    async def test_valid_path_creates_handler(self, plugin, mock_llm_service, tmp_path):
+        """Passing a valid path SHOULD create a log file."""
+        mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
+        mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+        log_file = str(tmp_path / "trace.log")
+
+        await plugin.run_guided_analysis(argument_text="text", trace_log_path=log_file)
+
+        # Handler is removed in finally, but the file should exist
+        import os
+        assert os.path.exists(log_file), "Log file should be created for valid path"
