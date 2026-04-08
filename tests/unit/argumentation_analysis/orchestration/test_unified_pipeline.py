@@ -285,7 +285,7 @@ class TestPrebuiltWorkflows:
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        assert len(wf.phases) == 11
+        assert len(wf.phases) == 13
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on
@@ -971,7 +971,7 @@ class TestInvokeCallables:
         assert result["valid"] is False
 
     async def test_invoke_dung_extensions_error(self):
-        """_invoke_dung_extensions returns error dict on exception."""
+        """_invoke_dung_extensions falls back to Python when handler unavailable."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
@@ -981,8 +981,8 @@ class TestInvokeCallables:
             side_effect=Exception("no handler"),
         ):
             result = await _invoke_dung_extensions("text", {})
-        assert "error" in result
-        assert result["extensions"] == {}
+        assert result["semantics"] == "python_fallback"
+        assert "extensions" in result
 
     async def test_invoke_dung_extensions_no_arguments(self):
         """_invoke_dung_extensions generates default args when none provided."""
@@ -1002,15 +1002,15 @@ class TestInvokeCallables:
                 "argumentation_analysis.agents.core.logic.af_handler": MagicMock(
                     AFHandler=MagicMock(return_value=mock_handler)
                 ),
-                "argumentation_analysis.core.jvm_setup": MagicMock(
+                "argumentation_analysis.agents.core.logic.tweety_initializer": MagicMock(
                     TweetyInitializer=MagicMock()
                 ),
             },
         ):
             result = await _invoke_dung_extensions("text", {})
-        # Should have called with default arg_0, arg_1, arg_2
+        # Should have called with default placeholder argument
         call_args = mock_handler.analyze_dung_framework.call_args
-        assert call_args[0][0] == ["arg_0", "arg_1", "arg_2"]
+        assert call_args[0][0] == ["argument_placeholder"]
 
     async def test_invoke_formal_synthesis_no_phases(self):
         """_invoke_formal_synthesis with empty context."""
@@ -1730,14 +1730,14 @@ class TestAdditionalWorkflows:
         assert len(wf.phases) == 3
 
     def test_build_jtms_dung_loop_workflow(self):
-        """JTMS-Dung loop workflow has 2 phases."""
+        """JTMS-Dung loop workflow has 3 phases (jtms_beliefs, dung_extensions, aspic_analysis)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_jtms_dung_loop_workflow,
         )
 
         wf = build_jtms_dung_loop_workflow()
         assert wf.name == "jtms_dung_loop"
-        assert len(wf.phases) == 2
+        assert len(wf.phases) == 3
 
     def test_build_neural_symbolic_fallacy_workflow(self):
         """Neural-symbolic fallacy workflow has 3 phases (neural + hierarchical + quality)."""

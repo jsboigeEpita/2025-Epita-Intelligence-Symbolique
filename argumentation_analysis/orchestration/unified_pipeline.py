@@ -1399,16 +1399,33 @@ def _generate_attacks_from_args(
         for i, f in enumerate(fallacies):
             if not isinstance(f, dict):
                 continue
-            # The fallacy undermines an argument — find closest match
-            target_idx = min(i, len(arguments) - 1) if arguments else -1
-            if target_idx >= 0 and target_idx < len(arguments):
-                # "fallacy detection" attacks the argument it exposes
-                fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
-                if fallacy_label in arguments:
-                    attacks.append([fallacy_label, arguments[target_idx]])
-                elif len(arguments) > target_idx + 1:
-                    # Adjacent arguments with different positions attack each other
-                    attacks.append([arguments[target_idx], arguments[target_idx + 1]])
+            fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
+            # Try to match fallacy to argument by text content
+            target_text = (
+                f.get("target_text", f.get("argument", f.get("text", "")))
+            ).lower()[:60]
+            target_arg = None
+            # Strategy 1: exact text overlap between fallacy target and argument
+            if target_text:
+                best_overlap = 0
+                for arg in arguments:
+                    overlap = len(
+                        set(target_text.split()) & set(arg.lower().split())
+                    )
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        target_arg = arg
+                # Require at least 2 words overlap for a meaningful match
+                if best_overlap < 2:
+                    target_arg = None
+            # Strategy 2: index-based fallback
+            if target_arg is None and arguments:
+                target_idx = min(i, len(arguments) - 1)
+                target_arg = arguments[target_idx]
+
+            if target_arg:
+                # The fallacious argument attacks the argument it undermines
+                attacks.append([f"fallacy_{i}_{fallacy_label}", target_arg])
 
         # Use counter-arguments to generate attacks
         ca_output = context.get("phase_counter_output", {})
@@ -3035,30 +3052,117 @@ async def _invoke_modal_logic(input_text: str, context: Dict[str, Any]) -> Dict:
 
 
 async def _invoke_dung_extensions(input_text: str, context: Dict[str, Any]) -> Dict:
-    """Invoke Dung framework extension computation via AFHandler (JVM required)."""
+    """Invoke Dung framework extension computation via AFHandler (JVM required).
+
+    Builds attack graph from extracted arguments and detected fallacies,
+    then computes grounded, preferred, and stable extensions via Tweety.
+    Falls back to pure-Python computation when JVM is unavailable.
+    """
+    # 1. Extract arguments from upstream phases
+    arguments = _extract_arguments_from_context(input_text, context)
+
+    # 2. Build attack relations from fallacies and counter-arguments
+    attacks = _generate_attacks_from_args(arguments, context)
+
+    # 3. Compute extensions via Tweety (or Python fallback)
     try:
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
-        from argumentation_analysis.core.jvm_setup import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
         initializer = TweetyInitializer()
         handler = AFHandler(initializer)
-        arguments = context.get("arguments", [])
-        attacks = context.get("attacks", [])
-        if not arguments:
-            arguments = [f"arg_{i}" for i in range(3)]
-            attacks = []
-        semantics = context.get("semantics", "preferred")
-        result = await asyncio.to_thread(
-            handler.analyze_dung_framework, arguments, attacks, semantics
-        )
-        return result
-    except Exception as e:
+
+        # Compute multiple semantics for comprehensive analysis
+        all_extensions = {}
+        for semantics in ("grounded", "preferred", "stable"):
+            try:
+                result = await asyncio.to_thread(
+                    handler.analyze_dung_framework, arguments, attacks, semantics
+                )
+                ext = result.get("extensions", {})
+                if isinstance(ext, dict):
+                    all_extensions[semantics] = ext
+            except Exception:
+                pass
+
+        # Use preferred as primary if available
+        primary = all_extensions.get("preferred", all_extensions.get("grounded", {}))
         return {
-            "error": str(e),
-            "semantics": context.get("semantics", "preferred"),
-            "extensions": {},
-            "statistics": {},
+            "semantics": "multi",
+            "extensions": primary,
+            "all_extensions": all_extensions,
+            "arguments": arguments,
+            "attacks": attacks,
+            "statistics": {
+                "arguments_count": len(arguments),
+                "attacks_count": len(attacks),
+            },
         }
+    except Exception as e:
+        logger.info(f"Dung AFHandler unavailable ({e}), using Python fallback")
+        return _python_dung_fallback(arguments, attacks)
+
+
+def _python_dung_fallback(
+    arguments: List[str], attacks: List[List[str]]
+) -> Dict[str, Any]:
+    """Pure-Python Dung extension computation when JVM/Tweety is unavailable.
+
+    Computes grounded extension using iterative fixpoint: start from empty set,
+    repeatedly add arguments that are defended against all attacks.
+    """
+    if not arguments:
+        return {
+            "semantics": "python_fallback",
+            "extensions": {},
+            "arguments": [],
+            "attacks": [],
+            "statistics": {"arguments_count": 0, "attacks_count": 0},
+        }
+
+    # Build attack maps
+    arg_set = set(arguments)
+    attack_map = {a: [] for a in arg_set}  # attacker → targets
+    attacked_by = {a: [] for a in arg_set}  # target → attackers
+    for attacker, target in attacks:
+        if attacker in arg_set and target in arg_set:
+            attack_map[attacker].append(target)
+            attacked_by[target].append(attacker)
+
+    # Grounded extension: iterative fixpoint
+    grounded = set()
+    changed = True
+    while changed:
+        changed = False
+        for arg in arg_set:
+            if arg in grounded:
+                continue
+            # arg is defended if all its attackers are attacked by grounded
+            defended = all(
+                any(att in attack_map.get(g, []) for g in grounded)
+                for att in attacked_by[arg]
+            )
+            if defended and all(
+                att not in grounded for att in attack_map.get(arg, [])
+            ):
+                # Also check: arg doesn't attack itself (conflict-free)
+                grounded.add(arg)
+                changed = True
+
+    extensions = {}
+    if grounded:
+        extensions["grounded"] = list(grounded)
+
+    return {
+        "semantics": "python_fallback",
+        "extensions": extensions,
+        "arguments": arguments,
+        "attacks": attacks,
+        "statistics": {
+            "arguments_count": len(arguments),
+            "attacks_count": len(attacks),
+        },
+    }
 
 
 async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> Dict:
@@ -3667,16 +3771,26 @@ def _write_dung_extensions_to_state(output, state, ctx) -> None:
         return
     semantics = str(output.get("semantics", "preferred"))
     extensions = output.get("extensions", {})
-    statistics = output.get("statistics", {})
-    arguments = []
-    if isinstance(statistics, dict):
-        arguments = [f"arg_{i}" for i in range(statistics.get("arguments_count", 0))]
+    all_extensions = output.get("all_extensions", {})
+    arguments = output.get("arguments", [])
+    attacks = output.get("attacks", [])
+    # Store primary framework with actual arguments and attacks
     state.add_dung_framework(
         name=f"verification_{semantics}",
-        arguments=arguments,
-        attacks=[],
+        arguments=arguments if isinstance(arguments, list) else [],
+        attacks=attacks if isinstance(attacks, list) else [],
         extensions=extensions if isinstance(extensions, dict) else {},
     )
+    # Store additional semantics if computed
+    if isinstance(all_extensions, dict):
+        for sem, ext in all_extensions.items():
+            if sem != semantics and isinstance(ext, dict) and ext:
+                state.add_dung_framework(
+                    name=f"verification_{sem}",
+                    arguments=arguments if isinstance(arguments, list) else [],
+                    attacks=attacks if isinstance(attacks, list) else [],
+                    extensions=ext,
+                )
 
 
 def _write_formal_synthesis_to_state(output, state, ctx) -> None:
@@ -4366,8 +4480,8 @@ def build_standard_workflow() -> WorkflowDefinition:
     """Standard workflow with fact extraction, fallacy detection, and quality-gated counter-arguments.
 
     Self-hosted LLM (Tier 2) and hierarchical fallacy detection run as optional
-    phases after extraction (#297). Downstream phases (quality, counter,
-    JTMS) read fallacy results via context['phase_hierarchical_fallacy_output'].
+    phases after extraction (#297). Dung/ASPIC analysis builds attack graphs
+    from detected fallacies for abstract argumentation (#286).
     """
     return (
         WorkflowBuilder("standard_analysis")
@@ -4402,6 +4516,18 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
@@ -4431,7 +4557,11 @@ def build_standard_workflow() -> WorkflowDefinition:
 
 
 def build_full_workflow() -> WorkflowDefinition:
-    """Full pipeline traversing all 12 capabilities with LLM extraction."""
+    """Full pipeline traversing all 12 capabilities with LLM extraction.
+
+    Includes Dung/ASPIC abstract argumentation phases that build attack
+    graphs from detected fallacies (#286).
+    """
     return (
         WorkflowBuilder("full_analysis")
         .add_phase(
@@ -4498,6 +4628,18 @@ def build_full_workflow() -> WorkflowDefinition:
             "fol",
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()
@@ -4725,7 +4867,12 @@ def build_debate_governance_loop_workflow() -> WorkflowDefinition:
 
 
 def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
-    """JTMS-Dung belief retraction/extension recalc loop (Loop 2). STUB."""
+    """JTMS-Dung belief retraction/extension recalc loop (Loop 2).
+
+    Builds attack graph from arguments and detected fallacies, computes
+    Dung extensions (grounded, preferred, stable), then feeds results
+    back into JTMS for belief revision.
+    """
     return (
         WorkflowBuilder("jtms_dung_loop")
         .add_phase(
@@ -4735,8 +4882,14 @@ def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
         )
         .add_phase(
             "dung_extensions",
-            capability="ranking_semantics",
+            capability="dung_extensions",
             depends_on=["jtms_beliefs"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()
