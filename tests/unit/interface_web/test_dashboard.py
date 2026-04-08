@@ -8,7 +8,6 @@ Validates:
 - API endpoint mapping is complete
 """
 
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -136,10 +135,10 @@ class TestDashboardTemplate:
 class TestDashboardRouteRegistration:
     def test_starlette_app_has_dashboard_route(self):
         """Verify the Starlette app includes a /dashboard route."""
-        from interface_web.app import app
+        from interface_web.app import routes
 
         route_paths = []
-        for route in app.routes:
+        for route in routes:
             if hasattr(route, "path"):
                 route_paths.append(route.path)
         assert "/dashboard" in route_paths
@@ -159,23 +158,31 @@ class TestDashboardRouteRegistration:
 
 class TestDashboardEndpointBehavior:
     def test_starlette_dashboard_returns_html(self):
-        """Test that the Starlette dashboard endpoint returns HTML content."""
+        """Test that the Starlette dashboard endpoint returns HTML content.
+
+        Uses a fresh Starlette app with API-only routes instead of the
+        module-level ``app`` to avoid StaticFiles state pollution in long
+        test sessions (Issue #276).
+        """
+        from contextlib import asynccontextmanager
+
+        from starlette.applications import Starlette
+        from starlette.routing import Route
         from starlette.testclient import TestClient
 
-        from interface_web.app import app
+        from interface_web.app import dashboard_endpoint
 
-        # Ensure a fresh event loop to avoid pollution from prior async tests
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        @asynccontextmanager
+        async def noop_lifespan(app):
+            yield
 
-        client = TestClient(app, raise_server_exceptions=False)
-        response = client.get("/dashboard")
+        test_app = Starlette(
+            debug=True,
+            routes=[Route("/dashboard", endpoint=dashboard_endpoint, methods=["GET"])],
+            lifespan=noop_lifespan,
+        )
+        with TestClient(test_app, raise_server_exceptions=False) as client:
+            response = client.get("/dashboard")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
         assert "<!DOCTYPE html>" in response.text

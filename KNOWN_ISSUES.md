@@ -92,11 +92,10 @@ Last updated: 2026-03-29
 - **Status**: Monitoring — exact runtime skip count pending full suite run
 - **Related**: #28, #30, #94, #112
 
-### Starlette Tests: Event Loop Contamination in Full Suite
+### Starlette Tests: Event Loop Contamination in Full Suite — RESOLVED
 - **Symptom**: 18 ERRORs in `test_interface_web_starlette.py` when running full suite, but all 18 pass in isolation
-- **Impact**: Low — cosmetic failures only in marathon suite runs
-- **Root cause**: Suspected async event loop pollution from prior tests
-- **Workaround**: Run in isolation: `pytest tests/unit/test_interface_web_starlette.py -v`
+- **Root cause**: Tests reused the module-level `routes` list containing a shared `StaticFiles` ASGI sub-app instance that accumulated state across long test sessions. The `TestClient` context manager triggers ASGI lifecycle events on the shared instance, causing fixture setup failures after 3+ hours.
+- **Fix**: Tests now build fresh API-only routes per fixture, importing only endpoint functions (not the module-level `routes`/`app`). The StaticFiles mount (not tested in unit tests) is excluded. Same fix applied to `test_dashboard.py`.
 - **Related**: Issue #276
 
 ### Pytest Markers Not Registered (cosmetic warnings)
@@ -126,7 +125,7 @@ Last updated: 2026-03-29
 - **Orchestration modes**: 2 active — pipeline (default), conversational (legacy removed round 79)
 - **Sherlock Watson validation**: 43/43 passed
 - **CI**: GREEN on main (`88af060f`)
-- **Known flaky in full suite**: Starlette (18 ERRORs, pass in isolation — #276), robustness adversarial (~87 tests, resource exhaustion)
+- **Known flaky in full suite**: robustness adversarial (~87 tests, resource exhaustion). Starlette #276 resolved (shared StaticFiles state fix).
 
 ## Test Commands
 

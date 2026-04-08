@@ -4,15 +4,63 @@ Unit tests for the Starlette web application (interface_web/app.py).
 
 Tests the API endpoints by creating a Starlette app with a mock lifespan
 that injects a mocked ServiceManager, avoiding heavy LLM/JVM initialization.
+
+Fix for Issue #276: Tests build fresh routes per fixture instead of reusing
+the module-level ``routes`` list (which contains a shared StaticFiles ASGI
+instance that accumulates state across long test sessions).
 """
 
-import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from contextlib import asynccontextmanager
 
 from starlette.applications import Starlette
+from starlette.routing import Route
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.testclient import TestClient
+
+
+def _build_test_routes():
+    """Build fresh API routes for testing, excluding the StaticFiles mount.
+
+    Importing only the endpoint *functions* avoids sharing mutable ASGI
+    sub-app instances (StaticFiles) from the module-level ``routes`` list.
+    This prevents state accumulation that caused 18 ERRORs after 3+ hours
+    of continuous test execution (Issue #276).
+    """
+    from interface_web.app import (
+        status_endpoint,
+        analyze_endpoint,
+        examples_endpoint,
+        dashboard_endpoint,
+        framework_analyze_endpoint,
+    )
+
+    return [
+        Route("/dashboard", endpoint=dashboard_endpoint, methods=["GET"]),
+        Route("/api/status", endpoint=status_endpoint, methods=["GET"]),
+        Route("/api/health", endpoint=status_endpoint, methods=["GET"]),
+        Route("/api/analyze", endpoint=analyze_endpoint, methods=["POST"]),
+        Route("/api/examples", endpoint=examples_endpoint, methods=["GET"]),
+        Route(
+            "/api/v1/framework/analyze",
+            endpoint=framework_analyze_endpoint,
+            methods=["POST"],
+        ),
+    ]
+
+
+def _build_test_middleware():
+    """Build fresh middleware list for testing."""
+    return [
+        Middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    ]
 
 
 @pytest.fixture
@@ -41,22 +89,9 @@ def mock_service_manager():
 def client(mock_service_manager):
     """Create a Starlette TestClient with mocked ServiceManager.
 
-    Uses a fresh event loop to avoid pollution from prior async tests
-    in the same session (see Issue #276).
+    Builds fresh routes and middleware per test to avoid state pollution
+    from prior tests in long sessions (Issue #276).
     """
-    # Import routes and middleware from the real app
-    from interface_web.app import routes, middleware
-
-    # Ensure a fresh event loop for TestClient's internal async operations
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
     @asynccontextmanager
     async def test_lifespan(app):
         app.state.service_manager = mock_service_manager
@@ -64,7 +99,10 @@ def client(mock_service_manager):
         yield
 
     test_app = Starlette(
-        debug=True, routes=routes, middleware=middleware, lifespan=test_lifespan
+        debug=True,
+        routes=_build_test_routes(),
+        middleware=_build_test_middleware(),
+        lifespan=test_lifespan,
     )
     with TestClient(test_app, raise_server_exceptions=False) as c:
         yield c
@@ -223,18 +261,6 @@ class TestServiceManagerUnavailable:
 
     @pytest.fixture
     def client_no_sm(self):
-        from interface_web.app import routes, middleware
-
-        # Ensure a fresh event loop to avoid pollution from prior async tests
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
         @asynccontextmanager
         async def test_lifespan(app):
             app.state.service_manager = None
@@ -242,7 +268,10 @@ class TestServiceManagerUnavailable:
             yield
 
         test_app = Starlette(
-            debug=True, routes=routes, middleware=middleware, lifespan=test_lifespan
+            debug=True,
+            routes=_build_test_routes(),
+            middleware=_build_test_middleware(),
+            lifespan=test_lifespan,
         )
         with TestClient(test_app, raise_server_exceptions=False) as c:
             yield c
