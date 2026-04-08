@@ -102,8 +102,8 @@ class TestWorkflowFormalPhases:
 
         wf = build_standard_workflow()
         # extract, neural_detect, hierarchical_fallacy, nl_to_logic, pl, fol,
-        # quality, counter, jtms, governance, debate = 11 phases
-        assert len(wf.phases) == 11
+        # dung_extensions, aspic_analysis, quality, counter, jtms, governance, debate = 13 phases
+        assert len(wf.phases) == 13
 
 
 # ============================================================

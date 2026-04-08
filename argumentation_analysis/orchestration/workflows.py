@@ -91,6 +91,18 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
@@ -187,6 +199,18 @@ def build_full_workflow() -> WorkflowDefinition:
             "fol",
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()
@@ -414,7 +438,7 @@ def build_debate_governance_loop_workflow() -> WorkflowDefinition:
 
 
 def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
-    """JTMS-Dung belief retraction/extension recalc loop (Loop 2). STUB."""
+    """JTMS-Dung belief retraction/extension recalc loop (Loop 2)."""
     return (
         WorkflowBuilder("jtms_dung_loop")
         .add_phase(
@@ -424,8 +448,14 @@ def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
         )
         .add_phase(
             "dung_extensions",
-            capability="ranking_semantics",
+            capability="dung_extensions",
             depends_on=["jtms_beliefs"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()

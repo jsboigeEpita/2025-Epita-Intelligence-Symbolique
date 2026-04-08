@@ -1431,16 +1431,28 @@ def _generate_attacks_from_args(
         for i, f in enumerate(fallacies):
             if not isinstance(f, dict):
                 continue
-            # The fallacy undermines an argument — find closest match
-            target_idx = min(i, len(arguments) - 1) if arguments else -1
-            if target_idx >= 0 and target_idx < len(arguments):
-                # "fallacy detection" attacks the argument it exposes
-                fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
-                if fallacy_label in arguments:
-                    attacks.append([fallacy_label, arguments[target_idx]])
-                elif len(arguments) > target_idx + 1:
-                    # Adjacent arguments with different positions attack each other
-                    attacks.append([arguments[target_idx], arguments[target_idx + 1]])
+            # Strategy 1: match by text overlap between fallacy target and argument
+            target_text = (
+                f.get("target_text", "") or f.get("target_argument", "")
+            ).lower()
+            fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
+            target_arg = None
+            if target_text and arguments:
+                best_overlap = 0
+                for arg in arguments:
+                    arg_lower = arg.lower() if isinstance(arg, str) else str(arg).lower()
+                    overlap = len(set(target_text.split()) & set(arg_lower.split()))
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        target_arg = arg
+                if best_overlap < 2:
+                    target_arg = None
+            # Strategy 2: index-based fallback
+            if target_arg is None and arguments:
+                target_idx = min(i, len(arguments) - 1)
+                target_arg = arguments[target_idx]
+            if target_arg:
+                attacks.append([f"fallacy_{i}_{fallacy_label}", target_arg])
 
         # Use counter-arguments to generate attacks
         ca_output = context.get("phase_counter_output", {})
@@ -3068,29 +3080,104 @@ async def _invoke_modal_logic(input_text: str, context: Dict[str, Any]) -> Dict:
 
 async def _invoke_dung_extensions(input_text: str, context: Dict[str, Any]) -> Dict:
     """Invoke Dung framework extension computation via AFHandler (JVM required)."""
+    # 1. Extract arguments from upstream phases
+    arguments = _extract_arguments_from_context(input_text, context)
+
+    # 2. Build attack relations from fallacies and counter-arguments
+    attacks = _generate_attacks_from_args(arguments, context)
+
+    # 3. Compute extensions via Tweety (or Python fallback)
     try:
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
-        from argumentation_analysis.core.jvm_setup import TweetyInitializer
+        from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
         initializer = TweetyInitializer()
         handler = AFHandler(initializer)
-        arguments = context.get("arguments", [])
-        attacks = context.get("attacks", [])
-        if not arguments:
-            arguments = [f"arg_{i}" for i in range(3)]
-            attacks = []
-        semantics = context.get("semantics", "preferred")
-        result = await asyncio.to_thread(
-            handler.analyze_dung_framework, arguments, attacks, semantics
-        )
-        return result
-    except Exception as e:
+
+        # Compute multiple semantics for comprehensive analysis
+        all_extensions = {}
+        for semantics in ("grounded", "preferred", "stable"):
+            try:
+                result = await asyncio.to_thread(
+                    handler.analyze_dung_framework, arguments, attacks, semantics
+                )
+                ext = result.get("extensions", {})
+                if isinstance(ext, dict):
+                    all_extensions[semantics] = ext
+            except Exception:
+                pass
+
+        # Use preferred as primary if available
+        primary = all_extensions.get("preferred", all_extensions.get("grounded", {}))
         return {
-            "error": str(e),
-            "semantics": context.get("semantics", "preferred"),
-            "extensions": {},
-            "statistics": {},
+            "semantics": "multi",
+            "extensions": primary,
+            "all_extensions": all_extensions,
+            "arguments": arguments,
+            "attacks": attacks,
+            "statistics": {
+                "arguments_count": len(arguments),
+                "attacks_count": len(attacks),
+            },
         }
+    except Exception as e:
+        logger.info(f"Dung AFHandler unavailable ({e}), using Python fallback")
+        return _python_dung_fallback(arguments, attacks)
+
+
+def _python_dung_fallback(
+    arguments: list, attacks: list
+) -> dict:
+    """Pure-Python Dung extension computation when JVM/Tweety is unavailable.
+
+    Computes grounded extension using iterative fixpoint: start from empty set,
+    repeatedly add arguments that are defended against all attacks.
+    """
+    if not arguments:
+        return {
+            "semantics": "python_fallback",
+            "extensions": {},
+            "arguments": [],
+            "attacks": [],
+            "statistics": {"arguments_count": 0, "attacks_count": 0},
+        }
+
+    # Build attack graph
+    attack_map = {a: [] for a in arguments}  # arg -> list of attackers
+    for att in attacks:
+        if len(att) >= 2 and att[0] in arguments and att[1] in arguments:
+            attack_map[att[1]].append(att[0])
+
+    # Grounded extension: iterative fixpoint
+    grounded = set()
+    changed = True
+    while changed:
+        changed = False
+        for arg in arguments:
+            if arg in grounded:
+                continue
+            # Check if arg is defended: every attacker is attacked by some grounded member
+            defended = True
+            for attacker in attack_map.get(arg, []):
+                if attacker == arg:
+                    # Self-attacking arguments are never defended
+                    defended = False
+                    break
+                # Check if some grounded member attacks the attacker
+                if not any([g, attacker] in [[a[0], a[1]] for a in attacks if len(a) >= 2] for g in grounded):
+                    defended = False
+                    break
+            if defended and arg not in attack_map.get(arg, []):
+                grounded.add(arg)
+                changed = True
+
+    return {
+        "semantics": "python_fallback",
+        "extensions": {"grounded": list(grounded)},
+        "arguments": arguments,
+        "attacks": attacks,
+        "statistics": {"arguments_count": len(arguments), "attacks_count": len(attacks)},
+    }
 
 
 async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> Dict:
