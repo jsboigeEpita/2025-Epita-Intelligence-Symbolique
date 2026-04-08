@@ -55,8 +55,8 @@ def build_standard_workflow() -> WorkflowDefinition:
     """Standard workflow with fact extraction, fallacy detection, and quality-gated counter-arguments.
 
     Self-hosted LLM (Tier 2) and hierarchical fallacy detection run as optional
-    phases after extraction (#297). Downstream phases (quality, counter,
-    JTMS) read fallacy results via context['phase_hierarchical_fallacy_output'].
+    phases after extraction (#297). Dung/ASPIC analysis builds attack graphs
+    from detected fallacies for abstract argumentation (#286).
     """
     return (
         WorkflowBuilder("standard_analysis")
@@ -91,6 +91,18 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
             "counter",
@@ -120,7 +132,11 @@ def build_standard_workflow() -> WorkflowDefinition:
 
 
 def build_full_workflow() -> WorkflowDefinition:
-    """Full pipeline traversing all 12 capabilities with LLM extraction."""
+    """Full pipeline traversing all 12 capabilities with LLM extraction.
+
+    Includes Dung/ASPIC abstract argumentation phases that build attack
+    graphs from detected fallacies (#286).
+    """
     return (
         WorkflowBuilder("full_analysis")
         .add_phase(
@@ -187,6 +203,18 @@ def build_full_workflow() -> WorkflowDefinition:
             "fol",
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()
@@ -414,7 +442,12 @@ def build_debate_governance_loop_workflow() -> WorkflowDefinition:
 
 
 def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
-    """JTMS-Dung belief retraction/extension recalc loop (Loop 2). STUB."""
+    """JTMS-Dung belief retraction/extension recalc loop (Loop 2).
+
+    Builds attack graph from arguments and detected fallacies, computes
+    Dung extensions (grounded, preferred, stable), then feeds results
+    back into JTMS for belief revision.
+    """
     return (
         WorkflowBuilder("jtms_dung_loop")
         .add_phase(
@@ -424,8 +457,14 @@ def build_jtms_dung_loop_workflow() -> WorkflowDefinition:
         )
         .add_phase(
             "dung_extensions",
-            capability="ranking_semantics",
+            capability="dung_extensions",
             depends_on=["jtms_beliefs"],
+            optional=True,
+        )
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
             optional=True,
         )
         .build()

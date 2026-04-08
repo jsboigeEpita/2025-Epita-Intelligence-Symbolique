@@ -1,116 +1,130 @@
-"""Tests for _invoke_camembert_fallacy function (#250 follow-up).
+"""Tests for _invoke_camembert_fallacy function (#297 update).
 
-Verifies the CamemBERT-based neural fallacy detection invoke function.
+Verifies the self-hosted LLM fallacy detection invoke function that replaced
+the dead CamemBERT adapter (PR #299).
 """
+import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
 
-# Patch path for FrenchFallacyAdapter (imported inside the function)
-FRENCH_ADAPTER_PATH = (
-    "argumentation_analysis.adapters.french_fallacy_adapter.FrenchFallacyAdapter"
-)
-
-
 class TestInvokeCamemBERTFallacy:
-    """Tests for _invoke_camembert_fallacy function."""
+    """Tests for _invoke_camembert_fallacy (now self-hosted LLM)."""
+
+    async def test_invoke_camembert_no_endpoint(self):
+        """Returns early with explanation when SELF_HOSTED_LLM_ENDPOINT not set."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_camembert_fallacy,
+        )
+
+        with patch.dict("os.environ", {}, clear=True):
+            result = await _invoke_camembert_fallacy("test text", {})
+
+        assert result["total_fallacies"] == 0
+        assert result["tiers_used"] == ["none"]
+        assert "not configured" in result["explanation"]
 
     async def test_invoke_camembert_success(self):
-        """_invoke_camembert_fallacy returns detections from FrenchFallacyAdapter."""
+        """_invoke_camembert_fallacy returns detected_fallacies from self-hosted LLM."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_camembert_fallacy,
         )
 
-        mock_adapter = MagicMock()
-        mock_adapter.detect.return_value = {
-            "detections": [
-                {"text": "Tu es stupide", "label": "Ad Hominem", "confidence": 0.92},
-                {"text": "Tout le monde le fait", "label": "Bandwagon", "confidence": 0.78},
-            ]
+        mock_plugin = MagicMock()
+        mock_plugin.run_guided_analysis = AsyncMock(
+            return_value=json.dumps({
+                "fallacies": [
+                    {
+                        "fallacy_type": "Ad Hominem",
+                        "confidence": 0.92,
+                        "explanation": "Attack on person",
+                        "taxonomy_pk": "1.1",
+                    }
+                ],
+                "exploration_method": "self_hosted",
+            })
+        )
+
+        env = {
+            "SELF_HOSTED_LLM_ENDPOINT": "http://localhost:5000/v1",
+            "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with patch(FRENCH_ADAPTER_PATH, return_value=mock_adapter):
-            result = await _invoke_camembert_fallacy("Tu es stupide. Tout le monde le fait.", {})
+        with patch.dict("os.environ", env, clear=True), \
+             patch("argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
+                   create=True) as mock_fwp_cls, \
+             patch("openai.AsyncOpenAI"), \
+             patch("semantic_kernel.kernel.Kernel"), \
+             patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
+            # Make the plugin class importable inside the function
+            with patch.dict("sys.modules", {
+                "openai": MagicMock(AsyncOpenAI=MagicMock()),
+                "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
+                "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                    OpenAIChatCompletion=MagicMock()
+                ),
+                "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                    FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
+                ),
+            }):
+                result = await _invoke_camembert_fallacy(
+                    "Tu es stupide donc ton argument est faux.", {}
+                )
 
-        assert "detections" in result
-        assert len(result["detections"]) == 2
-        assert result["detections"][0]["label"] == "Ad Hominem"
+        assert "detected_fallacies" in result
+        assert result["total_fallacies"] == 1
+        assert "Ad Hominem" in result["detected_fallacies"]
+        assert result["tiers_used"] == ["self_hosted_llm"]
 
     async def test_invoke_camembert_empty_text(self):
-        """_invoke_camembert_fallacy handles empty input gracefully."""
+        """_invoke_camembert_fallacy handles empty input (no endpoint configured)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_camembert_fallacy,
         )
 
-        mock_adapter = MagicMock()
-        mock_adapter.detect.return_value = {"detections": []}
-
-        with patch(FRENCH_ADAPTER_PATH, return_value=mock_adapter):
+        # Without endpoint, returns early regardless of text
+        with patch.dict("os.environ", {}, clear=True):
             result = await _invoke_camembert_fallacy("", {})
 
-        assert "detections" in result
-        assert len(result["detections"]) == 0
+        assert result["total_fallacies"] == 0
+        assert isinstance(result["detected_fallacies"], dict)
 
     async def test_invoke_camembert_import_failure(self):
-        """_invoke_camembert_fallacy gracefully handles ImportError."""
+        """_invoke_camembert_fallacy gracefully handles missing dependencies."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_camembert_fallacy,
         )
 
-        with patch.dict(
-            "sys.modules",
-            {"argumentation_analysis.adapters.french_fallacy_adapter": None},
-        ):
-            try:
-                result = await _invoke_camembert_fallacy("test text", {})
-            except ImportError:
-                # Expected if the module is not available
-                result = {"detections": [], "error": "FrenchFallacyAdapter not available"}
+        env = {
+            "SELF_HOSTED_LLM_ENDPOINT": "http://localhost:5000/v1",
+            "SELF_HOSTED_LLM_MODEL": "test-model",
+        }
 
-        # Should either return a valid result or raise a handled error
-        assert "detections" in result or "error" in result
+        with patch.dict("os.environ", env, clear=True), \
+             patch.dict("sys.modules", {"openai": None}):
+            result = await _invoke_camembert_fallacy("test text", {})
 
-    async def test_invoke_camembert_adapter_exception(self):
-        """_invoke_camembert_fallacy handles adapter exceptions."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _invoke_camembert_fallacy,
-        )
-
-        mock_adapter = MagicMock()
-        mock_adapter.detect.side_effect = RuntimeError("Model loading failed")
-
-        with patch(FRENCH_ADAPTER_PATH, return_value=mock_adapter):
-            try:
-                result = await _invoke_camembert_fallacy("test text", {})
-            except RuntimeError:
-                # If the error propagates, that's acceptable
-                result = {"detections": [], "error": "RuntimeError"}
-
-        # Should either return a valid result or the error should be caught
+        # Should return graceful fallback, not crash
         assert isinstance(result, dict)
+        assert result["detected_fallacies"] == {}
+        assert result["total_fallacies"] == 0
 
     async def test_invoke_camembert_uses_to_thread(self):
-        """_invoke_camembert_fallacy uses asyncio.to_thread for sync adapter."""
+        """_invoke_camembert_fallacy no longer uses to_thread (uses async SK)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_camembert_fallacy,
         )
 
-        mock_adapter = MagicMock()
-        mock_adapter.detect.return_value = {"detections": []}
+        # Without endpoint configured, the function returns early
+        # without calling any async operations
+        with patch.dict("os.environ", {}, clear=True):
+            result = await _invoke_camembert_fallacy("test", {})
 
-        with patch(FRENCH_ADAPTER_PATH, return_value=mock_adapter), patch(
-            "asyncio.to_thread", new_callable=AsyncMock
-        ) as mock_to_thread:
-            mock_to_thread.return_value = {"detections": [{"label": "test"}]}
-
-            await _invoke_camembert_fallacy("test", {})
-
-        # to_thread should be called with adapter.detect and the text
-        mock_to_thread.assert_called_once()
+        assert result["tiers_used"] == ["none"]
 
 
 class TestCamemBERTRegistryRegistration:
-    """Tests for camembert_fallacy_detector registration in setup_registry."""
+    """Tests for neural_fallacy_detection registration in setup_registry."""
 
     def test_registry_includes_camembert_fallacy_detector(self):
         """setup_registry registers camembert_fallacy_detector when available."""
@@ -132,18 +146,11 @@ class TestCamemBERTRegistryRegistration:
             setup_registry,
         )
 
-        # Patch the import to ensure camembert is registered
-        mock_adapter = MagicMock()
-        with patch(
-            "argumentation_analysis.adapters.french_fallacy_adapter.FrenchFallacyAdapter",
-            mock_adapter,
-        ):
-            registry = setup_registry(include_optional=True)
-            providers = registry.find_for_capability("neural_fallacy_detection")
-            names = [p.name for p in providers]
-            # If CamemBERT is available, it should be registered
-            # If not available, providers may be empty but should not error
-            assert isinstance(names, list)
+        registry = setup_registry(include_optional=True)
+        providers = registry.find_for_capability("neural_fallacy_detection")
+        names = [p.name for p in providers]
+        # Should be registered as a provider
+        assert isinstance(names, list)
 
     def test_registry_camembert_optional_registration(self):
         """camembert_fallacy_detector is optional (graceful skip if unavailable)."""

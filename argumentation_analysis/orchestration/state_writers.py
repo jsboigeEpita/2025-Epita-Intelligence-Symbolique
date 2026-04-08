@@ -600,16 +600,26 @@ def _write_dung_extensions_to_state(output, state, ctx) -> None:
         return
     semantics = str(output.get("semantics", "preferred"))
     extensions = output.get("extensions", {})
-    statistics = output.get("statistics", {})
-    arguments = []
-    if isinstance(statistics, dict):
-        arguments = [f"arg_{i}" for i in range(statistics.get("arguments_count", 0))]
+    all_extensions = output.get("all_extensions", {})
+    arguments = output.get("arguments", [])
+    attacks = output.get("attacks", [])
+    # Store primary framework with actual arguments and attacks
     state.add_dung_framework(
         name=f"verification_{semantics}",
-        arguments=arguments,
-        attacks=[],
+        arguments=arguments if isinstance(arguments, list) else [],
+        attacks=attacks if isinstance(attacks, list) else [],
         extensions=extensions if isinstance(extensions, dict) else {},
     )
+    # Store additional semantics if computed
+    if isinstance(all_extensions, dict):
+        for sem, ext in all_extensions.items():
+            if sem != semantics and isinstance(ext, dict) and ext:
+                state.add_dung_framework(
+                    name=f"verification_{sem}",
+                    arguments=arguments if isinstance(arguments, list) else [],
+                    attacks=attacks if isinstance(attacks, list) else [],
+                    extensions=ext,
+                )
 
 
 def _write_formal_synthesis_to_state(output, state, ctx) -> None:
