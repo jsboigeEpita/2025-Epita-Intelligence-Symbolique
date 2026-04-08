@@ -647,7 +647,7 @@ Durée : 223.12s (3min 43s)
 
 #### Baseline Historique Découverte
 
-**Document clé** : [`reports/comparaison_faux_vs_vrai_20250609_231852.md`](reports/comparaison_faux_vs_vrai_20250609_231852.md)
+**Document clé** : [`reports/comparaison_faux_vs_vrai_20250609_231852.md`](../../../docs/archives/reports_legacy_317/comparaison_faux_vs_vrai_20250609_231852.md)
 
 **Date rapport** : 2025-06-09 23:18:52 UTC
 

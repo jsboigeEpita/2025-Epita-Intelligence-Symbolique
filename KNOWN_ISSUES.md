@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-03-29
+Last updated: 2026-04-09
 
 ---
 
@@ -64,6 +64,19 @@ Last updated: 2026-03-29
 
 ---
 
+## Resolved — Epic #317: Professor-Side Consolidation & Cleanup
+
+- **#318**: 510 `*.log` files + untracked clutter deleted, `.gitignore` tightened
+- **#319**: `FileHandler(None)` bug fixed — stray `None` file no longer created
+- **#320**: 6 orphan root scripts removed (broken paths, obsolete env names, exact duplicates)
+- **#321**: `src/` and `plugins/` root residues cleaned — `fallacy_families.yaml` moved to consuming plugin, orphan SK prompts archived
+- **#322**: `services/web_api/` investigated and consolidated — NOT a duplicate (frontend vs backend), `interface-simple/` archived, tests moved, PNGs deleted
+- **#323**: `reports/` (28 files), `validation/` (3 files) archived; `data/` fixtures relocated
+- **#311**: Absorbed into Epic #317 (original repo cleanup issue)
+- **Result**: Root-level tracked entries reduced from ~953 to ~50. `*.log` at root: 0.
+
+---
+
 ## Active Issues
 
 ### JVM "Access Violation" Warning Under pytest (cosmetic)
@@ -108,12 +121,12 @@ Last updated: 2026-03-29
 - No `max_tokens` (use `max_completion_tokens`, but omit entirely via SK 1.37 to avoid empty responses)
 - **Related**: #22 (closed)
 
-### 4 Overlapping Web Applications
+### 4 Overlapping Web Applications → 3 (partially resolved)
 - `api/main.py` (FastAPI + JVM bootstrap)
 - `argumentation_analysis/api/main.py` (FastAPI + JTMS plugins)
-- `services/web_api_from_libs/app.py` (Flask + React)
-- `interface_web/app.py` (Starlette + ServiceManager)
-- **Impact**: Confusing for new developers. Different API formats and ports.
+- `interface_web/app.py` (Starlette + ServiceManager + React frontend)
+- ~~`services/web_api_from_libs/app.py`~~ — **ARCHIVED** (#322) — only stale .pyc files remained, no source
+- **Impact**: Reduced from 4 to 3. Still confusing for new developers.
 - **Related**: #33, #34
 
 ---
