@@ -381,7 +381,7 @@ python -m pytest tests/unit/ -v --timeout=300 -m "not slow"
 - **[Patterns d'Orchestration](GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** : Bonnes pratiques
 
 ### 🔬 Pour Chercheurs
-- **[Rapports de Validation](../../reports/)** : Résultats complets 5/5 points d'entrée
+- **[Rapports de Validation](../../docs/archives/validation_legacy_317/)** : Résultats complets 5/5 points d'entrée
 - **[Documentation Technique](../technical/)** : Spécifications avancées
 - **[Analyses d'Architecture](../architecture/)** : Architecture hiérarchique 3 niveaux
 
