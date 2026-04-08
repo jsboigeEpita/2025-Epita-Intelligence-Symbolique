@@ -109,18 +109,21 @@ Root/
 └── config files (pyproject.toml, pytest.ini, etc.)
 ```
 
-### Known Overflow (to be cleaned up)
+### Known Overflow (completed — Epic #317)
 
-Several root-level directories contain code that should live under `argumentation_analysis/`:
+Root-level directories that were cleaned up during Epic #317 consolidation:
 
 | Root directory | Overlaps with | Status |
 |---|---|---|
 | `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
-| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **DELETED** (PR #154) — was in `docs/archives/core_overflow/` |
+| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **DELETED** (PR #154) |
 | ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
-| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **CONSOLIDATED** (#322) — `mcp_server/` migrated; `interface-simple/` archived; React frontend (`interface-web-argumentative/build/`) **KEPT** — load-bearing for `interface_web/app.py:92-94` (`STATIC_FILES_DIR`); management scripts kept |
-| ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **MIGRATED** — `AnalysisToolsPlugin` → `argumentation_analysis/plugins/analysis_tools/`; minor plugins archived |
-| ~~`src/`~~ | ~~`argumentation_analysis/agents/`~~ | **MIGRATED** → `argumentation_analysis/plugin_framework/` (duplicate orchestration_service deleted) |
+| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **CONSOLIDATED** (#322) — React frontend kept (load-bearing `STATIC_FILES_DIR`); `interface-simple/` archived; management scripts kept |
+| ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **CONSOLIDATED** (#321) — orphan SK prompts archived to `docs/archives/plugins_overflow/` |
+| ~~`src/`~~ | ~~`argumentation_analysis/agents/`~~ | **CONSOLIDATED** (#321) — `fallacy_families.yaml` moved to consuming plugin; empty dir removed |
+| ~~`reports/`~~ | — | **ARCHIVED** (#323) → `docs/archives/reports_legacy_317/` (28 files, June 2025) |
+| ~~`validation/`~~ | — | **ARCHIVED** (#323) → `docs/archives/validation_legacy_317/` (3 files) |
+| ~~`data/`~~ | — | **RELOCATED** (#323) → `argumentation_analysis/data/datasets/legacy_fixtures/` (4 JSON files) |
 | `project_core/` | `argumentation_analysis/core/` | **KEPT** — infrastructure utilities (NOT business logic) |
 
 **Rule**: When adding new code, put it inside `argumentation_analysis/`. Do not add new modules at root level.
@@ -131,7 +134,7 @@ Several root-level directories contain code that should live under `argumentatio
 
 ### Other Root Directories
 
-- `interface_web/` — Flask/Jinja web UI with its own routes and services
+- `interface_web/` — Starlette web app serving React frontend + analysis API
 - `Arg_Semantic_Index/` — Knowledge indexing system (Streamlit)
 - `abs_arg_dung/` — Abstract argumentation (Dung semantics) library
 - `CaseAI/` — Slack bot frontend
@@ -261,15 +264,15 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - **Coordinateur:** `myia-ai-01:2025-Epita-Intelligence-Symbolique`
 - **Dashboard workspace:** `roosync_dashboard(action: "read", type: "workspace")`
 
-### Project Status (Round 79 — 2026-03-29)
+### Project Status (Round 90 — 2026-04-09)
 
-- **Branche**: `main` @ `44071ae0`, CI GREEN
-- **PRs ouvertes**: 0
+- **Branche**: `main` @ `47035344`, CI GREEN
+- **PRs ouvertes**: 1 (#326 — Epic #317 consolidation)
 - **Issues ouvertes**: 2
-  - **#276** (P3 LOW) — Starlette tests: 18 ERRORs en suite complète mais passent en isolation. Piste: event loops async non nettoyées entre tests
+  - **#317** (epic) — Professor-Side Consolidation & Cleanup — 6/7 PRs done
   - **#78** (backlog) — ROADMAP: Democratech
-- **Repo stable**, pas de travail urgent
-- **Round 79 complet**: #272-#275 toutes résolues (PR #277 + commits directs)
+- **Epics complétées**: #208, #282, #300
+- **Repo stable**, root cleanup nearly complete
 
 ### MCPs Disponibles
 
