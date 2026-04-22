@@ -152,6 +152,9 @@ results_archive/
 # Temp files (dotted)
 .temp/
 
+# Local analysis knowledge base (personal research artifact, not shared)
+.analysis_kb/
+
 # Generated demo outputs
 demos/validation_*.json
 

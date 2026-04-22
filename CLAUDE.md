@@ -256,36 +256,46 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - `KNOWN_ISSUES.md` — Tracked problems and active issues
 - Issue #21 — Planned Tweety environment update from CoursIA
 
-## RooSync Configuration
+## RooSync Cluster Topology
 
-- **Machine ID:** myia-po-2025
-- **Workspace ID:** 2025-Epita-Intelligence-Symbolique
-- **Format d'adresse:** `myia-po-2025:2025-Epita-Intelligence-Symbolique`
-- **Coordinateur:** `myia-ai-01:2025-Epita-Intelligence-Symbolique`
-- **Dashboard workspace:** `roosync_dashboard(action: "read", type: "workspace")`
+Ce repo est cloné sur plusieurs machines qui collaborent via le dashboard RooSync workspace.
+**Identifie toujours TA machine** via `hostname` avant de signer un message dashboard. Le fichier CLAUDE.md est partagé — il ne peut pas encoder l'identité d'une machine donnée.
 
-### Project Status (Round 90 — 2026-04-09)
+### Machines du cluster (workspace `2025-Epita-Intelligence-Symbolique`)
 
-- **Branche**: `main` @ `47035344`, CI GREEN
-- **PRs ouvertes**: 1 (#326 — Epic #317 consolidation)
-- **Issues ouvertes**: 2
-  - **#317** (epic) — Professor-Side Consolidation & Cleanup — 6/7 PRs done
-  - **#78** (backlog) — ROADMAP: Democratech
-- **Epics complétées**: #208, #282, #300
-- **Repo stable**, root cleanup nearly complete
+| Machine ID | Rôle | Hostname | Notes |
+|------------|------|----------|-------|
+| `myia-ai-01` | **Coordinateur** | MyIA-AI-01 | Arbitre dispatch, merge PRs, tient le compte des rounds |
+| `myia-po-2025` | Worker | MyIA-PO-2025 | Exécute tâches assignées |
+| `myia-po-2023` | Worker | MyIA-PO-2023 | Exécute tâches assignées |
+| `NanoClaw` (ai-01:3101) | ClusterManager | — | Monitoring passif, artefacts (ex : archéologie git #327) |
 
-### MCPs Disponibles
+### Adressage
 
-- **roo-state-manager** : RooSync, grounding conversationnel
-- (MCPs globaux hérités de la config machine)
+- **Format** : `machine-id:workspace-id` (ex : `myia-ai-01:2025-Epita-Intelligence-Symbolique`)
+- **Jamais** : "po-2025" seul (ambigu — machine ou rôle ?) ou "po-2025 sur toutes machines" (contradictoire)
+- **Signature dashboard** : `Claude Code @ <machine-id>:<workspace-id>` en en-tête de message
+
+### Dashboard workspace
+
+```
+roosync_dashboard(action: "read", type: "workspace")    # début de session
+roosync_dashboard(action: "append", type: "workspace",
+                  tags: ["..."], content: "...")        # pendant/fin
+```
 
 ### Communication cross-workspace
 
-```bash
+```python
 roosync_send(
   action: "send",
-  to: "myia-ai-01:2025-Epita-Intelligence-Symbolique",  # coordinateur EPITA
+  to: "myia-ai-01:2025-Epita-Intelligence-Symbolique",   # adresse du destinataire
   subject: "[EPITA] Titre",
   body: "Message..."
 )
 ```
+
+### MCPs disponibles
+
+- **roo-state-manager** — RooSync (dashboards, config, sync), grounding conversationnel, codebase_search
+- MCPs globaux hérités de la config machine (varient selon la machine)
