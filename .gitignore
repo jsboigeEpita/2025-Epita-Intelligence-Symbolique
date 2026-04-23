@@ -50,6 +50,20 @@ verify_*.log
 *.api_key*
 .api_key_backup
 
+# === Dataset Privacy ===
+# The canonical dataset is argumentation_analysis/data/extract_sources.json.gz.enc
+# (encrypted, tracked). Any plaintext/decrypted/downstream form must stay out of git.
+# See CLAUDE.md "Dataset Privacy Discipline".
+Arg_Semantic_Index/sources/*.json
+Arg_Semantic_Index/sources/*.jsonl
+*_unencrypted*
+*_decrypted*
+extract_sources.json
+extract_sources_*.json
+!extract_sources.json.gz.enc
+# Downstream analysis outputs (contain raw_text, source_name, or document_name)
+argumentation_analysis/evaluation/results/
+
 # === Virtual Environments ===
 .venv/
 venv/

@@ -244,6 +244,21 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - **Async**: All async code uses `asyncio`. Tests use `asyncio_mode = auto`.
 - **New code goes in `argumentation_analysis/`**: Do not create new modules at root level.
 
+## Dataset Privacy Discipline
+
+The canonical dataset is `argumentation_analysis/data/extract_sources.json.gz.enc` (encrypted, tracked). Passphrase is in `.env` (`TEXT_CONFIG_PASSPHRASE`). It contains politically sensitive speeches (historical dictators, current heads of state, domestic politics). **Never let plaintext or downstream analysis leave the machine via git.**
+
+### Rules
+
+1. **Never commit plaintext dataset content.** No `full_text`, `raw_text`, `full_text_segment`, `raw_text_snippet`, or similar fields. If a script produces such output, write it under a gitignored path.
+2. **Never commit decrypted snapshots.** Any `*_unencrypted*`, `*_decrypted*`, or bare `extract_sources.json` is blocked by `.gitignore`.
+3. **Downstream analysis is gitignored by default.** `argumentation_analysis/evaluation/results/` is fully ignored — benchmark outputs, LLM judge scores, baselines, state snapshots live there. If you need to share a summary, hand-curate an aggregate-only report with opaque IDs.
+4. **Use opaque IDs in commits/PRs/dashboards/chat.** Prefer `src0_ext0`, `doc_A`, `corpus_001`, `Source_3`. Avoid source names (author, title, date of the underlying speech) even in Git commit messages or dashboard posts — the repo is indexed by GitHub search.
+5. **Downstream writers must consume the encrypted dataset in-memory.** Load via `argumentation_analysis.core.io_manager.load_extract_definitions` with the derived key; never persist the decrypted definitions to disk.
+6. **When in doubt, gitignore.** Better to over-ignore and have to un-ignore an aggregate report than to push raw content.
+
+A verification script lives at `scripts/security/verify_encrypted_dataset_completeness.py` — run it before deleting any plaintext file to confirm the encrypted dataset is a superset.
+
 ## Related Resources
 
 - `D:\CoursIA` — Professor's course repository with Tweety notebooks (`MyIA.AI.Notebooks/SymbolicAI/Tweety/`) — reference for Tweety/JPype best practices

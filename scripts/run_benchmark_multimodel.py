@@ -49,7 +49,7 @@ logging.basicConfig(
 logger = logging.getLogger("benchmark.multimodel")
 
 DATASET_PATH = str(
-    project_root / "Arg_Semantic_Index" / "sources" / "final_processed_config_unencrypted.json"
+    project_root / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
 )
 
 # Workflows to compare (representative subset)
@@ -84,7 +84,11 @@ async def run_multimodel_comparison(
         logger.error(f"Dataset not found: {DATASET_PATH}")
         return {}
 
-    runner.load_dataset_unencrypted(DATASET_PATH)
+    passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
+    if not passphrase:
+        logger.error("TEXT_CONFIG_PASSPHRASE not set in environment (.env)")
+        return {}
+    runner.load_dataset_encrypted(DATASET_PATH, passphrase)
     total_docs = len(runner.dataset)
     valid_docs = [i for i in doc_indices if i < total_docs]
 
