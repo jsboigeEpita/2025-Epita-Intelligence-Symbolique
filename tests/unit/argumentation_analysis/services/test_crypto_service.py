@@ -2,6 +2,7 @@
 """Tests for CryptoService — encryption, decryption, key management."""
 
 import pytest
+from unittest.mock import patch
 from cryptography.fernet import Fernet
 
 from argumentation_analysis.services.crypto_service import CryptoService
@@ -95,15 +96,14 @@ class TestKeyManagement:
         assert loaded == key
 
     def test_save_key_bad_path(self, svc, key):
-        # Use a truly non-existent path - Windows UNC path to non-existent server
-        # (or use a drive letter that's unlikely to exist)
-        bad_path = "Z:\\this_drive_does_not_exist\\path\\key.bin"
-        assert svc.save_key(key, bad_path) is False
+        """Test que save_key retourne False si l'écriture échoue."""
+        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+            assert svc.save_key(key, "/nonexistent/path/key.bin") is False
 
     def test_load_key_nonexistent(self, svc):
-        # Use a truly non-existent path
-        bad_path = "Z:\\this_drive_does_not_exist\\path\\key.bin"
-        assert svc.load_key(bad_path) is None
+        """Test que load_key retourne None si la lecture échoue."""
+        with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
+            assert svc.load_key("/nonexistent/path/key.bin") is None
 
 
 # ── Encrypt / Decrypt ──

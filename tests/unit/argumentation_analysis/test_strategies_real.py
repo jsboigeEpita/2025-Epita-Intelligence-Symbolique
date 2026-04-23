@@ -14,8 +14,20 @@ import pytest_asyncio
 from pathlib import Path
 from typing import List
 
-# Configuration pour forcer l'utilisation du vrai JPype
-os.environ["USE_REAL_JPYPE"] = "true"
+
+# Fixture pour gérer la variable d'environnement sans polluer les autres tests
+@pytest.fixture(scope="module", autouse=True)
+def _manage_real_jpype_env():
+    """Gère la variable USE_REAL_JPYPE pour ce module uniquement."""
+    original_value = os.environ.get("USE_REAL_JPYPE")
+    os.environ["USE_REAL_JPYPE"] = "true"
+    yield
+    # Restauration après tous les tests du module
+    if original_value is None:
+        os.environ.pop("USE_REAL_JPYPE", None)
+    else:
+        os.environ["USE_REAL_JPYPE"] = original_value
+
 
 try:
     # IMPORTS CORRIGÉS avec les bons chemins
