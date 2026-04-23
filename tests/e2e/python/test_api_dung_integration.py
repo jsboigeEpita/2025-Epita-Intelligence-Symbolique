@@ -6,7 +6,7 @@ import json
 # Marqueur pour facilement cibler ces tests
 # Les fixtures sont injectées par l'orchestrateur de test.
 # donc le démarrage du serveur est géré automatiquement.
-pytestmark = [pytest.mark.api_integration, pytest.mark.e2e_test]
+pytestmark = [pytest.mark.api_integration, pytest.mark.e2e]
 
 
 @pytest.mark.playwright

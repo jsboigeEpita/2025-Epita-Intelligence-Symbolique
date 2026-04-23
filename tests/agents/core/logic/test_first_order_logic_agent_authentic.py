@@ -10,7 +10,7 @@ from semantic_kernel import Kernel
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 
 
-@pytest.mark.jvm_test
+@pytest.mark.jpype
 @pytest.mark.asyncio
 async def test_agent_initialization_simplified(
     tweety_bridge_fixture, mock_kernel_with_llm

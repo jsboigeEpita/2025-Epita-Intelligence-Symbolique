@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 _jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
 
-@pytest.mark.jvm_test
+@pytest.mark.jpype
 @pytest.mark.skipif(
     _jpype_is_mocked,
     reason="Requires real JVM (--disable-jvm-session mocks jpype)",
