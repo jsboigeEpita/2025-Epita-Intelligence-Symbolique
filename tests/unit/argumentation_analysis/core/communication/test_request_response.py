@@ -344,6 +344,7 @@ class TestSendRequest:
         assert result.content["answer"] == "yes"
 
     def test_timeout_raises_error(self, protocol):
+        """Test that a timeout raises RequestTimeoutError."""
         with pytest.raises(RequestTimeoutError):
             protocol.send_request(
                 sender="a",
