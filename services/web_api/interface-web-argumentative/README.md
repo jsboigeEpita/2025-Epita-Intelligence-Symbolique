@@ -264,7 +264,7 @@ Le serveur de développement supporte le rechargement automatique lors des modif
 
 - **[Guide Application Web](../../../docs/WEB_APPLICATION_GUIDE.md)** : Guide complet d'utilisation
 - **[API Backend](../../argumentation_analysis/services/web_api/README.md)** : Documentation API
-- **[Tests Fonctionnels](../../../tests/README_FUNCTIONAL_TESTS.md)** : Tests Playwright
+- **[Tests Fonctionnels](../../../docs/guides/testing/functional_tests.md)** : Tests Playwright
 - **[Architecture Générale](../../../docs/ARCHITECTURE.md)** : Vue d'ensemble système
 
 ## 🤝 Contribution
