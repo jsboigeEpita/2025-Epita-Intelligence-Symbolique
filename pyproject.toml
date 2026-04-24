@@ -130,7 +130,6 @@ source = ["argumentation_analysis"]
 omit = [
     "argumentation_analysis/**/tests/*",
     "argumentation_analysis/agents/runners/*",
-    "argumentation_analysis/agents/test_scripts/*",
     "argumentation_analysis/scripts/*",
     "argumentation_analysis/ui/*",
     "argumentation_analysis/examples/*",

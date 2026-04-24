@@ -22,7 +22,7 @@ Ce template fournit une structure de base pour créer un nouvel agent dans le sy
 
 3. **Tester Votre Agent**
    - Créez des tests unitaires dans un répertoire `tests/`
-   - Utilisez les scripts de test fournis dans `runners/test/`
+   - Utilisez pytest pour exécuter vos tests
 
 4. **Intégrer Votre Agent**
    - Mettez à jour le système d'orchestration pour inclure votre agent
