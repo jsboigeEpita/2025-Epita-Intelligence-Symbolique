@@ -228,14 +228,11 @@ if __name__ == "__main__":
 ### Scripts de Test
 
 ```bash
-# Test de l'agent d'analyse informelle
-python agents/runners/test/informal/test_informal_agent.py
+# Tests unitaires via pytest
+pytest tests/unit/argumentation_analysis/ -v
 
-# Test de l'agent PM
-python agents/runners/test/orchestration/test_orchestration_complete.py
-
-# Test à grande échelle
-python agents/runners/test/orchestration/test_orchestration_scale.py
+# Test d'un agent spécifique
+pytest tests/unit/agents/test_informal_agent.py -v
 ```
 
 ### Scripts de Déploiement

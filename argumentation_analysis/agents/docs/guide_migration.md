@@ -1,5 +1,9 @@
 # Guide de Migration vers la Nouvelle Structure
 
+> **DEPRECATED** — Ce guide documente une migration historique vers une structure intermédiaire.
+> Les chemins `runners/test/` et `test_scripts/` référencés ci-dessous ont été supprimés.
+> Pour la structure actuelle, voir `CLAUDE.md` et `tests/README.md`.
+
 Ce document fournit des instructions pour adapter votre code à la nouvelle structure du répertoire `agents/`. Il est destiné aux développeurs qui travaillent déjà sur le projet et qui doivent migrer leur code existant.
 
 ## Changements Principaux

@@ -28,9 +28,6 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 ### Scripts d'Exécution
 
 * **[`runners/`](./runners/README.md)** 🚀 : Scripts d'exécution pour les agents
-  * **[`runners/test/`](./runners/test/README.md)** 🧪 : Scripts pour l'exécution des tests
-  * **[`runners/deploy/`](./runners/deploy/README.md)** 📦 : Scripts de déploiement
-  * **[`runners/integration/`](./runners/integration/README.md)** 🔄 : Scripts d'intégration
 
 ### Données et Bibliothèques
 
@@ -108,52 +105,12 @@ Pour créer un nouvel agent, suivez ces étapes :
 
 ### Test indépendant des agents
 
-Pour tester un agent de manière indépendante, créez un script de test dédié :
+Les tests des agents se trouvent dans `tests/unit/agents/` et `tests/unit/argumentation_analysis/`. Pour tester un agent :
 
-1. **Créez un répertoire de test** :
-   ```bash
-   mkdir -p runners/test/nom_de_votre_agent
-   ```
-
-2. **Créez un script de test** :
-   ```python
-   # runners/test/nom_de_votre_agent/test_nom_de_votre_agent.py
-   import asyncio
-   import sys
-   import os
-   from pathlib import Path
-
-   # Ajouter le répertoire parent au chemin de recherche des modules
-   current_dir = Path(__file__).parent
-   parent_dir = current_dir.parent.parent.parent
-   if str(parent_dir) not in sys.path:
-       sys.path.append(str(parent_dir))
-
-   from dotenv import load_dotenv
-   load_dotenv(override=True)
-
-   from core.llm_service import create_llm_service
-   from agents.core.nom_de_votre_agent.nom_agent_definitions import setup_nom_agent
-
-   async def test_agent():
-       # Créer le service LLM
-       llm_service = create_llm_service()
-       
-       # Initialiser l'agent
-       kernel, agent = await setup_nom_agent(llm_service)
-       
-       # Tester une fonctionnalité spécifique
-       result = await agent.some_function("Texte de test")
-       print(f"Résultat: {result}")
-
-   if __name__ == "__main__":
-       asyncio.run(test_agent())
-   ```
-
-3. **Exécutez le test** :
-   ```bash
-   python agents/runners/test/nom_de_votre_agent/test_nom_de_votre_agent.py
-   ```
+```bash
+# Test unitaire standard
+pytest tests/unit/agents/test_nom_agent.py -v
+```
 
 ### Workflow de contribution en groupe
 
@@ -245,7 +202,7 @@ Le dossier `tools/optimization/` contient des outils pour analyser et améliorer
 
 ### Tests à Grande Échelle
 
-Les scripts dans `runners/integration/` permettent de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
+Les scripts dans `scripts/` et les tests d'intégration dans `tests/integration/` permettent de tester l'orchestration des agents sur un grand nombre de textes, afin d'évaluer :
 
 - La robustesse du système
 - Les performances des agents
