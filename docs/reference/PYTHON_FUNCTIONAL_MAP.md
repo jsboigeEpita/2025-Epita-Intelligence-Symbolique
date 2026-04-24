@@ -101,19 +101,19 @@ Ce répertoire contient divers scripts pour des tâches spécifiques, la mainten
 *   **`scripts/test_rhetorical_analysis.py`**
     *   **Rôle :** Teste l'analyse rhétorique.
     *   **Statut :** Stable.
-*   **`scripts/update_imports.py`**
+*   **`scripts/maintenance/tools/update_imports.py`**
     *   **Rôle :** Met à jour les importations dans les fichiers.
     *   **Statut :** Stable.
-*   **`scripts/update_paths.py`**
+*   **`scripts/maintenance/tools/update_paths.py`**
     *   **Rôle :** Met à jour les chemins dans les fichiers.
     *   **Statut :** Stable.
-*   **`scripts/verify_content_integrity.py`**
+*   **`scripts/maintenance/tools/verify_content_integrity.py`**
     *   **Rôle :** Vérifie l'intégrité du contenu des fichiers.
     *   **Statut :** Stable.
-*   **`scripts/verify_files.py`**
+*   **`scripts/maintenance/tools/verify_files.py`**
     *   **Rôle :** Vérifie l'existence et la lisibilité des fichiers.
     *   **Statut :** Stable.
-*   **`scripts/visualize_test_coverage.py`**
+*   **`scripts/reporting/visualize_test_coverage.py`**
     *   **Rôle :** Visualise la couverture des tests.
     *   **Statut :** Stable.
 
