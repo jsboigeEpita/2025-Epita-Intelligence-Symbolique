@@ -102,7 +102,7 @@ async def run_benchmark(
     workflows: list,
     doc_indices: list,
     model_name: str,
-    timeout: float = 120.0,
+    timeout: float = 600.0,
     max_text_chars: int = 3000,
 ):
     """Run a grid of benchmark cells."""
@@ -166,7 +166,7 @@ def main():
                         help="Document indices to use")
     parser.add_argument("--model", default="default",
                         help="Model name from registry")
-    parser.add_argument("--timeout", type=float, default=120.0,
+    parser.add_argument("--timeout", type=float, default=600.0,
                         help="Timeout per cell in seconds")
     parser.add_argument("--max-text", type=int, default=3000,
                         help="Max chars of input text per cell")
