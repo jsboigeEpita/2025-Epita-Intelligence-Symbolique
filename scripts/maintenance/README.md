@@ -1,18 +1,35 @@
 # Scripts de Maintenance
 
-Ce répertoire contient des scripts utilisés pour la maintenance du code, la structure du projet, la gestion des imports et des chemins, ainsi que l'intégrité des fichiers de configuration.
+Scripts utilisés pour la maintenance du code, la structure du projet, la gestion des imports et des chemins, et l'intégrité des fichiers de configuration.
 
-## Scripts
+Les scripts de maintenance documentation, récupération et analyse se trouvent dans [`tools/`](tools/README.md).
 
-- `apply_path_corrections_logged.py`: Applique les corrections de chemin qui ont été préalablement loguées.
-- `check_imports.py`: Vérifie une liste prédéfinie d'importations pour s'assurer de leur fonctionnement.
-- `correct_french_sources_config.py`: Corrige la configuration des sources françaises.
-- `correct_source_paths.py`: Corrige les chemins des sources dans les fichiers de configuration ou ailleurs.
-- `fix_project_structure.py`: Corrige la structure du projet si des incohérences sont détectées.
-- `remove_source_from_config.py`: Supprime une source d'un fichier de configuration.
-- `test_imports_after_reorg.py`: Teste les imports après une réorganisation potentielle des fichiers.
-- `test_imports.py`: Script générique pour tester les imports du projet.
-- `update_imports.py`: Met à jour les déclarations d'import dans les fichiers du projet.
-- `update_paths.py`: Met à jour les chemins codés en dur dans les fichiers du projet.
-- `verify_content_integrity.py`: Vérifie l'intégrité du contenu de certains fichiers.
-- `verify_files.py`: Effectue des vérifications diverses sur les fichiers du projet.
+## Scripts (ce répertoire)
+
+### Commits & archéologie git
+- `clean_commit_diffs.py` : nettoyage des diffs dans le cache des commits
+- `enrich_commit_docs.py` : enrichit la documentation des commits
+- `fix_missing_diffs.py` : répare les diffs manquants dans le cache
+- `git_archeology_analyzer.py` : analyse archéologique d'un dépôt git
+- `migrate_commit_cache.py` : migration du cache des commits vers un nouveau schéma
+- `repair_commit_json.py` : répare les fichiers JSON du cache commits
+
+### Tests & imports
+- `test_imports.py` : test générique des imports du projet
+- `test_imports_after_reorg.py` : test des imports après réorganisation
+- `test_oracle_enhanced_compatibility.py` : vérifie la compatibilité Oracle Enhanced
+
+### Documentation & rapports
+- `clean_orphan_reports.py` : supprime les rapports orphelins
+- `docs.py` : utilitaires génération docs
+- `quarantine_orphan_audits.py` : met en quarantaine les audits orphelins
+
+### Connectivité
+- `validate_openai_connection.py` : vérifie la connectivité OpenAI
+
+## Sous-répertoires
+
+- [`tools/`](tools/README.md) — Documentation, récupération, analyse (17 scripts)
+- `cleanup/` — Scripts one-shot de nettoyage historique
+- `migration/` — Scripts one-shot de migration
+- `recovered/` — Code récupéré lors de migrations passées
