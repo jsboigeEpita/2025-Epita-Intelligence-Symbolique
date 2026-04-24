@@ -822,13 +822,21 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         ]
         if uber_jars:
             # Sort to pick the latest version (alphabetical = version order for tweety jars)
-            classpath = [str(sorted(uber_jars)[-1].resolve())]
+            jar_entries = [str(sorted(uber_jars)[-1].resolve())]
         else:
             logger.warning("Aucun uber-jar trouvé, chargement de tous les JARs.")
-            classpath = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
-            if not classpath:
+            jar_entries = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
+            if not jar_entries:
                 logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
                 return False
+
+        # Build classpath: native dir first for JNI SAT solver getResource(), then JARs
+        classpath = []
+        native_libs_dir = PROJ_ROOT / settings.jvm.native_libs_dir
+        if native_libs_dir.exists():
+            classpath.append(str(native_libs_dir.resolve()))
+            logger.info(f"Native SAT dir prepended to classpath: {native_libs_dir.resolve()}")
+        classpath.extend(jar_entries)
 
         try:
             # Correction de la logique de détection du chemin de la JVM.
