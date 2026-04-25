@@ -1,0 +1,177 @@
+/* JtmsBeliefTree.css — Collapsible JTMS belief tree */
+
+.jtms-tree-container {
+  background: #0f172a;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  padding: 16px;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.jtms-tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.jtms-tree-header h3 {
+  margin: 0;
+  color: #38bdf8;
+  font-size: 1.1rem;
+}
+
+.jtms-summary {
+  display: flex;
+  gap: 10px;
+  font-size: 0.78rem;
+}
+
+.jtms-summary-item {
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Summary badge colors */
+.jtms-summary-item.jtms-status-valid { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+.jtms-summary-item.jtms-status-invalid { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+.jtms-summary-item.jtms-status-unknown { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+.jtms-summary-item.jtms-status-retracted { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+
+/* Tree body */
+.jtms-tree-body {
+  background: #1e293b;
+  border-radius: 6px;
+  padding: 8px 0;
+}
+
+.jtms-empty {
+  padding: 20px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Belief node */
+.jtms-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: default;
+  transition: background 0.15s;
+  min-height: 32px;
+}
+
+.jtms-node:hover {
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.jtms-node.jtms-hovered {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+/* Collapse button */
+.jtms-collapse-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0 2px;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.jtms-collapse-btn:hover {
+  color: #38bdf8;
+}
+
+.jtms-leaf-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+/* Status icons */
+.jtms-status-icon {
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.jtms-status-icon.jtms-status-valid { color: #4ade80; }
+.jtms-status-icon.jtms-status-invalid { color: #f87171; }
+.jtms-status-icon.jtms-status-unknown { color: #94a3b8; }
+
+/* Belief label */
+.jtms-belief-label {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.jtms-strikethrough {
+  text-decoration: line-through;
+  color: #fb923c;
+}
+
+/* Retracted node */
+.jtms-node.jtms-retracted {
+  background: rgba(251, 146, 60, 0.05);
+}
+
+/* Badges */
+.jtms-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.jtms-badge-root {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.jtms-badge-retracted {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.jtms-badge-source {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+/* Tooltip */
+.jtms-tooltip {
+  padding: 8px 12px;
+  background: #0f172a;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+  pointer-events: none;
+}
+
+.jtms-tooltip-title {
+  font-weight: 600;
+  color: #38bdf8;
+  margin-bottom: 4px;
+}
+
+.jtms-tooltip-detail {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  margin-top: 2px;
+}
+
+.jtms-tooltip-retraction {
+  color: #fb923c;
+}
