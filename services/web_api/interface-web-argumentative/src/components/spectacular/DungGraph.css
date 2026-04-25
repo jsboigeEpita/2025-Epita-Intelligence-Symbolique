@@ -1,0 +1,176 @@
+/* DungGraph.css — D3.js force-directed graph for Dung argumentation */
+.dung-graph-container {
+  background: #0f172a;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  padding: 16px;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.dung-graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dung-graph-header h3 {
+  margin: 0;
+  color: #38bdf8;
+  font-size: 1.1rem;
+}
+
+.dung-graph-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+}
+
+.dung-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dung-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dung-svg-container {
+  width: 100%;
+  background: #1e293b;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dung-svg-container svg {
+  display: block;
+}
+
+/* Node styles (applied via D3) */
+.dung-node {
+  cursor: pointer;
+}
+
+.dung-node circle {
+  stroke-width: 2px;
+  transition: r 0.2s;
+}
+
+.dung-node:hover circle {
+  r: 22;
+}
+
+.dung-node text {
+  fill: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+/* Edge styles */
+.dung-edge {
+  stroke: #64748b;
+  stroke-width: 1.5px;
+  fill: none;
+  marker-end: url(#arrowhead);
+}
+
+.dung-edge-label {
+  fill: #94a3b8;
+  font-size: 9px;
+  text-anchor: middle;
+}
+
+/* Extension highlight */
+.dung-ext-grounded circle { fill: rgba(74, 222, 128, 0.3); stroke: #4ade80; }
+.dung-ext-preferred circle { fill: rgba(56, 189, 248, 0.3); stroke: #38bdf8; }
+.dung-ext-stable circle { fill: rgba(251, 191, 36, 0.3); stroke: #fbbf24; }
+.dung-ext-none circle { fill: rgba(100, 116, 139, 0.3); stroke: #64748b; }
+
+/* Tooltip */
+.dung-tooltip {
+  position: absolute;
+  padding: 8px 12px;
+  background: #1e293b;
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  pointer-events: none;
+  z-index: 100;
+  max-width: 300px;
+}
+
+.dung-tooltip-title {
+  font-weight: 600;
+  color: #38bdf8;
+  margin-bottom: 4px;
+}
+
+.dung-tooltip-detail {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+/* Extension selector */
+.dung-ext-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dung-ext-btn {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dung-ext-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.dung-ext-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+/* Node detail panel */
+.dung-detail-panel {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #1e293b;
+  border-radius: 6px;
+  border-left: 3px solid #38bdf8;
+  font-size: 0.85rem;
+}
+
+.dung-detail-arg {
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.dung-detail-ext {
+  margin-top: 4px;
+}
+
+.dung-detail-ext span {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  margin-right: 4px;
+}
