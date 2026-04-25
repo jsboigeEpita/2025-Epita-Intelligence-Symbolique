@@ -8,6 +8,7 @@ import LogicGraph from './components/LogicGraph';
 import ValidationForm from './components/ValidationForm';
 import GovernanceDashboard from './components/governance/GovernanceDashboard';
 import DebateArena from './components/debate/DebateArena';
+import SpectacularDashboard from './components/spectacular/SpectacularDashboard';
 import { checkAPIHealth } from './services/api';
 
 function App() {
@@ -29,7 +30,8 @@ function App() {
     { id: 'validation', label: '✅ Validation', component: ValidationForm },
     { id: 'framework', label: '🏗️ Framework', component: FrameworkBuilder },
     { id: 'governance', label: '🏛️ Gouvernance', component: GovernanceDashboard },
-    { id: 'debate', label: '⚔️ Débat', component: DebateArena }
+    { id: 'debate', label: '⚔️ Débat', component: DebateArena },
+    { id: 'spectacular', label: '🌟 Spectacular', component: SpectacularDashboard }
   ];
 
   const renderActiveComponent = () => {
@@ -41,19 +43,21 @@ function App() {
     return null;
   };
 
+  // Spectacular tab works with mock data (no API required)
+  const isSpectacular = activeTab === 'spectacular';
+
   return (
     <div className="App">
       <header className="App-header">
         <div className="header-content">
           <h1>🎯 Interface d'Analyse Argumentative</h1>
           <p className="header-subtitle">
-            Analysez vos arguments, détectez les sophismes et construisez des frameworks r
-robustes
+            Analysez vos arguments, détectez les sophismes et construisez des frameworks robustes
           </p>
           <div className={`api-status ${apiStatus}`}>
             <span className="status-indicator"></span>
             API: {apiStatus === 'connected' ? '✅ Connectée' :
-                  apiStatus === 'disconnected' ? '❌ Déconnectée' : '🔄 Vérification...'} 
+                  apiStatus === 'disconnected' ? '❌ Déconnectée' : '🔄 Vérification...'}
           </div>
         </div>
       </header>
@@ -65,14 +69,15 @@ robustes
               key={tab.id}
               className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
-              disabled={apiStatus !== 'connected'}
+              disabled={apiStatus !== 'connected' && tab.id !== 'spectacular'}
               data-testid={
                 tab.id === 'analyzer' ? 'analyzer-tab' :
                 tab.id === 'fallacies' ? 'fallacy-detector-tab' :
                 tab.id === 'reconstructor' ? 'reconstructor-tab' :
                 tab.id === 'logic-graph' ? 'logic-graph-tab' :
                 tab.id === 'validation' ? 'validation-tab' :
-                tab.id === 'framework' ? 'framework-tab' : undefined
+                tab.id === 'framework' ? 'framework-tab' :
+                tab.id === 'spectacular' ? 'spectacular-tab' : undefined
               }
             >
               {tab.label}
@@ -82,7 +87,7 @@ robustes
       </nav>
 
       <main className="main-content">
-        {apiStatus !== 'connected' ? (
+        {(apiStatus !== 'connected' && !isSpectacular) ? (
           <div className="api-error-state">
             <div className="error-icon">🚫</div>
             <h2>API Indisponible</h2>
@@ -92,7 +97,7 @@ robustes
             </p>
             <div className="error-instructions">
               <h3>Pour démarrer l'API :</h3>
-              <pre><code>cd services/web_api{'\n'}python start_api.py</code></pre>        
+              <pre><code>cd services/web_api{'\n'}python start_api.py</code></pre>
             </div>
           </div>
         ) : (
