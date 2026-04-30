@@ -28,6 +28,7 @@ __all__ = [
     "build_jtms_dung_loop_workflow",
     "build_neural_symbolic_fallacy_workflow",
     "build_hierarchical_fallacy_workflow",
+    "build_spectacular_workflow",
     "WORKFLOW_CATALOG",
     "get_workflow_catalog",
     "reset_workflow_catalog",
@@ -522,6 +523,126 @@ def build_hierarchical_fallacy_workflow() -> WorkflowDefinition:
     )
 
 
+def build_spectacular_workflow() -> WorkflowDefinition:
+    """Full-chain spectacular analysis composing every available capability.
+
+    Designed to maximise UnifiedAnalysisState field coverage (target ≥28/32).
+    Phases are arranged in a DAG so formal logic, fallacy detection, and
+    quality evaluation run in parallel after extraction; downstream phases
+    (Dung, ASPIC, JTMS, ATMS, debate, governance, synthesis) aggregate
+    results from earlier stages.
+
+    DAG levels (approximate):
+        L0  extract
+        L1  quality | nl_to_logic | neural_detect | hierarchical_fallacy
+        L2  pl | fol | modal                     (from nl_to_logic)
+        L3  dung_extensions                       (from fallacy + pl)
+        L4  aspic_analysis                        (from dung)
+        L5  counter                               (from quality)
+        L6  jtms | debate                         (from counter)
+        L7  atms                                  (from jtms)
+        L8  governance | formal_synthesis         (aggregation)
+    """
+    return (
+        WorkflowBuilder("spectacular_analysis")
+        # L0 — extraction
+        .add_phase("extract", capability="fact_extraction")
+        # L1 — parallel after extraction
+        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
+        .add_phase(
+            "nl_to_logic",
+            capability="nl_to_logic_translation",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "neural_detect",
+            capability="neural_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "hierarchical_fallacy",
+            capability="hierarchical_fallacy_detection",
+            depends_on=["extract"],
+            optional=True,
+        )
+        # L2 — formal logic (parallel, from nl_to_logic)
+        .add_phase(
+            "pl",
+            capability="propositional_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "fol",
+            capability="fol_reasoning",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        .add_phase(
+            "modal",
+            capability="modal_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        # L3 — Dung extensions (from fallacy + PL results)
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        # L4 — ASPIC+ structured argumentation
+        .add_phase(
+            "aspic_analysis",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L5 — counter-argument generation
+        .add_phase(
+            "counter",
+            capability="counter_argument_generation",
+            depends_on=["quality"],
+        )
+        # L6 — JTMS belief tracking + adversarial debate (parallel)
+        .add_phase(
+            "jtms",
+            capability="belief_maintenance",
+            depends_on=["counter"],
+            optional=True,
+        )
+        .add_phase(
+            "debate",
+            capability="adversarial_debate",
+            depends_on=["counter"],
+            optional=True,
+        )
+        # L7 — ATMS multi-context (from JTMS beliefs)
+        .add_phase(
+            "atms",
+            capability="assumption_based_reasoning",
+            depends_on=["jtms"],
+            optional=True,
+        )
+        # L8 — governance + formal synthesis (terminal aggregation)
+        .add_phase(
+            "governance",
+            capability="governance_simulation",
+            depends_on=["quality"],
+            optional=True,
+        )
+        .add_phase(
+            "formal_synthesis",
+            capability="formal_synthesis",
+            depends_on=["fol", "modal", "aspic_analysis"],
+            optional=True,
+        )
+        .build()
+    )
+
+
 WORKFLOW_CATALOG: Dict[str, WorkflowDefinition] = {}
 
 
@@ -540,6 +661,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "neural_symbolic": build_neural_symbolic_fallacy_workflow(),
             "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
             "nl_to_logic": build_nl_to_logic_workflow(),
+            "spectacular": build_spectacular_workflow(),
         }
         # Collaborative multi-agent debate (#175)
         try:
