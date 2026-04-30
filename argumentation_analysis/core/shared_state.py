@@ -406,6 +406,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.bipolar_results: List[Dict[str, Any]] = []
         # Logic agent analysis results (#71 formal verification)
         self.fol_analysis_results: List[Dict[str, Any]] = []
+        self.fol_signature: List[str] = []  # Pre-declared sorts/types (#348)
         self.propositional_analysis_results: List[Dict[str, Any]] = []
         self.modal_analysis_results: List[Dict[str, Any]] = []
         self.formal_synthesis_reports: List[Dict[str, Any]] = []

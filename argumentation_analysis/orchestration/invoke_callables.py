@@ -2987,14 +2987,20 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
 
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 
         bridge = TweetyBridge()
-        belief_set_str = "\n".join(str(f) for f in formulas)
+        # Pre-declare signature (sorts + types) for Tweety FolParser (#348)
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+        fol_signature = meta.get("signature_lines", [])
+        belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "first_order"
         )
         return {
             "formulas": formulas,
+            "fol_signature": fol_signature,
+            "fol_metadata": meta,
             "consistent": bool(is_consistent),
             "inferences": inferences,
             "confidence": 0.8 if is_consistent else 0.4,
@@ -3005,8 +3011,17 @@ async def _invoke_fol_reasoning(input_text: str, context: Dict[str, Any]) -> Dic
     except Exception:
         # Fallback: check for contradiction in generated formulas
         has_fallacious = any("Fallacious" in f for f in formulas)
+        # Still extract signature metadata even in fallback (#348)
+        fol_signature = []
+        try:
+            from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
+            meta = FOLLogicAgent.extract_fol_metadata(formulas)
+            fol_signature = meta.get("signature_lines", [])
+        except Exception:
+            pass
         return {
             "formulas": formulas,
+            "fol_signature": fol_signature,
             "consistent": not has_fallacious,
             "inferences": inferences,
             "confidence": 0.6 if not has_fallacious else 0.3,
