@@ -275,11 +275,12 @@ Exemples:
         "--mode",
         "-m",
         type=str,
-        choices=["pipeline", "conversational", "legacy"],
+        choices=["pipeline", "conversational", "legacy", "sherlock_modern"],
         default="pipeline",
         help="Mode d'orchestration: pipeline (séquentiel, défaut), "
         "conversational (agents dialoguent via AgentGroupChat), "
-        "legacy (ancien AnalysisRunner)",
+        "legacy (ancien AnalysisRunner), "
+        "sherlock_modern (investigation multi-agent, #357)",
     )
     parser.add_argument(
         "--legacy",
@@ -368,6 +369,42 @@ Exemples:
     # Exécution de l'analyse
     if mode == "legacy":
         await run_legacy_analysis(text_content, llm_service)
+    elif mode == "sherlock_modern":
+        from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
+            SherlockModernOrchestrator,
+        )
+
+        logging.info("Mode SHERLOCK MODERN : investigation multi-agent")
+        orchestrator = SherlockModernOrchestrator()
+        result = await orchestrator.investigate(text_content)
+
+        print(f"\n{'='*60}")
+        print(f" Sherlock Modern Investigation")
+        print(f"{'='*60}")
+        print(f"  Agents used     : {result.agent_count}")
+        print(f"  Investigation steps : {len(result.trace)}")
+        print(f"  Hypotheses tested   : {len(result.hypotheses)}")
+        print(f"\n  Reasoning chain:")
+        for i, step in enumerate(result.reasoning_chain, 1):
+            print(f"    {i}. {step}")
+        if result.hypotheses:
+            print(f"\n  Hypotheses:")
+            for h in result.hypotheses:
+                status = "COHERENT" if h.get("coherent") else "INCOHERENT"
+                print(f"    - {h['id']}: {status}")
+        print(f"\n  Solution:\n    {result.solution[:500]}")
+        print(f"{'='*60}\n")
+
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {"trace": result.trace, "solution": result.solution,
+                     "agents": result.agents_used, "hypotheses": result.hypotheses},
+                    f, ensure_ascii=False, indent=2, default=str,
+                )
+            logging.info(f"Results saved to {output_path}")
     elif mode == "conversational":
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             run_conversational_analysis,
