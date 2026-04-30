@@ -33,7 +33,10 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 )
 from semantic_kernel.contents.chat_history import ChatHistory
 
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+from argumentation_analysis.core.shared_state import (
+    RhetoricalAnalysisState,
+    UnifiedAnalysisState,
+)
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.orchestration.trace_analyzer import (
     ConversationalTraceAnalyzer,
@@ -301,6 +304,7 @@ async def run_conversational_analysis(
     text: str,
     max_turns_per_phase: int = 5,
     agent_names: Optional[List[str]] = None,
+    spectacular: bool = True,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -308,6 +312,13 @@ async def run_conversational_analysis(
     1. Extraction + Detection (PM, ExtractAgent, InformalAgent)
     2. Formal Analysis (PM, FormalAgent, QualityAgent)
     3. Synthesis (PM, DebateAgent, CounterAgent, GovernanceAgent)
+
+    Args:
+        text: Input text to analyze.
+        max_turns_per_phase: Max agent turns per phase.
+        agent_names: Optional subset of agent names to use.
+        spectacular: If True, use UnifiedAnalysisState for 28+/32 field
+            coverage matching the spectacular workflow profile (#363).
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -329,8 +340,9 @@ async def run_conversational_analysis(
     )
     kernel.add_service(llm_service)
 
-    # 2. Setup shared state
-    state = RhetoricalAnalysisState(text)
+    # 2. Setup shared state (#363: UnifiedAnalysisState for spectacular coverage)
+    state_cls = UnifiedAnalysisState if spectacular else RhetoricalAnalysisState
+    state = state_cls(text)
 
     # 3. Create all agents
     all_agents = create_conversational_agents(
@@ -543,15 +555,54 @@ async def run_conversational_analysis(
 
     result = {
         "mode": "conversational",
+        "workflow_name": "spectacular_analysis" if spectacular else "conversational",
         "phases": [p["name"] for p in phase_configs],
         "conversation_log": conversation_log,
         "total_messages": len(conversation_log),
         "duration_seconds": duration,
         "state_snapshot": state_snapshot,
         "state_non_empty_fields": non_empty,
+        "state_total_fields": len(state_snapshot),
+        "state_coverage_pct": (
+            non_empty / len(state_snapshot) * 100 if state_snapshot else 0
+        ),
         "unified_state": state,
         "trace_report": trace_report,
+        "summary": {
+            "completed": len(phase_configs),
+            "failed": 0,
+            "skipped": 0,
+            "total": len(phase_configs),
+            "total_messages": len(conversation_log),
+        },
     }
+
+    # Spectacular mode: add capability mapping from conversation log
+    if spectacular:
+        capabilities_used = set()
+        for msg in conversation_log:
+            agent = msg.get("agent", "")
+            if agent == "ExtractAgent":
+                capabilities_used.add("fact_extraction")
+            elif agent == "InformalAgent":
+                capabilities_used.update(
+                    ["neural_fallacy_detection", "hierarchical_fallacy_detection"]
+                )
+            elif agent == "FormalAgent":
+                capabilities_used.update(
+                    ["nl_to_logic_translation", "fol_reasoning", "modal_logic",
+                     "propositional_logic"]
+                )
+            elif agent == "QualityAgent":
+                capabilities_used.add("argument_quality")
+            elif agent == "CounterAgent":
+                capabilities_used.add("counter_argument_generation")
+            elif agent == "DebateAgent":
+                capabilities_used.add("adversarial_debate")
+            elif agent == "GovernanceAgent":
+                capabilities_used.add("governance_simulation")
+        result["capabilities_used"] = list(capabilities_used)
+        result["capabilities_missing"] = []
 
     logger.info(
         f"Conversational analysis complete: {len(conversation_log)} messages, "

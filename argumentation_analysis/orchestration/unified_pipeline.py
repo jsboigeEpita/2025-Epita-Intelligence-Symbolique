@@ -119,21 +119,9 @@ async def run_unified_analysis(
                 run_conversational_analysis,
             )
 
-            conv_result = await run_conversational_analysis(text)
+            conv_result = await run_conversational_analysis(text, spectacular=True)
 
-            # Normalize result format for benchmark compatibility (#208-L)
-            # Conversational returns {phases: [names], conversation_log, total_messages}
-            # Benchmark expects {phases: {dict}, summary: {completed, total, ...}}
-            phase_names = conv_result.get("phases", [])
-            total_msgs = conv_result.get("total_messages", 0)
-            conv_result["summary"] = {
-                "completed": len(phase_names),
-                "failed": 0,
-                "skipped": 0,
-                "total": len(phase_names),
-                "total_messages": total_msgs,
-            }
-            conv_result["workflow_name"] = "conversational"
+            # Result already contains summary, capabilities_used, workflow_name (#363)
             return conv_result
         except Exception as e:
             logger.warning(
