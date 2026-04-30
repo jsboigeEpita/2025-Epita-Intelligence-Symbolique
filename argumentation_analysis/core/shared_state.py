@@ -411,6 +411,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.formal_synthesis_reports: List[Dict[str, Any]] = []
         # NL-to-formal-logic translations (#173)
         self.nl_to_logic_translations: List[Dict[str, Any]] = []
+        # ATMS multi-context analysis (#349)
+        self.atms_contexts: List[Dict[str, Any]] = []
         # Workflow execution results
         self.workflow_results: Dict[str, Any] = {}
 

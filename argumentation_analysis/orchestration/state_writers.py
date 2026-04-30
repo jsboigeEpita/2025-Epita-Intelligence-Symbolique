@@ -177,6 +177,7 @@ def _write_atms_to_state(output, state, ctx) -> None:
     """Write ATMS assumption-based reasoning results to UnifiedAnalysisState (#292).
 
     Stores each node's environment info as a JTMS belief for compatibility.
+    Also stores multi-context hypotheses in state.atms_contexts (#349).
     """
     if not output or not isinstance(output, dict):
         return
@@ -207,6 +208,10 @@ def _write_atms_to_state(output, state, ctx) -> None:
             f"contradictions={'yes' if output.get('has_contradictions') else 'no'}",
         ],
     )
+    # Store multi-context hypotheses (#349)
+    atms_contexts = output.get("atms_contexts", [])
+    if isinstance(atms_contexts, list):
+        state.atms_contexts = atms_contexts
 
 
 def _write_debate_to_state(output, state, ctx) -> None:
