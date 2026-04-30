@@ -171,6 +171,10 @@ def _write_jtms_to_state(output, state, ctx) -> None:
         if not isinstance(justifications, list):
             justifications = []
         state.add_jtms_belief(str(name), valid, justifications=justifications)
+    # Store retraction cascade chains (#350)
+    retraction_chain = output.get("retraction_chain", [])
+    if isinstance(retraction_chain, list):
+        state.jtms_retraction_chain = retraction_chain
 
 
 def _write_atms_to_state(output, state, ctx) -> None:

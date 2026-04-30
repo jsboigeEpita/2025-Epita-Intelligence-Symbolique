@@ -385,6 +385,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.argument_quality_scores: Dict[str, Dict[str, Any]] = {}
         # JTMS belief network (1.4.1)
         self.jtms_beliefs: Dict[str, Dict[str, Any]] = {}
+        # JTMS retraction cascade chains (#350)
+        self.jtms_retraction_chain: List[Dict[str, Any]] = []
         # Dung abstract argumentation frameworks (abs_arg_dung)
         self.dung_frameworks: Dict[str, Dict[str, Any]] = {}
         # Governance decisions and votes (2.1.6)
