@@ -72,6 +72,7 @@ __all__ = [
     "_invoke_dung_extensions",
     "_python_dung_fallback",
     "_invoke_formal_synthesis",
+    "_invoke_narrative_synthesis",
 ]
 
 
@@ -3248,6 +3249,62 @@ async def _invoke_formal_synthesis(input_text: str, context: Dict[str, Any]) -> 
         "overall_validity": overall_validity,
         "phase_count": len(phase_results),
     }
+
+
+async def _invoke_narrative_synthesis(input_text: str, context: Dict[str, Any]) -> Dict:
+    """Invoke narrative synthesis to produce readable prose from all phase outputs (#351).
+
+    Reads state from context (populated by prior phases) and calls
+    build_narrative to generate 1-2 paragraphs weaving together quality,
+    fallacies, JTMS, ATMS, Dung, and formal logic results.
+    """
+    from argumentation_analysis.plugins.narrative_synthesis_plugin import build_narrative
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+    # Reconstruct state from context if possible
+    state = context.get("_state_object")
+    if not isinstance(state, UnifiedAnalysisState):
+        state = UnifiedAnalysisState(input_text[:200])
+        # Populate from context outputs
+        for key, value in context.items():
+            if key.startswith("phase_") and key.endswith("_output"):
+                cap = key[len("phase_") : -len("_output")]
+                writer = CAPABILITY_STATE_WRITERS.get(cap)
+                if writer and isinstance(value, dict):
+                    try:
+                        writer(value, state, context)
+                    except Exception:
+                        pass
+
+    narrative = build_narrative(state)
+
+    return {
+        "narrative": narrative,
+        "paragraph_count": narrative.count("\n\n") + 1,
+        "referenced_fields": _count_referenced_fields(state),
+    }
+
+
+def _count_referenced_fields(state) -> int:
+    """Count how many state fields have data (used as references in narrative)."""
+    count = 0
+    for field_name in [
+        "argument_quality_scores",
+        "identified_fallacies",
+        "neural_fallacy_scores",
+        "counter_arguments",
+        "jtms_beliefs",
+        "jtms_retraction_chain",
+        "atms_contexts",
+        "dung_frameworks",
+        "fol_analysis_results",
+        "propositional_analysis_results",
+        "modal_analysis_results",
+    ]:
+        val = getattr(state, field_name, None)
+        if val and (isinstance(val, (list, dict)) and len(val) > 0):
+            count += 1
+    return count
 
 
 # --- State writers: map capability → (output, state, ctx) → None ---
