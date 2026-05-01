@@ -1,0 +1,539 @@
+/* SpectacularDashboard.css — Rich 32-field dashboard layout */
+:root {
+  --spec-bg: #0f172a;
+  --spec-card: #1e293b;
+  --spec-card-hover: #334155;
+  --spec-border: #475569;
+  --spec-accent: #38bdf8;
+  --spec-success: #4ade80;
+  --spec-warning: #fbbf24;
+  --spec-danger: #f87171;
+  --spec-text: #e2e8f0;
+  --spec-text-dim: #94a3b8;
+  --spec-retracted: #ef4444;
+}
+
+.spec-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--spec-text);
+}
+
+/* ── Header ── */
+.spec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: var(--spec-card);
+  border-radius: 10px;
+  border: 1px solid var(--spec-border);
+}
+
+.spec-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--spec-accent);
+}
+
+.spec-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--spec-text-dim);
+}
+
+.spec-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Field coverage bar ── */
+.spec-coverage-bar {
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  background: var(--spec-card);
+  border-radius: 8px;
+  border: 1px solid var(--spec-border);
+}
+
+.spec-coverage-label {
+  font-size: 0.85rem;
+  color: var(--spec-text-dim);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.spec-coverage-track {
+  height: 8px;
+  background: var(--spec-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.spec-coverage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--spec-accent), var(--spec-success));
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── Section cards ── */
+.spec-section {
+  margin-bottom: 12px;
+  background: var(--spec-card);
+  border-radius: 8px;
+  border: 1px solid var(--spec-border);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.spec-section:hover {
+  border-color: var(--spec-accent);
+}
+
+.spec-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.spec-section-header:hover {
+  background: var(--spec-card-hover);
+}
+
+.spec-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.spec-section-icon {
+  font-size: 1.1rem;
+}
+
+.spec-section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.spec-badge-populated {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--spec-success);
+}
+
+.spec-badge-empty {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--spec-danger);
+}
+
+.spec-section-chevron {
+  font-size: 0.8rem;
+  color: var(--spec-text-dim);
+  transition: transform 0.2s;
+}
+
+.spec-section-chevron.open {
+  transform: rotate(90deg);
+}
+
+.spec-section-body {
+  padding: 0 16px 16px;
+}
+
+/* ── Section content styles ── */
+.spec-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.spec-field-item {
+  padding: 8px 12px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.spec-field-label {
+  color: var(--spec-text-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.spec-field-value {
+  color: var(--spec-text);
+  word-break: break-word;
+}
+
+/* ── Argument list ── */
+.spec-arg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spec-arg-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.spec-arg-id {
+  color: var(--spec-accent);
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+.spec-arg-text {
+  color: var(--spec-text);
+}
+
+/* ── Fallacy items ── */
+.spec-fallacy-item {
+  padding: 8px 12px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  border-left: 3px solid var(--spec-warning);
+  margin-bottom: 6px;
+}
+
+.spec-fallacy-path {
+  font-size: 0.75rem;
+  color: var(--spec-text-dim);
+  margin-bottom: 2px;
+}
+
+.spec-fallacy-type {
+  font-weight: 600;
+  color: var(--spec-warning);
+  font-size: 0.9rem;
+}
+
+.spec-fallacy-justification {
+  font-size: 0.82rem;
+  color: var(--spec-text);
+  margin-top: 2px;
+}
+
+.spec-severity-bar {
+  height: 4px;
+  background: var(--spec-bg);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.spec-severity-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+/* ── JTMS belief tree ── */
+.spec-belief-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spec-belief-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 0.82rem;
+  border-radius: 4px;
+}
+
+.spec-belief-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spec-belief-status.valid {
+  background: var(--spec-success);
+}
+
+.spec-belief-status.retracted {
+  background: var(--spec-retracted);
+}
+
+.spec-belief-name {
+  color: var(--spec-text);
+}
+
+.spec-belief-name.retracted {
+  text-decoration: line-through;
+  color: var(--spec-retracted);
+}
+
+.spec-retraction-chain {
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid var(--spec-retracted);
+  margin-top: 8px;
+}
+
+.spec-retraction-trigger {
+  font-weight: 600;
+  color: var(--spec-retracted);
+  font-size: 0.85rem;
+}
+
+.spec-retraction-cascade {
+  font-size: 0.82rem;
+  color: var(--spec-text-dim);
+  margin-top: 2px;
+  padding-left: 12px;
+}
+
+/* ── Dung framework ── */
+.spec-dung-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.spec-dung-ext {
+  padding: 8px 12px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+}
+
+.spec-dung-ext-label {
+  font-size: 0.75rem;
+  color: var(--spec-text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.spec-dung-ext-args {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.spec-dung-arg-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* ── Quality radar ── */
+.spec-quality-card {
+  padding: 10px 14px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.spec-quality-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.spec-quality-arg {
+  font-weight: 600;
+  color: var(--spec-accent);
+  font-size: 0.9rem;
+}
+
+.spec-quality-overall {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.spec-quality-scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spec-quality-virtue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.spec-quality-virtue-label {
+  color: var(--spec-text-dim);
+}
+
+.spec-quality-virtue-value {
+  font-weight: 500;
+}
+
+.spec-quality-assessment {
+  font-size: 0.82rem;
+  color: var(--spec-text-dim);
+  font-style: italic;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--spec-border);
+}
+
+/* ── Counter-argument items ── */
+.spec-ca-item {
+  padding: 8px 12px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  border-left: 3px solid var(--spec-accent);
+  margin-bottom: 6px;
+}
+
+.spec-ca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.spec-ca-strategy {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--spec-accent);
+}
+
+.spec-ca-content {
+  font-size: 0.85rem;
+  color: var(--spec-text);
+}
+
+/* ── Narrative section ── */
+.spec-narrative {
+  padding: 12px 16px;
+  background: var(--spec-bg);
+  border-radius: 8px;
+  border-left: 4px solid var(--spec-accent);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--spec-text);
+}
+
+/* ── Workflow phases ── */
+.spec-phase-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spec-phase-chip {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--spec-success);
+}
+
+/* ── Conclusion ── */
+.spec-conclusion {
+  padding: 12px 16px;
+  background: rgba(56, 189, 248, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── ATMS context ── */
+.spec-atms-context {
+  padding: 8px 12px;
+  background: var(--spec-bg);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.spec-atms-hypothesis {
+  font-weight: 600;
+  color: var(--spec-accent);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.spec-atms-status {
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.spec-atms-status.consistent {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--spec-success);
+}
+
+.spec-atms-status.mostly_consistent {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--spec-warning);
+}
+
+.spec-atms-status.conflicting {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--spec-danger);
+}
+
+/* ── Mock badge ── */
+.spec-mock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--spec-warning);
+  margin-left: 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .spec-dashboard {
+    padding: 8px;
+  }
+
+  .spec-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .spec-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spec-dung-summary {
+    grid-template-columns: 1fr;
+  }
+}
