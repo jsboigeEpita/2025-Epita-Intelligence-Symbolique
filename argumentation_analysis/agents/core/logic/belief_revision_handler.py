@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 class BeliefRevisionHandler:
     """AGM belief revision using Tweety's beliefdynamics module."""
 
+    REVISION_METHODS = {"dalal", "levi"}
+
     def __init__(self, initializer_instance=None):
         if initializer_instance and not initializer_instance.is_jvm_ready():
             raise RuntimeError(
