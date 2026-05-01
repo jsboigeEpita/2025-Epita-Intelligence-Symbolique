@@ -2,8 +2,8 @@
   "workflow_name": "spectacular_analysis",
   "source_id": "doc_A",
   "summary": {
-    "completed": 16,
-    "total": 16,
+    "completed": 17,
+    "total": 17,
     "failed": 0,
     "skipped": 0
   },
@@ -23,6 +23,7 @@
     "debate_protocol",
     "assumption_based_reasoning",
     "governance_simulation",
+    "formal_synthesis",
     "narrative_synthesis"
   ],
   "state_snapshot": {

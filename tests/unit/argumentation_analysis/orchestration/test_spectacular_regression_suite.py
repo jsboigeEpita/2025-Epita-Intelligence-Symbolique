@@ -293,11 +293,12 @@ class TestSpectacularWorkflowGolden:
         "hierarchical_fallacy", "pl", "fol", "modal",
         "dung_extensions", "aspic_analysis", "counter",
         "jtms", "debate", "atms", "governance", "formal_synthesis",
+        "narrative_synthesis",
     }
 
-    def test_phase_count_is_16(self):
+    def test_phase_count_is_17(self):
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 16
+        assert len(wf.phases) == 17
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -354,7 +355,7 @@ class TestSpectacularWorkflowGolden:
         wf = build_spectacular_workflow()
         results, state = await _execute_workflow(wf)
         completed = [r for r in results.values() if r.status == PhaseStatus.COMPLETED]
-        assert len(completed) == 16
+        assert len(completed) == 17
 
     @pytest.mark.asyncio
     async def test_no_failed_phases(self):
@@ -483,7 +484,7 @@ class TestSpectacularWorkflowGolden:
         _, state = await _execute_workflow(wf)
         assert "spectacular_analysis" in state.workflow_results
         wf_data = state.workflow_results["spectacular_analysis"]
-        assert wf_data["completed"] == 16
+        assert wf_data["completed"] == 17
         assert wf_data["failed"] == 0
 
 
@@ -580,7 +581,7 @@ class TestWorkflowCatalogGolden:
         catalog = get_workflow_catalog()
         assert "spectacular" in catalog
         assert catalog["spectacular"].name == "spectacular_analysis"
-        assert len(catalog["spectacular"].phases) == 16
+        assert len(catalog["spectacular"].phases) == 17
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

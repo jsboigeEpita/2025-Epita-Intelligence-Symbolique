@@ -29,7 +29,7 @@ class TestSpectacularWorkflowDAG:
 
     def test_phase_count(self):
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 16
+        assert len(wf.phases) == 17
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -51,6 +51,7 @@ class TestSpectacularWorkflowDAG:
             "atms",
             "governance",
             "formal_synthesis",
+            "narrative_synthesis",
         }
         assert expected == phase_names
 

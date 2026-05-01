@@ -647,6 +647,12 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["fol", "modal", "aspic_analysis"],
             optional=True,
         )
+        .add_phase(
+            "narrative_synthesis",
+            capability="narrative_synthesis",
+            depends_on=["quality", "jtms", "atms", "dung_extensions"],
+            optional=True,
+        )
         .build()
     )
 
