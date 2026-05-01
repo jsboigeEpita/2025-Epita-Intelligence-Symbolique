@@ -19,7 +19,7 @@ Fonctionnalités :
 import logging
 import asyncio
 import inspect
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Union, Tuple, Set
 from dataclasses import dataclass, field
 from pydantic import PrivateAttr
 
@@ -530,16 +530,22 @@ RÉPONDS EN FORMAT JSON :
         import re
 
         predicates: Dict[str, int] = {}  # name -> arity
-        constants: set = set()
-        variables: set = set()
+        constants: Set[str] = set()
+        variables: Set[str] = set()
 
+        # Note: this regex assumes flat predicate applications with simple
+        # argument lists. Nested predicates like P(Q(x), y) and operators
+        # inside argument lists are not supported (review #375).
         for formula in formulas:
-            # Extract predicate applications: Name(arg1, arg2, ...)
             for match in re.finditer(r"([A-Z][A-Za-z_]*)\(([^)]+)\)", formula):
                 pred_name = match.group(1)
                 args_str = match.group(2)
                 args = [a.strip() for a in args_str.split(",")]
+                # Filter empty args (malformed input like P(, x)).
+                args = [a for a in args if a]
                 arity = len(args)
+                if not arity:
+                    continue
                 if pred_name not in predicates or predicates[pred_name] < arity:
                     predicates[pred_name] = arity
                 for arg in args:

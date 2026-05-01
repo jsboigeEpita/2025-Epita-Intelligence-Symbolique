@@ -63,12 +63,58 @@ class SherlockModernOrchestrator:
 
     MIN_AGENTS = 5
 
+    # Maps phase ctx-key to the capability whose state writer should run
+    # (review #382: phases must populate self.state, not just self._ctx).
+    _PHASE_TO_CAPABILITY = {
+        "phase_extract_output": "fact_extraction",
+        "phase_hierarchical_fallacy_output": "hierarchical_fallacy_detection",
+        "phase_quality_output": "argument_quality",
+        "phase_counter_output": "counter_argument_generation",
+        "phase_jtms_output": "belief_maintenance",
+        "phase_atms_output": "assumption_based_reasoning",
+    }
+
     def __init__(self, state: Optional[UnifiedAnalysisState] = None):
         self.state = state
         self._trace: List[InvestigationStep] = []
         self._agents: List[str] = []
         self._hypotheses: List[Dict[str, Any]] = []
+        self._solution: str = ""
         self._ctx: Dict[str, Any] = {}
+
+    def _reset(self) -> None:
+        """Reset accumulators between investigations (review #383: idempotency)."""
+        self._trace = []
+        self._agents = []
+        self._hypotheses = []
+        self._solution = ""
+        self._ctx = {}
+
+    def _persist_to_state(self, ctx_key: str, result: Dict) -> None:
+        """Run the capability state writer so self.state is populated.
+
+        Without this, state_snapshot stays empty and the spectacular
+        coverage promise (28+ fields) is unmet (review #382).
+        """
+        if self.state is None or not isinstance(result, dict):
+            return
+        cap = self._PHASE_TO_CAPABILITY.get(ctx_key)
+        if cap is None:
+            return
+        try:
+            from argumentation_analysis.orchestration.state_writers import (
+                CAPABILITY_STATE_WRITERS,
+            )
+
+            writer = CAPABILITY_STATE_WRITERS.get(cap)
+            if writer is not None:
+                writer(result, self.state, self._ctx)
+        except Exception:
+            logger.warning(
+                "State writer for capability '%s' failed during Sherlock phase",
+                cap,
+                exc_info=True,
+            )
 
     def _add_step(self, phase: str, agent: str, findings: Dict, conclusion: str):
         self._trace.append(
@@ -84,7 +130,9 @@ class SherlockModernOrchestrator:
             self._agents.append(agent)
 
     async def investigate(self, discourse: str, context: Optional[Dict] = None) -> InvestigationResult:
-        """Run full investigation on discourse text."""
+        """Run full investigation on discourse text. Resets state on entry
+        (review #383: idempotency)."""
+        self._reset()
         self._ctx = dict(context or {})
         if self.state is None:
             self.state = UnifiedAnalysisState(discourse)
@@ -108,6 +156,7 @@ class SherlockModernOrchestrator:
             fallback={"extracts": [], "arguments": [], "claims": []},
         )
         self._ctx["phase_extract_output"] = result
+        self._persist_to_state("phase_extract_output", result)
 
         claims = result.get("extracts", result.get("claims", []))
         args = result.get("arguments", [])
@@ -128,6 +177,7 @@ class SherlockModernOrchestrator:
             fallback={"fallacies": {}, "total": 0},
         )
         self._ctx["phase_hierarchical_fallacy_output"] = result
+        self._persist_to_state("phase_hierarchical_fallacy_output", result)
 
         fallacies = result.get("fallacies", [])
         if isinstance(fallacies, dict):
@@ -158,6 +208,7 @@ class SherlockModernOrchestrator:
             fallback={"per_argument_scores": {}, "note_finale": 0.0},
         )
         self._ctx["phase_quality_output"] = result
+        self._persist_to_state("phase_quality_output", result)
 
         scores = result.get("per_argument_scores", {})
         overall = result.get("note_finale", 0.0)
@@ -182,6 +233,7 @@ class SherlockModernOrchestrator:
             fallback={"counter_arguments": [], "suggested_strategy": {}},
         )
         self._ctx["phase_counter_output"] = result
+        self._persist_to_state("phase_counter_output", result)
 
         counters = result.get("counter_arguments", [])
         strategy = result.get("suggested_strategy", {})
@@ -207,6 +259,7 @@ class SherlockModernOrchestrator:
             fallback={"beliefs": {}, "retraction_chain": []},
         )
         self._ctx["phase_jtms_output"] = result
+        self._persist_to_state("phase_jtms_output", result)
 
         beliefs = result.get("beliefs", {})
         retraction_chain = result.get("retraction_chain", [])
@@ -237,6 +290,7 @@ class SherlockModernOrchestrator:
             fallback={"atms_contexts": [], "has_contradictions": False},
         )
         self._ctx["phase_atms_output"] = result
+        self._persist_to_state("phase_atms_output", result)
 
         contexts = result.get("atms_contexts", [])
         has_contradictions = result.get("has_contradictions", False)
@@ -300,7 +354,10 @@ class SherlockModernOrchestrator:
             if func is not None:
                 return await func(text, self._ctx)
         except Exception as e:
-            logger.debug("invoke_safe(%s) fallback: %s", func_name, e)
+            # WARNING (not DEBUG) so operators see when real callables fail
+            # silently — fallbacks otherwise mask import/signature errors
+            # (review #382/#383).
+            logger.warning("invoke_safe(%s) fallback: %s", func_name, e)
         return dict(fallback)
 
     def _build_template_solution(self) -> str:
@@ -324,10 +381,11 @@ class SherlockModernOrchestrator:
         ]
         reasoning = [s.conclusion for s in self._trace if s.conclusion]
         snapshot = None
-        try:
-            snapshot = self.state.get_state_snapshot(summarize=True)
-        except Exception:
-            pass
+        if self.state is not None:
+            try:
+                snapshot = self.state.get_state_snapshot(summarize=True)
+            except Exception as e:
+                logger.warning("Failed to build state snapshot: %s", e)
 
         return InvestigationResult(
             trace=trace_dicts,
@@ -335,7 +393,7 @@ class SherlockModernOrchestrator:
             agents_used=list(self._agents),
             agent_count=len(self._agents),
             hypotheses=list(self._hypotheses),
-            solution=getattr(self, "_solution", ""),
+            solution=self._solution,
             state_snapshot=snapshot,
         )
 

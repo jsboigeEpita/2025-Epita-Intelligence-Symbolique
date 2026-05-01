@@ -144,9 +144,10 @@ def build_narrative(state: Any) -> str:
             "une synthese narrative. Seules des donnees partielles sont disponibles."
         )
 
-    # ── Assemble into 1-2 paragraphs ───────────────────────────────
-    paragraph_1 = " ".join(parts[: len(parts) // 2 + 1])
-    paragraph_2 = " ".join(parts[len(parts) // 2 + 1 :]) if len(parts) > 3 else ""
+    # ── Assemble into 1-2 paragraphs (ceil-split, never drops content) ──
+    half = (len(parts) + 1) // 2
+    paragraph_1 = " ".join(parts[:half])
+    paragraph_2 = " ".join(parts[half:])
 
     if paragraph_2:
         return f"{paragraph_1}\n\n{paragraph_2}"

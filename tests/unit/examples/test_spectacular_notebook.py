@@ -63,34 +63,34 @@ class TestSpectacularNotebook:
         not SCRIPT.exists(),
         reason="Demo script dependency not found"
     )
-    def test_notebook_executes_headless(self):
-        """Execute the notebook via nbconvert and verify no errors."""
+    def test_notebook_executes_headless(self, tmp_path):
+        """Execute the notebook via nbconvert and verify no errors.
+
+        Writes the executed notebook into pytest tmp_path so the source tree
+        stays clean and parallel runs don't collide (review #377).
+        """
+        executed = tmp_path / "spectacular_analysis_tour_executed.ipynb"
         result = subprocess.run(
             [
                 sys.executable, "-m", "jupyter", "nbconvert",
                 "--to", "notebook", "--execute",
                 "--ExecutePreprocessor.timeout=60",
                 str(NOTEBOOK),
-                "--output", "spectacular_analysis_tour_executed.ipynb",
+                "--output", str(executed),
             ],
             capture_output=True, text=True, timeout=120,
-            cwd=NOTEBOOK.parent,
         )
         assert result.returncode == 0, f"Notebook execution failed:\n{result.stderr[:500]}"
-
-        executed = NOTEBOOK.parent / "spectacular_analysis_tour_executed.ipynb"
         assert executed.exists()
-        try:
-            import nbformat
-            nb = nbformat.read(executed, as_version=4)
-            error_cells = [
-                c for c in nb.cells
-                if c.cell_type == "code"
-                and any(
-                    o.get("output_type") == "error"
-                    for o in c.get("outputs", [])
-                )
-            ]
-            assert len(error_cells) == 0, f"Cells with errors: {[c.source[:50] for c in error_cells]}"
-        finally:
-            executed.unlink(missing_ok=True)
+
+        import nbformat
+        nb = nbformat.read(executed, as_version=4)
+        error_cells = [
+            c for c in nb.cells
+            if c.cell_type == "code"
+            and any(
+                o.get("output_type") == "error"
+                for o in c.get("outputs", [])
+            )
+        ]
+        assert len(error_cells) == 0, f"Cells with errors: {[c.source[:50] for c in error_cells]}"
