@@ -418,6 +418,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.atms_contexts: List[Dict[str, Any]] = []
         # Workflow execution results
         self.workflow_results: Dict[str, Any] = {}
+        # Narrative synthesis (#351)
+        self.narrative_synthesis: str = ""
 
     def add_counter_argument(
         self, original_arg: str, counter_content: str, strategy: str, score: float

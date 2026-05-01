@@ -48,6 +48,7 @@ __all__ = [
     "_write_delp_to_state",
     "_write_qbf_to_state",
     "_write_collaborative_analysis_to_state",
+    "_write_narrative_synthesis_to_state",
     "CAPABILITY_STATE_WRITERS",
 ]
 
@@ -789,6 +790,15 @@ def _write_collaborative_analysis_to_state(output, state, ctx) -> None:
     _write_collaborative_to_state(output, state, ctx)
 
 
+def _write_narrative_synthesis_to_state(output, state, ctx) -> None:
+    """Write narrative synthesis results to UnifiedAnalysisState (#351)."""
+    if not output or not isinstance(output, dict):
+        return
+    narrative = output.get("narrative", "")
+    if isinstance(narrative, str) and narrative:
+        state.narrative_synthesis = narrative
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -825,4 +835,5 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "qbf_reasoning": _write_qbf_to_state,
     "collaborative_analysis": _write_collaborative_analysis_to_state,
     "nl_to_logic_translation": _write_nl_to_logic_to_state,
+    "narrative_synthesis": _write_narrative_synthesis_to_state,
 }
