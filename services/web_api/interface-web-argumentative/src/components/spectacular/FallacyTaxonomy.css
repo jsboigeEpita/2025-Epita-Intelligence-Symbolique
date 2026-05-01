@@ -1,0 +1,153 @@
+/* FallacyTaxonomy.css — Interactive fallacy taxonomy drill-down */
+
+.taxonomy-container {
+  background: #0f172a;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  padding: 16px;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.taxonomy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.taxonomy-header h3 {
+  margin: 0;
+  color: #38bdf8;
+  font-size: 1.1rem;
+}
+
+.taxonomy-stats {
+  display: flex;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+
+.taxonomy-stat {
+  color: #94a3b8;
+}
+
+.taxonomy-stat-divider {
+  color: #475569;
+}
+
+/* Filters */
+.taxonomy-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.taxonomy-filter-btn {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.taxonomy-filter-btn:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.taxonomy-filter-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+/* Tree */
+.taxonomy-tree {
+  background: #1e293b;
+  border-radius: 6px;
+  padding: 4px 0;
+}
+
+.taxonomy-empty {
+  padding: 20px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Nodes */
+.taxonomy-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.taxonomy-node:hover {
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.taxonomy-branch {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.taxonomy-expand-icon {
+  font-size: 0.65rem;
+  color: #64748b;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.taxonomy-leaf-spacer {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.taxonomy-node-name {
+  flex: 1;
+}
+
+.taxonomy-leaf .taxonomy-node-name {
+  font-weight: 400;
+  color: #cbd5e1;
+}
+
+/* Detected */
+.taxonomy-detected .taxonomy-node-name {
+  color: #fbbf24;
+}
+
+.taxonomy-detected-badge {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.taxonomy-count-badge {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+/* Severity */
+.taxonomy-severity {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
