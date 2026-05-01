@@ -134,6 +134,7 @@ async def run_modern_analysis(
     text_content: str,
     workflow_name: str = "standard",
     output_file: Optional[str] = None,
+    rich_output: bool = False,
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
@@ -189,6 +190,17 @@ async def run_modern_analysis(
         print(f"\n  État unifié : {non_empty} champs non-vides sur {len(state_snapshot)}")
 
     print(f"{'='*60}\n")
+
+    # Rich output formatting
+    if rich_output:
+        try:
+            from argumentation_analysis.cli.output_formatter import (
+                render_spectacular_result,
+            )
+
+            render_spectacular_result(results)
+        except ImportError:
+            logging.warning("Module output_formatter non disponible")
 
     # Sauvegarder en JSON si demandé
     if output_file:
@@ -268,6 +280,11 @@ Exemples:
         "-o",
         type=str,
         help="Chemin pour sauvegarder les résultats en JSON",
+    )
+    parser.add_argument(
+        "--rich-output",
+        action="store_true",
+        help="Afficher les résultats avec le formatage Rich (sections colorées, cross-refs)",
     )
 
     # Mode d'orchestration
@@ -399,6 +416,27 @@ Exemples:
 
         print(f"{'='*60}\n")
 
+        # Rich output formatting for conversational mode
+        if args.rich_output:
+            try:
+                from argumentation_analysis.cli.output_formatter import (
+                    render_spectacular_result,
+                )
+
+                # Normalize conversational result to expected format
+                render_result = {
+                    "workflow_name": results.get("workflow_name", "conversational"),
+                    "state_snapshot": results.get("state_snapshot", {}),
+                    "summary": results.get("summary", {
+                        "completed": len(results.get("phases", [])),
+                        "total": len(results.get("phases", [])),
+                    }),
+                    "capabilities_used": results.get("capabilities_used", []),
+                }
+                render_spectacular_result(render_result)
+            except ImportError:
+                logging.warning("Module output_formatter non disponible")
+
         # Sauvegarder si demandé
         if args.output:
             output_path = Path(args.output)
@@ -411,6 +449,7 @@ Exemples:
             text_content,
             workflow_name=args.workflow,
             output_file=args.output,
+            rich_output=args.rich_output,
         )
 
 
