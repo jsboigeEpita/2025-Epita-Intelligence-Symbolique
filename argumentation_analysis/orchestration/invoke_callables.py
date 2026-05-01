@@ -1320,8 +1320,15 @@ def _generate_hypotheses(
         if isinstance(f, dict):
             target = f.get("target_argument", f.get("argument", ""))
             if target:
-                fallacy_targets.add(str(target)[:60])
-    clean_args = [a for a in arg_names if a not in fallacy_targets]
+                fallacy_targets.add(str(target))
+    # Match against arg_names truncated to the same length to avoid silently
+    # missing fallacy-implicated arguments longer than the target string
+    # (review #376).
+    clean_args = [
+        a
+        for a in arg_names
+        if not any(t and (a == t or a.startswith(t) or t.startswith(a)) for t in fallacy_targets)
+    ]
     if clean_args and set(clean_args) != set(arg_names):
         hypotheses.append({
             "id": "h_fallacy_excluded",
@@ -1339,11 +1346,18 @@ def _generate_hypotheses(
     if per_arg_scores:
         high_quality = []
         for arg_name in arg_names:
-            for arg_id, scores in per_arg_scores.items():
-                if isinstance(scores, dict) and arg_name[:30] in str(arg_id):
-                    if scores.get("overall", scores.get("note_finale", 0)) >= 3.0:
-                        high_quality.append(arg_name)
-                    break
+            # Direct lookup first; fall back to exact-match against str(arg_id).
+            # Avoid arg_name[:30] in str(arg_id) — it falsely matched unrelated
+            # IDs like "counter_argument" / "target_argument" (review #376).
+            scores = per_arg_scores.get(arg_name)
+            if not isinstance(scores, dict):
+                for arg_id, candidate in per_arg_scores.items():
+                    if isinstance(candidate, dict) and str(arg_id) == arg_name:
+                        scores = candidate
+                        break
+            if isinstance(scores, dict):
+                if scores.get("overall", scores.get("note_finale", 0)) >= 3.0:
+                    high_quality.append(arg_name)
         if high_quality and set(high_quality) != set(arg_names):
             hypotheses.append({
                 "id": "h_high_quality",
@@ -3412,13 +3426,18 @@ async def _invoke_narrative_synthesis(input_text: str, context: Dict[str, Any]) 
                     try:
                         writer(value, state, context)
                     except Exception:
-                        pass
+                        logger.warning(
+                            "State writer for '%s' failed during narrative reconstruction",
+                            cap,
+                            exc_info=True,
+                        )
 
     narrative = build_narrative(state)
+    paragraph_count = (narrative.count("\n\n") + 1) if narrative else 0
 
     return {
         "narrative": narrative,
-        "paragraph_count": narrative.count("\n\n") + 1,
+        "paragraph_count": paragraph_count,
         "referenced_fields": _count_referenced_fields(state),
     }
 

@@ -733,7 +733,11 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_sherlock_modern_workflow,
             )
 
-            WORKFLOW_CATALOG["sherlock_modern"] = build_sherlock_modern_workflow()
+            wf = build_sherlock_modern_workflow()
+            if wf is not None:  # builder returns None on failure (review #382)
+                WORKFLOW_CATALOG["sherlock_modern"] = wf
+            else:
+                logger.warning("Sherlock modern workflow builder returned None")
         except Exception as e:
             logger.warning(f"Sherlock modern workflow not registered: {e}")
     return WORKFLOW_CATALOG

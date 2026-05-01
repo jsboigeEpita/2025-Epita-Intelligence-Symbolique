@@ -76,5 +76,6 @@ async def run_demo():
 
 if __name__ == "__main__":
     result = asyncio.run(run_demo())
-    # Exit with 0 if investigation produced results
-    sys.exit(0 if result.claims_analyzed >= 0 else 1)
+    # Exit with 0 only if the investigation produced at least one claim
+    # (claims_analyzed is len(); >=0 was always true — review #383).
+    sys.exit(0 if result.claims_analyzed >= 1 else 1)

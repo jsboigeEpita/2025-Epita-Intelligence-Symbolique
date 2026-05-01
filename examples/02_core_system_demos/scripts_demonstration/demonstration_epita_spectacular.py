@@ -63,7 +63,9 @@ def box(title: str, subtitle: str = ""):
     print(_c(C.C, "║") + _c(C.BOLD, f"  {title:^{w-4}}") + _c(C.C, "║"))
     if subtitle:
         print(_c(C.C, "║") + _c(C.DIM, f"  {subtitle:^{w-4}}") + _c(C.C, "║"))
-    print(_c(C.C, "╚" + "═" * w + "╗" if not subtitle else "╚" + "═" * w + "╝"))
+    # Bottom corner is always ╝ for a closed box. Original ternary had a
+    # precedence bug that made the ╗ branch dead code (review #377).
+    print(_c(C.C, "╚" + "═" * w + "╝"))
     print()
 
 

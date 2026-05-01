@@ -14,7 +14,7 @@ Key API:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, FrozenSet
+from typing import Any, Dict, List, Optional, Set
 
 from argumentation_analysis.services.jtms.atms_core import ATMS, ATMSNode
 
@@ -56,8 +56,13 @@ class HypothesisTracker:
         self._atms = ATMS()
         self._hypotheses: Dict[str, Hypothesis] = {}
         self._evidence_log: List[Dict[str, Any]] = []
-        self._assumption_to_hypothesis: Dict[str, str] = {}
-        self._contradicted_assumptions: Set[str] = set()
+        # Map assumption → list of hypotheses that include it (review #386:
+        # multiple hypotheses may share an assumption; original code silently
+        # overwrote on collision).
+        self._assumption_to_hypotheses: Dict[str, List[str]] = {}
+        # Map contradicted assumption → first evidence that contradicted it
+        # (review #386: avoid blaming the latest evidence in retraction reason).
+        self._contradicted_by: Dict[str, str] = {}
 
     def create_hypothesis(
         self,
@@ -71,7 +76,7 @@ class HypothesisTracker:
         atms_assumptions = []
         for a in assumptions:
             self._atms.add_assumption(a)
-            self._assumption_to_hypothesis[a] = hyp_id
+            self._assumption_to_hypotheses.setdefault(a, []).append(hyp_id)
             atms_assumptions.append(a)
 
         hyp = Hypothesis(
@@ -105,23 +110,28 @@ class HypothesisTracker:
         contradicts = contradicts or []
         derives = derives or []
 
-        # Register evidence node as assumption (evidence is an input fact,
-        # so it always has its own environment)
-        self._atms.add_assumption(evidence_id)
-
-        # Add justifications: supported assumptions → evidence node
+        # Register evidence node. If supports are provided the evidence is
+        # derived from them (justification); otherwise it's a free-standing
+        # input fact (assumption). Avoids the assumption+derived circular
+        # structure that produced spurious environments (review #386).
         if supports:
+            if evidence_id not in self._atms.nodes:
+                self._atms.add_node(evidence_id, is_assumption=False)
             self._atms.add_justification(
                 in_names=supports,
                 out_names=[],
                 conclusion_name=evidence_id,
             )
+        else:
+            self._atms.add_assumption(evidence_id)
 
         # Contradictions: evidence contradicts assumptions
-        # Track directly since ATMS invalidate_environment clears "⊥" label
+        # Track directly since ATMS invalidate_environment clears "⊥" label.
+        # Record the first contradicting evidence per assumption so retraction
+        # reasons identify the actual cause, not just the latest call.
         if contradicts:
-            self._contradicted_assumptions.update(contradicts)
             for c in contradicts:
+                self._contradicted_by.setdefault(c, evidence_id)
                 if c not in self._atms.nodes:
                     self._atms.add_node(c, is_assumption=False)
 
@@ -160,12 +170,17 @@ class HypothesisTracker:
 
             hyp.evidence_applied.append(new_evidence)
 
-            contradicted = set(hyp.assumptions) & self._contradicted_assumptions
+            contradicted = set(hyp.assumptions) & set(self._contradicted_by.keys())
             if contradicted:
                 hyp.coherent = False
+                # Identify the actual contradicting evidence per assumption
+                # rather than always blaming the latest call (review #386).
+                blames = sorted(
+                    {self._contradicted_by[a] for a in contradicted}
+                )
                 hyp.retraction_reason = (
-                    f"Contradicted by evidence '{new_evidence}' — "
-                    f"assumptions {contradicted} conflict with evidence"
+                    f"Contradicted by evidence {blames} — "
+                    f"assumptions {sorted(contradicted)} conflict with evidence"
                 )
 
     def get_active_hypotheses(self) -> List[Hypothesis]:

@@ -126,7 +126,11 @@ class OpenDomainInvestigator:
             elif phase == "quality_evaluation":
                 score = findings.get("overall_score", 0)
                 n = findings.get("arguments_evaluated", 0)
-                claims.append(f"Reliability score: {score:.1f}/10 ({n} arguments)")
+                # Skip the score line when no arguments were evaluated — the
+                # 0.0/10 readout is meaningless and pollutes attribution
+                # output (review #383).
+                if n > 0:
+                    claims.append(f"Reliability score: {score:.1f}/10 ({n} arguments)")
         return claims
 
     def _build_attributions(
