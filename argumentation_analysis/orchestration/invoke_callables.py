@@ -33,6 +33,7 @@ __all__ = [
     "_invoke_governance",
     "_invoke_jtms",
     "_invoke_atms",
+    "_generate_hypotheses",
     "_invoke_camembert_fallacy",
     "_invoke_local_llm",
     "_invoke_semantic_index",
@@ -1237,14 +1238,134 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict:
                         {"belief": node_name, "environment": env}
                     )
 
+    # ── Step 5: Multi-context hypothesis testing (#349) ──────────────
+    hypotheses = _generate_hypotheses(
+        arg_names, claim_names, detected_fallacies, per_arg_scores
+    )
+
+    atms_contexts = []
+    for hyp in hypotheses:
+        hyp_assumptions = frozenset(hyp["assumptions"])
+        is_consistent = atms.is_consistent(hyp_assumptions)
+
+        derivable_beliefs = []
+        for name, node in atms.nodes.items():
+            if node.is_assumption or name == "⊥":
+                continue
+            for env in node.label:
+                if env.issubset(hyp_assumptions):
+                    derivable_beliefs.append(name)
+                    break
+
+        contradicting_beliefs = []
+        for name, node in atms.nodes.items():
+            if not name.startswith("CONTRA:"):
+                continue
+            for env in node.label:
+                if env.issubset(hyp_assumptions):
+                    contradicting_beliefs.append(name)
+                    break
+
+        atms_contexts.append({
+            "hypothesis_id": hyp["id"],
+            "label": hyp["label"],
+            "assumptions": sorted(hyp_assumptions),
+            "coherent": is_consistent,
+            "derivable_beliefs": sorted(set(derivable_beliefs)),
+            "contradicting_beliefs": sorted(set(contradicting_beliefs)),
+            "derivation_count": len(derivable_beliefs),
+            "contradiction_count": len(contradicting_beliefs),
+        })
+
     return {
         "assumption_count": len(assumptions),
         "assumptions": assumptions,
         "node_count": len(atms.nodes) - 1,  # exclude ⊥
         "environments": environments,
         "consistent_derivations": consistent_envs,
-        "has_contradictions": len(atms.nodes.get("\u22a5", ATMSNode("", False)).label) > 0,
+        "has_contradictions": any(
+            len(n.label) > 0 for name, n in atms.nodes.items() if name == "⊥"
+        ),
+        "atms_contexts": atms_contexts,
     }
+
+
+def _generate_hypotheses(
+    arg_names: List[str],
+    claim_names: List[str],
+    fallacies: List[Any],
+    per_arg_scores: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Generate 3-4 testable hypotheses from analysis data for ATMS multi-context.
+
+    Each hypothesis is a named set of assumptions representing a possible
+    world. Hypotheses vary in which arguments they accept as true, producing
+    contexts where some beliefs are coherent and others are not.
+    """
+    hypotheses = []
+
+    # Hypothesis 1: Accept all arguments (full trust context)
+    hypotheses.append({
+        "id": "h_full_trust",
+        "label": "All arguments accepted",
+        "assumptions": list(arg_names),
+    })
+
+    # Hypothesis 2: Exclude arguments implicated in fallacies
+    fallacy_targets = set()
+    for f in fallacies[:6]:
+        if isinstance(f, dict):
+            target = f.get("target_argument", f.get("argument", ""))
+            if target:
+                fallacy_targets.add(str(target)[:60])
+    clean_args = [a for a in arg_names if a not in fallacy_targets]
+    if clean_args and set(clean_args) != set(arg_names):
+        hypotheses.append({
+            "id": "h_fallacy_excluded",
+            "label": "Arguments implicated in fallacies excluded",
+            "assumptions": list(clean_args),
+        })
+    elif len(arg_names) >= 2:
+        hypotheses.append({
+            "id": "h_partial_accept",
+            "label": "Partial acceptance (last argument excluded)",
+            "assumptions": list(arg_names[:-1]),
+        })
+
+    # Hypothesis 3: Only high-quality arguments (if quality data available)
+    if per_arg_scores:
+        high_quality = []
+        for arg_name in arg_names:
+            for arg_id, scores in per_arg_scores.items():
+                if isinstance(scores, dict) and arg_name[:30] in str(arg_id):
+                    if scores.get("overall", scores.get("note_finale", 0)) >= 3.0:
+                        high_quality.append(arg_name)
+                    break
+        if high_quality and set(high_quality) != set(arg_names):
+            hypotheses.append({
+                "id": "h_high_quality",
+                "label": "Only high-quality arguments",
+                "assumptions": list(high_quality),
+            })
+
+    # Hypothesis 4: Minimal set -- first argument only (skeptical context)
+    if len(arg_names) >= 2:
+        hypotheses.append({
+            "id": "h_skeptical",
+            "label": "Skeptical: single argument only",
+            "assumptions": [arg_names[0]],
+        })
+
+    # Ensure at least 3 hypotheses
+    if len(hypotheses) < 3 and len(arg_names) >= 3:
+        mid = len(arg_names) // 2
+        hypotheses.append({
+            "id": "h_first_half",
+            "label": "First half of arguments",
+            "assumptions": list(arg_names[:mid]),
+        })
+
+    return hypotheses[:4]
 
 
 async def _invoke_camembert_fallacy(input_text: str, context: Dict[str, Any]) -> Dict:
