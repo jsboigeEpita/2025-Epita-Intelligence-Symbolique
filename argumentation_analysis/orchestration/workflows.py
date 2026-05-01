@@ -13,6 +13,13 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowDefinition,
 )
 
+try:
+    from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
+        build_sherlock_modern_workflow,
+    )
+except ImportError:
+    build_sherlock_modern_workflow = None  # type: ignore[assignment,misc]
+
 logger = logging.getLogger("UnifiedPipeline")
 
 __all__ = [
