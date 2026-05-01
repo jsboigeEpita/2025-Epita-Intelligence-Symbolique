@@ -514,6 +514,69 @@ RÉPONDS EN FORMAT JSON :
         # Combine declarations + empty line + formulas (Tweety BNF: SORTSDEC DECLAR FORMULAS)
         return declarations + [""] + formulas
 
+    @staticmethod
+    def extract_fol_metadata(formulas: List[str]) -> Dict[str, Any]:
+        """Extract sorts, predicates, and constants from FOL formulas.
+
+        Parses LLM-generated formulas to build a Tweety-compatible signature
+        (sort declarations + constant assignments). This pre-declaration is
+        required by Tweety's FolParser — without it, unknown constants cause
+        parse failures (#348).
+
+        Returns:
+            Dict with keys: sorts (Dict[str, List[str]]), predicates (Dict[str, int]),
+            constants (set), signature_lines (List[str]).
+        """
+        import re
+
+        predicates: Dict[str, int] = {}  # name -> arity
+        constants: set = set()
+        variables: set = set()
+
+        for formula in formulas:
+            # Extract predicate applications: Name(arg1, arg2, ...)
+            for match in re.finditer(r"([A-Z][A-Za-z_]*)\(([^)]+)\)", formula):
+                pred_name = match.group(1)
+                args_str = match.group(2)
+                args = [a.strip() for a in args_str.split(",")]
+                arity = len(args)
+                if pred_name not in predicates or predicates[pred_name] < arity:
+                    predicates[pred_name] = arity
+                for arg in args:
+                    if arg[0].isupper():
+                        variables.add(arg)
+                    else:
+                        constants.add(arg)
+
+        # Build sort declarations from constants
+        # Default sort "thing" collects all lowercase constants
+        sorts: Dict[str, List[str]] = {"thing": sorted(constants)}
+        signature_lines = [f"thing = {{{', '.join(sorted(constants))}}}"]
+        for pred_name, arity in sorted(predicates.items()):
+            sort_args = ", ".join(["thing"] * arity)
+            signature_lines.append(f"type({pred_name}({sort_args}))")
+
+        return {
+            "sorts": sorts,
+            "predicates": predicates,
+            "constants": constants,
+            "variables": variables,
+            "signature_lines": signature_lines,
+        }
+
+    @staticmethod
+    def build_signature_prefixed_formulas(formulas: List[str]) -> List[str]:
+        """Prepend signature declarations to formulas for Tweety parsing.
+
+        Tweety's FolParser requires sort/type declarations before formulas.
+        This method extracts metadata from formulas, generates declarations,
+        and combines them into a single parseable block.
+        """
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+        if not meta["constants"] and not meta["predicates"]:
+            return formulas
+        return meta["signature_lines"] + [""] + formulas
+
     def _validate_fol_formula(self, formula: str) -> bool:
         """Validation basique syntaxe FOL (accepts both Unicode and ASCII)."""
         # Vérifications de base

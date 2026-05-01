@@ -559,6 +559,13 @@ def _write_fol_to_state(output, state, ctx) -> None:
     state.add_fol_analysis_result(
         formulas, bool(consistent), inferences, float(confidence)
     )
+    # Store FOL signature metadata (#348)
+    fol_signature = output.get("fol_signature", [])
+    if isinstance(fol_signature, list) and fol_signature:
+        if not hasattr(state, "fol_signature"):
+            state.fol_signature = fol_signature
+        else:
+            state.fol_signature = fol_signature
 
 
 def _write_modal_to_state(output, state, ctx) -> None:
