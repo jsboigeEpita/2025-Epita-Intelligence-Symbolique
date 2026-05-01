@@ -1,0 +1,485 @@
+{
+  "workflow_name": "spectacular_analysis",
+  "source_id": "doc_A",
+  "summary": {
+    "completed": 16,
+    "total": 16,
+    "failed": 0,
+    "skipped": 0
+  },
+  "capabilities_used": [
+    "fact_extraction",
+    "argument_quality",
+    "nl_to_logic",
+    "neural_fallacy_detection",
+    "hierarchical_fallacy_detection",
+    "propositional_logic",
+    "first_order_logic",
+    "modal_logic",
+    "dung_extensions",
+    "aspic_analysis",
+    "counter_argumentation",
+    "jtms_belief_revision",
+    "debate_protocol",
+    "assumption_based_reasoning",
+    "governance_simulation",
+    "narrative_synthesis"
+  ],
+  "state_snapshot": {
+    "raw_text": "[REDACTED - doc_A source text]",
+    "analysis_tasks": [
+      {"task_id": "t1", "type": "extract", "status": "completed"},
+      {"task_id": "t2", "type": "quality", "status": "completed"},
+      {"task_id": "t3", "type": "nl_to_logic", "status": "completed"},
+      {"task_id": "t4", "type": "neural_detect", "status": "completed"},
+      {"task_id": "t5", "type": "hierarchical_fallacy", "status": "completed"},
+      {"task_id": "t6", "type": "pl", "status": "completed"},
+      {"task_id": "t7", "type": "fol", "status": "completed"},
+      {"task_id": "t8", "type": "modal", "status": "completed"},
+      {"task_id": "t9", "type": "dung_extensions", "status": "completed"},
+      {"task_id": "t10", "type": "aspic_analysis", "status": "completed"},
+      {"task_id": "t11", "type": "counter", "status": "completed"},
+      {"task_id": "t12", "type": "jtms", "status": "completed"},
+      {"task_id": "t13", "type": "debate", "status": "completed"},
+      {"task_id": "t14", "type": "atms", "status": "completed"},
+      {"task_id": "t15", "type": "governance", "status": "completed"},
+      {"task_id": "t16", "type": "formal_synthesis", "status": "completed"}
+    ],
+    "identified_arguments": {
+      "arg_p1": "All citizens have the right to express their opinions",
+      "arg_p2": "Freedom of expression is a fundamental democratic principle",
+      "arg_c1": "Therefore restricting public discourse undermines democracy",
+      "arg_p3": "Historical precedents show censorship leads to authoritarianism",
+      "arg_p4": "Public debate strengthens collective reasoning",
+      "arg_c2": "Open discourse produces better policy outcomes",
+      "arg_p5": "Experts recommend structured deliberation for complex issues",
+      "arg_c3": "Institutional debate frameworks improve governance quality"
+    },
+    "identified_fallacies": {
+      "f1": {
+        "type": "ad_hominem",
+        "family": "relevance",
+        "justification": "Attacks the speaker's credibility rather than addressing the argument",
+        "confidence": 0.87,
+        "source_arg": "arg_p3"
+      },
+      "f2": {
+        "type": "slippery_slope",
+        "family": "causal",
+        "justification": "Assumes restriction inevitably leads to authoritarianism without justification",
+        "confidence": 0.82,
+        "source_arg": "arg_c1"
+      },
+      "f3": {
+        "type": "straw_man",
+        "family": "distortion",
+        "justification": "Misrepresents the opponent's position on regulation as total censorship",
+        "confidence": 0.79,
+        "source_arg": "arg_p3"
+      },
+      "f4": {
+        "type": "false_dilemma",
+        "family": "presumption",
+        "justification": "Presents only two extreme options: total freedom or authoritarianism",
+        "confidence": 0.75,
+        "source_arg": "arg_c1"
+      }
+    },
+    "extracts": [
+      {"claim": "arg_p1", "type": "premise", "confidence": 0.95},
+      {"claim": "arg_p2", "type": "premise", "confidence": 0.92},
+      {"claim": "arg_c1", "type": "conclusion", "confidence": 0.88},
+      {"claim": "arg_p3", "type": "premise", "confidence": 0.85},
+      {"claim": "arg_p4", "type": "premise", "confidence": 0.90},
+      {"claim": "arg_c2", "type": "conclusion", "confidence": 0.87},
+      {"claim": "arg_p5", "type": "premise", "confidence": 0.91},
+      {"claim": "arg_c3", "type": "conclusion", "confidence": 0.86}
+    ],
+    "belief_sets": {
+      "bs_prop": {
+        "type": "propositional",
+        "formulas": ["P1", "P2", "P1 AND P2 -> C1", "P3", "P3 -> C1"],
+        "consistent": true
+      },
+      "bs_fol": {
+        "type": "first_order",
+        "formulas": [
+          "forall x (Citizen(x) -> HasRight(x, expression))",
+          "forall x (Fundamental(x, democracy) -> Protected(x))",
+          "exists x (Restriction(x, discourse) -> Undermines(x, democracy))"
+        ],
+        "consistent": true
+      },
+      "bs_modal": {
+        "type": "modal",
+        "formulas": [
+          "Box(HasRight(citizen, expression))",
+          "Box(Fundamental(expression, democracy))",
+          "Diamond(Restriction(discourse, governance))"
+        ],
+        "consistent": true
+      }
+    },
+    "query_log": [
+      {"query": "Is arg_c1 entailed?", "result": "true", "method": "propositional"},
+      {"query": "Is arg_c2 consistent?", "result": "true", "method": "fol"},
+      {"query": "Is arg_c3 necessary?", "result": "false", "method": "modal"}
+    ],
+    "answers": [
+      {"question": "Does the argument establish causation?", "answer": "No, it relies on historical correlation", "confidence": 0.78},
+      {"question": "Are there counter-examples?", "answer": "Yes, regulated discourse exists in functional democracies", "confidence": 0.85}
+    ],
+    "errors": [],
+    "final_conclusion": "The argumentative structure of doc_A contains 8 arguments organized in 3 reasoning chains. 4 fallacies were detected across 3 families (relevance, causal, distortion). Formal analysis confirms partial logical validity but identifies unsupported causal leaps. Counter-arguments expose the false dilemma and slippery slope patterns. The JTMS belief revision shows 2 retraction cascades triggered by ATMS assumptions. Narrative synthesis integrates all 16 analysis phases into a coherent assessment.",
+    "counter_arguments": [
+      {
+        "strategy": "reductio",
+        "target_arg": "arg_c1",
+        "counter_content": "If restriction always undermines democracy, then libel laws and perjury statutes are anti-democratic, which is absurd.",
+        "strength": 0.88
+      },
+      {
+        "strategy": "counter_example",
+        "target_arg": "arg_p3",
+        "counter_content": "Germany has hate speech restrictions yet remains a robust democracy, refuting the censorship-authoritarianism link.",
+        "strength": 0.91
+      },
+      {
+        "strategy": "distinction",
+        "target_arg": "arg_c2",
+        "counter_content": "Better policy outcomes require distinguishing between free expression and unregulated disinformation.",
+        "strength": 0.84
+      },
+      {
+        "strategy": "concession",
+        "target_arg": "arg_p4",
+        "counter_content": "While public debate is valuable, structured moderation improves deliberation quality, contradicting the implied absolutism.",
+        "strength": 0.79
+      }
+    ],
+    "argument_quality_scores": {
+      "arg_p1": {"clarity": 0.92, "coherence": 0.88, "relevance": 0.95, "completeness": 0.85, "overall": 0.90},
+      "arg_p2": {"clarity": 0.90, "coherence": 0.91, "relevance": 0.93, "completeness": 0.82, "overall": 0.89},
+      "arg_c1": {"clarity": 0.85, "coherence": 0.72, "relevance": 0.88, "completeness": 0.68, "overall": 0.78},
+      "arg_p3": {"clarity": 0.80, "coherence": 0.65, "relevance": 0.82, "completeness": 0.70, "overall": 0.74},
+      "arg_p4": {"clarity": 0.88, "coherence": 0.85, "relevance": 0.90, "completeness": 0.80, "overall": 0.86},
+      "arg_c2": {"clarity": 0.87, "coherence": 0.83, "relevance": 0.89, "completeness": 0.78, "overall": 0.84},
+      "arg_p5": {"clarity": 0.91, "coherence": 0.89, "relevance": 0.86, "completeness": 0.83, "overall": 0.87},
+      "arg_c3": {"clarity": 0.89, "coherence": 0.86, "relevance": 0.88, "completeness": 0.80, "overall": 0.86}
+    },
+    "nl_to_logic_translations": [
+      {"source": "arg_p1", "logic": "forall x (Citizen(x) -> HasRight(x, expression))", "method": "template"},
+      {"source": "arg_p2", "logic": "Fundamental(expression, democracy)", "method": "template"},
+      {"source": "arg_c1", "logic": "Restriction(discourse) -> ~Healthy(democracy)", "method": "template"},
+      {"source": "arg_p3", "logic": "Censorship(x) -> Authoritarianism(follows, x)", "method": "template"},
+      {"source": "arg_p4", "logic": "PublicDebate -> Stronger(CollectiveReasoning)", "method": "template"},
+      {"source": "arg_c2", "logic": "OpenDiscourse -> Better(PolicyOutcomes)", "method": "template"},
+      {"source": "arg_p5", "logic": "StructuredDeliberation(complex_issues) -> Recommended(experts)", "method": "template"},
+      {"source": "arg_c3", "logic": "DebateFrameworks -> Improved(GovernanceQuality)", "method": "template"}
+    ],
+    "neural_fallacy_scores": [
+      {"fallacy": "ad_hominem", "score": 0.87, "argument": "arg_p3"},
+      {"fallacy": "slippery_slope", "score": 0.82, "argument": "arg_c1"},
+      {"fallacy": "straw_man", "score": 0.79, "argument": "arg_p3"},
+      {"fallacy": "false_dilemma", "score": 0.75, "argument": "arg_c1"},
+      {"fallacy": "hasty_generalization", "score": 0.45, "argument": "arg_p3"},
+      {"fallacy": "appeal_to_authority", "score": 0.38, "argument": "arg_p5"}
+    ],
+    "propositional_analysis_results": [
+      {"formula": "P1 AND P2 -> C1", "satisfiable": true, "valid": true},
+      {"formula": "P3 -> C1", "satisfiable": true, "valid": false},
+      {"formula": "P4 AND P5 -> C2", "satisfiable": true, "valid": true},
+      {"formula": "C1 AND C2 -> C3", "satisfiable": true, "valid": false},
+      {"formula": "~C1 OR C2", "satisfiable": true, "valid": true}
+    ],
+    "fol_analysis_results": [
+      {"formula": "forall x (Citizen(x) -> HasRight(x, expression))", "result": "satisfiable", " entailment": true},
+      {"formula": "exists x (Restriction(x) -> Authoritarianism(x))", "result": "satisfiable", "entailment": false},
+      {"formula": "forall x (Debate(x) -> Improved(Reasoning(x)))", "result": "satisfiable", "entailment": true},
+      {"formula": "forall x forall y (Deliberation(x, y) -> Better(Policy(x, y)))", "result": "unknown", "entailment": null},
+      {"formula": "exists x (Regulation(x) AND ~Authoritarianism(x))", "result": "satisfiable", "entailment": true},
+      {"formula": "forall x (Censorship(x) -> ~Democracy(x))", "result": "satisfiable", "entailment": false}
+    ],
+    "fol_signature": [
+      "Citizen/1",
+      "HasRight/2",
+      "Fundamental/2",
+      "Restriction/1",
+      "Authoritarianism/1",
+      "Democracy/1",
+      "Debate/1",
+      "Improved/1",
+      "Deliberation/2",
+      "Better/1",
+      "Policy/2",
+      "Regulation/1",
+      "Censorship/1",
+      "expression/0",
+      "democracy/0",
+      "discourse/0"
+    ],
+    "modal_analysis_results": [
+      {"formula": "Box(HasRight(citizen, expression))", "system": "S5", "satisfiable": true},
+      {"formula": "Box(Fundamental(expression, democracy))", "system": "S5", "satisfiable": true},
+      {"formula": "Diamond(Restriction(discourse, governance))", "system": "S5", "satisfiable": true},
+      {"formula": "Box(Restriction(discourse) -> ~Democracy)", "system": "S5", "satisfiable": false},
+      {"formula": "Diamond(Better(PolicyOutcomes) AND OpenDiscourse)", "system": "S5", "satisfiable": true}
+    ],
+    "dung_frameworks": {
+      "fw_complete": {
+        "arguments": ["arg_p1", "arg_p2", "arg_c1", "arg_p3", "arg_p4", "arg_c2", "arg_p5", "arg_c3"],
+        "attacks": [
+          {"from": "arg_c1", "to": "arg_p3"},
+          {"from": "arg_p3", "to": "arg_c1"},
+          {"from": "arg_c2", "to": "arg_c1"},
+          {"from": "arg_c3", "to": "arg_p3"}
+        ],
+        "extensions": {
+          "grounded": ["arg_p1", "arg_p2", "arg_p4", "arg_p5", "arg_c2", "arg_c3"],
+          "preferred": [
+            ["arg_p1", "arg_p2", "arg_p4", "arg_p5", "arg_c2", "arg_c3"],
+            ["arg_p1", "arg_p2", "arg_p3", "arg_p4", "arg_p5", "arg_c2", "arg_c3"]
+          ],
+          "stable": [
+            ["arg_p1", "arg_p2", "arg_p4", "arg_p5", "arg_c2", "arg_c3"]
+          ]
+        },
+        "status_assignment": {
+          "arg_p1": "credulously_accepted",
+          "arg_p2": "credulously_accepted",
+          "arg_c1": "rejected",
+          "arg_p3": "credulously_accepted",
+          "arg_p4": "skeptically_accepted",
+          "arg_c2": "skeptically_accepted",
+          "arg_p5": "skeptically_accepted",
+          "arg_c3": "skeptically_accepted"
+        }
+      }
+    },
+    "aspic_results": {
+      "framework_id": "aspic_fw_1",
+      "rules": [
+        {"id": "r1", "premises": ["arg_p1", "arg_p2"], "conclusion": "arg_c1", "defeasible": true},
+        {"id": "r2", "premises": ["arg_p4"], "conclusion": "arg_c2", "defeasible": true},
+        {"id": "r3", "premises": ["arg_p5"], "conclusion": "arg_c3", "defeasible": false}
+      ],
+      "argumentation_theory": {
+        "ordinary_premises": ["arg_p1", "arg_p2", "arg_p4"],
+        "axiom_premises": ["arg_p5"],
+        "assumptions": ["assumption_freedom_absolute", "assumption_censorship_authoritarian"]
+      },
+      "derivations": [
+        {"conclusion": "arg_c1", "derivability": "defeasible", "sub_arguments": ["arg_p1", "arg_p2", "r1"]},
+        {"conclusion": "arg_c2", "derivability": "defeasible", "sub_arguments": ["arg_p4", "r2"]},
+        {"conclusion": "arg_c3", "derivability": "strict", "sub_arguments": ["arg_p5", "r3"]}
+      ]
+    },
+    "jtms_beliefs": {
+      "b_arg_p1": {"status": "IN", "confidence": 0.95, "justification": "j_established_principle"},
+      "b_arg_p2": {"status": "IN", "confidence": 0.92, "justification": "j_constitutional_basis"},
+      "b_arg_c1": {"status": "OUT", "confidence": 0.45, "justification": "j_causal_inference", "retracted_by": "cascade_1"},
+      "b_arg_p3": {"status": "IN", "confidence": 0.78, "justification": "j_historical_evidence"},
+      "b_arg_p4": {"status": "IN", "confidence": 0.90, "justification": "j_empirical_support"},
+      "b_arg_c2": {"status": "IN", "confidence": 0.87, "justification": "j_policy_evidence"},
+      "b_arg_p5": {"status": "IN", "confidence": 0.91, "justification": "j_expert_consensus"},
+      "b_arg_c3": {"status": "IN", "confidence": 0.86, "justification": "j_institutional_evidence"},
+      "b_counter_reductio": {"status": "IN", "confidence": 0.88, "justification": "j_formal_validity"},
+      "b_counter_example": {"status": "IN", "confidence": 0.91, "justification": "j_german_case"}
+    },
+    "jtms_retraction_chain": [
+      {
+        "cascade_id": "cascade_1",
+        "trigger": "b_counter_reductio",
+        "retracted": ["b_arg_c1"],
+        "reason": "Reductio counter-argument exposed false dilemma: absolute freedom is not a prerequisite for democracy",
+        "timestamp": "2026-05-01T10:30:00Z",
+        "downstream_effects": [
+          {"belief": "b_arg_c1", "old_status": "IN", "new_status": "OUT"}
+        ]
+      },
+      {
+        "cascade_id": "cascade_2",
+        "trigger": "b_counter_example",
+        "retracted": [],
+        "reason": "Counter-example from German case weakened causal link but did not retract arg_p3 entirely",
+        "timestamp": "2026-05-01T10:31:00Z",
+        "downstream_effects": [
+          {"belief": "b_arg_p3", "old_confidence": 0.85, "new_confidence": 0.78}
+        ]
+      }
+    ],
+    "debate_transcripts": [
+      {
+        "round": 1,
+        "proponent": "arg_c1",
+        "opponent": "counter_reductio",
+        "proponent_move": "Restriction of discourse undermines the democratic process",
+        "opponent_move": "If all restriction undermines democracy, then libel laws are anti-democratic - reductio",
+        "winner": "opponent"
+      },
+      {
+        "round": 2,
+        "proponent": "arg_p3",
+        "opponent": "counter_example",
+        "proponent_move": "Historical precedents show censorship leads to authoritarianism",
+        "opponent_move": "Germany restricts hate speech yet maintains robust democratic institutions",
+        "winner": "opponent"
+      },
+      {
+        "round": 3,
+        "proponent": "arg_c2",
+        "opponent": "counter_distinction",
+        "proponent_move": "Open discourse produces better policy outcomes",
+        "opponent_move": "Distinction: free expression and unregulated disinformation are different categories",
+        "winner": "split"
+      }
+    ],
+    "atms_contexts": [
+      {
+        "context_id": "ctx_absolute_freedom",
+        "label": "Absolute freedom of expression",
+        "assumptions": ["assumption_freedom_absolute"],
+        "environment": ["arg_p1", "arg_p2", "arg_c1", "arg_p3"],
+        "nogoods": ["b_counter_reductio"],
+        "status": "contradictory"
+      },
+      {
+        "context_id": "ctx_regulated_freedom",
+        "label": "Regulated freedom with democratic safeguards",
+        "assumptions": ["assumption_regulation_compatible"],
+        "environment": ["arg_p1", "arg_p2", "arg_p4", "arg_c2", "arg_p5", "arg_c3"],
+        "nogoods": [],
+        "status": "consistent"
+      },
+      {
+        "context_id": "ctx_historical_inductive",
+        "label": "Historical inductive reasoning framework",
+        "assumptions": ["assumption_censorship_authoritarian", "assumption_inductive_valid"],
+        "environment": ["arg_p3", "arg_c1"],
+        "nogoods": ["b_counter_example"],
+        "status": "contradictory"
+      },
+      {
+        "context_id": "ctx_institutional_deliberative",
+        "label": "Institutional deliberative democracy",
+        "assumptions": ["assumption_structured_deliberation"],
+        "environment": ["arg_p5", "arg_c3", "arg_p4"],
+        "nogoods": [],
+        "status": "consistent"
+      }
+    ],
+    "governance_decisions": [
+      {
+        "method": "majority",
+        "proposals": ["prop_absolute_freedom", "prop_regulated_freedom", "prop_institutional"],
+        "votes": {"prop_absolute_freedom": 2, "prop_regulated_freedom": 4, "prop_institutional": 1},
+        "result": "prop_regulated_freedom",
+        "consensus_score": 0.67
+      },
+      {
+        "method": "borda",
+        "rankings": [
+          {"agent": "a_shrlock", "ranking": ["prop_regulated_freedom", "prop_institutional", "prop_absolute_freedom"]},
+          {"agent": "a_watson", "ranking": ["prop_regulated_freedom", "prop_absolute_freedom", "prop_institutional"]},
+          {"agent": "a_synthesis", "ranking": ["prop_institutional", "prop_regulated_freedom", "prop_absolute_freedom"]}
+        ],
+        "result": "prop_regulated_freedom",
+        "consensus_score": 0.78
+      },
+      {
+        "method": "condorcet",
+        "pairwise": {"prop_regulated vs prop_absolute": "regulated", "prop_regulated vs prop_institutional": "regulated", "prop_absolute vs prop_institutional": "absolute"},
+        "result": "prop_regulated_freedom",
+        "consensus_score": 0.72
+      }
+    ],
+    "formal_synthesis_reports": [
+      {
+        "report_id": "synth_1",
+        "logic_system": "propositional",
+        "summary": "5 formulas analyzed, 3 valid, 2 invalid. Key invalidity: causal chain P3->C1 unsupported.",
+        "key_findings": ["C1 not entailed by P3 alone", "C2 well-supported by P4"]
+      },
+      {
+        "report_id": "synth_2",
+        "logic_system": "first_order",
+        "summary": "6 formulas analyzed. FOL analysis confirms regulated freedom is consistent with democratic values.",
+        "key_findings": ["Regulation does not imply non-democracy", "Counter-example exists"]
+      },
+      {
+        "report_id": "synth_3",
+        "logic_system": "modal",
+        "summary": "5 formulas in S5. Absolute restriction claim is necessarily false.",
+        "key_findings": ["Box(Restriction -> ~Democracy) is unsatisfiable in S5"]
+      }
+    ],
+    "ranking_results": [
+      {"argument": "arg_c2", "rank": 1, "score": 0.91},
+      {"argument": "arg_c3", "rank": 2, "score": 0.89},
+      {"argument": "arg_p1", "rank": 3, "score": 0.88},
+      {"argument": "arg_p5", "rank": 4, "score": 0.87},
+      {"argument": "arg_p4", "rank": 5, "score": 0.86},
+      {"argument": "arg_p2", "rank": 6, "score": 0.85},
+      {"argument": "arg_p3", "rank": 7, "score": 0.74},
+      {"argument": "arg_c1", "rank": 8, "score": 0.45}
+    ],
+    "belief_revision_results": {
+      "initial_beliefs": 10,
+      "revised_beliefs": 10,
+      "retractions": 1,
+      "confidence_adjustments": 1,
+      "method": "AGM_contraction"
+    },
+    "dialogue_results": {
+      "protocol": "walton_krabbe_ppd",
+      "total_moves": 6,
+      "winner": "opponent",
+      "key_turning_point": "round_1_reductio"
+    },
+    "probabilistic_results": {
+      "arg_c1_posterior": 0.45,
+      "arg_c2_posterior": 0.87,
+      "arg_c3_posterior": 0.86,
+      "prior_strength": 0.7,
+      "evidence_strength": 0.85
+    },
+    "bipolar_results": {
+      "support_relations": [
+        {"from": "arg_p1", "to": "arg_c1", "weight": 0.9},
+        {"from": "arg_p2", "to": "arg_c1", "weight": 0.85},
+        {"from": "arg_p4", "to": "arg_c2", "weight": 0.88}
+      ],
+      "attack_relations": [
+        {"from": "arg_c1", "to": "arg_p3", "weight": 0.7},
+        {"from": "counter_reductio", "to": "arg_c1", "weight": 0.88}
+      ]
+    },
+    "semantic_index_refs": [
+      {"doc_id": "doc_A", "chunk_count": 8, "indexed": true}
+    ],
+    "narrative_synthesis": "The spectacular analysis of doc_A reveals a multi-layered argumentative structure with 8 arguments across 3 reasoning chains (see Section 1, Extraction). Propositional logic analysis validated 3 of 5 formulas but found the causal link from arg_p3 to arg_c1 unsupported (see Section 4, Formal Logic). FOL analysis with 6 formulas confirmed that regulated freedom coexists with democratic values, while modal S5 analysis proved the absolute restriction claim necessarily false. Fallacy detection identified 4 fallacies across 3 families: ad hominem (relevance), slippery slope (causal), straw man (distortion), and false dilemma (presumption) (see Section 3, Fallacies). The Dung abstract argumentation framework produced 4 extensions (grounded, 2 preferred, 1 stable), with arg_c1 rejected under grounded semantics (see Section 5, Frameworks). Counter-argumentation produced 4 strong rebuttals using reductio, counter-example, distinction, and concession strategies (see Section 6, Counter-Arguments). JTMS belief revision triggered 2 retraction cascades, most notably demoting arg_c1 from IN to OUT after the reductio counter-argument (see Section 7, JTMS). The ATMS identified 4 reasoning contexts, 2 of which are contradictory, confirming the argument's internal tensions (see Section 8, ATMS). Governance simulation across 3 voting methods (majority, Borda, Condorcet) unanimously selected the regulated freedom proposal (see Section 9, Governance). Overall quality scores range from 0.74 to 0.90, with arg_c1 scoring lowest due to logical weaknesses and fallacy exposure.",
+    "workflow_results": {
+      "phases_completed": 16,
+      "phases_failed": 0,
+      "total_duration_ms": 45000,
+      "phase_timings": {
+        "extract": 3200,
+        "quality": 2100,
+        "nl_to_logic": 2800,
+        "neural_detect": 4500,
+        "hierarchical_fallacy": 3100,
+        "pl": 2600,
+        "fol": 3800,
+        "modal": 3400,
+        "dung_extensions": 2900,
+        "aspic_analysis": 3100,
+        "counter": 2700,
+        "jtms": 2400,
+        "debate": 2600,
+        "atms": 2200,
+        "governance": 1800,
+        "formal_synthesis": 1200
+      }
+    }
+  }
+}
