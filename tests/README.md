@@ -1,50 +1,81 @@
-# Stratégie de Gestion de la JVM dans les Tests
+# Test Suite
 
-Ce document explique comment la JVM est gérée dans notre suite de tests `pytest` pour garantir la stabilité, en particulier sous Windows où les conflits de cycle de vie de la JVM peuvent causer des crashs fatals (`Windows fatal exception: access violation`).
+Unit, integration, and functional tests for the argumentation analysis system.
 
-## Le Problème : Conflit de Cycle de Vie de la JVM
+## Running Tests
 
-Le cœur du problème réside dans le fait que `JPype` ne permet de démarrer la JVM **qu'une seule fois** par processus. Toute tentative de redémarrage ou de démarrage d'une seconde JVM dans un sous-processus qui a hérité de l'état du parent mène à un crash.
+```bash
+# Activate environment first
+conda activate projet-is-roo-new
 
-Nos tests se divisent en deux catégories principales :
+# All tests
+pytest tests/ -v
 
-1.  **Tests d'Intégration (`@pytest.mark.jvm_test`)**: Ces tests importent directement des composants qui dépendent de la JVM (ex: `TweetyBridge`). Ils nécessitent qu'une JVM soit active dans le processus `pytest` principal.
-2.  **Tests End-to-End (`@pytest.mark.e2e`)**: Ces tests valident l'application complète. Ils utilisent la fixture `e2e_servers` qui démarre le serveur backend dans un **sous-processus**. Ce serveur backend est lui-même responsable de démarrer et de gérer sa propre JVM.
+# Unit tests only
+pytest tests/unit/ -v
 
-Le conflit survient lorsqu'un test E2E est exécuté dans une session `pytest` où la JVM a déjà été démarrée pour des tests d'intégration. Le sous-processus du serveur E2E hérite d'un état invalide et crashe en tentant d'initialiser sa propre JVM.
+# Skip slow tests
+pytest tests/ -m "not slow" -v
 
-## La Solution : Isolation Stricte
+# Single test file / function
+pytest tests/unit/argumentation_analysis/test_foo.py -v
+pytest tests/unit/argumentation_analysis/test_foo.py::TestClass::test_method -v
 
-Pour résoudre ce problème, nous avons implémenté une stratégie d'isolation stricte :
+# With coverage
+pytest --cov=argumentation_analysis tests/ -v
 
-1.  **Fixture de Session `jvm_session`**:
-    *   Une fixture `jvm_session` avec `scope="session"` et `autouse=True` est définie dans `tests/conftest.py`.
-    *   Elle est responsable de démarrer la JVM **une unique fois** pour tous les tests qui en ont besoin (principalement les tests d'intégration).
+# LLM tests by cost tier
+pytest tests/ -m "llm_light" -v          # <30s, ~$0.01-0.05
+pytest tests/ -m "llm_integration" -v    # >30s, ~$0.05-0.20
+pytest tests/ -m "llm_critical" -v       # E2E, >60s, >$0.20
+```
 
-2.  **Désactivation pour les Tests E2E**:
-    *   Les tests qui utilisent la fixture `e2e_servers` **ne doivent pas** avoir de JVM active dans le processus `pytest` principal.
-    *   Pour garantir cela, tous les tests E2E doivent être marqués avec `@pytest.mark.no_jvm_session`.
-    *   Ce marqueur indique à la fixture `jvm_session` de ne pas s'exécuter pour ce test.
-    *   De plus, une assertion de sécurité a été ajoutée au début de la fixture `e2e_servers` pour vérifier que `jpype.isJVMStarted()` est `False`. Si ce n'est pas le cas, le test échoue avec un message d'erreur explicite, empêchant le crash fatal.
+Tests auto-skip when API keys are unavailable (no failures).
 
-## Comment Exécuter les Tests
+## Structure
 
-*   **Pour exécuter tous les tests sauf les E2E (recommandé pour le développement rapide)**:
-    ```bash
-    python -m pytest -m "not e2e"
-    ```
+```text
+tests/
+├── conftest.py              # Global fixtures (JVM session, env setup)
+├── unit/                    # Unit tests (no external services)
+│   └── argumentation_analysis/
+│       ├── agents/          # Agent tests
+│       ├── services/        # Service tests
+│       └── orchestration/   # Orchestration tests
+├── integration/             # Integration tests (cross-module)
+└── functional/              # E2E tests (Playwright, full workflows)
+```
 
-*   **Pour exécuter uniquement les tests E2E**:
-    Il est **crucial** d'utiliser le marqueur pour s'assurer que la JVM de session n'est pas démarrée.
-    ```bash
-    python -m pytest -m e2e
-    ```
-    (La configuration actuelle des marqueurs devrait gérer l'isolation automatiquement).
+## Key Conventions
 
-*   **Pour exécuter un fichier de test E2E spécifique**:
-    Assurez-vous que le test est marqué avec `@pytest.mark.no_jvm_session`.
-    ```bash
-    python -m pytest tests/test_mon_fichier_e2e.py
-    ```
+### Async
 
-Cette approche garantit que les deux types de tests peuvent coexister dans la même suite de tests sans provoquer d'instabilité liée à la JVM.
+`asyncio_mode = auto` in `pyproject.toml` — no need for `@pytest.mark.asyncio`.
+
+### JVM / JPype
+
+Tests requiring the JVM use `@pytest.mark.usefixtures("jvm_session")`. A session-scoped fixture starts the JVM once. Tests that must NOT have a JVM active (e.g., E2E subprocess tests) use `@pytest.mark.no_jvm_session`.
+
+### Windows DLL Load Order
+
+`conftest.py` imports torch/transformers BEFORE jpype to avoid `WinError 182`. Do not reorder.
+
+### Conditional Skips
+
+Some tests skip on Windows when PyTorch's `fbgemm.dll` fails to load, or when `OPENAI_API_KEY` is absent. See `docs/guides/testing/conditional_skips.md` for the full catalog and reactivation steps.
+
+### Test Markers
+
+50+ markers defined in `pyproject.toml` under `[tool.pytest.ini_options]`. Common ones: `slow`, `integration`, `e2e`, `api`, `real_jpype`, `playwright`, `belief_set`, `propositional`.
+
+## Detailed Guides
+
+- **Advanced patterns & module-specific patterns** — `docs/guides/testing/advanced_patterns.md`
+
+- **Integration & functional test best practices** — `docs/guides/testing/best_practices.md`
+
+- **FOL agent tests** — `docs/guides/testing/fol_tests.md`
+
+- **UnifiedConfig tests** — `docs/guides/testing/unified_config_tests.md`
+
+- **Conditional skip catalog** — `docs/guides/testing/conditional_skips.md`
