@@ -466,7 +466,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                     simple_repair = partial_json[:valid_end] + "}" * open_braces
                     json.loads(simple_repair)
                     return simple_repair
-                except:
+                except (json.JSONDecodeError, IndexError):
                     pass
 
         self.logger.warning("Retour du JSON partiel original.")

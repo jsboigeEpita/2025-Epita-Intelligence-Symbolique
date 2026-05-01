@@ -392,7 +392,7 @@ class StateManagerPlugin:
             if context:
                 try:
                     context_dict = json.loads(context)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     context_dict = {"raw": context}
 
             # Create extended belief

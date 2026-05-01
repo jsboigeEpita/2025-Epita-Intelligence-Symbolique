@@ -482,7 +482,7 @@ async def get_jtms_state(
                     last_accessed=session_data["last_accessed"],
                     checkpoint_count=session_data.get("checkpoint_count", 0),
                 )
-            except:
+            except (KeyError, TypeError):
                 pass  # Session info optionnelle
 
         # Construire les justifications si demandées
