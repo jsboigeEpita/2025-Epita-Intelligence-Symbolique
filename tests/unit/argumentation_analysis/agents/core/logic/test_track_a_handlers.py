@@ -99,8 +99,123 @@ class TestRankingHandler:
             "tuples",
             "strategy",
             "propagation",
+            "saf",
+            "counter_transitivity",
+            "probabilistic_ranking",
+            "iterated_graded_defense",
+            "serialisable",
         }
         assert set(handler.REASONERS.keys()) == expected
+
+    def test_rank_with_saf_method(self):
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = True
+        reasoner_cls = registry.get(
+            "org.tweetyproject.arg.rankings.reasoner.SAFRankingReasoner"
+        )
+        if reasoner_cls:
+            reasoner_cls.return_value.getModel.return_value = mock_ranking
+
+        result = handler.rank_arguments(
+            arguments=["a", "b"], attacks=[["b", "a"]], method="saf"
+        )
+        assert result["method"] == "saf"
+        assert result["statistics"]["arguments_count"] == 2
+
+    def test_rank_with_counter_transitivity(self):
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = False
+        reasoner_cls = registry.get(
+            "org.tweetyproject.arg.rankings.reasoner.CounterTransitivityReasoner"
+        )
+        if reasoner_cls:
+            reasoner_cls.return_value.getModel.return_value = mock_ranking
+
+        result = handler.rank_arguments(
+            arguments=["x", "y", "z"],
+            attacks=[["x", "y"], ["y", "z"]],
+            method="counter_transitivity",
+        )
+        assert result["method"] == "counter_transitivity"
+        assert result["statistics"]["attacks_count"] == 2
+
+    def test_rank_with_probabilistic_ranking(self):
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = True
+        reasoner_cls = registry.get(
+            "org.tweetyproject.arg.rankings.reasoner.ProbabilisticRankingReasoner"
+        )
+        if reasoner_cls:
+            reasoner_cls.return_value.getModel.return_value = mock_ranking
+
+        result = handler.rank_arguments(
+            arguments=["p", "q"], attacks=[["p", "q"]], method="probabilistic_ranking"
+        )
+        assert result["method"] == "probabilistic_ranking"
+        assert len(result["arguments"]) == 2
+
+    def test_rank_with_iterated_graded_defense(self):
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = True
+        reasoner_cls = registry.get(
+            "org.tweetyproject.arg.rankings.reasoner.IteratedGradedDefenseReasoner"
+        )
+        if reasoner_cls:
+            reasoner_cls.return_value.getModel.return_value = mock_ranking
+
+        result = handler.rank_arguments(
+            arguments=["a", "b", "c"],
+            attacks=[["a", "b"]],
+            method="iterated_graded_defense",
+        )
+        assert result["method"] == "iterated_graded_defense"
+        assert result["statistics"]["arguments_count"] == 3
+
+    def test_rank_with_serialisable(self):
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = False
+        reasoner_cls = registry.get(
+            "org.tweetyproject.arg.rankings.reasoner.SerialisableRankingReasoner"
+        )
+        if reasoner_cls:
+            reasoner_cls.return_value.getModel.return_value = mock_ranking
+
+        result = handler.rank_arguments(
+            arguments=["a", "b"], attacks=[], method="serialisable"
+        )
+        assert result["method"] == "serialisable"
+        assert result["statistics"]["attacks_count"] == 0
+
+    def test_reasoner_count_is_12(self):
+        handler, _, _ = self._make_handler()
+        assert len(handler.REASONERS) == 12
+
+    def test_all_reasoner_java_classes_are_distinct(self):
+        handler, _, _ = self._make_handler()
+        java_classes = list(handler.REASONERS.values())
+        assert len(java_classes) == len(set(java_classes))
+
+    def test_comparisons_for_all_methods(self):
+        """Each method should produce comparison results when ranking is available."""
+        handler, mock_jpype, registry = self._make_handler()
+        mock_ranking = MagicMock()
+        mock_ranking.isStrictlyMoreAcceptableThan.return_value = True
+
+        for method_name, java_cls in handler.REASONERS.items():
+            cls = registry.get(java_cls)
+            if cls:
+                cls.return_value.getModel.return_value = mock_ranking
+
+            result = handler.rank_arguments(
+                arguments=["a", "b"], attacks=[["a", "b"]], method=method_name
+            )
+            assert result["method"] == method_name
+            assert isinstance(result["comparisons"], dict)
 
 
 # =====================================================================
