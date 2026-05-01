@@ -270,7 +270,7 @@ def generate_comparison_report(results: List[Dict[str, Any]]) -> str:
         for label, key, unit in rows:
             s = std_metrics.get(key, 0)
             sp = spec_metrics.get(key, 0)
-            delta = sp - s
+            delta = round(sp - s, 1)
             sign = "+" if delta > 0 else ""
             lines.append(
                 f"| {label} | {s}{unit} | {sp}{unit} | {sign}{delta}{unit} |"
