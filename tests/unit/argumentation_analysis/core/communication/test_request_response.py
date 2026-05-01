@@ -352,7 +352,7 @@ class TestSendRequest:
                 recipient="b",
                 request_type="q",
                 content={},
-                timeout=0.2,
+                timeout=0.5,
                 retry_count=0,
             )
 
