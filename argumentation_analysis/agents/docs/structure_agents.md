@@ -22,10 +22,7 @@ argumentation_analysis/
     │   ├── encryption/                 # Système d'encryption
     │   └── README.md
     │
-    ├── runners/                        # Scripts d'exécution
-    │   ├── test/                       # Exécution des tests
-    │   ├── deploy/                     # Scripts de déploiement
-    │   ├── integration/                # Scripts d'intégration
+    ├── runners/                        # Scripts d'exécution (legacy)
     │   └── README.md
     │
     ├── data/                           # Données utilisées par les agents
@@ -110,7 +107,7 @@ Ce répertoire contient les scripts utilisés pour exécuter les agents dans dif
 1. Utilisez le template étudiant comme base (`templates/student_template/`)
 2. Créez un nouveau sous-répertoire dans `core/` avec le nom de l'agent
 3. Implémentez les fonctionnalités spécifiques à l'agent
-4. Créez des tests dans le répertoire `runners/test/`
+4. Créez des tests dans le répertoire `tests/unit/agents/`
 5. Intégrez l'agent dans le système d'orchestration
 
 ### Utilisation des Outils
@@ -169,10 +166,10 @@ async def optimize_agent():
     save_prompts(improved_prompts, "agents/core/informal/prompts_improved.py")
 ```
 
-### Exemple 3: Exécution d'un Script de Test
+### Exemple 3: Exécution d'un Test
 
 ```bash
-python agents/runners/test/informal/test_informal_agent.py
+pytest tests/unit/agents/test_informal_agent.py -v
 ```
 
 ## Conclusion
