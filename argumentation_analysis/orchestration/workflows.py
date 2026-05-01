@@ -29,6 +29,7 @@ __all__ = [
     "build_neural_symbolic_fallacy_workflow",
     "build_hierarchical_fallacy_workflow",
     "build_spectacular_workflow",
+    "build_sherlock_modern_workflow",
     "WORKFLOW_CATALOG",
     "get_workflow_catalog",
     "reset_workflow_catalog",
@@ -726,6 +727,15 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             WORKFLOW_CATALOG["comprehensive"] = build_comprehensive_analysis_workflow()
         except Exception as e:
             logger.warning(f"Comprehensive workflow not registered: {e}")
+        # Sherlock Modern investigation (#357)
+        try:
+            from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
+                build_sherlock_modern_workflow,
+            )
+
+            WORKFLOW_CATALOG["sherlock_modern"] = build_sherlock_modern_workflow()
+        except Exception as e:
+            logger.warning(f"Sherlock modern workflow not registered: {e}")
     return WORKFLOW_CATALOG
 
 
