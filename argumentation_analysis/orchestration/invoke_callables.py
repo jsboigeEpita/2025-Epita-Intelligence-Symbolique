@@ -990,6 +990,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
 
     # ── Step 4: Fallacies → retract undermined beliefs + propagation ─
     fallacy_beliefs = []
+    session.jtms.enable_tracing()  # Track retraction cascades (#350)
     for i, f in enumerate(detected_fallacies[:6]):
         if not isinstance(f, dict):
             continue
@@ -1139,6 +1140,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict:
         "formal_consistency": formal_consistency,
         "session_version": session.version,
         "consistency_checks": session.consistency_checks,
+        "retraction_chain": session.jtms.get_retraction_chain(),
     }
 
 

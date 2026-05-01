@@ -93,7 +93,21 @@ class Belief:
         self._propagating = True
         try:
             for justification in self.implications:
-                justification.conclusion.compute_truth_statement()
+                conclusion = justification.conclusion
+                old_valid = conclusion.valid
+                conclusion.compute_truth_statement()
+                # Track cascade: conclusion was valid, now retracted
+                if (
+                    hasattr(self, '_jtms_ref')
+                    and self._jtms_ref is not None
+                    and self._jtms_ref._tracing_enabled
+                    and old_valid is True
+                    and conclusion.valid is not True
+                    and self._jtms_ref._retraction_trace
+                ):
+                    self._jtms_ref._retraction_trace[-1]["cascaded"].append(
+                        conclusion.name
+                    )
         finally:
             self._propagating = False
 
@@ -131,11 +145,15 @@ class JTMS:
     def __init__(self, strict: bool = False):
         self.beliefs: Dict[str, Belief] = {}
         self.strict = strict
+        self._retraction_trace: List[Dict] = []
+        self._tracing_enabled: bool = False
 
     def add_belief(self, name: str):
         """Add a new belief to the system."""
         if name not in self.beliefs:
-            self.beliefs[name] = Belief(name)
+            belief = Belief(name)
+            belief._jtms_ref = self
+            self.beliefs[name] = belief
 
     def remove_belief(self, belief_name: str):
         """Remove a belief and clean up its implications."""
@@ -153,7 +171,16 @@ class JTMS:
         """Set the truth value of a belief and propagate."""
         if belief_name not in self.beliefs:
             raise KeyError(f"Unknown belief: {belief_name}")
-        self.beliefs[belief_name].set_truth_value(validity)
+        belief = self.beliefs[belief_name]
+        old_valid = belief.valid
+        if self._tracing_enabled and old_valid is True and validity is not True:
+            self._retraction_trace.append({
+                "trigger": belief_name,
+                "retracted": [belief_name],
+                "cascaded": [],
+                "reason": f"directly set to {validity}",
+            })
+        belief.set_truth_value(validity)
 
     def add_justification(
         self,
@@ -206,6 +233,19 @@ class JTMS:
         """Print all beliefs and their truth values."""
         for b in self.beliefs.values():
             print(b)
+
+    def enable_tracing(self):
+        """Enable retraction cascade tracing."""
+        self._tracing_enabled = True
+        self._retraction_trace = []
+
+    def get_retraction_chain(self) -> List[Dict]:
+        """Return the accumulated retraction cascade trace.
+
+        Each entry is:
+            {trigger: str, retracted: [str], cascaded: [str], reason: str}
+        """
+        return list(self._retraction_trace)
 
     def explain_belief(self, belief_name: str) -> str:
         """Return a formatted explanation of a belief's justifications."""
