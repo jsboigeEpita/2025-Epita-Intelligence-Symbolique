@@ -79,7 +79,7 @@ class SessionCheckpoint:
         try:
             data = self.to_dict()
             return len(json.dumps(data, default=str))
-        except:
+        except (TypeError, ValueError):
             return 0
 
     def to_dict(self) -> Dict[str, Any]:
