@@ -416,7 +416,7 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
         (
             "ranking_semantics_handler",
             ["ranking_semantics"],
-            "Qualitative argument ranking (Categoriser, Burden)",
+            "Qualitative argument ranking (12 reasoners: categorizer, burden, discussion, counting, tuples, strategy, propagation, saf, counter_transitivity, probabilistic_ranking, iterated_graded_defense, serialisable)",
             _invoke_ranking,
         ),
         (

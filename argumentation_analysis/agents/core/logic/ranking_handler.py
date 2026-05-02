@@ -1,11 +1,19 @@
 """Handler for Ranking Semantics via TweetyProject.
 
-Provides qualitative argument ranking using Dung frameworks:
+Provides qualitative argument ranking using Dung frameworks.
+12 ranking reasoners from Tweety arg.rankings module:
 - Categorizer (Besnard & Hunter)
 - Burden-based
 - Discussion-based
 - Counting
 - Tuples
+- Strategy-based
+- Propagation
+- SAF (Social Abstract Argumentation Framework)
+- Counter-Transitivity
+- Probabilistic ranking
+- Iterated Graded Defense
+- Serialisable wrapper
 
 Each reasoner takes a DungTheory and returns a ranking (ordering) over arguments.
 """
@@ -28,6 +36,11 @@ class RankingHandler:
         "tuples": "org.tweetyproject.arg.rankings.reasoner.TuplesRankingReasoner",
         "strategy": "org.tweetyproject.arg.rankings.reasoner.StrategyBasedRankingReasoner",
         "propagation": "org.tweetyproject.arg.rankings.reasoner.PropagationRankingReasoner",
+        "saf": "org.tweetyproject.arg.rankings.reasoner.SAFRankingReasoner",
+        "counter_transitivity": "org.tweetyproject.arg.rankings.reasoner.CounterTransitivityReasoner",
+        "probabilistic_ranking": "org.tweetyproject.arg.rankings.reasoner.ProbabilisticRankingReasoner",
+        "iterated_graded_defense": "org.tweetyproject.arg.rankings.reasoner.IteratedGradedDefenseReasoner",
+        "serialisable": "org.tweetyproject.arg.rankings.reasoner.SerialisableRankingReasoner",
     }
 
     def __init__(self, initializer_instance=None):

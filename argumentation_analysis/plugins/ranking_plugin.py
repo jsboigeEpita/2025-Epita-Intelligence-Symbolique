@@ -1,8 +1,9 @@
 """Semantic Kernel plugin for argument ranking via Tweety.
 
-Wraps RankingHandler to expose 7 formal ranking methods
-(categorizer, burden, discussion, counting, tuples, strategy, propagation)
-as @kernel_function methods for SK agent integration.
+Wraps RankingHandler to expose 12 formal ranking methods
+(categorizer, burden, discussion, counting, tuples, strategy, propagation,
+saf, counter_transitivity, probabilistic_ranking, iterated_graded_defense,
+serialisable) as @kernel_function methods for SK agent integration.
 """
 
 import json
