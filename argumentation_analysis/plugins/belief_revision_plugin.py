@@ -62,7 +62,11 @@ class BeliefRevisionPlugin:
     )
     def list_revision_methods(self) -> str:
         """Return available revision method names."""
+        from argumentation_analysis.agents.core.logic.belief_revision_handler import (
+            BeliefRevisionHandler,
+        )
+
         return json.dumps(
-            ["dalal", "levi"],
+            sorted(BeliefRevisionHandler.REVISION_METHODS),
             ensure_ascii=False,
         )

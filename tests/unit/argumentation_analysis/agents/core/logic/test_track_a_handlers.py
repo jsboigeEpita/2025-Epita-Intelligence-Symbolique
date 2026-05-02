@@ -519,6 +519,114 @@ class TestBeliefRevisionHandler:
         assert result["operation"] == "contraction"
         assert result["removed"] == "a"
 
+    def test_revise_returns_statistics(self):
+        handler, _, registry = self._make_handler()
+        mock_revised = MagicMock()
+        mock_revised.__iter__ = MagicMock(
+            return_value=iter(
+                [MagicMock(__str__=lambda s: "a"), MagicMock(__str__=lambda s: "b")]
+            )
+        )
+        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
+        if dalal:
+            dalal.return_value.revise.return_value = mock_revised
+
+        result = handler.revise(["a"], "b", method="dalal")
+        assert "statistics" in result
+        assert result["statistics"]["original_size"] == 1
+        assert result["statistics"]["revised_size"] == 2
+
+    def test_contract_returns_statistics(self):
+        handler, _, registry = self._make_handler()
+        mock_contracted = MagicMock()
+        mock_contracted.__iter__ = MagicMock(return_value=iter([]))
+        kernel = registry.get(
+            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+        )
+        if kernel:
+            kernel.return_value.contract.return_value = mock_contracted
+
+        result = handler.contract(["a", "b", "c"], "b")
+        assert result["statistics"]["original_size"] == 3
+        assert result["statistics"]["contracted_size"] == 0
+
+    def test_revise_with_negated_formula(self):
+        handler, _, registry = self._make_handler()
+        mock_revised = MagicMock()
+        mock_revised.__iter__ = MagicMock(
+            return_value=iter([MagicMock(__str__=lambda s: "!a")])
+        )
+        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
+        if dalal:
+            dalal.return_value.revise.return_value = mock_revised
+
+        result = handler.revise(["a"], "!a", method="dalal")
+        assert result["new_belief"] == "!a"
+
+    def test_revise_empty_belief_set(self):
+        handler, _, registry = self._make_handler()
+        mock_revised = MagicMock()
+        mock_revised.__iter__ = MagicMock(
+            return_value=iter([MagicMock(__str__=lambda s: "p")])
+        )
+        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
+        if dalal:
+            dalal.return_value.revise.return_value = mock_revised
+
+        result = handler.revise([], "p", method="dalal")
+        assert result["statistics"]["original_size"] == 0
+        assert result["statistics"]["revised_size"] == 1
+
+    def test_contract_single_formula(self):
+        handler, _, registry = self._make_handler()
+        mock_contracted = MagicMock()
+        mock_contracted.__iter__ = MagicMock(return_value=iter([]))
+        kernel = registry.get(
+            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+        )
+        if kernel:
+            kernel.return_value.contract.return_value = mock_contracted
+
+        result = handler.contract(["x"], "x")
+        assert result["removed"] == "x"
+        assert result["statistics"]["contracted_size"] == 0
+
+    def test_revise_dalal_vs_levi_different_results(self):
+        """Both methods should work on the same input without errors."""
+        handler, _, registry = self._make_handler()
+        mock_revised_dalal = MagicMock()
+        mock_revised_dalal.__iter__ = MagicMock(
+            return_value=iter([MagicMock(__str__=lambda s: "a")])
+        )
+        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
+        if dalal:
+            dalal.return_value.revise.return_value = mock_revised_dalal
+
+        result_d = handler.revise(["a", "b"], "c", method="dalal")
+        result_l = handler.revise(["a", "b"], "c", method="levi")
+        assert result_d["method"] == "dalal"
+        assert result_l["method"] == "levi"
+        assert result_d["original"] == result_l["original"]
+
+    def test_revised_formulas_are_sorted(self):
+        handler, _, registry = self._make_handler()
+        mock_revised = MagicMock()
+        mock_revised.__iter__ = MagicMock(
+            return_value=iter(
+                [
+                    MagicMock(__str__=lambda s: "c"),
+                    MagicMock(__str__=lambda s: "a"),
+                    MagicMock(__str__=lambda s: "b"),
+                ]
+            )
+        )
+        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
+        if dalal:
+            dalal.return_value.revise.return_value = mock_revised
+
+        result = handler.revise(["a"], "b", method="dalal")
+        assert result["revised"] == sorted(result["revised"])
+
 
 # =====================================================================
 # Probabilistic Handler Tests (#59)
