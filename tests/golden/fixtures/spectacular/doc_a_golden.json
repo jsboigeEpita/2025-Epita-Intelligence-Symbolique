@@ -2,8 +2,8 @@
   "workflow_name": "spectacular_analysis",
   "source_id": "doc_A",
   "summary": {
-    "completed": 16,
-    "total": 16,
+    "completed": 17,
+    "total": 17,
     "failed": 0,
     "skipped": 0
   },
@@ -23,6 +23,7 @@
     "debate_protocol",
     "assumption_based_reasoning",
     "governance_simulation",
+    "formal_synthesis",
     "narrative_synthesis"
   ],
   "state_snapshot": {
@@ -459,7 +460,7 @@
     ],
     "narrative_synthesis": "The spectacular analysis of doc_A reveals a multi-layered argumentative structure with 8 arguments across 3 reasoning chains (see Section 1, Extraction). Propositional logic analysis validated 3 of 5 formulas but found the causal link from arg_p3 to arg_c1 unsupported (see Section 4, Formal Logic). FOL analysis with 6 formulas confirmed that regulated freedom coexists with democratic values, while modal S5 analysis proved the absolute restriction claim necessarily false. Fallacy detection identified 4 fallacies across 3 families: ad hominem (relevance), slippery slope (causal), straw man (distortion), and false dilemma (presumption) (see Section 3, Fallacies). The Dung abstract argumentation framework produced 4 extensions (grounded, 2 preferred, 1 stable), with arg_c1 rejected under grounded semantics (see Section 5, Frameworks). Counter-argumentation produced 4 strong rebuttals using reductio, counter-example, distinction, and concession strategies (see Section 6, Counter-Arguments). JTMS belief revision triggered 2 retraction cascades, most notably demoting arg_c1 from IN to OUT after the reductio counter-argument (see Section 7, JTMS). The ATMS identified 4 reasoning contexts, 2 of which are contradictory, confirming the argument's internal tensions (see Section 8, ATMS). Governance simulation across 3 voting methods (majority, Borda, Condorcet) unanimously selected the regulated freedom proposal (see Section 9, Governance). Overall quality scores range from 0.74 to 0.90, with arg_c1 scoring lowest due to logical weaknesses and fallacy exposure.",
     "workflow_results": {
-      "phases_completed": 16,
+      "phases_completed": 17,
       "phases_failed": 0,
       "total_duration_ms": 45000,
       "phase_timings": {

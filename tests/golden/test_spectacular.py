@@ -124,14 +124,14 @@ class TestFieldCoverage:
             f"Populated: {[k for k, v in state.items() if v and v not in ([], {}, '', None, 0)]}"
         )
 
-    def test_all_16_capabilities_present(self, golden):
+    def test_all_17_capabilities_present(self, golden):
         caps = golden["capabilities_used"]
-        assert len(caps) == 16, f"Expected 16 capabilities, got {len(caps)}"
+        assert len(caps) == 17, f"Expected 17 capabilities, got {len(caps)}"
 
-    def test_all_16_phases_completed(self, golden):
+    def test_all_17_phases_completed(self, golden):
         summary = golden["summary"]
-        assert summary["completed"] == 16
-        assert summary["total"] == 16
+        assert summary["completed"] == 17
+        assert summary["total"] == 17
         assert summary["failed"] == 0
 
 
