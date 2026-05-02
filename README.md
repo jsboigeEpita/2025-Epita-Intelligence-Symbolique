@@ -92,6 +92,42 @@ python examples/scripts_demonstration/demonstration_epita.py --quick-start
 
 ---
 
+## 🎬 **Demo Spectaculaire (5-min tour)**
+
+New to the repo? Run the full spectacular pipeline in 4 commands:
+
+```bash
+# 1. Setup (skip if already done above)
+conda activate projet-is-roo-new
+cp .env.example .env   # edit OPENAI_API_KEY
+
+# 2. Run spectacular analysis on a scenario
+python -m argumentation_analysis.run_orchestration \
+    --input examples/scenarios/politics.txt \
+    --workflow spectacular \
+    --rich-output
+
+# 3. Render interactive HTML report
+python -m argumentation_analysis.visualization.html_report \
+    .last_state.json report.html && open report.html
+
+# 4. Build presentation slides
+python scripts/build_deck.py
+```
+
+### Pedagogical Resources
+
+| Resource | Description | Path |
+|----------|-------------|------|
+| Jupyter tour | 20-cell notebook covering all 17 phases | [`examples/notebooks/spectacular_full_tour.ipynb`](examples/notebooks/spectacular_full_tour.ipynb) |
+| Slide deck | 28-slide reveal.js presentation | [`docs/soutenance/slides.md`](docs/soutenance/slides.md) |
+| 5 Scenarios | Politics, science, media, fact-check, philosophy | [`examples/scenarios/`](examples/scenarios/) |
+| HTML report | Self-contained interactive report with D3.js graphs | [`argumentation_analysis/visualization/html_report.py`](argumentation_analysis/visualization/html_report.py) |
+
+> **GIF capture:** `docs/demo/quickstart.tape` provides a reproducible [vhs](https://github.com/charmbracelet/vhs) script for terminal recording.
+
+---
+
 
 ## 🧭 **Comment Naviguer dans ce Vaste Projet : Les 5 Points d'Entrée Clés**
 
