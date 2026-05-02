@@ -1,0 +1,70 @@
+# Scenario fixtures for spectacular analysis pipeline
+# All content is original pedagogical material — NOT from the encrypted dataset
+
+scenarios:
+  - id: scenario_politics
+    file: politics.txt
+    title: "Loi sur le Logement Abordable"
+    theme: public_policy
+    language: fr
+    expected_capabilities:
+      - fact_extraction
+      - argument_quality
+      - hierarchical_fallacy_detection
+      - counter_argumentation
+      - governance_simulation
+    acceptance_min_args: 5
+    acceptance_min_fallacies: 1
+
+  - id: scenario_science
+    file: science.txt
+    title: "Le changement climatique : mythe ou realite ?"
+    theme: science
+    language: fr
+    expected_capabilities:
+      - fact_extraction
+      - nl_to_logic
+      - propositional_logic
+      - first_order_logic
+      - dung_extensions
+    acceptance_min_args: 5
+    acceptance_min_fallacies: 1
+
+  - id: scenario_media
+    file: media.txt
+    title: "La liberte d'expression a-t-elle des limites ?"
+    theme: media
+    language: fr
+    expected_capabilities:
+      - fact_extraction
+      - argument_quality
+      - neural_fallacy_detection
+      - hierarchical_fallacy_detection
+    acceptance_min_args: 5
+    acceptance_min_fallacies: 2
+
+  - id: scenario_factcheck
+    file: factcheck.txt
+    title: "Verification : les retraites seront-elles supprimees ?"
+    theme: fact_checking
+    language: fr
+    expected_capabilities:
+      - fact_extraction
+      - assumption_based_reasoning
+      - jtms_belief_revision
+      - modal_logic
+    acceptance_min_args: 6
+    acceptance_min_fallacies: 1
+
+  - id: scenario_philosophy
+    file: philosophy.txt
+    title: "Le probleme du tramway"
+    theme: philosophy
+    language: fr
+    expected_capabilities:
+      - counter_argumentation
+      - debate_protocol
+      - governance_simulation
+      - narrative_synthesis
+    acceptance_min_args: 5
+    acceptance_min_fallacies: 1
