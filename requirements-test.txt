@@ -16,3 +16,4 @@ unidecode
 pytest-playwright
 matplotlib
 mcp
+hypothesis
