@@ -177,6 +177,9 @@ tests/e2e/test-results/
 tests/unit/all_tests.txt
 tests/unit/targeted_test_list.txt
 
+# Soutenance slide deck build output
+docs/soutenance/build/
+
 # Misc generated docs
 docs/reports/ARBRE_*
 docs/reports/CLEANUP_LOG.md
