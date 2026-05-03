@@ -146,3 +146,56 @@ class TestHTMLReport:
         render_html_report(golden_state)
         elapsed = time.monotonic() - start
         assert elapsed < 2.0, f"Rendering took {elapsed:.2f}s (expected < 2s)"
+
+    def test_no_pattern_section_without_data(self, golden_state):
+        """Pattern Mining section should NOT appear when pattern_data is None."""
+        from argumentation_analysis.visualization.html_report import render_html_report
+
+        html = render_html_report(golden_state)
+        assert "Discourse Pattern Mining" not in html
+
+    def test_pattern_section_with_data(self, golden_state):
+        """Pattern Mining section appears when pattern_data is provided."""
+        from argumentation_analysis.visualization.html_report import render_html_report
+
+        pattern = {
+            "spectrum": {
+                "propaganda": {"ad_hominem": 0.5, "appeal_to_fear": 0.3},
+                "debate": {"straw_man": 0.4, "false_dilemma": 0.6},
+            },
+            "asymmetry": {
+                "propaganda": {"tricherie_share": 0.2, "influence_share": 0.8, "asymmetry": 0.6},
+                "debate": {"tricherie_share": 0.5, "influence_share": 0.5, "asymmetry": 0.0},
+            },
+            "cooccurrence_pairs": [
+                {"a": "ad_hominem", "b": "appeal_to_fear", "support": 5, "lift": 2.3, "jaccard": 0.45},
+            ],
+            "cross_coverage": {
+                "ad_hominem": {"fol_invalid": 0.0, "dung_unsupported": 1.0, "jtms_retraction": 0.0},
+            },
+        }
+        html = render_html_report(golden_state, pattern_data=pattern)
+        assert "Discourse Pattern Mining" in html
+        assert "Fallacy Spectra by Cluster" in html
+        assert "propaganda" in html
+        assert "debate" in html
+        assert "Tricherie" in html
+        assert "Influence" in html
+        assert "Co-occurrence" in html
+        assert "ad_hominem" in html
+        assert "Cross-coverage" in html
+
+    def test_pattern_section_partial_data(self, golden_state):
+        """Pattern section renders with only spectrum (no asymmetry/cooccurrence)."""
+        from argumentation_analysis.visualization.html_report import render_html_report
+
+        pattern = {
+            "spectrum": {"cluster_a": {"red_herring": 1.0}},
+        }
+        html = render_html_report(golden_state, pattern_data=pattern)
+        assert "Discourse Pattern Mining" in html
+        assert "Fallacy Spectra by Cluster" in html
+        assert "red_herring" in html
+        # Asymmetry and co-occurrence should be absent
+        assert "Asymmetry" not in html
+        assert "Co-occurrence" not in html
