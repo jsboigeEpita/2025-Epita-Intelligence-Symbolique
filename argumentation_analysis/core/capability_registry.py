@@ -45,13 +45,13 @@ class ComponentRegistration:
 
     name: str
     component_type: ComponentType
-    component_class: Optional[Type] = None
-    factory: Optional[Callable] = None
+    component_class: Optional[Type[Any]] = None
+    factory: Optional[Callable[..., Any]] = None
     capabilities: List[str] = field(default_factory=list)
     requires: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    invoke: Optional[Callable] = None  # async (input_text: str, context: Dict) -> Any
+    invoke: Optional[Callable[..., Any]] = None  # async (input_text: str, context: Dict) -> Any
 
     @property
     def provides(self) -> List[str]:
@@ -77,7 +77,7 @@ class CapabilityRegistry:
     puis de les decouvrir dynamiquement par capability requise.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._registrations: Dict[str, ComponentRegistration] = {}
         self._capability_index: Dict[str, Set[str]] = (
             {}
@@ -92,13 +92,13 @@ class CapabilityRegistry:
         self,
         name: str,
         component_type: ComponentType,
-        component_class: Optional[Type] = None,
-        factory: Optional[Callable] = None,
+        component_class: Optional[Type[Any]] = None,
+        factory: Optional[Callable[..., Any]] = None,
         capabilities: Optional[List[str]] = None,
         requires: Optional[List[str]] = None,
         parameters: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        invoke: Optional[Callable] = None,
+        invoke: Optional[Callable[..., Any]] = None,
     ) -> "ComponentRegistration":
         """
         Enregistre un composant dans le registre.
@@ -161,10 +161,10 @@ class CapabilityRegistry:
     def register_agent(
         self,
         name: str,
-        agent_class: Type,
+        agent_class: Type[Any],
         capabilities: Optional[List[str]] = None,
         requires: Optional[List[str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ComponentRegistration":
         """Shorthand for registering an agent."""
         return self.register(
@@ -179,10 +179,10 @@ class CapabilityRegistry:
     def register_plugin(
         self,
         name: str,
-        plugin_class: Type,
+        plugin_class: Type[Any],
         capabilities: Optional[List[str]] = None,
         requires: Optional[List[str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ComponentRegistration":
         """Shorthand for registering a plugin."""
         return self.register(
@@ -197,11 +197,11 @@ class CapabilityRegistry:
     def register_service(
         self,
         name: str,
-        service_class: Optional[Type] = None,
-        factory: Optional[Callable] = None,
+        service_class: Optional[Type[Any]] = None,
+        factory: Optional[Callable[..., Any]] = None,
         capabilities: Optional[List[str]] = None,
         requires: Optional[List[str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ComponentRegistration":
         """Shorthand for registering a service."""
         return self.register(
@@ -447,7 +447,7 @@ class ServiceDiscovery:
         metadata: Dict[str, Any] = field(default_factory=dict)
         priority: int = 0  # Higher = preferred
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._providers: Dict[str, "ServiceDiscovery.ProviderRegistration"] = {}
         self._type_index: Dict[str, Set[str]] = {}  # type -> set of provider names
         logger.info("ServiceDiscovery initialized")
@@ -493,7 +493,7 @@ class ServiceDiscovery:
         api_key: Optional[str] = None,
         models: Optional[List[str]] = None,
         priority: int = 0,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ServiceDiscovery.ProviderRegistration":
         """Register an LLM provider."""
         return self.register_provider(
@@ -514,7 +514,7 @@ class ServiceDiscovery:
         model: Optional[str] = None,
         dimensions: Optional[int] = None,
         priority: int = 0,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ServiceDiscovery.ProviderRegistration":
         """Register an embedding provider."""
         return self.register_provider(
@@ -533,7 +533,7 @@ class ServiceDiscovery:
         name: str,
         endpoint: Optional[str] = None,
         priority: int = 0,
-        **kwargs,
+        **kwargs: Any,
     ) -> "ServiceDiscovery.ProviderRegistration":
         """Register a speech-to-text provider."""
         return self.register_provider(

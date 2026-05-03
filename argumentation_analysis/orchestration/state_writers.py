@@ -53,7 +53,7 @@ __all__ = [
 ]
 
 
-def _write_quality_to_state(output, state, ctx) -> None:
+def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write quality evaluator results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -100,7 +100,7 @@ def _write_quality_to_state(output, state, ctx) -> None:
         state.add_quality_score(arg_id, scores, float(overall))
 
 
-def _write_counter_argument_to_state(output, state, ctx) -> None:
+def _write_counter_argument_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -149,7 +149,7 @@ def _write_counter_argument_to_state(output, state, ctx) -> None:
     state.add_counter_argument(original, strategy_name, strategy_name, float(score))
 
 
-def _write_jtms_to_state(output, state, ctx) -> None:
+def _write_jtms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write JTMS results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -178,7 +178,7 @@ def _write_jtms_to_state(output, state, ctx) -> None:
         state.jtms_retraction_chain = retraction_chain
 
 
-def _write_atms_to_state(output, state, ctx) -> None:
+def _write_atms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ATMS assumption-based reasoning results to UnifiedAnalysisState (#292).
 
     Stores each node's environment info as a JTMS belief for compatibility.
@@ -219,7 +219,7 @@ def _write_atms_to_state(output, state, ctx) -> None:
         state.atms_contexts = atms_contexts
 
 
-def _write_debate_to_state(output, state, ctx) -> None:
+def _write_debate_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write debate analysis results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -246,7 +246,7 @@ def _write_debate_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_governance_to_state(output, state, ctx) -> None:
+def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write governance results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -305,7 +305,7 @@ def _write_governance_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_camembert_to_state(output, state, ctx) -> None:
+def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write CamemBERT neural fallacy results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -322,7 +322,7 @@ def _write_camembert_to_state(output, state, ctx) -> None:
         )
 
 
-def _write_hierarchical_fallacy_to_state(output, state, ctx) -> None:
+def _write_hierarchical_fallacy_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write hierarchical taxonomy-guided fallacy results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -347,7 +347,7 @@ def _write_hierarchical_fallacy_to_state(output, state, ctx) -> None:
         state.add_fallacy(fallacy_type=fallacy_type, justification=full_justification)
 
 
-def _write_semantic_index_to_state(output, state, ctx) -> None:
+def _write_semantic_index_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write semantic index results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -366,7 +366,7 @@ def _write_semantic_index_to_state(output, state, ctx) -> None:
         )
 
 
-def _write_speech_to_state(output, state, ctx) -> None:
+def _write_speech_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write speech transcription results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -384,7 +384,7 @@ def _write_speech_to_state(output, state, ctx) -> None:
         )
 
 
-def _write_ranking_to_state(output, state, ctx) -> None:
+def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ranking semantics results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -398,7 +398,7 @@ def _write_ranking_to_state(output, state, ctx) -> None:
     state.add_ranking_result(method, arguments, comparisons)
 
 
-def _write_aspic_to_state(output, state, ctx) -> None:
+def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ASPIC+ analysis results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -412,7 +412,7 @@ def _write_aspic_to_state(output, state, ctx) -> None:
     state.add_aspic_result(reasoner_type, extensions, statistics)
 
 
-def _write_belief_revision_to_state(output, state, ctx) -> None:
+def _write_belief_revision_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write belief revision results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -426,7 +426,7 @@ def _write_belief_revision_to_state(output, state, ctx) -> None:
     state.add_belief_revision_result(method, original, revised)
 
 
-def _write_dialogue_to_state(output, state, ctx) -> None:
+def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write dialogue protocol results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -438,7 +438,7 @@ def _write_dialogue_to_state(output, state, ctx) -> None:
     state.add_dialogue_result(topic, outcome, trace)
 
 
-def _write_probabilistic_to_state(output, state, ctx) -> None:
+def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write probabilistic argumentation results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -451,7 +451,7 @@ def _write_probabilistic_to_state(output, state, ctx) -> None:
     state.add_probabilistic_result(arguments, acceptance)
 
 
-def _write_bipolar_to_state(output, state, ctx) -> None:
+def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write bipolar argumentation results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -465,7 +465,7 @@ def _write_bipolar_to_state(output, state, ctx) -> None:
     state.add_bipolar_result(fw_type, arguments, supports)
 
 
-def _write_aba_to_state(output, state, ctx) -> None:
+def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ABA reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
     if not output or not isinstance(output, dict):
         return
@@ -481,7 +481,7 @@ def _write_aba_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_adf_to_state(output, state, ctx) -> None:
+def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ADF reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
     if not output or not isinstance(output, dict):
         return
@@ -497,7 +497,7 @@ def _write_adf_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_fact_extraction_to_state(output, state, ctx) -> None:
+def _write_fact_extraction_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write fact extraction results to state (populates extracts + base fields)."""
     if not output or not isinstance(output, dict):
         return
@@ -538,7 +538,7 @@ def _write_fact_extraction_to_state(output, state, ctx) -> None:
         state.add_task(f"Fact extraction: {summary[:200]}")
 
 
-def _write_propositional_to_state(output, state, ctx) -> None:
+def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write propositional logic analysis results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -552,7 +552,7 @@ def _write_propositional_to_state(output, state, ctx) -> None:
     state.add_propositional_analysis_result(formulas, bool(satisfiable), model)
 
 
-def _write_fol_to_state(output, state, ctx) -> None:
+def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write FOL reasoning results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -578,7 +578,7 @@ def _write_fol_to_state(output, state, ctx) -> None:
             state.fol_signature = fol_signature
 
 
-def _write_modal_to_state(output, state, ctx) -> None:
+def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write modal logic analysis results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -592,7 +592,7 @@ def _write_modal_to_state(output, state, ctx) -> None:
     state.add_modal_analysis_result(formulas, bool(valid), modalities)
 
 
-def _write_nl_to_logic_to_state(output, state, ctx) -> None:
+def _write_nl_to_logic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write NL-to-formal-logic translation results to UnifiedAnalysisState (#173)."""
     if not output or not isinstance(output, dict):
         return
@@ -611,7 +611,7 @@ def _write_nl_to_logic_to_state(output, state, ctx) -> None:
             )
 
 
-def _write_dung_extensions_to_state(output, state, ctx) -> None:
+def _write_dung_extensions_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Dung extension computation results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -639,7 +639,7 @@ def _write_dung_extensions_to_state(output, state, ctx) -> None:
                 )
 
 
-def _write_formal_synthesis_to_state(output, state, ctx) -> None:
+def _write_formal_synthesis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write formal synthesis report to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -653,7 +653,7 @@ def _write_formal_synthesis_to_state(output, state, ctx) -> None:
     state.add_formal_synthesis_report(summary, phase_results, float(overall_validity))
 
 
-def _write_dl_to_state(output, state, ctx) -> None:
+def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Description Logic results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
@@ -667,7 +667,7 @@ def _write_dl_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_cl_to_state(output, state, ctx) -> None:
+def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Conditional Logic results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
@@ -681,7 +681,7 @@ def _write_cl_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_sat_to_state(output, state, ctx) -> None:
+def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write SAT solver results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
@@ -703,7 +703,7 @@ def _write_sat_to_state(output, state, ctx) -> None:
         )
 
 
-def _write_setaf_to_state(output, state, ctx) -> None:
+def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write SetAF results to UnifiedAnalysisState (#87)."""
     if not output or not isinstance(output, dict):
         return
@@ -715,7 +715,7 @@ def _write_setaf_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_weighted_to_state(output, state, ctx) -> None:
+def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Weighted AF results to UnifiedAnalysisState (#87)."""
     if not output or not isinstance(output, dict):
         return
@@ -731,7 +731,7 @@ def _write_weighted_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_social_to_state(output, state, ctx) -> None:
+def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Social AF results to UnifiedAnalysisState (#87)."""
     if not output or not isinstance(output, dict):
         return
@@ -745,7 +745,7 @@ def _write_social_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_eaf_to_state(output, state, ctx) -> None:
+def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write EAF results to UnifiedAnalysisState (#88)."""
     if not output or not isinstance(output, dict):
         return
@@ -757,7 +757,7 @@ def _write_eaf_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_delp_to_state(output, state, ctx) -> None:
+def _write_delp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write DeLP results to UnifiedAnalysisState (#89)."""
     if not output or not isinstance(output, dict):
         return
@@ -770,7 +770,7 @@ def _write_delp_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_qbf_to_state(output, state, ctx) -> None:
+def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write QBF results to UnifiedAnalysisState (#90)."""
     if not output or not isinstance(output, dict):
         return
@@ -781,7 +781,7 @@ def _write_qbf_to_state(output, state, ctx) -> None:
     )
 
 
-def _write_collaborative_analysis_to_state(output, state, ctx) -> None:
+def _write_collaborative_analysis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write collaborative multi-agent debate results to state (#175)."""
     from argumentation_analysis.orchestration.collaborative_debate import (
         _write_collaborative_to_state,
@@ -790,7 +790,7 @@ def _write_collaborative_analysis_to_state(output, state, ctx) -> None:
     _write_collaborative_to_state(output, state, ctx)
 
 
-def _write_narrative_synthesis_to_state(output, state, ctx) -> None:
+def _write_narrative_synthesis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write narrative synthesis results to UnifiedAnalysisState (#351)."""
     if not output or not isinstance(output, dict):
         return

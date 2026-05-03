@@ -1,6 +1,6 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
 
-from typing import List, Optional, Type
+from typing import Any, List, Optional, Type
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.agents import Agent, ChatCompletionAgent
@@ -103,8 +103,11 @@ _PLUGIN_REGISTRY = {
 
 
 def get_plugin_instances(
-    agent_speciality: str, state=None, kernel=None, llm_service=None
-) -> list:
+    agent_speciality: str,
+    state: Any = None,
+    kernel: Optional[Kernel] = None,
+    llm_service: Any = None,
+) -> list[Any]:
     """Return instantiated plugin objects for an agent's speciality.
 
     Useful for ChatCompletionAgent(plugins=[...]) scoping where each agent
@@ -167,8 +170,11 @@ def get_plugin_instances(
 
 
 def load_plugins_for_agent(
-    kernel: Kernel, agent_speciality: str, state=None, llm_service=None
-) -> list:
+    kernel: Kernel,
+    agent_speciality: str,
+    state: Any = None,
+    llm_service: Any = None,
+) -> list[str]:
     """Load only the plugins relevant to an agent's speciality onto its kernel.
 
     Always loads StateManagerPlugin (if state is provided) as the shared
@@ -259,18 +265,18 @@ class AgentFactory:
         )
 
         if trace_log_path:
-            return TracedAgent(
+            return TracedAgent(  # type: ignore[return-value]
                 agent_to_wrap=agent_to_create, trace_log_path=trace_log_path
             )
         return agent_to_create
 
-    def create_agent(self, agent_type: AgentType, **kwargs) -> FallacyAgentBase:
+    def create_agent(self, agent_type: AgentType, **kwargs: Any) -> FallacyAgentBase:
         # Cette méthode est maintenant le point d'entrée principal.
         # Elle peut utiliser create_informal_fallacy_agent si nécessaire.
         if agent_type == AgentType.INFORMAL_FALLACY:
             # Fait le pont avec la nouvelle méthode de création détaillée
             # On passe les kwargs pour permettre plus de flexibilité (comme 'config_name')
-            return self.create_informal_fallacy_agent(**kwargs)
+            return self.create_informal_fallacy_agent(**kwargs)  # type: ignore[return-value]
 
         # --- Importation locale pour briser le cycle d'importation ---
         from .sherlock_jtms_agent import SherlockJTMSAgent
@@ -288,18 +294,18 @@ class AgentFactory:
         if "llm_service_id" not in kwargs:
             kwargs["llm_service_id"] = self.llm_service_id
 
-        return agent_class(kernel=self.kernel, **kwargs)
+        return agent_class(kernel=self.kernel, **kwargs)  # type: ignore[return-value]
 
     def create_project_manager_agent(
         self, trace_log_path: Optional[str] = None
     ) -> Agent:
-        plugins = [ProjectManagementPlugin()]
+        plugins: list[Any] = [ProjectManagementPlugin()]
         with open(
             "argumentation_analysis/agents/prompts/ProjectManagerAgent/skprompt.txt",
             "r",
         ) as f:
             prompt = f.read()
-        llm_service = self.kernel.get_service(self.llm_service_id)
+        llm_service: Any = self.kernel.get_service(self.llm_service_id)
         agent = ChatCompletionAgent(
             kernel=self.kernel,
             service=llm_service,
@@ -308,7 +314,7 @@ class AgentFactory:
             plugins=plugins,
         )
         if trace_log_path:
-            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
+            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)  # type: ignore[return-value]
         return agent
 
     def create_sherlock_agent(
@@ -378,7 +384,7 @@ class AgentFactory:
         agent_class: Type[Agent],
         trace_log_path: Optional[str] = None,
         enable_auto_function_calling: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> Agent:
         """Create an agent instance with optional auto function calling.
 
@@ -399,7 +405,7 @@ class AgentFactory:
             self._enable_function_choice_behavior(agent)
 
         if trace_log_path:
-            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
+            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)  # type: ignore[return-value,arg-type]
         return agent
 
     def _enable_function_choice_behavior(self, agent: Agent) -> None:
@@ -420,7 +426,7 @@ class AgentFactory:
                 object.__setattr__(agent, "function_choice_behavior", fcb)
             else:
                 # Fallback: store for manual use by orchestrator
-                agent._function_choice_behavior = fcb
+                agent._function_choice_behavior = fcb  # type: ignore[attr-defined]
         except Exception as e:
             import logging
 

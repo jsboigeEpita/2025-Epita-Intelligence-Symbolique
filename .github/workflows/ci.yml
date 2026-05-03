@@ -37,6 +37,11 @@ jobs:
         run: |
           conda run -n projet-is --no-capture-output flake8 argumentation_analysis/ tests/ api/ project_core/
 
+      - name: Type check (mypy strict — core orchestration)
+        shell: pwsh
+        run: |
+          conda run -n projet-is --no-capture-output python -m mypy --config-file pyproject.toml argumentation_analysis/core/capability_registry.py argumentation_analysis/core/shared_state.py argumentation_analysis/orchestration/workflow_dsl.py argumentation_analysis/orchestration/registry_setup.py argumentation_analysis/orchestration/workflows.py argumentation_analysis/orchestration/invoke_callables.py argumentation_analysis/orchestration/state_writers.py argumentation_analysis/agents/factory.py
+
   automated-tests:
     runs-on: windows-latest
     # Run tests independently of lint — lint failures should not block test execution

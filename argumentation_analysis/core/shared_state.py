@@ -1,7 +1,7 @@
 # core/shared_state.py
 import json
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, cast
 import logging
 
 # Logger spécifique pour l'état
@@ -61,8 +61,8 @@ class RhetoricalAnalysisState:
         self.belief_sets = {}
         self.query_log = []
         self.answers = {}
-        self.extracts = []
-        self.errors = []
+        self.extracts: List[Dict[str, Any]] = []
+        self.errors: List[Dict[str, Any]] = []
         self.final_conclusion = None
         self._next_agent_designated = None
         state_logger.debug(
@@ -162,7 +162,7 @@ class RhetoricalAnalysisState:
 
     def add_answer(
         self, task_id: str, author_agent: str, answer_text: str, source_ids: List[str]
-    ):
+    ) -> None:
         """Ajoute la réponse d'un agent à une tâche spécifiques."""
         if task_id not in self.analysis_tasks:
             state_logger.warning(
@@ -180,7 +180,7 @@ class RhetoricalAnalysisState:
             f"État answers après ajout réponse pour {task_id}: {self.answers}"
         )
 
-    def set_conclusion(self, conclusion: str):
+    def set_conclusion(self, conclusion: str) -> None:
         """Enregistre la conclusion finale de l'analyse."""
         self.final_conclusion = conclusion
         state_logger.info(f"Conclusion finale enregistrée : '{conclusion[:60]}...'")
@@ -188,13 +188,13 @@ class RhetoricalAnalysisState:
             f"État final_conclusion après enregistrement: {self.final_conclusion is not None}"
         )
 
-    def add_identified_arguments(self, arguments: List[str]):
+    def add_identified_arguments(self, arguments: List[str]) -> None:
         """Ajoute une liste d'arguments identifiés."""
         state_logger.info(f"Ajout de {len(arguments)} arguments identifiés...")
         for arg_desc in arguments:
             self.add_argument(arg_desc)
 
-    def add_identified_fallacies(self, fallacies: List[Dict[str, str]]):
+    def add_identified_fallacies(self, fallacies: List[Dict[str, str]]) -> None:
         """Ajoute une liste de sophismes identifiés."""
         state_logger.info(f"Ajout de {len(fallacies)} sophismes identifiés...")
         for fallacy_data in fallacies:
@@ -206,7 +206,7 @@ class RhetoricalAnalysisState:
                 # On pourrait aussi extraire la citation et la passer dans la justification
             )
 
-    def mark_task_as_answered(self, task_id: str, answer: str, author: str = "Unknown"):
+    def mark_task_as_answered(self, task_id: str, answer: str, author: str = "Unknown") -> None:
         """Marque une tâche comme terminée en lui ajoutant une réponse."""
         if task_id not in self.analysis_tasks:
             state_logger.warning(
@@ -226,7 +226,7 @@ class RhetoricalAnalysisState:
         # On pourrait avoir une logique plus complexe, mais pour l'instant on prend la dernière créée
         return unanswered_tasks[-1]
 
-    def designate_next_agent(self, agent_name: str):
+    def designate_next_agent(self, agent_name: str) -> None:
         """Désigne l'agent qui doit parler au prochain tour."""
         self._next_agent_designated = agent_name
         state_logger.info(f"Prochain agent désigné: '{agent_name}'")
@@ -271,11 +271,11 @@ class RhetoricalAnalysisState:
             state_logger.info(f"Désignation pour '{agent_name}' consommée.")
         return agent_name
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         """Réinitialise l'état à son état initial (vide sauf texte brut)."""
         state_logger.info(">>> Réinitialisation de l'état d'analyse...")
         initial_text = self.raw_text
-        self.__init__(initial_text)
+        self.__init__(initial_text)  # type: ignore[misc]
         assert not self.analysis_tasks, "Reset analysis_tasks failed"
         assert not self.identified_arguments, "Reset identified_arguments failed"
         assert not self.identified_fallacies, "Reset identified_fallacies failed"
@@ -325,7 +325,7 @@ class RhetoricalAnalysisState:
                 "next_agent_designated": self._next_agent_designated,
             }
         else:
-            return json.loads(self.to_json(indent=None))
+            return cast(Dict[str, Any], json.loads(self.to_json(indent=None)))
 
     def to_json(self, indent: Optional[int] = 2) -> str:
         """Sérialise l'état actuel en chaîne JSON."""
@@ -476,7 +476,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         name: str,
         arguments: List[str],
         attacks: List[List[str]],
-        extensions: Optional[Dict[str, List]] = None,
+        extensions: Optional[Dict[str, List[str]]] = None,
     ) -> str:
         """Add a Dung argumentation framework."""
         df_id = self._generate_id("dung", self.dung_frameworks)
@@ -848,7 +848,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
 
     def get_fallacious_arguments(self) -> List[ArgumentProfile]:
         """Return ArgumentProfiles for arguments targeted by at least one fallacy."""
-        targeted_ids: set = set()
+        targeted_ids: set[str] = set()
         for _fid, fdata in self.identified_fallacies.items():
             tid = fdata.get("target_argument_id")
             if tid and tid in self.identified_arguments:
@@ -860,7 +860,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         total = len(self.identified_arguments)
 
         # Collect sets of arg_ids that have each enrichment
-        with_fallacy: set = set()
+        with_fallacy: set[str] = set()
         for _fid, fdata in self.identified_fallacies.items():
             tid = fdata.get("target_argument_id")
             if tid and tid in self.identified_arguments:
@@ -871,7 +871,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         )
 
         # Counter-arguments use text matching
-        with_counter: set = set()
+        with_counter: set[str] = set()
         for arg_id, desc in self.identified_arguments.items():
             if not desc:
                 continue
@@ -888,7 +888,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     break
 
         # Formal verification (NL-to-logic translations)
-        with_formal: set = set()
+        with_formal: set[str] = set()
         for arg_id, desc in self.identified_arguments.items():
             if not desc:
                 continue
@@ -900,7 +900,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     break
 
         # JTMS beliefs
-        with_jtms: set = set()
+        with_jtms: set[str] = set()
         for arg_id, desc in self.identified_arguments.items():
             for _bid, bdata in self.jtms_beliefs.items():
                 belief_name = bdata.get("name", "")

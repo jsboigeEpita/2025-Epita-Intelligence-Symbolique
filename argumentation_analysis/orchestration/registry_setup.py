@@ -83,7 +83,7 @@ def setup_registry(
             register_with_capability_registry as register_counter_arg,
         )
 
-        register_counter_arg(registry)
+        register_counter_arg(registry)  # type: ignore[no-untyped-call]
         # Wire invoke callable (registration was created by register_counter_arg)
         if "counter_argument_agent" in registry._registrations:
             registry._registrations[
