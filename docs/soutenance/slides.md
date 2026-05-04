@@ -326,6 +326,27 @@ Tous originaux — aucun extrait du corpus chiffre
 
 ---
 
+## Discourse Pattern Mining
+
+**Signatures quantitatives** sur corpus chiffre :
+
+| Metrique | Placeholder | Description |
+|----------|------------|-------------|
+| Clusters | 2 | propaganda, debate |
+| Types de sophismes | 8+ | par spectre marginal |
+| Asymetrie Tricheriel/Influence | ` [donnees] ` | ratio par cluster |
+| Co-occurrences | ` [donnees] ` | lift + Jaccard top-20 |
+| Detecteurs formels | 3 | Dung, ATMS, JTMS |
+
+Pipeline : `C.1 Privacy → C.2 Batch → C.3 Aggregator → C.4 Report → C.5 Enrichment`
+
+_Rapport_ : `docs/reports/discourse_patterns.md`
+_Charts_ : `docs/reports/discourse_patterns/*.svg`
+
+> _Donnees placeholder — mises a jour apres merge C.3/C.4_
+
+---
+
 ## Tests & Qualite
 
 **Strategie de test** :
