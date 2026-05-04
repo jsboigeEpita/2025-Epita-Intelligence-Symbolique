@@ -33,7 +33,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
 ENCRYPTED_PATH = DATA_DIR / "extract_sources.json.gz.enc"
-DEFAULT_KB = REPO_ROOT / ".analysis_kb"
+DEFAULT_KB = REPO_ROOT / "analysis_kb"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -102,6 +102,7 @@ async def _run_single(
     state_dumps_dir: Path,
     signatures_dir: Path,
     skip_existing: bool,
+    timeout: int = 900,
     pipeline_fn: Optional[Any] = None,
     sanitize_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
 ) -> Optional[Dict[str, Any]]:
@@ -131,9 +132,18 @@ async def _run_single(
 
         result = await asyncio.wait_for(
             pipeline_fn(text, workflow_name=workflow),
-            timeout=600,
+            timeout=timeout,
         )
+        # Prefer full (non-summarized) state for pattern mining.
         state_snapshot = result.get("state_snapshot", {})
+        unified = result.get("unified_state")
+        if unified is not None:
+            try:
+                full = unified.get_state_snapshot(summarize=False)
+                if full:
+                    state_snapshot = full
+            except Exception:
+                pass
     except asyncio.TimeoutError:
         logger.warning("[%s] timeout (>600s), marking partial", opaque_id_str)
         partial = True
@@ -196,9 +206,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--max-docs", type=int, default=0, help="Max docs to process (0 = all)"
     )
     parser.add_argument(
+        "--max-chars",
+        type=int,
+        default=0,
+        help="Skip extracts longer than N chars (0 = no limit)",
+    )
+    parser.add_argument(
         "--skip-existing",
         action="store_true",
         help="Skip docs with existing signatures",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=900,
+        help="Per-doc timeout in seconds (default: 900)",
     )
     args = parser.parse_args(argv)
 
@@ -239,11 +261,29 @@ def main(argv: Optional[List[str]] = None) -> int:
         for k, v in src_meta.items():
             classified.setdefault(k, v)
 
-        for extract in source_def.get("extracts", []):
-            text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
-            if not text:
+        src_oid = opaque_id(src_name)
+        for ext_idx, extract in enumerate(source_def.get("extracts", [])):
+            # Corpus uses "extract_text" (not "full_text") at extract level.
+            # Fallback chain: extract_text → full_text_segment → source full_text.
+            full_text = (
+                extract.get("extract_text", "")
+                or extract.get("full_text_segment", "")
+                or source_def.get("full_text", "")
+            )
+            if not full_text:
                 continue
-            oid = opaque_id(src_name)
+            if args.max_chars > 0 and len(full_text) > args.max_chars:
+                logger.info(
+                    "[%s] skip (text too long: %d > %d)",
+                    src_oid, len(full_text), args.max_chars,
+                )
+                continue
+            # Per-extract unique ID: src_oid_ext_N or src_oid if only 1 extract
+            n_extracts = len(source_def.get("extracts", []))
+            if n_extracts > 1:
+                oid = f"{src_oid}_ext{ext_idx}"
+            else:
+                oid = src_oid
             docs.append(
                 {
                     "source_name": src_name,
@@ -277,6 +317,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 state_dumps_dir=state_dumps_dir,
                 signatures_dir=args.output_dir,
                 skip_existing=args.skip_existing,
+                timeout=args.timeout,
             )
         )
         if sig is not None:
