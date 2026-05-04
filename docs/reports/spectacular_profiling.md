@@ -1,5 +1,8 @@
 # Spectacular Workflow Profiling Report
 
+> **Snapshot** generated on 2025-05-03 from commit `b6e3602`.
+> This is a point-in-time report. Re-run `scripts/profile_spectacular.py` for fresh data.
+
 Performance bottleneck analysis for the spectacular analysis workflow.
 Generated with `cProfile` + `pyinstrument` + `tracemalloc`.
 

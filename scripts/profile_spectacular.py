@@ -35,7 +35,10 @@ import tracemalloc
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import pyinstrument
+try:
+    import pyinstrument
+except ImportError:
+    pyinstrument = None  # type: ignore[assignment]
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
@@ -58,7 +61,13 @@ logging.basicConfig(
 logger = logging.getLogger("profile_spectacular")
 
 # Suppress noisy loggers during profiling
-for _name in ("httpx", "openai", "httpcore", "urllib3", "semantic_kernel.connectors.ai"):
+for _name in (
+    "httpx",
+    "openai",
+    "httpcore",
+    "urllib3",
+    "semantic_kernel.connectors.ai",
+):
     logging.getLogger(_name).setLevel(logging.WARNING)
 
 
@@ -82,7 +91,12 @@ def _load_encrypted_doc(doc_index: int = 0, max_chars: int = 3000) -> Optional[s
         if not passphrase:
             return None
 
-        dataset_path = project_root / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
+        dataset_path = (
+            project_root
+            / "argumentation_analysis"
+            / "data"
+            / "extract_sources.json.gz.enc"
+        )
         if not dataset_path.exists():
             return None
 
@@ -111,14 +125,27 @@ class PhaseTimingCollector:
         self._original_execute = original_execute
         collector = self
 
-        async def instrumented_execute(self_exec, workflow, input_data, context=None, state=None, state_writers=None):
-            results = await original_execute(self_exec, workflow, input_data, context, state, state_writers)
+        async def instrumented_execute(
+            self_exec,
+            workflow,
+            input_data,
+            context=None,
+            state=None,
+            state_writers=None,
+        ):
+            results = await original_execute(
+                self_exec, workflow, input_data, context, state, state_writers
+            )
             for name, result in results.items():
                 entry = {
                     "phase": name,
                     "capability": result.capability,
                     "status": result.status.value,
-                    "duration_seconds": round(result.duration_seconds, 4) if result.duration_seconds else 0,
+                    "duration_seconds": (
+                        round(result.duration_seconds, 4)
+                        if result.duration_seconds
+                        else 0
+                    ),
                     "error": result.error,
                 }
                 collector.phase_timings.append(entry)
@@ -149,7 +176,9 @@ async def run_spectacular_with_profiling(
         if cache_mode == "off":
             logger.info("LLM_CACHE_MODE not set — profiling with live LLM (no caching)")
         else:
-            logger.info(f"LLM_CACHE_MODE={cache_mode} — profiling with cached responses")
+            logger.info(
+                f"LLM_CACHE_MODE={cache_mode} — profiling with cached responses"
+            )
 
     # Install phase timing collector
     timing_collector = PhaseTimingCollector()
@@ -163,8 +192,14 @@ async def run_spectacular_with_profiling(
     profiler.enable()
 
     # pyinstrument setup
-    pyi_profiler = pyinstrument.Profiler(async_mode="enabled")
-    pyi_profiler.start()
+    if pyinstrument is not None:
+        pyi_profiler = pyinstrument.Profiler(async_mode="enabled")
+        pyi_profiler.start()
+    else:
+        pyi_profiler = None
+        logger.warning(
+            "pyinstrument not installed — HTML flame graph will not be generated"
+        )
 
     # --- Run the workflow ---
     start_wall = time.monotonic()
@@ -180,11 +215,13 @@ async def run_spectacular_with_profiling(
     wall_clock = time.monotonic() - start_wall
 
     # --- Collect profiling data ---
-    pyi_profiler.stop()
+    if pyi_profiler is not None:
+        pyi_profiler.stop()
     profiler.disable()
 
-    # Memory snapshot
+    # Memory snapshot — capture BEFORE stop to measure workflow, not profiling infra
     current_mem, peak_mem = tracemalloc.get_traced_memory()
+    memory_snapshot = tracemalloc.take_snapshot()
     tracemalloc.stop()
 
     # Uninstall timing collector
@@ -198,10 +235,11 @@ async def run_spectacular_with_profiling(
     logger.info(f"cProfile saved: {cprofile_path}")
 
     # 2. pyinstrument HTML
-    pyi_path = PROFILING_DIR / "spectacular_pyinstrument.html"
-    html = pyi_profiler.output_html()
-    pyi_path.write_text(html, encoding="utf-8")
-    logger.info(f"pyinstrument HTML saved: {pyi_path}")
+    if pyi_profiler is not None:
+        pyi_path = PROFILING_DIR / "spectacular_pyinstrument.html"
+        html = pyi_profiler.output_html()
+        pyi_path.write_text(html, encoding="utf-8")
+        logger.info(f"pyinstrument HTML saved: {pyi_path}")
 
     # 3. Phase timings JSON
     phase_timings = timing_collector.phase_timings
@@ -218,27 +256,28 @@ async def run_spectacular_with_profiling(
             continue
         if tt < 0.01:
             continue
-        top_functions.append({
-            "function": func_str,
-            "calls": nc,
-            "total_time_s": round(tt, 4),
-            "cumulative_time_s": round(ct, 4),
-        })
+        top_functions.append(
+            {
+                "function": func_str,
+                "calls": nc,
+                "total_time_s": round(tt, 4),
+                "cumulative_time_s": round(ct, 4),
+            }
+        )
     top_functions.sort(key=lambda x: x["cumulative_time_s"], reverse=True)
     top_functions = top_functions[:30]
 
-    # tracemalloc top allocators
-    tracemalloc.start()
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics("lineno")[:20]
+    # tracemalloc top allocators — use snapshot taken during workflow execution
+    top_stats = memory_snapshot.statistics("lineno")[:20]
     top_allocators = []
     for stat in top_stats:
-        top_allocators.append({
-            "file": str(stat.traceback),
-            "size_kb": round(stat.size / 1024, 1),
-            "count": stat.count,
-        })
-    tracemalloc.stop()
+        top_allocators.append(
+            {
+                "file": str(stat.traceback),
+                "size_kb": round(stat.size / 1024, 1),
+                "count": stat.count,
+            }
+        )
 
     profiling_output = {
         "wall_clock_seconds": round(wall_clock, 2),
@@ -246,14 +285,32 @@ async def run_spectacular_with_profiling(
         "overhead_seconds": round(wall_clock - total_phase_time, 2),
         "memory_current_mb": round(current_mem / 1024 / 1024, 2),
         "memory_peak_mb": round(peak_mem / 1024 / 1024, 2),
-        "phase_timings": sorted(phase_timings, key=lambda p: p["duration_seconds"], reverse=True),
+        "phase_timings": sorted(
+            phase_timings, key=lambda p: p["duration_seconds"], reverse=True
+        ),
         "top_functions_cumulative": top_functions[:20],
         "top_allocators_kb": top_allocators[:10],
         "workflow_summary": {
-            "completed": result.get("summary", {}).get("completed", 0) if isinstance(result, dict) else 0,
-            "failed": result.get("summary", {}).get("failed", 0) if isinstance(result, dict) else 0,
-            "skipped": result.get("summary", {}).get("skipped", 0) if isinstance(result, dict) else 0,
-            "total": result.get("summary", {}).get("total", 0) if isinstance(result, dict) else 0,
+            "completed": (
+                result.get("summary", {}).get("completed", 0)
+                if isinstance(result, dict)
+                else 0
+            ),
+            "failed": (
+                result.get("summary", {}).get("failed", 0)
+                if isinstance(result, dict)
+                else 0
+            ),
+            "skipped": (
+                result.get("summary", {}).get("skipped", 0)
+                if isinstance(result, dict)
+                else 0
+            ),
+            "total": (
+                result.get("summary", {}).get("total", 0)
+                if isinstance(result, dict)
+                else 0
+            ),
         },
     }
 
@@ -269,6 +326,9 @@ async def run_spectacular_with_profiling(
 
 def generate_report(profiling: Dict[str, Any]) -> str:
     """Generate the markdown profiling report."""
+    import datetime
+    import subprocess
+
     wall = profiling["wall_clock_seconds"]
     phase_total = profiling["total_phase_time_seconds"]
     overhead = profiling["overhead_seconds"]
@@ -278,8 +338,33 @@ def generate_report(profiling: Dict[str, Any]) -> str:
     top_alloc = profiling.get("top_allocators_kb", [])
     summary = profiling.get("workflow_summary", {})
 
+    def _phase_group_time(group):
+        return sum(p["duration_seconds"] for p in group)
+
+    llm_time = 0.0
+    formal_time = 0.0
+    tms_time = 0.0
+    other_time = 0.0
+
+    # Snapshot header — this is a point-in-time capture, not live data
+    gen_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+    except Exception:
+        commit = "unknown"
+
     lines = [
         "# Spectacular Workflow Profiling Report",
+        "",
+        f"> **Snapshot** generated on {gen_date} from commit `{commit}`.",
+        "> This is a point-in-time report. Re-run `scripts/profile_spectacular.py` for fresh data.",
         "",
         "Performance bottleneck analysis for the spectacular analysis workflow.",
         "Generated with `cProfile` + `pyinstrument` + `tracemalloc`.",
@@ -299,14 +384,16 @@ def generate_report(profiling: Dict[str, Any]) -> str:
     ]
 
     # Per-phase timing breakdown
-    lines.extend([
-        "## Per-Phase Wall-Clock Breakdown",
-        "",
-        "Phases sorted by duration (descending).",
-        "",
-        "| Phase | Capability | Duration (s) | % of Total | Status |",
-        "|-------|-----------|-------------:|-----------:|--------|",
-    ])
+    lines.extend(
+        [
+            "## Per-Phase Wall-Clock Breakdown",
+            "",
+            "Phases sorted by duration (descending).",
+            "",
+            "| Phase | Capability | Duration (s) | % of Total | Status |",
+            "|-------|-----------|-------------:|-----------:|--------|",
+        ]
+    )
 
     for p in phases:
         pct = (p["duration_seconds"] / phase_total * 100) if phase_total > 0 else 0
@@ -318,35 +405,62 @@ def generate_report(profiling: Dict[str, Any]) -> str:
 
     # Phase grouping analysis
     if phases:
-        llm_phases = [p for p in phases if p["capability"] in (
-            "fact_extraction", "nl_to_logic_translation", "neural_fallacy_detection",
-            "hierarchical_fallacy_detection", "counter_argument_generation",
-            "adversarial_debate", "narrative_synthesis", "formal_synthesis",
-        )]
-        formal_phases = [p for p in phases if p["capability"] in (
-            "propositional_logic", "fol_reasoning", "modal_logic",
-            "dung_extensions", "aspic_plus_reasoning",
-        )]
-        tms_phases = [p for p in phases if p["capability"] in (
-            "belief_maintenance", "assumption_based_reasoning",
-        )]
-        other_phases = [p for p in phases if p not in llm_phases and p not in formal_phases and p not in tms_phases]
-
-        def _phase_group_time(group):
-            return sum(p["duration_seconds"] for p in group)
+        llm_phases = [
+            p
+            for p in phases
+            if p["capability"]
+            in (
+                "fact_extraction",
+                "nl_to_logic_translation",
+                "neural_fallacy_detection",
+                "hierarchical_fallacy_detection",
+                "counter_argument_generation",
+                "adversarial_debate",
+                "narrative_synthesis",
+                "formal_synthesis",
+            )
+        ]
+        formal_phases = [
+            p
+            for p in phases
+            if p["capability"]
+            in (
+                "propositional_logic",
+                "fol_reasoning",
+                "modal_logic",
+                "dung_extensions",
+                "aspic_plus_reasoning",
+            )
+        ]
+        tms_phases = [
+            p
+            for p in phases
+            if p["capability"]
+            in (
+                "belief_maintenance",
+                "assumption_based_reasoning",
+            )
+        ]
+        other_phases = [
+            p
+            for p in phases
+            if p not in llm_phases and p not in formal_phases and p not in tms_phases
+        ]
 
         llm_time = _phase_group_time(llm_phases)
         formal_time = _phase_group_time(formal_phases)
         tms_time = _phase_group_time(tms_phases)
         other_time = _phase_group_time(other_phases)
 
-        lines.extend([
-            "",
-            "### Time by Category",
-            "",
-            "| Category | Phases | Total Time (s) | % of Phase Time |",
-            "|----------|-------:|---------------:|----------------:|",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Time by Category",
+                "",
+                "| Category | Phases | Total Time (s) | % of Phase Time |",
+                "|----------|-------:|---------------:|----------------:|",
+            ]
+        )
 
         for cat_name, cat_time, cat_count in [
             ("LLM-dependent", llm_time, len(llm_phases)),
@@ -359,15 +473,17 @@ def generate_report(profiling: Dict[str, Any]) -> str:
 
     # Top hot functions
     if top_funcs:
-        lines.extend([
-            "",
-            "## Top 10 Hot Functions (by cumulative time)",
-            "",
-            "From cProfile output.",
-            "",
-            "| # | Function | Calls | Cumulative (s) | Total (s) |",
-            "|--:|----------|------:|---------------:|----------:|",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Top 10 Hot Functions (by cumulative time)",
+                "",
+                "From cProfile output.",
+                "",
+                "| # | Function | Calls | Cumulative (s) | Total (s) |",
+                "|--:|----------|------:|---------------:|----------:|",
+            ]
+        )
         for i, f in enumerate(top_funcs[:10], 1):
             func_name = f["function"]
             if len(func_name) > 80:
@@ -379,27 +495,35 @@ def generate_report(profiling: Dict[str, Any]) -> str:
 
     # Top memory allocators
     if top_alloc:
-        lines.extend([
-            "",
-            "## Top 5 Memory Allocators",
-            "",
-            "From tracemalloc snapshot.",
-            "",
-            "| # | Location | Size (KB) | Allocations |",
-            "|--:|----------|----------:|------------:|",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Top 5 Memory Allocators",
+                "",
+                "From tracemalloc snapshot.",
+                "",
+                "| # | Location | Size (KB) | Allocations |",
+                "|--:|----------|----------:|------------:|",
+            ]
+        )
         for i, a in enumerate(top_alloc[:5], 1):
             loc = a["file"]
             if len(loc) > 80:
                 loc = "..." + loc[-77:]
             lines.append(f"| {i} | `{loc}` | {a['size_kb']} | {a['count']} |")
 
+    # Compute category times (needed even when phases is empty for recommendations)
+    def _phase_group_time(group):
+        return sum(p["duration_seconds"] for p in group)
+
     # Optimization recommendations
-    lines.extend([
-        "",
-        "## Optimization Recommendations",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Optimization Recommendations",
+            "",
+        ]
+    )
 
     # Auto-generate recommendations based on profiling data
     slowest = phases[0] if phases else None
@@ -452,20 +576,22 @@ def generate_report(profiling: Dict[str, Any]) -> str:
     for rec in recommendations:
         lines.append(rec)
 
-    lines.extend([
-        "",
-        "## Methodology",
-        "",
-        "- **cProfile**: deterministic profiling of all function calls",
-        "- **pyinstrument**: statistical sampling profiler (lower overhead, flame graph view)",
-        "- **tracemalloc**: memory allocation tracking",
-        "- **Phase timing**: instrumented WorkflowExecutor per-phase wall-clock",
-        "- **Reproducibility**: run with `LLM_CACHE_MODE=replay` for deterministic cached responses",
-        "",
-        "View the pyinstrument flame graph: `open .profiling/spectacular_pyinstrument.html`",
-        "View cProfile interactively: `snakeviz .profiling/spectacular_cprofile.prof`",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Methodology",
+            "",
+            "- **cProfile**: deterministic profiling of all function calls",
+            "- **pyinstrument**: statistical sampling profiler (lower overhead, flame graph view)",
+            "- **tracemalloc**: memory allocation tracking",
+            "- **Phase timing**: instrumented WorkflowExecutor per-phase wall-clock",
+            "- **Reproducibility**: run with `LLM_CACHE_MODE=replay` for deterministic cached responses",
+            "",
+            "View the pyinstrument flame graph: `open .profiling/spectacular_pyinstrument.html`",
+            "View cProfile interactively: `snakeviz .profiling/spectacular_cprofile.prof`",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -475,23 +601,31 @@ def main():
         description="Profile the spectacular workflow for bottleneck analysis (#400)"
     )
     parser.add_argument(
-        "--text", type=str, default=None,
+        "--text",
+        type=str,
+        default=None,
         help="Custom text to analyze (default: sample climate text)",
     )
     parser.add_argument(
-        "--doc-index", type=int, default=None,
+        "--doc-index",
+        type=int,
+        default=None,
         help="Load doc from encrypted dataset by index (0=doc_A, 1=doc_B, etc.)",
     )
     parser.add_argument(
-        "--max-chars", type=int, default=3000,
+        "--max-chars",
+        type=int,
+        default=3000,
         help="Max chars of input text (default: 3000)",
     )
     parser.add_argument(
-        "--no-cache", action="store_true",
+        "--no-cache",
+        action="store_true",
         help="Disable LLM caching for profiling",
     )
     parser.add_argument(
-        "--report-only", action="store_true",
+        "--report-only",
+        action="store_true",
         help="Generate report from existing .profiling/spectacular_phase_timings.json",
     )
     args = parser.parse_args()
@@ -509,12 +643,14 @@ def main():
             loaded = _load_encrypted_doc(args.doc_index, args.max_chars)
             if loaded:
                 text = loaded
-                logger.info(f"Loaded encrypted doc (opaque ID: doc_{chr(65 + args.doc_index)})")
+                logger.info(
+                    f"Loaded encrypted doc (opaque ID: doc_{chr(65 + args.doc_index)})"
+                )
             else:
                 logger.warning("Could not load encrypted doc, using sample text")
-                text = SAMPLE_TEXT[:args.max_chars]
+                text = SAMPLE_TEXT[: args.max_chars]
         if text is None:
-            text = SAMPLE_TEXT[:args.max_chars]
+            text = SAMPLE_TEXT[: args.max_chars]
 
         logger.info(f"Input text: {len(text)} chars")
         logger.info(f"Output directory: {PROFILING_DIR}")
@@ -537,12 +673,16 @@ def main():
     print("=" * 60)
     print(f"Wall-clock: {profiling['wall_clock_seconds']:.1f}s")
     print(f"Peak memory: {profiling['memory_peak_mb']:.1f} MB")
-    print(f"Phases: {profiling.get('workflow_summary', {}).get('completed', '?')}/"
-          f"{profiling.get('workflow_summary', {}).get('total', '?')} completed")
+    print(
+        f"Phases: {profiling.get('workflow_summary', {}).get('completed', '?')}/"
+        f"{profiling.get('workflow_summary', {}).get('total', '?')} completed"
+    )
     print()
     print("Top 5 phases by duration:")
     for p in profiling["phase_timings"][:5]:
-        print(f"  {p['phase']:<25s} {p['duration_seconds']:>6.2f}s  ({p['capability']})")
+        print(
+            f"  {p['phase']:<25s} {p['duration_seconds']:>6.2f}s  ({p['capability']})"
+        )
     print()
     print(f"Full report: {report_path}")
     print(f"cProfile:    {PROFILING_DIR / 'spectacular_cprofile.prof'}")
