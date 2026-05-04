@@ -523,6 +523,10 @@ RÉPONDS EN FORMAT JSON :
         required by Tweety's FolParser — without it, unknown constants cause
         parse failures (#348).
 
+        Handles accented characters (e.g. estPrésident), numeric constants
+        (e.g. arg1), and function symbols (e.g. f(x)) in addition to the
+        standard CamelCase predicate patterns.
+
         Returns:
             Dict with keys: sorts (Dict[str, List[str]]), predicates (Dict[str, int]),
             constants (set), signature_lines (List[str]).
@@ -533,15 +537,16 @@ RÉPONDS EN FORMAT JSON :
         constants: Set[str] = set()
         variables: Set[str] = set()
 
-        # Note: this regex assumes flat predicate applications with simple
-        # argument lists. Nested predicates like P(Q(x), y) and operators
-        # inside argument lists are not supported (review #375).
+        # Extended regex: handle accented chars, digits, and underscores in names.
+        # Matches both predicate (CamelCase) and function (lowercase) applications.
+        # Examples: EstHomme(x), est_president(x, y), P1(a, b), asserte(c1)
         for formula in formulas:
-            for match in re.finditer(r"([A-Z][A-Za-z_]*)\(([^)]+)\)", formula):
+            for match in re.finditer(
+                r"([A-Za-z_À-ÖØ-öø-ÿ][A-Za-z0-9_À-ÖØ-öø-ÿ]*)\(([^)]+)\)", formula
+            ):
                 pred_name = match.group(1)
                 args_str = match.group(2)
                 args = [a.strip() for a in args_str.split(",")]
-                # Filter empty args (malformed input like P(, x)).
                 args = [a for a in args if a]
                 arity = len(args)
                 if not arity:
@@ -549,23 +554,63 @@ RÉPONDS EN FORMAT JSON :
                 if pred_name not in predicates or predicates[pred_name] < arity:
                     predicates[pred_name] = arity
                 for arg in args:
+                    # Variable: starts with uppercase letter (X, Y, Z)
+                    # Constant: starts with lowercase or digit (socrates, c1, 42)
                     if arg[0].isupper():
                         variables.add(arg)
                     else:
                         constants.add(arg)
 
+        # Also scan for standalone lowercase identifiers not inside predicates
+        # (e.g. in "forall X: (Est(X) => Mortel(X))", there are no standalone constants,
+        #  but in "socrates && platon", socrates/platon are constants)
+        for formula in formulas:
+            # Remove already-recognized predicate applications to avoid false positives
+            stripped = re.sub(
+                r"[A-Za-z_À-ÖØ-öø-ÿ][A-Za-z0-9_À-ÖØ-öø-ÿ]*\([^)]*\)", "", formula
+            )
+            for match in re.finditer(r"\b([a-z_À-öø-ÿ][a-z0-9_À-öø-ÿ]*)\b", stripped):
+                word = match.group(1)
+                if word not in (
+                    "forall",
+                    "exists",
+                    "and",
+                    "or",
+                    "not",
+                    "true",
+                    "false",
+                ):
+                    constants.add(word)
+
+        # Sanitize constants: Tweety identifiers must be alphanumeric ASCII + underscore
+        # Replace accented characters with ASCII equivalents for Tweety compatibility
+        sanitized_constants = set()
+        for c in constants:
+            sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", c)
+            if sanitized and not sanitized[0].isdigit():
+                sanitized_constants.add(sanitized)
+            else:
+                sanitized_constants.add(f"c_{sanitized}")
+
         # Build sort declarations from constants
-        # Default sort "thing" collects all lowercase constants
-        sorts: Dict[str, List[str]] = {"thing": sorted(constants)}
-        signature_lines = [f"thing = {{{', '.join(sorted(constants))}}}"]
-        for pred_name, arity in sorted(predicates.items()):
+        sorted_consts = sorted(sanitized_constants)
+        sorts: Dict[str, List[str]] = {"thing": sorted_consts}
+        signature_lines = [f"thing = {{{', '.join(sorted_consts)}}}"]
+        # Sanitize predicate names in signature for Tweety compatibility
+        sanitized_predicates: Dict[str, int] = {}
+        for pred_name, arity in predicates.items():
+            safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", pred_name)
+            if safe_name and not safe_name[0].isdigit():
+                sanitized_predicates[safe_name] = arity
+            else:
+                sanitized_predicates[f"pred_{safe_name}"] = arity
             sort_args = ", ".join(["thing"] * arity)
-            signature_lines.append(f"type({pred_name}({sort_args}))")
+            signature_lines.append(f"type({safe_name}({sort_args}))")
 
         return {
             "sorts": sorts,
-            "predicates": predicates,
-            "constants": constants,
+            "predicates": sanitized_predicates,
+            "constants": sanitized_constants,
             "variables": variables,
             "signature_lines": signature_lines,
         }
