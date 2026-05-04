@@ -23,6 +23,7 @@ coverage.json
 htmlcov_demonstration/
 test-report.xml
 tests/reports/
+.profiling/
 
 # === Logs ===
 # *.log covers hs_err_pid*.log (JVM crashes), trace_reelle_*.log, etc.
