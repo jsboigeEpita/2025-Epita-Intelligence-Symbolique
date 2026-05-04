@@ -17,8 +17,12 @@ def _make_state() -> UnifiedAnalysisState:
     a3 = state.add_argument("Climate change requires immediate policy action")
 
     # 2 fallacies targeting arg_1 and arg_2
-    state.add_fallacy("Ad Hominem", "Attacks the source not the claim", target_arg_id=a1)
-    state.add_fallacy("Straw Man", "Misrepresents the original position", target_arg_id=a2)
+    state.add_fallacy(
+        "Ad Hominem", "Attacks the source not the claim", target_arg_id=a1
+    )
+    state.add_fallacy(
+        "Straw Man", "Misrepresents the original position", target_arg_id=a2
+    )
 
     # Quality scores for all 3 (arg_1 weak, arg_2 medium, arg_3 strong)
     state.add_quality_score(a1, {"clarity": 3.0, "relevance": 4.0}, overall=3.5)

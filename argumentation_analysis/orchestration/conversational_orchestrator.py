@@ -131,10 +131,10 @@ AGENT_CONFIG = {
             "   is_valid=True/False, variables=JSON. confidence=0.0-1.0)\n\n"
             "ETAPE 2 — Validation Tweety :\n"
             "1. Pour les formules valides, appeelle check_propositional_consistency(\n"
-            "   input='{\"formulas\": [\"p => q\", \"q\"]}') \n"
+            '   input=\'{"formulas": ["p => q", "q"]}\') \n'
             "2. Pour FOL: check_fol_consistency(input='{\"formulas\": [...]}')\n"
             "3. Pour les modalites (possibilite/obligation): check_modal_satisfiability(\n"
-            "   input='{\"formula\": \"<>P\", \"logic_type\": \"S5\"}')\n"
+            '   input=\'{"formula": "<>P", "logic_type": "S5"}\')\n'
             "4. Si inconstistances: signalez au PM\n\n"
             "ETAPE 3 — Analyse Dung (Argumentation Abstraite) :\n"
             "1. Construis un graphe d'attaque depuis les arguments et sophismes detectes\n"
@@ -168,7 +168,7 @@ AGENT_CONFIG = {
             "   evaluate_argument_quality(text='...') → scores sur 9 vertus\n"
             "3. PUIS, utilise evaluate_with_cross_kb_context(text='...', cross_kb_context=JSON) "
             "en passant les sophismes detectes et resultats formels en contexte JSON :\n"
-            "   cross_kb_context = '{\"fallacies\": [...], \"formal_inconsistencies\": [...]}'\n"
+            '   cross_kb_context = \'{"fallacies": [...], "formal_inconsistencies": [...]}\'\n'
             "4. Le plugin retourne des scores de base + des recommandations d'ajustement\n"
             "5. Applique ton propre raisonnement LLM pour produire des scores AJUSTES finaux\n\n"
             "CROSS-KB (#208-I) — ajustements bases sur les autres agents :\n"
@@ -216,12 +216,12 @@ AGENT_CONFIG = {
         "instructions": (
             "Tu es l'agent de gouvernance et vote. Tu disposes de ces outils SPECIFIQUES :\n"
             "- detect_conflicts(positions_json) : detecte les conflits entre positions d'agents. "
-            "Input: JSON mapping noms d'agents → positions (ex: '{\"DebateAgent\": \"pour\", \"CounterAgent\": \"contre\"}')\n"
+            'Input: JSON mapping noms d\'agents → positions (ex: \'{"DebateAgent": "pour", "CounterAgent": "contre"}\')\n'
             "- compute_consensus_metrics(results_json) : calcule taux de consensus. "
             "Input: JSON avec 'votes' et 'winner'\n"
             "- social_choice_vote(input_json) : lance un vote formel. "
             "Input: JSON avec 'method' (copeland/schulze/stv/approval), 'ballots' (listes de preferences), 'options' (candidats). "
-            "Ex: '{\"method\": \"copeland\", \"ballots\": [[\"A\",\"B\",\"C\"],[\"B\",\"A\",\"C\"]], \"options\": [\"A\",\"B\",\"C\"]}'\n"
+            'Ex: \'{"method": "copeland", "ballots": [["A","B","C"],["B","A","C"]], "options": ["A","B","C"]}\'\n'
             "- find_condorcet_winner(input_json) : trouve le vainqueur de Condorcet. "
             "Input: JSON avec 'ballots' et 'options'\n\n"
             "Quand le PM te donne la parole :\n"
@@ -479,7 +479,12 @@ async def run_conversational_analysis(
             if needs_reanalysis:
                 reanalysis_cfg = {
                     "name": "Re-Analysis",
-                    "agents": ["ProjectManager", "InformalAgent", "QualityAgent", "GovernanceAgent"],
+                    "agents": [
+                        "ProjectManager",
+                        "InformalAgent",
+                        "QualityAgent",
+                        "GovernanceAgent",
+                    ],
                     "max_turns": 5,
                     "initial_prompt": (
                         "Re-analysez en tenant compte des resultats de l'analyse formelle.\n"
@@ -506,7 +511,9 @@ async def run_conversational_analysis(
                     )
 
                     try:
-                        trace.begin_phase(phase_name, state.get_state_snapshot(summarize=False))
+                        trace.begin_phase(
+                            phase_name, state.get_state_snapshot(summarize=False)
+                        )
                     except Exception:
                         trace.begin_phase(phase_name)
 
@@ -528,7 +535,9 @@ async def run_conversational_analysis(
                             content=msg.get("content", ""),
                         )
                     try:
-                        trace.end_phase(phase_name, state.get_state_snapshot(summarize=False))
+                        trace.end_phase(
+                            phase_name, state.get_state_snapshot(summarize=False)
+                        )
                     except Exception:
                         trace.end_phase(phase_name)
 
@@ -590,8 +599,12 @@ async def run_conversational_analysis(
                 )
             elif agent == "FormalAgent":
                 capabilities_used.update(
-                    ["nl_to_logic_translation", "fol_reasoning", "modal_logic",
-                     "propositional_logic"]
+                    [
+                        "nl_to_logic_translation",
+                        "fol_reasoning",
+                        "modal_logic",
+                        "propositional_logic",
+                    ]
                 )
             elif agent == "QualityAgent":
                 capabilities_used.add("argument_quality")
@@ -680,14 +693,18 @@ def _check_convergence(state, phase_name: str, messages: list) -> bool:
     """
     # Signal 1: conclusion set during Synthesis
     if state and state.final_conclusion:
-        logger.info(f"  [{phase_name}] CONVERGENCE: final conclusion set, exiting early")
+        logger.info(
+            f"  [{phase_name}] CONVERGENCE: final conclusion set, exiting early"
+        )
         return True
 
     # Signal 2: stagnation detection (last 2 messages empty or identical)
     if len(messages) >= 3:
         recent = [m.get("content", "") for m in messages[-2:]]
         if all(c in ("(empty)", "", "ERROR") or len(c) < 10 for c in recent):
-            logger.info(f"  [{phase_name}] CONVERGENCE: stagnation detected, exiting early")
+            logger.info(
+                f"  [{phase_name}] CONVERGENCE: stagnation detected, exiting early"
+            )
             return True
 
     return False
@@ -701,7 +718,11 @@ def _select_next_agent(
     Falls back to round-robin if no designation or designated agent not in phase.
     """
     # Check if PM designated a specific agent
-    if state and hasattr(state, "_next_agent_designated") and state._next_agent_designated:
+    if (
+        state
+        and hasattr(state, "_next_agent_designated")
+        and state._next_agent_designated
+    ):
         designated = state._next_agent_designated
         state._next_agent_designated = None  # Consume the designation
 
@@ -712,7 +733,9 @@ def _select_next_agent(
                 return agent
 
         # Designated agent not in this phase, fall through to round-robin
-        logger.debug(f"  PM designated '{designated}' but not in phase agents, using round-robin")
+        logger.debug(
+            f"  PM designated '{designated}' but not in phase agents, using round-robin"
+        )
 
     # Round-robin fallback
     return agents[turn % len(agents)]
@@ -838,7 +861,9 @@ async def _resolve_phase_conflicts(
     Returns:
         List of resolution results applied to the state.
     """
-    from argumentation_analysis.services.jtms.conflict_resolution import ConflictResolver
+    from argumentation_analysis.services.jtms.conflict_resolution import (
+        ConflictResolver,
+    )
 
     resolver = ConflictResolver()
     resolutions = []
@@ -853,9 +878,19 @@ async def _resolve_phase_conflicts(
 
     # Pattern 1: Fallacy vs High Quality
     try:
-        fallacies_dict = state.identified_fallacies if hasattr(state, "identified_fallacies") else {}
-        fallacies = list(fallacies_dict.values()) if isinstance(fallacies_dict, dict) else fallacies_dict
-        quality_scores = state.argument_quality_scores if hasattr(state, "argument_quality_scores") else {}
+        fallacies_dict = (
+            state.identified_fallacies if hasattr(state, "identified_fallacies") else {}
+        )
+        fallacies = (
+            list(fallacies_dict.values())
+            if isinstance(fallacies_dict, dict)
+            else fallacies_dict
+        )
+        quality_scores = (
+            state.argument_quality_scores
+            if hasattr(state, "argument_quality_scores")
+            else {}
+        )
 
         if fallacies and quality_scores:
             for fallacy in fallacies:
@@ -874,12 +909,15 @@ async def _resolve_phase_conflicts(
                                     "agents": {
                                         "InformalAgent": {
                                             "belief_name": f"FALLACY:{fallacy.get('type', fallacy.get('fallacy_type', 'unknown'))}",
-                                            "confidence": fallacy.get("confidence", 0.7),
+                                            "confidence": fallacy.get(
+                                                "confidence", 0.7
+                                            ),
                                             "evidence": fallacy.get("explanation", ""),
                                         },
                                         "QualityAgent": {
                                             "belief_name": f"QUALITY:{target_arg}",
-                                            "confidence": score / 9.0,  # Normalize to 0-1
+                                            "confidence": score
+                                            / 9.0,  # Normalize to 0-1
                                             "evidence": f"Quality score {score}/9",
                                         },
                                     },
@@ -940,7 +978,11 @@ def _retract_fallacious_beliefs(
         return None
 
     fallacies_dict = getattr(state, "identified_fallacies", {})
-    fallacies = list(fallacies_dict.values()) if isinstance(fallacies_dict, dict) else fallacies_dict
+    fallacies = (
+        list(fallacies_dict.values())
+        if isinstance(fallacies_dict, dict)
+        else fallacies_dict
+    )
     if not fallacies:
         return None
 
@@ -964,7 +1006,8 @@ def _retract_fallacious_beliefs(
         else:
             # Try common patterns: arg_N, argument_N, belief about arg_N
             candidates = [
-                name for name in session.extended_beliefs
+                name
+                for name in session.extended_beliefs
                 if target_arg.lower() in name.lower()
                 or name.lower() in target_arg.lower()
             ]
@@ -988,10 +1031,14 @@ def _retract_fallacious_beliefs(
 
             # Record retraction in extended belief via modification history
             import datetime
-            ext_belief.record_modification("retract", {
-                "reason": reason,
-                "timestamp": datetime.datetime.now().isoformat(),
-            })
+
+            ext_belief.record_modification(
+                "retract",
+                {
+                    "reason": reason,
+                    "timestamp": datetime.datetime.now().isoformat(),
+                },
+            )
             ext_belief.context["retracted"] = True
             ext_belief.context["retraction_reason"] = reason
 

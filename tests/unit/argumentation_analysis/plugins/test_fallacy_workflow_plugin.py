@@ -655,7 +655,9 @@ class TestFileHandlerDefensiveGuard:
 
         assert len(plugin.logger.handlers) == handler_count_before
 
-    async def test_string_none_no_file_created(self, plugin, mock_llm_service, tmp_path):
+    async def test_string_none_no_file_created(
+        self, plugin, mock_llm_service, tmp_path
+    ):
         """Passing 'None' (string) must not create a file named 'None'."""
         mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
         mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
@@ -665,6 +667,7 @@ class TestFileHandlerDefensiveGuard:
         none_file = tmp_path / "None"
         # Also check CWD isn't polluted
         import os
+
         assert not os.path.exists("None"), "File named 'None' should not be created"
 
     async def test_empty_string_no_file_created(self, plugin, mock_llm_service):
@@ -697,4 +700,5 @@ class TestFileHandlerDefensiveGuard:
 
         # Handler is removed in finally, but the file should exist
         import os
+
         assert os.path.exists(log_file), "Log file should be created for valid path"

@@ -455,9 +455,7 @@ class BenchmarkReport:
 
     results: List[DetectionResult] = field(default_factory=list)
     mode_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    family_scores: Dict[str, Dict[str, Dict[str, float]]] = field(
-        default_factory=dict
-    )
+    family_scores: Dict[str, Dict[str, Dict[str, float]]] = field(default_factory=dict)
     summary: str = ""
 
     def compute_scores(self):
@@ -484,9 +482,7 @@ class BenchmarkReport:
                 continue
             families: Dict[str, list] = {}
             for r in mode_results:
-                case = next(
-                    (c for c in BENCHMARK_CASES if c["id"] == r.case_id), None
-                )
+                case = next((c for c in BENCHMARK_CASES if c["id"] == r.case_id), None)
                 if case:
                     fam = case["expected_family"]
                     families.setdefault(fam, []).append(r)
@@ -828,10 +824,10 @@ class FallacyBenchmarkRunner:
             lines.append("")
         # Per-family breakdown
         lines.append("## Per-Family Breakdown\n")
-        all_families = sorted(
-            set(c["expected_family"] for c in BENCHMARK_CASES)
+        all_families = sorted(set(c["expected_family"] for c in BENCHMARK_CASES))
+        lines.append(
+            f"{'Family':<25} {'Mode':<14} {'Prec':>6} {'Recall':>7} {'NameSim':>8} {'N':>3}"
         )
-        lines.append(f"{'Family':<25} {'Mode':<14} {'Prec':>6} {'Recall':>7} {'NameSim':>8} {'N':>3}")
         lines.append("-" * 70)
         for fam in all_families:
             for mode in ("free", "one_shot", "constrained"):

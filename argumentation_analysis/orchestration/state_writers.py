@@ -71,7 +71,9 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
             llm_assessment = result.get("llm_assessment")  # (#290)
             if isinstance(overall, (int, float)) and (scores or overall > 0):
                 state.add_quality_score(
-                    str(arg_id), scores, float(overall),
+                    str(arg_id),
+                    scores,
+                    float(overall),
                     llm_assessment=llm_assessment,
                 )
         return
@@ -100,7 +102,9 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         state.add_quality_score(arg_id, scores, float(overall))
 
 
-def _write_counter_argument_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_counter_argument_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -196,12 +200,8 @@ def _write_atms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         env_list = env_data.get("environments", [])
         # For ATMS, "valid" = has at least one consistent environment
         valid = len(env_list) > 0
-        justifications = [
-            f"assumption_env:{sorted(e)}" for e in env_list[:5]
-        ]
-        state.add_jtms_belief(
-            f"ATMS:{name}", valid, justifications=justifications
-        )
+        justifications = [f"assumption_env:{sorted(e)}" for e in env_list[:5]]
+        state.add_jtms_belief(f"ATMS:{name}", valid, justifications=justifications)
     # Store summary metadata
     state.add_jtms_belief(
         "ATMS:summary",
@@ -322,7 +322,9 @@ def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> N
         )
 
 
-def _write_hierarchical_fallacy_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_hierarchical_fallacy_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write hierarchical taxonomy-guided fallacy results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -347,7 +349,9 @@ def _write_hierarchical_fallacy_to_state(output: Any, state: Any, ctx: dict[str,
         state.add_fallacy(fallacy_type=fallacy_type, justification=full_justification)
 
 
-def _write_semantic_index_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_semantic_index_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write semantic index results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -412,7 +416,9 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     state.add_aspic_result(reasoner_type, extensions, statistics)
 
 
-def _write_belief_revision_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_belief_revision_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write belief revision results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -497,7 +503,9 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     )
 
 
-def _write_fact_extraction_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_fact_extraction_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write fact extraction results to state (populates extracts + base fields)."""
     if not output or not isinstance(output, dict):
         return
@@ -611,7 +619,9 @@ def _write_nl_to_logic_to_state(output: Any, state: Any, ctx: dict[str, Any]) ->
             )
 
 
-def _write_dung_extensions_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_dung_extensions_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write Dung extension computation results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -639,7 +649,9 @@ def _write_dung_extensions_to_state(output: Any, state: Any, ctx: dict[str, Any]
                 )
 
 
-def _write_formal_synthesis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_formal_synthesis_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write formal synthesis report to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
@@ -781,7 +793,9 @@ def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     )
 
 
-def _write_collaborative_analysis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_collaborative_analysis_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write collaborative multi-agent debate results to state (#175)."""
     from argumentation_analysis.orchestration.collaborative_debate import (
         _write_collaborative_to_state,
@@ -790,7 +804,9 @@ def _write_collaborative_analysis_to_state(output: Any, state: Any, ctx: dict[st
     _write_collaborative_to_state(output, state, ctx)
 
 
-def _write_narrative_synthesis_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+def _write_narrative_synthesis_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
     """Write narrative synthesis results to UnifiedAnalysisState (#351)."""
     if not output or not isinstance(output, dict):
         return

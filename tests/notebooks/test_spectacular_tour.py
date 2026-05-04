@@ -1,13 +1,15 @@
 """Smoke tests for the spectacular full tour notebook."""
+
 import json
 import pathlib
 
 import pytest
 
-
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 NOTEBOOK_PATH = REPO_ROOT / "examples" / "notebooks" / "spectacular_full_tour.ipynb"
-FIXTURE_PATH = REPO_ROOT / "tests" / "golden" / "fixtures" / "spectacular" / "doc_a_golden.json"
+FIXTURE_PATH = (
+    REPO_ROOT / "tests" / "golden" / "fixtures" / "spectacular" / "doc_a_golden.json"
+)
 
 
 class TestSpectacularTourNotebook:
@@ -28,7 +30,9 @@ class TestSpectacularTourNotebook:
         assert NOTEBOOK_PATH.exists(), f"Notebook not found at {NOTEBOOK_PATH}"
 
     def test_minimum_15_cells(self, notebook_cells):
-        assert len(notebook_cells) >= 15, f"Expected >= 15 cells, got {len(notebook_cells)}"
+        assert (
+            len(notebook_cells) >= 15
+        ), f"Expected >= 15 cells, got {len(notebook_cells)}"
 
     def test_has_markdown_and_code_cells(self, notebook_cells):
         cell_types = {c["cell_type"] for c in notebook_cells}
@@ -38,35 +42,34 @@ class TestSpectacularTourNotebook:
     def test_all_17_capabilities_referenced(self, notebook_cells, golden_state):
         capabilities = set(golden_state["capabilities_used"])
         all_source = " ".join(
-            " ".join(cell.get("source", []))
-            for cell in notebook_cells
+            " ".join(cell.get("source", [])) for cell in notebook_cells
         )
         for cap in capabilities:
             assert cap in all_source, f"Capability '{cap}' not referenced in notebook"
 
     def test_no_plaintext_source_content(self, notebook_cells):
         all_source = " ".join(
-            " ".join(cell.get("source", []))
-            for cell in notebook_cells
+            " ".join(cell.get("source", [])) for cell in notebook_cells
         )
         forbidden = ["raw_text", "full_text", "source_name", "author", "speaker"]
         for word in forbidden:
             # Allow 'raw_text' only as dict key access patterns like state["raw_text"]
             # but not actual content
-            assert f'"{word}"' not in all_source.lower() or word == "raw_text", (
-                f"Potentially sensitive '{word}' found in notebook"
-            )
+            assert (
+                f'"{word}"' not in all_source.lower() or word == "raw_text"
+            ), f"Potentially sensitive '{word}' found in notebook"
 
     def test_opaque_id_only(self, notebook_cells):
         all_source = " ".join(
-            " ".join(cell.get("source", []))
-            for cell in notebook_cells
+            " ".join(cell.get("source", [])) for cell in notebook_cells
         )
         assert "doc_A" in all_source, "Opaque ID doc_A not found"
         # The notebook loads from the golden fixture file (doc_a_golden.json) which is fine
         # What matters is that displayed outputs use opaque IDs, not source names
         assert "source_name" not in all_source, "Should not reference source_name field"
-        assert "author" not in all_source.lower(), "Should not reference author metadata"
+        assert (
+            "author" not in all_source.lower()
+        ), "Should not reference author metadata"
 
     def test_section_structure(self, notebook_cells):
         """Verify all 8 major sections exist as markdown headers."""
@@ -87,7 +90,9 @@ class TestSpectacularTourNotebook:
             "Narrative Synthesis",
         ]
         for section in sections:
-            assert section in all_md, f"Section '{section}' not found in notebook markdown"
+            assert (
+                section in all_md
+            ), f"Section '{section}' not found in notebook markdown"
 
     def test_golden_fixture_loads(self, golden_state):
         assert golden_state["source_id"] == "doc_A"
@@ -126,4 +131,6 @@ class TestSpectacularTourNotebook:
             if c["cell_type"] == "code"
         ]
         uses_display = any("display(HTML" in src for src in code_sources)
-        assert uses_display, "Notebook should use IPython display(HTML(...)) for rich output"
+        assert (
+            uses_display
+        ), "Notebook should use IPython display(HTML(...)) for rich output"

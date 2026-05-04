@@ -41,7 +41,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
 )
 from argumentation_analysis.core.capability_registry import CapabilityRegistry
 
-
 # ============================================================
 # pipeline_utils.py edge cases
 # ============================================================
@@ -271,6 +270,7 @@ class TestWorkflowCatalog:
         get_workflow_catalog()
         reset_workflow_catalog()
         from argumentation_analysis.orchestration.workflows import WORKFLOW_CATALOG
+
         assert len(WORKFLOW_CATALOG) == 0
 
 
@@ -513,12 +513,17 @@ class TestWorkflowStateWriter:
         def mock_writer(output, state, ctx):
             written.append(output)
 
-        mock_state = type("State", (), {"log_error": lambda s, p, e: None, "set_workflow_results": lambda s, n, d: None})()
+        mock_state = type(
+            "State",
+            (),
+            {
+                "log_error": lambda s, p, e: None,
+                "set_workflow_results": lambda s, n, d: None,
+            },
+        )()
 
         workflow = (
-            WorkflowBuilder("sw_test")
-            .add_phase("p1", capability="test_cap")
-            .build()
+            WorkflowBuilder("sw_test").add_phase("p1", capability="test_cap").build()
         )
         executor = WorkflowExecutor(registry)
         results = await executor.execute(
@@ -548,12 +553,17 @@ class TestWorkflowStateWriter:
         def bad_writer(output, state, ctx):
             raise RuntimeError("writer failed")
 
-        mock_state = type("State", (), {"log_error": lambda s, p, e: None, "set_workflow_results": lambda s, n, d: None})()
+        mock_state = type(
+            "State",
+            (),
+            {
+                "log_error": lambda s, p, e: None,
+                "set_workflow_results": lambda s, n, d: None,
+            },
+        )()
 
         workflow = (
-            WorkflowBuilder("sw_err")
-            .add_phase("p1", capability="test_cap")
-            .build()
+            WorkflowBuilder("sw_err").add_phase("p1", capability="test_cap").build()
         )
         executor = WorkflowExecutor(registry)
         results = await executor.execute(

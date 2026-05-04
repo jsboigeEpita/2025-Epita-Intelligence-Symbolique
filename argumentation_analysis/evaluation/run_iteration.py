@@ -183,9 +183,7 @@ def _build_iteration_workflow(iter_num: int, capabilities: List[str]):
             valid_deps = [
                 d
                 for d in deps
-                if any(
-                    p[0] == d and p[1] in capabilities for p in phase_order
-                )
+                if any(p[0] == d and p[1] in capabilities for p in phase_order)
             ]
             builder.add_phase(
                 name=phase_name,

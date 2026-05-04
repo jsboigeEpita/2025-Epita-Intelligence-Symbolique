@@ -514,12 +514,14 @@ def render_html_report(
     fallacy_by_family: Dict[str, list] = {}
     for fid, fdata in fallacies.items():
         family = fdata.get("family", "unknown")
-        fallacy_by_family.setdefault(family, []).append({
-            "id": fid,
-            "type": fdata.get("type", ""),
-            "source_arg": fdata.get("source_arg", ""),
-            "confidence": fdata.get("confidence", 0),
-        })
+        fallacy_by_family.setdefault(family, []).append(
+            {
+                "id": fid,
+                "type": fdata.get("type", ""),
+                "source_arg": fdata.get("source_arg", ""),
+                "confidence": fdata.get("confidence", 0),
+            }
+        )
 
     # Precompute heatmap grid: list of {family, cells: [{conf: float|None}]}
     arg_ids = list(arguments.keys())
@@ -569,7 +571,9 @@ def render_html_report(
     pattern_ctx = None
     if pattern_data:
         spectrum = pattern_data.get("spectrum", {})
-        spectrum_types = sorted({t for c in spectrum.values() for t in c}) if spectrum else []
+        spectrum_types = (
+            sorted({t for c in spectrum.values() for t in c}) if spectrum else []
+        )
         cluster_ids = sorted(spectrum.keys()) if spectrum else []
         pattern_ctx = {
             "spectrum": spectrum,
@@ -584,7 +588,9 @@ def render_html_report(
     html = template.render(
         source_id=state.get("source_id", "unknown"),
         workflow_name=state.get("workflow_name", "unknown"),
-        summary=state.get("summary", {"completed": 0, "total": 0, "failed": 0, "skipped": 0}),
+        summary=state.get(
+            "summary", {"completed": 0, "total": 0, "failed": 0, "skipped": 0}
+        ),
         capabilities=state.get("capabilities_used", []),
         arguments=arguments,
         arg_ids=arg_ids,
@@ -615,10 +621,20 @@ def render_html_report(
         dung_status=dung_status,
         atms_tree_data=json.dumps(atms_root),
         # Helper functions
-        _score_badge=lambda v: f'<span class="badge {"badge-green" if float(v) >= 0.8 else "badge-orange" if float(v) >= 0.6 else "badge-red"}">{v:.0%}</span>' if isinstance(v, (int, float)) else v,
-        _score_cell=lambda v: f'<span style="color:{_score_color(float(v))};font-weight:600;">{v:.2f}</span>' if isinstance(v, (int, float)) else str(v),
+        _score_badge=lambda v: (
+            f'<span class="badge {"badge-green" if float(v) >= 0.8 else "badge-orange" if float(v) >= 0.6 else "badge-red"}">{v:.0%}</span>'
+            if isinstance(v, (int, float))
+            else v
+        ),
+        _score_cell=lambda v: (
+            f'<span style="color:{_score_color(float(v))};font-weight:600;">{v:.2f}</span>'
+            if isinstance(v, (int, float))
+            else str(v)
+        ),
         _heat_color=_heat_color,
-        _pattern_heat_bg=lambda v: f"rgba(88,166,255,{min(v * 0.8, 0.6):.2f})" if v > 0 else "transparent",
+        _pattern_heat_bg=lambda v: (
+            f"rgba(88,166,255,{min(v * 0.8, 0.6):.2f})" if v > 0 else "transparent"
+        ),
         _status_badge=lambda s: f'<span class="badge {"badge-green" if "accepted" in s else "badge-red" if s == "rejected" else "badge-blue"}">{s.replace("_", " ")}</span>',
     )
 
@@ -633,11 +649,19 @@ if __name__ == "__main__":
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="Render HTML report from spectacular state JSON")
-    parser.add_argument("state_json", help="Path to state JSON file (golden fixture format)")
+    parser = argparse.ArgumentParser(
+        description="Render HTML report from spectacular state JSON"
+    )
+    parser.add_argument(
+        "state_json", help="Path to state JSON file (golden fixture format)"
+    )
     parser.add_argument("output_html", help="Output HTML file path")
-    parser.add_argument("--pattern-json", help="Optional path to pattern mining JSON for section 10")
-    parser.add_argument("--indent", action="store_true", help="Pretty-print HTML output")
+    parser.add_argument(
+        "--pattern-json", help="Optional path to pattern mining JSON for section 10"
+    )
+    parser.add_argument(
+        "--indent", action="store_true", help="Pretty-print HTML output"
+    )
     args = parser.parse_args()
 
     state_path = pathlib.Path(args.state_json)

@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # 1. Rate limiting between LLM API calls
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True, scope="function")
 def rate_limit():
     """
@@ -60,6 +61,7 @@ def rate_limit():
 # ---------------------------------------------------------------------------
 # 2. Session-level API key check
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True, scope="session")
 def api_key_required():
@@ -112,14 +114,13 @@ def require_openai_api_key():
     """
     api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
-        pytest.skip(
-            "OPENAI_API_KEY not set -- skipping LLM-dependent validation test"
-        )
+        pytest.skip("OPENAI_API_KEY not set -- skipping LLM-dependent validation test")
 
 
 # ---------------------------------------------------------------------------
 # 3. Async workflow timeout wrapper
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="function")
 def workflow_timeout():
@@ -255,6 +256,7 @@ def clean_oracle_state():
 # 5. Safe JSON serializer for SK objects
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="function")
 def safe_json_serialize():
     """
@@ -294,6 +296,7 @@ def safe_json_serialize():
         # Handle enum types (AuthorRole, QueryType, etc.)
         try:
             import enum
+
             if isinstance(obj, enum.Enum):
                 return obj.value
         except Exception:
@@ -302,11 +305,18 @@ def safe_json_serialize():
         # Handle SK ChatMessageContent
         try:
             from semantic_kernel.contents import ChatMessageContent
+
             if isinstance(obj, ChatMessageContent):
                 return {
-                    "role": str(obj.role.value) if hasattr(obj.role, 'value') else str(obj.role),
+                    "role": (
+                        str(obj.role.value)
+                        if hasattr(obj.role, "value")
+                        else str(obj.role)
+                    ),
                     "content": str(obj.content) if obj.content else "",
-                    "name": str(obj.name) if hasattr(obj, 'name') and obj.name else None,
+                    "name": (
+                        str(obj.name) if hasattr(obj, "name") and obj.name else None
+                    ),
                 }
         except ImportError:
             pass
@@ -314,6 +324,7 @@ def safe_json_serialize():
         # Handle SK ChatHistory
         try:
             from semantic_kernel.contents import ChatHistory
+
             if isinstance(obj, ChatHistory):
                 return [_clean(msg) for msg in obj.messages]
         except (ImportError, AttributeError):
@@ -326,6 +337,7 @@ def safe_json_serialize():
         # Handle datetime
         try:
             from datetime import datetime, date
+
             if isinstance(obj, (datetime, date)):
                 return obj.isoformat()
         except Exception:
@@ -346,6 +358,7 @@ def safe_json_serialize():
 
         try:
             from collections import deque
+
             if isinstance(obj, deque):
                 return [_clean(item) for item in obj]
         except ImportError:

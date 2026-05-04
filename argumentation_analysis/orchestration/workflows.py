@@ -261,8 +261,11 @@ def _should_rerun_fallacy(context: Dict[str, Any]) -> bool:
     # Method 2: scan beliefs dict for invalid entries
     beliefs = jtms_output.get("beliefs", {})
     if isinstance(beliefs, dict):
-        retracted = [name for name, bdata in beliefs.items()
-                     if isinstance(bdata, dict) and bdata.get("valid") is False]
+        retracted = [
+            name
+            for name, bdata in beliefs.items()
+            if isinstance(bdata, dict) and bdata.get("valid") is False
+        ]
         if retracted:
             return True
 
@@ -346,8 +349,7 @@ def build_iterative_analysis_workflow() -> WorkflowDefinition:
             capability="adversarial_debate",
             depends_on=["counter"],
             optional=True,
-        )
-        .build()
+        ).build()
     )
 
 
@@ -726,9 +728,9 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_formal_verification_workflow,
             )
 
-            WORKFLOW_CATALOG[
-                "formal_verification"
-            ] = build_formal_verification_workflow()
+            WORKFLOW_CATALOG["formal_verification"] = (
+                build_formal_verification_workflow()
+            )
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
         # Comprehensive analysis (LLM-only, benchmark-optimized)
@@ -769,5 +771,3 @@ def reset_workflow_catalog() -> None:
     global WORKFLOW_CATALOG
     WORKFLOW_CATALOG = {}
     logger.debug("Workflow catalog reset to empty state")
-
-

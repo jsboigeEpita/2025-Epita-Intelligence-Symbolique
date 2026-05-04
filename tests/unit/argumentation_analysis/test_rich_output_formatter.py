@@ -16,8 +16,8 @@ from argumentation_analysis.cli.output_formatter import (
     SECTIONS,
 )
 
-
 # ── Fixtures ──
+
 
 @pytest.fixture
 def sample_result():
@@ -25,7 +25,10 @@ def sample_result():
     return {
         "workflow_name": "standard",
         "state_snapshot": {
-            "identified_arguments": {"arg1": "All men are mortal", "arg2": "Socrates is a man"},
+            "identified_arguments": {
+                "arg1": "All men are mortal",
+                "arg2": "Socrates is a man",
+            },
             "extracts": [{"claim": "claim1"}, {"claim": "claim2"}],
             "fol_analysis_results": [{"formula": "∀x Man(x)→Mortal(x)"}],
             "propositional_analysis_results": [{"formula": "P → Q"}],
@@ -33,7 +36,10 @@ def sample_result():
             "nl_to_logic_translations": [{"source": "text", "logic": "P→Q"}],
             "identified_fallacies": {
                 "f1": {"type": "ad_hominem", "justification": "Attacks the person"},
-                "f2": {"type": "straw_man", "justification": "Misrepresents the argument"},
+                "f2": {
+                    "type": "straw_man",
+                    "justification": "Misrepresents the argument",
+                },
             },
             "neural_fallacy_scores": [{"fallacy": "ad_hominem", "score": 0.85}],
             "jtms_beliefs": {
@@ -47,7 +53,9 @@ def sample_result():
             "counter_arguments": [
                 {"strategy": "reductio", "counter_content": "If P then contradiction"},
             ],
-            "debate_transcripts": [{"round": 1, "proponent": "arg1", "opponent": "counter1"}],
+            "debate_transcripts": [
+                {"round": 1, "proponent": "arg1", "opponent": "counter1"}
+            ],
             "governance_decisions": [{"method": "majority", "result": "accepted"}],
             "argument_quality_scores": {
                 "arg1": {"overall": 0.85},
@@ -71,6 +79,7 @@ def empty_result():
 
 
 # ── Helper function tests ──
+
 
 class TestSectionRef:
     def test_valid_section_numbers(self):
@@ -112,6 +121,7 @@ class TestCountNonEmpty:
 
 # ── Plain renderer tests ──
 
+
 class TestRenderPlain:
     def test_renders_without_error(self, sample_result, capsys):
         _render_plain(sample_result)
@@ -126,6 +136,7 @@ class TestRenderPlain:
 
 
 # ── Rich renderer tests ──
+
 
 class TestRenderSpectacularResult:
     def test_rich_render_with_mock_console(self, sample_result):
@@ -178,9 +189,11 @@ class TestRenderStateSnapshot:
 
 # ── Individual section renderer tests ──
 
+
 class TestSectionRenderers:
     def test_extraction_section(self):
         from argumentation_analysis.cli.output_formatter import _render_extraction
+
         console = MagicMock()
         state = {"identified_arguments": {"a1": "test arg"}}
         _render_extraction(console, state)
@@ -188,12 +201,14 @@ class TestSectionRenderers:
 
     def test_extraction_empty(self):
         from argumentation_analysis.cli.output_formatter import _render_extraction
+
         console = MagicMock()
         _render_extraction(console, {})
         assert console.print.call_count == 0
 
     def test_formal_logic_section(self):
         from argumentation_analysis.cli.output_formatter import _render_formal_logic
+
         console = MagicMock()
         state = {"fol_analysis_results": [{"formula": "∀x P(x)"}]}
         _render_formal_logic(console, state)
@@ -201,6 +216,7 @@ class TestSectionRenderers:
 
     def test_fallacies_section(self):
         from argumentation_analysis.cli.output_formatter import _render_fallacies
+
         console = MagicMock()
         state = {
             "identified_fallacies": {
@@ -212,6 +228,7 @@ class TestSectionRenderers:
 
     def test_jtms_section(self):
         from argumentation_analysis.cli.output_formatter import _render_jtms
+
         console = MagicMock()
         state = {
             "jtms_beliefs": {
@@ -224,6 +241,7 @@ class TestSectionRenderers:
 
     def test_dung_section(self):
         from argumentation_analysis.cli.output_formatter import _render_dung
+
         console = MagicMock()
         state = {
             "dung_frameworks": {
@@ -234,7 +252,10 @@ class TestSectionRenderers:
         assert console.print.call_count >= 1
 
     def test_counter_arguments_section(self):
-        from argumentation_analysis.cli.output_formatter import _render_counter_arguments
+        from argumentation_analysis.cli.output_formatter import (
+            _render_counter_arguments,
+        )
+
         console = MagicMock()
         state = {
             "counter_arguments": [{"strategy": "reductio", "counter_content": "test"}]
@@ -244,6 +265,7 @@ class TestSectionRenderers:
 
     def test_debate_section(self):
         from argumentation_analysis.cli.output_formatter import _render_debate
+
         console = MagicMock()
         state = {
             "debate_transcripts": [{"round": 1}],
@@ -254,15 +276,15 @@ class TestSectionRenderers:
 
     def test_quality_section(self):
         from argumentation_analysis.cli.output_formatter import _render_quality
+
         console = MagicMock()
-        state = {
-            "argument_quality_scores": {"arg1": {"overall": 0.85}}
-        }
+        state = {"argument_quality_scores": {"arg1": {"overall": 0.85}}}
         _render_quality(console, state)
         assert console.print.call_count >= 1
 
     def test_narrative_section(self):
         from argumentation_analysis.cli.output_formatter import _render_narrative
+
         console = MagicMock()
         state = {"final_conclusion": "The argument is sound."}
         result = {"state_snapshot": state}
@@ -271,6 +293,7 @@ class TestSectionRenderers:
 
     def test_narrative_with_cross_refs(self):
         from argumentation_analysis.cli.output_formatter import _render_narrative
+
         console = MagicMock()
         state = {
             "final_conclusion": "Conclusion here",
@@ -287,6 +310,7 @@ class TestSectionRenderers:
 
 # ── Cross-reference tests ──
 
+
 class TestCrossReferences:
     def test_sections_list_complete(self):
         assert len(SECTIONS) == 10
@@ -297,9 +321,8 @@ class TestCrossReferences:
         """Quality section should cross-ref to fallacies (#3)."""
         console = MagicMock()
         from argumentation_analysis.cli.output_formatter import _render_quality
-        state = {
-            "argument_quality_scores": {"arg1": {"overall": 0.5}}
-        }
+
+        state = {"argument_quality_scores": {"arg1": {"overall": 0.5}}}
         _render_quality(console, state)
         printed = str(console.print.call_args_list)
         assert "Section 3" in printed

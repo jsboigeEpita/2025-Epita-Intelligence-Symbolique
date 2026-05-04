@@ -178,7 +178,9 @@ class JTMSSession:
     def set_fact(self, name: str, is_true: bool = True):
         """Declare a belief as ground truth."""
         if name not in self.jtms.beliefs:
-            self.add_belief(name, "system_fact", {"description": "Auto-added as a fact"})
+            self.add_belief(
+                name, "system_fact", {"description": "Auto-added as a fact"}
+            )
         self.jtms.set_belief_validity(name, is_true)
         self.last_modified = datetime.now()
 
@@ -191,10 +193,12 @@ class JTMSSession:
         contradiction = "_CONTRADICTION_"
         if contradiction in self.jtms.beliefs:
             if self.jtms.beliefs[contradiction].valid:
-                conflicts.append({
-                    "type": "contradiction_detected",
-                    "belief": contradiction,
-                })
+                conflicts.append(
+                    {
+                        "type": "contradiction_detected",
+                        "belief": contradiction,
+                    }
+                )
 
         for name, belief in self.jtms.beliefs.items():
             if belief.non_monotonic:

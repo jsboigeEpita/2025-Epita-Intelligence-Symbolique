@@ -19,6 +19,7 @@ from tqdm.auto import tqdm
 
 class JVMStartupTimeoutError(TimeoutError):
     """Exception raised when JVM startup exceeds the configured timeout."""
+
     pass
 
 
@@ -835,7 +836,9 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         native_libs_dir = PROJ_ROOT / settings.jvm.native_libs_dir
         if native_libs_dir.exists():
             classpath.append(str(native_libs_dir.resolve()))
-            logger.info(f"Native SAT dir prepended to classpath: {native_libs_dir.resolve()}")
+            logger.info(
+                f"Native SAT dir prepended to classpath: {native_libs_dir.resolve()}"
+            )
         classpath.extend(jar_entries)
 
         try:
@@ -891,7 +894,11 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             )
 
             # Get timeout from settings or use default
-            startup_timeout = getattr(settings.jvm, 'startup_timeout_seconds', DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS)
+            startup_timeout = getattr(
+                settings.jvm,
+                "startup_timeout_seconds",
+                DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS,
+            )
 
             def _do_start_jvm():
                 """Inner function to start JVM for timeout wrapper."""

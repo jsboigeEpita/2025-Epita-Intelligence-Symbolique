@@ -1,4 +1,5 @@
 """Smoke tests for demonstration_epita_spectacular.py — #361"""
+
 import json
 import subprocess
 import sys
@@ -29,8 +30,14 @@ class TestDemonstrationSpectacular:
     def test_full_demo_contains_all_steps(self):
         r = _run(["--quiet"])
         output = r.stdout
-        for step_name in ("Extraction & Claims", "Formal Logic", "Fallacy Detection",
-                          "Argumentation Frameworks", "Adversarial Debate", "Unified Synthesis"):
+        for step_name in (
+            "Extraction & Claims",
+            "Formal Logic",
+            "Fallacy Detection",
+            "Argumentation Frameworks",
+            "Adversarial Debate",
+            "Unified Synthesis",
+        ):
             assert step_name in output, f"Missing step: {step_name}"
 
     def test_json_full_output_valid(self):
@@ -67,7 +74,9 @@ class TestDemonstrationSpectacular:
         r = _run(["--quiet", "--step", "4"])
         assert "Grounded" in r.stdout
         assert "JTMS" in r.stdout
-        assert "retraction cascade" in r.stdout.lower() or "Retraction cascade" in r.stdout
+        assert (
+            "retraction cascade" in r.stdout.lower() or "Retraction cascade" in r.stdout
+        )
 
     def test_step_6_synthesis_quality(self):
         r = _run(["--quiet", "--step", "6"])
@@ -80,6 +89,7 @@ class TestDemonstrationSpectacular:
         sys.path.insert(0, str(SCRIPT.parent))
         try:
             import importlib
+
             mod_name = "demonstration_epita_spectacular"
             spec = importlib.util.spec_from_file_location(mod_name, SCRIPT)
             mod = importlib.util.module_from_spec(spec)
@@ -87,9 +97,26 @@ class TestDemonstrationSpectacular:
 
             result = mod.MOCK_SPECTACULAR_RESULT
             assert len(result["steps"]) == 6
-            assert result["steps"]["1_extraction"]["output"]["extraction_stats"]["claims"] == 5
-            assert len(result["steps"]["3_fallacy_detection"]["output"]["detected_fallacies"]) == 6
-            assert len(result["steps"]["4_argumentation_frameworks"]["output"]["dung"]["extensions"]["grounded"]) == 3
+            assert (
+                result["steps"]["1_extraction"]["output"]["extraction_stats"]["claims"]
+                == 5
+            )
+            assert (
+                len(
+                    result["steps"]["3_fallacy_detection"]["output"][
+                        "detected_fallacies"
+                    ]
+                )
+                == 6
+            )
+            assert (
+                len(
+                    result["steps"]["4_argumentation_frameworks"]["output"]["dung"][
+                        "extensions"
+                    ]["grounded"]
+                )
+                == 3
+            )
             assert result["steps"]["6_synthesis"]["output"]["field_count"] == 32
         finally:
             sys.path.pop(0)
@@ -99,6 +126,7 @@ class TestDemonstrationSpectacular:
         sys.path.insert(0, str(SCRIPT.parent))
         try:
             import importlib.util
+
             mod_name = "demonstration_epita_spectacular"
             spec = importlib.util.spec_from_file_location(mod_name, SCRIPT)
             mod = importlib.util.module_from_spec(spec)

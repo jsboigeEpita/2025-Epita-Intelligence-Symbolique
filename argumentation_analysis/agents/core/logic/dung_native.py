@@ -111,9 +111,7 @@ class DungFramework:
         for size in range(1, len(args_list) + 1):
             for combo in combinations(args_list, size):
                 s = frozenset(combo)
-                if self.is_conflict_free(s) and all(
-                    self.defends(s, arg) for arg in s
-                ):
+                if self.is_conflict_free(s) and all(self.defends(s, arg) for arg in s):
                     result.append(s)
         return result
 
@@ -171,7 +169,9 @@ class DungFramework:
         # Credulous: accepted in at least one preferred extension
         credulously_accepted = any(arg in ext for ext in preferred)
         # Skeptical: accepted in all preferred extensions
-        skeptically_accepted = all(arg in ext for ext in preferred) if preferred else False
+        skeptically_accepted = (
+            all(arg in ext for ext in preferred) if preferred else False
+        )
 
         return {
             "in_grounded": arg in grounded,
@@ -223,9 +223,7 @@ class DungFramework:
             "num_attacks": len(self.attacks),
             "has_cycles": has_cycle,
             "self_attacking": self_attacking,
-            "unattacked": sorted(
-                a for a in self.arguments if not self.attackers_of(a)
-            ),
+            "unattacked": sorted(a for a in self.arguments if not self.attackers_of(a)),
         }
 
     @classmethod

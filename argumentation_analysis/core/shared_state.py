@@ -20,6 +20,7 @@ if not state_logger.handlers and not state_logger.propagate:
 @dataclass
 class ArgumentProfile:
     """Aggregated view of all analysis data for a single argument."""
+
     arg_id: str
     description: str
     fallacies: List[Dict[str, Any]] = field(default_factory=list)
@@ -206,7 +207,9 @@ class RhetoricalAnalysisState:
                 # On pourrait aussi extraire la citation et la passer dans la justification
             )
 
-    def mark_task_as_answered(self, task_id: str, answer: str, author: str = "Unknown") -> None:
+    def mark_task_as_answered(
+        self, task_id: str, answer: str, author: str = "Unknown"
+    ) -> None:
         """Marque une tâche comme terminée en lui ajoutant une réponse."""
         if task_id not in self.analysis_tasks:
             state_logger.warning(
@@ -438,7 +441,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return ca_id
 
     def add_quality_score(
-        self, arg_id: str, scores: Dict[str, float], overall: float,
+        self,
+        arg_id: str,
+        scores: Dict[str, float],
+        overall: float,
         llm_assessment: Optional[str] = None,
     ) -> None:
         """Add quality evaluation scores for an argument.

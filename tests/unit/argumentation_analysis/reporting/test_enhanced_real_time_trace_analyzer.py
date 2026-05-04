@@ -486,7 +486,9 @@ class TestEnhancedRealTimeTraceAnalyzer:
 
     def test_save_report_invalid_path(self, analyzer):
         """Test que save_enhanced_report retourne False si l'écriture échoue."""
-        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+        with patch(
+            "builtins.open", side_effect=PermissionError("Cannot write to path")
+        ):
             result = analyzer.save_enhanced_report("/nonexistent/path/report.md")
         assert result is False
 

@@ -2,9 +2,9 @@
 
 Verifies the 3-tier fallback: upstream translations → on-the-fly translator → templates.
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-
 
 TWEETY_BRIDGE_PATH = (
     "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
@@ -90,7 +90,10 @@ class TestPropositionalLogicNLWiring:
 
         # Mock TweetyBridge since fallback path calls check_consistency
         with patch(TWEETY_BRIDGE_PATH) as MockBridge:
-            MockBridge.return_value.check_consistency.return_value = (True, "consistent")
+            MockBridge.return_value.check_consistency.return_value = (
+                True,
+                "consistent",
+            )
             result = await _invoke_propositional_logic("text", context)
         assert result["logic_type"] == "propositional"
         # Invalid translations are skipped → falls back to on-the-fly or template
@@ -153,7 +156,9 @@ class TestPropositionalLogicNLWiring:
 
         context = _make_context_with_args(["Some argument text here"])
 
-        with patch.dict("sys.modules", {"argumentation_analysis.services.nl_to_logic": None}):
+        with patch.dict(
+            "sys.modules", {"argumentation_analysis.services.nl_to_logic": None}
+        ):
             result = await _invoke_propositional_logic("text", context)
 
         assert result["logic_type"] == "propositional"
@@ -275,7 +280,9 @@ class TestFOLReasoningNLWiring:
 
         context = _make_context_with_args(["Some argument text here"])
 
-        with patch.dict("sys.modules", {"argumentation_analysis.services.nl_to_logic": None}):
+        with patch.dict(
+            "sys.modules", {"argumentation_analysis.services.nl_to_logic": None}
+        ):
             result = await _invoke_fol_reasoning("text", context)
 
         assert result["logic_type"] == "first_order"

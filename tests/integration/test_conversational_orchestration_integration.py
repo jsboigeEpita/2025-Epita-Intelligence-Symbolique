@@ -8,6 +8,7 @@ Tests the full conversational pipeline with mock LLM, verifying:
 5. State snapshot benchmark (non-empty fields)
 6. Convergence detection via trace report
 """
+
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
@@ -18,7 +19,6 @@ from argumentation_analysis.orchestration.conversational_orchestrator import (
     run_conversational_analysis,
 )
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-
 
 SAMPLE_TEXT = (
     "L'IA est dangereuse car Elon Musk l'a dit. "
@@ -79,9 +79,15 @@ class TestConversationalPipelineIntegration:
             )
 
         required_fields = [
-            "mode", "phases", "conversation_log", "total_messages",
-            "duration_seconds", "state_snapshot", "state_non_empty_fields",
-            "unified_state", "trace_report",
+            "mode",
+            "phases",
+            "conversation_log",
+            "total_messages",
+            "duration_seconds",
+            "state_snapshot",
+            "state_non_empty_fields",
+            "unified_state",
+            "trace_report",
         ]
         for field in required_fields:
             assert field in result, f"Missing required field: {field}"
@@ -135,9 +141,9 @@ class TestAgentPluginSpecialization:
         """Every agent has non-empty instructions."""
         for name, config in AGENT_CONFIG.items():
             assert "instructions" in config, f"Agent {name} missing instructions"
-            assert len(config["instructions"]) > 20, (
-                f"Agent {name} has suspiciously short instructions"
-            )
+            assert (
+                len(config["instructions"]) > 20
+            ), f"Agent {name} has suspiciously short instructions"
 
     def test_plugin_instances_created_for_all_specialities(self):
         """get_plugin_instances succeeds for every agent speciality."""
@@ -160,9 +166,9 @@ class TestAgentPluginSpecialization:
         ]
         # Allow some overlap but not all same
         unique = set(specialities)
-        assert len(unique) >= 4, (
-            f"Expected at least 4 distinct specialities, got {len(unique)}: {unique}"
-        )
+        assert (
+            len(unique) >= 4
+        ), f"Expected at least 4 distinct specialities, got {len(unique)}: {unique}"
 
 
 @pytest.mark.integration
@@ -344,9 +350,9 @@ class TestConversationLog:
             )
 
         agents_in_log = set(entry["agent"] for entry in result["conversation_log"])
-        assert len(agents_in_log) >= 2, (
-            f"Expected multiple agents in log, got: {agents_in_log}"
-        )
+        assert (
+            len(agents_in_log) >= 2
+        ), f"Expected multiple agents in log, got: {agents_in_log}"
 
 
 # =============================================================================
@@ -379,9 +385,7 @@ class TestRealAgentCreationWithMockedLLM:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Analysis complete."
 
-        with patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ), patch(
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}), patch(
             "openai.resources.chat.completions.Completions.create",
             return_value=mock_response,
         ):
@@ -440,9 +444,7 @@ class TestRealAgentCreationWithMockedLLM:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Analysis complete."
 
-        with patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ), patch(
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}), patch(
             "openai.resources.chat.completions.Completions.create",
             return_value=mock_response,
         ):

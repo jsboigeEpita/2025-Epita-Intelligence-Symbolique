@@ -51,13 +51,13 @@ from tests.fixtures.calibrated_fallacy_texts import (
 # Leaf nodes are auto-confirmed by the plugin (no children).
 # Map: depth-1 PK -> depth-2 child PK to navigate to.
 _BRANCH_TO_LEAF = {
-    "1": "2",       # Insuffisance -> Argument bâclé
-    "175": "176",   # Influence -> Procédé rhétorique
-    "594": "595",   # Erreur mathématique -> Généralisation abusive
-    "696": "697",   # Erreur de raisonnement -> Causalité douteuse
-    "798": "833",   # Abus de langage -> Comparaison fallacieuse
-    "887": "888",   # Tricherie -> Arranger les faits
-    "1280": "1360", # Obstruction -> Ad hominem
+    "1": "2",  # Insuffisance -> Argument bâclé
+    "175": "176",  # Influence -> Procédé rhétorique
+    "594": "595",  # Erreur mathématique -> Généralisation abusive
+    "696": "697",  # Erreur de raisonnement -> Causalité douteuse
+    "798": "833",  # Abus de langage -> Comparaison fallacieuse
+    "887": "888",  # Tricherie -> Arranger les faits
+    "1280": "1360",  # Obstruction -> Ad hominem
 }
 
 # Branches to select in Phase 1 for each test scenario.
@@ -76,7 +76,12 @@ class TestFallacyWorkflowCalibration:
     @pytest.fixture
     def workflow_plugin(self, mock_llm_service, mock_kernel):
         """Crée une instance du plugin avec des mocks."""
-        taxonomy_path = Path(project_root_for_test) / "argumentation_analysis" / "data" / "taxonomy_medium.csv"
+        taxonomy_path = (
+            Path(project_root_for_test)
+            / "argumentation_analysis"
+            / "data"
+            / "taxonomy_medium.csv"
+        )
 
         # Create a real Kernel instance with mocked service
         kernel = Kernel()
@@ -99,7 +104,9 @@ class TestFallacyWorkflowCalibration:
         - At least MAX_BRANCHES (4) distinct fallacies are identified.
         - Each detected fallacy has a valid taxonomy PK and navigation trace.
         """
-        result_json = asyncio.run(workflow_plugin.run_guided_analysis(CALIBRATED_TEXT_8_FALLACIES))
+        result_json = asyncio.run(
+            workflow_plugin.run_guided_analysis(CALIBRATED_TEXT_8_FALLACIES)
+        )
 
         result = json.loads(result_json)
 
@@ -114,14 +121,12 @@ class TestFallacyWorkflowCalibration:
 
         # Verify each detected fallacy has a valid taxonomy PK
         for f in detected:
-            assert f.get("taxonomy_pk"), (
-                f"Detected fallacy missing taxonomy_pk: {f}"
-            )
+            assert f.get("taxonomy_pk"), f"Detected fallacy missing taxonomy_pk: {f}"
 
         # Verify exploration method is iterative_deepening (not one-shot fallback)
-        assert result.get("exploration_method") == "iterative_deepening", (
-            f"Expected iterative_deepening, got {result.get('exploration_method')}"
-        )
+        assert (
+            result.get("exploration_method") == "iterative_deepening"
+        ), f"Expected iterative_deepening, got {result.get('exploration_method')}"
 
     def test_epita_text_2_fallacies(self, workflow_plugin):
         """
@@ -139,7 +144,9 @@ class TestFallacyWorkflowCalibration:
 
         result = json.loads(result_json)
 
-        detected_names = [f.get("fallacy_type", "").lower() for f in result.get("fallacies", [])]
+        detected_names = [
+            f.get("fallacy_type", "").lower() for f in result.get("fallacies", [])
+        ]
 
         # Vérifier qu'on a au moins 2 détections (one per branch)
         assert len(result.get("fallacies", [])) >= 2, (
@@ -152,7 +159,9 @@ class TestFallacyWorkflowCalibration:
             "rhétorique" in d or "autorité" in d or "authority" in d
             for d in detected_names
         )
-        assert has_influence, f"Expected Influence branch detection, got: {detected_names}"
+        assert (
+            has_influence
+        ), f"Expected Influence branch detection, got: {detected_names}"
 
         # Vérifier ad hominem
         has_ad_hominem = any("hominem" in d or "attaque" in d for d in detected_names)
@@ -174,9 +183,9 @@ class TestFallacyWorkflowCalibration:
             # Si des sophismes sont détectés, ils doivent avoir une faible confiance
             for f in fallacies:
                 confidence = f.get("confidence", 1.0)
-                assert confidence < 0.5, (
-                    f"False positive detected with high confidence: {f}"
-                )
+                assert (
+                    confidence < 0.5
+                ), f"False positive detected with high confidence: {f}"
 
 
 # Fixtures mock
@@ -259,7 +268,7 @@ def mock_llm_service():
             if "Current position:" in content:
                 # Extract the position name after "Current position:"
                 idx = content.index("Current position:")
-                rest = content[idx + len("Current position:"):].strip()
+                rest = content[idx + len("Current position:") :].strip()
                 # Take the first line
                 return rest.split("\n")[0].strip()
         return ""
@@ -334,20 +343,24 @@ def mock_llm_service():
         text_type = _detect_text(chat_history)
 
         if text_type == "neutral":
-            response_json = json.dumps({
-                "fallacy_name": "none",
-                "taxonomy_pk": "",
-                "explanation": "No fallacy detected",
-                "confidence": 0.1,
-            })
+            response_json = json.dumps(
+                {
+                    "fallacy_name": "none",
+                    "taxonomy_pk": "",
+                    "explanation": "No fallacy detected",
+                    "confidence": 0.1,
+                }
+            )
         else:
             # Generic fallacy detection for one-shot path
-            response_json = json.dumps({
-                "fallacy_name": "Procédé rhétorique",
-                "taxonomy_pk": "176",
-                "explanation": "Rhetorical device detected",
-                "confidence": 0.5,
-            })
+            response_json = json.dumps(
+                {
+                    "fallacy_name": "Procédé rhétorique",
+                    "taxonomy_pk": "176",
+                    "explanation": "Rhetorical device detected",
+                    "confidence": 0.5,
+                }
+            )
 
         mock_response = MagicMock(spec=ChatMessageContent)
         mock_response.__str__ = lambda self: response_json

@@ -297,7 +297,8 @@ def pytest_configure(config):
         "no_jvm_session: marks tests that should not start the shared JVM session",
     )
     config.addinivalue_line(
-        "markers", "jvm_test: (deprecated, use jpype) marks tests that require the JVM to be started."
+        "markers",
+        "jvm_test: (deprecated, use jpype) marks tests that require the JVM to be started.",
     )
 
     if MOCK_DOTENV:

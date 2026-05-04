@@ -100,19 +100,23 @@ async def mobile_analyze(request: TextRequest):
         arguments = []
         for i, arg in enumerate(result_dict.get("identified_arguments", {}).items()):
             arg_id, desc = arg
-            arguments.append(ArgumentResult(
-                id=arg_id,
-                text=desc,
-                conclusion=desc,
-            ))
+            arguments.append(
+                ArgumentResult(
+                    id=arg_id,
+                    text=desc,
+                    conclusion=desc,
+                )
+            )
 
         fallacies_raw = result_dict.get("identified_fallacies", {})
         if not arguments and result_dict.get("summary"):
-            arguments.append(ArgumentResult(
-                id="summary",
-                text=result_dict["summary"],
-                conclusion=result_dict.get("summary", ""),
-            ))
+            arguments.append(
+                ArgumentResult(
+                    id="summary",
+                    text=result_dict["summary"],
+                    conclusion=result_dict.get("summary", ""),
+                )
+            )
 
         return AnalyzeResponse(
             text=request.text,
@@ -123,11 +127,13 @@ async def mobile_analyze(request: TextRequest):
         logger.error(f"Mobile analyze failed: {e}")
         return AnalyzeResponse(
             text=request.text,
-            arguments=[ArgumentResult(
-                id="error",
-                text=f"Analysis unavailable: {e}",
-                conclusion=str(e),
-            )],
+            arguments=[
+                ArgumentResult(
+                    id="error",
+                    text=f"Analysis unavailable: {e}",
+                    conclusion=str(e),
+                )
+            ],
             overall_quality=0.0,
         )
 
@@ -149,11 +155,13 @@ async def mobile_fallacies(request: TextRequest):
         fallacies = []
         for fid, fdata in result_dict.get("identified_fallacies", {}).items():
             if isinstance(fdata, dict):
-                fallacies.append(FallacyInstance(
-                    type=fdata.get("type", fid),
-                    confidence=0.8,
-                    explanation=fdata.get("justification", ""),
-                ))
+                fallacies.append(
+                    FallacyInstance(
+                        type=fdata.get("type", fid),
+                        confidence=0.8,
+                        explanation=fdata.get("justification", ""),
+                    )
+                )
 
         return FallacyResponse(
             text=request.text,
@@ -187,7 +195,10 @@ async def mobile_validate(request: TextRequest):
             valid=bool(toulmin.claim and toulmin.data),
             formalization=ValidationFormalization(
                 type="toulmin",
-                premises=[d.content if hasattr(d, "content") else str(d) for d in (toulmin.data or [])],
+                premises=[
+                    d.content if hasattr(d, "content") else str(d)
+                    for d in (toulmin.data or [])
+                ],
                 conclusion=toulmin.claim or "",
                 rule=toulmin.warrant or "",
             ),
@@ -233,7 +244,9 @@ async def mobile_chat(request: ChatRequest):
 
         result = await run_unified_analysis(request.message, workflow_name="light")
         result_dict = result if isinstance(result, dict) else {"raw": str(result)}
-        summary = result_dict.get("summary", result_dict.get("raw", "Analysis complete."))
+        summary = result_dict.get(
+            "summary", result_dict.get("raw", "Analysis complete.")
+        )
 
         return ChatResponse(
             message=summary,

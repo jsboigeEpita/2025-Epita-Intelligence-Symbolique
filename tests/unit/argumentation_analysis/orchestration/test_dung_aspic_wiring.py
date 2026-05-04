@@ -15,7 +15,6 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # ============================================================
 # Test: _invoke_dung_extensions uses helper functions
 # ============================================================
@@ -115,9 +114,7 @@ class TestInvokeDungExtensions:
         )
 
         context = {
-            "phase_extract_output": {
-                "arguments": [{"text": "arg1"}, {"text": "arg2"}]
-            }
+            "phase_extract_output": {"arguments": [{"text": "arg1"}, {"text": "arg2"}]}
         }
 
         with patch(
@@ -151,9 +148,7 @@ class TestInvokeDungExtensions:
         )
 
         context = {
-            "phase_extract_output": {
-                "arguments": [{"text": "arg1"}, {"text": "arg2"}]
-            }
+            "phase_extract_output": {"arguments": [{"text": "arg1"}, {"text": "arg2"}]}
         }
 
         with patch(
@@ -334,8 +329,9 @@ class TestCrossKBFallacyAttacks:
 
         assert len(attacks) > 0
         # The fallacy should target the first argument (text overlap)
-        assert any("professeur" in a[1].lower() or "dupont" in a[1].lower()
-                    for a in attacks)
+        assert any(
+            "professeur" in a[1].lower() or "dupont" in a[1].lower() for a in attacks
+        )
 
     def test_fallacy_label_in_attack(self):
         """Attack labels include fallacy type."""
@@ -354,8 +350,10 @@ class TestCrossKBFallacyAttacks:
 
         attacks = _generate_attacks_from_args(arguments, context)
         assert len(attacks) > 0
-        assert any("appel" in str(a[0]).lower() or "autorite" in str(a[0]).lower()
-                    for a in attacks)
+        assert any(
+            "appel" in str(a[0]).lower() or "autorite" in str(a[0]).lower()
+            for a in attacks
+        )
 
     def test_counter_argument_attacks(self):
         """Counter-arguments generate attack relations."""
@@ -466,9 +464,7 @@ class TestWorkflowDungPhases:
         )
 
         wf = build_jtms_dung_loop_workflow()
-        dung_phase = next(
-            (p for p in wf.phases if p.name == "dung_extensions"), None
-        )
+        dung_phase = next((p for p in wf.phases if p.name == "dung_extensions"), None)
         assert dung_phase is not None
         assert dung_phase.capability == "dung_extensions"
 

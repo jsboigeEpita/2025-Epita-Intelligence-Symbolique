@@ -166,7 +166,9 @@ class TestLLMAnalysisResult:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestRealLLMOrchestratorInit:
     """Tests for RealLLMOrchestrator initialization."""
 
@@ -218,7 +220,9 @@ class TestRealLLMOrchestratorInit:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestMetricsAndCache:
     """Tests for metrics tracking and cache operations."""
 
@@ -300,7 +304,9 @@ class TestMetricsAndCache:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestInitialize:
     """Tests for the initialize() async method."""
 
@@ -341,7 +347,9 @@ class TestInitialize:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestBasicAnalyzerFactories:
     """Tests for the _create_basic_*_analyzer factory methods."""
 
@@ -396,7 +404,9 @@ class TestBasicAnalyzerFactories:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestAnalyzeText:
     """Tests for analyze_text() with various analysis types."""
 
@@ -553,7 +563,9 @@ class TestAnalyzeText:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestCachingBehavior:
     """Tests for cache integration in analyze_text."""
 
@@ -621,7 +633,9 @@ class TestCachingBehavior:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestBatchAnalyze:
     """Tests for batch_analyze() method."""
 
@@ -666,7 +680,9 @@ class TestBatchAnalyze:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestOrchestrateAnalysis:
     """Tests for orchestrate_analysis() high-level method."""
 
@@ -702,7 +718,9 @@ class TestOrchestrateAnalysis:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestErrorHandling:
     """Tests for error handling in analyze_text."""
 
@@ -746,7 +764,9 @@ class TestErrorHandling:
 # ============================================================================
 
 
-@pytest.mark.skip(reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead")
+@pytest.mark.skip(
+    reason="RealLLMOrchestrator archived (#215) - use UnifiedPipeline tests instead"
+)
 class TestLogicalAnalysis:
     """Tests for _analyze_logical which requires PropositionalLogicAgent."""
 

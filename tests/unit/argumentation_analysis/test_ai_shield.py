@@ -13,9 +13,10 @@ from argumentation_analysis.services.ai_shield.shield import (
     LayerResult,
 )
 from argumentation_analysis.services.ai_shield.layers.heuristic import HeuristicLayer
-from argumentation_analysis.services.ai_shield.layers.output_filter import OutputFilterLayer
+from argumentation_analysis.services.ai_shield.layers.output_filter import (
+    OutputFilterLayer,
+)
 from argumentation_analysis.services.ai_shield.presets import load_preset
-
 
 # ── Heuristic Layer Tests ────────────────────────────────────────────
 
@@ -311,5 +312,7 @@ class TestPresets:
     def test_basic_preset_passes_clean(self):
         """Basic preset passes clean input."""
         shield = load_preset("basic")
-        result = shield.validate_input("Please analyze this argument about climate change")
+        result = shield.validate_input(
+            "Please analyze this argument about climate change"
+        )
         assert result.passed is True

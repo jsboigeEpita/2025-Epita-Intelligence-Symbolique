@@ -24,7 +24,6 @@ from argumentation_analysis.evaluation.conversational_benchmark import (
 )
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
-
 # ── Test Data ─────────────────────────────────────────────────────────────
 
 
@@ -79,9 +78,9 @@ class TestBenchmarkTexts:
 
     def test_texts_contain_french_content(self):
         for text_id, text in BENCHMARK_TEXTS.items():
-            assert any(w in text.lower() for w in ["les", "que", "est", "des"]), (
-                f"{text_id} doesn't look like French text"
-            )
+            assert any(
+                w in text.lower() for w in ["les", "que", "est", "des"]
+            ), f"{text_id} doesn't look like French text"
 
 
 # ============================================================
@@ -164,19 +163,21 @@ class TestBenchmarkReport:
         runs = []
         for text_id in ["text_a", "text_b"]:
             for mode in ["standard", "full", "conversational"]:
-                runs.append(RunMetrics(
-                    text_id=text_id,
-                    mode=mode,
-                    wall_clock_seconds=100.0 if mode != "conversational" else 300.0,
-                    argument_count=5,
-                    fallacy_count=2,
-                    quality_scores_count=4,
-                    counter_argument_count=3,
-                    jtms_belief_count=5,
-                    state_field_fill_rate=0.45,
-                    cross_ref_density=0.3,
-                    total_messages=15 if mode == "conversational" else 0,
-                ))
+                runs.append(
+                    RunMetrics(
+                        text_id=text_id,
+                        mode=mode,
+                        wall_clock_seconds=100.0 if mode != "conversational" else 300.0,
+                        argument_count=5,
+                        fallacy_count=2,
+                        quality_scores_count=4,
+                        counter_argument_count=3,
+                        jtms_belief_count=5,
+                        state_field_fill_rate=0.45,
+                        cross_ref_density=0.3,
+                        total_messages=15 if mode == "conversational" else 0,
+                    )
+                )
         return runs
 
     def test_compute_averages(self):
@@ -262,9 +263,12 @@ class TestReportFormatting:
     def test_summary_contains_table(self):
         runs = [
             RunMetrics(
-                text_id="test", mode="standard",
-                wall_clock_seconds=50.0, argument_count=5,
-                fallacy_count=2, state_field_fill_rate=0.45,
+                text_id="test",
+                mode="standard",
+                wall_clock_seconds=50.0,
+                argument_count=5,
+                fallacy_count=2,
+                state_field_fill_rate=0.45,
             ),
         ]
         report = BenchmarkReport(runs=runs)

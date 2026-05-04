@@ -7,6 +7,7 @@ Validates:
 - Build output is gitignored
 - All assets under 100KB
 """
+
 import pathlib
 import re
 import sys
@@ -32,9 +33,7 @@ class TestSlideSource:
         content = SLIDES_MD.read_text(encoding="utf-8")
         sections = SLIDE_SEPARATOR.split(content)
         non_empty = [s.strip() for s in sections if s.strip()]
-        assert len(non_empty) >= 25, (
-            f"Expected >= 25 slides, found {len(non_empty)}"
-        )
+        assert len(non_empty) >= 25, f"Expected >= 25 slides, found {len(non_empty)}"
 
     def test_has_frontmatter(self):
         content = SLIDES_MD.read_text(encoding="utf-8")
@@ -48,9 +47,7 @@ class TestSlideSource:
     def test_no_plaintext_extracts(self):
         content = SLIDES_MD.read_text(encoding="utf-8").lower()
         for field in SENSITIVE_FIELDS:
-            assert field not in content, (
-                f"Found sensitive field '{field}' in slides.md"
-            )
+            assert field not in content, f"Found sensitive field '{field}' in slides.md"
 
     def test_opaque_ids_only(self):
         content = SLIDES_MD.read_text(encoding="utf-8")
@@ -107,12 +104,10 @@ class TestBuildScript:
         section_count = html.count("<section data-markdown>")
         md_content = SLIDES_MD.read_text(encoding="utf-8")
         _, body = parse_frontmatter(md_content)
-        md_sections = [
-            s.strip() for s in SLIDE_SEPARATOR.split(body) if s.strip()
-        ]
-        assert section_count == len(md_sections), (
-            f"HTML has {section_count} sections but source has {len(md_sections)}"
-        )
+        md_sections = [s.strip() for s in SLIDE_SEPARATOR.split(body) if s.strip()]
+        assert section_count == len(
+            md_sections
+        ), f"HTML has {section_count} sections but source has {len(md_sections)}"
 
     def test_build_output_under_100kb(self, tmp_path):
         from build_deck import build_deck

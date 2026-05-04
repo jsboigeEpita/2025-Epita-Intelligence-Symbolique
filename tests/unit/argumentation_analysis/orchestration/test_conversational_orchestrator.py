@@ -26,7 +26,6 @@ from argumentation_analysis.agents.factory import (
 )
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
-
 # ── Fixtures ──
 
 
@@ -133,9 +132,7 @@ class TestAgentConfig:
         for name, config in AGENT_CONFIG.items():
             speciality = config["speciality"]
             plugins = AGENT_SPECIALITY_MAP.get(speciality, [])
-            assert (
-                len(plugins) <= 2
-            ), f"{name} has {len(plugins)} plugins — too many"
+            assert len(plugins) <= 2, f"{name} has {len(plugins)} plugins — too many"
 
     def test_plugin_isolation_informal_no_tweety(self):
         """InformalAgent should NOT have tweety_logic plugin."""
@@ -192,9 +189,7 @@ class TestCreateConversationalAgents:
             return_value=[MagicMock()],
         ):
             MockAgent.return_value = MagicMock()
-            agents = create_conversational_agents(
-                mock_kernel, state, "test_llm"
-            )
+            agents = create_conversational_agents(mock_kernel, state, "test_llm")
             assert len(agents) == 8
 
     def test_creates_subset_of_agents(self, mock_kernel, state):
@@ -540,7 +535,9 @@ class TestRunConversationalAnalysis:
 
         phase_names_seen = []
 
-        async def tracking_run_phase(agents, prompt, max_turns=5, phase_name="", state=None):
+        async def tracking_run_phase(
+            agents, prompt, max_turns=5, phase_name="", state=None
+        ):
             phase_names_seen.append(phase_name)
             return [
                 {

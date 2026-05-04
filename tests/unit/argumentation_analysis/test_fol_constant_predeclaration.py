@@ -18,7 +18,6 @@ from argumentation_analysis.services.nl_to_logic import (
     normalize_operators,
 )
 
-
 # ── _extract_fol_metadata tests ────────────────────────────────────────
 
 
@@ -66,9 +65,7 @@ class TestExtractFolMetadata:
         # But constants are extracted and a default Thing sort is created
         assert "Thing" in metadata["sorts"]
         assert "socrates" in metadata["sorts"]["Thing"]
-        assert metadata["constants_raw"] == {
-            "socrates": "the philosopher Socrates"
-        }
+        assert metadata["constants_raw"] == {"socrates": "the philosopher Socrates"}
 
     def test_no_sorts_creates_default_thing_sort(self):
         """When no sorts declared but constants exist, creates a 'Thing' sort."""
@@ -391,7 +388,10 @@ class TestTranslateWithLLMFolMetadata:
                     )
 
         assert result.is_valid is True
-        assert result.formula == "forall X: (Human(X) => Mortal(X)); Human(socrates); Human(plato)"
+        assert (
+            result.formula
+            == "forall X: (Human(X) => Mortal(X)); Human(socrates); Human(plato)"
+        )
 
         # Verify metadata was extracted and passed
         meta = captured_metadata["fol_metadata"]

@@ -27,12 +27,18 @@ MOCK_RESULT = OpenDomainResult(
     claims_analyzed=3,
     attributions=[
         Attribution(
-            claim="test", attribution="Author supported under h_trust",
-            hypothesis_id="h_trust", coherent=True, confidence=0.8,
+            claim="test",
+            attribution="Author supported under h_trust",
+            hypothesis_id="h_trust",
+            coherent=True,
+            confidence=0.8,
         ),
         Attribution(
-            claim="test", attribution="Author undermined under h_skeptical",
-            hypothesis_id="h_skeptical", coherent=False, confidence=0.3,
+            claim="test",
+            attribution="Author undermined under h_skeptical",
+            hypothesis_id="h_skeptical",
+            coherent=False,
+            confidence=0.3,
         ),
     ],
     hypothesis_summary={
@@ -53,18 +59,19 @@ class TestScenarioRunner:
 
     def test_scenario_file_exists(self):
         from pathlib import Path
-        path = Path(
-            "examples/03_demos_overflow/sherlock_modern/run_scenarios.py"
-        )
+
+        path = Path("examples/03_demos_overflow/sherlock_modern/run_scenarios.py")
         assert path.exists()
 
     def test_scenarios_doc_exists(self):
         from pathlib import Path
+
         path = Path("docs/sherlock/scenarios.md")
         assert path.exists()
 
     def test_scenario_definitions_valid(self):
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "run_scenarios",
             "examples/03_demos_overflow/sherlock_modern/run_scenarios.py",
@@ -82,6 +89,7 @@ class TestScenarioRunner:
     def test_opaque_ids_no_plaintext(self):
         """Scenarios use opaque IDs, never source names."""
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "run_scenarios",
             "examples/03_demos_overflow/sherlock_modern/run_scenarios.py",
@@ -92,12 +100,13 @@ class TestScenarioRunner:
         sensitive_patterns = ["full_text", "raw_text", "speaker", "author"]
         scenario_text = str(mod.SCENARIOS)
         for pattern in sensitive_patterns:
-            assert pattern not in scenario_text.lower() or pattern == "author", (
-                f"Sensitive pattern '{pattern}' found in scenario definitions"
-            )
+            assert (
+                pattern not in scenario_text.lower() or pattern == "author"
+            ), f"Sensitive pattern '{pattern}' found in scenario definitions"
 
     def test_run_scenario_returns_result(self):
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "run_scenarios",
             "examples/03_demos_overflow/sherlock_modern/run_scenarios.py",
@@ -110,8 +119,14 @@ class TestScenarioRunner:
             ".SherlockModernOrchestrator.investigate",
             new_callable=AsyncMock,
             return_value=InvestigationResult(
-                trace=[{"step": 1, "phase": "extraction", "findings": {"claims_found": 2},
-                       "conclusion": "Found claims"}],
+                trace=[
+                    {
+                        "step": 1,
+                        "phase": "extraction",
+                        "findings": {"claims_found": 2},
+                        "conclusion": "Found claims",
+                    }
+                ],
                 reasoning_chain=["Found claims"],
                 agents_used=["ExtractAgent"],
                 agent_count=1,
@@ -130,6 +145,7 @@ class TestScenarioPrivacy:
     def test_no_plaintext_in_docs(self):
         """Scenarios doc uses only opaque IDs."""
         from pathlib import Path
+
         content = Path("docs/sherlock/scenarios.md").read_text(encoding="utf-8")
         assert "doc_A" in content
         assert "doc_B" in content

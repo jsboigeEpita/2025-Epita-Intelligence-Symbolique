@@ -48,7 +48,11 @@ def build_narrative(state: Any) -> str:
                 f"{len(quality)} argument(s), avec une note moyenne de "
                 f"{avg:.1f}/5."
             )
-            weak = [k for k, v in quality.items() if isinstance(v, dict) and v.get("overall", 0) < 3]
+            weak = [
+                k
+                for k, v in quality.items()
+                if isinstance(v, dict) and v.get("overall", 0) < 3
+            ]
             if weak:
                 quality_desc += f" {len(weak)} argument(s) presentent des faiblesses significatives."
             parts.append(quality_desc)
@@ -58,7 +62,9 @@ def build_narrative(state: Any) -> str:
     neural_fallacies = getattr(state, "neural_fallacy_scores", [])
     total_fallacies = len(fallacies) + len(neural_fallacies)
     if total_fallacies:
-        types = [v.get("type", "inconnu") for v in fallacies.values() if isinstance(v, dict)]
+        types = [
+            v.get("type", "inconnu") for v in fallacies.values() if isinstance(v, dict)
+        ]
         types_str = ", ".join(set(types)) if types else f"{total_fallacies} sophisme(s)"
         fallacy_text = (
             f"L'analyse a detecte {total_fallacies} sophisme(s) "
@@ -82,8 +88,16 @@ def build_narrative(state: Any) -> str:
     # ── JTMS beliefs ───────────────────────────────────────────────
     jtms_beliefs = getattr(state, "jtms_beliefs", {})
     if jtms_beliefs:
-        valid_count = sum(1 for v in jtms_beliefs.values() if isinstance(v, dict) and v.get("valid") is True)
-        invalid_count = sum(1 for v in jtms_beliefs.values() if isinstance(v, dict) and v.get("valid") is False)
+        valid_count = sum(
+            1
+            for v in jtms_beliefs.values()
+            if isinstance(v, dict) and v.get("valid") is True
+        )
+        invalid_count = sum(
+            1
+            for v in jtms_beliefs.values()
+            if isinstance(v, dict) and v.get("valid") is False
+        )
         jtms_text = (
             f"Le systeme JTMS maintient {len(jtms_beliefs)} croyance(s): "
             f"{valid_count} valide(s), {invalid_count} rejetee(s)."
@@ -100,7 +114,9 @@ def build_narrative(state: Any) -> str:
     # ── ATMS multi-context ─────────────────────────────────────────
     atms_contexts = getattr(state, "atms_contexts", [])
     if atms_contexts:
-        coherent = sum(1 for c in atms_contexts if isinstance(c, dict) and c.get("coherent"))
+        coherent = sum(
+            1 for c in atms_contexts if isinstance(c, dict) and c.get("coherent")
+        )
         incoherent = len(atms_contexts) - coherent
         parts.append(
             f"L'analyse ATMS multi-contextes a teste {len(atms_contexts)} hypothese(s): "

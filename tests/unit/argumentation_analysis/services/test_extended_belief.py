@@ -10,7 +10,6 @@ from argumentation_analysis.services.jtms.extended_belief import (
 from argumentation_analysis.services.jtms.conflict_resolution import ConflictResolver
 from argumentation_analysis.services.jtms.jtms_core import JTMS, Belief, Justification
 
-
 # ── ExtendedBelief ──────────────────────────────────────────────────
 
 
@@ -166,10 +165,12 @@ class TestConflictResolver:
 
     def test_resolve_by_confidence(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "sherlock": {"belief_name": "hyp_X", "confidence": 0.9},
-            "watson": {"belief_name": "hyp_X", "confidence": 0.3},
-        })
+        conflict = self._make_conflict(
+            {
+                "sherlock": {"belief_name": "hyp_X", "confidence": 0.9},
+                "watson": {"belief_name": "hyp_X", "confidence": 0.3},
+            }
+        )
         result = resolver.resolve(conflict, strategy="confidence_based")
         assert result["resolved"] is True
         assert result["chosen_agent"] == "sherlock"
@@ -177,18 +178,20 @@ class TestConflictResolver:
 
     def test_resolve_by_evidence(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "agent_a": {
-                "belief_name": "b1",
-                "confidence": 0.5,
-                "justification_count": 4,
-            },
-            "agent_b": {
-                "belief_name": "b1",
-                "confidence": 0.9,
-                "justification_count": 1,
-            },
-        })
+        conflict = self._make_conflict(
+            {
+                "agent_a": {
+                    "belief_name": "b1",
+                    "confidence": 0.5,
+                    "justification_count": 4,
+                },
+                "agent_b": {
+                    "belief_name": "b1",
+                    "confidence": 0.9,
+                    "justification_count": 1,
+                },
+            }
+        )
         result = resolver.resolve(conflict, strategy="evidence_based")
         assert result["resolved"] is True
         # agent_a: 4*0.5=2.0, agent_b: 1*0.9=0.9 → agent_a wins
@@ -196,20 +199,24 @@ class TestConflictResolver:
 
     def test_resolve_by_consensus_needs_3_agents(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "valid": True},
-            "b": {"belief_name": "b1", "valid": False},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "valid": True},
+                "b": {"belief_name": "b1", "valid": False},
+            }
+        )
         result = resolver.resolve(conflict, strategy="consensus")
         assert result["resolved"] is False
 
     def test_resolve_by_consensus_majority(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "valid": True},
-            "b": {"belief_name": "b1", "valid": True},
-            "c": {"belief_name": "b1", "valid": False},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "valid": True},
+                "b": {"belief_name": "b1", "valid": True},
+                "c": {"belief_name": "b1", "valid": False},
+            }
+        )
         result = resolver.resolve(conflict, strategy="consensus")
         assert result["resolved"] is True
 
@@ -230,36 +237,44 @@ class TestConflictResolver:
 
     def test_resolve_by_temporal(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "timestamp": "2026-03-25T10:00:00"},
-            "b": {"belief_name": "b1", "timestamp": "2026-03-25T12:00:00"},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "timestamp": "2026-03-25T10:00:00"},
+                "b": {"belief_name": "b1", "timestamp": "2026-03-25T12:00:00"},
+            }
+        )
         result = resolver.resolve(conflict, strategy="temporal")
         assert result["resolved"] is True
         assert result["chosen_agent"] == "b"
 
     def test_invalid_strategy_falls_back(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "confidence": 0.5},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "confidence": 0.5},
+            }
+        )
         result = resolver.resolve(conflict, strategy="nonexistent")
         assert result["strategy_used"] == "confidence_based"
 
     def test_resolution_history(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "confidence": 0.5},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "confidence": 0.5},
+            }
+        )
         resolver.resolve(conflict)
         resolver.resolve(conflict)
         assert len(resolver.get_history()) == 2
 
     def test_stats(self):
         resolver = ConflictResolver()
-        conflict = self._make_conflict({
-            "a": {"belief_name": "b1", "confidence": 0.5},
-        })
+        conflict = self._make_conflict(
+            {
+                "a": {"belief_name": "b1", "confidence": 0.5},
+            }
+        )
         resolver.resolve(conflict, strategy="confidence_based")
         resolver.resolve(conflict, strategy="evidence_based")
         stats = resolver.get_stats()
@@ -275,21 +290,25 @@ class TestConflictResolver:
 class TestServiceImports:
     def test_import_extended_belief_from_init(self):
         from argumentation_analysis.services.jtms import ExtendedBelief
+
         eb = ExtendedBelief("test")
         assert eb.name == "test"
 
     def test_import_session_from_init(self):
         from argumentation_analysis.services.jtms import JTMSSession
+
         s = JTMSSession("s1", "agent")
         assert s.session_id == "s1"
 
     def test_import_resolver_from_init(self):
         from argumentation_analysis.services.jtms import ConflictResolver
+
         r = ConflictResolver()
         assert len(r.STRATEGIES) == 5
 
     def test_import_core_still_works(self):
         from argumentation_analysis.services.jtms import JTMS, Belief, Justification
+
         jtms = JTMS()
         jtms.add_belief("test")
         assert "test" in jtms.beliefs

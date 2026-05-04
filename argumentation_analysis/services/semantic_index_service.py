@@ -374,9 +374,7 @@ class SemanticIndexService:
                 continue
 
             arg_id = f"arg_{i+1}"
-            source_quote = (
-                arg.get("source_quote", "") if isinstance(arg, dict) else ""
-            )
+            source_quote = arg.get("source_quote", "") if isinstance(arg, dict) else ""
 
             # Build metadata tags
             tags: Dict[str, str] = {
@@ -404,7 +402,11 @@ class SemanticIndexService:
                 if isinstance(virtues, dict):
                     # Store weakest virtue for targeted search
                     weakest = min(
-                        ((k, v) for k, v in virtues.items() if isinstance(v, (int, float))),
+                        (
+                            (k, v)
+                            for k, v in virtues.items()
+                            if isinstance(v, (int, float))
+                        ),
                         key=lambda x: x[1],
                         default=None,
                     )
@@ -531,38 +533,47 @@ class SemanticIndexService:
             chunks = []
             for arg in arguments:
                 if isinstance(arg, dict):
-                    chunks.append({
-                        "text": arg.get("text", str(arg)),
-                        "source_quote": arg.get("source_quote", ""),
-                        "chunk_type": "argument",
-                    })
+                    chunks.append(
+                        {
+                            "text": arg.get("text", str(arg)),
+                            "source_quote": arg.get("source_quote", ""),
+                            "chunk_type": "argument",
+                        }
+                    )
                 elif isinstance(arg, str) and len(arg) >= 10:
-                    chunks.append({
-                        "text": arg,
-                        "source_quote": "",
-                        "chunk_type": "argument",
-                    })
+                    chunks.append(
+                        {
+                            "text": arg,
+                            "source_quote": "",
+                            "chunk_type": "argument",
+                        }
+                    )
 
             for claim in claims:
                 if isinstance(claim, dict):
-                    chunks.append({
-                        "text": claim.get("text", str(claim)),
-                        "source_quote": claim.get("source_quote", ""),
-                        "chunk_type": "claim",
-                    })
+                    chunks.append(
+                        {
+                            "text": claim.get("text", str(claim)),
+                            "source_quote": claim.get("source_quote", ""),
+                            "chunk_type": "claim",
+                        }
+                    )
                 elif isinstance(claim, str) and len(claim) >= 10:
-                    chunks.append({
-                        "text": claim,
-                        "source_quote": "",
-                        "chunk_type": "claim",
-                    })
+                    chunks.append(
+                        {
+                            "text": claim,
+                            "source_quote": "",
+                            "chunk_type": "claim",
+                        }
+                    )
 
             if chunks:
                 return chunks
 
         # Fallback: sentence-level splitting
         import re
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        sentences = re.split(r"(?<=[.!?])\s+", text)
         return [
             {"text": s.strip(), "source_quote": "", "chunk_type": "sentence"}
             for s in sentences

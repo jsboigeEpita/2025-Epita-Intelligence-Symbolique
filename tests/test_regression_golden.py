@@ -65,15 +65,15 @@ GOLDEN_TEXTS = {
 # Minimum thresholds per workflow type
 THRESHOLDS = {
     "light": {
-        "min_arguments": 2,       # heuristic extraction is conservative
+        "min_arguments": 2,  # heuristic extraction is conservative
         "min_quality_scores": 1,
         "min_counter_arguments": 1,
     },
     "standard": {
         "min_arguments": 3,
-        "min_fallacies": 0,        # hierarchical detector may not always fire
+        "min_fallacies": 0,  # hierarchical detector may not always fire
         "min_quality_scores": 1,
-        "min_fol_formulas": 0,     # NL-to-logic depends on LLM availability
+        "min_fol_formulas": 0,  # NL-to-logic depends on LLM availability
         "min_belief_sets": 1,
         "min_counter_arguments": 1,
     },
@@ -98,7 +98,9 @@ def _check_thresholds(
 
     n_quality = len(state.argument_quality_scores)
     if n_quality < thresholds.get("min_quality_scores", 0):
-        violations.append(f"quality_scores: {n_quality} < {thresholds['min_quality_scores']}")
+        violations.append(
+            f"quality_scores: {n_quality} < {thresholds['min_quality_scores']}"
+        )
 
     n_fol = len(state.fol_analysis_results)
     if n_fol < thresholds.get("min_fol_formulas", 0):
@@ -110,7 +112,9 @@ def _check_thresholds(
 
     n_counter = len(state.counter_arguments)
     if n_counter < thresholds.get("min_counter_arguments", 0):
-        violations.append(f"counter_arguments: {n_counter} < {thresholds['min_counter_arguments']}")
+        violations.append(
+            f"counter_arguments: {n_counter} < {thresholds['min_counter_arguments']}"
+        )
 
     return violations
 
@@ -136,58 +140,74 @@ class TestGoldenLightWorkflow:
         """Light workflow extracts at least 2 arguments from each golden text."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         state = result["unified_state"]
         assert isinstance(state, UnifiedAnalysisState)
         n_args = len(state.identified_arguments)
-        assert n_args >= THRESHOLDS["light"]["min_arguments"], (
-            f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_arguments']} arguments, got {n_args}"
-        )
+        assert (
+            n_args >= THRESHOLDS["light"]["min_arguments"]
+        ), f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_arguments']} arguments, got {n_args}"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_light_produces_quality_scores(self, registry, text_name):
         """Light workflow produces quality evaluation scores."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         state = result["unified_state"]
         n_quality = len(state.argument_quality_scores)
-        assert n_quality >= THRESHOLDS["light"]["min_quality_scores"], (
-            f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_quality_scores']} quality scores, got {n_quality}"
-        )
+        assert (
+            n_quality >= THRESHOLDS["light"]["min_quality_scores"]
+        ), f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_quality_scores']} quality scores, got {n_quality}"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_light_produces_counter_arguments(self, registry, text_name):
         """Light workflow generates at least 1 counter-argument."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         state = result["unified_state"]
         n_counter = len(state.counter_arguments)
-        assert n_counter >= THRESHOLDS["light"]["min_counter_arguments"], (
-            f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_counter_arguments']} counter-arguments, got {n_counter}"
-        )
+        assert (
+            n_counter >= THRESHOLDS["light"]["min_counter_arguments"]
+        ), f"[{text_name}/light] Expected >= {THRESHOLDS['light']['min_counter_arguments']} counter-arguments, got {n_counter}"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_light_phases_complete(self, registry, text_name):
         """Light workflow: extract + quality + counter all complete."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         phases = result["phases"]
-        assert phases["extract"].status.value == "completed", f"[{text_name}] extract phase not completed"
-        assert phases["quality"].status.value == "completed", f"[{text_name}] quality phase not completed"
-        assert phases["counter"].status.value == "completed", f"[{text_name}] counter phase not completed"
+        assert (
+            phases["extract"].status.value == "completed"
+        ), f"[{text_name}] extract phase not completed"
+        assert (
+            phases["quality"].status.value == "completed"
+        ), f"[{text_name}] quality phase not completed"
+        assert (
+            phases["counter"].status.value == "completed"
+        ), f"[{text_name}] counter phase not completed"
 
     async def test_light_state_snapshot_has_all_fields(self, registry):
         """Light workflow state snapshot includes expected dimension counts."""
         text = GOLDEN_TEXTS["vaccins"]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         snapshot = result["state_snapshot"]
         assert "counter_argument_count" in snapshot
@@ -218,69 +238,85 @@ class TestGoldenStandardWorkflow:
         """Standard workflow meets all quality thresholds."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
-        violations = _check_thresholds(state, THRESHOLDS["standard"], f"{text_name}/standard")
-        assert violations == [], (
-            f"[{text_name}/standard] Threshold violations: {'; '.join(violations)}"
+        violations = _check_thresholds(
+            state, THRESHOLDS["standard"], f"{text_name}/standard"
         )
+        assert (
+            violations == []
+        ), f"[{text_name}/standard] Threshold violations: {'; '.join(violations)}"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_standard_produces_fallacies(self, registry, text_name):
         """Standard workflow detects at least 1 fallacy per text."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
         n_fallacies = len(state.identified_fallacies)
-        assert n_fallacies >= 1, (
-            f"[{text_name}/standard] Expected >= 1 fallacy, got {n_fallacies}"
-        )
+        assert (
+            n_fallacies >= 1
+        ), f"[{text_name}/standard] Expected >= 1 fallacy, got {n_fallacies}"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_standard_produces_fol_results(self, registry, text_name):
         """Standard workflow produces FOL analysis results."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
-        assert len(state.fol_analysis_results) >= 1, (
-            f"[{text_name}/standard] No FOL analysis results"
-        )
+        assert (
+            len(state.fol_analysis_results) >= 1
+        ), f"[{text_name}/standard] No FOL analysis results"
 
     @pytest.mark.parametrize("text_name", list(GOLDEN_TEXTS.keys()))
     async def test_standard_produces_jtms_beliefs(self, registry, text_name):
         """Standard workflow creates JTMS beliefs."""
         text = GOLDEN_TEXTS[text_name]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
         n_jtms = len(state.jtms_beliefs)
-        assert n_jtms >= 1, (
-            f"[{text_name}/standard] Expected >= 1 JTMS belief, got {n_jtms}"
-        )
+        assert (
+            n_jtms >= 1
+        ), f"[{text_name}/standard] Expected >= 1 JTMS belief, got {n_jtms}"
 
     async def test_standard_enrichment_summary(self, registry):
         """Standard workflow produces a valid enrichment summary."""
         text = GOLDEN_TEXTS["climat"]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
         summary = state.get_enrichment_summary()
         assert summary["total_arguments"] >= 3
         assert summary["with_quality_score"] >= 1
-        assert summary["with_fallacy_analysis"] >= 0  # may be 0 if no fallacy targets matched
+        assert (
+            summary["with_fallacy_analysis"] >= 0
+        )  # may be 0 if no fallacy targets matched
 
     async def test_standard_argument_profiles(self, registry):
         """Standard workflow produces argument profiles with cross-references."""
         text = GOLDEN_TEXTS["peine_de_mort"]
         result = await run_unified_analysis(
-            text=text, workflow_name="standard", registry=registry,
+            text=text,
+            workflow_name="standard",
+            registry=registry,
         )
         state = result["unified_state"]
         for arg_id in list(state.identified_arguments.keys())[:3]:
@@ -305,22 +341,30 @@ class TestRegressionSnapshots:
         """Light workflow result always has the same top-level keys."""
         text = GOLDEN_TEXTS["vaccins"]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         expected_keys = {
-            "workflow_name", "phases", "summary",
-            "capabilities_used", "capabilities_missing",
-            "unified_state", "state_snapshot",
+            "workflow_name",
+            "phases",
+            "summary",
+            "capabilities_used",
+            "capabilities_missing",
+            "unified_state",
+            "state_snapshot",
         }
-        assert expected_keys.issubset(set(result.keys())), (
-            f"Missing keys: {expected_keys - set(result.keys())}"
-        )
+        assert expected_keys.issubset(
+            set(result.keys())
+        ), f"Missing keys: {expected_keys - set(result.keys())}"
 
     async def test_state_snapshot_dimensions_stable(self, registry):
         """State snapshot always includes all expected dimension counts."""
         text = GOLDEN_TEXTS["climat"]
         result = await run_unified_analysis(
-            text=text, workflow_name="light", registry=registry,
+            text=text,
+            workflow_name="light",
+            registry=registry,
         )
         snapshot = result["state_snapshot"]
         expected_dimensions = [

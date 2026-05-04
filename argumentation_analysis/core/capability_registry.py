@@ -51,7 +51,9 @@ class ComponentRegistration:
     requires: List[str] = field(default_factory=list)
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    invoke: Optional[Callable[..., Any]] = None  # async (input_text: str, context: Dict) -> Any
+    invoke: Optional[Callable[..., Any]] = (
+        None  # async (input_text: str, context: Dict) -> Any
+    )
 
     @property
     def provides(self) -> List[str]:

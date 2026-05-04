@@ -125,7 +125,9 @@ class ConversationalTraceAnalyzer:
             f"{sum(len(p.turns) for p in self.phases)} turns"
         )
 
-    def begin_phase(self, phase_name: str, state_snapshot: Optional[Dict] = None) -> None:
+    def begin_phase(
+        self, phase_name: str, state_snapshot: Optional[Dict] = None
+    ) -> None:
         """Begin tracking a new conversational phase."""
         if self._current_phase and not self._current_phase.end_time:
             self._current_phase.end_time = time.time()
@@ -184,7 +186,9 @@ class ConversationalTraceAnalyzer:
         if isinstance(state_snapshot.get("identified_fallacies"), list):
             metrics.fallacies_found = len(state_snapshot["identified_fallacies"])
         if isinstance(state_snapshot.get("argument_quality_scores"), dict):
-            metrics.quality_scores_count = len(state_snapshot["argument_quality_scores"])
+            metrics.quality_scores_count = len(
+                state_snapshot["argument_quality_scores"]
+            )
         if isinstance(state_snapshot.get("counter_arguments"), list):
             metrics.counter_arguments_count = len(state_snapshot["counter_arguments"])
 
@@ -208,15 +212,17 @@ class ConversationalTraceAnalyzer:
 
         phase_summaries = []
         for phase in self.phases:
-            phase_summaries.append({
-                "name": phase.name,
-                "turns": len(phase.turns),
-                "duration_seconds": round(phase.duration, 1),
-                "agents": phase.agents_active,
-                "total_content_chars": phase.total_content,
-                "state_before": phase.state_before,
-                "state_after": phase.state_after,
-            })
+            phase_summaries.append(
+                {
+                    "name": phase.name,
+                    "turns": len(phase.turns),
+                    "duration_seconds": round(phase.duration, 1),
+                    "agents": phase.agents_active,
+                    "total_content_chars": phase.total_content,
+                    "state_before": phase.state_before,
+                    "state_after": phase.state_after,
+                }
+            )
 
         report = {
             "total_phases": len(self.phases),

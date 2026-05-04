@@ -170,8 +170,11 @@ class TestHypothesisDataclass:
 
     def test_with_values(self):
         hyp = Hypothesis(
-            id="h1", name="Test", assumptions=["a", "b"],
-            description="desc", coherent=False,
+            id="h1",
+            name="Test",
+            assumptions=["a", "b"],
+            description="desc",
+            coherent=False,
             retraction_reason="contradicted",
         )
         assert hyp.coherent is False

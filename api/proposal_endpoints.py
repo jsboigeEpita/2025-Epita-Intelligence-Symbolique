@@ -154,8 +154,14 @@ async def list_capabilities():
         for name, reg in registry._registrations.items():
             info = CapabilityInfo(
                 name=name,
-                type=reg.component_type.value if hasattr(reg.component_type, "value") else str(reg.component_type),
-                capabilities=list(reg.capabilities) if hasattr(reg, "capabilities") else [],
+                type=(
+                    reg.component_type.value
+                    if hasattr(reg.component_type, "value")
+                    else str(reg.component_type)
+                ),
+                capabilities=(
+                    list(reg.capabilities) if hasattr(reg, "capabilities") else []
+                ),
             )
             if "agent" in info.type.lower():
                 agents.append(info)
@@ -165,8 +171,13 @@ async def list_capabilities():
                 services.append(info)
 
         workflows = [
-            "light", "standard", "full", "auto",
-            "democratech", "debate_tournament", "fact_check",
+            "light",
+            "standard",
+            "full",
+            "auto",
+            "democratech",
+            "debate_tournament",
+            "fact_check",
         ]
 
         return CapabilitiesResponse(
@@ -212,6 +223,4 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
         )
     except Exception as e:
         logger.error(f"Custom workflow failed: {e}")
-        return WorkflowResult(
-            workflow=request.workflow, status="failed", error=str(e)
-        )
+        return WorkflowResult(workflow=request.workflow, status="failed", error=str(e))

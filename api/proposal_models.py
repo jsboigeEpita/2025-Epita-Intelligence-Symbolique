@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
-
 # ──── Enums ────
 
 
@@ -43,14 +42,17 @@ class VoteCreate(BaseModel):
 class DeliberationRequest(BaseModel):
     proposal_id: str = Field(..., description="ID of the proposal to deliberate on")
     workflow: str = Field(
-        "democratech", description="Workflow to use (democratech, debate_tournament, fact_check)"
+        "democratech",
+        description="Workflow to use (democratech, debate_tournament, fact_check)",
     )
     options: Dict = Field(default_factory=dict, description="Workflow-specific options")
 
 
 class CustomWorkflowRequest(BaseModel):
     text: str = Field(..., description="Input text for analysis")
-    workflow: str = Field(..., description="Workflow name (light, standard, full, auto)")
+    workflow: str = Field(
+        ..., description="Workflow name (light, standard, full, auto)"
+    )
     options: Dict = Field(default_factory=dict)
 
 

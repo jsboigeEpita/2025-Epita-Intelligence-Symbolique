@@ -27,7 +27,6 @@ from argumentation_analysis.evaluation.plugin_benchmark import (
     PluginBenchmarkSuite,
 )
 
-
 # ============================================================
 # Benchmark cases structure
 # ============================================================
@@ -73,9 +72,9 @@ class TestBenchmarkCases:
         valid = {"easy", "medium", "hard"}
         for plugin, cases in PLUGIN_BENCHMARK_CASES.items():
             for case in cases:
-                assert case["difficulty"] in valid, (
-                    f"{case['id']}: invalid difficulty '{case['difficulty']}'"
-                )
+                assert (
+                    case["difficulty"] in valid
+                ), f"{case['id']}: invalid difficulty '{case['difficulty']}'"
 
     def test_case_ids_unique(self):
         """Test that all case IDs are unique."""
@@ -93,9 +92,9 @@ class TestBenchmarkCases:
         """Test that Tier A plugins (no deps) have >= 3 cases each."""
         tier_a = ["governance", "quality_scoring", "atms"]
         for plugin in tier_a:
-            assert len(PLUGIN_BENCHMARK_CASES[plugin]) >= 3, (
-                f"Tier A plugin {plugin} should have >= 3 cases"
-            )
+            assert (
+                len(PLUGIN_BENCHMARK_CASES[plugin]) >= 3
+            ), f"Tier A plugin {plugin} should have >= 3 cases"
 
     def test_total_case_count(self):
         """Test total case count is in expected range."""
@@ -165,12 +164,18 @@ class TestPluginBenchmarkReport:
         report = PluginBenchmarkReport()
         report.results = [
             PluginBenchmarkResult(
-                case_id="gov_01", plugin_name="governance",
-                function_name="social_choice_vote", passed=True, latency_ms=5.0,
+                case_id="gov_01",
+                plugin_name="governance",
+                function_name="social_choice_vote",
+                passed=True,
+                latency_ms=5.0,
             ),
             PluginBenchmarkResult(
-                case_id="gov_02", plugin_name="governance",
-                function_name="detect_conflicts_fn", passed=False, latency_ms=3.0,
+                case_id="gov_02",
+                plugin_name="governance",
+                function_name="detect_conflicts_fn",
+                passed=False,
+                latency_ms=3.0,
                 error="test error",
             ),
         ]
@@ -360,7 +365,9 @@ class TestQualityScoringBenchmark:
     def test_list_virtues(self):
         """Test that list_virtues returns exactly 9 virtues."""
         suite = PluginBenchmarkSuite()
-        result = suite.run_single("quality_scoring", PLUGIN_BENCHMARK_CASES["quality_scoring"][2])
+        result = suite.run_single(
+            "quality_scoring", PLUGIN_BENCHMARK_CASES["quality_scoring"][2]
+        )
         assert result.passed
         assert result.error == ""
 
@@ -496,9 +503,9 @@ class TestPluginRegistry:
         """Test that registry covers all benchmarked plugins."""
         suite = PluginBenchmarkSuite()
         for plugin_name in PLUGIN_BENCHMARK_CASES:
-            assert plugin_name in suite.PLUGIN_REGISTRY, (
-                f"{plugin_name} missing from PLUGIN_REGISTRY"
-            )
+            assert (
+                plugin_name in suite.PLUGIN_REGISTRY
+            ), f"{plugin_name} missing from PLUGIN_REGISTRY"
 
     def test_registry_entry_format(self):
         """Test that registry entries have correct format."""
@@ -558,13 +565,16 @@ class TestEdgeCases:
         """Test running a case for an unavailable plugin."""
         suite = PluginBenchmarkSuite()
         with patch.object(suite, "_instantiate_plugin", return_value=None):
-            result = suite.run_single("nonexistent", {
-                "id": "test_01",
-                "function": "test",
-                "args": {},
-                "expected": {},
-                "difficulty": "easy",
-            })
+            result = suite.run_single(
+                "nonexistent",
+                {
+                    "id": "test_01",
+                    "function": "test",
+                    "args": {},
+                    "expected": {},
+                    "difficulty": "easy",
+                },
+            )
         assert result.error != ""
         assert "not available" in result.error
 
@@ -574,13 +584,16 @@ class TestEdgeCases:
         mock_plugin = MagicMock(spec=[])
         # No attribute 'nonexistent_fn'
         with patch.object(suite, "_instantiate_plugin", return_value=mock_plugin):
-            result = suite.run_single("test", {
-                "id": "test_01",
-                "function": "nonexistent_fn",
-                "args": {},
-                "expected": {},
-                "difficulty": "easy",
-            })
+            result = suite.run_single(
+                "test",
+                {
+                    "id": "test_01",
+                    "function": "nonexistent_fn",
+                    "args": {},
+                    "expected": {},
+                    "difficulty": "easy",
+                },
+            )
         assert "not found" in result.error
 
     def test_run_single_exception_in_function(self):
@@ -589,13 +602,16 @@ class TestEdgeCases:
         mock_plugin = MagicMock()
         mock_plugin.test_fn.side_effect = ValueError("test error")
         with patch.object(suite, "_instantiate_plugin", return_value=mock_plugin):
-            result = suite.run_single("test", {
-                "id": "test_01",
-                "function": "test_fn",
-                "args": {},
-                "expected": {},
-                "difficulty": "easy",
-            })
+            result = suite.run_single(
+                "test",
+                {
+                    "id": "test_01",
+                    "function": "test_fn",
+                    "args": {},
+                    "expected": {},
+                    "difficulty": "easy",
+                },
+            )
         assert result.error != ""
         assert not result.passed
         assert "EXCEPTION" in result.validation_details
@@ -624,11 +640,14 @@ class TestEdgeCases:
         mock_plugin.test_fn.return_value = async_fn()
 
         with patch.object(suite, "_instantiate_plugin", return_value=mock_plugin):
-            result = suite.run_single("test", {
-                "id": "async_01",
-                "function": "test_fn",
-                "args": {},
-                "expected": {"returns_json": True},
-                "difficulty": "easy",
-            })
+            result = suite.run_single(
+                "test",
+                {
+                    "id": "async_01",
+                    "function": "test_fn",
+                    "args": {},
+                    "expected": {"returns_json": True},
+                    "difficulty": "easy",
+                },
+            )
         assert result.passed

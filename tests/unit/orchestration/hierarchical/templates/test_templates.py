@@ -24,10 +24,10 @@ from argumentation_analysis.orchestration.hierarchical.templates.analysis_tool_t
     ANALYSIS_TOOL_CONFIG_EXAMPLE,
 )
 
-
 # ============================================================
 # BaseAgent (agent_template)
 # ============================================================
+
 
 class TestBaseAgent:
     def test_init_with_name(self):
@@ -68,6 +68,7 @@ class TestBaseAgent:
 # ============================================================
 # BaseOrchestrationStrategy (strategy_template)
 # ============================================================
+
 
 class TestBaseOrchestrationStrategy:
     def test_init_with_name(self):
@@ -121,6 +122,7 @@ class TestBaseOrchestrationStrategy:
 # BaseAnalysisType (analysis_type_template)
 # ============================================================
 
+
 class TestBaseAnalysisType:
     def test_init_with_name(self):
         t = BaseAnalysisType({"name": "my_analysis"})
@@ -165,6 +167,7 @@ class TestBaseAnalysisType:
 # ============================================================
 # BaseAnalysisTool (analysis_tool_template)
 # ============================================================
+
 
 class TestBaseAnalysisTool:
     def test_init_with_name(self):

@@ -46,27 +46,39 @@ class TestSherlockModernOrchestrator:
     def test_uses_at_least_5_agents(self):
         orch = SherlockModernOrchestrator()
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
-        assert result.agent_count >= 5, (
-            f"Expected >= 5 agents, got {result.agent_count}: {result.agents_used}"
-        )
+        assert (
+            result.agent_count >= 5
+        ), f"Expected >= 5 agents, got {result.agent_count}: {result.agents_used}"
 
     def test_agents_include_required_types(self):
         orch = SherlockModernOrchestrator()
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
         agents_lower = [a.lower() for a in result.agents_used]
-        assert any("extract" in a for a in agents_lower), f"Missing ExtractAgent in {result.agents_used}"
-        assert any("fallacy" in a or "informal" in a for a in agents_lower), f"Missing fallacy agent in {result.agents_used}"
-        assert any("quality" in a for a in agents_lower), f"Missing quality agent in {result.agents_used}"
-        assert any("counter" in a for a in agents_lower), f"Missing counter-arg agent in {result.agents_used}"
-        assert any("jtms" in a for a in agents_lower), f"Missing JTMS in {result.agents_used}"
-        assert any("atms" in a for a in agents_lower), f"Missing ATMS in {result.agents_used}"
+        assert any(
+            "extract" in a for a in agents_lower
+        ), f"Missing ExtractAgent in {result.agents_used}"
+        assert any(
+            "fallacy" in a or "informal" in a for a in agents_lower
+        ), f"Missing fallacy agent in {result.agents_used}"
+        assert any(
+            "quality" in a for a in agents_lower
+        ), f"Missing quality agent in {result.agents_used}"
+        assert any(
+            "counter" in a for a in agents_lower
+        ), f"Missing counter-arg agent in {result.agents_used}"
+        assert any(
+            "jtms" in a for a in agents_lower
+        ), f"Missing JTMS in {result.agents_used}"
+        assert any(
+            "atms" in a for a in agents_lower
+        ), f"Missing ATMS in {result.agents_used}"
 
     def test_trace_has_7_steps(self):
         orch = SherlockModernOrchestrator()
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
-        assert len(result.trace) >= 7, (
-            f"Expected >= 7 trace steps, got {len(result.trace)}"
-        )
+        assert (
+            len(result.trace) >= 7
+        ), f"Expected >= 7 trace steps, got {len(result.trace)}"
 
     def test_trace_steps_have_required_fields(self):
         orch = SherlockModernOrchestrator()
@@ -83,9 +95,13 @@ class TestSherlockModernOrchestrator:
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
         phases = [s["phase"] for s in result.trace]
         expected = [
-            "extraction", "fallacy_detection", "quality_evaluation",
-            "cross_examination", "belief_tracking",
-            "hypothesis_branching", "solution_synthesis",
+            "extraction",
+            "fallacy_detection",
+            "quality_evaluation",
+            "cross_examination",
+            "belief_tracking",
+            "hypothesis_branching",
+            "solution_synthesis",
         ]
         for expected_phase in expected:
             assert expected_phase in phases, f"Missing phase: {expected_phase}"
@@ -135,6 +151,7 @@ class TestSherlockModernOrchestrator:
             ".SherlockModernOrchestrator._invoke_safe",
             new_callable=AsyncMock,
         ) as mock_invoke:
+
             async def fake_invoke(func_name, text, fallback):
                 return dict(fallback)
 
@@ -172,8 +189,11 @@ class TestInvestigationStep:
 
     def test_creation(self):
         step = InvestigationStep(
-            step=1, phase="test", agent="Agent",
-            findings={"k": "v"}, conclusion="test conclusion",
+            step=1,
+            phase="test",
+            agent="Agent",
+            findings={"k": "v"},
+            conclusion="test conclusion",
         )
         assert step.step == 1
         assert step.phase == "test"

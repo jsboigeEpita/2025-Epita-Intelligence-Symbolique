@@ -94,7 +94,7 @@ class TestPipelineMetrics:
         assert summary["total_analyses"] == 3
         assert summary["successful"] == 2
         assert summary["failed"] == 1
-        assert summary["success_rate"] == 2/3
+        assert summary["success_rate"] == 2 / 3
 
     def test_confidence_aggregation(self):
         """Test confidence score aggregation."""

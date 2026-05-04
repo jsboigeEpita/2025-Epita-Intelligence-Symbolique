@@ -6,6 +6,7 @@ Verifies that:
 3. Respects confidence threshold
 4. FrenchFallacyAdapter defaults to CamemBERT disabled
 """
+
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,6 +19,7 @@ class TestLLMFallacyDetector:
         from argumentation_analysis.adapters.french_fallacy_adapter import (
             LLMFallacyDetector,
         )
+
         return LLMFallacyDetector(confidence_threshold=0.4)
 
     def test_is_available_with_api_key(self):
@@ -40,22 +42,24 @@ class TestLLMFallacyDetector:
             LLMFallacyDetector,
         )
 
-        llm_response = json.dumps({
-            "fallacies": [
-                {
-                    "type": "Argument d'autorite (Appeal to Authority)",
-                    "confidence": 0.85,
-                    "explanation": "Utilise une autorite non pertinente",
-                    "target_text": "Elon Musk a dit que",
-                },
-                {
-                    "type": "Generalisation hative (Hasty Generalization)",
-                    "confidence": 0.3,  # below threshold
-                    "explanation": "Pas assez d'exemples",
-                    "target_text": "Tous les...",
-                },
-            ]
-        })
+        llm_response = json.dumps(
+            {
+                "fallacies": [
+                    {
+                        "type": "Argument d'autorite (Appeal to Authority)",
+                        "confidence": 0.85,
+                        "explanation": "Utilise une autorite non pertinente",
+                        "target_text": "Elon Musk a dit que",
+                    },
+                    {
+                        "type": "Generalisation hative (Hasty Generalization)",
+                        "confidence": 0.3,  # below threshold
+                        "explanation": "Pas assez d'exemples",
+                        "target_text": "Tous les...",
+                    },
+                ]
+            }
+        )
 
         mock_message = MagicMock()
         mock_message.content = llm_response
@@ -72,7 +76,9 @@ class TestLLMFallacyDetector:
         with patch.object(
             detector, "_get_openai_client", return_value=(mock_client, "gpt-5-mini")
         ):
-            result = await detector.detect_async("L'IA est dangereuse car Elon Musk l'a dit.")
+            result = await detector.detect_async(
+                "L'IA est dangereuse car Elon Musk l'a dit."
+            )
 
         # First fallacy above threshold
         assert len(result) == 1

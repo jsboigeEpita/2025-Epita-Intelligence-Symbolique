@@ -242,6 +242,7 @@ class TweetyBridge:
             raise RuntimeError("JVM not started.")
         if self._qbf_handler is None:
             from .qbf_handler import QBFHandler
+
             self._qbf_handler = QBFHandler(self._initializer)
         return self._qbf_handler
 

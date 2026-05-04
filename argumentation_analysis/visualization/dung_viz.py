@@ -35,6 +35,7 @@ def render_attack_graph(
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         import networkx as nx
@@ -81,8 +82,12 @@ def render_attack_graph(
     )
     nx.draw_networkx_labels(G, pos, ax=ax, font_size=8, font_weight="bold")
     nx.draw_networkx_edges(
-        G, pos, ax=ax, edge_color="#666",
-        arrowsize=20, arrowstyle="-|>",
+        G,
+        pos,
+        ax=ax,
+        edge_color="#666",
+        arrowsize=20,
+        arrowstyle="-|>",
         connectionstyle="arc3,rad=0.1",
     )
 
@@ -99,8 +104,12 @@ def render_attack_graph(
         for sem, exts in extensions.items():
             stats_text += f"\n{sem}: {len(exts)} ext(s)"
     ax.text(
-        0.02, 0.02, stats_text, transform=ax.transAxes,
-        fontsize=8, verticalalignment="bottom",
+        0.02,
+        0.02,
+        stats_text,
+        transform=ax.transAxes,
+        fontsize=8,
+        verticalalignment="bottom",
         bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
     )
 

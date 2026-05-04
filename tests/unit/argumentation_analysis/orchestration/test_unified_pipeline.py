@@ -735,7 +735,9 @@ class TestInvokeCallables:
         result = await _invoke_jtms(
             "First claim here. Second claim here. Third claim here.", {}
         )
-        assert result["belief_count"] >= 3  # 3 sentences + possible synthetic conclusion
+        assert (
+            result["belief_count"] >= 3
+        )  # 3 sentences + possible synthetic conclusion
         assert isinstance(result["beliefs"], dict)
         # New format: beliefs with validity, justifications (repr), and content
         for name, data in result["beliefs"].items():
@@ -2221,6 +2223,7 @@ class TestHierarchicalFallacyWorkflow:
             orig_async_client = openai_mod.AsyncOpenAI
 
             from unittest.mock import AsyncMock
+
             mock_plugin_instance = MagicMock()
             mock_plugin_instance.run_guided_analysis = AsyncMock(
                 side_effect=ValueError("Unexpected LLM response format"),

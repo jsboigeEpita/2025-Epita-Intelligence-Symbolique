@@ -15,7 +15,6 @@ from argumentation_analysis.adapters.french_fallacy_adapter import (
     _TAXONOMY_PK_TO_NODE,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -91,9 +90,7 @@ class TestLoadTaxonomyHierarchy:
                 assert sub["depth"] == 2
 
     def test_pk_to_node_populated(self, hierarchy):
-        assert len(_TAXONOMY_PK_TO_NODE) > 100, (
-            "PK lookup should have many entries"
-        )
+        assert len(_TAXONOMY_PK_TO_NODE) > 100, "PK lookup should have many entries"
         # Spot check: PK 1 = Insuffisance
         assert _TAXONOMY_PK_TO_NODE[1]["label"] == "Insuffisance"
 
@@ -131,9 +128,15 @@ class TestHierarchicalStage1:
             if len(candidate_labels) == 7:
                 # Stage 1 call
                 return _mock_classifier_result(
-                    ["Insuffisance", "Influence", "Tricherie",
-                     "Obstruction", "Abus de langage",
-                     "Erreur math\u00e9matique", "Erreur de raisonnement"],
+                    [
+                        "Insuffisance",
+                        "Influence",
+                        "Tricherie",
+                        "Obstruction",
+                        "Abus de langage",
+                        "Erreur math\u00e9matique",
+                        "Erreur de raisonnement",
+                    ],
                     [0.8, 0.2, 0.1, 0.05, 0.04, 0.03, 0.02],
                 )
             # Stage 2 call -- return low scores so we stay at family level
@@ -181,9 +184,9 @@ class TestHierarchicalStage2:
             call_count["n"] += 1
             if call_count["n"] == 1:
                 # Stage 1: Obstruction wins
-                ordered = sorted(candidate_labels,
-                                 key=lambda x: x == "Obstruction",
-                                 reverse=True)
+                ordered = sorted(
+                    candidate_labels, key=lambda x: x == "Obstruction", reverse=True
+                )
                 scores = [0.7] + [0.05] * (len(ordered) - 1)
                 return _mock_classifier_result(ordered, scores)
             else:
@@ -214,9 +217,9 @@ class TestHierarchicalStage2:
             call_count["n"] += 1
             if call_count["n"] == 1:
                 # Stage 1: Influence scores high
-                ordered = sorted(candidate_labels,
-                                 key=lambda x: x == "Influence",
-                                 reverse=True)
+                ordered = sorted(
+                    candidate_labels, key=lambda x: x == "Influence", reverse=True
+                )
                 scores = [0.6] + [0.05] * (len(ordered) - 1)
                 return _mock_classifier_result(ordered, scores)
             else:
@@ -371,9 +374,7 @@ class TestAdapterHierarchicalIntegration:
         adapter._nli = mock_nli
 
         result = adapter.detect("test text")
-        mock_nli.detect.assert_called_once_with(
-            "test text", hierarchical=True
-        )
+        mock_nli.detect.assert_called_once_with("test text", hierarchical=True)
         assert "nli_hierarchical" in result["tiers_used"]
 
     def test_adapter_detect_calls_nli_flat_by_default(self):
@@ -388,6 +389,4 @@ class TestAdapterHierarchicalIntegration:
         adapter._nli = mock_nli
 
         adapter.detect("test text")
-        mock_nli.detect.assert_called_once_with(
-            "test text", hierarchical=False
-        )
+        mock_nli.detect.assert_called_once_with("test text", hierarchical=False)

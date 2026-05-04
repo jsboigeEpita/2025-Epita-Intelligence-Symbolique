@@ -98,7 +98,7 @@ class Belief:
                 conclusion.compute_truth_statement()
                 # Track cascade: conclusion was valid, now retracted
                 if (
-                    hasattr(self, '_jtms_ref')
+                    hasattr(self, "_jtms_ref")
                     and self._jtms_ref is not None
                     and self._jtms_ref._tracing_enabled
                     and old_valid is True
@@ -174,12 +174,14 @@ class JTMS:
         belief = self.beliefs[belief_name]
         old_valid = belief.valid
         if self._tracing_enabled and old_valid is True and validity is not True:
-            self._retraction_trace.append({
-                "trigger": belief_name,
-                "retracted": [belief_name],
-                "cascaded": [],
-                "reason": f"directly set to {validity}",
-            })
+            self._retraction_trace.append(
+                {
+                    "trigger": belief_name,
+                    "retracted": [belief_name],
+                    "cascaded": [],
+                    "reason": f"directly set to {validity}",
+                }
+            )
         belief.set_truth_value(validity)
 
     def add_justification(

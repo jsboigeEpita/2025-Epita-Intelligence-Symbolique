@@ -212,7 +212,9 @@ class TestArgumentQualityEvaluator:
 
 class TestEvaluerArgument:
     def test_convenience_function(self):
-        result = qe.evaluer_argument("Selon l'OMS, c'est vrai car les données le montrent.")
+        result = qe.evaluer_argument(
+            "Selon l'OMS, c'est vrai car les données le montrent."
+        )
         assert "note_finale" in result
 
 

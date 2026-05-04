@@ -37,36 +37,85 @@ SAMPLE_DISCOURSE = (
 
 MOCK_INVESTIGATION = InvestigationResult(
     trace=[
-        {"step": 1, "phase": "extraction", "agent": "ExtractAgent",
-         "findings": {"claims_found": 2, "arguments_found": 1}, "conclusion": "Found 2 claims"},
-        {"step": 2, "phase": "fallacy_detection", "agent": "InformalAnalysisAgent",
-         "findings": {"fallacy_count": 2, "types": ["ad_hominem", "generalisation_hative"]},
-         "conclusion": "Detected 2 fallacies"},
-        {"step": 3, "phase": "quality_evaluation", "agent": "QualityScoringPlugin",
-         "findings": {"overall_score": 3.5, "arguments_evaluated": 2}, "conclusion": "Score 3.5/10"},
-        {"step": 4, "phase": "cross_examination", "agent": "CounterArgumentAgent",
-         "findings": {"counter_arguments": 1, "strategy": "reductio"},
-         "conclusion": "Cross-exam produced 1 counter"},
-        {"step": 5, "phase": "belief_tracking", "agent": "JTMS",
-         "findings": {"beliefs_total": 3, "beliefs_valid": 2, "beliefs_invalid": 1},
-         "conclusion": "3 beliefs, 1 retracted"},
-        {"step": 6, "phase": "hypothesis_branching", "agent": "ATMS",
-         "findings": {"hypotheses_tested": 2, "coherent": 1, "incoherent": 1},
-         "conclusion": "1 coherent, 1 incoherent"},
-        {"step": 7, "phase": "solution_synthesis", "agent": "NarrativeSynthesisPlugin",
-         "findings": {"paragraph_count": 1}, "conclusion": "Synthesis complete"},
+        {
+            "step": 1,
+            "phase": "extraction",
+            "agent": "ExtractAgent",
+            "findings": {"claims_found": 2, "arguments_found": 1},
+            "conclusion": "Found 2 claims",
+        },
+        {
+            "step": 2,
+            "phase": "fallacy_detection",
+            "agent": "InformalAnalysisAgent",
+            "findings": {
+                "fallacy_count": 2,
+                "types": ["ad_hominem", "generalisation_hative"],
+            },
+            "conclusion": "Detected 2 fallacies",
+        },
+        {
+            "step": 3,
+            "phase": "quality_evaluation",
+            "agent": "QualityScoringPlugin",
+            "findings": {"overall_score": 3.5, "arguments_evaluated": 2},
+            "conclusion": "Score 3.5/10",
+        },
+        {
+            "step": 4,
+            "phase": "cross_examination",
+            "agent": "CounterArgumentAgent",
+            "findings": {"counter_arguments": 1, "strategy": "reductio"},
+            "conclusion": "Cross-exam produced 1 counter",
+        },
+        {
+            "step": 5,
+            "phase": "belief_tracking",
+            "agent": "JTMS",
+            "findings": {"beliefs_total": 3, "beliefs_valid": 2, "beliefs_invalid": 1},
+            "conclusion": "3 beliefs, 1 retracted",
+        },
+        {
+            "step": 6,
+            "phase": "hypothesis_branching",
+            "agent": "ATMS",
+            "findings": {"hypotheses_tested": 2, "coherent": 1, "incoherent": 1},
+            "conclusion": "1 coherent, 1 incoherent",
+        },
+        {
+            "step": 7,
+            "phase": "solution_synthesis",
+            "agent": "NarrativeSynthesisPlugin",
+            "findings": {"paragraph_count": 1},
+            "conclusion": "Synthesis complete",
+        },
     ],
     reasoning_chain=[
-        "Found 2 claims", "Detected 2 fallacies", "Score 3.5/10",
-        "Cross-exam produced 1 counter", "3 beliefs, 1 retracted",
-        "1 coherent, 1 incoherent", "Synthesis complete",
+        "Found 2 claims",
+        "Detected 2 fallacies",
+        "Score 3.5/10",
+        "Cross-exam produced 1 counter",
+        "3 beliefs, 1 retracted",
+        "1 coherent, 1 incoherent",
+        "Synthesis complete",
     ],
-    agents_used=["ExtractAgent", "InformalAnalysisAgent", "QualityScoringPlugin",
-                  "CounterArgumentAgent", "JTMS", "ATMS", "NarrativeSynthesisPlugin"],
+    agents_used=[
+        "ExtractAgent",
+        "InformalAnalysisAgent",
+        "QualityScoringPlugin",
+        "CounterArgumentAgent",
+        "JTMS",
+        "ATMS",
+        "NarrativeSynthesisPlugin",
+    ],
     agent_count=7,
     hypotheses=[
         {"id": "h_full_trust", "coherent": True, "assumptions": ["trust_all_sources"]},
-        {"id": "h_skeptical", "coherent": False, "assumptions": ["doubt_fallacious_sources"]},
+        {
+            "id": "h_skeptical",
+            "coherent": False,
+            "assumptions": ["doubt_fallacious_sources"],
+        },
     ],
     solution="Investigation summary: multiple fallacies detected under full trust hypothesis.",
 )
@@ -85,7 +134,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_A"))
@@ -95,7 +145,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_B"))
@@ -105,7 +156,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE))
@@ -115,7 +167,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_A"))
@@ -126,7 +179,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_A"))
@@ -136,7 +190,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE))
@@ -148,7 +203,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             _run(inv.investigate_document(SAMPLE_DISCOURSE))
@@ -160,7 +216,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             _run(inv.investigate_document(SAMPLE_DISCOURSE))
             assert inv.state is state
@@ -169,7 +226,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_X"))
@@ -180,7 +238,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE))
@@ -193,7 +252,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_A"))
@@ -202,23 +262,32 @@ class TestOpenDomainInvestigator:
 
     def test_empty_state_fallback(self):
         empty_result = InvestigationResult(
-            trace=[], reasoning_chain=[], agents_used=[], agent_count=0,
-            hypotheses=[], solution="",
+            trace=[],
+            reasoning_chain=[],
+            agents_used=[],
+            agent_count=0,
+            hypotheses=[],
+            solution="",
         )
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=empty_result,
+            new_callable=AsyncMock,
+            return_value=empty_result,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document("empty", "doc_C"))
-            assert "insufficient" in result.conclusion.lower() or "partial" in result.conclusion.lower()
+            assert (
+                "insufficient" in result.conclusion.lower()
+                or "partial" in result.conclusion.lower()
+            )
 
     def test_claims_analyzed_count(self):
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE))
@@ -229,7 +298,8 @@ class TestOpenDomainInvestigator:
         with patch(
             "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
             ".SherlockModernOrchestrator.investigate",
-            new_callable=AsyncMock, return_value=MOCK_INVESTIGATION,
+            new_callable=AsyncMock,
+            return_value=MOCK_INVESTIGATION,
         ):
             inv = _mocked_investigator()
             result = _run(inv.investigate_document(SAMPLE_DISCOURSE, "doc_A"))
@@ -243,8 +313,11 @@ class TestAttribution:
 
     def test_creation(self):
         attr = Attribution(
-            claim="test claim", attribution="Author claims X",
-            hypothesis_id="h1", coherent=True, confidence=0.8,
+            claim="test claim",
+            attribution="Author claims X",
+            hypothesis_id="h1",
+            coherent=True,
+            confidence=0.8,
         )
         assert attr.claim == "test claim"
         assert attr.coherent is True
@@ -252,8 +325,10 @@ class TestAttribution:
 
     def test_defaults(self):
         attr = Attribution(
-            claim="test", attribution="test",
-            hypothesis_id="h1", coherent=False,
+            claim="test",
+            attribution="test",
+            hypothesis_id="h1",
+            coherent=False,
         )
         assert attr.confidence == 0.0
 
@@ -263,6 +338,7 @@ class TestDemoScript:
 
     def test_demo_file_exists(self):
         from pathlib import Path
+
         demo_path = Path(
             "examples/02_core_system_demos/scripts_demonstration"
             "/demo_sherlock_investigation.py"
@@ -271,6 +347,7 @@ class TestDemoScript:
 
     def test_demo_has_run_function(self):
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "demo_sherlock",
             "examples/02_core_system_demos/scripts_demonstration"

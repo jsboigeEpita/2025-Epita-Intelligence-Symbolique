@@ -3,6 +3,7 @@
 Verifies list_available_workflows includes conversational and
 run_unified_analysis normalizes conversational result format.
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -31,7 +32,10 @@ class TestListAvailableWorkflows:
 
     def test_fallback_includes_conversational(self):
         """Fallback list includes 'conversational' even when import fails."""
-        with patch.dict("sys.modules", {"argumentation_analysis.orchestration.unified_pipeline": None}):
+        with patch.dict(
+            "sys.modules",
+            {"argumentation_analysis.orchestration.unified_pipeline": None},
+        ):
             # Force re-import to trigger fallback
             import importlib
             import argumentation_analysis.evaluation.multi_model_benchmark as mod
@@ -78,7 +82,9 @@ class TestRunUnifiedAnalysisConversational:
             new_callable=AsyncMock,
             return_value=mock_conv_result,
         ):
-            result = await run_unified_analysis("test text", workflow_name="conversational")
+            result = await run_unified_analysis(
+                "test text", workflow_name="conversational"
+            )
 
         assert "summary" in result
         assert result["summary"]["completed"] == 3
@@ -99,7 +105,9 @@ class TestRunUnifiedAnalysisConversational:
             side_effect=ImportError("Module not available"),
         ):
             # Should fall back to standard workflow without raising
-            result = await run_unified_analysis("test text", workflow_name="conversational")
+            result = await run_unified_analysis(
+                "test text", workflow_name="conversational"
+            )
 
         assert result is not None
         # Fell back to standard pipeline, workflow name from catalog

@@ -41,7 +41,12 @@ def _rich_state() -> UnifiedAnalysisState:
     state.add_jtms_belief("premise_A", True, justifications=[])
     state.add_jtms_belief("premise_B", False, justifications=["retracted"])
     state.jtms_retraction_chain = [
-        {"trigger": "premise_B", "retracted": ["premise_B"], "cascaded": ["claim_X"], "reason": "inconsistency"}
+        {
+            "trigger": "premise_B",
+            "retracted": ["premise_B"],
+            "cascaded": ["claim_X"],
+            "reason": "inconsistency",
+        }
     ]
 
     # ATMS
@@ -52,7 +57,10 @@ def _rich_state() -> UnifiedAnalysisState:
 
     # Dung
     state.dung_frameworks = {
-        "framework_1": {"extensions": [["arg_1"], ["arg_2"]], "attacks": [["arg_1", "arg_2"]]}
+        "framework_1": {
+            "extensions": [["arg_1"], ["arg_2"]],
+            "attacks": [["arg_1", "arg_2"]],
+        }
     }
 
     # Formal logic
@@ -99,8 +107,19 @@ class TestBuildNarrative:
     def test_at_least_5_distinct_references(self):
         state = _rich_state()
         result = build_narrative(state)
-        keywords = ["qualite", "sophisme", "croyance", "hypothese", "contre-argument",
-                     "dung", "logique", "jtms", "atms", "retraction", "extension"]
+        keywords = [
+            "qualite",
+            "sophisme",
+            "croyance",
+            "hypothese",
+            "contre-argument",
+            "dung",
+            "logique",
+            "jtms",
+            "atms",
+            "retraction",
+            "extension",
+        ]
         found = sum(1 for kw in keywords if kw in result.lower())
         assert found >= 5, f"Only {found} references found in: {result[:200]}"
 
@@ -139,6 +158,7 @@ class TestNarrativeSynthesisPlugin:
     def test_plugin_synthesize(self):
         plugin = NarrativeSynthesisPlugin()
         import json
+
         state_dict = {
             "argument_quality_scores": {"arg_1": {"overall": 3.5}},
             "identified_fallacies": {"f_1": {"type": "ad_hominem"}},

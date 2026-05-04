@@ -13,8 +13,8 @@ from hypothesis import strategies as st
 
 from argumentation_analysis.services.jtms.atms_core import ATMS, CONTRADICTION_SYMBOL
 
-
 # --- Strategies ---
+
 
 def name_pool(prefix="a", max_names=6):
     return st.lists(
@@ -48,16 +48,24 @@ def atms_with_envs(draw):
     assume(len(all_names) >= 2)
 
     for _ in range(n_just):
-        in_nodes = draw(st.lists(
-            st.sampled_from(all_names), min_size=0, max_size=min(3, len(all_names)),
-            unique=True,
-        ))
+        in_nodes = draw(
+            st.lists(
+                st.sampled_from(all_names),
+                min_size=0,
+                max_size=min(3, len(all_names)),
+                unique=True,
+            )
+        )
         remaining = [n for n in all_names if n not in in_nodes]
         if remaining:
-            out_nodes = draw(st.lists(
-                st.sampled_from(remaining),
-                min_size=0, max_size=2, unique=True,
-            ))
+            out_nodes = draw(
+                st.lists(
+                    st.sampled_from(remaining),
+                    min_size=0,
+                    max_size=2,
+                    unique=True,
+                )
+            )
         else:
             out_nodes = []
         candidates = [n for n in all_names if n not in in_nodes and n not in out_nodes]
@@ -101,9 +109,9 @@ class TestATMSContradictionPropagation:
 
         for name, node in atms.nodes.items():
             for env in node.label:
-                assert not env_to_kill.issubset(env), (
-                    f"Node {name} still has env {set(env)} superset of killed {set(env_to_kill)}"
-                )
+                assert not env_to_kill.issubset(
+                    env
+                ), f"Node {name} still has env {set(env)} superset of killed {set(env_to_kill)}"
 
     @given(atms_data=atms_with_envs())
     @settings(max_examples=40, deadline=2000)
@@ -118,9 +126,9 @@ class TestATMSContradictionPropagation:
 
         for name, node in atms.nodes.items():
             for env in node.label:
-                assert not env_to_kill.issubset(env), (
-                    f"Node {name} still has env {set(env)} superset of killed {set(env_to_kill)}"
-                )
+                assert not env_to_kill.issubset(
+                    env
+                ), f"Node {name} still has env {set(env)} superset of killed {set(env_to_kill)}"
 
 
 class TestATMSEnvironmentMonotonicity:
@@ -133,7 +141,9 @@ class TestATMSEnvironmentMonotonicity:
     @settings(max_examples=50, deadline=2000)
     @pytest.mark.property
     def test_adding_justification_preserves_environments(
-        self, assumptions, derived,
+        self,
+        assumptions,
+        derived,
     ):
         assume(len(assumptions) >= 2 and len(derived) >= 1)
 
@@ -144,9 +154,7 @@ class TestATMSEnvironmentMonotonicity:
             atms.add_node(name)
 
         atms.add_justification([assumptions[0]], [], derived[0])
-        labels_before = {
-            name: set(node.label) for name, node in atms.nodes.items()
-        }
+        labels_before = {name: set(node.label) for name, node in atms.nodes.items()}
 
         # Add another justification that won't trigger contradiction
         if len(assumptions) > 1:
@@ -187,16 +195,16 @@ class TestATMSNogoodEnforcement:
         nogood = frozenset({a1, a2})
         # d0 should NOT have the nogood env (it was invalidated)
         for env in atms.get_environments("d0"):
-            assert not nogood.issubset(env), (
-                f"d0 still has env {set(env)} containing nogood {set(nogood)}"
-            )
+            assert not nogood.issubset(
+                env
+            ), f"d0 still has env {set(env)} containing nogood {set(nogood)}"
 
         # Assumption nodes retain their singleton envs (not supersets of nogood)
         for name in [a1, a2]:
             for env in atms.get_environments(name):
-                assert not nogood.issubset(env), (
-                    f"{name} still has env {set(env)} containing nogood {set(nogood)}"
-                )
+                assert not nogood.issubset(
+                    env
+                ), f"{name} still has env {set(env)} containing nogood {set(nogood)}"
 
 
 class TestATMSHypothesisBranching:

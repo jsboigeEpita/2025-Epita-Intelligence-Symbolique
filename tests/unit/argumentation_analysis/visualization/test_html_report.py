@@ -5,7 +5,13 @@ import pathlib
 
 import pytest
 
-FIXTURE_PATH = pathlib.Path(__file__).parent.parent.parent.parent / "golden" / "fixtures" / "spectacular" / "doc_a_golden.json"
+FIXTURE_PATH = (
+    pathlib.Path(__file__).parent.parent.parent.parent
+    / "golden"
+    / "fixtures"
+    / "spectacular"
+    / "doc_a_golden.json"
+)
 
 
 @pytest.fixture
@@ -164,14 +170,32 @@ class TestHTMLReport:
                 "debate": {"straw_man": 0.4, "false_dilemma": 0.6},
             },
             "asymmetry": {
-                "propaganda": {"tricherie_share": 0.2, "influence_share": 0.8, "asymmetry": 0.6},
-                "debate": {"tricherie_share": 0.5, "influence_share": 0.5, "asymmetry": 0.0},
+                "propaganda": {
+                    "tricherie_share": 0.2,
+                    "influence_share": 0.8,
+                    "asymmetry": 0.6,
+                },
+                "debate": {
+                    "tricherie_share": 0.5,
+                    "influence_share": 0.5,
+                    "asymmetry": 0.0,
+                },
             },
             "cooccurrence_pairs": [
-                {"a": "ad_hominem", "b": "appeal_to_fear", "support": 5, "lift": 2.3, "jaccard": 0.45},
+                {
+                    "a": "ad_hominem",
+                    "b": "appeal_to_fear",
+                    "support": 5,
+                    "lift": 2.3,
+                    "jaccard": 0.45,
+                },
             ],
             "cross_coverage": {
-                "ad_hominem": {"fol_invalid": 0.0, "dung_unsupported": 1.0, "jtms_retraction": 0.0},
+                "ad_hominem": {
+                    "fol_invalid": 0.0,
+                    "dung_unsupported": 1.0,
+                    "jtms_retraction": 0.0,
+                },
             },
         }
         html = render_html_report(golden_state, pattern_data=pattern)
