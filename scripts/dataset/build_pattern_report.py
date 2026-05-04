@@ -297,16 +297,17 @@ def build_report(signatures: List[Dict[str, Any]],
                 md += f"| {cid} | " + " | ".join(f"{vals.get(k, 0):.3f}" for k in header_cols) + " |\n"
         md += "\n"
 
-    # Section 6: Cross-coverage
+    # Section 6: Cross-coverage (using per_signature_rate as primary metric)
     md += "## 5. Cross-coverage: Informal ↔ Formal\n\n"
     if xcov:
         signals = ["fol_invalid", "dung_unsupported", "jtms_retraction"]
         md += "| Fallacy Type | " + " | ".join(s.title() for s in signals) + " |\n"
         md += "|" + "------|" * (len(signals) + 1) + "\n"
         for ftype in sorted(xcov.keys()):
-            vals = [f"{xcov[ftype].get(s, 0):.2f}" for s in signals]
+            rate = xcov[ftype].get("per_signature_rate", {})
+            vals = [f"{rate.get(s, 0):.2f}" for s in signals]
             md += f"| {ftype} | " + " | ".join(vals) + " |\n"
-        md += "\n_Hypothesis: manipulation = camouflaging formal errors?_\n\n"
+        md += "\n_Rates = fraction of signatures with this fallacy that also exhibit each formal signal._\n\n"
     else:
         md += "_No cross-coverage data._\n\n"
 

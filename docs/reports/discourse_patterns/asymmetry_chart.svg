@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 300" width="340" height="300">
 <text x="170" y="20" font-size="13" fill="#2c3e50" text-anchor="middle">Tricherie vs Influence Asymmetry</text>
-<rect x="100" y="173" width="60" height="0" fill="#8b4513" opacity="0.8"/>
-<rect x="100" y="173" width="60" height="67" fill="#2c3e50" opacity="0.8"/>
+<rect x="100" y="60" width="60" height="0" fill="#8b4513" opacity="0.8"/>
+<rect x="100" y="60" width="60" height="180" fill="#2c3e50" opacity="0.8"/>
 <text x="130" y="258" font-size="8" fill="#333" text-anchor="middle">debate</text>
 <text x="130" y="272" font-size="8" fill="#666" text-anchor="middle">+1.00</text>
-<rect x="200" y="128" width="60" height="0" fill="#8b4513" opacity="0.8"/>
-<rect x="200" y="128" width="60" height="112" fill="#2c3e50" opacity="0.8"/>
+<rect x="200" y="60" width="60" height="0" fill="#8b4513" opacity="0.8"/>
+<rect x="200" y="60" width="60" height="180" fill="#2c3e50" opacity="0.8"/>
 <text x="230" y="258" font-size="8" fill="#333" text-anchor="middle">propaganda</text>
 <text x="230" y="272" font-size="8" fill="#666" text-anchor="middle">+1.00</text>
 <text x="30" y="80" font-size="9" fill="#2c3e50" text-anchor="middle">Influence</text>

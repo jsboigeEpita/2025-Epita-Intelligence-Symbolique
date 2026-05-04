@@ -135,11 +135,14 @@ class TestPatternMining:
     def test_cross_coverage(self, synthetic_signatures):
         xcov = cross_coverage(synthetic_signatures)
         assert isinstance(xcov, dict)
-        # At least one fallacy type should appear
+        # New structure: {ftype: {"per_signature_rate": {...}, "per_occurrence_rate": {...}}}
         if xcov:
-            for ftype, signals in xcov.items():
-                for sig_name in ["fol_invalid", "dung_unsupported", "jtms_retraction"]:
-                    assert sig_name in signals
+            for ftype, rates in xcov.items():
+                assert "per_signature_rate" in rates
+                assert "per_occurrence_rate" in rates
+                for rate_family in ["per_signature_rate", "per_occurrence_rate"]:
+                    for sig_name in ["fol_invalid", "dung_unsupported", "jtms_retraction"]:
+                        assert sig_name in rates[rate_family]
 
     def test_formal_detectors(self, synthetic_signatures):
         for sig in synthetic_signatures:

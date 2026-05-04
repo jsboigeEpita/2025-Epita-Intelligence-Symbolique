@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 124" width="500" height="124">
 <text x="250" y="20" font-size="13" fill="#2c3e50" text-anchor="middle">Fallacy Spectrum — debate</text>
-<text x="125" y="55" font-size="9" fill="#333" text-anchor="end">straw_man</text>
+<text x="125" y="55" font-size="9" fill="#333" text-anchor="end">false_dilemma</text>
 <rect x="130" y="40" width="330" height="18" fill="#2c3e50" opacity="0.7"/>
 <text x="465" y="55" font-size="8" fill="#333" text-anchor="start">0.50</text>
-<text x="125" y="77" font-size="9" fill="#333" text-anchor="end">false_dilemma</text>
+<text x="125" y="77" font-size="9" fill="#333" text-anchor="end">straw_man</text>
 <rect x="130" y="62" width="330" height="18" fill="#2c3e50" opacity="0.7"/>
 <text x="465" y="77" font-size="8" fill="#333" text-anchor="start">0.50</text>
 </svg>
