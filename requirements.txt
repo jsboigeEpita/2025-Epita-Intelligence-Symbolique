@@ -32,5 +32,6 @@ coverage
 pytest-benchmark
 
 tiktoken
+diskcache
 black
 flake8
