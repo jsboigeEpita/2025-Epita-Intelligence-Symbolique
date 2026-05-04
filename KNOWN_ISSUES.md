@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-04-09
+Last updated: 2026-05-04
 
 ---
 
@@ -99,10 +99,8 @@ Last updated: 2026-04-09
 - **Workaround**: Run orchestration tests in smaller batches (e.g., by class), not as a full suite. Do NOT use this failure count as a regression signal — always verify individual test pass before investigating.
 
 ### Skipped Tests in Unit Suite
-- **Breakdown** (as of 2026-03-28, 10085 collected):
-  - Phantom module skips from `test_configuration_cli.py` (`unified_production_analyzer`) appear resolved — 0 skips observed in that file
-  - Remaining skips are test-body skips (conditional on platform/env), not module-level skips
-- **Status**: Monitoring — exact runtime skip count pending full suite run
+- **Breakdown** (as of 2026-05-04): 4 skips observed in CI mode. Tests requiring API keys or JVM auto-skip gracefully.
+- **Status**: Stable — skip count remains low and consistent across runs
 - **Related**: #28, #30, #94, #112
 
 ### Starlette Tests: Event Loop Contamination in Full Suite — RESOLVED
@@ -131,28 +129,34 @@ Last updated: 2026-04-09
 
 ---
 
-## Test Statistics (as of 2026-03-29)
+## Test Statistics (as of 2026-05-04)
 
-- **Unit suite**: 10085+ collected; 0 known regressions (15 fixes in commit `88af060f`)
-- **Epic #208 tests**: 158+ passed (conv_orch, groupchat, plugin, trace, quality, NL-logic, JTMS, benchmark, CamemBERT, integration)
-- **Orchestration modes**: 2 active — pipeline (default), conversational (legacy removed round 79)
-- **Sherlock Watson validation**: 43/43 passed
-- **CI**: GREEN on main (`88af060f`)
-- **Known flaky in full suite**: robustness adversarial (~87 tests, resource exhaustion). Starlette #276 resolved (shared StaticFiles state fix).
+- **Full suite**: 2845+ tests passed, 4 skipped (CI mode with `--disable-jvm-session`)
+- **Spectacular pipeline**: 75+ golden tests (17 phases, 0 failures on golden fixture)
+- **Epic B pedagogy**: 53+ tests (HTML report, Jupyter notebook, scenario fixtures, slide deck, README quickstart)
+- **Epic A hardening**: 11 property tests (ATMS/JTMS invariants, requires `hypothesis` dep), profiling tests
+- **Epic C discourse mining**: 71+ tests (privacy plumbing, batch runner, pattern aggregator, report generator, enrichment workflow)
+- **CI**: GREEN on main (`b6e36025`)
+- **Conda env**: `projet-is` (primary) or `projet-is-roo-new` (latest deps)
+- **Known flaky**: robustness adversarial tests (~87 tests, resource exhaustion after 1.5h runs). Starlette tests resolved.
+- **Property tests**: Require `hypothesis` package (not installed by default — `pip install hypothesis`)
 
 ## Test Commands
 
 ```bash
-# CI mode (fast, JVM mocked)
-pytest tests/ --allow-dotenv --disable-jvm-session --ignore=tests/e2e --ignore=tests/performance -q
+# CI mode (fast, JVM mocked) — requires conda env activation
+conda run -n projet-is --no-capture-output pytest tests/ --allow-dotenv --disable-jvm-session --ignore=tests/e2e --ignore=tests/performance --ignore=tests/property -q
 
 # Unit only
-pytest tests/unit/ --allow-dotenv --disable-jvm-session -q
+conda run -n projet-is --no-capture-output pytest tests/unit/ --allow-dotenv --disable-jvm-session -q
+
+# Property tests (requires hypothesis: pip install hypothesis)
+conda run -n projet-is --no-capture-output pytest tests/property/ --allow-dotenv --disable-jvm-session -q
 
 # Full JVM mode (slower, tests Java integration)
-pytest tests/ --allow-dotenv --ignore=tests/e2e --ignore=tests/performance -q
+conda run -n projet-is --no-capture-output pytest tests/ --allow-dotenv --ignore=tests/e2e --ignore=tests/performance --ignore=tests/property -q
 ```
 
 ---
 
-**Maintainer**: Project team
+**Maintainer**: Project team | Coordinator: myia-ai-01
