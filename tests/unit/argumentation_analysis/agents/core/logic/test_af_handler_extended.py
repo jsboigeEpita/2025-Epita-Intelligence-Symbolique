@@ -53,6 +53,7 @@ def mock_jpype():
             attack.getAttacker.return_value = source
             attack.getAttacked.return_value = target
             return attack
+
         mock_attack_cls = MagicMock(side_effect=make_attack)
 
         def jclass_side_effect(class_name):

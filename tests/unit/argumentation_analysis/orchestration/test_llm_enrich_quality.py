@@ -3,6 +3,7 @@
 Verifies LLM enrichment pass in the quality evaluator pipeline phase,
 including fallacy context integration and per-argument llm_assessment.
 """
+
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -59,15 +60,19 @@ class TestLlmEnrichQuality:
             _llm_enrich_quality,
         )
 
-        llm_response = json.dumps({
-            "enrichments": [{
-                "arg_id": "arg_1",
-                "implicit_assumptions": ["The economy is stable"],
-                "reasoning_assessment": "moderate",
-                "evidence_quality": "weak",
-                "improvement_suggestion": "Add empirical data",
-            }]
-        })
+        llm_response = json.dumps(
+            {
+                "enrichments": [
+                    {
+                        "arg_id": "arg_1",
+                        "implicit_assumptions": ["The economy is stable"],
+                        "reasoning_assessment": "moderate",
+                        "evidence_quality": "weak",
+                        "improvement_suggestion": "Add empirical data",
+                    }
+                ]
+            }
+        )
 
         mock_message = MagicMock()
         mock_message.content = llm_response
@@ -84,10 +89,12 @@ class TestLlmEnrichQuality:
             return_value=(mock_client, "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality(
-                {"arg_1": {
-                    "note_finale": 5.0,
-                    "scores_par_vertu": {"clarity": 6.0, "coherence": 4.0},
-                }},
+                {
+                    "arg_1": {
+                        "note_finale": 5.0,
+                        "scores_par_vertu": {"clarity": 6.0, "coherence": 4.0},
+                    }
+                },
                 [{"text": "The economy grows because of tax cuts"}],
             )
 
@@ -165,7 +172,10 @@ class TestLlmEnrichQuality:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         heuristic = {
-            f"arg_{i}": {"note_finale": float(i), "scores_par_vertu": {"clarity": float(i)}}
+            f"arg_{i}": {
+                "note_finale": float(i),
+                "scores_par_vertu": {"clarity": float(i)},
+            }
             for i in range(1, 8)
         }
         raw_args = [{"text": f"Argument {i}"} for i in range(1, 8)]
@@ -181,6 +191,7 @@ class TestLlmEnrichQuality:
         user_msg = call_args.kwargs["messages"][1]["content"]
         # Count [arg_N] occurrences
         import re
+
         arg_refs = re.findall(r"\[arg_\d+\]", user_msg)
         assert len(arg_refs) <= 4
 
@@ -364,13 +375,15 @@ class TestLlmEnrichQualityWithFallacies:
         }
 
         enrichment_data = {
-            "enrichments": [{
-                "arg_id": "arg_1",
-                "reasoning_assessment": "moderate",
-                "evidence_quality": "weak",
-                "bias_indicators": ["confirmation bias"],
-                "llm_assessment": "This argument relies on unsubstantiated claims.",
-            }]
+            "enrichments": [
+                {
+                    "arg_id": "arg_1",
+                    "reasoning_assessment": "moderate",
+                    "evidence_quality": "weak",
+                    "bias_indicators": ["confirmation bias"],
+                    "llm_assessment": "This argument relies on unsubstantiated claims.",
+                }
+            ]
         }
 
         with patch(
@@ -388,7 +401,9 @@ class TestLlmEnrichQualityWithFallacies:
             result = await _invoke_quality_evaluator("Test", context)
 
         arg1 = result["per_argument_scores"]["arg_1"]
-        assert arg1["llm_assessment"] == "This argument relies on unsubstantiated claims."
+        assert (
+            arg1["llm_assessment"] == "This argument relies on unsubstantiated claims."
+        )
         assert arg1["reasoning_assessment"] == "moderate"
         assert arg1["evidence_quality"] == "weak"
         assert arg1["bias_indicators"] == ["confirmation bias"]
@@ -413,9 +428,7 @@ class TestLlmEnrichQualityWithFallacies:
             return_value=None,
         ):
             context = {
-                "phase_extract_output": {
-                    "arguments": [{"text": "A simple argument"}]
-                }
+                "phase_extract_output": {"arguments": [{"text": "A simple argument"}]}
             }
             result = await _invoke_quality_evaluator("Test", context)
 
@@ -432,8 +445,10 @@ class TestQualityStateWriterLlmAssessment:
 
         state = UnifiedAnalysisState(initial_text="test")
         state.add_quality_score(
-            "arg_1", {"clarity": 7.0}, 7.0,
-            llm_assessment="Strong argument with good evidence."
+            "arg_1",
+            {"clarity": 7.0},
+            7.0,
+            llm_assessment="Strong argument with good evidence.",
         )
         entry = state.argument_quality_scores["arg_1"]
         assert entry["llm_assessment"] == "Strong argument with good evidence."

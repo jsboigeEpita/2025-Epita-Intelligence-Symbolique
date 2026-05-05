@@ -97,7 +97,9 @@ class TestKeyManagement:
 
     def test_save_key_bad_path(self, svc, key):
         """Test que save_key retourne False si l'écriture échoue."""
-        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+        with patch(
+            "builtins.open", side_effect=PermissionError("Cannot write to path")
+        ):
             assert svc.save_key(key, "/nonexistent/path/key.bin") is False
 
     def test_load_key_nonexistent(self, svc):

@@ -10,8 +10,12 @@ from typing import Optional
 
 from argumentation_analysis.services.ai_shield.shield import Shield
 from argumentation_analysis.services.ai_shield.layers.heuristic import HeuristicLayer
-from argumentation_analysis.services.ai_shield.layers.llm_validator import LLMValidatorLayer
-from argumentation_analysis.services.ai_shield.layers.output_filter import OutputFilterLayer
+from argumentation_analysis.services.ai_shield.layers.llm_validator import (
+    LLMValidatorLayer,
+)
+from argumentation_analysis.services.ai_shield.layers.output_filter import (
+    OutputFilterLayer,
+)
 
 
 def load_preset(

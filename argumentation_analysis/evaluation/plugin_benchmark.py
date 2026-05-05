@@ -39,15 +39,17 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "gov_01",
             "function": "social_choice_vote",
             "args": {
-                "input_json": json.dumps({
-                    "method": "copeland",
-                    "ballots": [
-                        ["A", "B", "C"],
-                        ["A", "C", "B"],
-                        ["B", "A", "C"],
-                    ],
-                    "options": ["A", "B", "C"],
-                }),
+                "input_json": json.dumps(
+                    {
+                        "method": "copeland",
+                        "ballots": [
+                            ["A", "B", "C"],
+                            ["A", "C", "B"],
+                            ["B", "A", "C"],
+                        ],
+                        "options": ["A", "B", "C"],
+                    }
+                ),
             },
             "expected": {"has_winner": True, "winner_is": "A"},
             "difficulty": "easy",
@@ -56,11 +58,13 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "gov_02",
             "function": "detect_conflicts_fn",
             "args": {
-                "positions_json": json.dumps({
-                    "agent_a": "Le climat change dû aux activités humaines",
-                    "agent_b": "Le climat change naturellement",
-                    "agent_c": "Le climat change dû aux activités humaines",
-                }),
+                "positions_json": json.dumps(
+                    {
+                        "agent_a": "Le climat change dû aux activités humaines",
+                        "agent_b": "Le climat change naturellement",
+                        "agent_c": "Le climat change dû aux activités humaines",
+                    }
+                ),
             },
             "expected": {"has_conflicts": True, "conflict_count": 1},
             "difficulty": "easy",
@@ -69,10 +73,12 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "gov_03",
             "function": "compute_consensus_metrics",
             "args": {
-                "results_json": json.dumps({
-                    "votes": ["A", "A", "A", "A", "A", "B", "B", "B", "C", "C"],
-                    "winner": "A",
-                }),
+                "results_json": json.dumps(
+                    {
+                        "votes": ["A", "A", "A", "A", "A", "B", "B", "B", "C", "C"],
+                        "winner": "A",
+                    }
+                ),
             },
             "expected": {"has_consensus_rate": True},
             "difficulty": "easy",
@@ -81,14 +87,16 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "gov_04",
             "function": "find_condorcet_winner",
             "args": {
-                "input_json": json.dumps({
-                    "ballots": [
-                        ["A", "B", "C"],
-                        ["A", "C", "B"],
-                        ["A", "B", "C"],
-                    ],
-                    "options": ["A", "B", "C"],
-                }),
+                "input_json": json.dumps(
+                    {
+                        "ballots": [
+                            ["A", "B", "C"],
+                            ["A", "C", "B"],
+                            ["A", "B", "C"],
+                        ],
+                        "options": ["A", "B", "C"],
+                    }
+                ),
             },
             "expected": {"condorcet_winner_is": "A"},
             "difficulty": "medium",
@@ -250,10 +258,12 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "tl_02",
             "function": "analyze_dung_framework",
             "args": {
-                "framework_json": json.dumps({
-                    "arguments": ["a", "b", "c"],
-                    "attacks": [["a", "b"], ["b", "c"]],
-                }),
+                "framework_json": json.dumps(
+                    {
+                        "arguments": ["a", "b", "c"],
+                        "attacks": [["a", "b"], ["b", "c"]],
+                    }
+                ),
             },
             "expected": {"returns_json": True},
             "difficulty": "hard",
@@ -290,11 +300,13 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "aspic_01",
             "function": "analyze_aspic",
             "args": {
-                "rules_json": json.dumps({
-                    "strict_rules": [["p", "q"]],
-                    "defeasible_rules": [],
-                    "preferences": {},
-                }),
+                "rules_json": json.dumps(
+                    {
+                        "strict_rules": [["p", "q"]],
+                        "defeasible_rules": [],
+                        "preferences": {},
+                    }
+                ),
             },
             "expected": {"returns_json": True},
             "difficulty": "hard",
@@ -312,10 +324,12 @@ PLUGIN_BENCHMARK_CASES: Dict[str, List[dict]] = {
             "id": "rank_01",
             "function": "rank_arguments",
             "args": {
-                "framework_json": json.dumps({
-                    "arguments": ["a", "b"],
-                    "attacks": [["a", "b"]],
-                }),
+                "framework_json": json.dumps(
+                    {
+                        "arguments": ["a", "b"],
+                        "attacks": [["a", "b"]],
+                    }
+                ),
                 "method": "grounded",
             },
             "expected": {"returns_json": True},
@@ -545,15 +559,15 @@ class PluginBenchmarkSuite:
         # Default: no-arg constructor
         return cls()
 
-    def _validate_output(
-        self, expected: dict, actual_raw: str
-    ) -> tuple:
+    def _validate_output(self, expected: dict, actual_raw: str) -> tuple:
         """Validate plugin output against expected criteria.
 
         Returns (passed: bool, details: str).
         """
         try:
-            actual = json.loads(actual_raw) if isinstance(actual_raw, str) else actual_raw
+            actual = (
+                json.loads(actual_raw) if isinstance(actual_raw, str) else actual_raw
+            )
         except (json.JSONDecodeError, TypeError):
             actual = {"raw": actual_raw}
 
@@ -562,7 +576,10 @@ class PluginBenchmarkSuite:
         if "has_winner" in expected:
             if "winner" not in actual:
                 failures.append("missing 'winner' key")
-            if expected.get("winner_is") and actual.get("winner") != expected["winner_is"]:
+            if (
+                expected.get("winner_is")
+                and actual.get("winner") != expected["winner_is"]
+            ):
                 failures.append(
                     f"winner={actual.get('winner')} != {expected['winner_is']}"
                 )
@@ -597,9 +614,7 @@ class PluginBenchmarkSuite:
         if "note_finale_gte" in expected:
             nf = actual.get("note_finale", 0)
             if isinstance(nf, (int, float)) and nf < expected["note_finale_gte"]:
-                failures.append(
-                    f"note_finale={nf} < {expected['note_finale_gte']}"
-                )
+                failures.append(f"note_finale={nf} < {expected['note_finale_gte']}")
 
         if "has_note_moyenne" in expected:
             if "note_moyenne" not in actual:
@@ -621,13 +636,17 @@ class PluginBenchmarkSuite:
                 failures.append("empty results")
 
         if "has_beliefs" in expected:
-            if not actual or ("beliefs" not in str(actual) and "belief" not in str(actual)):
+            if not actual or (
+                "beliefs" not in str(actual) and "belief" not in str(actual)
+            ):
                 failures.append("no beliefs in state")
 
         if "min_types" in expected:
             items = actual if isinstance(actual, list) else []
             if len(items) < expected["min_types"]:
-                failures.append(f"only {len(items)} types, need >= {expected['min_types']}")
+                failures.append(
+                    f"only {len(items)} types, need >= {expected['min_types']}"
+                )
 
         if "has_tiers" in expected:
             if not actual or (isinstance(actual, dict) and not actual.get("tiers")):
@@ -664,9 +683,7 @@ class PluginBenchmarkSuite:
         details = "; ".join(failures) if failures else "OK"
         return passed, details
 
-    def run_single(
-        self, plugin_name: str, case: dict
-    ) -> PluginBenchmarkResult:
+    def run_single(self, plugin_name: str, case: dict) -> PluginBenchmarkResult:
         """Run a single benchmark case against a plugin."""
         case_id = case["id"]
         function_name = case["function"]
@@ -700,8 +717,11 @@ class PluginBenchmarkSuite:
                 try:
                     loop = asyncio.get_running_loop()
                     import concurrent.futures
+
                     with concurrent.futures.ThreadPoolExecutor() as pool:
-                        raw_output = pool.submit(asyncio.run, raw_output).result(timeout=30)
+                        raw_output = pool.submit(asyncio.run, raw_output).result(
+                            timeout=30
+                        )
                 except RuntimeError:
                     raw_output = asyncio.run(raw_output)
 

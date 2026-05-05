@@ -599,7 +599,8 @@ class ConversationOrchestrator:
                 "fallacies_count": len(fallacies),
                 "sophistication_score": min(len(fallacies) * 0.2 + 0.3, 1.0),
                 "main_issues": [
-                    f.get("type", f.get("fallacy_type", "unknown")) for f in fallacies[:5]
+                    f.get("type", f.get("fallacy_type", "unknown"))
+                    for f in fallacies[:5]
                 ],
                 "raw_result": result,
             }

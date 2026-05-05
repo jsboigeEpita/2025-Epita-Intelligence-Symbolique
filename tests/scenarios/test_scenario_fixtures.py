@@ -1,4 +1,5 @@
 """Smoke tests for scenario fixtures and manifest validation."""
+
 import pathlib
 
 import pytest
@@ -16,6 +17,7 @@ MANIFEST_PATH = SCENARIOS_DIR / "manifest.yaml"
 
 # Import schema from scenarios directory
 import sys
+
 sys.path.insert(0, str(SCENARIOS_DIR.parent))
 from scenarios.schema import ScenarioManifest, ScenarioSpec, load_manifest
 
@@ -61,24 +63,40 @@ class TestScenarioManifest:
 
     def test_all_expected_capabilities_valid(self):
         known_capabilities = {
-            "fact_extraction", "argument_quality", "nl_to_logic",
-            "neural_fallacy_detection", "hierarchical_fallacy_detection",
-            "propositional_logic", "first_order_logic", "modal_logic",
-            "dung_extensions", "aspic_analysis", "counter_argumentation",
-            "jtms_belief_revision", "debate_protocol",
-            "assumption_based_reasoning", "governance_simulation",
-            "formal_synthesis", "narrative_synthesis",
+            "fact_extraction",
+            "argument_quality",
+            "nl_to_logic",
+            "neural_fallacy_detection",
+            "hierarchical_fallacy_detection",
+            "propositional_logic",
+            "first_order_logic",
+            "modal_logic",
+            "dung_extensions",
+            "aspic_analysis",
+            "counter_argumentation",
+            "jtms_belief_revision",
+            "debate_protocol",
+            "assumption_based_reasoning",
+            "governance_simulation",
+            "formal_synthesis",
+            "narrative_synthesis",
         }
         manifest = load_manifest(MANIFEST_PATH)
         for s in manifest.scenarios:
             for cap in s.expected_capabilities:
-                assert cap in known_capabilities, f"Unknown capability '{cap}' in {s.id}"
+                assert (
+                    cap in known_capabilities
+                ), f"Unknown capability '{cap}' in {s.id}"
 
     def test_acceptance_thresholds_reasonable(self):
         manifest = load_manifest(MANIFEST_PATH)
         for s in manifest.scenarios:
-            assert 1 <= s.acceptance_min_args <= 20, f"{s.id}: min_args={s.acceptance_min_args}"
-            assert 0 <= s.acceptance_min_fallacies <= 10, f"{s.id}: min_fallacies={s.acceptance_min_fallacies}"
+            assert (
+                1 <= s.acceptance_min_args <= 20
+            ), f"{s.id}: min_args={s.acceptance_min_args}"
+            assert (
+                0 <= s.acceptance_min_fallacies <= 10
+            ), f"{s.id}: min_fallacies={s.acceptance_min_fallacies}"
 
 
 class TestScenarioContent:
@@ -87,7 +105,13 @@ class TestScenarioContent:
     def test_five_scenarios_present(self):
         manifest = load_manifest(MANIFEST_PATH)
         assert len(manifest.scenarios) == 5
-        expected_themes = {"public_policy", "science", "media", "fact_checking", "philosophy"}
+        expected_themes = {
+            "public_policy",
+            "science",
+            "media",
+            "fact_checking",
+            "philosophy",
+        }
         actual_themes = {s.theme for s in manifest.scenarios}
         assert actual_themes == expected_themes
 

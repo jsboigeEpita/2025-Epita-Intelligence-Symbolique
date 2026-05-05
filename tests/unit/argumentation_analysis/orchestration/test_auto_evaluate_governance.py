@@ -5,6 +5,7 @@ Verifies that:
 2. Governance auto-runs social_choice_vote when positions are available
 3. State writer uses evaluation scores and vote results
 """
+
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -105,12 +106,16 @@ class TestCounterArgumentAutoEvaluation:
         mock_plugin.parse_argument.return_value = '{"premise": "test"}'
         mock_plugin.suggest_strategy.return_value = '{"strategy_name": "test"}'
 
-        llm_response = json.dumps([{
-            "counter_argument": "Bon contre-argument avec des preuves solides.",
-            "strategy_used": "counter-example",
-            "target_argument": "Test argument",
-            "strength": "strong",
-        }])
+        llm_response = json.dumps(
+            [
+                {
+                    "counter_argument": "Bon contre-argument avec des preuves solides.",
+                    "strategy_used": "counter-example",
+                    "target_argument": "Test argument",
+                    "strength": "strong",
+                }
+            ]
+        )
 
         mock_message = MagicMock()
         mock_message.content = llm_response
@@ -152,10 +157,12 @@ class TestGovernanceAutoVote:
         mock_plugin = MagicMock()
         mock_plugin.list_governance_methods.return_value = '["majority", "copeland"]'
         mock_plugin.detect_conflicts_fn.return_value = "[]"
-        mock_plugin.social_choice_vote.return_value = json.dumps({
-            "winner": "agent_1",
-            "copeland_scores": {"agent_1": 2, "agent_2": 1, "agent_3": 0},
-        })
+        mock_plugin.social_choice_vote.return_value = json.dumps(
+            {
+                "winner": "agent_1",
+                "copeland_scores": {"agent_1": 2, "agent_2": 1, "agent_3": 0},
+            }
+        )
 
         with patch(
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
@@ -216,17 +223,19 @@ class TestStateWriterEvaluationScore:
 
         state = UnifiedAnalysisState(initial_text="test")
         output = {
-            "llm_counter_arguments": [{
-                "counter_argument": "Good counter",
-                "target_argument": "Original",
-                "strategy_used": "distinction",
-                "strength": "weak",  # would map to 0.3
-                "evaluation": {
-                    "overall_score": 0.72,  # should be used instead
-                    "relevance": 0.8,
-                    "logical_strength": 0.7,
-                },
-            }]
+            "llm_counter_arguments": [
+                {
+                    "counter_argument": "Good counter",
+                    "target_argument": "Original",
+                    "strategy_used": "distinction",
+                    "strength": "weak",  # would map to 0.3
+                    "evaluation": {
+                        "overall_score": 0.72,  # should be used instead
+                        "relevance": 0.8,
+                        "logical_strength": 0.7,
+                    },
+                }
+            ]
         }
         _write_counter_argument_to_state(output, state, {})
 
@@ -242,12 +251,14 @@ class TestStateWriterEvaluationScore:
 
         state = UnifiedAnalysisState(initial_text="test")
         output = {
-            "llm_counter_arguments": [{
-                "counter_argument": "Counter",
-                "target_argument": "Original",
-                "strategy_used": "test",
-                "strength": "strong",
-            }]
+            "llm_counter_arguments": [
+                {
+                    "counter_argument": "Counter",
+                    "target_argument": "Original",
+                    "strategy_used": "test",
+                    "strength": "strong",
+                }
+            ]
         }
         _write_counter_argument_to_state(output, state, {})
 

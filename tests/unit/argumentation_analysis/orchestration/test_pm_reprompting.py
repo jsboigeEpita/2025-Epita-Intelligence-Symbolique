@@ -23,6 +23,7 @@ class TestShouldRerunFallacy:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _should_rerun_fallacy,
         )
+
         return _should_rerun_fallacy
 
     def test_returns_true_when_retracted_beliefs_via_undermined_count(self):
@@ -113,6 +114,7 @@ class TestIncrementFallacyRerun:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _increment_fallacy_rerun,
         )
+
         ctx = {}
         _increment_fallacy_rerun(ctx)
         assert ctx["_fallacy_rerun_count"] == 1
@@ -121,6 +123,7 @@ class TestIncrementFallacyRerun:
         from argumentation_analysis.orchestration.unified_pipeline import (
             _increment_fallacy_rerun,
         )
+
         ctx = {"_fallacy_rerun_count": 1}
         _increment_fallacy_rerun(ctx)
         assert ctx["_fallacy_rerun_count"] == 2
@@ -164,7 +167,13 @@ class TestBuildIterativeWorkflow:
 
         wf = build_iterative_analysis_workflow()
         phase_names = [p.name for p in wf.phases]
-        for expected in ["extract", "hierarchical_fallacy", "quality", "counter", "jtms"]:
+        for expected in [
+            "extract",
+            "hierarchical_fallacy",
+            "quality",
+            "counter",
+            "jtms",
+        ]:
             assert expected in phase_names, f"Missing phase: {expected}"
 
     def test_fallacy_reanalysis_depends_on_jtms(self):
@@ -186,9 +195,9 @@ class TestBuildIterativeWorkflow:
 
         reset_workflow_catalog()
         catalog = get_workflow_catalog()
-        assert "iterative" in catalog, (
-            f"'iterative' not in catalog keys: {list(catalog.keys())}"
-        )
+        assert (
+            "iterative" in catalog
+        ), f"'iterative' not in catalog keys: {list(catalog.keys())}"
         assert catalog["iterative"].name == "iterative_analysis"
         reset_workflow_catalog()
 
@@ -207,9 +216,9 @@ class TestBuildIterativeWorkflow:
 
         jtms_pos = flat_order.index("jtms")
         reanalysis_pos = flat_order.index("fallacy_reanalysis")
-        assert reanalysis_pos > jtms_pos, (
-            f"fallacy_reanalysis ({reanalysis_pos}) should come after jtms ({jtms_pos})"
-        )
+        assert (
+            reanalysis_pos > jtms_pos
+        ), f"fallacy_reanalysis ({reanalysis_pos}) should come after jtms ({jtms_pos})"
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +233,7 @@ class TestShouldAddReanalysisPhase:
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _should_add_reanalysis_phase,
         )
+
         return _should_add_reanalysis_phase
 
     def test_returns_true_when_low_fallacy_coverage(self):

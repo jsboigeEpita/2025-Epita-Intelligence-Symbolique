@@ -28,10 +28,10 @@ from argumentation_analysis.evaluation.run_llm_judge import (
 )
 from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_benchmark_entry(
     workflow="standard",
@@ -73,6 +73,7 @@ def make_judge_score(overall=4.0, depth=3.5) -> JudgeScore:
 # ---------------------------------------------------------------------------
 # JudgeResult
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestJudgeResult:
@@ -116,19 +117,35 @@ class TestJudgeResult:
 
     def test_timestamp_auto_set(self):
         jr = JudgeResult(
-            workflow_name="w", model_name="m", document_name="d",
-            document_index=0, judge_model="j",
-            completeness=1, accuracy=1, depth=1, coherence=1,
-            actionability=1, overall=1, reasoning="",
+            workflow_name="w",
+            model_name="m",
+            document_name="d",
+            document_index=0,
+            judge_model="j",
+            completeness=1,
+            accuracy=1,
+            depth=1,
+            coherence=1,
+            actionability=1,
+            overall=1,
+            reasoning="",
         )
         assert jr.timestamp != ""
 
     def test_no_error_by_default(self):
         jr = JudgeResult(
-            workflow_name="w", model_name="m", document_name="d",
-            document_index=0, judge_model="j",
-            completeness=1, accuracy=1, depth=1, coherence=1,
-            actionability=1, overall=1, reasoning="",
+            workflow_name="w",
+            model_name="m",
+            document_name="d",
+            document_index=0,
+            judge_model="j",
+            completeness=1,
+            accuracy=1,
+            depth=1,
+            coherence=1,
+            actionability=1,
+            overall=1,
+            reasoning="",
         )
         assert jr.error is None
 
@@ -136,6 +153,7 @@ class TestJudgeResult:
 # ---------------------------------------------------------------------------
 # load_benchmark_results
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestLoadBenchmarkResults:
@@ -174,6 +192,7 @@ class TestLoadBenchmarkResults:
 # ---------------------------------------------------------------------------
 # run_judge_on_results
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestRunJudgeOnResults:
@@ -258,7 +277,10 @@ class TestRunJudgeOnResults:
     @pytest.mark.asyncio
     async def test_result_fields_populated_from_score(self):
         entry = make_benchmark_entry(
-            workflow="formal_debate", model="openrouter", doc_name="corpus_007", doc_idx=6
+            workflow="formal_debate",
+            model="openrouter",
+            doc_name="corpus_007",
+            doc_idx=6,
         )
         score = make_judge_score(overall=3.8, depth=4.2)
         score.completeness = 4.5
@@ -281,6 +303,7 @@ class TestRunJudgeOnResults:
 # ---------------------------------------------------------------------------
 # build_report
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestBuildReport:
@@ -355,6 +378,7 @@ class TestBuildReport:
 # write_scores_jsonl
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestWriteScoresJsonl:
     def test_creates_file_with_correct_entries(self, tmp_path):
@@ -365,8 +389,12 @@ class TestWriteScoresJsonl:
                 document_name="doc_001",
                 document_index=0,
                 judge_model="gpt-5-mini",
-                completeness=4.0, accuracy=4.0, depth=4.0,
-                coherence=4.0, actionability=4.0, overall=4.0,
+                completeness=4.0,
+                accuracy=4.0,
+                depth=4.0,
+                coherence=4.0,
+                actionability=4.0,
+                overall=4.0,
                 reasoning="Good.",
             )
         ]
@@ -389,27 +417,38 @@ class TestWriteScoresJsonl:
 # write_report
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestWriteReport:
     def test_creates_json_and_markdown(self, tmp_path):
         report = JudgeReport(
             total_cells_evaluated=5,
             total_errors=0,
-            aggregates=[{
-                "model_name": "default",
-                "workflow_name": "standard",
-                "n_docs": 5,
+            aggregates=[
+                {
+                    "model_name": "default",
+                    "workflow_name": "standard",
+                    "n_docs": 5,
+                    "avg_composite": 0.75,
+                    "avg_overall": 4.0,
+                    "avg_completeness": 3.8,
+                    "avg_accuracy": 4.2,
+                    "avg_depth": 3.5,
+                    "avg_coherence": 4.0,
+                    "avg_actionability": 3.9,
+                }
+            ],
+            best_by_quality={
+                "model": "default",
+                "workflow": "standard",
                 "avg_composite": 0.75,
                 "avg_overall": 4.0,
-                "avg_completeness": 3.8,
-                "avg_accuracy": 4.2,
+            },
+            best_by_depth={
+                "model": "default",
+                "workflow": "standard",
                 "avg_depth": 3.5,
-                "avg_coherence": 4.0,
-                "avg_actionability": 3.9,
-            }],
-            best_by_quality={"model": "default", "workflow": "standard",
-                             "avg_composite": 0.75, "avg_overall": 4.0},
-            best_by_depth={"model": "default", "workflow": "standard", "avg_depth": 3.5},
+            },
         )
         out = tmp_path / "report"
         write_report(report, out)
@@ -473,9 +512,7 @@ class TestMaxDocsRegression:
                 judge_model="test-model",
             )
         )
-        results = await run_judge_on_results(
-            entries_3_docs, mock_judge, max_docs=2
-        )
+        results = await run_judge_on_results(entries_3_docs, mock_judge, max_docs=2)
         # Only 2 docs should have been evaluated
         assert len(results) == 2
         doc_names = {r.document_name for r in results}
@@ -496,9 +533,7 @@ class TestMaxDocsRegression:
                 judge_model="test-model",
             )
         )
-        results = await run_judge_on_results(
-            entries_3_docs, mock_judge, max_docs=1
-        )
+        results = await run_judge_on_results(entries_3_docs, mock_judge, max_docs=1)
         assert len(results) == 1
 
     async def test_max_docs_none_evaluates_all(self, entries_3_docs):
@@ -516,7 +551,5 @@ class TestMaxDocsRegression:
                 judge_model="test-model",
             )
         )
-        results = await run_judge_on_results(
-            entries_3_docs, mock_judge, max_docs=None
-        )
+        results = await run_judge_on_results(entries_3_docs, mock_judge, max_docs=None)
         assert len(results) == 3

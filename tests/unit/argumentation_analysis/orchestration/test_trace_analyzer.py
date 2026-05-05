@@ -21,7 +21,6 @@ from argumentation_analysis.orchestration.trace_analyzer import (
     _count_state_fields,
 )
 
-
 # ── Dataclass properties ──
 
 
@@ -35,10 +34,13 @@ class TestPhaseTrace:
         assert p.duration == 0.0
 
     def test_total_content(self):
-        p = PhaseTrace(name="test", turns=[
-            TurnTrace(phase="test", turn=1, agent="A", content_length=100),
-            TurnTrace(phase="test", turn=2, agent="B", content_length=250),
-        ])
+        p = PhaseTrace(
+            name="test",
+            turns=[
+                TurnTrace(phase="test", turn=1, agent="A", content_length=100),
+                TurnTrace(phase="test", turn=2, agent="B", content_length=250),
+            ],
+        )
         assert p.total_content == 350
 
     def test_total_content_empty(self):
@@ -46,11 +48,14 @@ class TestPhaseTrace:
         assert p.total_content == 0
 
     def test_agents_active(self):
-        p = PhaseTrace(name="test", turns=[
-            TurnTrace(phase="test", turn=1, agent="PM", content_length=10),
-            TurnTrace(phase="test", turn=2, agent="Extract", content_length=20),
-            TurnTrace(phase="test", turn=3, agent="PM", content_length=15),
-        ])
+        p = PhaseTrace(
+            name="test",
+            turns=[
+                TurnTrace(phase="test", turn=1, agent="PM", content_length=10),
+                TurnTrace(phase="test", turn=2, agent="Extract", content_length=20),
+                TurnTrace(phase="test", turn=3, agent="PM", content_length=15),
+            ],
+        )
         active = p.agents_active
         assert set(active) == {"PM", "Extract"}
 
@@ -72,20 +77,28 @@ class TestConvergenceMetrics:
         assert m.coverage_ratio == 0.0
 
     def test_is_converged_true(self):
-        m = ConvergenceMetrics(arguments_found=3, fallacies_found=1, quality_scores_count=2)
+        m = ConvergenceMetrics(
+            arguments_found=3, fallacies_found=1, quality_scores_count=2
+        )
         assert m.is_converged is True
 
     def test_is_converged_no_arguments(self):
-        m = ConvergenceMetrics(arguments_found=0, fallacies_found=1, quality_scores_count=2)
+        m = ConvergenceMetrics(
+            arguments_found=0, fallacies_found=1, quality_scores_count=2
+        )
         assert m.is_converged is False
 
     def test_is_converged_no_quality(self):
-        m = ConvergenceMetrics(arguments_found=3, fallacies_found=0, quality_scores_count=0)
+        m = ConvergenceMetrics(
+            arguments_found=3, fallacies_found=0, quality_scores_count=0
+        )
         assert m.is_converged is False
 
     def test_is_converged_zero_fallacies_ok(self):
         """Zero fallacies is valid (text may not contain any)."""
-        m = ConvergenceMetrics(arguments_found=2, fallacies_found=0, quality_scores_count=1)
+        m = ConvergenceMetrics(
+            arguments_found=2, fallacies_found=0, quality_scores_count=1
+        )
         assert m.is_converged is True
 
 
@@ -233,21 +246,27 @@ class TestGenerateReport:
         analyzer.begin_phase("Extraction", {"text": "hello", "args": []})
         analyzer.record_turn("Extraction", 1, "PM", "Let's extract arguments")
         analyzer.record_turn("Extraction", 2, "ExtractAgent", "Found 2 arguments")
-        analyzer.end_phase("Extraction", {
-            "text": "hello",
-            "identified_arguments": [{"id": "a1"}, {"id": "a2"}],
-            "identified_fallacies": [],
-            "argument_quality_scores": {"a1": 6},
-        })
+        analyzer.end_phase(
+            "Extraction",
+            {
+                "text": "hello",
+                "identified_arguments": [{"id": "a1"}, {"id": "a2"}],
+                "identified_fallacies": [],
+                "argument_quality_scores": {"a1": 6},
+            },
+        )
 
         analyzer.begin_phase("Synthesis")
         analyzer.record_turn("Synthesis", 1, "PM", "Synthesize")
-        analyzer.end_phase("Synthesis", {
-            "text": "hello",
-            "identified_arguments": [{"id": "a1"}, {"id": "a2"}],
-            "identified_fallacies": [{"type": "ad_hominem"}],
-            "argument_quality_scores": {"a1": 6, "a2": 3},
-        })
+        analyzer.end_phase(
+            "Synthesis",
+            {
+                "text": "hello",
+                "identified_arguments": [{"id": "a1"}, {"id": "a2"}],
+                "identified_fallacies": [{"type": "ad_hominem"}],
+                "argument_quality_scores": {"a1": 6, "a2": 3},
+            },
+        )
 
         analyzer.stop()
         return analyzer

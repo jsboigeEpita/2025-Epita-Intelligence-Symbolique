@@ -59,7 +59,9 @@ class TestExtractFolMetadata:
             "forall X: (Fallacious(X) => !FullySupported(X))",
         ]
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
-        assert len(meta["predicates"]) >= 3  # Asserted, Fallacious, Undermines, FullySupported
+        assert (
+            len(meta["predicates"]) >= 3
+        )  # Asserted, Fallacious, Undermines, FullySupported
         assert len(meta["constants"]) >= 2  # arg1, arg2, fallacy1
         assert len(meta["signature_lines"]) >= 3
 

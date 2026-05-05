@@ -25,7 +25,6 @@ pytestmark = [
 
 from argumentation_analysis.evaluation import BenchmarkRunner, ModelRegistry
 
-
 DATASET_PATH = os.path.join(
     os.path.dirname(__file__),
     "..",
@@ -65,17 +64,37 @@ def _count_populated_fields(state):
     if not state:
         return 0
     field_keys = [
-        "identified_arguments", "identified_fallacies", "belief_sets",
-        "extracts", "counter_arguments", "argument_quality_scores",
-        "jtms_beliefs", "jtms_retraction_chain", "dung_frameworks",
-        "governance_decisions", "debate_transcripts", "neural_fallacy_scores",
-        "ranking_results", "aspic_results", "fol_analysis_results",
-        "propositional_analysis_results", "modal_analysis_results",
-        "formal_synthesis_reports", "nl_to_logic_translations",
-        "atms_contexts", "narrative_synthesis", "final_conclusion",
-        "answers", "query_log", "belief_revision_results",
-        "dialogue_results", "probabilistic_results", "bipolar_results",
-        "fol_signature", "workflow_results", "semantic_index_refs",
+        "identified_arguments",
+        "identified_fallacies",
+        "belief_sets",
+        "extracts",
+        "counter_arguments",
+        "argument_quality_scores",
+        "jtms_beliefs",
+        "jtms_retraction_chain",
+        "dung_frameworks",
+        "governance_decisions",
+        "debate_transcripts",
+        "neural_fallacy_scores",
+        "ranking_results",
+        "aspic_results",
+        "fol_analysis_results",
+        "propositional_analysis_results",
+        "modal_analysis_results",
+        "formal_synthesis_reports",
+        "nl_to_logic_translations",
+        "atms_contexts",
+        "narrative_synthesis",
+        "final_conclusion",
+        "answers",
+        "query_log",
+        "belief_revision_results",
+        "dialogue_results",
+        "probabilistic_results",
+        "bipolar_results",
+        "fol_signature",
+        "workflow_results",
+        "semantic_index_refs",
         "transcription_segments",
     ]
     count = 0
@@ -100,13 +119,15 @@ def benchmark_results(benchmark_runner):
     results = {}
     for wf in ["standard", "spectacular"]:
         for doc_idx in [0, 1, 2]:
-            result = asyncio.run(benchmark_runner.run_cell(
-                workflow_name=wf,
-                model_name="default",
-                document_index=doc_idx,
-                max_text_chars=3000,
-                timeout=WALL_CLOCK_TIMEOUT,
-            ))
+            result = asyncio.run(
+                benchmark_runner.run_cell(
+                    workflow_name=wf,
+                    model_name="default",
+                    document_index=doc_idx,
+                    max_text_chars=3000,
+                    timeout=WALL_CLOCK_TIMEOUT,
+                )
+            )
             key = f"{wf}_{OPAQUE_IDS.get(doc_idx, f'doc_{doc_idx}')}"
             results[key] = {
                 "success": result.success,
@@ -120,6 +141,7 @@ def benchmark_results(benchmark_runner):
 
 
 # --- Performance Tests ---
+
 
 class TestSpectacularPerformance:
     """Wall-clock and state size benchmarks."""
@@ -170,7 +192,12 @@ class TestSpectacularCoverage:
         for doc in ["doc_A", "doc_B", "doc_C"]:
             std = benchmark_results[f"standard_{doc}"]
             spec = benchmark_results[f"spectacular_{doc}"]
-            if std["success"] and spec["success"] and std["state_snapshot"] and spec["state_snapshot"]:
+            if (
+                std["success"]
+                and spec["success"]
+                and std["state_snapshot"]
+                and spec["state_snapshot"]
+            ):
                 std_fields = _count_populated_fields(std["state_snapshot"])
                 spec_fields = _count_populated_fields(spec["state_snapshot"])
                 assert spec_fields >= std_fields, (
@@ -193,9 +220,9 @@ class TestSpectacularCoverage:
             if r["success"] and r["state_snapshot"]:
                 fallacies = r["state_snapshot"].get("identified_fallacies", {})
                 neural = r["state_snapshot"].get("neural_fallacy_scores", [])
-                assert len(fallacies) > 0 or len(neural) > 0, (
-                    f"{doc}: no fallacies detected"
-                )
+                assert (
+                    len(fallacies) > 0 or len(neural) > 0
+                ), f"{doc}: no fallacies detected"
 
     def test_spectacular_has_formal_logic(self, benchmark_results):
         """Spectacular produces FOL analysis on doc_A."""
@@ -209,9 +236,9 @@ class TestSpectacularCoverage:
         r = benchmark_results["spectacular_doc_A"]
         if r["success"] and r["state_snapshot"]:
             narrative = r["state_snapshot"].get("narrative_synthesis", "")
-            assert narrative and len(narrative.strip()) > 0, (
-                "doc_A: no narrative synthesis produced"
-            )
+            assert (
+                narrative and len(narrative.strip()) > 0
+            ), "doc_A: no narrative synthesis produced"
 
 
 class TestComparisonMetrics:
@@ -220,7 +247,9 @@ class TestComparisonMetrics:
     def test_perf_summary(self, benchmark_results):
         """Print performance summary table (informational, always passes)."""
         print("\n")
-        print(f"{'Workflow':<15} {'Doc':<6} {'Time(s)':>8} {'Phases':>8} {'Fields':>8} {'Size(KB)':>10}")
+        print(
+            f"{'Workflow':<15} {'Doc':<6} {'Time(s)':>8} {'Phases':>8} {'Fields':>8} {'Size(KB)':>10}"
+        )
         print("-" * 60)
         for wf in ["standard", "spectacular"]:
             for doc in ["doc_A", "doc_B", "doc_C"]:
@@ -240,8 +269,11 @@ class TestComparisonMetrics:
     def test_no_plaintext_in_results(self, benchmark_results):
         """Verify no source names or plaintext content leaked into results."""
         sensitive_fields = [
-            "raw_text", "source_name", "full_text",
-            "extract_text", "content",
+            "raw_text",
+            "source_name",
+            "full_text",
+            "extract_text",
+            "content",
         ]
         for key, r in benchmark_results.items():
             if not r["state_snapshot"]:

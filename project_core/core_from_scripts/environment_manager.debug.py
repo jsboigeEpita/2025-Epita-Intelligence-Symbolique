@@ -6,16 +6,16 @@ import shlex
 
 print("--- ENV MANAGER SUPER MINIMAL ---")
 parser = argparse.ArgumentParser()
-parser.add_argument('--command', '-c', type=str, required=True)
+parser.add_argument("--command", "-c", type=str, required=True)
 # Ignorer les autres arguments pour l'instant
-parser.add_argument('--env-name', '-e', type=str, default=None)
+parser.add_argument("--env-name", "-e", type=str, default=None)
 args = parser.parse_args()
 
 print(f"Commande reçue: {args.command}")
 
 try:
     # shlex.split pour gérer les arguments avec espaces
-    command_list = shlex.split(args.command, posix=(os.name != 'nt'))
+    command_list = shlex.split(args.command, posix=(os.name != "nt"))
     print(f"Commande découpée: {command_list}")
 
     # Exécution directe sans conda run
@@ -23,8 +23,8 @@ try:
         command_list,
         check=False,
         text=True,
-        capture_output=True, # Capturer la sortie pour le débogage
-        encoding='utf-8'
+        capture_output=True,  # Capturer la sortie pour le débogage
+        encoding="utf-8",
     )
 
     print("--- SORTIE DU SOUS-PROCESSUS ---")

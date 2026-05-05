@@ -7,6 +7,7 @@ Validates:
 - README points to Discourse Pattern Mining
 - Privacy guard catches intentional leaks
 """
+
 import pathlib
 import subprocess
 import sys
@@ -26,7 +27,8 @@ class TestTasksCLI:
     def test_pattern_add_requires_args(self):
         result = subprocess.run(
             [sys.executable, str(TASKS_CLI), "pattern-add"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode != 0
         assert "--source" in result.stderr or "--source" in result.stdout
@@ -34,7 +36,8 @@ class TestTasksCLI:
     def test_pattern_rerun_graceful_missing_script(self):
         result = subprocess.run(
             [sys.executable, str(TASKS_CLI), "pattern-rerun", "--skip-existing"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 1
         assert "not found" in result.stderr.lower()
@@ -42,7 +45,8 @@ class TestTasksCLI:
     def test_pattern_report_graceful_missing_script(self):
         result = subprocess.run(
             [sys.executable, str(TASKS_CLI), "pattern-report"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 1
         assert "not found" in result.stderr.lower()
@@ -50,7 +54,8 @@ class TestTasksCLI:
     def test_invalid_command_exits_error(self):
         result = subprocess.run(
             [sys.executable, str(TASKS_CLI), "nonexistent"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode != 0
 
@@ -111,6 +116,8 @@ class TestPrivacyGuard:
         idx = content.find("Discourse Pattern Mining")
         if idx == -1:
             return
-        section = content[idx:idx + 2000]
+        section = content[idx : idx + 2000]
         for forbidden in ("full_text", "raw_text", "source_name"):
-            assert forbidden not in section, f"LEAK: {forbidden} in README pattern section"
+            assert (
+                forbidden not in section
+            ), f"LEAK: {forbidden} in README pattern section"

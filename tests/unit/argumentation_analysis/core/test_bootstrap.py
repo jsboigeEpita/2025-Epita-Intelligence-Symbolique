@@ -457,7 +457,9 @@ class TestPreInitSafetyChecks:
         with patch("pathlib.Path.exists", return_value=True), patch(
             "pathlib.Path.is_dir", return_value=False
         ):
-            result = _pre_init_safety_checks(Path("C:/test/file.txt"), Path("C:/test/.env"))
+            result = _pre_init_safety_checks(
+                Path("C:/test/file.txt"), Path("C:/test/.env")
+            )
             assert result is False
 
     def test_warns_for_pycharm_environment(self):

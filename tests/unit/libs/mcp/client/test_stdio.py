@@ -65,7 +65,9 @@ class TestStdioTransport:
         write_hook = MagicMock()
 
         # send() writes to _stdin (the subprocess's stdin stream)
-        transport = StdioTransport(stdin=mock_stdin, stdout=MagicMock(), write_hook=write_hook)
+        transport = StdioTransport(
+            stdin=mock_stdin, stdout=MagicMock(), write_hook=write_hook
+        )
 
         request = JSONRPCRequest(id=1, method="test")
         await transport.send(request)
@@ -110,9 +112,13 @@ class TestStdioTransport:
         read_hook = MagicMock()
 
         # receive() reads from _stdout (the subprocess's stdout stream)
-        mock_stdout.readline = MagicMock(return_value=b'{"jsonrpc":"2.0","id":1,"result":{}}\n')
+        mock_stdout.readline = MagicMock(
+            return_value=b'{"jsonrpc":"2.0","id":1,"result":{}}\n'
+        )
 
-        transport = StdioTransport(stdin=MagicMock(), stdout=mock_stdout, read_hook=read_hook)
+        transport = StdioTransport(
+            stdin=MagicMock(), stdout=mock_stdout, read_hook=read_hook
+        )
 
         await transport.receive()
 
@@ -235,7 +241,11 @@ class TestProcessStdioTransport:
         """ProcessStdioTransport can send and receive to subprocess."""
         # Use Python to echo JSON-RPC responses
         transport = ProcessStdioTransport(
-            command=["python", "-c", "import sys; print('{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}')"]
+            command=[
+                "python",
+                "-c",
+                'import sys; print(\'{"jsonrpc":"2.0","id":1,"result":{}}\')',
+            ]
         )
 
         try:

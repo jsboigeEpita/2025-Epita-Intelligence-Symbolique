@@ -44,16 +44,18 @@ class NLToLogicPlugin:
         translator = NLToLogicTranslator(max_retries=3, logic_type="propositional")
         result = await translator.translate(text, logic_type="propositional")
 
-        return json.dumps({
-            "original_text": result.original_text[:200],
-            "formula": result.formula,
-            "logic_type": result.logic_type,
-            "is_valid": result.is_valid,
-            "validation_message": result.validation_message,
-            "attempts": result.attempts,
-            "variables": result.variables,
-            "confidence": result.confidence,
-        })
+        return json.dumps(
+            {
+                "original_text": result.original_text[:200],
+                "formula": result.formula,
+                "logic_type": result.logic_type,
+                "is_valid": result.is_valid,
+                "validation_message": result.validation_message,
+                "attempts": result.attempts,
+                "variables": result.variables,
+                "confidence": result.confidence,
+            }
+        )
 
     @kernel_function(
         name="translate_to_fol",
@@ -71,16 +73,18 @@ class NLToLogicPlugin:
         translator = NLToLogicTranslator(max_retries=3, logic_type="fol")
         result = await translator.translate(text, logic_type="fol")
 
-        return json.dumps({
-            "original_text": result.original_text[:200],
-            "formula": result.formula,
-            "logic_type": result.logic_type,
-            "is_valid": result.is_valid,
-            "validation_message": result.validation_message,
-            "attempts": result.attempts,
-            "variables": result.variables,
-            "confidence": result.confidence,
-        })
+        return json.dumps(
+            {
+                "original_text": result.original_text[:200],
+                "formula": result.formula,
+                "logic_type": result.logic_type,
+                "is_valid": result.is_valid,
+                "validation_message": result.validation_message,
+                "attempts": result.attempts,
+                "variables": result.variables,
+                "confidence": result.confidence,
+            }
+        )
 
     @kernel_function(
         name="translate_batch_to_pl",
@@ -103,21 +107,23 @@ class NLToLogicPlugin:
         translator = NLToLogicTranslator(max_retries=3, logic_type="propositional")
         batch = await translator.translate_batch(arguments, logic_type="propositional")
 
-        return json.dumps({
-            "translations": [
-                {
-                    "original_text": t.original_text[:200],
-                    "formula": t.formula,
-                    "is_valid": t.is_valid,
-                    "variables": t.variables,
-                    "confidence": t.confidence,
-                }
-                for t in batch.translations
-            ],
-            "overall_consistency": batch.overall_consistency,
-            "consistency_message": batch.consistency_message,
-            "method": batch.method,
-        })
+        return json.dumps(
+            {
+                "translations": [
+                    {
+                        "original_text": t.original_text[:200],
+                        "formula": t.formula,
+                        "is_valid": t.is_valid,
+                        "variables": t.variables,
+                        "confidence": t.confidence,
+                    }
+                    for t in batch.translations
+                ],
+                "overall_consistency": batch.overall_consistency,
+                "consistency_message": batch.consistency_message,
+                "method": batch.method,
+            }
+        )
 
     @kernel_function(
         name="translate_batch_to_fol",
@@ -140,21 +146,23 @@ class NLToLogicPlugin:
         translator = NLToLogicTranslator(max_retries=3, logic_type="fol")
         batch = await translator.translate_batch(arguments, logic_type="fol")
 
-        return json.dumps({
-            "translations": [
-                {
-                    "original_text": t.original_text[:200],
-                    "formula": t.formula,
-                    "is_valid": t.is_valid,
-                    "variables": t.variables,
-                    "confidence": t.confidence,
-                }
-                for t in batch.translations
-            ],
-            "overall_consistency": batch.overall_consistency,
-            "consistency_message": batch.consistency_message,
-            "method": batch.method,
-        })
+        return json.dumps(
+            {
+                "translations": [
+                    {
+                        "original_text": t.original_text[:200],
+                        "formula": t.formula,
+                        "is_valid": t.is_valid,
+                        "variables": t.variables,
+                        "confidence": t.confidence,
+                    }
+                    for t in batch.translations
+                ],
+                "overall_consistency": batch.overall_consistency,
+                "consistency_message": batch.consistency_message,
+                "method": batch.method,
+            }
+        )
 
 
 def _parse_json_or_default(text: str, default: dict) -> dict:

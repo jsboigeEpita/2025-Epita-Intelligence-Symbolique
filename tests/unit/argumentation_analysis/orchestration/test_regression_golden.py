@@ -28,7 +28,6 @@ from argumentation_analysis.orchestration.workflow_dsl import (
 )
 from argumentation_analysis.core.capability_registry import CapabilityRegistry
 
-
 # ── Golden input text (known to contain fallacies + arguments) ────────────
 
 GOLDEN_TEXT = (
@@ -57,8 +56,12 @@ GOLDEN_TEXT = (
 MOCK_EXTRACTION_OUTPUT = {
     # _write_fact_extraction_to_state reads "arguments" (list of {text, source_quote?})
     "arguments": [
-        {"text": "La réforme des retraites est nécessaire car tous les pays européens l'ont déjà faite."},
-        {"text": "Si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans."},
+        {
+            "text": "La réforme des retraites est nécessaire car tous les pays européens l'ont déjà faite."
+        },
+        {
+            "text": "Si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans."
+        },
         {"text": "Travailler plus longtemps est dans l'ordre des choses."},
         {"text": "Le déficit atteindra 2.3% du PIB d'ici 2030."},
         {"text": "Pensez à vos enfants — il faut agir pour leur avenir."},
@@ -72,28 +75,73 @@ MOCK_EXTRACTION_OUTPUT = {
 MOCK_HIERARCHICAL_FALLACY_OUTPUT = {
     # _write_hierarchical_fallacy_to_state reads "fallacies" (list of dicts)
     "fallacies": [
-        {"type": "Argument d'autorité", "confidence": 0.85, "explanation": "Appel à l'autorité des autres pays", "taxonomy_pk": "4"},
-        {"type": "Appel à la peur", "confidence": 0.92, "explanation": "Menace d'effondrement du système", "taxonomy_pk": "340"},
+        {
+            "type": "Argument d'autorité",
+            "confidence": 0.85,
+            "explanation": "Appel à l'autorité des autres pays",
+            "taxonomy_pk": "4",
+        },
+        {
+            "type": "Appel à la peur",
+            "confidence": 0.92,
+            "explanation": "Menace d'effondrement du système",
+            "taxonomy_pk": "340",
+        },
     ],
 }
 
 MOCK_QUALITY_OUTPUT = {
     # _write_quality_to_state reads "per_argument_scores" (dict arg_id → {scores_par_vertu, note_finale, llm_assessment})
     "per_argument_scores": {
-        "arg_1": {"scores_par_vertu": {"clarity": 0.6, "relevance": 0.5}, "note_finale": 0.45, "llm_assessment": "Weak authority argument"},
-        "arg_2": {"scores_par_vertu": {"clarity": 0.7, "relevance": 0.4}, "note_finale": 0.35, "llm_assessment": "Fear-based"},
-        "arg_3": {"scores_par_vertu": {"clarity": 0.5, "relevance": 0.3}, "note_finale": 0.30, "llm_assessment": "Naturalistic fallacy"},
-        "arg_4": {"scores_par_vertu": {"clarity": 0.8, "relevance": 0.7}, "note_finale": 0.65, "llm_assessment": "Quantitative but assumption-based"},
-        "arg_5": {"scores_par_vertu": {"clarity": 0.6, "relevance": 0.2}, "note_finale": 0.25, "llm_assessment": "Emotional appeal"},
+        "arg_1": {
+            "scores_par_vertu": {"clarity": 0.6, "relevance": 0.5},
+            "note_finale": 0.45,
+            "llm_assessment": "Weak authority argument",
+        },
+        "arg_2": {
+            "scores_par_vertu": {"clarity": 0.7, "relevance": 0.4},
+            "note_finale": 0.35,
+            "llm_assessment": "Fear-based",
+        },
+        "arg_3": {
+            "scores_par_vertu": {"clarity": 0.5, "relevance": 0.3},
+            "note_finale": 0.30,
+            "llm_assessment": "Naturalistic fallacy",
+        },
+        "arg_4": {
+            "scores_par_vertu": {"clarity": 0.8, "relevance": 0.7},
+            "note_finale": 0.65,
+            "llm_assessment": "Quantitative but assumption-based",
+        },
+        "arg_5": {
+            "scores_par_vertu": {"clarity": 0.6, "relevance": 0.2},
+            "note_finale": 0.25,
+            "llm_assessment": "Emotional appeal",
+        },
     },
 }
 
 MOCK_COUNTER_OUTPUT = {
     # _write_counter_argument_to_state reads "llm_counter_arguments" (list of dicts)
     "llm_counter_arguments": [
-        {"target_argument": "La réforme est nécessaire car tous les pays européens l'ont faite.", "counter_argument": "L'argument d'autorité ignore les spécificités nationales.", "strategy_used": "counter_example", "strength": "strong"},
-        {"target_argument": "Le système s'effondrera dans cinq ans.", "counter_argument": "Les projections à 5 ans sont rarement fiables.", "strategy_used": "reductio_ad_absurdum", "strength": "moderate"},
-        {"target_argument": "Travailler plus longtemps est dans l'ordre des choses.", "counter_argument": "Ce qui est 'naturel' n'est pas nécessairement juste.", "strategy_used": "distinction", "strength": "strong"},
+        {
+            "target_argument": "La réforme est nécessaire car tous les pays européens l'ont faite.",
+            "counter_argument": "L'argument d'autorité ignore les spécificités nationales.",
+            "strategy_used": "counter_example",
+            "strength": "strong",
+        },
+        {
+            "target_argument": "Le système s'effondrera dans cinq ans.",
+            "counter_argument": "Les projections à 5 ans sont rarement fiables.",
+            "strategy_used": "reductio_ad_absurdum",
+            "strength": "moderate",
+        },
+        {
+            "target_argument": "Travailler plus longtemps est dans l'ordre des choses.",
+            "counter_argument": "Ce qui est 'naturel' n'est pas nécessairement juste.",
+            "strategy_used": "distinction",
+            "strength": "strong",
+        },
     ],
 }
 
@@ -109,21 +157,38 @@ MOCK_JTMS_OUTPUT = {
 MOCK_NL_TO_LOGIC_OUTPUT = {
     # _write_nl_to_logic_to_state reads "translations" (list of {formula, logic_type, is_valid, ...})
     "translations": [
-        {"original_text": "Si réforme européenne alors réforme française nécessaire", "formula": "european_reform => french_reform_needed", "logic_type": "propositional", "is_valid": True, "confidence": 0.8},
-        {"original_text": "Si croissance 1.8% alors déficit 2.3%", "formula": "growth_1_8 => deficit_2_3", "logic_type": "propositional", "is_valid": True, "confidence": 0.7},
+        {
+            "original_text": "Si réforme européenne alors réforme française nécessaire",
+            "formula": "european_reform => french_reform_needed",
+            "logic_type": "propositional",
+            "is_valid": True,
+            "confidence": 0.8,
+        },
+        {
+            "original_text": "Si croissance 1.8% alors déficit 2.3%",
+            "formula": "growth_1_8 => deficit_2_3",
+            "logic_type": "propositional",
+            "is_valid": True,
+            "confidence": 0.7,
+        },
     ],
 }
 
 MOCK_PL_OUTPUT = {
     # _write_propositional_to_state reads "formulas", "satisfiable", "model"
-    "formulas": ["european_reform => french_reform_needed", "growth_1_8 => deficit_2_3"],
+    "formulas": [
+        "european_reform => french_reform_needed",
+        "growth_1_8 => deficit_2_3",
+    ],
     "satisfiable": True,
     "model": {"european_reform": True, "french_reform_needed": True},
 }
 
 MOCK_FOL_OUTPUT = {
     # _write_fol_to_state reads "formulas", "consistent", "inferences", "confidence"
-    "formulas": ["forall x (EuropeanCountry(x) => ReformDone(x)) => ReformNeeded(France)"],
+    "formulas": [
+        "forall x (EuropeanCountry(x) => ReformDone(x)) => ReformNeeded(France)"
+    ],
     "consistent": True,
     "inferences": ["ReformNeeded(France)"],
     "confidence": 0.85,
@@ -135,7 +200,10 @@ MOCK_DEBATE_OUTPUT = {
     "llm_debate_assessment": {
         "key_exchanges": [
             {"point": "Reform is necessary", "rebuttal": "Reform model is flawed"},
-            {"point": "All countries did it", "rebuttal": "National specificities differ"},
+            {
+                "point": "All countries did it",
+                "rebuttal": "National specificities differ",
+            },
         ],
     },
 }
@@ -155,7 +223,11 @@ MOCK_GOVERNANCE_OUTPUT = {
 MOCK_CAMEMBERT_OUTPUT = {
     # _write_camembert_to_state reads "detections" (list of {text, label, confidence})
     "detections": [
-        {"text": "Pensez à vos enfants", "label": "Appel à l'émotion", "confidence": 0.78},
+        {
+            "text": "Pensez à vos enfants",
+            "label": "Appel à l'émotion",
+            "confidence": 0.78,
+        },
     ],
 }
 
@@ -197,21 +269,22 @@ def _build_golden_registry() -> CapabilityRegistry:
         # Override ALL registrations matching this capability (not just the first)
         for reg_name, reg in registry._registrations.items():
             if cap_name in reg.capabilities:
+
                 async def _mock_invoke(input_text, context, _out=mock_output):
                     return _out
+
                 reg.invoke = _mock_invoke
 
     # Also override any remaining registrations that have real invoke callables
     # but aren't in our mock map (e.g. speech, semantic_indexing, etc.)
     # — set them to return empty dicts so they don't make real calls
     for reg_name, reg in registry._registrations.items():
-        has_mock = any(
-            cap in mock_map
-            for cap in reg.capabilities
-        )
+        has_mock = any(cap in mock_map for cap in reg.capabilities)
         if not has_mock and reg.invoke is not None:
+
             async def _noop_invoke(input_text, context):
                 return {}
+
             reg.invoke = _noop_invoke
 
     return registry
@@ -234,7 +307,9 @@ class TestGoldenStatePipeline:
     def golden_state(self):
         return UnifiedAnalysisState(GOLDEN_TEXT)
 
-    async def test_standard_workflow_populates_arguments(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_arguments(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow extracts ≥3 arguments into state."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -250,11 +325,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.identified_arguments) >= 3, (
-            f"Expected ≥3 arguments, got {len(golden_state.identified_arguments)}"
-        )
+        assert (
+            len(golden_state.identified_arguments) >= 3
+        ), f"Expected ≥3 arguments, got {len(golden_state.identified_arguments)}"
 
-    async def test_standard_workflow_populates_fallacies(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_fallacies(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow detects ≥1 fallacy into state."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -270,11 +347,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.identified_fallacies) >= 1, (
-            f"Expected ≥1 fallacy, got {len(golden_state.identified_fallacies)}"
-        )
+        assert (
+            len(golden_state.identified_fallacies) >= 1
+        ), f"Expected ≥1 fallacy, got {len(golden_state.identified_fallacies)}"
 
-    async def test_standard_workflow_populates_quality_scores(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_quality_scores(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces ≥2 quality scores."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -290,11 +369,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.argument_quality_scores) >= 2, (
-            f"Expected ≥2 quality scores, got {len(golden_state.argument_quality_scores)}"
-        )
+        assert (
+            len(golden_state.argument_quality_scores) >= 2
+        ), f"Expected ≥2 quality scores, got {len(golden_state.argument_quality_scores)}"
 
-    async def test_standard_workflow_populates_fol_results(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_fol_results(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces ≥1 FOL analysis result."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -310,11 +391,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.fol_analysis_results) >= 1, (
-            f"Expected ≥1 FOL result, got {len(golden_state.fol_analysis_results)}"
-        )
+        assert (
+            len(golden_state.fol_analysis_results) >= 1
+        ), f"Expected ≥1 FOL result, got {len(golden_state.fol_analysis_results)}"
 
-    async def test_standard_workflow_populates_counter_arguments(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_counter_arguments(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces counter-arguments."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -330,11 +413,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.counter_arguments) >= 1, (
-            f"Expected ≥1 counter-argument, got {len(golden_state.counter_arguments)}"
-        )
+        assert (
+            len(golden_state.counter_arguments) >= 1
+        ), f"Expected ≥1 counter-argument, got {len(golden_state.counter_arguments)}"
 
-    async def test_standard_workflow_populates_jtms_beliefs(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_jtms_beliefs(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces JTMS beliefs."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -350,11 +435,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.jtms_beliefs) >= 1, (
-            f"Expected ≥1 JTMS belief, got {len(golden_state.jtms_beliefs)}"
-        )
+        assert (
+            len(golden_state.jtms_beliefs) >= 1
+        ), f"Expected ≥1 JTMS belief, got {len(golden_state.jtms_beliefs)}"
 
-    async def test_standard_workflow_populates_debate(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_debate(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces debate transcript."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -370,11 +457,13 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.debate_transcripts) >= 1, (
-            f"Expected ≥1 debate transcript, got {len(golden_state.debate_transcripts)}"
-        )
+        assert (
+            len(golden_state.debate_transcripts) >= 1
+        ), f"Expected ≥1 debate transcript, got {len(golden_state.debate_transcripts)}"
 
-    async def test_standard_workflow_populates_governance(self, golden_registry, golden_state):
+    async def test_standard_workflow_populates_governance(
+        self, golden_registry, golden_state
+    ):
         """Standard workflow produces governance decisions."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
@@ -390,9 +479,9 @@ class TestGoldenStatePipeline:
             state_writers=CAPABILITY_STATE_WRITERS,
         )
 
-        assert len(golden_state.governance_decisions) >= 1, (
-            f"Expected ≥1 governance decision, got {len(golden_state.governance_decisions)}"
-        )
+        assert (
+            len(golden_state.governance_decisions) >= 1
+        ), f"Expected ≥1 governance decision, got {len(golden_state.governance_decisions)}"
 
 
 # ============================================================
@@ -426,9 +515,15 @@ class TestGoldenSnapshotConsistency:
         snapshot = state.get_state_snapshot(summarize=True)
 
         # Core fields from #309 thresholds
-        assert snapshot.get("argument_count", 0) >= 3, f"argument_count: {snapshot.get('argument_count', 0)}"
-        assert snapshot.get("fallacy_count", 0) >= 1, f"fallacy_count: {snapshot.get('fallacy_count', 0)}"
-        assert snapshot.get("quality_scores_count", 0) >= 2, f"quality_scores_count: {snapshot.get('quality_scores_count', 0)}"
+        assert (
+            snapshot.get("argument_count", 0) >= 3
+        ), f"argument_count: {snapshot.get('argument_count', 0)}"
+        assert (
+            snapshot.get("fallacy_count", 0) >= 1
+        ), f"fallacy_count: {snapshot.get('fallacy_count', 0)}"
+        assert (
+            snapshot.get("quality_scores_count", 0) >= 2
+        ), f"quality_scores_count: {snapshot.get('quality_scores_count', 0)}"
 
     async def test_snapshot_has_correct_keys(self):
         """State snapshot has all expected summary keys."""
@@ -549,6 +644,7 @@ class TestGoldenIntegration:
     async def test_run_unified_analysis_standard_thresholds(self):
         """run_unified_analysis('standard') meets minimum thresholds."""
         import os
+
         if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not set")
 
@@ -565,16 +661,17 @@ class TestGoldenIntegration:
         assert state is not None, "Pipeline did not produce unified_state"
 
         snapshot = state.get_state_snapshot(summarize=True)
-        assert snapshot.get("argument_count", 0) >= 3, (
-            f"Expected ≥3 arguments, got {snapshot.get('argument_count', 0)}"
-        )
-        assert snapshot.get("fallacy_count", 0) >= 1, (
-            f"Expected ≥1 fallacy, got {snapshot.get('fallacy_count', 0)}"
-        )
+        assert (
+            snapshot.get("argument_count", 0) >= 3
+        ), f"Expected ≥3 arguments, got {snapshot.get('argument_count', 0)}"
+        assert (
+            snapshot.get("fallacy_count", 0) >= 1
+        ), f"Expected ≥1 fallacy, got {snapshot.get('fallacy_count', 0)}"
 
     async def test_run_unified_analysis_returns_state_snapshot(self):
         """run_unified_analysis returns state_snapshot in result dict."""
         import os
+
         if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not set")
 
@@ -609,9 +706,9 @@ class TestGoldenWorkflowStructure:
         )
 
         wf = build_standard_workflow()
-        assert len(wf.phases) >= 10, (
-            f"Expected ≥10 phases, got {len(wf.phases)}: {[p.name for p in wf.phases]}"
-        )
+        assert (
+            len(wf.phases) >= 10
+        ), f"Expected ≥10 phases, got {len(wf.phases)}: {[p.name for p in wf.phases]}"
 
     def test_full_workflow_phase_count(self):
         """Full workflow has ≥12 phases."""
@@ -620,9 +717,9 @@ class TestGoldenWorkflowStructure:
         )
 
         wf = build_full_workflow()
-        assert len(wf.phases) >= 12, (
-            f"Expected ≥12 phases, got {len(wf.phases)}: {[p.name for p in wf.phases]}"
-        )
+        assert (
+            len(wf.phases) >= 12
+        ), f"Expected ≥12 phases, got {len(wf.phases)}: {[p.name for p in wf.phases]}"
 
     def test_standard_workflow_has_required_capabilities(self):
         """Standard workflow includes core capabilities."""
@@ -653,9 +750,9 @@ class TestGoldenWorkflowStructure:
 
         light_caps = set(p.capability for p in light.phases)
         standard_caps = set(p.capability for p in standard.phases)
-        assert light_caps.issubset(standard_caps), (
-            f"Light has caps not in standard: {light_caps - standard_caps}"
-        )
+        assert light_caps.issubset(
+            standard_caps
+        ), f"Light has caps not in standard: {light_caps - standard_caps}"
 
     def test_state_writers_cover_standard_capabilities(self):
         """All standard workflow capabilities have state writers."""

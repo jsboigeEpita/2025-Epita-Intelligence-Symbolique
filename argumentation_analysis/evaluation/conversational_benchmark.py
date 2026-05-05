@@ -164,14 +164,18 @@ class BenchmarkReport:
                 "avg_wall_clock": sum(r.wall_clock_seconds for r in mode_runs) / n,
                 "avg_arguments": sum(r.argument_count for r in mode_runs) / n,
                 "avg_fallacies": sum(r.fallacy_count for r in mode_runs) / n,
-                "avg_quality_scores": sum(r.quality_scores_count for r in mode_runs) / n,
-                "avg_counter_args": sum(r.counter_argument_count for r in mode_runs) / n,
+                "avg_quality_scores": sum(r.quality_scores_count for r in mode_runs)
+                / n,
+                "avg_counter_args": sum(r.counter_argument_count for r in mode_runs)
+                / n,
                 "avg_jtms_beliefs": sum(r.jtms_belief_count for r in mode_runs) / n,
-                "avg_field_fill_rate": sum(r.state_field_fill_rate for r in mode_runs) / n,
+                "avg_field_fill_rate": sum(r.state_field_fill_rate for r in mode_runs)
+                / n,
                 "avg_cross_ref": sum(r.cross_ref_density for r in mode_runs) / n,
                 "avg_messages": sum(r.total_messages for r in mode_runs) / n,
                 "run_count": n,
-                "error_rate": sum(1 for r in self.runs if r.mode == mode and r.error) / len([r for r in self.runs if r.mode == mode]),
+                "error_rate": sum(1 for r in self.runs if r.mode == mode and r.error)
+                / len([r for r in self.runs if r.mode == mode]),
             }
 
 
@@ -216,7 +220,9 @@ def extract_metrics(
                     filled += 1
             else:
                 filled += 1
-    metrics.state_field_fill_rate = filled / len(ALL_STATE_FIELDS) if ALL_STATE_FIELDS else 0
+    metrics.state_field_fill_rate = (
+        filled / len(ALL_STATE_FIELDS) if ALL_STATE_FIELDS else 0
+    )
 
     # Cross-reference density
     try:
@@ -229,8 +235,8 @@ def extract_metrics(
             with_formal = enrichment.get("with_formal_verification", 0)
             # Density = average enrichment coverage across 4 dimensions
             metrics.cross_ref_density = (
-                (with_quality + with_fallacy + with_counter + with_formal) / (4 * total)
-            )
+                with_quality + with_fallacy + with_counter + with_formal
+            ) / (4 * total)
     except Exception:
         pass
 
@@ -306,8 +312,10 @@ class ConversationalBenchmarkRunner:
 
         # Per-run table
         lines.append("## Per-Run Results\n")
-        lines.append(f"{'Text':<20} {'Mode':<15} {'Args':>5} {'Fall':>5} {'Qual':>5} "
-                      f"{'CAs':>5} {'JTMS':>5} {'Fill':>6} {'XRef':>6} {'Time':>7} {'Msgs':>5}")
+        lines.append(
+            f"{'Text':<20} {'Mode':<15} {'Args':>5} {'Fall':>5} {'Qual':>5} "
+            f"{'CAs':>5} {'JTMS':>5} {'Fill':>6} {'XRef':>6} {'Time':>7} {'Msgs':>5}"
+        )
         lines.append("-" * 100)
         for r in report.runs:
             if r.error:

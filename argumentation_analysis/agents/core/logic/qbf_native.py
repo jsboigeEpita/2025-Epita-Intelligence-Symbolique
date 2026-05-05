@@ -341,9 +341,7 @@ def credulous_acceptance_qbf(
                 if attacker not in ext:
                     # Must be counter-attacked by someone in ext
                     counter_attacked = any(
-                        a[0] in ext and a[1] == attacker
-                        for a in attacks
-                        if len(a) >= 2
+                        a[0] in ext and a[1] == attacker for a in attacks if len(a) >= 2
                     )
                     if not counter_attacked:
                         admissible = False

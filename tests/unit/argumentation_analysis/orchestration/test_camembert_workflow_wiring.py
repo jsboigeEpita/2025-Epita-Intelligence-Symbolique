@@ -7,6 +7,7 @@ Verifies:
 4. InformalAgent in conversational mode has FrenchFallacyPlugin
 5. State writer correctly maps CamemBERT output
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 

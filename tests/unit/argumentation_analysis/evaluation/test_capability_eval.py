@@ -38,10 +38,10 @@ from argumentation_analysis.evaluation.capability_eval import (
     EVAL_WORKFLOW_PHASES,
 )
 
-
 # ---------------------------------------------------------------------------
 # CapabilityConfig
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestCapabilityConfig:
@@ -65,17 +65,28 @@ class TestCapabilityConfig:
 # PRESET_CONFIGS
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestPresetConfigs:
     def test_all_required_configs_present(self):
-        required = {"baseline", "quality", "fallacy", "counter", "debate", "logic", "full"}
+        required = {
+            "baseline",
+            "quality",
+            "fallacy",
+            "counter",
+            "debate",
+            "logic",
+            "full",
+        }
         assert required.issubset(set(PRESET_CONFIGS.keys()))
 
     def test_baseline_is_minimal(self):
         assert PRESET_CONFIGS["baseline"].capabilities == ["fact_extraction"]
 
     def test_full_has_most_capabilities(self):
-        cap_counts = {name: len(cfg.capabilities) for name, cfg in PRESET_CONFIGS.items()}
+        cap_counts = {
+            name: len(cfg.capabilities) for name, cfg in PRESET_CONFIGS.items()
+        }
         assert cap_counts["full"] == max(cap_counts.values())
 
     def test_all_configs_have_descriptions(self):
@@ -87,13 +98,16 @@ class TestPresetConfigs:
 # FilteredRegistry
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestFilteredRegistry:
     def _make_registry(self, caps_per_provider):
         """Build a mock registry where find_for_capability returns providers."""
         registry = MagicMock()
+
         def find(capability):
             return caps_per_provider.get(capability, [])
+
         registry.find_for_capability.side_effect = find
         return registry
 
@@ -131,16 +145,32 @@ class TestFilteredRegistry:
 # EvalCell
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestEvalCell:
-    def _make_cell(self, overall=4.0, depth=4.0, completeness=4.0,
-                   accuracy=4.0, coherence=4.0, actionability=4.0):
+    def _make_cell(
+        self,
+        overall=4.0,
+        depth=4.0,
+        completeness=4.0,
+        accuracy=4.0,
+        coherence=4.0,
+        actionability=4.0,
+    ):
         return EvalCell(
-            config_name="test", capabilities_active=["cap_a"],
-            document_name="doc_001", document_index=0,
-            phases_run=3, phases_skipped=1, phases_failed=0,
-            overall=overall, depth=depth, completeness=completeness,
-            accuracy=accuracy, coherence=coherence, actionability=actionability,
+            config_name="test",
+            capabilities_active=["cap_a"],
+            document_name="doc_001",
+            document_index=0,
+            phases_run=3,
+            phases_skipped=1,
+            phases_failed=0,
+            overall=overall,
+            depth=depth,
+            completeness=completeness,
+            accuracy=accuracy,
+            coherence=coherence,
+            actionability=actionability,
         )
 
     def test_composite_all_equal(self):
@@ -148,22 +178,38 @@ class TestEvalCell:
         assert cell.composite_score == pytest.approx(4.0, abs=0.01)
 
     def test_composite_only_overall(self):
-        cell = self._make_cell(overall=5.0, depth=0, completeness=0,
-                               accuracy=0, coherence=0, actionability=0)
+        cell = self._make_cell(
+            overall=5.0,
+            depth=0,
+            completeness=0,
+            accuracy=0,
+            coherence=0,
+            actionability=0,
+        )
         # 5.0 * 0.40 = 2.0
         assert cell.composite_score == pytest.approx(2.0, abs=0.01)
 
     def test_timestamp_auto_set(self):
         cell = EvalCell(
-            config_name="c", capabilities_active=[], document_name="d",
-            document_index=0, phases_run=0, phases_skipped=0, phases_failed=0,
+            config_name="c",
+            capabilities_active=[],
+            document_name="d",
+            document_index=0,
+            phases_run=0,
+            phases_skipped=0,
+            phases_failed=0,
         )
         assert cell.timestamp != ""
 
     def test_no_error_by_default(self):
         cell = EvalCell(
-            config_name="c", capabilities_active=[], document_name="d",
-            document_index=0, phases_run=0, phases_skipped=0, phases_failed=0,
+            config_name="c",
+            capabilities_active=[],
+            document_name="d",
+            document_index=0,
+            phases_run=0,
+            phases_skipped=0,
+            phases_failed=0,
         )
         assert cell.judge_error is None
 
@@ -171,6 +217,7 @@ class TestEvalCell:
 # ---------------------------------------------------------------------------
 # _build_eval_workflow
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestBuildEvalWorkflow:
@@ -198,14 +245,22 @@ class TestBuildEvalWorkflow:
 # run_single_cell
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestRunSingleCell:
     def _make_executor(self, status_map=None):
         """Build a mock WorkflowExecutor that returns fixed phase statuses."""
-        from argumentation_analysis.orchestration.workflow_dsl import PhaseResult, PhaseStatus
+        from argumentation_analysis.orchestration.workflow_dsl import (
+            PhaseResult,
+            PhaseStatus,
+        )
 
         if status_map is None:
-            status_map = {"extract": "completed", "quality": "completed", "fallacy": "skipped"}
+            status_map = {
+                "extract": "completed",
+                "quality": "completed",
+                "fallacy": "skipped",
+            }
 
         async def fake_execute(workflow, input_data, state=None, **kwargs):
             results = {}
@@ -224,15 +279,19 @@ class TestRunSingleCell:
     async def test_counts_phases_correctly(self):
         config = PRESET_CONFIGS["quality"]
         registry = MagicMock()
-        executor = self._make_executor({
-            "extract": "completed",
-            "quality": "completed",
-            "fallacy": "skipped",
-            "other": "failed",
-        })
+        executor = self._make_executor(
+            {
+                "extract": "completed",
+                "quality": "completed",
+                "fallacy": "skipped",
+                "other": "failed",
+            }
+        )
         workflow = _build_eval_workflow()
 
-        with patch("argumentation_analysis.evaluation.capability_eval.FilteredRegistry") as mock_fr:
+        with patch(
+            "argumentation_analysis.evaluation.capability_eval.FilteredRegistry"
+        ) as mock_fr:
             mock_fr.return_value = registry
             cell = await run_single_cell(
                 config=config,
@@ -256,7 +315,9 @@ class TestRunSingleCell:
         executor = self._make_executor({"extract": "completed"})
         workflow = _build_eval_workflow()
 
-        with patch("argumentation_analysis.evaluation.capability_eval.FilteredRegistry"):
+        with patch(
+            "argumentation_analysis.evaluation.capability_eval.FilteredRegistry"
+        ):
             cell = await run_single_cell(
                 config=config,
                 document_text="Test",
@@ -282,14 +343,21 @@ class TestRunSingleCell:
         workflow = _build_eval_workflow()
 
         fake_score = JudgeScore(
-            completeness=4.0, accuracy=3.5, depth=4.5,
-            coherence=4.0, actionability=3.8, overall=4.2,
-            reasoning="Good.", judge_model="test-model",
+            completeness=4.0,
+            accuracy=3.5,
+            depth=4.5,
+            coherence=4.0,
+            actionability=3.8,
+            overall=4.2,
+            reasoning="Good.",
+            judge_model="test-model",
         )
         judge = MagicMock()
         judge.evaluate = AsyncMock(return_value=fake_score)
 
-        with patch("argumentation_analysis.evaluation.capability_eval.FilteredRegistry"):
+        with patch(
+            "argumentation_analysis.evaluation.capability_eval.FilteredRegistry"
+        ):
             cell = await run_single_cell(
                 config=config,
                 document_text="Test text",
@@ -314,7 +382,9 @@ class TestRunSingleCell:
         judge = MagicMock()
         judge.evaluate = AsyncMock(side_effect=RuntimeError("API error"))
 
-        with patch("argumentation_analysis.evaluation.capability_eval.FilteredRegistry"):
+        with patch(
+            "argumentation_analysis.evaluation.capability_eval.FilteredRegistry"
+        ):
             cell = await run_single_cell(
                 config=config,
                 document_text="Test",
@@ -334,15 +404,24 @@ class TestRunSingleCell:
 # compute_marginal_scores
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestComputeMarginalScores:
     def _make_cell(self, caps, overall):
         c = EvalCell(
-            config_name="c", capabilities_active=list(caps),
-            document_name="d", document_index=0,
-            phases_run=0, phases_skipped=0, phases_failed=0,
-            overall=overall, depth=overall, completeness=overall,
-            accuracy=overall, coherence=overall, actionability=overall,
+            config_name="c",
+            capabilities_active=list(caps),
+            document_name="d",
+            document_index=0,
+            phases_run=0,
+            phases_skipped=0,
+            phases_failed=0,
+            overall=overall,
+            depth=overall,
+            completeness=overall,
+            accuracy=overall,
+            coherence=overall,
+            actionability=overall,
         )
         return c
 
@@ -385,15 +464,24 @@ class TestComputeMarginalScores:
 # compute_synergies
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestComputeSynergies:
     def _make_cell(self, caps, overall):
         c = EvalCell(
-            config_name="c", capabilities_active=list(caps),
-            document_name="d", document_index=0,
-            phases_run=0, phases_skipped=0, phases_failed=0,
-            overall=overall, depth=overall, completeness=overall,
-            accuracy=overall, coherence=overall, actionability=overall,
+            config_name="c",
+            capabilities_active=list(caps),
+            document_name="d",
+            document_index=0,
+            phases_run=0,
+            phases_skipped=0,
+            phases_failed=0,
+            overall=overall,
+            depth=overall,
+            completeness=overall,
+            accuracy=overall,
+            coherence=overall,
+            actionability=overall,
         )
         return c
 
@@ -416,15 +504,24 @@ class TestComputeSynergies:
 # build_report
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestBuildReport:
     def _make_cell(self, cfg, doc, overall):
         c = EvalCell(
-            config_name=cfg, capabilities_active=["cap_a"],
-            document_name=doc, document_index=0,
-            phases_run=1, phases_skipped=0, phases_failed=0,
-            overall=overall, depth=overall, completeness=overall,
-            accuracy=overall, coherence=overall, actionability=overall,
+            config_name=cfg,
+            capabilities_active=["cap_a"],
+            document_name=doc,
+            document_index=0,
+            phases_run=1,
+            phases_skipped=0,
+            phases_failed=0,
+            overall=overall,
+            depth=overall,
+            completeness=overall,
+            accuracy=overall,
+            coherence=overall,
+            actionability=overall,
         )
         return c
 
@@ -461,16 +558,25 @@ class TestBuildReport:
 # write_cells_jsonl
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestWriteCellsJsonl:
     def test_writes_valid_jsonl(self, tmp_path):
         cells = [
             EvalCell(
-                config_name="baseline", capabilities_active=["fact_extraction"],
-                document_name="doc_001", document_index=0,
-                phases_run=2, phases_skipped=1, phases_failed=0,
-                overall=4.0, depth=3.5, completeness=4.0,
-                accuracy=4.0, coherence=4.2, actionability=3.8,
+                config_name="baseline",
+                capabilities_active=["fact_extraction"],
+                document_name="doc_001",
+                document_index=0,
+                phases_run=2,
+                phases_skipped=1,
+                phases_failed=0,
+                overall=4.0,
+                depth=3.5,
+                completeness=4.0,
+                accuracy=4.0,
+                coherence=4.2,
+                actionability=3.8,
                 reasoning="Decent.",
             )
         ]
@@ -493,6 +599,7 @@ class TestWriteCellsJsonl:
 # write_report
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 class TestWriteReport:
     def test_creates_json_and_markdown(self, tmp_path):
@@ -500,24 +607,28 @@ class TestWriteReport:
             configs_evaluated=["baseline", "full"],
             num_documents=5,
             total_cells=10,
-            config_scores=[{
-                "config_name": "full",
-                "capabilities": ["cap_a", "cap_b"],
-                "n_docs": 5,
-                "avg_composite": 0.8,
-                "avg_overall": 4.0,
-                "avg_depth": 3.5,
-                "avg_completeness": 3.8,
-                "avg_phases_run": 6.0,
-            }],
-            marginal_scores=[{
-                "capability": "cap_a",
-                "avg_score_with": 4.0,
-                "avg_score_without": 3.0,
-                "marginal_contribution": 1.0,
-                "n_with": 5,
-                "n_without": 5,
-            }],
+            config_scores=[
+                {
+                    "config_name": "full",
+                    "capabilities": ["cap_a", "cap_b"],
+                    "n_docs": 5,
+                    "avg_composite": 0.8,
+                    "avg_overall": 4.0,
+                    "avg_depth": 3.5,
+                    "avg_completeness": 3.8,
+                    "avg_phases_run": 6.0,
+                }
+            ],
+            marginal_scores=[
+                {
+                    "capability": "cap_a",
+                    "avg_score_with": 4.0,
+                    "avg_score_without": 3.0,
+                    "marginal_contribution": 1.0,
+                    "n_with": 5,
+                    "n_without": 5,
+                }
+            ],
             best_config="full",
             best_composite=0.8,
         )
@@ -529,7 +640,9 @@ class TestWriteReport:
     def test_json_valid(self, tmp_path):
         report = CapabilityEvalReport()
         write_report(report, tmp_path)
-        data = json.loads((tmp_path / "capability_eval_report.json").read_text(encoding="utf-8"))
+        data = json.loads(
+            (tmp_path / "capability_eval_report.json").read_text(encoding="utf-8")
+        )
         assert "total_cells" in data
 
     def test_markdown_has_section_headers(self, tmp_path):
@@ -558,12 +671,12 @@ class TestStateWritersRegression:
 
         # Read the source code of run_single_cell to verify state_writers is passed
         source = inspect.getsource(run_single_cell)
-        assert "state_writers" in source, (
-            "run_single_cell must pass state_writers to executor.execute()"
-        )
-        assert "CAPABILITY_STATE_WRITERS" in source, (
-            "run_single_cell must import and use CAPABILITY_STATE_WRITERS"
-        )
+        assert (
+            "state_writers" in source
+        ), "run_single_cell must pass state_writers to executor.execute()"
+        assert (
+            "CAPABILITY_STATE_WRITERS" in source
+        ), "run_single_cell must import and use CAPABILITY_STATE_WRITERS"
 
 
 class TestEnumerateRegression:
@@ -580,9 +693,9 @@ class TestEnumerateRegression:
 
         source = inspect.getsource(capability_eval)
         # Ensure .index(doc) is NOT used in the main loop
-        assert "documents.index(doc)" not in source, (
-            "Main loop must use enumerate(documents), not documents.index(doc)"
-        )
+        assert (
+            "documents.index(doc)" not in source
+        ), "Main loop must use enumerate(documents), not documents.index(doc)"
 
     def test_main_loop_has_enumerate(self):
         """Verify enumerate(documents) is used."""
@@ -590,6 +703,6 @@ class TestEnumerateRegression:
         from argumentation_analysis.evaluation import capability_eval
 
         source = inspect.getsource(capability_eval)
-        assert "enumerate(documents)" in source, (
-            "Main loop must use enumerate(documents)"
-        )
+        assert (
+            "enumerate(documents)" in source
+        ), "Main loop must use enumerate(documents)"

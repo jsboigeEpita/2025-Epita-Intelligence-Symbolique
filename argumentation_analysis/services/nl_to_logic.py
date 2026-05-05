@@ -438,9 +438,7 @@ class NLToLogicTranslator:
 
         if logic_type == "propositional":
             # Try to parse as PL formula
-            result = await asyncio.to_thread(
-                bridge.validate_pl_formula, formula
-            )
+            result = await asyncio.to_thread(bridge.validate_pl_formula, formula)
             if result:
                 return True, "Valid propositional formula (Tweety)"
             else:
@@ -449,19 +447,22 @@ class NLToLogicTranslator:
             # FOL: build signature from metadata and validate all formulas together
             fol_formulas = [f.strip() for f in formula.split(";") if f.strip()]
 
-            if fol_metadata and (fol_metadata.get("sorts") or fol_metadata.get("constants_raw")):
+            if fol_metadata and (
+                fol_metadata.get("sorts") or fol_metadata.get("constants_raw")
+            ):
                 # Use programmatic signature building for robust constant handling
                 return await asyncio.to_thread(
-                    self._validate_fol_with_signature, bridge, fol_formulas, fol_metadata
+                    self._validate_fol_with_signature,
+                    bridge,
+                    fol_formulas,
+                    fol_metadata,
                 )
             else:
                 # Fallback: try parsing each formula without signature (old behavior)
                 errors = []
                 for f in fol_formulas:
                     try:
-                        await asyncio.to_thread(
-                            bridge.fol_handler.parse_fol_formula, f
-                        )
+                        await asyncio.to_thread(bridge.fol_handler.parse_fol_formula, f)
                     except (ValueError, Exception) as e:
                         errors.append(f"'{f}': {e}")
                 if errors:
@@ -525,10 +526,14 @@ class NLToLogicTranslator:
                         all_declared_constants.add(arg)
 
         try:
-            FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+            FolSignature = jpype.JClass(
+                "org.tweetyproject.logics.fol.syntax.FolSignature"
+            )
             Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
             Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-            Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
+            Predicate = jpype.JClass(
+                "org.tweetyproject.logics.commons.syntax.Predicate"
+            )
             FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
             ArrayList = jpype.JClass("java.util.ArrayList")
             String = jpype.JClass("java.lang.String")
@@ -553,7 +558,11 @@ class NLToLogicTranslator:
             # Step 3: Create and add predicates with their argument sorts
             # Handle both formats: {"Pred": ["Sort1"]} and {"Pred": "description"}
             for pred_name, arg_info in predicates_data.items():
-                if isinstance(arg_info, list) and arg_info and isinstance(arg_info[0], str):
+                if (
+                    isinstance(arg_info, list)
+                    and arg_info
+                    and isinstance(arg_info[0], str)
+                ):
                     # New format: list of sort names
                     java_arg_sorts = ArrayList()
                     for arg_sort_name in arg_info:
@@ -603,7 +612,10 @@ class NLToLogicTranslator:
                 return False, "; ".join(errors)
 
             formula_count = len(fol_formulas)
-            return True, f"Valid FOL formulas ({formula_count} formulas, Tweety with signature)"
+            return (
+                True,
+                f"Valid FOL formulas ({formula_count} formulas, Tweety with signature)",
+            )
 
         except jpype.JException as e:
             error_msg = str(e.getMessage()) if hasattr(e, "getMessage") else str(e)
@@ -675,7 +687,11 @@ class NLToLogicTranslator:
                 return False, f"Unmatched parentheses in '{f}'"
 
             # Check for predicates: at least one CamelCase word followed by (
-            if not re.search(r"[A-Z][a-zA-Z]*\(", f) and "forall" not in f and "exists" not in f:
+            if (
+                not re.search(r"[A-Z][a-zA-Z]*\(", f)
+                and "forall" not in f
+                and "exists" not in f
+            ):
                 return False, f"No predicates found in '{f}'"
 
         return True, "Valid FOL formulas (Python)"
@@ -741,10 +757,22 @@ class NLToLogicTranslator:
         """
         # Extract simple propositions from argument markers
         markers = [
-            "therefore", "because", "since", "thus", "hence",
-            "consequently", "so", "if", "then",
+            "therefore",
+            "because",
+            "since",
+            "thus",
+            "hence",
+            "consequently",
+            "so",
+            "if",
+            "then",
             # French markers
-            "donc", "car", "puisque", "parce que", "si", "alors",
+            "donc",
+            "car",
+            "puisque",
+            "parce que",
+            "si",
+            "alors",
         ]
 
         sentences = re.split(r"[.!?;]", text)
@@ -763,9 +791,7 @@ class NLToLogicTranslator:
                     f"{var_names[i]} => {var_names[i+1]}"
                     for i in range(len(var_names) - 1)
                 ]
-                formula = " && ".join(
-                    [var_names[0]] + implications
-                )
+                formula = " && ".join([var_names[0]] + implications)
             elif variables:
                 formula = list(variables.keys())[0]
             else:
@@ -785,8 +811,7 @@ class NLToLogicTranslator:
 
         else:  # FOL
             sentences_clean = [
-                re.sub(r"[^a-zA-Z0-9\s]", "", s).strip()
-                for s in sentences[:5]
+                re.sub(r"[^a-zA-Z0-9\s]", "", s).strip() for s in sentences[:5]
             ]
             formulas = []
             predicates = {}

@@ -29,6 +29,7 @@ def render_pipeline_dashboard(
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
@@ -99,8 +100,13 @@ def _render_counts_panel(ax, state: Dict[str, Any]) -> None:
     ax.set_xlabel("Count")
     ax.set_title("Extraction Results")
     for bar, val in zip(bars, values):
-        ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height() / 2,
-                str(val), va="center", fontsize=10)
+        ax.text(
+            bar.get_width() + 0.3,
+            bar.get_y() + bar.get_height() / 2,
+            str(val),
+            va="center",
+            fontsize=10,
+        )
 
 
 def _render_fallacy_panel(ax, state: Dict[str, Any]) -> None:
@@ -117,13 +123,21 @@ def _render_fallacy_panel(ax, state: Dict[str, Any]) -> None:
         items = {}
 
     if not items:
-        ax.text(0.5, 0.5, "No fallacies\ndetected", ha="center", va="center", fontsize=12)
+        ax.text(
+            0.5, 0.5, "No fallacies\ndetected", ha="center", va="center", fontsize=12
+        )
         ax.set_title("Fallacy Distribution")
         return
 
     labels = list(items.keys())[:8]
     sizes = [items[l] for l in labels]
-    ax.pie(sizes, labels=labels, autopct="%1.0f%%", startangle=90, textprops={"fontsize": 8})
+    ax.pie(
+        sizes,
+        labels=labels,
+        autopct="%1.0f%%",
+        startangle=90,
+        textprops={"fontsize": 8},
+    )
     ax.set_title(f"Fallacy Distribution ({sum(sizes)} total)")
 
 
@@ -178,20 +192,29 @@ def _render_phase_status(ax, state: Dict[str, Any]) -> None:
     if not phases:
         # Try to count non-empty fields
         non_empty = sum(
-            1 for k, v in state.items()
+            1
+            for k, v in state.items()
             if v and k not in ("raw_text", "source_info") and not k.startswith("phase_")
         )
         ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             f"{non_empty} non-empty\noutput fields",
-            ha="center", va="center", fontsize=16, fontweight="bold",
+            ha="center",
+            va="center",
+            fontsize=16,
+            fontweight="bold",
         )
         ax.set_title("Pipeline Output")
         return
 
-    colors = ["#4CAF50" if s == 1 else "#F44336" if s == 0 else "#FFC107" for s in statuses]
+    colors = [
+        "#4CAF50" if s == 1 else "#F44336" if s == 0 else "#FFC107" for s in statuses
+    ]
     ax.barh(phases, statuses, color=colors)
     ax.set_xlim(0, 1.2)
     ax.set_xticks([0, 0.5, 1])
     ax.set_xticklabels(["Error", "Empty", "OK"])
-    ax.set_title(f"Phase Status ({sum(1 for s in statuses if s == 1)}/{len(phases)} OK)")
+    ax.set_title(
+        f"Phase Status ({sum(1 for s in statuses if s == 1)}/{len(phases)} OK)"
+    )

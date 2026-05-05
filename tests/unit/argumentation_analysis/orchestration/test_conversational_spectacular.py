@@ -3,6 +3,7 @@
 Verifies that run_conversational_analysis uses UnifiedAnalysisState when
 spectacular=True and produces result format matching the unified pipeline.
 """
+
 import inspect
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -53,9 +54,7 @@ class TestSpectacularStateUpgrade:
     """Verify UnifiedAnalysisState is used in spectacular mode."""
 
     @pytest.mark.asyncio
-    async def test_spectacular_true_uses_unified_state(
-        self, mock_conversational_deps
-    ):
+    async def test_spectacular_true_uses_unified_state(self, mock_conversational_deps):
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             run_conversational_analysis,
         )
@@ -119,9 +118,7 @@ class TestSpectacularStateUpgrade:
         ):
             mock_run_phase.return_value = []
 
-            result = await run_conversational_analysis(
-                "test text", spectacular=False
-            )
+            result = await run_conversational_analysis("test text", spectacular=False)
 
         assert result["workflow_name"] == "conversational"
         assert isinstance(result["unified_state"], RhetoricalAnalysisState)
@@ -132,9 +129,7 @@ class TestSpectacularResultFormat:
     """Verify result format matches unified pipeline output."""
 
     @pytest.mark.asyncio
-    async def test_result_has_unified_pipeline_keys(
-        self, mock_conversational_deps
-    ):
+    async def test_result_has_unified_pipeline_keys(self, mock_conversational_deps):
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             run_conversational_analysis,
         )
@@ -158,9 +153,7 @@ class TestSpectacularResultFormat:
             "._should_add_reanalysis_phase",
             return_value=False,
         ):
-            result = await run_conversational_analysis(
-                "test text", spectacular=True
-            )
+            result = await run_conversational_analysis("test text", spectacular=True)
 
         # Unified pipeline expects these keys
         assert "workflow_name" in result
@@ -180,9 +173,7 @@ class TestSpectacularResultFormat:
         assert "total_messages" in summary
 
     @pytest.mark.asyncio
-    async def test_result_has_coverage_metrics(
-        self, mock_conversational_deps
-    ):
+    async def test_result_has_coverage_metrics(self, mock_conversational_deps):
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             run_conversational_analysis,
         )
@@ -206,9 +197,7 @@ class TestSpectacularResultFormat:
             "._should_add_reanalysis_phase",
             return_value=False,
         ):
-            result = await run_conversational_analysis(
-                "test text", spectacular=True
-            )
+            result = await run_conversational_analysis("test text", spectacular=True)
 
         assert "state_non_empty_fields" in result
         assert "state_total_fields" in result
@@ -256,9 +245,7 @@ class TestSpectacularCapabilityMapping:
             "._should_add_reanalysis_phase",
             return_value=False,
         ):
-            result = await run_conversational_analysis(
-                "test text", spectacular=True
-            )
+            result = await run_conversational_analysis("test text", spectacular=True)
 
         caps = result["capabilities_used"]
         assert "fact_extraction" in caps
@@ -277,9 +264,9 @@ class TestUnifiedAnalysisStateFields:
         state = UnifiedAnalysisState("test text")
         snapshot = state.get_state_snapshot(summarize=False)
         # Must have ≥ 28 fields for spectacular coverage
-        assert len(snapshot) >= 28, (
-            f"UnifiedAnalysisState has {len(snapshot)} fields, need >= 28"
-        )
+        assert (
+            len(snapshot) >= 28
+        ), f"UnifiedAnalysisState has {len(snapshot)} fields, need >= 28"
 
     def test_unified_state_inherits_rhetorical(self):
         state = UnifiedAnalysisState("test text")
@@ -345,6 +332,6 @@ class TestUnifiedAnalysisStateFields:
         non_empty = sum(
             1 for v in snapshot.values() if v and v not in ([], {}, "", None, 0)
         )
-        assert non_empty >= 28, (
-            f"Only {non_empty}/{len(snapshot)} fields non-empty after mock population"
-        )
+        assert (
+            non_empty >= 28
+        ), f"Only {non_empty}/{len(snapshot)} fields non-empty after mock population"

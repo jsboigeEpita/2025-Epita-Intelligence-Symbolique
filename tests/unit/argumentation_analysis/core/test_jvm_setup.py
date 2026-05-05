@@ -14,17 +14,22 @@ class TestJVMStartupTimeout:
 
     def test_default_timeout_value(self):
         """Vérifie que le timeout par défaut est de 60 secondes."""
-        from argumentation_analysis.core.jvm_setup import DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS
+        from argumentation_analysis.core.jvm_setup import (
+            DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS,
+        )
+
         assert DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS == 60
 
     def test_timeout_exception_is_timeout_error_subclass(self):
         """Vérifie que JVMStartupTimeoutError est une sous-classe de TimeoutError."""
         from argumentation_analysis.core.jvm_setup import JVMStartupTimeoutError
+
         assert issubclass(JVMStartupTimeoutError, TimeoutError)
 
     def test_timeout_exception_message(self):
         """Vérifie que l'exception contient le message attendu."""
         from argumentation_analysis.core.jvm_setup import JVMStartupTimeoutError
+
         msg = "JVM startup exceeded timeout of 30 seconds"
         exc = JVMStartupTimeoutError(msg)
         assert msg in str(exc)

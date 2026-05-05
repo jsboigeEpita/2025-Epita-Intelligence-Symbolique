@@ -238,7 +238,7 @@ class WorkflowBuilder:
         name: str,
         capability: str,
         condition: Callable[[Dict[str, Any]], bool],
-        **kwargs,
+        **kwargs: Any,
     ) -> "WorkflowBuilder":
         """Add a phase that only executes when condition(ctx) returns True."""
         return self.add_phase(name, capability, condition=condition, **kwargs)
@@ -249,7 +249,7 @@ class WorkflowBuilder:
         capability: str,
         max_iterations: int = 3,
         convergence_fn: Optional[Callable[[Any, Any], bool]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "WorkflowBuilder":
         """Add a phase that loops until convergence or max_iterations."""
         loop_cfg = LoopConfig(

@@ -129,7 +129,9 @@ class SherlockModernOrchestrator:
         if agent not in self._agents:
             self._agents.append(agent)
 
-    async def investigate(self, discourse: str, context: Optional[Dict] = None) -> InvestigationResult:
+    async def investigate(
+        self, discourse: str, context: Optional[Dict] = None
+    ) -> InvestigationResult:
         """Run full investigation on discourse text. Resets state on entry
         (review #383: idempotency)."""
         self._reset()
@@ -152,7 +154,8 @@ class SherlockModernOrchestrator:
     async def _phase_extraction(self, text: str):
         """Phase 1: Identify claims in the discourse."""
         result = await self._invoke_safe(
-            "_invoke_extract", text,
+            "_invoke_extract",
+            text,
             fallback={"extracts": [], "arguments": [], "claims": []},
         )
         self._ctx["phase_extract_output"] = result
@@ -173,7 +176,8 @@ class SherlockModernOrchestrator:
     async def _phase_fallacy_detection(self, text: str):
         """Phase 2: Detect argumentative inconsistencies."""
         result = await self._invoke_safe(
-            "_invoke_hierarchical_fallacy", text,
+            "_invoke_hierarchical_fallacy",
+            text,
             fallback={"fallacies": {}, "total": 0},
         )
         self._ctx["phase_hierarchical_fallacy_output"] = result
@@ -182,10 +186,16 @@ class SherlockModernOrchestrator:
         fallacies = result.get("fallacies", [])
         if isinstance(fallacies, dict):
             count = len(fallacies)
-            types = list(set(v.get("type", "") for v in fallacies.values() if isinstance(v, dict)))
+            types = list(
+                set(
+                    v.get("type", "") for v in fallacies.values() if isinstance(v, dict)
+                )
+            )
         elif isinstance(fallacies, list):
             count = len(fallacies)
-            types = list(set(f.get("type", "") for f in fallacies if isinstance(f, dict)))
+            types = list(
+                set(f.get("type", "") for f in fallacies if isinstance(f, dict))
+            )
         else:
             count = result.get("total", 0)
             types = []
@@ -204,7 +214,8 @@ class SherlockModernOrchestrator:
     async def _phase_quality(self, text: str):
         """Phase 3: Evaluate argument reliability."""
         result = await self._invoke_safe(
-            "_invoke_quality_evaluator", text,
+            "_invoke_quality_evaluator",
+            text,
             fallback={"per_argument_scores": {}, "note_finale": 0.0},
         )
         self._ctx["phase_quality_output"] = result
@@ -229,7 +240,8 @@ class SherlockModernOrchestrator:
     async def _phase_cross_examination(self, text: str):
         """Phase 4: Cross-examine via counter-arguments."""
         result = await self._invoke_safe(
-            "_invoke_counter_argument", text,
+            "_invoke_counter_argument",
+            text,
             fallback={"counter_arguments": [], "suggested_strategy": {}},
         )
         self._ctx["phase_counter_output"] = result
@@ -237,7 +249,11 @@ class SherlockModernOrchestrator:
 
         counters = result.get("counter_arguments", [])
         strategy = result.get("suggested_strategy", {})
-        strat_name = strategy.get("strategy_name", "general") if isinstance(strategy, dict) else "general"
+        strat_name = (
+            strategy.get("strategy_name", "general")
+            if isinstance(strategy, dict)
+            else "general"
+        )
 
         self._add_step(
             phase="cross_examination",
@@ -255,7 +271,8 @@ class SherlockModernOrchestrator:
     async def _phase_belief_tracking(self, text: str):
         """Phase 5: Track belief propagation via JTMS."""
         result = await self._invoke_safe(
-            "_invoke_jtms", text,
+            "_invoke_jtms",
+            text,
             fallback={"beliefs": {}, "retraction_chain": []},
         )
         self._ctx["phase_jtms_output"] = result
@@ -263,8 +280,16 @@ class SherlockModernOrchestrator:
 
         beliefs = result.get("beliefs", {})
         retraction_chain = result.get("retraction_chain", [])
-        valid = sum(1 for v in beliefs.values() if isinstance(v, dict) and v.get("valid") is True)
-        invalid = sum(1 for v in beliefs.values() if isinstance(v, dict) and v.get("valid") is False)
+        valid = sum(
+            1
+            for v in beliefs.values()
+            if isinstance(v, dict) and v.get("valid") is True
+        )
+        invalid = sum(
+            1
+            for v in beliefs.values()
+            if isinstance(v, dict) and v.get("valid") is False
+        )
 
         self._add_step(
             phase="belief_tracking",
@@ -286,7 +311,8 @@ class SherlockModernOrchestrator:
     async def _phase_hypothesis_branching(self, text: str):
         """Phase 6: Branch hypotheses via ATMS."""
         result = await self._invoke_safe(
-            "_invoke_atms", text,
+            "_invoke_atms",
+            text,
             fallback={"atms_contexts": [], "has_contradictions": False},
         )
         self._ctx["phase_atms_output"] = result
@@ -301,11 +327,13 @@ class SherlockModernOrchestrator:
         self._hypotheses = []
         for ctx in contexts:
             if isinstance(ctx, dict):
-                self._hypotheses.append({
-                    "id": ctx.get("hypothesis_id", "unknown"),
-                    "coherent": ctx.get("coherent", False),
-                    "assumptions": ctx.get("assumptions", []),
-                })
+                self._hypotheses.append(
+                    {
+                        "id": ctx.get("hypothesis_id", "unknown"),
+                        "coherent": ctx.get("coherent", False),
+                        "assumptions": ctx.get("assumptions", []),
+                    }
+                )
 
         self._add_step(
             phase="hypothesis_branching",
@@ -325,7 +353,8 @@ class SherlockModernOrchestrator:
     async def _phase_solution_synthesis(self):
         """Phase 7: Synthesize investigation solution."""
         result = await self._invoke_safe(
-            "_invoke_narrative_synthesis", "",
+            "_invoke_narrative_synthesis",
+            "",
             fallback={"narrative": "", "paragraph_count": 0},
         )
         self._ctx["phase_narrative_synthesis_output"] = result
@@ -369,14 +398,21 @@ class SherlockModernOrchestrator:
             lines.append("\nHypotheses:")
             for h in self._hypotheses:
                 status = "COHERENT" if h.get("coherent") else "INCOHERENT"
-                lines.append(f"  - {h['id']}: {status} (assumptions: {h.get('assumptions', [])})")
+                lines.append(
+                    f"  - {h['id']}: {status} (assumptions: {h.get('assumptions', [])})"
+                )
         return "\n".join(lines)
 
     def _build_result(self) -> InvestigationResult:
         """Build the final investigation result."""
         trace_dicts = [
-            {"step": s.step, "phase": s.phase, "agent": s.agent,
-             "findings": s.findings, "conclusion": s.conclusion}
+            {
+                "step": s.step,
+                "phase": s.phase,
+                "agent": s.agent,
+                "findings": s.findings,
+                "conclusion": s.conclusion,
+            }
             for s in self._trace
         ]
         reasoning = [s.conclusion for s in self._trace if s.conclusion]

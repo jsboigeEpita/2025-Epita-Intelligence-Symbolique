@@ -92,6 +92,7 @@ def client(mock_service_manager):
     Builds fresh routes and middleware per test to avoid state pollution
     from prior tests in long sessions (Issue #276).
     """
+
     @asynccontextmanager
     async def test_lifespan(app):
         app.state.service_manager = mock_service_manager

@@ -109,9 +109,7 @@ class TestEnsureEnvAsGuard:
         assert "ERREUR CRITIQUE" in exception_message
         assert "MAUVAIS ENVIRONNEMENT CONDA ACTIF" in exception_message
         assert "Environnement attendu   : 'projet-is'" in exception_message
-        assert (
-            "Environnement détecté (CONDA_DEFAULT_ENV) : 'base'" in exception_message
-        )
+        assert "Environnement détecté (CONDA_DEFAULT_ENV) : 'base'" in exception_message
 
     def test_ensure_env_silent_mode(self):
         """Vérifie le mode silencieux et non silencieux."""
@@ -125,7 +123,9 @@ class TestEnsureEnvAsGuard:
                     in str(call)
                     for call in mock_print.call_args_list
                 )
-                assert found_call, "Le message de succès n'a pas été affiché en mode non-silencieux."
+                assert (
+                    found_call
+                ), "Le message de succès n'a pas été affiché en mode non-silencieux."
 
         # En mode silencieux, on ne s'attend pas à un print
         with patch.dict(os.environ, env, clear=True):

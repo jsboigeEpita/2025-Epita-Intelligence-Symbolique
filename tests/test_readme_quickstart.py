@@ -6,6 +6,7 @@ Validates:
 - All referenced artifact paths exist
 - Quickstart commands reference valid entry points
 """
+
 import pathlib
 import re
 
@@ -29,7 +30,9 @@ class TestReadmeQuickstart:
 
     def test_has_demo_section(self):
         content = README.read_text(encoding="utf-8")
-        assert "Demo Spectaculaire" in content or "DEMO SPECTACULAIRE" in content.upper()
+        assert (
+            "Demo Spectaculaire" in content or "DEMO SPECTACULAIRE" in content.upper()
+        )
 
     def test_has_quickstart_commands(self):
         content = README.read_text(encoding="utf-8")
@@ -52,7 +55,9 @@ class TestQuickstartTape:
     """Tests for docs/demo/quickstart.tape."""
 
     def test_tape_exists(self):
-        assert QUICKSTART_TAPE.is_file(), f"quickstart.tape not found at {QUICKSTART_TAPE}"
+        assert (
+            QUICKSTART_TAPE.is_file()
+        ), f"quickstart.tape not found at {QUICKSTART_TAPE}"
 
     def test_tape_has_output_directive(self):
         content = QUICKSTART_TAPE.read_text(encoding="utf-8")
@@ -60,7 +65,9 @@ class TestQuickstartTape:
 
     def test_tape_references_spectacular(self):
         content = QUICKSTART_TAPE.read_text(encoding="utf-8")
-        assert "spectacular" in content.lower(), "Tape must reference spectacular workflow"
+        assert (
+            "spectacular" in content.lower()
+        ), "Tape must reference spectacular workflow"
 
     def test_tape_references_build_deck(self):
         content = QUICKSTART_TAPE.read_text(encoding="utf-8")
@@ -94,7 +101,9 @@ class TestArtifactPaths:
         txt_files = list(scenarios_dir.glob("*.txt"))
         if not txt_files:
             return
-        assert len(txt_files) >= 5, f"Expected >= 5 scenario .txt files, found {len(txt_files)}"
+        assert (
+            len(txt_files) >= 5
+        ), f"Expected >= 5 scenario .txt files, found {len(txt_files)}"
 
     def test_notebook_exists_or_skip(self):
         nb = REPO_ROOT / "examples" / "notebooks" / "spectacular_full_tour.ipynb"

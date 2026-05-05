@@ -61,7 +61,9 @@ class TestStateManagerJTMSMethods:
 
     def test_jtms_query_beliefs_returns_json(self):
         """jtms_query_beliefs returns valid JSON with belief metadata."""
-        self.plugin.jtms_create_belief("belief_X", agent_source="Agent1", confidence=0.9)
+        self.plugin.jtms_create_belief(
+            "belief_X", agent_source="Agent1", confidence=0.9
+        )
         result = self.plugin.jtms_query_beliefs()
         parsed = json.loads(result)
         assert isinstance(parsed, list)
@@ -143,9 +145,7 @@ class TestStateManagerJTMSMethods:
 
     def test_jtms_retract_no_session(self):
         """jtms_retract_belief returns error when no session exists."""
-        result = self.plugin.jtms_retract_belief(
-            belief_name="anything", reason="test"
-        )
+        result = self.plugin.jtms_retract_belief(belief_name="anything", reason="test")
         assert "FUNC_ERROR" in result
 
     def test_add_belief_set_fol(self):
@@ -182,9 +182,7 @@ class TestRetractFallaciousBeliefs:
 
     def setup_method(self):
         self.state = RhetoricalAnalysisState("Test text")
-        self.session = JTMSSession(
-            session_id="test_jtms", owner_agent="test"
-        )
+        self.session = JTMSSession(session_id="test_jtms", owner_agent="test")
         self.state._jtms_session = self.session
 
     def test_retract_matching_fallacy(self):

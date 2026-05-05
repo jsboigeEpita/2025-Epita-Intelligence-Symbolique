@@ -21,7 +21,6 @@ from argumentation_analysis.agents.factory import (
     load_plugins_for_agent,
 )
 
-
 # --- Plugin map structure ---
 
 

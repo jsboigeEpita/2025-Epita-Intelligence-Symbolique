@@ -12,7 +12,6 @@ from hypothesis import strategies as st
 
 from argumentation_analysis.services.jtms.jtms_core import JTMS
 
-
 # --- Strategies ---
 
 belief_names = st.lists(
@@ -39,18 +38,29 @@ def jtms_with_justifications(draw):
         candidates = list(names)
         if len(candidates) < 2:
             continue
-        in_list = draw(st.lists(
-            st.sampled_from(candidates), min_size=0, max_size=min(3, len(candidates)),
-            unique=True,
-        ))
+        in_list = draw(
+            st.lists(
+                st.sampled_from(candidates),
+                min_size=0,
+                max_size=min(3, len(candidates)),
+                unique=True,
+            )
+        )
         remaining = [n for n in candidates if n not in in_list]
         if remaining:
-            out_list = draw(st.lists(
-                st.sampled_from(remaining), min_size=0, max_size=2, unique=True,
-            ))
+            out_list = draw(
+                st.lists(
+                    st.sampled_from(remaining),
+                    min_size=0,
+                    max_size=2,
+                    unique=True,
+                )
+            )
         else:
             out_list = []
-        conclusion_candidates = [n for n in candidates if n not in in_list and n not in out_list]
+        conclusion_candidates = [
+            n for n in candidates if n not in in_list and n not in out_list
+        ]
         if not conclusion_candidates:
             continue
         conclusion = draw(st.sampled_from(conclusion_candidates))
@@ -96,9 +106,9 @@ class TestJTMSJustificationConsistency:
                 if in_ok and out_ok:
                     has_satisfied = True
                     break
-            assert has_satisfied, (
-                f"Belief {name} is valid via propagation but no justification is satisfied"
-            )
+            assert (
+                has_satisfied
+            ), f"Belief {name} is valid via propagation but no justification is satisfied"
 
 
 class TestJTMSRetractionCascade:
@@ -120,18 +130,18 @@ class TestJTMSRetractionCascade:
         jtms.set_belief_validity(names[0], True)
 
         for name in names:
-            assert jtms.beliefs[name].valid is True, (
-                f"Expected {name} valid after setting {names[0]}=True"
-            )
+            assert (
+                jtms.beliefs[name].valid is True
+            ), f"Expected {name} valid after setting {names[0]}=True"
 
         jtms.set_belief_validity(names[0], False)
 
         for name in names:
             belief = jtms.beliefs[name]
             if belief.justifications:
-                assert belief.valid is not True, (
-                    f"Belief {name} should be invalid after retracting {names[0]}"
-                )
+                assert (
+                    belief.valid is not True
+                ), f"Belief {name} should be invalid after retracting {names[0]}"
 
 
 class TestJTMSRetractionCascadeTracing:
@@ -192,9 +202,9 @@ class TestJTMSNoCircularSupport:
             jtms.add_justification([names[i]], [], names[next_i])
 
         for name in names:
-            assert jtms.beliefs[name].non_monotonic is True, (
-                f"Cycle member {name} should be non-monotonic"
-            )
+            assert (
+                jtms.beliefs[name].non_monotonic is True
+            ), f"Cycle member {name} should be non-monotonic"
 
     @given(
         n=st.integers(min_value=2, max_value=4),
@@ -212,6 +222,6 @@ class TestJTMSNoCircularSupport:
             jtms.add_justification([names[i]], [], names[i + 1])
 
         for name in names:
-            assert jtms.beliefs[name].non_monotonic is False, (
-                f"Non-cyclic belief {name} should not be non-monotonic"
-            )
+            assert (
+                jtms.beliefs[name].non_monotonic is False
+            ), f"Non-cyclic belief {name} should not be non-monotonic"

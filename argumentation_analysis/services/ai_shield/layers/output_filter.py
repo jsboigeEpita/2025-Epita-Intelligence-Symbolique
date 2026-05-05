@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
 
-
 # ── Leak detection patterns ──────────────────────────────────────────
 
 SYSTEM_PROMPT_LEAKS = [
@@ -25,11 +24,11 @@ SYSTEM_PROMPT_LEAKS = [
 
 CREDENTIAL_PATTERNS = [
     # API keys and tokens
-    r"sk-[a-zA-Z0-9]{20,}",                     # OpenAI-style
-    r"sk-or-v1-[a-zA-Z0-9]{40,}",               # OpenRouter
-    r"Bearer\s+[a-zA-Z0-9\-._~+/]+=*",          # Bearer tokens
+    r"sk-[a-zA-Z0-9]{20,}",  # OpenAI-style
+    r"sk-or-v1-[a-zA-Z0-9]{40,}",  # OpenRouter
+    r"Bearer\s+[a-zA-Z0-9\-._~+/]+=*",  # Bearer tokens
     r"api[_-]?key\s*[=:]\s*['\"]?[a-zA-Z0-9]{16,}",  # Generic API key
-    r"password\s*[=:]\s*['\"]?[^\s'\"]{8,}",     # Passwords
+    r"password\s*[=:]\s*['\"]?[^\s'\"]{8,}",  # Passwords
     r"secret\s*[=:]\s*['\"]?[a-zA-Z0-9]{16,}",  # Secrets
 ]
 
@@ -46,8 +45,8 @@ PII_PATTERNS = [
 
 PATH_PATTERNS = [
     # File paths
-    r"[A-Z]:\\[\w\\]+",                          # Windows paths
-    r"/(?:home|root|etc|var|usr)/[\w/]+",         # Unix paths
+    r"[A-Z]:\\[\w\\]+",  # Windows paths
+    r"/(?:home|root|etc|var|usr)/[\w/]+",  # Unix paths
     # Environment variables
     r"\$\{?\w+_(?:KEY|SECRET|TOKEN|PASSWORD)\}?",
 ]
@@ -107,7 +106,11 @@ class OutputFilterLayer(ShieldLayer):
                 if m:
                     # Redact the match for safety
                     matched = m.group()
-                    redacted = matched[:4] + "***" + matched[-4:] if len(matched) > 8 else "***"
+                    redacted = (
+                        matched[:4] + "***" + matched[-4:]
+                        if len(matched) > 8
+                        else "***"
+                    )
                     matches.append({"type": "credential", "match": redacted})
                     score += 0.6
                     break
@@ -116,7 +119,11 @@ class OutputFilterLayer(ShieldLayer):
             for pattern in self._pii_re:
                 for m in pattern.finditer(text):
                     matched = m.group()
-                    redacted = matched[:3] + "***" + matched[-3:] if len(matched) > 6 else "***"
+                    redacted = (
+                        matched[:3] + "***" + matched[-3:]
+                        if len(matched) > 6
+                        else "***"
+                    )
                     matches.append({"type": "pii", "match": redacted})
                     score += 0.3
                     if score >= 1.0:

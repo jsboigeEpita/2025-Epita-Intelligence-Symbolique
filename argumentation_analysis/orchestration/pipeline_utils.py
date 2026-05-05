@@ -27,9 +27,11 @@ logger = logging.getLogger("PipelineUtils")
 # 1. TTL-BASED CACHING
 # =============================================================================
 
+
 @dataclass
 class CacheEntry:
     """A cached result with metadata."""
+
     value: Any
     created_at: float
     ttl_seconds: float
@@ -76,20 +78,16 @@ class AnalysisCache:
         }
 
     def _generate_key(
-        self,
-        text: str,
-        analysis_type: str,
-        parameters: Optional[Dict[str, Any]] = None
+        self, text: str, analysis_type: str, parameters: Optional[Dict[str, Any]] = None
     ) -> str:
         """Generate a unique cache key from inputs."""
-        content = f"{text}:{analysis_type}:{json.dumps(parameters or {}, sort_keys=True)}"
+        content = (
+            f"{text}:{analysis_type}:{json.dumps(parameters or {}, sort_keys=True)}"
+        )
         return hashlib.md5(content.encode()).hexdigest()
 
     def get(
-        self,
-        text: str,
-        analysis_type: str,
-        parameters: Optional[Dict[str, Any]] = None
+        self, text: str, analysis_type: str, parameters: Optional[Dict[str, Any]] = None
     ) -> Optional[Any]:
         """
         Get a cached result if available and not expired.
@@ -120,7 +118,7 @@ class AnalysisCache:
         analysis_type: str,
         result: Any,
         parameters: Optional[Dict[str, Any]] = None,
-        ttl_override: Optional[float] = None
+        ttl_override: Optional[float] = None,
     ) -> None:
         """
         Cache a result.
@@ -175,15 +173,15 @@ class AnalysisCache:
         }
 
 
-
-
 # =============================================================================
 # 2. STRUCTURED METRICS COLLECTION
 # =============================================================================
 
+
 @dataclass
 class AnalysisMetric:
     """A single analysis metric entry."""
+
     timestamp: float
     analysis_type: str
     duration_seconds: float
@@ -227,22 +225,24 @@ class PipelineMetrics:
         success: bool,
         confidence: Optional[float] = None,
         error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Record a single analysis metric."""
         # Enforce max entries
         if len(self._metrics) >= self._max_entries:
             self._metrics.pop(0)
 
-        self._metrics.append(AnalysisMetric(
-            timestamp=time.time(),
-            analysis_type=analysis_type,
-            duration_seconds=duration_seconds,
-            success=success,
-            confidence=confidence,
-            error=error,
-            metadata=metadata or {},
-        ))
+        self._metrics.append(
+            AnalysisMetric(
+                timestamp=time.time(),
+                analysis_type=analysis_type,
+                duration_seconds=duration_seconds,
+                success=success,
+                confidence=confidence,
+                error=error,
+                metadata=metadata or {},
+            )
+        )
 
     def track(self, analysis_type: str, metadata: Optional[Dict[str, Any]] = None):
         """
@@ -290,7 +290,9 @@ class PipelineMetrics:
         # Compute averages
         for type_data in by_type.values():
             count = type_data["count"]
-            type_data["avg_duration"] = type_data["total_duration"] / count if count > 0 else 0
+            type_data["avg_duration"] = (
+                type_data["total_duration"] / count if count > 0 else 0
+            )
             confs = type_data["avg_confidence"]
             type_data["avg_confidence"] = sum(confs) / len(confs) if confs else None
 
@@ -304,7 +306,9 @@ class PipelineMetrics:
             "failed": len(failed),
             "success_rate": len(successful) / len(self._metrics),
             "avg_duration_seconds": sum(durations) / len(durations),
-            "avg_confidence": sum(confidences) / len(confidences) if confidences else None,
+            "avg_confidence": (
+                sum(confidences) / len(confidences) if confidences else None
+            ),
             "uptime_seconds": time.time() - self._start_time,
             "by_analysis_type": by_type,
         }
@@ -338,7 +342,7 @@ class _MetricsContext:
         self,
         metrics: PipelineMetrics,
         analysis_type: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         self._metrics = metrics
         self._analysis_type = analysis_type
@@ -380,9 +384,11 @@ class _MetricsContext:
 # 3. BATCH ANALYSIS WITH CONCURRENCY CONTROL
 # =============================================================================
 
+
 @dataclass
 class BatchRequest:
     """A single request in a batch."""
+
     id: str
     text: str
     analysis_type: str
@@ -392,6 +398,7 @@ class BatchRequest:
 @dataclass
 class BatchResult:
     """Result of a single batch request."""
+
     id: str
     success: bool
     result: Optional[Any] = None

@@ -277,6 +277,7 @@ def _pre_init_safety_checks(project_root: Path, env_path: Path) -> bool:
     # Check 2: jpype availability (critical for JVM)
     try:
         import jpype
+
         logger.debug(f"jpype version {jpype.__version__} is available")
     except ImportError as e:
         logger.critical(
@@ -306,6 +307,7 @@ def _pre_init_safety_checks(project_root: Path, env_path: Path) -> bool:
     psutil_available = False
     try:
         import psutil
+
         psutil_available = True
         available_memory_gb = psutil.virtual_memory().available / (1024**3)
         if available_memory_gb < 0.5:  # Less than 512MB

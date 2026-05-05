@@ -46,7 +46,9 @@ class TestNLToLogicPlugin:
             "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
             MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
-            result_str = await plugin.translate_to_pl("If it rains then the ground is wet")
+            result_str = await plugin.translate_to_pl(
+                "If it rains then the ground is wet"
+            )
 
         result = json.loads(result_str)
         assert result["formula"] == "rain => wet"
@@ -134,7 +136,9 @@ class TestNLToLogicPlugin:
         with patch(
             "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
-            MockTranslator.return_value.translate_batch = AsyncMock(return_value=mock_batch)
+            MockTranslator.return_value.translate_batch = AsyncMock(
+                return_value=mock_batch
+            )
             result_str = await plugin.translate_batch_to_pl(
                 json.dumps({"arguments": ["arg1", "arg2"]})
             )
@@ -174,7 +178,9 @@ class TestNLToLogicPlugin:
         with patch(
             "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
         ) as MockTranslator:
-            MockTranslator.return_value.translate_batch = AsyncMock(return_value=mock_batch)
+            MockTranslator.return_value.translate_batch = AsyncMock(
+                return_value=mock_batch
+            )
             result_str = await plugin.translate_batch_to_fol(
                 json.dumps({"arguments": ["Socrates is human"]})
             )

@@ -9,7 +9,6 @@ import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
 
-
 # ── CamemBERT label mapping tests ────────────────────────────────────
 
 
@@ -90,7 +89,9 @@ class TestCamemBERTFallacyDetector:
         mock_tokenizer.return_value = {"input_ids": torch.tensor([[1, 2, 3]])}
 
         # Create mock output with logits for class 0 (Ad Hominem) having highest score
-        mock_logits = torch.tensor([[5.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]])
+        mock_logits = torch.tensor(
+            [[5.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]]
+        )
         mock_output = MagicMock()
         mock_output.logits = mock_logits
 
@@ -122,7 +123,9 @@ class TestCamemBERTFallacyDetector:
         mock_tokenizer.return_value = {"input_ids": torch.tensor([[1, 2, 3]])}
 
         # Uniform logits → all classes ~0.077 confidence → below 0.99
-        mock_logits = torch.tensor([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]])
+        mock_logits = torch.tensor(
+            [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]
+        )
         mock_output = MagicMock()
         mock_output.logits = mock_logits
 

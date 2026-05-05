@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
 
-
 # ── Pattern definitions ──────────────────────────────────────────────
 
 INJECTION_PATTERNS = [
@@ -71,9 +70,7 @@ class HeuristicLayer(ShieldLayer):
         custom_patterns: Optional[List[str]] = None,
     ):
         super().__init__(name="heuristic", threshold=threshold, enabled=enabled)
-        self._injection_re = [
-            re.compile(p, re.IGNORECASE) for p in INJECTION_PATTERNS
-        ]
+        self._injection_re = [re.compile(p, re.IGNORECASE) for p in INJECTION_PATTERNS]
         self._bias_re = [re.compile(p, re.IGNORECASE) for p in BIAS_KEYWORDS]
         self._manipulation_re = [
             re.compile(p, re.IGNORECASE) for p in MANIPULATION_PATTERNS
@@ -98,25 +95,41 @@ class HeuristicLayer(ShieldLayer):
         for pattern in self._injection_re:
             m = pattern.search(text)
             if m:
-                matches.append({"type": "injection", "match": m.group(), "pattern": pattern.pattern})
+                matches.append(
+                    {
+                        "type": "injection",
+                        "match": m.group(),
+                        "pattern": pattern.pattern,
+                    }
+                )
                 score += 0.4
 
         for pattern in self._bias_re:
             m = pattern.search(text)
             if m:
-                matches.append({"type": "bias", "match": m.group(), "pattern": pattern.pattern})
+                matches.append(
+                    {"type": "bias", "match": m.group(), "pattern": pattern.pattern}
+                )
                 score += 0.3
 
         for pattern in self._manipulation_re:
             m = pattern.search(text)
             if m:
-                matches.append({"type": "manipulation", "match": m.group(), "pattern": pattern.pattern})
+                matches.append(
+                    {
+                        "type": "manipulation",
+                        "match": m.group(),
+                        "pattern": pattern.pattern,
+                    }
+                )
                 score += 0.5
 
         for pattern in self._custom_re:
             m = pattern.search(text)
             if m:
-                matches.append({"type": "custom", "match": m.group(), "pattern": pattern.pattern})
+                matches.append(
+                    {"type": "custom", "match": m.group(), "pattern": pattern.pattern}
+                )
                 score += 0.3
 
         score = min(score, 1.0)

@@ -274,7 +274,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=False, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=False,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         assert not adapter.is_available()
 
@@ -284,7 +287,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=False, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=False,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         assert adapter.get_available_tiers() == []
 
@@ -295,7 +301,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=False, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=False,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         result = adapter.detect("test text")
         assert result["total_fallacies"] == 0
@@ -309,7 +318,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=True, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=True,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         # Mock the symbolic detector
         mock_detections = [FallacyDetection("Ad Hominem", 1.0, "symbolic", "tu es nul")]
@@ -332,7 +344,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=True, enable_self_hosted_llm=False, enable_nli=True, enable_llm=False
+            enable_symbolic=True,
+            enable_self_hosted_llm=False,
+            enable_nli=True,
+            enable_llm=False,
         )
         symbolic_result = [FallacyDetection("Ad Hominem", 1.0, "symbolic", "tu es nul")]
         nli_result = [FallacyDetection("Ad Hominem", 0.7, "nli")]
@@ -359,7 +374,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=True, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=True,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         adapter._symbolic.detect = MagicMock(
             return_value=[FallacyDetection("Ad Hominem", 1.0, "symbolic")]
@@ -379,7 +397,10 @@ class TestFrenchFallacyAdapter:
         )
 
         adapter = FrenchFallacyAdapter(
-            enable_symbolic=True, enable_self_hosted_llm=False, enable_nli=False, enable_llm=False
+            enable_symbolic=True,
+            enable_self_hosted_llm=False,
+            enable_nli=False,
+            enable_llm=False,
         )
         adapter._symbolic.detect = MagicMock(return_value=[])
         adapter._symbolic._available = True

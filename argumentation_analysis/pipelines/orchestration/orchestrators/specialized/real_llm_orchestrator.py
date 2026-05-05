@@ -10,6 +10,7 @@ DEPRECATED: Use these alternatives instead:
 - For pipeline orchestration: argumentation_analysis.orchestration.unified_pipeline.UnifiedPipeline
 - For conversational analysis: argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator
 """
+
 import warnings
 
 
@@ -47,4 +48,4 @@ class RealLLMOrchestratorWrapper:
         )
 
 
-__all__ = ['RealLLMOrchestratorWrapper']
+__all__ = ["RealLLMOrchestratorWrapper"]

@@ -3,6 +3,7 @@
 Verifies the self-hosted LLM fallacy detection invoke function that replaced
 the dead CamemBERT adapter (PR #299).
 """
+
 import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -32,17 +33,19 @@ class TestInvokeCamemBERTFallacy:
 
         mock_plugin = MagicMock()
         mock_plugin.run_guided_analysis = AsyncMock(
-            return_value=json.dumps({
-                "fallacies": [
-                    {
-                        "fallacy_type": "Ad Hominem",
-                        "confidence": 0.92,
-                        "explanation": "Attack on person",
-                        "taxonomy_pk": "1.1",
-                    }
-                ],
-                "exploration_method": "self_hosted",
-            })
+            return_value=json.dumps(
+                {
+                    "fallacies": [
+                        {
+                            "fallacy_type": "Ad Hominem",
+                            "confidence": 0.92,
+                            "explanation": "Attack on person",
+                            "taxonomy_pk": "1.1",
+                        }
+                    ],
+                    "exploration_method": "self_hosted",
+                }
+            )
         )
 
         env = {
@@ -50,23 +53,28 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with patch.dict("os.environ", env, clear=True), \
-             patch("argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
-                   create=True) as mock_fwp_cls, \
-             patch("openai.AsyncOpenAI"), \
-             patch("semantic_kernel.kernel.Kernel"), \
-             patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
+        with patch.dict("os.environ", env, clear=True), patch(
+            "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
+            create=True,
+        ) as mock_fwp_cls, patch("openai.AsyncOpenAI"), patch(
+            "semantic_kernel.kernel.Kernel"
+        ), patch(
+            "semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"
+        ):
             # Make the plugin class importable inside the function
-            with patch.dict("sys.modules", {
-                "openai": MagicMock(AsyncOpenAI=MagicMock()),
-                "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
-                "semantic_kernel.connectors.ai.open_ai": MagicMock(
-                    OpenAIChatCompletion=MagicMock()
-                ),
-                "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
-                    FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
-                ),
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "openai": MagicMock(AsyncOpenAI=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
+                    "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                        OpenAIChatCompletion=MagicMock()
+                    ),
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                        FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
+                    ),
+                },
+            ):
                 result = await _invoke_camembert_fallacy(
                     "Tu es stupide donc ton argument est faux.", {}
                 )
@@ -100,8 +108,9 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with patch.dict("os.environ", env, clear=True), \
-             patch.dict("sys.modules", {"openai": None}):
+        with patch.dict("os.environ", env, clear=True), patch.dict(
+            "sys.modules", {"openai": None}
+        ):
             result = await _invoke_camembert_fallacy("test text", {})
 
         # Should return graceful fallback, not crash

@@ -22,7 +22,6 @@ from argumentation_analysis.orchestration.collaborative_debate import (
     build_collaborative_analysis_workflow,
 )
 
-
 # --- Role definitions ---
 
 

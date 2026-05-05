@@ -20,11 +20,20 @@ class TestChunkByArguments:
         """Arguments from fact_extraction are chunked individually."""
         extraction = {
             "arguments": [
-                {"text": "The climate is changing due to CO2 emissions", "source_quote": "para 2"},
-                {"text": "Renewable energy reduces carbon footprint", "source_quote": "para 5"},
+                {
+                    "text": "The climate is changing due to CO2 emissions",
+                    "source_quote": "para 2",
+                },
+                {
+                    "text": "Renewable energy reduces carbon footprint",
+                    "source_quote": "para 5",
+                },
             ],
             "claims": [
-                {"text": "We should invest in solar power", "source_quote": "conclusion"},
+                {
+                    "text": "We should invest in solar power",
+                    "source_quote": "conclusion",
+                },
             ],
         }
         chunks = SemanticIndexService.chunk_by_arguments("raw text", extraction)
@@ -62,7 +71,10 @@ class TestChunkByArguments:
             uploaded.append(1) or f"doc_{len(uploaded)}"
         )
         doc_ids = service.index_arguments(
-            arguments=[{"text": "ok"}, {"text": "This is long enough to be a real argument"}],
+            arguments=[
+                {"text": "ok"},
+                {"text": "This is long enough to be a real argument"},
+            ],
             source_name="test",
         )
         # Only the long argument gets indexed (short ones skipped)

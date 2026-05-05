@@ -166,9 +166,7 @@ class OpenDomainInvestigator:
                 )
         return attributions
 
-    def _build_hypothesis_summary(
-        self, hypotheses: List[Dict]
-    ) -> Dict[str, str]:
+    def _build_hypothesis_summary(self, hypotheses: List[Dict]) -> Dict[str, str]:
         """Build a human-readable hypothesis summary."""
         summary = {}
         for hyp in hypotheses:
@@ -176,9 +174,7 @@ class OpenDomainInvestigator:
             coherent = hyp.get("coherent", False)
             assumptions = hyp.get("assumptions", [])
             status = "COHERENT" if coherent else "INCOHERENT"
-            summary[hyp_id] = (
-                f"{status} — assumptions: {assumptions}"
-            )
+            summary[hyp_id] = f"{status} — assumptions: {assumptions}"
         return summary
 
     def _build_conclusion(
@@ -217,13 +213,9 @@ class OpenDomainInvestigator:
             supported = [a for a in attributions if a.coherent]
             undermined = [a for a in attributions if not a.coherent]
             if supported:
-                lines.append(
-                    f"  Supported attributions: {len(supported)}"
-                )
+                lines.append(f"  Supported attributions: {len(supported)}")
             if undermined:
-                lines.append(
-                    f"  Undermined attributions: {len(undermined)}"
-                )
+                lines.append(f"  Undermined attributions: {len(undermined)}")
 
         # Attribution narrative
         if coherent_hyps and incoherent_hyps:

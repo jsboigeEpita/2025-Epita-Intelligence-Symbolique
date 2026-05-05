@@ -184,6 +184,7 @@ class TestTweetyBridge(unittest.TestCase):
     def test_async_lock_is_asyncio_lock(self):
         """Vérifie que _get_async_lock retourne un asyncio.Lock."""
         import asyncio
+
         lock = TweetyBridge._get_async_lock()
         self.assertIsInstance(lock, asyncio.Lock)
 
@@ -221,7 +222,7 @@ class TestTweetyBridgeAsync(unittest.IsolatedAsyncioTestCase):
 
         try:
             # Mock the sync initialize_jvm to avoid actual JVM startup
-            with patch.object(TweetyBridge, 'initialize_jvm') as mock_init:
+            with patch.object(TweetyBridge, "initialize_jvm") as mock_init:
                 bridge = TweetyBridge.get_instance()
                 await bridge.async_initialize_jvm()
                 mock_init.assert_called_once()
@@ -256,7 +257,7 @@ class TestTweetyBridgeAsync(unittest.IsolatedAsyncioTestCase):
         asyncio.Lock.release = tracked_release
 
         try:
-            with patch.object(TweetyBridge, 'shutdown_jvm') as mock_shutdown:
+            with patch.object(TweetyBridge, "shutdown_jvm") as mock_shutdown:
                 bridge = TweetyBridge.get_instance()
                 await bridge.async_shutdown_jvm()
                 mock_shutdown.assert_called_once()

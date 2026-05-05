@@ -2,6 +2,7 @@
 
 Verifies the JTMS phase builds proper belief networks from upstream phases.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -15,7 +16,10 @@ class TestInvokeJTMS:
 
         context = {
             "phase_extract_output": {
-                "arguments": [{"text": "Evidence supports the claim"}, {"text": "Statistical data confirms"}],
+                "arguments": [
+                    {"text": "Evidence supports the claim"},
+                    {"text": "Statistical data confirms"},
+                ],
                 "claims": [{"text": "The policy is effective"}],
             }
         }

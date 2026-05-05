@@ -16,6 +16,7 @@ Usage:
 Sections: Extraction / Formal Logic / Fallacies / JTMS / ATMS / Dung /
 Counter-arguments / Debate / Quality / Narrative (#364).
 """
+
 import json
 from typing import Any, Dict, List, Optional
 
@@ -89,13 +90,15 @@ def render_spectacular_result(result: Dict[str, Any], console: Optional[Any] = N
     non_empty = _count_non_empty(state_snapshot)
     coverage = non_empty / total_fields * 100 if total_fields else 0
 
-    console.print(Panel(
-        f"[bold]Workflow:[/bold] {workflow}\n"
-        f"[bold]Phases:[/bold] {completed}/{total} completed\n"
-        f"[bold]State coverage:[/bold] {non_empty}/{total_fields} fields ({coverage:.0f}%)",
-        title="[bold cyan]Spectacular Rhetorical Analysis[/bold cyan]",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold]Workflow:[/bold] {workflow}\n"
+            f"[bold]Phases:[/bold] {completed}/{total} completed\n"
+            f"[bold]State coverage:[/bold] {non_empty}/{total_fields} fields ({coverage:.0f}%)",
+            title="[bold cyan]Spectacular Rhetorical Analysis[/bold cyan]",
+            border_style="cyan",
+        )
+    )
 
     # Sections
     _render_extraction(console, state_snapshot)
@@ -171,12 +174,16 @@ def _render_fallacies(console, state: Dict[str, Any]):
         table.add_column("Justification")
         for fid, data in list(fallacies.items())[:10]:
             ftype = data.get("type", "?") if isinstance(data, dict) else "?"
-            just = data.get("justification", "") if isinstance(data, dict) else str(data)
+            just = (
+                data.get("justification", "") if isinstance(data, dict) else str(data)
+            )
             table.add_row(fid, ftype, _truncate(just, 60))
         console.print(table)
     if neural:
-        console.print(f"  {len(neural)} neural detection scores "
-                      f"({_section_ref(9)} for quality impact)")
+        console.print(
+            f"  {len(neural)} neural detection scores "
+            f"({_section_ref(9)} for quality impact)"
+        )
 
 
 def _render_jtms(console, state: Dict[str, Any]):
@@ -227,7 +234,9 @@ def _render_counter_arguments(console, state: Dict[str, Any]):
     console.print(f"\n[bold]7. Counter-arguments[/bold] ({_section_ref(7)})")
     for ca in counters[:5]:
         strategy = ca.get("strategy", "?")
-        content = _truncate(str(ca.get("counter_content", ca.get("original_argument", ""))))
+        content = _truncate(
+            str(ca.get("counter_content", ca.get("original_argument", "")))
+        )
         console.print(f"  [{strategy}] {content}")
 
 

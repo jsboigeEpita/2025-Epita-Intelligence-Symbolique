@@ -17,6 +17,7 @@ FrameworkService, LogicService) remain available at their original import paths
 under argumentation_analysis.services.web_api.services.* and are used by the
 MCP server.
 """
+
 import warnings
 
 warnings.warn(
@@ -25,6 +26,7 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
+
 
 # Minimal shim: create_app returns a stub that raises on use
 def create_app(*args, **kwargs):

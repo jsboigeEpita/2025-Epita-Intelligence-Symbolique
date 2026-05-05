@@ -37,6 +37,7 @@ def state(golden):
 
 # ── Helpers ──
 
+
 def _non_empty_count(data: dict) -> int:
     """Count keys whose value is non-empty (list/dict with items, non-empty str, non-zero number)."""
     count = 0
@@ -91,6 +92,7 @@ def _extract_cited_fields(narrative: str, state: dict) -> set:
 
 # ── Structural regression tests ──
 
+
 class TestGoldenFixtureIntegrity:
     """Verify the fixture file itself is well-formed."""
 
@@ -111,7 +113,9 @@ class TestGoldenFixtureIntegrity:
 
     def test_no_plaintext_source_content(self, golden):
         raw = golden["state_snapshot"].get("raw_text", "")
-        assert raw.startswith("[REDACTED"), "Golden fixture must not contain plaintext source"
+        assert raw.startswith(
+            "[REDACTED"
+        ), "Golden fixture must not contain plaintext source"
 
 
 class TestFieldCoverage:
@@ -151,7 +155,9 @@ class TestAtmsContexts:
 
     def test_at_least_one_contradictory_context(self, state):
         statuses = [c["status"] for c in state["atms_contexts"]]
-        assert "contradictory" in statuses, "Expected at least one contradictory ATMS context"
+        assert (
+            "contradictory" in statuses
+        ), "Expected at least one contradictory ATMS context"
 
 
 class TestDungFrameworks:
@@ -226,18 +232,22 @@ class TestNarrativeSynthesis:
 
     def test_narrative_synthesis_present(self, state):
         narrative = state.get("narrative_synthesis", "")
-        assert len(narrative) > 100, "Narrative synthesis should be substantial (>100 chars)"
+        assert (
+            len(narrative) > 100
+        ), "Narrative synthesis should be substantial (>100 chars)"
 
     def test_narrative_cites_at_least_5_fields(self, state):
         narrative = state["narrative_synthesis"]
         cited = _extract_cited_fields(narrative, state)
-        assert len(cited) >= 5, (
-            f"Narrative should cite ≥5 state fields, cites {len(cited)}: {cited}"
-        )
+        assert (
+            len(cited) >= 5
+        ), f"Narrative should cite ≥5 state fields, cites {len(cited)}: {cited}"
 
     def test_narrative_references_sections(self, state):
         narrative = state["narrative_synthesis"]
-        assert "Section" in narrative, "Narrative should include section cross-references"
+        assert (
+            "Section" in narrative
+        ), "Narrative should include section cross-references"
 
 
 class TestCrossFieldConsistency:
@@ -249,17 +259,17 @@ class TestCrossFieldConsistency:
         # Neural scores should cover at least the detected fallacies
         neural_types = {s["fallacy"] for s in neural}
         fallacy_types = {f["type"] for f in fallacies.values()}
-        assert fallacy_types.issubset(neural_types), (
-            f"Some detected fallacies not in neural scores: {fallacy_types - neural_types}"
-        )
+        assert fallacy_types.issubset(
+            neural_types
+        ), f"Some detected fallacies not in neural scores: {fallacy_types - neural_types}"
 
     def test_dung_arguments_are_subset_of_identified(self, state):
         identified = set(state.get("identified_arguments", {}).keys())
         fw = next(iter(state.get("dung_frameworks", {}).values()), {})
         dung_args = set(fw.get("arguments", []))
-        assert dung_args.issubset(identified), (
-            f"Dung references unknown args: {dung_args - identified}"
-        )
+        assert dung_args.issubset(
+            identified
+        ), f"Dung references unknown args: {dung_args - identified}"
 
     def test_counter_arguments_target_existing_args(self, state):
         identified = set(state.get("identified_arguments", {}).keys())

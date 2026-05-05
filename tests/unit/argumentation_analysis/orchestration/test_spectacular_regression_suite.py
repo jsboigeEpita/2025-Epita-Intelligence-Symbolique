@@ -35,7 +35,10 @@ def _reset_catalog():
 # Deterministic mock outputs for each capability
 MOCK_OUTPUTS = {
     "fact_extraction": {
-        "extracts": [{"id": "e1", "content": "claim_1"}, {"id": "e2", "content": "claim_2"}],
+        "extracts": [
+            {"id": "e1", "content": "claim_1"},
+            {"id": "e2", "content": "claim_2"},
+        ],
         "arguments": [{"id": "a1", "description": "arg_1"}],
     },
     "argument_quality": {
@@ -89,8 +92,16 @@ MOCK_OUTPUTS = {
     },
     "assumption_based_reasoning": {
         "atms_contexts": [
-            {"hypothesis_id": "h_trust", "coherent": True, "assumptions": ["source_reliable"]},
-            {"hypothesis_id": "h_skeptical", "coherent": False, "assumptions": ["source_unreliable"]},
+            {
+                "hypothesis_id": "h_trust",
+                "coherent": True,
+                "assumptions": ["source_reliable"],
+            },
+            {
+                "hypothesis_id": "h_skeptical",
+                "coherent": False,
+                "assumptions": ["source_unreliable"],
+            },
         ],
         "has_contradictions": True,
     },
@@ -216,7 +227,9 @@ def _make_mock_state_writers():
         if isinstance(output, dict):
             for tr in output.get("translations", []):
                 state.add_nl_to_logic_translation(
-                    "text", tr.get("formula", ""), tr.get("logic_type", "fol"),
+                    "text",
+                    tr.get("formula", ""),
+                    tr.get("logic_type", "fol"),
                     tr.get("is_valid", True),
                 )
 
@@ -289,10 +302,22 @@ class TestSpectacularWorkflowGolden:
     """Golden regression tests for build_spectacular_workflow()."""
 
     EXPECTED_PHASES = {
-        "extract", "quality", "nl_to_logic", "neural_detect",
-        "hierarchical_fallacy", "pl", "fol", "modal",
-        "dung_extensions", "aspic_analysis", "counter",
-        "jtms", "debate", "atms", "governance", "formal_synthesis",
+        "extract",
+        "quality",
+        "nl_to_logic",
+        "neural_detect",
+        "hierarchical_fallacy",
+        "pl",
+        "fol",
+        "modal",
+        "dung_extensions",
+        "aspic_analysis",
+        "counter",
+        "jtms",
+        "debate",
+        "atms",
+        "governance",
+        "formal_synthesis",
         "narrative_synthesis",
     }
 
@@ -322,7 +347,10 @@ class TestSpectacularWorkflowGolden:
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
         assert set(levels[1]) == {
-            "hierarchical_fallacy", "neural_detect", "nl_to_logic", "quality",
+            "hierarchical_fallacy",
+            "neural_detect",
+            "nl_to_logic",
+            "quality",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -473,8 +501,7 @@ class TestSpectacularWorkflowGolden:
         _, state = await _execute_workflow(wf)
         snapshot = state.get_state_snapshot(summarize=True)
         populated = sum(
-            1 for k, v in snapshot.items()
-            if isinstance(v, (int, float)) and v > 0
+            1 for k, v in snapshot.items() if isinstance(v, (int, float)) and v > 0
         )
         assert populated >= 15
 
@@ -495,8 +522,13 @@ class TestSherlockModernWorkflowGolden:
     """Golden regression tests for build_sherlock_modern_workflow()."""
 
     EXPECTED_PHASES = {
-        "extract", "hierarchical_fallacy", "quality", "counter",
-        "jtms", "atms", "narrative_synthesis",
+        "extract",
+        "hierarchical_fallacy",
+        "quality",
+        "counter",
+        "jtms",
+        "atms",
+        "narrative_synthesis",
     }
 
     def test_workflow_builds(self):

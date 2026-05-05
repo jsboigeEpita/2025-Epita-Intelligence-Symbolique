@@ -134,7 +134,11 @@ class ProposalStore:
 
 
 async def run_deliberation_workflow(
-    store: ProposalStore, delib_id: str, proposal_text: str, workflow: str, options: Dict
+    store: ProposalStore,
+    delib_id: str,
+    proposal_text: str,
+    workflow: str,
+    options: Dict,
 ):
     """Execute a deliberation workflow asynchronously.
 
@@ -147,15 +151,15 @@ async def run_deliberation_workflow(
     try:
         # Try to run via UnifiedPipeline
         results = await _run_pipeline(proposal_text, workflow, options)
-        store.update_deliberation(delib_id, DeliberationStatus.COMPLETED, results=results)
+        store.update_deliberation(
+            delib_id, DeliberationStatus.COMPLETED, results=results
+        )
         store.set_analysis_results(proposal_id, results)
         store.update_status(proposal_id, ProposalStatus.DECIDED)
         logger.info(f"Deliberation {delib_id} completed successfully")
     except Exception as e:
         logger.error(f"Deliberation {delib_id} failed: {e}")
-        store.update_deliberation(
-            delib_id, DeliberationStatus.FAILED, error=str(e)
-        )
+        store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=str(e))
         store.update_status(proposal_id, ProposalStatus.PENDING)
 
 

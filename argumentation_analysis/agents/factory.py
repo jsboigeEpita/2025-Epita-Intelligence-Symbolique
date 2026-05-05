@@ -1,6 +1,6 @@
-# Fichier : argumentation_analysis/agents/agent_factory.py
+from __future__ import annotations
 
-from typing import List, Optional, Type
+from typing import Any, List, Optional, Type, Union
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.agents import Agent, ChatCompletionAgent
@@ -103,8 +103,11 @@ _PLUGIN_REGISTRY = {
 
 
 def get_plugin_instances(
-    agent_speciality: str, state=None, kernel=None, llm_service=None
-) -> list:
+    agent_speciality: str,
+    state: Any = None,
+    kernel: Optional[Kernel] = None,
+    llm_service: Any = None,
+) -> list[Any]:
     """Return instantiated plugin objects for an agent's speciality.
 
     Useful for ChatCompletionAgent(plugins=[...]) scoping where each agent
@@ -167,8 +170,11 @@ def get_plugin_instances(
 
 
 def load_plugins_for_agent(
-    kernel: Kernel, agent_speciality: str, state=None, llm_service=None
-) -> list:
+    kernel: Kernel,
+    agent_speciality: str,
+    state: Any = None,
+    llm_service: Any = None,
+) -> list[str]:
     """Load only the plugins relevant to an agent's speciality onto its kernel.
 
     Always loads StateManagerPlugin (if state is provided) as the shared
@@ -212,9 +218,7 @@ def load_plugins_for_agent(
             # Complex plugins need kernel + llm_service
             if plugin_name == "fallacy_workflow":
                 if llm_service is not None:
-                    instance = plugin_cls(
-                        master_kernel=kernel, llm_service=llm_service
-                    )
+                    instance = plugin_cls(master_kernel=kernel, llm_service=llm_service)
                 else:
                     _factory_logger.debug(
                         "Skipping '%s': requires llm_service", plugin_name
@@ -247,14 +251,11 @@ class AgentFactory:
         config_name: str = "simple",
         trace_log_path: Optional[str] = None,
         taxonomy_file_path: Optional[str] = None,
-    ) -> Agent:
-        # La logique de création des plugins est déléguée à l'agent lui-même.
-        # La factory se contente de passer la configuration.
-        # Cela élimine la logique dupliquée et les incohérences.
+    ) -> Union[Agent, "TracedAgent"]:
         agent_to_create = InformalFallacyAgent(
             kernel=self.kernel,
             config_name=config_name,
-            taxonomy_file_path=taxonomy_file_path,  # Ajout du passage de l'argument manquant
+            taxonomy_file_path=taxonomy_file_path,
             llm_service_id=self.llm_service_id,
         )
 
@@ -264,12 +265,10 @@ class AgentFactory:
             )
         return agent_to_create
 
-    def create_agent(self, agent_type: AgentType, **kwargs) -> FallacyAgentBase:
-        # Cette méthode est maintenant le point d'entrée principal.
-        # Elle peut utiliser create_informal_fallacy_agent si nécessaire.
+    def create_agent(
+        self, agent_type: AgentType, **kwargs: Any
+    ) -> Union[Agent, "TracedAgent"]:
         if agent_type == AgentType.INFORMAL_FALLACY:
-            # Fait le pont avec la nouvelle méthode de création détaillée
-            # On passe les kwargs pour permettre plus de flexibilité (comme 'config_name')
             return self.create_informal_fallacy_agent(**kwargs)
 
         # --- Importation locale pour briser le cycle d'importation ---
@@ -288,18 +287,18 @@ class AgentFactory:
         if "llm_service_id" not in kwargs:
             kwargs["llm_service_id"] = self.llm_service_id
 
-        return agent_class(kernel=self.kernel, **kwargs)
+        return agent_class(kernel=self.kernel, **kwargs)  # type: ignore[return-value]  # SherlockJTMSAgent doesn't inherit Agent
 
     def create_project_manager_agent(
         self, trace_log_path: Optional[str] = None
-    ) -> Agent:
-        plugins = [ProjectManagementPlugin()]
+    ) -> Union[Agent, "TracedAgent"]:
+        plugins: list[Any] = [ProjectManagementPlugin()]
         with open(
             "argumentation_analysis/agents/prompts/ProjectManagerAgent/skprompt.txt",
             "r",
         ) as f:
             prompt = f.read()
-        llm_service = self.kernel.get_service(self.llm_service_id)
+        llm_service: Any = self.kernel.get_service(self.llm_service_id)
         agent = ChatCompletionAgent(
             kernel=self.kernel,
             service=llm_service,
@@ -313,7 +312,7 @@ class AgentFactory:
 
     def create_sherlock_agent(
         self, agent_name: str = "Sherlock", trace_log_path: Optional[str] = None
-    ) -> Agent:
+    ) -> Union[Agent, "TracedAgent"]:
         return self._create_agent(
             agent_class=SherlockEnqueteAgent,
             agent_name=agent_name,
@@ -327,7 +326,7 @@ class AgentFactory:
         trace_log_path: Optional[str] = None,
         constants: Optional[List[str]] = None,
         system_prompt: Optional[str] = None,
-    ) -> Agent:
+    ) -> Union[Agent, "TracedAgent"]:
         return self._create_agent(
             agent_class=WatsonLogicAssistant,
             agent_name=agent_name,
@@ -341,7 +340,7 @@ class AgentFactory:
         self,
         agent_name: str = "CounterArgumentAgent",
         trace_log_path: Optional[str] = None,
-    ) -> Agent:
+    ) -> Union[Agent, "TracedAgent"]:
         """Create a counter-argument generation agent."""
         from argumentation_analysis.agents.core.counter_argument.counter_agent import (
             CounterArgumentAgent,
@@ -359,7 +358,7 @@ class AgentFactory:
         personality: str = "The Scholar",
         position: str = "for",
         trace_log_path: Optional[str] = None,
-    ) -> Agent:
+    ) -> Union[Agent, "TracedAgent"]:
         """Create a debate agent with specified personality and position."""
         from argumentation_analysis.agents.core.debate.debate_agent import (
             DebateAgent,
@@ -378,18 +377,8 @@ class AgentFactory:
         agent_class: Type[Agent],
         trace_log_path: Optional[str] = None,
         enable_auto_function_calling: bool = False,
-        **kwargs,
-    ) -> Agent:
-        """Create an agent instance with optional auto function calling.
-
-        Args:
-            agent_class: The agent class to instantiate.
-            trace_log_path: Optional path for execution tracing.
-            enable_auto_function_calling: If True, configure the agent's kernel
-                execution settings so it can auto-invoke @kernel_function plugins
-                during AgentGroupChat conversations. Required for conversational mode.
-            **kwargs: Additional agent-specific parameters.
-        """
+        **kwargs: Any,
+    ) -> Union[Agent, "TracedAgent"]:
         if "service_id" not in kwargs:
             kwargs["service_id"] = self.llm_service_id
 
@@ -399,7 +388,8 @@ class AgentFactory:
             self._enable_function_choice_behavior(agent)
 
         if trace_log_path:
-            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
+            # TracedAgent expects ChatCompletionAgent; callers always pass subclasses
+            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)  # type: ignore[arg-type]
         return agent
 
     def _enable_function_choice_behavior(self, agent: Agent) -> None:
@@ -420,7 +410,7 @@ class AgentFactory:
                 object.__setattr__(agent, "function_choice_behavior", fcb)
             else:
                 # Fallback: store for manual use by orchestrator
-                agent._function_choice_behavior = fcb
+                object.__setattr__(agent, "_function_choice_behavior", fcb)
         except Exception as e:
             import logging
 

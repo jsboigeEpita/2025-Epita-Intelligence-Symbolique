@@ -501,7 +501,9 @@ class TestEnhancedRealTimeTraceAnalyzer:
         analyzer.start_capture()
         analyzer.start_pm_phase("p1", "Test", ["A"])
         analyzer.stop_capture()
-        with patch("builtins.open", side_effect=PermissionError("Cannot write to path")):
+        with patch(
+            "builtins.open", side_effect=PermissionError("Cannot write to path")
+        ):
             result = analyzer.save_enhanced_report("/nonexistent/path/report.md")
         assert result is False
 

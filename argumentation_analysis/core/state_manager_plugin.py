@@ -204,7 +204,12 @@ class StateManagerPlugin:
         self._logger.info(
             f"Appel add_belief_set (state id: {id(self._state)}): Type='{logic_type}'..."
         )
-        valid_logic_types = {"propositional": "Propositional", "pl": "Propositional", "fol": "FOL", "first_order": "FOL"}
+        valid_logic_types = {
+            "propositional": "Propositional",
+            "pl": "Propositional",
+            "fol": "FOL",
+            "first_order": "FOL",
+        }
         normalized_logic_type = logic_type.strip().lower()
 
         if normalized_logic_type not in valid_logic_types:
@@ -270,7 +275,9 @@ class StateManagerPlugin:
         try:
             import json as _json
 
-            parsed_vars = _json.loads(variables) if isinstance(variables, str) else variables
+            parsed_vars = (
+                _json.loads(variables) if isinstance(variables, str) else variables
+            )
             tr_id = self._state.add_nl_to_logic_translation(
                 original_text=original_text[:200],
                 formula=formula,
@@ -403,11 +410,15 @@ class StateManagerPlugin:
                 confidence=confidence,
             )
 
-            self._logger.info(f" -> Belief '{belief_name}' created with ExtendedBelief metadata")
+            self._logger.info(
+                f" -> Belief '{belief_name}' created with ExtendedBelief metadata"
+            )
             return f"OK: Belief '{belief_name}' created by {agent_source}"
 
         except Exception as e:
-            self._logger.error(f"Error creating JTMS belief '{belief_name}': {e}", exc_info=True)
+            self._logger.error(
+                f"Error creating JTMS belief '{belief_name}': {e}", exc_info=True
+            )
             return f"FUNC_ERROR: Error creating belief: {e}"
 
     @kernel_function(
@@ -437,9 +448,13 @@ class StateManagerPlugin:
             session = self._state._jtms_session
 
             # Add justification with agent source tracking
-            session.add_justification(in_list, out_list, conclusion, agent_source=agent_source)
+            session.add_justification(
+                in_list, out_list, conclusion, agent_source=agent_source
+            )
 
-            self._logger.info(f" -> Justification for '{conclusion}' added by {agent_source}")
+            self._logger.info(
+                f" -> Justification for '{conclusion}' added by {agent_source}"
+            )
             return f"OK: Justification for '{conclusion}' added by {agent_source}"
 
         except Exception as e:
@@ -557,14 +572,18 @@ class StateManagerPlugin:
             if belief_name not in session.extended_beliefs:
                 # Try partial match (agents may use slightly different names)
                 candidates = [
-                    name for name in session.extended_beliefs
-                    if belief_name.lower() in name.lower() or name.lower() in belief_name.lower()
+                    name
+                    for name in session.extended_beliefs
+                    if belief_name.lower() in name.lower()
+                    or name.lower() in belief_name.lower()
                 ]
                 if candidates:
                     belief_name = candidates[0]
                     self._logger.info(f" -> Partial match: using '{belief_name}'")
                 else:
-                    return f"FUNC_ERROR: Belief '{belief_name}' not found in JTMS session."
+                    return (
+                        f"FUNC_ERROR: Belief '{belief_name}' not found in JTMS session."
+                    )
 
             ext_belief = session.extended_beliefs[belief_name]
 
@@ -576,10 +595,14 @@ class StateManagerPlugin:
 
             # Record retraction in extended belief via modification history
             import datetime as _dt
-            ext_belief.record_modification("retract", {
-                "reason": reason,
-                "timestamp": _dt.datetime.now().isoformat(),
-            })
+
+            ext_belief.record_modification(
+                "retract",
+                {
+                    "reason": reason,
+                    "timestamp": _dt.datetime.now().isoformat(),
+                },
+            )
             ext_belief.context["retracted"] = True
             ext_belief.context["retraction_reason"] = reason
 
@@ -604,10 +627,13 @@ class StateManagerPlugin:
                 f" -> Belief '{belief_name}' retracted. {len(affected)} dependent beliefs affected."
             )
             import json
+
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         except Exception as e:
-            self._logger.error(f"Error retracting belief '{belief_name}': {e}", exc_info=True)
+            self._logger.error(
+                f"Error retracting belief '{belief_name}': {e}", exc_info=True
+            )
             return f"FUNC_ERROR: Error retracting belief: {e}"
 
 

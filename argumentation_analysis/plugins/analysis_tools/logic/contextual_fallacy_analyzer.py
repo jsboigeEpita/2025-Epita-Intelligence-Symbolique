@@ -154,7 +154,9 @@ class EnhancedContextualFallacyAnalyzer:
             )
             self.logger.info("NLP models loaded successfully.")
         except Exception as e:
-            self.logger.warning("Could not load NLP models, falling back to heuristic: %s", e)
+            self.logger.warning(
+                "Could not load NLP models, falling back to heuristic: %s", e
+            )
             models = {}
         return models
 

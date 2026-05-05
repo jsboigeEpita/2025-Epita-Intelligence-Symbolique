@@ -87,7 +87,9 @@ class FallacyWorkflowPlugin:
                 self.logger.error(f"Error reading taxonomy file: {e}")
 
         self.taxonomy_navigator = TaxonomyNavigator(taxonomy_data=data)
-        self.exploration_plugin = ExplorationPlugin(self.taxonomy_navigator, language=self.language)
+        self.exploration_plugin = ExplorationPlugin(
+            self.taxonomy_navigator, language=self.language
+        )
 
         if self.taxonomy_navigator.get_root_nodes():
             self.logger.info(
@@ -271,7 +273,9 @@ class FallacyWorkflowPlugin:
             if reasoning_history:
                 reasoning_context = (
                     "\n--- PREVIOUS REASONING (for context) ---\n"
-                    + "\n".join(f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:]))
+                    + "\n".join(
+                        f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:])
+                    )
                     + "\n"
                 )
 
@@ -301,9 +305,7 @@ class FallacyWorkflowPlugin:
                 options_text += f"  - {cname} (ID: {cpk}): {cdesc}\n"
                 if cexample:
                     options_text += f"    Example: {cexample}\n"
-                options_text += (
-                    f"    → Call explore_branch(node_pk='{cpk}') to explore this branch.\n"
-                )
+                options_text += f"    → Call explore_branch(node_pk='{cpk}') to explore this branch.\n"
 
             prompt = (
                 f'Text to analyze: "{argument_text[:500]}"\n\n'
@@ -403,7 +405,9 @@ class FallacyWorkflowPlugin:
                         )
 
                     return IdentifiedFallacy(
-                        fallacy_type=result.get("name", result.get("name_fr", result.get("pk", ""))),
+                        fallacy_type=result.get(
+                            "name", result.get("name_fr", result.get("pk", ""))
+                        ),
                         taxonomy_pk=confirmed_pk,
                         taxonomy_path=result.get("path", ""),
                         explanation=full_explanation,
@@ -414,9 +418,7 @@ class FallacyWorkflowPlugin:
                 elif func_name == "conclude_no_fallacy":
                     reason = result.get("reason", "no reason")
                     # Capture reasoning for memory
-                    reasoning_summary = (
-                        f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
-                    )
+                    reasoning_summary = f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
                     reasoning_history.append(reasoning_summary)
                     self.logger.info(f"  Branch abandoned: {reason}")
                     return None
@@ -427,10 +429,10 @@ class FallacyWorkflowPlugin:
                     next_pk = node_info.get("pk", "")
                     if next_pk and next_pk != current_pk:
                         # Capture reasoning for memory - why this branch was chosen
-                        branch_name = node_info.get('name', node_info.get('name_fr', next_pk))
-                        reasoning_summary = (
-                            f"Explored {branch_name} from {current_node.get(f'text_{self.language}', current_pk)}"
+                        branch_name = node_info.get(
+                            "name", node_info.get("name_fr", next_pk)
                         )
+                        reasoning_summary = f"Explored {branch_name} from {current_node.get(f'text_{self.language}', current_pk)}"
                         reasoning_history.append(reasoning_summary)
 
                         current_pk = next_pk
@@ -568,8 +570,11 @@ class FallacyWorkflowPlugin:
             # Each branch gets its own reasoning history (no shared state)
             exploration_tasks = [
                 self._explore_single_branch(
-                    argument_text, pk, slave_kernel, slave_settings,
-                    reasoning_history=None  # Each branch starts fresh
+                    argument_text,
+                    pk,
+                    slave_kernel,
+                    slave_settings,
+                    reasoning_history=None,  # Each branch starts fresh
                 )
                 for pk in candidate_pks
             ]

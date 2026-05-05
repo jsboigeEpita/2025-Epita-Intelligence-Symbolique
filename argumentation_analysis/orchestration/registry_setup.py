@@ -54,6 +54,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
 
 logger = logging.getLogger("UnifiedPipeline")
 
+
 def setup_registry(
     include_optional: bool = True,
 ) -> CapabilityRegistry:
@@ -83,12 +84,12 @@ def setup_registry(
             register_with_capability_registry as register_counter_arg,
         )
 
-        register_counter_arg(registry)
+        register_counter_arg(registry)  # type: ignore[no-untyped-call]
         # Wire invoke callable (registration was created by register_counter_arg)
         if "counter_argument_agent" in registry._registrations:
-            registry._registrations[
-                "counter_argument_agent"
-            ].invoke = _invoke_counter_argument
+            registry._registrations["counter_argument_agent"].invoke = (
+                _invoke_counter_argument
+            )
         registered.append("counter_argument_agent")
     except ImportError as e:
         skipped.append(("counter_argument_agent", str(e)))
@@ -527,5 +528,3 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
             # Fall back to slot declaration if JVM not available
             for cap in caps:
                 registry.declare_slot(cap, requires=["jvm"], description=desc)
-
-

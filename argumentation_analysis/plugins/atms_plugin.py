@@ -60,7 +60,9 @@ class ATMSPlugin:
 
     @staticmethod
     def _json_result(success: bool, data: dict = None, error: str = None) -> str:
-        return json.dumps({"success": success, **(data or {}), **({"error": error} if error else {})})
+        return json.dumps(
+            {"success": success, **(data or {}), **({"error": error} if error else {})}
+        )
 
     # ------------------------------------------------------------------
     # Kernel functions
@@ -165,7 +167,9 @@ class ATMSPlugin:
     ) -> str:
         try:
             atms, _ = self._get_or_create(instance_id)
-            assumption_set = frozenset(n.strip() for n in assumptions.split(",") if n.strip())
+            assumption_set = frozenset(
+                n.strip() for n in assumptions.split(",") if n.strip()
+            )
             derivable = []
             for name, node in atms.nodes.items():
                 if node.is_assumption or name == "\u22a5":

@@ -209,12 +209,14 @@ async def run_multi_round(
                 for pr in tr.phase_results.values()
                 if hasattr(pr, "status") and pr.status.value == "completed"
             )
-            round_stats.append({
-                "round": tr.turn_number,
-                "phases_completed": completed,
-                "confidence": round(tr.confidence, 3),
-                "duration": round(tr.duration_seconds, 1),
-            })
+            round_stats.append(
+                {
+                    "round": tr.turn_number,
+                    "phases_completed": completed,
+                    "confidence": round(tr.confidence, 3),
+                    "duration": round(tr.duration_seconds, 1),
+                }
+            )
 
     return {
         "mode": "multi_round",
@@ -252,7 +254,14 @@ async def score_with_judge(
         "actionability": score.actionability,
         "overall": score.overall,
         "composite": round(
-            (score.completeness + score.accuracy + score.depth + score.coherence + score.actionability) / 5,
+            (
+                score.completeness
+                + score.accuracy
+                + score.depth
+                + score.coherence
+                + score.actionability
+            )
+            / 5,
             2,
         ),
         "reasoning": score.reasoning,
@@ -317,7 +326,11 @@ async def run_agentic_eval(
         # 2) Multi-round conversational
         try:
             multi = await run_multi_round(
-                text, doc_id, workflow, full_registry, CAPABILITY_STATE_WRITERS,
+                text,
+                doc_id,
+                workflow,
+                full_registry,
+                CAPABILITY_STATE_WRITERS,
                 max_rounds=max_rounds,
             )
             all_results.append(multi)
@@ -409,15 +422,23 @@ def _compute_summary(
     max_rounds: int,
 ) -> Dict[str, Any]:
     """Compute aggregate summary."""
-    single_results = [r for r in results if r.get("mode") == "single_pass" and "error" not in r]
-    multi_results = [r for r in results if r.get("mode") == "multi_round" and "error" not in r]
+    single_results = [
+        r for r in results if r.get("mode") == "single_pass" and "error" not in r
+    ]
+    multi_results = [
+        r for r in results if r.get("mode") == "multi_round" and "error" not in r
+    ]
 
     def avg(values):
         return round(sum(values) / max(len(values), 1), 2)
 
     # Aggregate scores
-    single_scores = [c.get("single_pass", {}) for c in judge_comparisons if "single_pass" in c]
-    multi_scores = [c.get("multi_round", {}) for c in judge_comparisons if "multi_round" in c]
+    single_scores = [
+        c.get("single_pass", {}) for c in judge_comparisons if "single_pass" in c
+    ]
+    multi_scores = [
+        c.get("multi_round", {}) for c in judge_comparisons if "multi_round" in c
+    ]
 
     single_composites = [s["composite"] for s in single_scores if "composite" in s]
     multi_composites = [s["composite"] for s in multi_scores if "composite" in s]
@@ -428,8 +449,12 @@ def _compute_summary(
         "n_docs": len(single_results),
         "single_pass": {
             "avg_duration": avg([r["duration_seconds"] for r in single_results]),
-            "avg_non_empty_fields": avg([r["non_empty_fields"] for r in single_results]),
-            "avg_composite_score": avg(single_composites) if single_composites else None,
+            "avg_non_empty_fields": avg(
+                [r["non_empty_fields"] for r in single_results]
+            ),
+            "avg_composite_score": (
+                avg(single_composites) if single_composites else None
+            ),
             "scores_by_dimension": _avg_dimension_scores(single_scores),
         },
         "multi_round": {
@@ -487,9 +512,15 @@ def _print_summary(summary: Dict[str, Any]):
     print(f"\n{'Metric':<25} {'Single-pass':>12} {'Multi-round':>12} {'Delta':>8}")
     print("-" * 60)
     dr = delta.get("duration_ratio", "?")
-    print(f"{'Duration (avg)':<25} {sp.get('avg_duration', '?'):>10}s {mr.get('avg_duration', '?'):>10}s {f'x{dr}':>8}")
-    print(f"{'Non-empty fields':<25} {sp.get('avg_non_empty_fields', '?'):>12} {mr.get('avg_non_empty_fields', '?'):>12}")
-    print(f"{'Composite score':<25} {sp.get('avg_composite_score', '?'):>12} {mr.get('avg_composite_score', '?'):>12} {delta.get('composite', '?'):>8}")
+    print(
+        f"{'Duration (avg)':<25} {sp.get('avg_duration', '?'):>10}s {mr.get('avg_duration', '?'):>10}s {f'x{dr}':>8}"
+    )
+    print(
+        f"{'Non-empty fields':<25} {sp.get('avg_non_empty_fields', '?'):>12} {mr.get('avg_non_empty_fields', '?'):>12}"
+    )
+    print(
+        f"{'Composite score':<25} {sp.get('avg_composite_score', '?'):>12} {mr.get('avg_composite_score', '?'):>12} {delta.get('composite', '?'):>8}"
+    )
 
     for dim in ["completeness", "accuracy", "depth", "coherence", "actionability"]:
         sp_val = sp.get("scores_by_dimension", {}).get(dim, "?")
@@ -502,9 +533,13 @@ def _print_summary(summary: Dict[str, Any]):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Agentic conversation evaluation (#97)")
+    parser = argparse.ArgumentParser(
+        description="Agentic conversation evaluation (#97)"
+    )
     parser.add_argument("--max-docs", type=int, default=3, help="Max documents")
-    parser.add_argument("--max-text", type=int, default=5000, help="Max text chars per doc")
+    parser.add_argument(
+        "--max-text", type=int, default=5000, help="Max text chars per doc"
+    )
     parser.add_argument("--rounds", type=int, default=3, help="Max conversation rounds")
     parser.add_argument(
         "--output",

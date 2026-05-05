@@ -18,7 +18,7 @@ try:
         build_sherlock_modern_workflow,
     )
 except ImportError:
-    build_sherlock_modern_workflow = None  # type: ignore[assignment,misc]
+    build_sherlock_modern_workflow = None  # type: ignore[assignment]
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -261,8 +261,11 @@ def _should_rerun_fallacy(context: Dict[str, Any]) -> bool:
     # Method 2: scan beliefs dict for invalid entries
     beliefs = jtms_output.get("beliefs", {})
     if isinstance(beliefs, dict):
-        retracted = [name for name, bdata in beliefs.items()
-                     if isinstance(bdata, dict) and bdata.get("valid") is False]
+        retracted = [
+            name
+            for name, bdata in beliefs.items()
+            if isinstance(bdata, dict) and bdata.get("valid") is False
+        ]
         if retracted:
             return True
 
@@ -346,8 +349,7 @@ def build_iterative_analysis_workflow() -> WorkflowDefinition:
             capability="adversarial_debate",
             depends_on=["counter"],
             optional=True,
-        )
-        .build()
+        ).build()
     )
 
 
@@ -384,20 +386,20 @@ def build_nl_to_logic_workflow() -> WorkflowDefinition:
 def build_quality_gated_counter_workflow() -> WorkflowDefinition:
     """Quality-gated counter-argument with iterative refinement (Loop 3)."""
 
-    def quality_gate(ctx):
+    def quality_gate(ctx: Dict[str, Any]) -> bool:
         """Only generate counter-argument if quality score > 3.0."""
         output = ctx.get("phase_quality_output")
         if not output or not isinstance(output, dict):
             return True  # proceed if no quality data
-        return output.get("note_finale", 0) > 3.0
+        return bool(output.get("note_finale", 0) > 3.0)
 
-    def counter_quality_convergence(prev, curr):
+    def counter_quality_convergence(prev: Any, curr: Any) -> bool:
         """Converge when counter-argument quality stops improving."""
         if not isinstance(prev, dict) or not isinstance(curr, dict):
             return False
         prev_score = prev.get("note_finale", 0)
         curr_score = curr.get("note_finale", 0)
-        return curr_score >= prev_score  # stop when no improvement
+        return bool(curr_score >= prev_score)  # stop when no improvement
 
     return (
         WorkflowBuilder("quality_gated_counter")
@@ -683,7 +685,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_collaborative_analysis_workflow,
             )
 
-            WORKFLOW_CATALOG["collaborative"] = build_collaborative_analysis_workflow()
+            WORKFLOW_CATALOG["collaborative"] = build_collaborative_analysis_workflow()  # type: ignore[no-untyped-call]
         except Exception as e:
             logger.warning(f"Collaborative workflow not registered: {e}")
         # Macro workflows (Track D)
@@ -726,9 +728,9 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_formal_verification_workflow,
             )
 
-            WORKFLOW_CATALOG[
-                "formal_verification"
-            ] = build_formal_verification_workflow()
+            WORKFLOW_CATALOG["formal_verification"] = (
+                build_formal_verification_workflow()
+            )
         except Exception as e:
             logger.warning(f"Formal verification workflow not registered: {e}")
         # Comprehensive analysis (LLM-only, benchmark-optimized)
@@ -746,7 +748,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
                 build_sherlock_modern_workflow,
             )
 
-            wf = build_sherlock_modern_workflow()
+            wf = build_sherlock_modern_workflow()  # type: ignore[no-untyped-call]
             if wf is not None:  # builder returns None on failure (review #382)
                 WORKFLOW_CATALOG["sherlock_modern"] = wf
             else:
@@ -769,5 +771,3 @@ def reset_workflow_catalog() -> None:
     global WORKFLOW_CATALOG
     WORKFLOW_CATALOG = {}
     logger.debug("Workflow catalog reset to empty state")
-
-

@@ -51,7 +51,9 @@ _FALLACY_LABELS_LEGACY = [
 ]
 
 _TAXONOMY_CSV = Path(__file__).resolve().parent.parent / "data" / "taxonomy_medium.csv"
-_TAXONOMY_FULL_CSV = Path(__file__).resolve().parent.parent / "data" / "taxonomy_full.csv"
+_TAXONOMY_FULL_CSV = (
+    Path(__file__).resolve().parent.parent / "data" / "taxonomy_full.csv"
+)
 
 # Maps taxonomy text_fr label → PK for downstream hierarchical descent
 _TAXONOMY_LABEL_TO_PK: Dict[str, int] = {}
@@ -571,9 +573,7 @@ class NLIFallacyDetector:
     # Threshold for Stage 1: minimum confidence on a family to drill down
     HIERARCHICAL_STAGE1_THRESHOLD = 0.3
 
-    def _nli_hierarchical_classify(
-        self, text: str
-    ) -> List[FallacyDetection]:
+    def _nli_hierarchical_classify(self, text: str) -> List[FallacyDetection]:
         """2-stage hierarchical NLI classification.
 
         Stage 1: classify against the 7 depth-1 families.
@@ -608,9 +608,7 @@ class NLIFallacyDetector:
 
             detections: List[FallacyDetection] = []
 
-            for label, score in zip(
-                stage1_result["labels"], stage1_result["scores"]
-            ):
+            for label, score in zip(stage1_result["labels"], stage1_result["scores"]):
                 if score < self.HIERARCHICAL_STAGE1_THRESHOLD:
                     continue
 
@@ -629,12 +627,9 @@ class NLIFallacyDetector:
                             confidence=round(score, 3),
                             source="nli_hierarchical",
                             description=(
-                                f"NLI hierarchical stage-1 "
-                                f"({self._model_name})"
+                                f"NLI hierarchical stage-1 " f"({self._model_name})"
                             ),
-                            taxonomy_pk=family_node["pk"]
-                            if family_node
-                            else None,
+                            taxonomy_pk=family_node["pk"] if family_node else None,
                         )
                     )
                     continue
@@ -919,7 +914,9 @@ class SelfHostedLLMFallacyDetector:
         import os
 
         self._endpoint = endpoint or os.environ.get("SELF_HOSTED_LLM_ENDPOINT", "")
-        self._api_key = api_key or os.environ.get("SELF_HOSTED_LLM_API_KEY", "not-needed")
+        self._api_key = api_key or os.environ.get(
+            "SELF_HOSTED_LLM_API_KEY", "not-needed"
+        )
         self._model = model or os.environ.get("SELF_HOSTED_LLM_MODEL", "")
         self._timeout = timeout
         self._available = None
@@ -951,7 +948,10 @@ class SelfHostedLLMFallacyDetector:
         payload = {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": "Tu es un expert en logique et argumentation. Réponds en JSON uniquement."},
+                {
+                    "role": "system",
+                    "content": "Tu es un expert en logique et argumentation. Réponds en JSON uniquement.",
+                },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.1,
@@ -1061,7 +1061,7 @@ class LLMFallacyDetector:
         "Reponds UNIQUEMENT en JSON valide avec cette structure:\n"
         '{"fallacies": [{"type": "...", "confidence": 0.XX, '
         '"explanation": "...", "target_text": "..."}]}\n\n'
-        "Si aucun sophisme n'est detecte, reponds: {\"fallacies\": []}\n\n"
+        'Si aucun sophisme n\'est detecte, reponds: {"fallacies": []}\n\n'
         "Types de sophismes connus:\n"
         "- Attaque personnelle (Ad Hominem)\n"
         "- Appel a la popularite (Ad Populum)\n"
@@ -1136,9 +1136,7 @@ class LLMFallacyDetector:
             # Strip markdown code fences if present
             if raw.startswith("```"):
                 lines = raw.split("\n")
-                raw = "\n".join(
-                    l for l in lines if not l.startswith("```")
-                )
+                raw = "\n".join(l for l in lines if not l.startswith("```"))
 
             data = _json.loads(raw)
             fallacies_data = data.get("fallacies", [])
@@ -1276,7 +1274,13 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         """At least one tier must be available."""
         return any(
             t is not None and t.is_available()
-            for t in [self._symbolic, self._self_hosted_llm, self._camembert, self._nli, self._llm]
+            for t in [
+                self._symbolic,
+                self._self_hosted_llm,
+                self._camembert,
+                self._nli,
+                self._llm,
+            ]
         )
 
     def get_available_tiers(self) -> List[str]:
@@ -1333,16 +1337,10 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
 
         # Tier 2: NLI zero-shot (deprecated, shadowed by self-hosted LLM)
         if self._nli and self._nli.is_available():
-            nli_results = self._nli.detect(
-                text, hierarchical=self._nli_hierarchical
-            )
+            nli_results = self._nli.detect(text, hierarchical=self._nli_hierarchical)
             all_detections.extend(nli_results)
             if nli_results:
-                tier_name = (
-                    "nli_hierarchical"
-                    if self._nli_hierarchical
-                    else "nli"
-                )
+                tier_name = "nli_hierarchical" if self._nli_hierarchical else "nli"
                 result.tiers_used.append(tier_name)
 
         # Tier 0: Remote LLM zero-shot

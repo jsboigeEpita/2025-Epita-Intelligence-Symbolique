@@ -82,9 +82,7 @@ class TestInvokeAtmsMultiContext:
     def test_at_least_3_contexts_generated(self):
         context = {
             "phase_extract_output": {
-                "arguments": [
-                    {"text": "Arg " + str(i)} for i in range(5)
-                ],
+                "arguments": [{"text": "Arg " + str(i)} for i in range(5)],
                 "claims": [{"text": "Claim"}],
             },
         }
@@ -168,7 +166,9 @@ class TestAtmsStateWriter:
     def test_atms_contexts_stored_in_state(self):
         state = UnifiedAnalysisState("test text")
         output = {
-            "environments": {"node_a": {"is_assumption": True, "environments": [["x"]]}},
+            "environments": {
+                "node_a": {"is_assumption": True, "environments": [["x"]]}
+            },
             "assumption_count": 1,
             "node_count": 2,
             "consistent_derivations": [],

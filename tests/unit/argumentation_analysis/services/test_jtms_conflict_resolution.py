@@ -203,7 +203,9 @@ class TestHistoryAndStats:
         assert stats["by_strategy"]["confidence_based"] == 1
 
     def test_auto_conflict_id(self, resolver):
-        result = resolver.resolve({"beliefs": {"a": {"belief_name": "x", "confidence": 0.5}}})
+        result = resolver.resolve(
+            {"beliefs": {"a": {"belief_name": "x", "confidence": 0.5}}}
+        )
         assert "conflict_" in result["conflict_id"]
 
     def test_timestamp_in_result(self, resolver, simple_conflict):

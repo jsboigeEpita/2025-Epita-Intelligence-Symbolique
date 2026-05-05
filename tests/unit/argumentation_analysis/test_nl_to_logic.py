@@ -9,7 +9,6 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # ── Service unit tests ───────────────────────────────────────────────────
 
 
@@ -272,9 +271,7 @@ class TestNLToLogicPipelineIntegration:
         registry = setup_registry(include_optional=False)
         # Check capability exists
         found = registry.find_agents_for_capability("nl_to_logic_translation")
-        assert found or "nl_to_logic_service" in str(
-            registry._registrations.keys()
-        )
+        assert found or "nl_to_logic_service" in str(registry._registrations.keys())
 
     def test_state_writer_in_dict(self):
         """nl_to_logic_translation has a state writer."""
@@ -362,7 +359,9 @@ class TestNLToLogicPipelineIntegration:
             "phase_extract_output": {
                 "arguments": [
                     {"text": "Rain causes wet ground and dangerous conditions."},
-                    {"text": "Climate change accelerates extreme weather events globally."},
+                    {
+                        "text": "Climate change accelerates extreme weather events globally."
+                    },
                 ],
             },
         }

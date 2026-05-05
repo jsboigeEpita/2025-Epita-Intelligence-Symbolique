@@ -12,7 +12,6 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # ============================================================
 # Test: Workflow definitions include formal reasoning phases
 # ============================================================
@@ -283,9 +282,7 @@ class TestJTMSKeyFixes:
 
         result = await _invoke_jtms("test", context)
         # Should find a FALLACY:appeal_to_authority belief
-        fallacy_beliefs = [
-            k for k in result["beliefs"] if k.startswith("FALLACY:")
-        ]
+        fallacy_beliefs = [k for k in result["beliefs"] if k.startswith("FALLACY:")]
         assert len(fallacy_beliefs) >= 1
         assert "appeal_to_authority" in fallacy_beliefs[0]
 
@@ -312,9 +309,7 @@ class TestJTMSKeyFixes:
         }
 
         result = await _invoke_jtms("test", context)
-        fallacy_beliefs = [
-            k for k in result["beliefs"] if k.startswith("FALLACY:")
-        ]
+        fallacy_beliefs = [k for k in result["beliefs"] if k.startswith("FALLACY:")]
         assert len(fallacy_beliefs) >= 1
         assert "ad_hominem" in fallacy_beliefs[0]
 
@@ -436,7 +431,10 @@ class TestGovernanceCrossKB:
             "phase_debate_output": {},
             "phase_counter_output": {
                 "llm_counter_arguments": [
-                    {"strategy_used": "reductio", "counter_argument": "If we follow..."},
+                    {
+                        "strategy_used": "reductio",
+                        "counter_argument": "If we follow...",
+                    },
                 ],
             },
             "phase_quality_output": {},
@@ -504,7 +502,10 @@ class TestDebateCrossKB:
             },
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
-                    {"type": "appeal_to_authority", "justification": "Cites celebrity opinion"},
+                    {
+                        "type": "appeal_to_authority",
+                        "justification": "Cites celebrity opinion",
+                    },
                 ],
             },
             "phase_counter_output": {},
@@ -524,4 +525,8 @@ class TestDebateCrossKB:
 
         result = await _invoke_debate_analysis("test", context)
         # Basic structure check — LLM enrichment won't fire without API key
-        assert "argument_scores" in result or "scores" in result or isinstance(result, dict)
+        assert (
+            "argument_scores" in result
+            or "scores" in result
+            or isinstance(result, dict)
+        )

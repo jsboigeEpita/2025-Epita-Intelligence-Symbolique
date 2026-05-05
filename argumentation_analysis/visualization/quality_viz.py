@@ -55,6 +55,7 @@ def render_quality_radar(
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         import numpy as np
@@ -84,8 +85,13 @@ def render_quality_radar(
     # Add overall score
     overall = sum(values[:-1]) / max(n, 1)
     ax.text(
-        0.5, -0.08, f"Score global: {overall:.2f}",
-        transform=ax.transAxes, ha="center", size=12, weight="bold",
+        0.5,
+        -0.08,
+        f"Score global: {overall:.2f}",
+        transform=ax.transAxes,
+        ha="center",
+        size=12,
+        weight="bold",
     )
 
     plt.tight_layout()

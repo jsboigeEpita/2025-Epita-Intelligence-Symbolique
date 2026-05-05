@@ -19,7 +19,6 @@ from argumentation_analysis.adapters.french_fallacy_adapter import (
     FallacyDetection,
 )
 
-
 # -- Availability Tests -----------------------------------------------------
 
 
@@ -102,24 +101,26 @@ class TestSelfHostedLLMDetection:
 
     def _mock_response(self, fallacies):
         return {
-            "choices": [
-                {
-                    "message": {
-                        "content": json.dumps({"fallacies": fallacies})
-                    }
-                }
-            ]
+            "choices": [{"message": {"content": json.dumps({"fallacies": fallacies})}}]
         }
 
     @pytest.mark.asyncio
     async def test_detect_single_fallacy(self, detector):
         mock_client = self._make_mock_client(
-            self._mock_response([
-                {"type": "Appel à la popularité (Ad Populum)", "confidence": 0.92, "explanation": "Test"}
-            ])
+            self._mock_response(
+                [
+                    {
+                        "type": "Appel à la popularité (Ad Populum)",
+                        "confidence": 0.92,
+                        "explanation": "Test",
+                    }
+                ]
+            )
         )
         with patch("httpx.AsyncClient", return_value=mock_client):
-            results = await detector.detect_async("Tout le monde le fait donc c'est bien")
+            results = await detector.detect_async(
+                "Tout le monde le fait donc c'est bien"
+            )
         assert len(results) == 1
         assert results[0].fallacy_type == "Appel à la popularité (Ad Populum)"
         assert results[0].confidence == 0.92
@@ -128,10 +129,16 @@ class TestSelfHostedLLMDetection:
     @pytest.mark.asyncio
     async def test_detect_multiple_fallacies(self, detector):
         mock_client = self._make_mock_client(
-            self._mock_response([
-                {"type": "Ad Hominem", "confidence": 0.85, "explanation": "Attack"},
-                {"type": "Pente glissante", "confidence": 0.78, "explanation": "Slope"},
-            ])
+            self._mock_response(
+                [
+                    {"type": "Ad Hominem", "confidence": 0.85, "explanation": "Attack"},
+                    {
+                        "type": "Pente glissante",
+                        "confidence": 0.78,
+                        "explanation": "Slope",
+                    },
+                ]
+            )
         )
         with patch("httpx.AsyncClient", return_value=mock_client):
             results = await detector.detect_async("Test text")

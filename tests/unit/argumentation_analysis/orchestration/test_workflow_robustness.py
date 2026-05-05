@@ -427,7 +427,9 @@ class TestCodeInjectionInputs:
                 workflow_name,
             )
         except asyncio.TimeoutError:
-            pytest.skip(f"Pipeline timeout ({_timeout_for(workflow_name)}s) for adversarial input in {workflow_name} workflow — LLM latency")
+            pytest.skip(
+                f"Pipeline timeout ({_timeout_for(workflow_name)}s) for adversarial input in {workflow_name} workflow — LLM latency"
+            )
         assert_valid_result(result, workflow_name)
 
 

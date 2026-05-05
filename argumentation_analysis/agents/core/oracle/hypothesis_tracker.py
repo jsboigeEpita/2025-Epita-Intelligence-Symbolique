@@ -175,9 +175,7 @@ class HypothesisTracker:
                 hyp.coherent = False
                 # Identify the actual contradicting evidence per assumption
                 # rather than always blaming the latest call (review #386).
-                blames = sorted(
-                    {self._contradicted_by[a] for a in contradicted}
-                )
+                blames = sorted({self._contradicted_by[a] for a in contradicted})
                 hyp.retraction_reason = (
                     f"Contradicted by evidence {blames} — "
                     f"assumptions {sorted(contradicted)} conflict with evidence"
@@ -214,8 +212,7 @@ class HypothesisTracker:
         for hyp in self._hypotheses.values():
             status = "COHERENT" if hyp.coherent else "RETRACTED"
             lines.append(
-                f"  [{status}] {hyp.id} ({hyp.name}): "
-                f"assumptions={hyp.assumptions}"
+                f"  [{status}] {hyp.id} ({hyp.name}): " f"assumptions={hyp.assumptions}"
             )
             if not hyp.coherent:
                 lines.append(f"    Reason: {hyp.retraction_reason}")

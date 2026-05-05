@@ -294,7 +294,11 @@ class TestCreateSession:
         """create_session() creates ProcessStdioTransport with command."""
         # Use echo as a safe test command that outputs valid JSON
         session = await create_session(
-            command=["python", "-c", "import sys; print('{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{}}}'); sys.stdout.flush()"]
+            command=[
+                "python",
+                "-c",
+                'import sys; print(\'{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{}}}\'); sys.stdout.flush()',
+            ]
         )
 
         try:

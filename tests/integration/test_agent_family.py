@@ -64,9 +64,7 @@ def test_agent_performance(agent_factory, agent_type, test_case):
         AgentType.INFORMAL_FALLACY,
     }
     if agent_type in _broken_types:
-        pytest.xfail(
-            f"{agent_type.name}: invalid model_id in test environment"
-        )
+        pytest.xfail(f"{agent_type.name}: invalid model_id in test environment")
 
     # Arrange
     agent = agent_factory.create_agent(agent_type)

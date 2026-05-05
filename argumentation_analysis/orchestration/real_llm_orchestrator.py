@@ -10,6 +10,7 @@ DEPRECATED: Use these alternatives instead:
 - For conversational analysis: argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator
 - For analysis requests: argumentation_analysis.core.shared_state.UnifiedAnalysisState
 """
+
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -22,6 +23,7 @@ class LLMAnalysisRequest:
 
     Use UnifiedAnalysisState or direct agent invocation instead.
     """
+
     text: str
     analysis_type: str
     context: Optional[Dict[str, Any]] = None
@@ -35,6 +37,7 @@ class LLMAnalysisResult:
 
     Use UnifiedAnalysisState or analysis plugins instead.
     """
+
     request_id: str
     analysis_type: str
     result: Dict[str, Any]
@@ -86,6 +89,7 @@ class RealLLMOrchestrator:
 def _get_conversation_logger():
     """Lazy import to avoid circular dependencies."""
     from .conversation_orchestrator import ConversationLogger
+
     return ConversationLogger
 
 
@@ -113,8 +117,8 @@ class RealConversationLogger:
 
 # Export list for backward compatibility
 __all__ = [
-    'RealLLMOrchestrator',
-    'LLMAnalysisRequest',
-    'LLMAnalysisResult',
-    'RealConversationLogger',
+    "RealLLMOrchestrator",
+    "LLMAnalysisRequest",
+    "LLMAnalysisResult",
+    "RealConversationLogger",
 ]

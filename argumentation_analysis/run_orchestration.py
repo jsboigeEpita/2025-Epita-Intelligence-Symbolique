@@ -162,7 +162,9 @@ async def run_modern_analysis(
     print(f"\n{'='*60}")
     print(f" Résultats — Workflow: {results.get('workflow_name', workflow_name)}")
     print(f"{'='*60}")
-    print(f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}")
+    print(
+        f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}"
+    )
     print(f"  Phases échouées   : {summary.get('failed', 0)}")
     print(f"  Phases sautées    : {summary.get('skipped', 0)}")
 
@@ -183,11 +185,11 @@ async def run_modern_analysis(
     state_snapshot = results.get("state_snapshot")
     if state_snapshot:
         non_empty = sum(
-            1
-            for v in state_snapshot.values()
-            if v and v not in ([], {}, "", None, 0)
+            1 for v in state_snapshot.values() if v and v not in ([], {}, "", None, 0)
         )
-        print(f"\n  État unifié : {non_empty} champs non-vides sur {len(state_snapshot)}")
+        print(
+            f"\n  État unifié : {non_empty} champs non-vides sur {len(state_snapshot)}"
+        )
 
     print(f"{'='*60}\n")
 
@@ -417,9 +419,16 @@ Exemples:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(
-                    {"trace": result.trace, "solution": result.solution,
-                     "agents": result.agents_used, "hypotheses": result.hypotheses},
-                    f, ensure_ascii=False, indent=2, default=str,
+                    {
+                        "trace": result.trace,
+                        "solution": result.solution,
+                        "agents": result.agents_used,
+                        "hypotheses": result.hypotheses,
+                    },
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                    default=str,
                 )
             logging.info(f"Results saved to {output_path}")
     elif mode == "conversational":
@@ -464,10 +473,13 @@ Exemples:
                 render_result = {
                     "workflow_name": results.get("workflow_name", "conversational"),
                     "state_snapshot": results.get("state_snapshot", {}),
-                    "summary": results.get("summary", {
-                        "completed": len(results.get("phases", [])),
-                        "total": len(results.get("phases", [])),
-                    }),
+                    "summary": results.get(
+                        "summary",
+                        {
+                            "completed": len(results.get("phases", [])),
+                            "total": len(results.get("phases", [])),
+                        },
+                    ),
                     "capabilities_used": results.get("capabilities_used", []),
                 }
                 render_spectacular_result(render_result)

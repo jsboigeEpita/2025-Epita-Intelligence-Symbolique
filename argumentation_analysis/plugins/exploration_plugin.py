@@ -60,8 +60,10 @@ class ExplorationPlugin:
                     or node.get("nom_vulgarisé", "")
                     or node.get(f"text_{self._alt_lang}", "")
                 ),
-                "description": node.get(f"desc_{lang}", "") or node.get(f"desc_{self._alt_lang}", ""),
-                "example": node.get(f"example_{lang}", "") or node.get(f"example_{self._alt_lang}", ""),
+                "description": node.get(f"desc_{lang}", "")
+                or node.get(f"desc_{self._alt_lang}", ""),
+                "example": node.get(f"example_{lang}", "")
+                or node.get(f"example_{self._alt_lang}", ""),
                 "depth": node.get("depth", ""),
                 "is_leaf": len(children) == 0,
             },
@@ -73,8 +75,12 @@ class ExplorationPlugin:
                         or c.get("nom_vulgarisé", "")
                         or c.get(f"text_{self._alt_lang}", "")
                     ),
-                    "description": c.get(f"desc_{lang}", "") or c.get(f"desc_{self._alt_lang}", ""),
-                    "example": (c.get(f"example_{lang}", "") or c.get(f"example_{self._alt_lang}", ""))[:200],
+                    "description": c.get(f"desc_{lang}", "")
+                    or c.get(f"desc_{self._alt_lang}", ""),
+                    "example": (
+                        c.get(f"example_{lang}", "")
+                        or c.get(f"example_{self._alt_lang}", "")
+                    )[:200],
                 }
                 for c in children
             ],
