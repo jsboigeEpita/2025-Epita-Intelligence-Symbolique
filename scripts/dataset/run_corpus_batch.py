@@ -240,15 +240,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             classified.setdefault(k, v)
 
         for extract in source_def.get("extracts", []):
-            full_text = extract.get("full_text", "")
-            if not full_text:
+            text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+            if not text:
                 continue
             oid = opaque_id(src_name)
             docs.append(
                 {
                     "source_name": src_name,
                     "opaque_id": oid,
-                    "full_text": full_text,
+                    "full_text": text,
                     "metadata": classified,
                 }
             )

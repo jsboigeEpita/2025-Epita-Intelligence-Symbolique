@@ -824,7 +824,7 @@ class UnifiedCorpusManager:
                     "extract_name": extract.get("extract_name", ""),
                     "start_marker": extract.get("start_marker", ""),
                     "end_marker": extract.get("end_marker", ""),
-                    "full_text": extract.get("full_text", ""),
+                    "full_text": extract.get("extract_text", "") or extract.get("full_text_segment", ""),
                     "metadata": extract.get("metadata", {}),
                 }
 

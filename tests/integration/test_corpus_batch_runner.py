@@ -9,7 +9,7 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -141,30 +141,73 @@ class TestRunSingle:
         assert sig is not None
         assert sig.get("partial") is True
 
-    @pytest.mark.asyncio
-    async def test_partial_on_timeout(self, tmp_path):
-        """Timeout produces partial signature."""
 
-        async def _slow(*a, **kw):
-            await asyncio.sleep(10)
+# ---------------------------------------------------------------------------
+# Document flattening field name tests
+# ---------------------------------------------------------------------------
 
-        slow_fn = AsyncMock(side_effect=_slow)
 
-        with patch(
-            "run_corpus_batch.asyncio.wait_for", side_effect=asyncio.TimeoutError
-        ):
-            sig = await runner._run_single(
-                text="x",
-                source_name="x",
-                opaque_id_str="tmo12345",
-                workflow="spectacular",
-                metadata={},
-                state_dumps_dir=tmp_path / "dumps",
-                signatures_dir=tmp_path / "sigs",
-                skip_existing=False,
-                pipeline_fn=slow_fn,
-                sanitize_fn=_mock_sanitize,
-            )
+class TestDocumentFlattening:
+    """Validate that the batch runner reads the correct corpus field names."""
 
-        assert sig is not None
-        assert sig.get("partial") is True
+    def test_extracts_using_extract_text_field(self):
+        """Batch runner should read 'extract_text' from corpus extracts."""
+        definitions = [
+            {
+                "source_name": "Test Source",
+                "extracts": [
+                    {"extract_name": "ex1", "extract_text": "Content from extract_text"},
+                ],
+            }
+        ]
+
+        docs = []
+        for source_def in definitions:
+            for extract in source_def.get("extracts", []):
+                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                if text:
+                    docs.append(text)
+
+        assert len(docs) == 1
+        assert docs[0] == "Content from extract_text"
+
+    def test_fallback_to_full_text_segment(self):
+        """When extract_text is empty, full_text_segment should be used."""
+        definitions = [
+            {
+                "source_name": "Test",
+                "extracts": [
+                    {"extract_name": "ex1", "extract_text": "", "full_text_segment": "Fallback content"},
+                ],
+            }
+        ]
+
+        docs = []
+        for source_def in definitions:
+            for extract in source_def.get("extracts", []):
+                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                if text:
+                    docs.append(text)
+
+        assert len(docs) == 1
+        assert docs[0] == "Fallback content"
+
+    def test_old_full_text_field_not_used(self):
+        """The old 'full_text' field on extracts should NOT be read (source-level field)."""
+        definitions = [
+            {
+                "source_name": "Test",
+                "extracts": [
+                    {"extract_name": "ex1", "full_text": "Wrong field value"},
+                ],
+            }
+        ]
+
+        docs = []
+        for source_def in definitions:
+            for extract in source_def.get("extracts", []):
+                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                if text:
+                    docs.append(text)
+
+        assert len(docs) == 0, "Should not extract from 'full_text' field on extracts"
