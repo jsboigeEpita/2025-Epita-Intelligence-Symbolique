@@ -17,7 +17,9 @@ Usage:
     result = await workflow.execute(text, registry=registry)
 """
 
+import asyncio
 import logging
+import time
 from typing import (
     Callable,
     Dict,
@@ -25,6 +27,7 @@ from typing import (
     Any,
     Optional,
     Set,
+    Tuple,
 )
 from dataclasses import dataclass, field
 from enum import Enum
@@ -313,6 +316,9 @@ class WorkflowExecutor:
         """
         Execute a workflow definition.
 
+        Phases at the same DAG level execute concurrently via asyncio.gather().
+        Phases at different levels execute sequentially (respecting depends_on).
+
         Args:
             workflow: The workflow to execute
             input_data: Input data (typically text to analyze)
@@ -327,14 +333,11 @@ class WorkflowExecutor:
         Returns:
             Dict mapping phase name to PhaseResult.
         """
-        import time
-
         results: Dict[str, PhaseResult] = {}
         execution_order = workflow.get_execution_order()
         ctx = dict(context or {})
         ctx["input_data"] = input_data
 
-        # Inject state into context for invoke callables to access
         if state is not None:
             ctx["unified_state"] = state
 
@@ -346,168 +349,22 @@ class WorkflowExecutor:
         for level_idx, level_phases in enumerate(execution_order):
             logger.debug(f"Level {level_idx}: executing phases {level_phases}")
 
+            phase_coros = []
             for phase_name in level_phases:
                 phase = workflow.get_phase(phase_name)
-                if not phase:
-                    continue
-
-                start = time.time()
-
-                # Condition check — skip phase when condition returns False
-                if phase.condition is not None:
-                    try:
-                        if not phase.condition(ctx):
-                            results[phase_name] = PhaseResult(
-                                phase_name=phase_name,
-                                status=PhaseStatus.SKIPPED,
-                                capability=phase.capability,
-                                error="Condition not met",
-                            )
-                            logger.info(
-                                f"Phase '{phase_name}' skipped — " f"condition not met"
-                            )
-                            continue
-                    except Exception as cond_err:
-                        logger.warning(
-                            f"Condition eval failed for '{phase_name}': "
-                            f"{cond_err} — proceeding anyway"
-                        )
-
-                # Resolve capability
-                try:
-                    providers = self._registry.find_for_capability(phase.capability)
-                except Exception as resolve_err:
-                    duration = time.time() - start
-                    results[phase_name] = PhaseResult(
-                        phase_name=phase_name,
-                        status=PhaseStatus.FAILED,
-                        capability=phase.capability,
-                        error=f"Capability resolution error: {resolve_err}",
-                        duration_seconds=duration,
-                    )
-                    logger.error(
-                        f"Phase '{phase_name}' FAILED — "
-                        f"capability resolution error for '{phase.capability}': {resolve_err}"
-                    )
-                    continue
-
-                if not providers:
-                    if phase.optional:
-                        results[phase_name] = PhaseResult(
-                            phase_name=phase_name,
-                            status=PhaseStatus.SKIPPED,
-                            capability=phase.capability,
-                            error="No provider available (optional phase)",
-                        )
-                        logger.info(
-                            f"Phase '{phase_name}' skipped — "
-                            f"no provider for '{phase.capability}'"
-                        )
-                        continue
-                    else:
-                        results[phase_name] = PhaseResult(
-                            phase_name=phase_name,
-                            status=PhaseStatus.FAILED,
-                            capability=phase.capability,
-                            error=f"No provider for required capability '{phase.capability}'",
-                        )
-                        logger.error(
-                            f"Phase '{phase_name}' FAILED — "
-                            f"no provider for required capability '{phase.capability}'"
-                        )
-                        continue
-
-                # Use the first available provider
-                provider = providers[0]
-                try:
-                    import asyncio
-
-                    # Apply input transform if defined
-                    phase_input = input_data
-                    if phase.input_transform is not None:
-                        try:
-                            phase_input = phase.input_transform(input_data, ctx)
-                        except Exception as tf_err:
-                            logger.warning(
-                                f"Input transform failed for '{phase_name}': "
-                                f"{tf_err} — using original input"
-                            )
-                            phase_input = input_data
-
-                    output = None
-                    if provider.invoke is not None:
-                        if phase.loop_config is not None:
-                            # Iterative execution
-                            output = await self._execute_loop(
-                                phase,
-                                provider,
-                                phase_input,
-                                ctx,
-                                phase.loop_config,
-                            )
-                        elif phase.timeout_seconds:
-                            output = await asyncio.wait_for(
-                                provider.invoke(phase_input, ctx),
-                                timeout=phase.timeout_seconds,
-                            )
-                        else:
-                            output = await provider.invoke(phase_input, ctx)
-                    else:
-                        logger.warning(
-                            f"Phase '{phase_name}': component '{provider.name}' "
-                            f"has no invoke callable, output will be None"
-                        )
-
-                    duration = time.time() - start
-                    results[phase_name] = PhaseResult(
-                        phase_name=phase_name,
-                        status=PhaseStatus.COMPLETED,
-                        capability=phase.capability,
-                        component_used=provider.name,
-                        output=output,
-                        duration_seconds=duration,
+                if phase:
+                    phase_coros.append(
+                        self._execute_phase(phase, phase_name, input_data, ctx)
                     )
 
-                    # Store result in context for downstream phases
-                    ctx[f"phase_{phase_name}_result"] = results[phase_name]
-                    ctx[f"phase_{phase_name}_output"] = output
+            if not phase_coros:
+                continue
 
-                    # Write phase output to unified state if writer exists
-                    if (
-                        state is not None
-                        and state_writers
-                        and phase.capability in state_writers
-                    ):
-                        try:
-                            state_writers[phase.capability](output, state, ctx)
-                        except Exception as sw_err:
-                            logger.warning(
-                                f"State writer for '{phase.capability}' failed: {sw_err}"
-                            )
-
-                    logger.info(
-                        f"Phase '{phase_name}' completed "
-                        f"using '{provider.name}' ({duration:.2f}s)"
-                    )
-
-                except Exception as e:
-                    duration = time.time() - start
-                    results[phase_name] = PhaseResult(
-                        phase_name=phase_name,
-                        status=PhaseStatus.FAILED,
-                        capability=phase.capability,
-                        component_used=provider.name,
-                        error=str(e),
-                        duration_seconds=duration,
-                    )
-                    logger.error(f"Phase '{phase_name}' FAILED: {e}")
-
-                    # Log error in unified state
-                    if state is not None and hasattr(state, "log_error"):
-                        try:
-                            state.log_error(phase_name, str(e))
-                        except Exception:
-                            pass
+            level_results = await asyncio.gather(*phase_coros)
+            for phase_name, result, output in level_results:
+                self._store_phase_result(
+                    phase_name, result, output, results, ctx, state, state_writers
+                )
 
         # Summary
         completed = sum(
@@ -520,7 +377,6 @@ class WorkflowExecutor:
             f"{completed} completed, {failed} failed, {skipped} skipped"
         )
 
-        # Store workflow summary in unified state
         if state is not None and hasattr(state, "set_workflow_results"):
             try:
                 state.set_workflow_results(
@@ -536,6 +392,184 @@ class WorkflowExecutor:
                 logger.warning(f"Failed to store workflow results in state: {sw_err}")
 
         return results
+
+    async def _execute_phase(
+        self,
+        phase: WorkflowPhase,
+        phase_name: str,
+        input_data: Any,
+        ctx: Dict[str, Any],
+    ) -> Tuple[str, PhaseResult, Any]:
+        """Execute a single workflow phase, returning (name, result, output)."""
+        start = time.time()
+
+        # Condition check
+        if phase.condition is not None:
+            try:
+                if not phase.condition(ctx):
+                    return (
+                        phase_name,
+                        PhaseResult(
+                            phase_name=phase_name,
+                            status=PhaseStatus.SKIPPED,
+                            capability=phase.capability,
+                            error="Condition not met",
+                        ),
+                        None,
+                    )
+            except Exception as cond_err:
+                logger.warning(
+                    f"Condition eval failed for '{phase_name}': "
+                    f"{cond_err} — proceeding anyway"
+                )
+
+        # Resolve capability
+        try:
+            providers = self._registry.find_for_capability(phase.capability)
+        except Exception as resolve_err:
+            duration = time.time() - start
+            return (
+                phase_name,
+                PhaseResult(
+                    phase_name=phase_name,
+                    status=PhaseStatus.FAILED,
+                    capability=phase.capability,
+                    error=f"Capability resolution error: {resolve_err}",
+                    duration_seconds=duration,
+                ),
+                None,
+            )
+
+        if not providers:
+            if phase.optional:
+                return (
+                    phase_name,
+                    PhaseResult(
+                        phase_name=phase_name,
+                        status=PhaseStatus.SKIPPED,
+                        capability=phase.capability,
+                        error="No provider available (optional phase)",
+                    ),
+                    None,
+                )
+            return (
+                phase_name,
+                PhaseResult(
+                    phase_name=phase_name,
+                    status=PhaseStatus.FAILED,
+                    capability=phase.capability,
+                    error=f"No provider for required capability '{phase.capability}'",
+                ),
+                None,
+            )
+
+        provider = providers[0]
+        try:
+            phase_input = input_data
+            if phase.input_transform is not None:
+                try:
+                    phase_input = phase.input_transform(input_data, ctx)
+                except Exception as tf_err:
+                    logger.warning(
+                        f"Input transform failed for '{phase_name}': "
+                        f"{tf_err} — using original input"
+                    )
+                    phase_input = input_data
+
+            output = None
+            if provider.invoke is not None:
+                if phase.loop_config is not None:
+                    output = await self._execute_loop(
+                        phase,
+                        provider,
+                        phase_input,
+                        ctx,
+                        phase.loop_config,
+                    )
+                elif phase.timeout_seconds:
+                    output = await asyncio.wait_for(
+                        provider.invoke(phase_input, ctx),
+                        timeout=phase.timeout_seconds,
+                    )
+                else:
+                    output = await provider.invoke(phase_input, ctx)
+            else:
+                logger.warning(
+                    f"Phase '{phase_name}': component '{provider.name}' "
+                    f"has no invoke callable, output will be None"
+                )
+
+            duration = time.time() - start
+            return (
+                phase_name,
+                PhaseResult(
+                    phase_name=phase_name,
+                    status=PhaseStatus.COMPLETED,
+                    capability=phase.capability,
+                    component_used=provider.name,
+                    output=output,
+                    duration_seconds=duration,
+                ),
+                output,
+            )
+
+        except Exception as e:
+            duration = time.time() - start
+            return (
+                phase_name,
+                PhaseResult(
+                    phase_name=phase_name,
+                    status=PhaseStatus.FAILED,
+                    capability=phase.capability,
+                    component_used=provider.name,
+                    error=str(e),
+                    duration_seconds=duration,
+                ),
+                None,
+            )
+
+    def _store_phase_result(
+        self,
+        phase_name: str,
+        result: PhaseResult,
+        output: Any,
+        results: Dict[str, PhaseResult],
+        ctx: Dict[str, Any],
+        state: Any,
+        state_writers: Optional[Dict[str, Any]],
+    ) -> None:
+        """Store a phase result in results dict, context, and state."""
+        results[phase_name] = result
+
+        if result.status == PhaseStatus.COMPLETED:
+            ctx[f"phase_{phase_name}_result"] = result
+            ctx[f"phase_{phase_name}_output"] = output
+
+            if (
+                state is not None
+                and state_writers
+                and result.capability in state_writers
+            ):
+                try:
+                    state_writers[result.capability](output, state, ctx)
+                except Exception as sw_err:
+                    logger.warning(
+                        f"State writer for '{result.capability}' failed: {sw_err}"
+                    )
+
+            logger.info(
+                f"Phase '{phase_name}' completed "
+                f"using '{result.component_used}' ({result.duration_seconds:.2f}s)"
+            )
+        elif result.status == PhaseStatus.SKIPPED:
+            logger.info(f"Phase '{phase_name}' skipped — {result.error}")
+        elif result.status == PhaseStatus.FAILED:
+            logger.error(f"Phase '{phase_name}' FAILED — " f"{result.error}")
+            if state is not None and hasattr(state, "log_error"):
+                try:
+                    state.log_error(phase_name, str(result.error))
+                except Exception:
+                    pass
 
     async def _execute_loop(
         self,
