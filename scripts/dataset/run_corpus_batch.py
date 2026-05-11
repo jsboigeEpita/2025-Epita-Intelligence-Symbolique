@@ -42,6 +42,15 @@ logging.basicConfig(
 logger = logging.getLogger("corpus_batch")
 
 
+class _SafeEncoder(json.JSONEncoder):
+    """JSON encoder that converts sets to sorted lists."""
+
+    def default(self, o: Any) -> Any:
+        if isinstance(o, set):
+            return sorted(o, key=str)
+        return super().default(o)
+
+
 # ---------------------------------------------------------------------------
 # Metadata classifier — simple heuristics from source_name / date
 # ---------------------------------------------------------------------------
@@ -157,7 +166,7 @@ async def _run_single(
     state_dumps_dir.mkdir(parents=True, exist_ok=True)
     dump_path = state_dumps_dir / f"state_full_{opaque_id_str}.json"
     dump_path.write_text(
-        json.dumps(state_snapshot, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(state_snapshot, ensure_ascii=False, indent=2, cls=_SafeEncoder), encoding="utf-8"
     )
     logger.info(
         "[%s] state dump written (%d bytes)", opaque_id_str, dump_path.stat().st_size
@@ -177,7 +186,7 @@ async def _run_single(
 
     signatures_dir.mkdir(parents=True, exist_ok=True)
     sig_path.write_text(
-        json.dumps(signature, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(signature, ensure_ascii=False, indent=2, cls=_SafeEncoder), encoding="utf-8"
     )
     logger.info("[%s] signature written (wall=%.1fs)", opaque_id_str, wall_clock)
 
