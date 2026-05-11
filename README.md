@@ -88,15 +88,9 @@ Entry points: `api/main.py` (FastAPI), `argumentation_analysis/run_orchestration
 - [Project catalog](docs/projets/README.md)
 - [Integration guide](docs/projets/sujets/aide/GUIDE_INTEGRATION_PROJETS.md)
 
-## Dataset Privacy
+## Dataset
 
-The corpus is encrypted (`argumentation_analysis/data/extract_sources.json.gz.enc`). Passphrase in `.env` (`TEXT_CONFIG_PASSPHRASE`). It contains politically sensitive content.
-
-- Never commit plaintext or analysis outputs
-- Use opaque IDs in all commits, PRs, and discussions
-- Downstream analysis goes under gitignored paths (`.analysis_kb/`)
-
-See [security documentation](docs/security/) for full discipline rules.
+The analysis corpus is encrypted at rest. Passphrase is configured via `TEXT_CONFIG_PASSPHRASE` in `.env`. See [security documentation](docs/security/) for handling rules.
 
 ## Documentation
 
