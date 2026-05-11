@@ -288,7 +288,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 {
                     "source_name": src_name,
                     "opaque_id": oid,
-                    "full_text": text,
+                    "full_text": full_text,
                     "metadata": classified,
                 }
             )
