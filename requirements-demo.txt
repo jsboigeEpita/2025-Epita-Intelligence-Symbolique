@@ -1,0 +1,3 @@
+# Additional dependencies for the Gradio live demo app
+# Install: pip install -r requirements-demo.txt
+gradio>=4.0.0
