@@ -312,6 +312,8 @@ class WorkflowExecutor:
         context: Optional[Dict[str, Any]] = None,
         state: Optional[Any] = None,
         state_writers: Optional[Dict[str, Any]] = None,
+        checkpoint_callback: Optional[Callable[..., None]] = None,
+        resume_from: Optional[Set[str]] = None,
     ) -> Dict[str, PhaseResult]:
         """
         Execute a workflow definition.
@@ -329,6 +331,12 @@ class WorkflowExecutor:
             state_writers: Dict mapping capability name to a callable
                 ``(output, state, ctx) -> None`` that writes phase output
                 to the state object.
+            checkpoint_callback: Optional callable invoked after each DAG level
+                with signature ``(results, ctx) -> None``.  Used for per-document
+                checkpointing in long batch runs.
+            resume_from: Optional set of phase names to skip (already completed
+                in a previous run).  Their outputs must already be present in
+                *context* (keyed ``phase_{name}_output`` / ``phase_{name}_result``).
 
         Returns:
             Dict mapping phase name to PhaseResult.
@@ -337,6 +345,7 @@ class WorkflowExecutor:
         execution_order = workflow.get_execution_order()
         ctx = dict(context or {})
         ctx["input_data"] = input_data
+        skip_phases: Set[str] = resume_from or set()
 
         if state is not None:
             ctx["unified_state"] = state
@@ -344,27 +353,62 @@ class WorkflowExecutor:
         logger.info(
             f"Executing workflow '{workflow.name}' — "
             f"{len(workflow.phases)} phases, {len(execution_order)} levels"
+            f"{f', resuming (skip {len(skip_phases)} phases)' if skip_phases else ''}"
         )
 
         for level_idx, level_phases in enumerate(execution_order):
             logger.debug(f"Level {level_idx}: executing phases {level_phases}")
 
-            phase_coros = []
+            # Split into skipped vs to-run
+            to_run = [p for p in level_phases if p not in skip_phases]
             for phase_name in level_phases:
+                if phase_name in skip_phases:
+                    # Reconstruct a SKIPPED result from context if available
+                    existing_result = ctx.get(f"phase_{phase_name}_result")
+                    if existing_result is not None:
+                        # Use the output/context from checkpoint but mark as SKIPPED
+                        results[phase_name] = PhaseResult(
+                            phase_name=phase_name,
+                            status=PhaseStatus.SKIPPED,
+                            capability=existing_result.capability,
+                            component_used=existing_result.component_used,
+                            output=existing_result.output,
+                            error="Skipped (resumed from checkpoint)",
+                            duration_seconds=existing_result.duration_seconds,
+                        )
+                    else:
+                        _skipped_phase = workflow.get_phase(phase_name)
+                        results[phase_name] = PhaseResult(
+                            phase_name=phase_name,
+                            status=PhaseStatus.SKIPPED,
+                            capability=(
+                                _skipped_phase.capability
+                                if _skipped_phase
+                                else "unknown"
+                            ),
+                            error="Skipped (resumed from checkpoint)",
+                        )
+
+            phase_coros = []
+            for phase_name in to_run:
                 phase = workflow.get_phase(phase_name)
                 if phase:
                     phase_coros.append(
                         self._execute_phase(phase, phase_name, input_data, ctx)
                     )
 
-            if not phase_coros:
-                continue
+            if phase_coros:
+                level_results = await asyncio.gather(*phase_coros)
+                for phase_name, result, output in level_results:
+                    self._store_phase_result(
+                        phase_name, result, output, results, ctx, state, state_writers
+                    )
 
-            level_results = await asyncio.gather(*phase_coros)
-            for phase_name, result, output in level_results:
-                self._store_phase_result(
-                    phase_name, result, output, results, ctx, state, state_writers
-                )
+            if checkpoint_callback is not None:
+                try:
+                    checkpoint_callback(results, ctx)
+                except Exception as cb_err:
+                    logger.warning("Checkpoint callback failed: %s", cb_err)
 
         # Summary
         completed = sum(

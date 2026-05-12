@@ -60,6 +60,8 @@ async def run_unified_analysis(
     context: Optional[Dict[str, Any]] = None,
     state: Optional[Any] = None,
     create_state: bool = True,
+    checkpoint_callback: Optional[Any] = None,
+    resume_from: Optional[set] = None,
 ) -> Dict[str, Any]:
     """
     Run a unified analysis pipeline on input text.
@@ -74,6 +76,9 @@ async def run_unified_analysis(
                are written to it via state writers.
         create_state: If True and no state provided, automatically create an
                       UnifiedAnalysisState. Set to False to disable state tracking.
+        checkpoint_callback: Optional callable passed to WorkflowExecutor for
+              per-level checkpointing.  Signature: ``(results, ctx) -> None``.
+        resume_from: Optional set of phase names to skip on resume.
 
     Returns:
         Dict with keys:
@@ -145,6 +150,8 @@ async def run_unified_analysis(
         context=context,
         state=state,
         state_writers=CAPABILITY_STATE_WRITERS if state is not None else None,
+        checkpoint_callback=checkpoint_callback,
+        resume_from=resume_from,
     )
 
     # Build summary

@@ -5,15 +5,23 @@ Iterates over every (source, extract) in the encrypted dataset, runs the
 chosen workflow on each, and persists both the full state dump and a
 privacy-safe signature.
 
+Supports checkpoint/resume: after each DAG level, a checkpoint file is
+written atomically.  On crash, ``--resume`` picks up from the last
+checkpoint instead of restarting the document.
+
 Usage:
-    python scripts/dataset/run_corpus_batch.py \
-        --workflow spectacular \
-        --output-dir .analysis_kb/signatures \
-        --max-docs 0 \
+    python scripts/dataset/run_corpus_batch.py \\
+        --workflow spectacular \\
+        --output-dir .analysis_kb/signatures \\
+        --max-docs 0 \\
         --skip-existing
+
+    # Resume an interrupted batch
+    python scripts/dataset/run_corpus_batch.py --resume
 
 Output layout (all gitignored):
     .analysis_kb/
+    ├── checkpoints/   <opaque_id>.checkpoint.json
     ├── state_dumps/   state_full_<opaque_id>.json
     └── signatures/    signature_<opaque_id>.json
 """
@@ -28,7 +36,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
@@ -98,7 +106,7 @@ def classify_metadata(source_name: str, date_iso: str = "") -> Dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Per-document processing
+# Checkpoint-aware per-document processing
 # ---------------------------------------------------------------------------
 
 
@@ -112,6 +120,7 @@ async def _run_single(
     signatures_dir: Path,
     skip_existing: bool,
     timeout: int = 900,
+    checkpoint_mgr: Optional[Any] = None,
     pipeline_fn: Optional[Any] = None,
     sanitize_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
 ) -> Optional[Dict[str, Any]]:
@@ -127,6 +136,86 @@ async def _run_single(
 
         sanitize_fn = sanitize_state
 
+    # --- Resume logic -------------------------------------------------------
+    resume_from: Optional[set] = None
+    resume_context: Optional[Dict[str, Any]] = None
+    checkpoint_snapshot: Optional[Dict[str, Any]] = None
+
+    if checkpoint_mgr is not None:
+        ckpt = checkpoint_mgr.load(opaque_id_str)
+        if ckpt is not None:
+            completed = set(ckpt.get("completed_phases", []))
+            if completed:
+                from argumentation_analysis.orchestration.checkpoint import (
+                    deserialize_phase_outputs,
+                )
+                from argumentation_analysis.orchestration.workflow_dsl import (
+                    PhaseResult,
+                    PhaseStatus,
+                )
+
+                phase_outputs = deserialize_phase_outputs(ckpt.get("phase_outputs", {}))
+                resume_context = {}
+                resume_from = completed
+                checkpoint_snapshot = ckpt.get("state_snapshot")
+
+                for pname in completed:
+                    output = phase_outputs.get(pname)
+                    if output is not None:
+                        resume_context[f"phase_{pname}_output"] = output
+                        resume_context[f"phase_{pname}_result"] = PhaseResult(
+                            phase_name=pname,
+                            status=PhaseStatus.COMPLETED,
+                            capability="unknown",
+                            output=output,
+                        )
+                logger.info(
+                    "[%s] resuming from checkpoint (%d phases)",
+                    opaque_id_str,
+                    len(completed),
+                )
+
+    # --- Build checkpoint callback ------------------------------------------
+    level_counter = [0]
+
+    def _checkpoint_callback(results: Dict, ctx: Dict) -> None:
+        """Called by WorkflowExecutor after each DAG level."""
+        if checkpoint_mgr is None:
+            return
+
+        from argumentation_analysis.orchestration.checkpoint import (
+            serialize_phase_result,
+        )
+
+        completed_phases = sorted(
+            n for n, r in results.items() if r.status.value == "completed"
+        )
+        phase_outputs = {}
+        for name in completed_phases:
+            r = results[name]
+            phase_outputs[name] = serialize_phase_result(
+                name, r.status.value, r.output, r.duration_seconds, r.error
+            )
+
+        # Capture state snapshot if available
+        snap = None
+        ust = ctx.get("unified_state")
+        if ust is not None and hasattr(ust, "get_state_snapshot"):
+            try:
+                snap = ust.get_state_snapshot(summarize=False)
+            except Exception:
+                pass
+
+        checkpoint_mgr.save(
+            doc_id=opaque_id_str,
+            workflow=workflow,
+            completed_phases=completed_phases,
+            phase_outputs=phase_outputs,
+            state_snapshot=snap,
+        )
+        level_counter[0] += 1
+
+    # --- Execute pipeline ---------------------------------------------------
     t0 = time.perf_counter()
     partial = False
     state_snapshot: Dict[str, Any] = {}
@@ -140,11 +229,21 @@ async def _run_single(
             pipeline_fn = run_unified_analysis
 
         result = await asyncio.wait_for(
-            pipeline_fn(text, workflow_name=workflow),
+            pipeline_fn(
+                text,
+                workflow_name=workflow,
+                context=resume_context,
+                checkpoint_callback=(
+                    _checkpoint_callback if checkpoint_mgr is not None else None
+                ),
+                resume_from=resume_from,
+            ),
             timeout=timeout,
+        )
         )
         # Prefer full (non-summarized) state for pattern mining.
         state_snapshot = result.get("state_snapshot", {})
+        # Prefer full (non-summarized) state for pattern mining.
         unified = result.get("unified_state")
         if unified is not None:
             try:
@@ -153,6 +252,11 @@ async def _run_single(
                     state_snapshot = full
             except Exception:
                 pass
+
+        # Merge checkpoint snapshot with new snapshot if resuming
+        if checkpoint_snapshot and isinstance(state_snapshot, dict):
+            merged = _merge_snapshots(checkpoint_snapshot, state_snapshot)
+            state_snapshot = merged
     except asyncio.TimeoutError:
         logger.warning("[%s] timeout (>600s), marking partial", opaque_id_str)
         partial = True
@@ -190,7 +294,22 @@ async def _run_single(
     )
     logger.info("[%s] signature written (wall=%.1fs)", opaque_id_str, wall_clock)
 
+    # Remove checkpoint on success
+    if checkpoint_mgr is not None and not partial:
+        checkpoint_mgr.remove(opaque_id_str)
+
     return signature
+
+
+def _merge_snapshots(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge two state snapshots.  *override* takes precedence."""
+    merged = dict(base)
+    for key, val in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(val, dict):
+            merged[key] = {**merged[key], **val}
+        else:
+            merged[key] = val
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -231,9 +350,37 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=900,
         help="Per-doc timeout in seconds (default: 900)",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume interrupted batch from per-document checkpoints",
+    )
     args = parser.parse_args(argv)
 
     state_dumps_dir = DEFAULT_KB / "state_dumps"
+    checkpoint_dir = DEFAULT_KB / "checkpoints"
+
+    # Setup checkpoint manager
+    checkpoint_mgr = None
+    if args.resume:
+        from argumentation_analysis.orchestration.checkpoint import CheckpointManager
+
+        checkpoint_mgr = CheckpointManager(checkpoint_dir)
+        incomplete = checkpoint_mgr.list_incomplete()
+        if incomplete:
+            logger.info(
+                "Resume mode: %d incomplete checkpoints found: %s",
+                len(incomplete),
+                incomplete[:5],
+            )
+        else:
+            logger.info("Resume mode: no incomplete checkpoints found")
+
+    # Also enable checkpoints for new runs when --resume is active
+    if checkpoint_mgr is None and args.resume:
+        from argumentation_analysis.orchestration.checkpoint import CheckpointManager
+
+        checkpoint_mgr = CheckpointManager(checkpoint_dir)
 
     # Load encrypted dataset
     from dotenv import load_dotenv
@@ -306,10 +453,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         docs = docs[: args.max_docs]
 
     logger.info(
-        "Starting batch: %d docs, workflow=%s, skip_existing=%s",
+        "Starting batch: %d docs, workflow=%s, skip_existing=%s, resume=%s",
         len(docs),
         args.workflow,
         args.skip_existing,
+        args.resume,
     )
 
     # Process documents serially
@@ -327,6 +475,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 signatures_dir=args.output_dir,
                 skip_existing=args.skip_existing,
                 timeout=args.timeout,
+                checkpoint_mgr=checkpoint_mgr,
             )
         )
         if sig is not None:
