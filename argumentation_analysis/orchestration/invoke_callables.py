@@ -3227,15 +3227,51 @@ async def _invoke_fol_reasoning(
             "logic_type": "first_order",
             "argument_count": len(args),
         }
-    except Exception:
-        # Fallback: check for contradiction in generated formulas
+    except Exception as tweety_err:
+        logger.warning(
+            f"FOL Tweety parse failed ({tweety_err}). "
+            f"Attempting per-formula isolation with {len(formulas)} formulas."
+        )
+        # Retry: isolate valid formulas by parsing each individually.
+        # This handles the case where one bad formula causes the entire
+        # batch to fail in Tweety's parser.
+        valid_formulas = []
+        for formula in formulas:
+            try:
+                single_meta = FOLLogicAgent.extract_fol_metadata([formula])
+                single_sig = single_meta.get("signature_lines", [])
+                single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
+                await asyncio.to_thread(
+                    bridge.check_consistency, single_bs, "first_order"
+                )
+                valid_formulas.append(formula)
+            except Exception:
+                logger.debug(f"FOL formula rejected by Tweety: {formula}")
+
+        if valid_formulas:
+            meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
+            fol_signature = meta.get("signature_lines", [])
+            logger.info(
+                f"FOL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
+                f"formulas accepted by Tweety"
+            )
+            return {
+                "formulas": valid_formulas,
+                "fol_signature": fol_signature,
+                "fol_metadata": meta,
+                "consistent": True,
+                "inferences": inferences,
+                "confidence": 0.6,
+                "logic_type": "first_order",
+                "argument_count": len(args),
+                "isolation_retry": True,
+                "rejected_count": len(formulas) - len(valid_formulas),
+            }
+
+        # All formulas failed — use Python fallback
         has_fallacious = any("Fallacious" in f for f in formulas)
-        # Still extract signature metadata even in fallback (#348)
         fol_signature = []
         try:
-            from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-                FOLLogicAgent,
-            )
 
             meta = FOLLogicAgent.extract_fol_metadata(formulas)
             fol_signature = meta.get("signature_lines", [])
@@ -3250,6 +3286,7 @@ async def _invoke_fol_reasoning(
             "logic_type": "first_order",
             "argument_count": len(args),
             "fallback": "python",
+            "diagnostic": str(tweety_err),
         }
 
 
