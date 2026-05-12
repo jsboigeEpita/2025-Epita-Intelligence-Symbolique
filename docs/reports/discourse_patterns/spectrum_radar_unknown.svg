@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 344" width="500" height="344">
+<text x="250" y="20" font-size="13" fill="#2c3e50" text-anchor="middle">Fallacy Spectrum — unknown</text>
+<text x="125" y="55" font-size="9" fill="#333" text-anchor="end">Illusion de regrou</text>
+<rect x="130" y="40" width="330" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="465" y="55" font-size="8" fill="#333" text-anchor="start">0.21</text>
+<text x="125" y="77" font-size="9" fill="#333" text-anchor="end">Enthymême invalide</text>
+<rect x="130" y="62" width="188" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="323" y="77" font-size="8" fill="#333" text-anchor="start">0.12</text>
+<text x="125" y="99" font-size="9" fill="#333" text-anchor="end">Sycophantie</text>
+<rect x="130" y="84" width="94" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="229" y="99" font-size="8" fill="#333" text-anchor="start">0.06</text>
+<text x="125" y="121" font-size="9" fill="#333" text-anchor="end">La pompe à intuiti</text>
+<rect x="130" y="106" width="94" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="229" y="121" font-size="8" fill="#333" text-anchor="start">0.06</text>
+<text x="125" y="143" font-size="9" fill="#333" text-anchor="end">Sophisme du faisce</text>
+<rect x="130" y="128" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="143" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="165" font-size="9" fill="#333" text-anchor="end">Appel à l'ignoranc</text>
+<rect x="130" y="150" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="165" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="187" font-size="9" fill="#333" text-anchor="end">Polytélie</text>
+<rect x="130" y="172" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="187" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="209" font-size="9" fill="#333" text-anchor="end">Angélisme</text>
+<rect x="130" y="194" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="209" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="231" font-size="9" fill="#333" text-anchor="end">Haptique</text>
+<rect x="130" y="216" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="231" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="253" font-size="9" fill="#333" text-anchor="end">Lancer de soulier</text>
+<rect x="130" y="238" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="253" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="275" font-size="9" fill="#333" text-anchor="end">Souffle court</text>
+<rect x="130" y="260" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="275" font-size="8" fill="#333" text-anchor="start">0.03</text>
+<text x="125" y="297" font-size="9" fill="#333" text-anchor="end">Convaincre le publ</text>
+<rect x="130" y="282" width="47" height="18" fill="#2c3e50" opacity="0.7"/>
+<text x="182" y="297" font-size="8" fill="#333" text-anchor="start">0.03</text>
+</svg>
