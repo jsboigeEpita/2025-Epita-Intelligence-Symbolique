@@ -1,0 +1,34 @@
+services:
+  # Run the demo scenario analysis (one-shot)
+  demo:
+    build: .
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_CHAT_MODEL_ID=${OPENAI_CHAT_MODEL_ID:-gpt-5-mini}
+    command: >
+      bash -c "python argumentation_analysis/run_orchestration.py
+               --file examples/scenarios/politics.txt
+               --workflow light"
+    volumes:
+      - ./demo_output:/app/output
+
+  # Start the FastAPI web interface
+  api:
+    build: .
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_CHAT_MODEL_ID=${OPENAI_CHAT_MODEL_ID:-gpt-5-mini}
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "uvicorn api.main:app --host 0.0.0.0 --port 8000"
+
+  # Run verification protocol (asserts on demo output)
+  verify:
+    build: .
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_CHAT_MODEL_ID=${OPENAI_CHAT_MODEL_ID:-gpt-5-mini}
+    command: bash scripts/repro/run_demo.sh
+    volumes:
+      - ./demo_output:/app/output
