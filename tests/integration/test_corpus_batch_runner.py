@@ -156,7 +156,10 @@ class TestDocumentFlattening:
             {
                 "source_name": "Test Source",
                 "extracts": [
-                    {"extract_name": "ex1", "extract_text": "Content from extract_text"},
+                    {
+                        "extract_name": "ex1",
+                        "extract_text": "Content from extract_text",
+                    },
                 ],
             }
         ]
@@ -164,7 +167,9 @@ class TestDocumentFlattening:
         docs = []
         for source_def in definitions:
             for extract in source_def.get("extracts", []):
-                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                text = extract.get("extract_text", "") or extract.get(
+                    "full_text_segment", ""
+                )
                 if text:
                     docs.append(text)
 
@@ -177,7 +182,11 @@ class TestDocumentFlattening:
             {
                 "source_name": "Test",
                 "extracts": [
-                    {"extract_name": "ex1", "extract_text": "", "full_text_segment": "Fallback content"},
+                    {
+                        "extract_name": "ex1",
+                        "extract_text": "",
+                        "full_text_segment": "Fallback content",
+                    },
                 ],
             }
         ]
@@ -185,7 +194,9 @@ class TestDocumentFlattening:
         docs = []
         for source_def in definitions:
             for extract in source_def.get("extracts", []):
-                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                text = extract.get("extract_text", "") or extract.get(
+                    "full_text_segment", ""
+                )
                 if text:
                     docs.append(text)
 
@@ -206,7 +217,9 @@ class TestDocumentFlattening:
         docs = []
         for source_def in definitions:
             for extract in source_def.get("extracts", []):
-                text = extract.get("extract_text", "") or extract.get("full_text_segment", "")
+                text = extract.get("extract_text", "") or extract.get(
+                    "full_text_segment", ""
+                )
                 if text:
                     docs.append(text)
 
