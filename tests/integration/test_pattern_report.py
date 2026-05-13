@@ -23,6 +23,7 @@ from argumentation_analysis.evaluation.pattern_mining import (
 # Synthetic fixture signatures
 # ---------------------------------------------------------------------------
 
+
 def _make_signature(
     cluster_id: str = "test_cluster",
     fallacies: dict | None = None,
@@ -53,7 +54,9 @@ def _make_signature(
         "identified_fallacies": identified,
         "dung_frameworks": dung_fw,
         "jtms_beliefs": jtms_beliefs,
-        "jtms_retraction_chain": [{"from": f"b{j}", "to": f"b{j+1}"} for j in range(jtms_retractions)],
+        "jtms_retraction_chain": [
+            {"from": f"b{j}", "to": f"b{j+1}"} for j in range(jtms_retractions)
+        ],
         "fol_analysis_results": [] if fol_valid else [{"valid": False}],
         "atms_contexts": [],
     }
@@ -67,17 +70,25 @@ def synthetic_signatures():
         _make_signature(
             "propaganda",
             {"ad_hominem": "arg0", "appeal_to_fear": "arg1", "straw_man": "arg0"},
-            dung_args=4, dung_attacks=3, jtms_retractions=2, fol_valid=False,
+            dung_args=4,
+            dung_attacks=3,
+            jtms_retractions=2,
+            fol_valid=False,
         ),
         _make_signature(
             "propaganda",
             {"ad_hominem": "arg0", "bandwagon": "arg2", "cherry_picking": "arg3"},
-            dung_args=2, dung_attacks=1, jtms_retractions=0,
+            dung_args=2,
+            dung_attacks=1,
+            jtms_retractions=0,
         ),
         _make_signature(
             "debate",
             {"straw_man": "arg0", "false_dilemma": "arg1", "red_herring": "arg2"},
-            dung_args=3, dung_attacks=2, jtms_retractions=1, fol_valid=False,
+            dung_args=3,
+            dung_attacks=2,
+            jtms_retractions=1,
+            fol_valid=False,
         ),
     ]
 
@@ -95,6 +106,7 @@ def sig_dir(tmp_path, synthetic_signatures):
 # ---------------------------------------------------------------------------
 # Test: pattern_mining functions on synthetic data
 # ---------------------------------------------------------------------------
+
 
 class TestPatternMining:
     """Verify pattern_mining functions produce valid output on synthetic data."""
@@ -141,7 +153,11 @@ class TestPatternMining:
                 assert "per_signature_rate" in rates
                 assert "per_occurrence_rate" in rates
                 for rate_family in ["per_signature_rate", "per_occurrence_rate"]:
-                    for sig_name in ["fol_invalid", "dung_unsupported", "jtms_retraction"]:
+                    for sig_name in [
+                        "fol_invalid",
+                        "dung_unsupported",
+                        "jtms_retraction",
+                    ]:
                         assert sig_name in rates[rate_family]
 
     def test_formal_detectors(self, synthetic_signatures):
@@ -157,6 +173,7 @@ class TestPatternMining:
 # ---------------------------------------------------------------------------
 # Test: build_pattern_report functions
 # ---------------------------------------------------------------------------
+
 
 class TestReportBuilder:
     """Test report generation and SVG output."""
@@ -248,6 +265,7 @@ class TestReportBuilder:
 # Test: SVG generation edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestSVGGeneration:
     """Test SVG generation with edge-case inputs."""
 
@@ -289,8 +307,16 @@ class TestSVGGeneration:
         from scripts.dataset.build_pattern_report import generate_asymmetry_svg
 
         data = {
-            "cluster_a": {"tricherie_share": 0.3, "influence_share": 0.7, "asymmetry": 0.4},
-            "cluster_b": {"tricherie_share": 0.6, "influence_share": 0.2, "asymmetry": -0.5},
+            "cluster_a": {
+                "tricherie_share": 0.3,
+                "influence_share": 0.7,
+                "asymmetry": 0.4,
+            },
+            "cluster_b": {
+                "tricherie_share": 0.6,
+                "influence_share": 0.2,
+                "asymmetry": -0.5,
+            },
         }
         svg = generate_asymmetry_svg(data)
         assert "<svg" in svg
