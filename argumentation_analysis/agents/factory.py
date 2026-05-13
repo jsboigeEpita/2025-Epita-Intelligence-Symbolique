@@ -400,7 +400,7 @@ class AgentFactory:
         self,
         agent_class: Type[Agent],
         trace_log_path: Optional[str] = None,
-        enable_auto_function_calling: bool = False,
+        enable_auto_function_calling: bool = True,
         **kwargs: Any,
     ) -> Union[Agent, "TracedAgent"]:
         if "service_id" not in kwargs:
