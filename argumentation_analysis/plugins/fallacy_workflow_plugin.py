@@ -238,28 +238,96 @@ class FallacyWorkflowPlugin:
 
             children = self.taxonomy_navigator.get_children(current_pk)
 
-            # Leaf node — ask for confirmation
+            # Leaf node — ask LLM for confirmation instead of auto-confirm (#471)
             if not children:
                 self.logger.info(
                     f"  Leaf node reached: {current_pk} "
                     f"({current_node.get(f'text_{self.language}', '')})"
                 )
-                # Auto-confirm leaf as the most specific match
-                explanation = (
-                    f"Leaf node reached after {iteration + 1} iterations. "
-                    f"Reasoning history: {'; '.join(reasoning_history[-3:])}"
+                leaf_name = current_node.get(
+                    f"text_{self.language}", current_node.get("nom_vulgarisé", current_pk)
                 )
-                return IdentifiedFallacy(
-                    fallacy_type=current_node.get(
-                        f"text_{self.language}",
-                        current_node.get("nom_vulgarisé", current_pk),
-                    ),
-                    taxonomy_pk=current_pk,
-                    taxonomy_path=current_node.get("path", ""),
-                    explanation=explanation,
-                    confidence=0.7,
-                    navigation_trace=navigation_trace,
+                leaf_desc = current_node.get(f"desc_{self.language}", "")
+                leaf_example = current_node.get(f"example_{self.language}", "")
+
+                reasoning_context = ""
+                if reasoning_history:
+                    reasoning_context = (
+                        "\n--- PREVIOUS REASONING ---\n"
+                        + "\n".join(f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:]))
+                        + "\n"
+                    )
+
+                leaf_prompt = (
+                    f'Text to analyze: "{argument_text[:500]}"\n\n'
+                    f"You reached a LEAF node in the fallacy taxonomy.\n"
+                    f"Node: {leaf_name} (PK: {current_pk})\n"
+                    f"Description: {leaf_desc}\n"
+                    f"{'Example: ' + leaf_example[:200] if leaf_example else ''}\n"
+                    f"{reasoning_context}\n"
+                    "Does this leaf node correctly identify a fallacy in the text?\n"
+                    "IMPORTANT: Only confirm if the reasoning in the text is genuinely fallacious.\n"
+                    "Legitimate uses of authority, emotion, or tradition are NOT fallacies.\n\n"
+                    "Choose ONE action:\n"
+                    f"- confirm_fallacy(node_pk='{current_pk}', justification='...', confidence=0.0-1.0) "
+                    "if this matches\n"
+                    "- conclude_no_fallacy(reason='...') if no match"
                 )
+
+                leaf_history = ChatHistory(
+                    system_message=(
+                        "You are a fallacy classifier. You MUST call exactly one function. "
+                        "Do NOT respond with text."
+                    )
+                )
+                leaf_history.add_user_message(leaf_prompt)
+
+                try:
+                    leaf_response = await asyncio.wait_for(
+                        self.llm_service.get_chat_message_contents(
+                            chat_history=leaf_history,
+                            settings=slave_settings,
+                            kernel=slave_kernel,
+                        ),
+                        timeout=30.0,
+                    )
+                except asyncio.TimeoutError:
+                    self.logger.warning(f"  Leaf confirmation timed out for {current_pk}")
+                    break
+                except Exception as e:
+                    self.logger.warning(f"  Leaf confirmation LLM call failed: {e}")
+                    break
+
+                leaf_items = []
+                if leaf_response:
+                    for msg in leaf_response:
+                        if hasattr(msg, "items"):
+                            leaf_items.extend(msg.items)
+
+                leaf_calls = [i for i in leaf_items if isinstance(i, FunctionCallContent)]
+                if not leaf_calls:
+                    self.logger.info("  No function call at leaf — branch abandoned")
+                    break
+
+                leaf_results = await self._execute_tool_calls(
+                    leaf_calls, slave_kernel, leaf_history
+                )
+
+                for lr in leaf_results:
+                    if lr.get("function_name") == "confirm_fallacy" and lr.get("confirmed"):
+                        return IdentifiedFallacy(
+                            fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
+                            taxonomy_pk=current_pk,
+                            taxonomy_path=current_node.get("path", ""),
+                            explanation=lr.get("justification", ""),
+                            confidence=lr.get("confidence", 0.7),
+                            navigation_trace=navigation_trace,
+                        )
+                    elif lr.get("function_name") == "conclude_no_fallacy":
+                        self.logger.info(f"  Leaf not confirmed: {lr.get('reason', '')}")
+                        return None
+
+                break
 
             # Build double-selection prompt with memory of reasons
             parent_name = current_node.get(
@@ -341,11 +409,17 @@ class FallacyWorkflowPlugin:
             history.add_user_message(prompt)
 
             try:
-                response = await self.llm_service.get_chat_message_contents(
-                    chat_history=history,
-                    settings=slave_settings,
-                    kernel=slave_kernel,
+                response = await asyncio.wait_for(
+                    self.llm_service.get_chat_message_contents(
+                        chat_history=history,
+                        settings=slave_settings,
+                        kernel=slave_kernel,
+                    ),
+                    timeout=30.0,
                 )
+            except asyncio.TimeoutError:
+                self.logger.warning(f"  LLM call timed out during branch exploration at {current_pk}")
+                break
             except Exception as e:
                 self.logger.warning(f"  LLM call failed during branch exploration: {e}")
                 break
@@ -525,11 +599,17 @@ class FallacyWorkflowPlugin:
             history.add_user_message(selection_prompt)
 
             try:
-                response = await self.llm_service.get_chat_message_contents(
-                    chat_history=history,
-                    settings=slave_settings,
-                    kernel=slave_kernel,
+                response = await asyncio.wait_for(
+                    self.llm_service.get_chat_message_contents(
+                        chat_history=history,
+                        settings=slave_settings,
+                        kernel=slave_kernel,
+                    ),
+                    timeout=30.0,
                 )
+            except asyncio.TimeoutError:
+                self.logger.warning("Root selection LLM call timed out. Falling back to one-shot.")
+                return await self._run_one_shot(argument_text)
             except Exception as e:
                 self.logger.warning(
                     f"Root selection LLM call failed: {e}. Falling back to one-shot."
