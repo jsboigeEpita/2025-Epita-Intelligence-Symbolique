@@ -9,7 +9,7 @@
 **/.venv
 **/.classpath
 **/.dockerignore
-**/.env
+# .env is needed at runtime (injected), but don't copy the dev one
 **/.git
 **/.gitignore
 **/.project
