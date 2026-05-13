@@ -328,22 +328,37 @@ Tous originaux — aucun extrait du corpus chiffre
 
 ## Discourse Pattern Mining
 
-**Signatures quantitatives** sur corpus chiffre :
+**18 documents** analyses via spectacular workflow sur corpus reel (IDs opaques) :
 
-| Metrique | Placeholder | Description |
-|----------|------------|-------------|
-| Clusters | 2 | propaganda, debate |
-| Types de sophismes | 8+ | par spectre marginal |
-| Asymetrie Tricheriel/Influence | ` [donnees] ` | ratio par cluster |
-| Co-occurrences | ` [donnees] ` | lift + Jaccard top-20 |
-| Detecteurs formels | 3 | Dung, ATMS, JTMS |
+| Metrique | Valeur | Description |
+|----------|--------|-------------|
+| Documents | 18 | extraits < 15K chars |
+| Sophismes uniques | 23 types | spectre marginal 0.03–0.21 |
+| Sophisme dominant | Illusion de regroupement | 21% des unites |
+| Co-occurrences top | Lift 18.0 (6 paires) | perfect co-occurrence |
+| Dung : args/attaques | 8.0 / 3.0 | densite 5.4% |
+| JTMS : croyances | 38.0 | retraction 7.9% |
+| Cross-coverage | Jtms_Retraction 100% | toutes fallacies → JTMS signal |
 
-Pipeline : `C.1 Privacy → C.2 Batch → C.3 Aggregator → C.4 Report → C.5 Enrichment`
+_Pipeline_ : Privacy → Batch → Aggregator → Report → Enrichment
 
-_Rapport_ : `docs/reports/discourse_patterns.md`
-_Charts_ : `docs/reports/discourse_patterns/*.svg`
+---
 
-> _Donnees placeholder — mises a jour apres merge C.3/C.4_
+## What We Discovered — Corpus Patterns
+
+**Insight 1** : `Illusion de regroupement` est le sophisme le plus frequent (21%)
+→ Co-occurre avec 5 autres types (Populisme, Pseudorationalisme, Souffle court, Faisceau de preuves, Mauvaise etiquetage) — hub central du reseau
+
+**Insight 2** : 6 paires de sophismes ont un **lift de 18** (perfect co-occurrence)
+→ Acte de foi + Coup de pouce + Misogynie forment un triplet joint
+→ Haptique + Lancer de soulier = paire specifique
+
+**Insight 3** : JTMS retraction = 100% cross-coverage avec les detections informelles
+→ Chaque detection de sophisme declenche un signal formel JTMS
+→ FOL et Dung restent a 0% (formules valides, pas d'attaques Dung)
+
+_Rapport complet_ : `docs/reports/discourse_patterns.md`
+_Visualisations_ : `docs/reports/discourse_patterns/*.svg`
 
 ---
 
