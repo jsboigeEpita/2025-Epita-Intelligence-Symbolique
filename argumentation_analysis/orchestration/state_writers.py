@@ -819,7 +819,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,
-    "assumption_based_reasoning": _write_atms_to_state,
+    "atms_reasoning": _write_atms_to_state,
     "adversarial_debate": _write_debate_to_state,
     "governance_simulation": _write_governance_to_state,
     "neural_fallacy_detection": _write_camembert_to_state,

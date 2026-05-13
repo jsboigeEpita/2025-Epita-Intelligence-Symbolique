@@ -126,4 +126,4 @@ class TestSpectacularWorkflowDAG:
     def test_spectacular_includes_atms(self):
         wf = build_spectacular_workflow()
         caps = wf.get_required_capabilities()
-        assert "assumption_based_reasoning" in caps
+        assert "atms_reasoning" in caps

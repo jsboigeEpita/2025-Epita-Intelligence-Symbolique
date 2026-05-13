@@ -632,7 +632,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         # L7 — ATMS multi-context (from JTMS beliefs)
         .add_phase(
             "atms",
-            capability="assumption_based_reasoning",
+            capability="atms_reasoning",
             depends_on=["jtms"],
             optional=True,
         )

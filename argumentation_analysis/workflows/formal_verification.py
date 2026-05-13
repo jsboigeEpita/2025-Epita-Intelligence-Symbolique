@@ -159,7 +159,7 @@ def build_formal_verification_workflow() -> WorkflowDefinition:
         # ATMS assumption-based reasoning — complements JTMS with environment tracking (#292)
         .add_phase(
             "atms_tracking",
-            capability="assumption_based_reasoning",
+            capability="atms_reasoning",
             depends_on=["jtms_tracking"],
             optional=True,
         )

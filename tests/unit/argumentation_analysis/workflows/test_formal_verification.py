@@ -89,7 +89,7 @@ class TestBuildFormalVerificationWorkflow:
             "defeasible_logic",
             "qbf_reasoning",
             # ATMS assumption-based reasoning (#292)
-            "assumption_based_reasoning",
+            "atms_reasoning",
         }
         assert expected == set(caps)
 
