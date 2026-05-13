@@ -165,8 +165,8 @@ class TestKernelFunctionRegistration:
 
         functions = kernel.get_full_list_of_function_metadata()
         sm_fns = [f for f in functions if f.plugin_name == "state_manager"]
-        assert len(sm_fns) >= 15, (
-            f"Expected >= 15 kernel functions, got {len(sm_fns)}: "
+        assert len(sm_fns) >= 25, (
+            f"Expected >= 25 kernel functions, got {len(sm_fns)}: "
             f"{[f.name for f in sm_fns]}"
         )
 
