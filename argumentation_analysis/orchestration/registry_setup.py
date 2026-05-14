@@ -312,6 +312,43 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("tweety_logic_plugin", str(e)))
 
+    # --- TextToKBPlugin: NL → KB extraction (#474) ---
+    try:
+        from argumentation_analysis.plugins.text_to_kb_plugin import TextToKBPlugin
+
+        registry.register_plugin(
+            name="text_to_kb_plugin",
+            plugin_class=TextToKBPlugin,
+            capabilities=["nl_extraction", "argument_extraction", "kb_construction"],
+            metadata={
+                "description": (
+                    "SK plugin for NL→KB extraction with iterative descent (#474)"
+                )
+            },
+        )
+        registered.append("text_to_kb_plugin")
+    except ImportError as e:
+        skipped.append(("text_to_kb_plugin", str(e)))
+
+    # --- KBToTweetyPlugin: KB → Tweety formula translation (#475) ---
+    try:
+        from argumentation_analysis.plugins.kb_to_tweety_plugin import KBToTweetyPlugin
+
+        registry.register_plugin(
+            name="kb_to_tweety_plugin",
+            plugin_class=KBToTweetyPlugin,
+            capabilities=["kb_to_tweety", "formula_translation", "tweety_validation"],
+            metadata={
+                "description": (
+                    "SK plugin for KB→Tweety formula translation with "
+                    "translate-validate-retry loop (#475)"
+                )
+            },
+        )
+        registered.append("kb_to_tweety_plugin")
+    except ImportError as e:
+        skipped.append(("kb_to_tweety_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         (
