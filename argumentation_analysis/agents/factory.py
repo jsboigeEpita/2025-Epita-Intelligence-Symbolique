@@ -47,14 +47,14 @@ _factory_logger = logging.getLogger("AgentFactory")
 AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
     "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
-    "extract": ["toulmin"],
-    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision"],
+    "extract": ["toulmin", "text_to_kb"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents", "text_to_kb", "kb_to_tweety", "tweety_interpretation"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
     "governance": ["governance"],
     "sherlock": [],  # Sherlock uses its own investigation tools
-    "watson": ["tweety_logic"],
+    "watson": ["tweety_logic", "logic_agents"],
 }
 
 # Registry of plugin name → (module_path, class_name) for lazy loading
@@ -119,6 +119,26 @@ _PLUGIN_REGISTRY = {
     "toulmin": (
         "argumentation_analysis.plugins.toulmin_plugin",
         "ToulminPlugin",
+    ),
+    # PL/FOL/Modal logic operations (#477)
+    "logic_agents": (
+        "argumentation_analysis.plugins.logic_agent_plugin",
+        "LogicAgentPlugin",
+    ),
+    # NL → KB extraction with iterative descent (#474)
+    "text_to_kb": (
+        "argumentation_analysis.plugins.text_to_kb_plugin",
+        "TextToKBPlugin",
+    ),
+    # KB → Tweety formula translation with retry (#475)
+    "kb_to_tweety": (
+        "argumentation_analysis.plugins.kb_to_tweety_plugin",
+        "KBToTweetyPlugin",
+    ),
+    # Formal results → NL interpretation (#476)
+    "tweety_interpretation": (
+        "argumentation_analysis.plugins.tweety_result_interpretation_plugin",
+        "TweetyResultInterpretationPlugin",
     ),
     # Complex plugins (need constructor args — loaded via special handling)
     # "exploration": needs TaxonomyNavigator — loaded by FallacyWorkflowPlugin

@@ -312,6 +312,100 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("tweety_logic_plugin", str(e)))
 
+    # --- LogicAgentPlugin: PL/FOL/Modal @kernel_function methods (#477) ---
+    try:
+        from argumentation_analysis.plugins.logic_agent_plugin import LogicAgentPlugin
+
+        registry.register_plugin(
+            name="logic_agent_plugin",
+            plugin_class=LogicAgentPlugin,
+            capabilities=[
+                "propositional_reasoning",
+                "first_order_reasoning",
+                "modal_reasoning",
+            ],
+            metadata={
+                "description": (
+                    "SK plugin exposing PL/FOL/Modal logic operations as "
+                    "@kernel_function methods for LLM agents (#477)"
+                )
+            },
+        )
+        registered.append("logic_agent_plugin")
+    except ImportError as e:
+        skipped.append(("logic_agent_plugin", str(e)))
+
+    # --- TextToKBPlugin: NL extraction with iterative descent (#474) ---
+    try:
+        from argumentation_analysis.plugins.text_to_kb_plugin import TextToKBPlugin
+
+        registry.register_plugin(
+            name="text_to_kb_plugin",
+            plugin_class=TextToKBPlugin,
+            capabilities=["nl_extraction", "argument_extraction", "kb_construction"],
+            metadata={
+                "description": (
+                    "NL→KB extraction with iterative descent. Extracts arguments, "
+                    "premises, conclusions, beliefs, and FOL signatures (#474)"
+                )
+            },
+        )
+        registered.append("text_to_kb_plugin")
+    except ImportError as e:
+        skipped.append(("text_to_kb_plugin", str(e)))
+
+    # --- KBToTweetyPlugin: KB → Tweety formula translation (#475) ---
+    try:
+        from argumentation_analysis.plugins.kb_to_tweety_plugin import KBToTweetyPlugin
+
+        registry.register_plugin(
+            name="kb_to_tweety_plugin",
+            plugin_class=KBToTweetyPlugin,
+            capabilities=[
+                "kb_to_tweety",
+                "formula_translation",
+                "tweety_validation",
+            ],
+            metadata={
+                "description": (
+                    "Translate KB entries to Tweety formulas with "
+                    "translate-validate-retry loop for PL, FOL, Modal, "
+                    "Dung, and ASPIC (#475)"
+                )
+            },
+        )
+        registered.append("kb_to_tweety_plugin")
+    except ImportError as e:
+        skipped.append(("logic_agent_plugin", str(e)))
+
+    # --- TweetyResultInterpretationPlugin: formal results → NL (#476) ---
+    try:
+        from argumentation_analysis.plugins.tweety_result_interpretation_plugin import (
+            TweetyResultInterpretationPlugin,
+        )
+
+        registry.register_plugin(
+            name="tweety_result_interpretation_plugin",
+            plugin_class=TweetyResultInterpretationPlugin,
+            capabilities=[
+                "formal_result_interpretation",
+                "dung_interpretation",
+                "fol_interpretation",
+                "aspic_interpretation",
+                "ranking_interpretation",
+                "belief_revision_interpretation",
+            ],
+            metadata={
+                "description": (
+                    "SK plugin converting formal analysis results (Dung, FOL, ASPIC, "
+                    "ranking, belief revision) into NL explanations (#476)"
+                )
+            },
+        )
+        registered.append("tweety_result_interpretation_plugin")
+    except ImportError as e:
+        skipped.append(("tweety_result_interpretation_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         (
