@@ -48,13 +48,13 @@ AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
     "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
     "extract": ["toulmin"],
-    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
     "governance": ["governance"],
     "sherlock": [],  # Sherlock uses its own investigation tools
-    "watson": ["tweety_logic"],
+    "watson": ["tweety_logic", "logic_agents"],
 }
 
 # Registry of plugin name → (module_path, class_name) for lazy loading
@@ -111,6 +111,11 @@ _PLUGIN_REGISTRY = {
     "belief_revision": (
         "argumentation_analysis.plugins.belief_revision_plugin",
         "BeliefRevisionPlugin",
+    ),
+    # PL/FOL/Modal logic operations (#477)
+    "logic_agents": (
+        "argumentation_analysis.plugins.logic_agent_plugin",
+        "LogicAgentPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",
