@@ -2829,7 +2829,7 @@ async def _invoke_asp_reasoning(
                     for a in head_atoms:
                         rule.getHead().add(a)
                     for a in body_atoms:
-                        rule.getBody().add(a)  # type: ignore[attr-defined]
+                        rule.getBody().add(a)
                     rules.append(rule)
                 else:
                     rules.append(ASPRule([ASPAtom(line)], []))
@@ -2860,14 +2860,14 @@ async def _invoke_asp_reasoning(
 
     # Try Python clingo package
     try:
-        import clingo as clingo_py  # type: ignore[import-untyped]
+        import clingo as clingo_py  # type: ignore[import-untyped,unused-ignore]
 
-        models = []
+        models: list[list[str]] = []
         ctl = clingo_py.Control(arguments=[f"--models={max_models}" if max_models else "--models=0"])
         ctl.add("base", [], str(program))
         ctl.ground([("base", [])])
 
-        def on_model(model):
+        def on_model(model: Any) -> None:
             models.append([str(s) for s in model.symbols(shown=True)])
 
         ctl.solve(on_model=on_model)
@@ -3302,38 +3302,6 @@ async def _invoke_fol_reasoning(
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
 
-    # External solver routing (#479): EProver or Prover9 for FOL
-    fol_solver = context.get("fol_solver", "tweety")  # tweety, eprover, prover9
-    if fol_solver in ("eprover", "prover9"):
-        try:
-            from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
-
-            handler = FOLHandler()
-            belief_set_str = "\n".join(str(f) for f in formulas)
-            if fol_solver == "eprover":
-                is_consistent, msg = await asyncio.to_thread(
-                    handler._fol_check_consistency_with_eprover, belief_set_str
-                )
-            else:
-                is_consistent, msg = await asyncio.to_thread(
-                    handler._fol_check_consistency_with_prover9, belief_set_str
-                )
-            return {
-                "formulas": formulas,
-                "consistent": bool(is_consistent),
-                "inferences": inferences,
-                "confidence": 0.85 if is_consistent else 0.4,
-                "message": msg,
-                "logic_type": "first_order",
-                "argument_count": len(args),
-                "solver": fol_solver,
-            }
-        except Exception as e:
-            logger.info(
-                f"External solver '{fol_solver}' unavailable ({e}), "
-                f"falling back to Tweety"
-            )
-
     inferences = []
     # Derive inferences from the structure
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
@@ -3501,19 +3469,24 @@ async def _invoke_modal_logic(
 
     modal_solver = context.get("modal_solver", "tweety")  # tweety, spass
 
-    # SPASS routing (#479)
+    # SPASS routing (#479): set settings.modal_solver for this request
     if modal_solver == "spass":
         try:
+            from argumentation_analysis.core.config import settings, ModalSolverChoice
             from argumentation_analysis.agents.core.logic.modal_handler import (
                 ModalHandler,
-                ModalSolverChoice,
+            )
+            from argumentation_analysis.agents.core.logic.tweety_initializer import (
+                TweetyInitializer,
             )
 
-            handler = ModalHandler(modal_solver=ModalSolverChoice.SPASS)
+            if not settings.modal_solver == ModalSolverChoice.SPASS:
+                object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
+            initializer = TweetyInitializer()
+            handler = ModalHandler(initializer_instance=initializer)
             belief_set_str = "\n".join(str(f) for f in formulas)
-            logic_type = context.get("modal_logic_type", "K")
             is_consistent, msg = await asyncio.to_thread(
-                handler._modal_check_consistency_with_spass, belief_set_str, logic_type
+                handler.is_modal_kb_consistent, belief_set_str
             )
             return {
                 "formulas": formulas,
