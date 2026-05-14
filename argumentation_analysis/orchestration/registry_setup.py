@@ -335,6 +335,25 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("logic_agent_plugin", str(e)))
 
+    # --- TextToKBPlugin: NL extraction with iterative descent (#474) ---
+    try:
+        from argumentation_analysis.plugins.text_to_kb_plugin import TextToKBPlugin
+
+        registry.register_plugin(
+            name="text_to_kb_plugin",
+            plugin_class=TextToKBPlugin,
+            capabilities=["nl_extraction", "argument_extraction", "kb_construction"],
+            metadata={
+                "description": (
+                    "NL→KB extraction with iterative descent. Extracts arguments, "
+                    "premises, conclusions, beliefs, and FOL signatures (#474)"
+                )
+            },
+        )
+        registered.append("text_to_kb_plugin")
+    except ImportError as e:
+        skipped.append(("logic_agent_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         (

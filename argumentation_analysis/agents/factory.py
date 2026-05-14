@@ -47,8 +47,8 @@ _factory_logger = logging.getLogger("AgentFactory")
 AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
     "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
-    "extract": ["toulmin"],
-    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents"],
+    "extract": ["toulmin", "text_to_kb"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents", "text_to_kb"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
@@ -116,6 +116,11 @@ _PLUGIN_REGISTRY = {
     "logic_agents": (
         "argumentation_analysis.plugins.logic_agent_plugin",
         "LogicAgentPlugin",
+    ),
+    # NL → KB extraction with iterative descent (#474)
+    "text_to_kb": (
+        "argumentation_analysis.plugins.text_to_kb_plugin",
+        "TextToKBPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",
