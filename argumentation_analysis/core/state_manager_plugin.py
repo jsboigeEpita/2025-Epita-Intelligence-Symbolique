@@ -674,7 +674,9 @@ class StateManagerPlugin:
         self, arg_id: str, scores_json: str, overall: str = "0.5"
     ) -> str:
         try:
-            scores = json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            scores = (
+                json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            )
             self._state.add_quality_score(arg_id, scores, float(overall))
             return f"OK: Quality scores added for {arg_id}"
         except Exception as e:
@@ -694,7 +696,9 @@ class StateManagerPlugin:
         try:
             arguments = json.loads(arguments_json)
             attacks = json.loads(attacks_json)
-            extensions = json.loads(extensions_json) if extensions_json != "{}" else None
+            extensions = (
+                json.loads(extensions_json) if extensions_json != "{}" else None
+            )
             df_id = self._state.add_dung_framework(name, arguments, attacks, extensions)
             return df_id
         except Exception as e:

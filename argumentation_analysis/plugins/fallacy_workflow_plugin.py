@@ -245,7 +245,8 @@ class FallacyWorkflowPlugin:
                     f"({current_node.get(f'text_{self.language}', '')})"
                 )
                 leaf_name = current_node.get(
-                    f"text_{self.language}", current_node.get("nom_vulgarisé", current_pk)
+                    f"text_{self.language}",
+                    current_node.get("nom_vulgarisé", current_pk),
                 )
                 leaf_desc = current_node.get(f"desc_{self.language}", "")
                 leaf_example = current_node.get(f"example_{self.language}", "")
@@ -254,7 +255,9 @@ class FallacyWorkflowPlugin:
                 if reasoning_history:
                     reasoning_context = (
                         "\n--- PREVIOUS REASONING ---\n"
-                        + "\n".join(f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:]))
+                        + "\n".join(
+                            f"{i+1}. {r}" for i, r in enumerate(reasoning_history[-3:])
+                        )
                         + "\n"
                     )
 
@@ -292,7 +295,9 @@ class FallacyWorkflowPlugin:
                         timeout=30.0,
                     )
                 except asyncio.TimeoutError:
-                    self.logger.warning(f"  Leaf confirmation timed out for {current_pk}")
+                    self.logger.warning(
+                        f"  Leaf confirmation timed out for {current_pk}"
+                    )
                     break
                 except Exception as e:
                     self.logger.warning(f"  Leaf confirmation LLM call failed: {e}")
@@ -304,7 +309,9 @@ class FallacyWorkflowPlugin:
                         if hasattr(msg, "items"):
                             leaf_items.extend(msg.items)
 
-                leaf_calls = [i for i in leaf_items if isinstance(i, FunctionCallContent)]
+                leaf_calls = [
+                    i for i in leaf_items if isinstance(i, FunctionCallContent)
+                ]
                 if not leaf_calls:
                     self.logger.info("  No function call at leaf — branch abandoned")
                     break
@@ -314,7 +321,9 @@ class FallacyWorkflowPlugin:
                 )
 
                 for lr in leaf_results:
-                    if lr.get("function_name") == "confirm_fallacy" and lr.get("confirmed"):
+                    if lr.get("function_name") == "confirm_fallacy" and lr.get(
+                        "confirmed"
+                    ):
                         return IdentifiedFallacy(
                             fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
                             taxonomy_pk=current_pk,
@@ -324,7 +333,9 @@ class FallacyWorkflowPlugin:
                             navigation_trace=navigation_trace,
                         )
                     elif lr.get("function_name") == "conclude_no_fallacy":
-                        self.logger.info(f"  Leaf not confirmed: {lr.get('reason', '')}")
+                        self.logger.info(
+                            f"  Leaf not confirmed: {lr.get('reason', '')}"
+                        )
                         return None
 
                 break
@@ -418,7 +429,9 @@ class FallacyWorkflowPlugin:
                     timeout=30.0,
                 )
             except asyncio.TimeoutError:
-                self.logger.warning(f"  LLM call timed out during branch exploration at {current_pk}")
+                self.logger.warning(
+                    f"  LLM call timed out during branch exploration at {current_pk}"
+                )
                 break
             except Exception as e:
                 self.logger.warning(f"  LLM call failed during branch exploration: {e}")
@@ -608,7 +621,9 @@ class FallacyWorkflowPlugin:
                     timeout=30.0,
                 )
             except asyncio.TimeoutError:
-                self.logger.warning("Root selection LLM call timed out. Falling back to one-shot.")
+                self.logger.warning(
+                    "Root selection LLM call timed out. Falling back to one-shot."
+                )
                 return await self._run_one_shot(argument_text)
             except Exception as e:
                 self.logger.warning(

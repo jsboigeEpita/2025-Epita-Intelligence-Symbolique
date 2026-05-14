@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 from semantic_kernel import Kernel
 
-
 # =====================================================================
 # Plugin Registry Integrity
 # =====================================================================
@@ -29,21 +28,33 @@ class TestPluginRegistryIntegrity:
         for name, (module_path, class_name) in _PLUGIN_REGISTRY.items():
             mod = importlib.import_module(module_path)
             plugin_cls = getattr(mod, class_name)
-            assert plugin_cls is not None, f"{name}: {class_name} not found in {module_path}"
+            assert (
+                plugin_cls is not None
+            ), f"{name}: {class_name} not found in {module_path}"
 
     def test_registry_has_expected_plugins(self):
         from argumentation_analysis.agents.factory import _PLUGIN_REGISTRY
 
         expected = {
-            "french_fallacy", "tweety_logic", "nl_to_logic",
-            "quality_scoring", "governance", "debate", "counter_argument",
-            "fallacy_workflow", "atms", "state_manager",
-            "ranking", "aspic", "belief_revision",
-            "narrative_synthesis", "toulmin",
+            "french_fallacy",
+            "tweety_logic",
+            "nl_to_logic",
+            "quality_scoring",
+            "governance",
+            "debate",
+            "counter_argument",
+            "fallacy_workflow",
+            "atms",
+            "state_manager",
+            "ranking",
+            "aspic",
+            "belief_revision",
+            "narrative_synthesis",
+            "toulmin",
         }
-        assert expected.issubset(set(_PLUGIN_REGISTRY.keys())), (
-            f"Missing: {expected - set(_PLUGIN_REGISTRY.keys())}"
-        )
+        assert expected.issubset(
+            set(_PLUGIN_REGISTRY.keys())
+        ), f"Missing: {expected - set(_PLUGIN_REGISTRY.keys())}"
 
 
 # =====================================================================
@@ -55,10 +66,18 @@ class TestPluginInstantiation:
     """Verify no-arg plugins can be instantiated."""
 
     NO_ARG_PLUGINS = [
-        "french_fallacy", "tweety_logic", "nl_to_logic",
-        "quality_scoring", "governance", "counter_argument",
-        "atms", "ranking", "aspic", "belief_revision",
-        "narrative_synthesis", "toulmin",
+        "french_fallacy",
+        "tweety_logic",
+        "nl_to_logic",
+        "quality_scoring",
+        "governance",
+        "counter_argument",
+        "atms",
+        "ranking",
+        "aspic",
+        "belief_revision",
+        "narrative_synthesis",
+        "toulmin",
     ]
 
     @pytest.mark.parametrize("plugin_name", NO_ARG_PLUGINS)
@@ -101,9 +120,7 @@ class TestKernelFunctionRegistration:
 
         functions = kernel.get_full_list_of_function_metadata()
         nl_fns = [f for f in functions if f.plugin_name == "nl_to_logic"]
-        assert len(nl_fns) >= 4, (
-            f"Expected >= 4 kernel functions, got {len(nl_fns)}"
-        )
+        assert len(nl_fns) >= 4, f"Expected >= 4 kernel functions, got {len(nl_fns)}"
 
     def test_ranking_plugin_registers_functions(self):
         from argumentation_analysis.plugins.ranking_plugin import RankingPlugin
@@ -126,7 +143,9 @@ class TestKernelFunctionRegistration:
         assert len(aspic_fns) >= 2
 
     def test_belief_revision_plugin_registers_functions(self):
-        from argumentation_analysis.plugins.belief_revision_plugin import BeliefRevisionPlugin
+        from argumentation_analysis.plugins.belief_revision_plugin import (
+            BeliefRevisionPlugin,
+        )
 
         kernel = Kernel()
         kernel.add_plugin(BeliefRevisionPlugin(), plugin_name="belief_revision")
@@ -184,10 +203,17 @@ class TestFactoryPluginLoading:
 
         speciality = "formal_logic"
         plugins = AGENT_SPECIALITY_MAP.get(speciality, [])
-        expected = {"tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision"}
-        assert expected.issubset(set(plugins)), (
-            f"Missing from formal_logic: {expected - set(plugins)}"
-        )
+        expected = {
+            "tweety_logic",
+            "nl_to_logic",
+            "atms",
+            "ranking",
+            "aspic",
+            "belief_revision",
+        }
+        assert expected.issubset(
+            set(plugins)
+        ), f"Missing from formal_logic: {expected - set(plugins)}"
 
     def test_informal_fallacy_speciality_includes_toulmin(self):
         from argumentation_analysis.agents.factory import AGENT_SPECIALITY_MAP
@@ -277,10 +303,18 @@ class TestTotalKernelFunctionCount:
         kernel = Kernel()
         total = 0
         for name in [
-            "tweety_logic", "nl_to_logic", "state_manager",
-            "ranking", "aspic", "belief_revision",
-            "governance", "quality_scoring", "atms",
-            "french_fallacy", "toulmin", "narrative_synthesis",
+            "tweety_logic",
+            "nl_to_logic",
+            "state_manager",
+            "ranking",
+            "aspic",
+            "belief_revision",
+            "governance",
+            "quality_scoring",
+            "atms",
+            "french_fallacy",
+            "toulmin",
+            "narrative_synthesis",
             "counter_argument",
         ]:
             entry = _PLUGIN_REGISTRY.get(name)
@@ -289,7 +323,10 @@ class TestTotalKernelFunctionCount:
             module_path, class_name = entry
             try:
                 if name == "state_manager":
-                    from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
+                    from argumentation_analysis.core.shared_state import (
+                        RhetoricalAnalysisState,
+                    )
+
                     instance = importlib.import_module(module_path)
                     cls = getattr(instance, class_name)
                     inst = cls(state=RhetoricalAnalysisState("test"))
@@ -303,6 +340,6 @@ class TestTotalKernelFunctionCount:
 
         functions = kernel.get_full_list_of_function_metadata()
         total = len(functions)
-        assert total >= 55, (
-            f"Expected >= 55 total kernel functions across all plugins, got {total}"
-        )
+        assert (
+            total >= 55
+        ), f"Expected >= 55 total kernel functions across all plugins, got {total}"
