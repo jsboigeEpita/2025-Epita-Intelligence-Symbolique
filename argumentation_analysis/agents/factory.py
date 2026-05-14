@@ -48,7 +48,7 @@ AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
     "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
     "extract": ["toulmin", "text_to_kb"],
-    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents", "text_to_kb"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision", "logic_agents", "text_to_kb", "kb_to_tweety"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
@@ -121,6 +121,11 @@ _PLUGIN_REGISTRY = {
     "text_to_kb": (
         "argumentation_analysis.plugins.text_to_kb_plugin",
         "TextToKBPlugin",
+    ),
+    # KB → Tweety formula translation with retry (#475)
+    "kb_to_tweety": (
+        "argumentation_analysis.plugins.kb_to_tweety_plugin",
+        "KBToTweetyPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",

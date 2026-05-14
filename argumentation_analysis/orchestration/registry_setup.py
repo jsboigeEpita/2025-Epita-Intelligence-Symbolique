@@ -352,6 +352,30 @@ def setup_registry(
         )
         registered.append("text_to_kb_plugin")
     except ImportError as e:
+        skipped.append(("text_to_kb_plugin", str(e)))
+
+    # --- KBToTweetyPlugin: KB → Tweety formula translation (#475) ---
+    try:
+        from argumentation_analysis.plugins.kb_to_tweety_plugin import KBToTweetyPlugin
+
+        registry.register_plugin(
+            name="kb_to_tweety_plugin",
+            plugin_class=KBToTweetyPlugin,
+            capabilities=[
+                "kb_to_tweety",
+                "formula_translation",
+                "tweety_validation",
+            ],
+            metadata={
+                "description": (
+                    "Translate KB entries to Tweety formulas with "
+                    "translate-validate-retry loop for PL, FOL, Modal, "
+                    "Dung, and ASPIC (#475)"
+                )
+            },
+        )
+        registered.append("kb_to_tweety_plugin")
+    except ImportError as e:
         skipped.append(("logic_agent_plugin", str(e)))
 
     # --- Logic agent capabilities (#71 Formal Verification) ---
