@@ -56,6 +56,7 @@ AGENT_SPECIALITY_MAP = {
         "aspic",
         "belief_revision",
         "logic_agents",
+        "tweety_interpretation",
     ],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
@@ -124,6 +125,11 @@ _PLUGIN_REGISTRY = {
     "logic_agents": (
         "argumentation_analysis.plugins.logic_agent_plugin",
         "LogicAgentPlugin",
+    ),
+    # Tweety result interpretation (#476)
+    "tweety_interpretation": (
+        "argumentation_analysis.plugins.tweety_result_interpretation_plugin",
+        "TweetyResultInterpretationPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",

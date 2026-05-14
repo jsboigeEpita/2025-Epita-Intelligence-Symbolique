@@ -335,6 +335,27 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("logic_agent_plugin", str(e)))
 
+    # --- TweetyResultInterpretationPlugin: formal results to NL (#476) ---
+    try:
+        from argumentation_analysis.plugins.tweety_result_interpretation_plugin import (
+            TweetyResultInterpretationPlugin,
+        )
+
+        registry.register_plugin(
+            name="tweety_result_interpretation_plugin",
+            plugin_class=TweetyResultInterpretationPlugin,
+            capabilities=["formal_result_interpretation", "dung_interpretation"],
+            metadata={
+                "description": (
+                    "SK plugin for interpreting formal Tweety results into "
+                    "natural language (#476)"
+                )
+            },
+        )
+        registered.append("tweety_result_interpretation_plugin")
+    except ImportError as e:
+        skipped.append(("tweety_result_interpretation_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         (
