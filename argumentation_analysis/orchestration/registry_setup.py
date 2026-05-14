@@ -312,6 +312,29 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("tweety_logic_plugin", str(e)))
 
+    # --- LogicAgentPlugin: PL/FOL/Modal @kernel_function methods (#477) ---
+    try:
+        from argumentation_analysis.plugins.logic_agent_plugin import LogicAgentPlugin
+
+        registry.register_plugin(
+            name="logic_agent_plugin",
+            plugin_class=LogicAgentPlugin,
+            capabilities=[
+                "propositional_reasoning",
+                "first_order_reasoning",
+                "modal_reasoning",
+            ],
+            metadata={
+                "description": (
+                    "SK plugin exposing PL/FOL/Modal logic operations as "
+                    "@kernel_function methods for LLM agents (#477)"
+                )
+            },
+        )
+        registered.append("logic_agent_plugin")
+    except ImportError as e:
+        skipped.append(("logic_agent_plugin", str(e)))
+
     # --- Logic agent capabilities (#71 Formal Verification) ---
     logic_capabilities = [
         (
