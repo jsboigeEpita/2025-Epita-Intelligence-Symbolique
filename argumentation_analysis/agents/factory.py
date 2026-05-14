@@ -55,6 +55,7 @@ AGENT_SPECIALITY_MAP = {
         "ranking",
         "aspic",
         "belief_revision",
+        "tweety_interpretation",
     ],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
@@ -118,6 +119,11 @@ _PLUGIN_REGISTRY = {
     "belief_revision": (
         "argumentation_analysis.plugins.belief_revision_plugin",
         "BeliefRevisionPlugin",
+    ),
+    # Tweety result interpretation (#476)
+    "tweety_interpretation": (
+        "argumentation_analysis.plugins.tweety_result_interpretation_plugin",
+        "TweetyResultInterpretationPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",
