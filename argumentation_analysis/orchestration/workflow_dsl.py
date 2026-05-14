@@ -20,6 +20,7 @@ Usage:
 import asyncio
 import logging
 import time
+import uuid
 from typing import (
     Callable,
     Dict,
@@ -304,6 +305,7 @@ class WorkflowExecutor:
             registry: CapabilityRegistry instance for resolving capabilities.
         """
         self._registry = registry
+        self._base_logger = logging.getLogger("orchestration.workflow_executor")
 
     async def execute(
         self,
@@ -350,10 +352,22 @@ class WorkflowExecutor:
         if state is not None:
             ctx["unified_state"] = state
 
-        logger.info(
+        # Structured logging with correlation_id
+        correlation_id = (
+            ctx.get("correlation_id")
+            or (getattr(state, "run_id", None) if state else None)
+            or str(uuid.uuid4())
+        )
+        ctx["correlation_id"] = correlation_id
+
+        from argumentation_analysis.orchestration.structured_logging import PhaseLogger
+        slog = PhaseLogger(self._base_logger, correlation_id=correlation_id)
+
+        slog.info(
             f"Executing workflow '{workflow.name}' — "
             f"{len(workflow.phases)} phases, {len(execution_order)} levels"
-            f"{f', resuming (skip {len(skip_phases)} phases)' if skip_phases else ''}"
+            f"{f', resuming (skip {len(skip_phases)} phases)' if skip_phases else ''}",
+            extra={"workflow": workflow.name, "phases_total": len(workflow.phases)},
         )
 
         for level_idx, level_phases in enumerate(execution_order):
@@ -393,6 +407,10 @@ class WorkflowExecutor:
             for phase_name in to_run:
                 phase = workflow.get_phase(phase_name)
                 if phase:
+                    slog.info(
+                        "Starting phase",
+                        extra={"phase_name": phase_name, "capability": phase.capability},
+                    )
                     phase_coros.append(
                         self._execute_phase(phase, phase_name, input_data, ctx)
                     )
@@ -416,9 +434,14 @@ class WorkflowExecutor:
         )
         failed = sum(1 for r in results.values() if r.status == PhaseStatus.FAILED)
         skipped = sum(1 for r in results.values() if r.status == PhaseStatus.SKIPPED)
-        logger.info(
+        slog.info(
             f"Workflow '{workflow.name}' finished: "
-            f"{completed} completed, {failed} failed, {skipped} skipped"
+            f"{completed} completed, {failed} failed, {skipped} skipped",
+            extra={
+                "workflow": workflow.name,
+                "phases_completed": completed,
+                "phases_total": len(results),
+            },
         )
 
         if state is not None and hasattr(state, "set_workflow_results"):
