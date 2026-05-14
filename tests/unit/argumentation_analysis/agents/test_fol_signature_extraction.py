@@ -115,3 +115,52 @@ class TestExtractFolMetadataExtended:
 
         assert "is_valid" in meta["predicates"]
         assert "test_case" in meta["constants"]
+
+    def test_constant_collision_disambiguation(self):
+        """Distinct constants that sanitize to same name get _v2, _v3 suffixes."""
+        formulas = ["P(jean-paul, jean paul, foo-bar, foo_bar)"]
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+
+        constants = meta["constants"]
+        # 4 distinct surface forms must produce 4 distinct sanitized constants
+        assert len(constants) == 4, f"Expected 4 distinct constants, got {constants}"
+        # Verify the mapping is returned
+        cmap = meta["constant_map"]
+        assert len(cmap) == 4
+        assert all(v in constants for v in cmap.values())
+
+    def test_constant_collision_suffixes(self):
+        """Collision produces ordered _v2, _v3 suffixes."""
+        formulas = ["P(a-b, a_b, a b)"]
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+
+        constants = meta["constants"]
+        # "a-b", "a_b", "a b" all sanitize to "a_b" → need disambiguation
+        assert len(constants) == 3
+        sanitized_names = sorted(constants)
+        assert sanitized_names[0] == "a_b"
+        assert sanitized_names[1] == "a_b_v2"
+        assert sanitized_names[2] == "a_b_v3"
+
+    def test_predicate_collision_disambiguation(self):
+        """Distinct predicates that sanitize to same name get _v2, _v3 suffixes."""
+        formulas = ["Est-Valide(x)", "Est_Valide(y)"]
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+
+        predicates = meta["predicates"]
+        # Both sanitize to "Est_Valide" — must be disambiguated
+        assert len(predicates) == 2, f"Expected 2 distinct predicates, got {predicates}"
+        pmap = meta["predicate_map"]
+        assert len(pmap) == 2
+        assert all(v in predicates for v in pmap.values())
+
+    def test_no_collision_when_names_already_distinct(self):
+        """No suffixes added when sanitized names are naturally distinct."""
+        formulas = ["Foo(a)", "Bar(b)"]
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+
+        assert "Foo" in meta["predicates"]
+        assert "Bar" in meta["predicates"]
+        cmap = meta["constant_map"]
+        assert cmap["a"] == "a"
+        assert cmap["b"] == "b"

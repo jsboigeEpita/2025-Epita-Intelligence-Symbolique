@@ -636,7 +636,168 @@ class StateManagerPlugin:
             )
             return f"FUNC_ERROR: Error retracting belief: {e}"
 
+    # =========================================================================
+    # Phase result writers — @kernel_function wrappers for add_* methods (#469)
+    # =========================================================================
 
-# Optionnel : Log de chargement
-module_logger = logging.getLogger(__name__)
-module_logger.debug("Module core.state_manager_plugin chargé.")
+    @kernel_function(
+        description="Add an extract (text segment identified during extraction).",
+        name="add_extract",
+    )
+    def add_extract(self, name: str, content: str) -> str:
+        try:
+            ext_id = self._state.add_extract(name, content)
+            return ext_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a counter-argument result. Params: original_arg, counter_content, strategy, score (0-1).",
+        name="add_counter_argument",
+    )
+    def add_counter_argument(
+        self, original_arg: str, counter_content: str, strategy: str, score: str = "0.5"
+    ) -> str:
+        try:
+            ca_id = self._state.add_counter_argument(
+                original_arg, counter_content, strategy, float(score)
+            )
+            return ca_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add quality scores for an argument. Params: arg_id, scores_json (virtue→float), overall (0-1).",
+        name="add_quality_score",
+    )
+    def add_quality_score(
+        self, arg_id: str, scores_json: str, overall: str = "0.5"
+    ) -> str:
+        try:
+            scores = json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            self._state.add_quality_score(arg_id, scores, float(overall))
+            return f"OK: Quality scores added for {arg_id}"
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a Dung argumentation framework. Params: name, arguments_json (list), attacks_json (list of pairs), extensions_json (optional).",
+        name="add_dung_framework",
+    )
+    def add_dung_framework(
+        self,
+        name: str,
+        arguments_json: str,
+        attacks_json: str,
+        extensions_json: str = "{}",
+    ) -> str:
+        try:
+            arguments = json.loads(arguments_json)
+            attacks = json.loads(attacks_json)
+            extensions = json.loads(extensions_json) if extensions_json != "{}" else None
+            df_id = self._state.add_dung_framework(name, arguments, attacks, extensions)
+            return df_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a governance/voting decision. Params: method (copeland/borda/...), winner, scores_json.",
+        name="add_governance_decision",
+    )
+    def add_governance_decision(
+        self, method: str, winner: str, scores_json: str
+    ) -> str:
+        try:
+            scores = json.loads(scores_json)
+            gd_id = self._state.add_governance_decision(method, winner, scores)
+            return gd_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a debate transcript. Params: topic, exchanges_json (list of {speaker, content}), winner (optional).",
+        name="add_debate_transcript",
+    )
+    def add_debate_transcript(
+        self, topic: str, exchanges_json: str, winner: str = ""
+    ) -> str:
+        try:
+            exchanges = json.loads(exchanges_json)
+            dt_id = self._state.add_debate_transcript(
+                topic, exchanges, winner if winner else None
+            )
+            return dt_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a ranking semantics result. Params: method, arguments_json (list), comparisons_json (list).",
+        name="add_ranking_result",
+    )
+    def add_ranking_result(
+        self, method: str, arguments_json: str, comparisons_json: str
+    ) -> str:
+        try:
+            arguments = json.loads(arguments_json)
+            comparisons = json.loads(comparisons_json)
+            rk_id = self._state.add_ranking_result(method, arguments, comparisons)
+            return rk_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add an ASPIC+ analysis result. Params: reasoner_type, extensions_json, statistics_json.",
+        name="add_aspic_result",
+    )
+    def add_aspic_result(
+        self, reasoner_type: str, extensions_json: str, statistics_json: str
+    ) -> str:
+        try:
+            extensions = json.loads(extensions_json)
+            statistics = json.loads(statistics_json)
+            as_id = self._state.add_aspic_result(reasoner_type, extensions, statistics)
+            return as_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a belief revision result. Params: method, original_json (list), revised_json (list).",
+        name="add_belief_revision_result",
+    )
+    def add_belief_revision_result(
+        self, method: str, original_json: str, revised_json: str
+    ) -> str:
+        try:
+            original = json.loads(original_json)
+            revised = json.loads(revised_json)
+            br_id = self._state.add_belief_revision_result(method, original, revised)
+            return br_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Add a neural fallacy detection score. Params: text_segment, label, confidence (0-1).",
+        name="add_neural_fallacy_score",
+    )
+    def add_neural_fallacy_score(
+        self, text_segment: str, label: str, confidence: str = "0.5"
+    ) -> str:
+        try:
+            nf_id = self._state.add_neural_fallacy_score(
+                text_segment, label, float(confidence)
+            )
+            return nf_id
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"
+
+    @kernel_function(
+        description="Set the workflow execution results. Params: workflow_name, results_json.",
+        name="set_workflow_results",
+    )
+    def set_workflow_results(self, workflow_name: str, results_json: str) -> str:
+        try:
+            results = json.loads(results_json)
+            self._state.set_workflow_results(workflow_name, results)
+            return f"OK: Workflow results set for {workflow_name}"
+        except Exception as e:
+            return f"FUNC_ERROR: {e}"

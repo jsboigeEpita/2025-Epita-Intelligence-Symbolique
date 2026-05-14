@@ -45,10 +45,10 @@ _factory_logger = logging.getLogger("AgentFactory")
 # ---------------------------------------------------------------------------
 
 AGENT_SPECIALITY_MAP = {
-    "project_manager": [],  # PM only gets StateManager
-    "informal_fallacy": ["french_fallacy", "fallacy_workflow"],
-    "extract": [],  # Extractor uses StateManager only
-    "formal_logic": ["tweety_logic", "nl_to_logic", "atms"],
+    "project_manager": ["narrative_synthesis"],
+    "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
+    "extract": ["toulmin"],
+    "formal_logic": ["tweety_logic", "nl_to_logic", "atms", "ranking", "aspic", "belief_revision"],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
     "counter_argument": ["counter_argument"],
@@ -99,6 +99,30 @@ _PLUGIN_REGISTRY = {
         "argumentation_analysis.core.state_manager_plugin",
         "StateManagerPlugin",
     ),
+    # Plugins with @kernel_function exposing Tweety handlers (#468)
+    "ranking": (
+        "argumentation_analysis.plugins.ranking_plugin",
+        "RankingPlugin",
+    ),
+    "aspic": (
+        "argumentation_analysis.plugins.aspic_plugin",
+        "ASPICPlugin",
+    ),
+    "belief_revision": (
+        "argumentation_analysis.plugins.belief_revision_plugin",
+        "BeliefRevisionPlugin",
+    ),
+    "narrative_synthesis": (
+        "argumentation_analysis.plugins.narrative_synthesis_plugin",
+        "NarrativeSynthesisPlugin",
+    ),
+    "toulmin": (
+        "argumentation_analysis.plugins.toulmin_plugin",
+        "ToulminPlugin",
+    ),
+    # Complex plugins (need constructor args — loaded via special handling)
+    # "exploration": needs TaxonomyNavigator — loaded by FallacyWorkflowPlugin
+    # "jtms": needs JTMSService — loaded by orchestration layer
 }
 
 
@@ -376,7 +400,7 @@ class AgentFactory:
         self,
         agent_class: Type[Agent],
         trace_log_path: Optional[str] = None,
-        enable_auto_function_calling: bool = False,
+        enable_auto_function_calling: bool = True,
         **kwargs: Any,
     ) -> Union[Agent, "TracedAgent"]:
         if "service_id" not in kwargs:

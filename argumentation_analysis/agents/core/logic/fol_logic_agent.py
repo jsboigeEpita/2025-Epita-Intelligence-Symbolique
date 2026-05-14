@@ -582,30 +582,56 @@ RÉPONDS EN FORMAT JSON :
                 ):
                     constants.add(word)
 
-        # Sanitize constants: Tweety identifiers must be alphanumeric ASCII + underscore
-        # Replace accented characters with ASCII equivalents for Tweety compatibility
+        # Sanitize constants: Tweety identifiers must be alphanumeric ASCII + underscore.
+        # Collision detection: distinct surface forms may collapse to the same
+        # sanitized form (e.g. "Jean-Paul" and "Jean Paul" → "Jean_Paul").
+        # Disambiguate by appending _v2, _v3, ... suffixes when collision detected.
         sanitized_constants = set()
+        constant_map: Dict[str, str] = {}  # surface_form → sanitized_form
+        collision_counts: Dict[str, int] = {}  # sanitized_base → count
         for c in constants:
             sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", c)
             if sanitized and not sanitized[0].isdigit():
-                sanitized_constants.add(sanitized)
+                base = sanitized
             else:
-                sanitized_constants.add(f"c_{sanitized}")
+                base = f"c_{sanitized}"
+            if base in sanitized_constants:
+                # Collision: disambiguate
+                count = collision_counts.get(base, 1) + 1
+                collision_counts[base] = count
+                base = f"{base}_v{count}"
+            else:
+                collision_counts[base] = 1
+            sanitized_constants.add(base)
+            constant_map[c] = base
 
         # Build sort declarations from constants
         sorted_consts = sorted(sanitized_constants)
         sorts: Dict[str, List[str]] = {"thing": sorted_consts}
         signature_lines = [f"thing = {{{', '.join(sorted_consts)}}}"]
-        # Sanitize predicate names in signature for Tweety compatibility
+        # Sanitize predicate names in signature for Tweety compatibility.
+        # Same collision detection as constants above.
         sanitized_predicates: Dict[str, int] = {}
+        predicate_map: Dict[str, str] = {}
+        pred_collision_counts: Dict[str, int] = {}
+        seen_pred_names: set = set()
         for pred_name, arity in predicates.items():
             safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", pred_name)
             if safe_name and not safe_name[0].isdigit():
-                sanitized_predicates[safe_name] = arity
+                base = safe_name
             else:
-                sanitized_predicates[f"pred_{safe_name}"] = arity
+                base = f"pred_{safe_name}"
+            if base in seen_pred_names:
+                count = pred_collision_counts.get(base, 1) + 1
+                pred_collision_counts[base] = count
+                base = f"{base}_v{count}"
+            else:
+                pred_collision_counts[base] = 1
+            seen_pred_names.add(base)
+            sanitized_predicates[base] = arity
+            predicate_map[pred_name] = base
             sort_args = ", ".join(["thing"] * arity)
-            signature_lines.append(f"type({safe_name}({sort_args}))")
+            signature_lines.append(f"type({base}({sort_args}))")
 
         return {
             "sorts": sorts,
@@ -613,6 +639,8 @@ RÉPONDS EN FORMAT JSON :
             "constants": sanitized_constants,
             "variables": variables,
             "signature_lines": signature_lines,
+            "constant_map": constant_map,
+            "predicate_map": predicate_map,
         }
 
     @staticmethod
