@@ -71,7 +71,7 @@ class SherlockModernOrchestrator:
         "phase_quality_output": "argument_quality",
         "phase_counter_output": "counter_argument_generation",
         "phase_jtms_output": "belief_maintenance",
-        "phase_atms_output": "assumption_based_reasoning",
+        "phase_atms_output": "atms_reasoning",
     }
 
     def __init__(self, state: Optional[UnifiedAnalysisState] = None):

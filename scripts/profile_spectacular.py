@@ -438,7 +438,7 @@ def generate_report(profiling: Dict[str, Any]) -> str:
             if p["capability"]
             in (
                 "belief_maintenance",
-                "assumption_based_reasoning",
+                "atms_reasoning",
             )
         ]
         other_phases = [

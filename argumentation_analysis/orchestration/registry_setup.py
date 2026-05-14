@@ -182,9 +182,8 @@ def setup_registry(
             name="atms_service",
             service_class=ATMSCore,
             capabilities=[
-                "assumption_based_reasoning",
-                "environment_tracking",
                 "atms_reasoning",
+                "environment_tracking",
             ],
             metadata={
                 "description": "Assumption-based Truth Maintenance System (ATMS)"

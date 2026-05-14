@@ -90,7 +90,7 @@ MOCK_OUTPUTS = {
         "transcript": [{"proponent": "P arg", "opponent": "O counter"}],
         "winner": "opponent",
     },
-    "assumption_based_reasoning": {
+    "atms_reasoning": {
         "atms_contexts": [
             {
                 "hypothesis_id": "h_trust",
@@ -268,7 +268,7 @@ def _make_mock_state_writers():
     writers["argument_quality"] = _write_quality
     writers["counter_argument_generation"] = _write_counter
     writers["belief_maintenance"] = _write_jtms
-    writers["assumption_based_reasoning"] = _write_atms
+    writers["atms_reasoning"] = _write_atms
     writers["adversarial_debate"] = _write_debate
     writers["governance_simulation"] = _write_governance
     writers["hierarchical_fallacy_detection"] = _write_fallacy
