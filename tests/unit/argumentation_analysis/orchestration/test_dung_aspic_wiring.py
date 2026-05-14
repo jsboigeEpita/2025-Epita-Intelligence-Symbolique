@@ -43,8 +43,8 @@ class TestInvokeDungExtensions:
             "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
         ) as mock_af:
             mock_handler = MagicMock()
-            mock_handler.analyze_dung_framework.return_value = {
-                "extensions": {"grounded": ["arg_0"]},
+            mock_handler.analyze_multi_semantics.return_value = {
+                "extensions": {"grounded": [["arg_0"]]},
             }
             mock_af.return_value = mock_handler
 
@@ -54,8 +54,8 @@ class TestInvokeDungExtensions:
                 mock_init.return_value = MagicMock()
                 result = await _invoke_dung_extensions("test text", context)
 
-        # Should have called AFHandler with extracted arguments
-        call_args = mock_handler.analyze_dung_framework.call_args
+        # Should have called analyze_multi_semantics with extracted arguments
+        call_args = mock_handler.analyze_multi_semantics.call_args
         args_passed = call_args[0][0]  # First positional arg = arguments
         assert len(args_passed) == 2
         assert "impots" in args_passed[0].lower() or "impots" in args_passed[0]
@@ -88,7 +88,7 @@ class TestInvokeDungExtensions:
             "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
         ) as mock_af:
             mock_handler = MagicMock()
-            mock_handler.analyze_dung_framework.return_value = {
+            mock_handler.analyze_multi_semantics.return_value = {
                 "extensions": {},
             }
             mock_af.return_value = mock_handler
@@ -100,18 +100,32 @@ class TestInvokeDungExtensions:
                 result = await _invoke_dung_extensions("test text", context)
 
         # Attacks should have been generated from the fallacy
-        call_args = mock_handler.analyze_dung_framework.call_args
+        call_args = mock_handler.analyze_multi_semantics.call_args
         attacks_passed = call_args[0][1]  # Second positional arg = attacks
         assert len(attacks_passed) > 0
-        # The fallacy should attack the targeted argument
         assert any("fallacy" in str(a).lower() for a in attacks_passed)
 
     @pytest.mark.asyncio
     async def test_returns_multi_semantics(self):
-        """Dung function computes multiple semantics (grounded, preferred, stable)."""
+        """Dung function computes all 11 semantics via analyze_multi_semantics."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
+
+        # Simulate result with 11 semantics
+        all_sems = {
+            "grounded": [["arg1"]],
+            "preferred": [["arg1"], ["arg2"]],
+            "stable": [["arg1", "arg2"]],
+            "complete": [["arg1"]],
+            "admissible": [["arg1"], ["arg1", "arg2"]],
+            "conflict_free": [["arg1"], ["arg2"], ["arg1", "arg2"]],
+            "semi_stable": [["arg1", "arg2"]],
+            "stage": [["arg1", "arg2"]],
+            "cf2": [["arg1", "arg2"]],
+            "ideal": [["arg1"]],
+            "naive": [["arg1", "arg2"]],
+        }
 
         context = {
             "phase_extract_output": {"arguments": [{"text": "arg1"}, {"text": "arg2"}]}
@@ -121,8 +135,9 @@ class TestInvokeDungExtensions:
             "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
         ) as mock_af:
             mock_handler = MagicMock()
-            mock_handler.analyze_dung_framework.return_value = {
-                "extensions": {"set": ["arg1"]},
+            mock_handler.analyze_multi_semantics.return_value = {
+                "extensions": all_sems,
+                "statistics": {"arguments_count": 2, "attacks_count": 0},
             }
             mock_af.return_value = mock_handler
 
@@ -134,11 +149,107 @@ class TestInvokeDungExtensions:
 
         assert result["semantics"] == "multi"
         assert "all_extensions" in result
-        assert "grounded" in result["all_extensions"]
-        assert "preferred" in result["all_extensions"]
-        assert "stable" in result["all_extensions"]
+        # All 11 semantics should be present
+        expected_semantics = [
+            "grounded",
+            "preferred",
+            "stable",
+            "complete",
+            "admissible",
+            "conflict_free",
+            "semi_stable",
+            "stage",
+            "cf2",
+            "ideal",
+            "naive",
+        ]
+        for sem in expected_semantics:
+            assert sem in result["all_extensions"], f"Missing semantics: {sem}"
         assert "arguments" in result
         assert "attacks" in result
+
+    @pytest.mark.asyncio
+    async def test_enriched_extensions_format(self):
+        """Dung extensions include count, sizes, and all_members per semantics."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
+        all_sems = {
+            "grounded": [["a", "c"]],
+            "preferred": [["a", "c"], ["b"]],
+            "stable": [["a", "c"]],
+        }
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "a"}, {"text": "b"}, {"text": "c"}]
+            }
+        }
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
+        ) as mock_af:
+            mock_handler = MagicMock()
+            mock_handler.analyze_multi_semantics.return_value = {
+                "extensions": all_sems,
+                "statistics": {"arguments_count": 3, "attacks_count": 1},
+            }
+            mock_af.return_value = mock_handler
+
+            with patch(
+                "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
+            ) as mock_init:
+                mock_init.return_value = MagicMock()
+                result = await _invoke_dung_extensions("test text", context)
+
+        # Check enriched format
+        grounded = result["all_extensions"]["grounded"]
+        assert grounded["count"] == 1
+        assert grounded["sizes"] == [2]
+        assert sorted(grounded["all_members"]) == ["a", "c"]
+
+        preferred = result["all_extensions"]["preferred"]
+        assert preferred["count"] == 2
+        assert sorted(preferred["all_members"]) == ["a", "b", "c"]
+
+        # Statistics should include semantics_computed
+        assert result["statistics"]["semantics_computed"] == 3
+
+    @pytest.mark.asyncio
+    async def test_semantics_error_handled(self):
+        """Semantics that fail computation are reported as errors, not skipped."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
+        all_sems = {
+            "grounded": [["a"]],
+            "cf2": {"error": "CF2Reasoner not available"},
+        }
+
+        context = {"phase_extract_output": {"arguments": [{"text": "a"}]}}
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
+        ) as mock_af:
+            mock_handler = MagicMock()
+            mock_handler.analyze_multi_semantics.return_value = {
+                "extensions": all_sems,
+                "statistics": {"arguments_count": 1, "attacks_count": 0},
+            }
+            mock_af.return_value = mock_handler
+
+            with patch(
+                "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
+            ) as mock_init:
+                mock_init.return_value = MagicMock()
+                result = await _invoke_dung_extensions("test text", context)
+
+        # Error semantics preserved as-is
+        assert "error" in result["all_extensions"]["cf2"]
+        # Successful semantics enriched
+        assert "count" in result["all_extensions"]["grounded"]
 
     @pytest.mark.asyncio
     async def test_fallback_to_python(self):

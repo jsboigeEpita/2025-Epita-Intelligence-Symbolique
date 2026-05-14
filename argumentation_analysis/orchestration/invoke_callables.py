@@ -367,7 +367,6 @@ async def _invoke_counter_argument(
     try:
         client, model_id = _get_openai_client()
         if client:
-
             # Collect fallacious arguments + weakest arguments for targeted CAs
             extract_output = context.get("phase_extract_output", {})
             arguments = extract_output.get("arguments", [])
@@ -562,7 +561,6 @@ async def _invoke_debate_analysis(
     try:
         client, model_id = _get_openai_client()
         if client:
-
             # Build adversarial debate from upstream analysis
             extract_output = context.get("phase_extract_output", {})
             raw_arguments = extract_output.get("arguments", [])
@@ -763,7 +761,6 @@ async def _invoke_governance(
     try:
         client, model_id = _get_openai_client()
         if client:
-
             # Build context from upstream phases
             context_parts = []
             if arguments:
@@ -3272,7 +3269,6 @@ async def _invoke_fol_reasoning(
         has_fallacious = any("Fallacious" in f for f in formulas)
         fol_signature = []
         try:
-
             meta = FOLLogicAgent.extract_fol_metadata(formulas)
             fol_signature = meta.get("signature_lines", [])
         except Exception:
@@ -3370,7 +3366,9 @@ async def _invoke_dung_extensions(
     """Invoke Dung framework extension computation via AFHandler (JVM required).
 
     Builds attack graph from extracted arguments and detected fallacies,
-    then computes grounded, preferred, and stable extensions via Tweety.
+    then computes all 11 Dung semantics via Tweety: grounded, preferred,
+    stable, complete, admissible, conflict_free, semi_stable, stage, cf2,
+    ideal, naive.
     Falls back to pure-Python computation when JVM is unavailable.
     """
     # 1. Extract arguments from upstream phases
@@ -3381,7 +3379,10 @@ async def _invoke_dung_extensions(
 
     # 3. Compute extensions via Tweety (or Python fallback)
     try:
-        from argumentation_analysis.agents.core.logic.af_handler import AFHandler
+        from argumentation_analysis.agents.core.logic.af_handler import (
+            AFHandler,
+            SEMANTICS_REASONERS,
+        )
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
             TweetyInitializer,
         )
@@ -3389,30 +3390,45 @@ async def _invoke_dung_extensions(
         initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = AFHandler(initializer)
 
-        # Compute multiple semantics for comprehensive analysis
-        all_extensions = {}
-        for semantics in ("grounded", "preferred", "stable"):
-            try:
-                result = await asyncio.to_thread(
-                    handler.analyze_dung_framework, arguments, attacks, semantics
-                )
-                ext = result.get("extensions", {})
-                if isinstance(ext, dict):
-                    all_extensions[semantics] = ext
-            except Exception:
-                pass
+        # Compute all 11 semantics in one pass (framework built once)
+        all_semantics = list(SEMANTICS_REASONERS.keys())
+        result = await asyncio.to_thread(
+            handler.analyze_multi_semantics, arguments, attacks, all_semantics
+        )
 
-        # Use preferred as primary if available
-        primary = all_extensions.get("preferred", all_extensions.get("grounded", {}))
+        raw_extensions = result.get("extensions", {})
+
+        # Enrich: for each semantics, add sizes and argument membership
+        enriched_extensions = {}
+        for sem, ext_data in raw_extensions.items():
+            if isinstance(ext_data, dict) and "error" in ext_data:
+                enriched_extensions[sem] = ext_data
+                continue
+            extensions_list = ext_data if isinstance(ext_data, list) else []
+            enriched_extensions[sem] = {
+                "extensions": extensions_list,
+                "count": len(extensions_list),
+                "sizes": [len(ext) for ext in extensions_list],
+                "all_members": sorted({arg for ext in extensions_list for arg in ext}),
+            }
+
+        # Use preferred as primary, fallback to grounded
+        primary = enriched_extensions.get(
+            "preferred", enriched_extensions.get("grounded", {})
+        )
+
         return {
             "semantics": "multi",
             "extensions": primary,
-            "all_extensions": all_extensions,
+            "all_extensions": enriched_extensions,
             "arguments": arguments,
             "attacks": attacks,
             "statistics": {
                 "arguments_count": len(arguments),
                 "attacks_count": len(attacks),
+                "semantics_computed": len(
+                    [v for v in enriched_extensions.values() if "count" in v]
+                ),
             },
         }
     except Exception as e:

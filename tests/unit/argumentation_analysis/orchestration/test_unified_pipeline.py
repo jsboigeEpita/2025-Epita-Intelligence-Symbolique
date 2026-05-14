@@ -993,8 +993,9 @@ class TestInvokeCallables:
         )
 
         mock_handler = MagicMock()
-        mock_handler.analyze_dung_framework.return_value = {
-            "extensions": {"preferred": []}
+        mock_handler.analyze_multi_semantics.return_value = {
+            "extensions": {"preferred": []},
+            "statistics": {"arguments_count": 1, "attacks_count": 0},
         }
 
         # Patch at the module level where the import happens inside the function
@@ -1002,7 +1003,8 @@ class TestInvokeCallables:
             "sys.modules",
             {
                 "argumentation_analysis.agents.core.logic.af_handler": MagicMock(
-                    AFHandler=MagicMock(return_value=mock_handler)
+                    AFHandler=MagicMock(return_value=mock_handler),
+                    SEMANTICS_REASONERS={"preferred": "x", "grounded": "y"},
                 ),
                 "argumentation_analysis.agents.core.logic.tweety_initializer": MagicMock(
                     TweetyInitializer=MagicMock()
@@ -1010,8 +1012,8 @@ class TestInvokeCallables:
             },
         ):
             result = await _invoke_dung_extensions("text", {})
-        # Should have called with default placeholder argument
-        call_args = mock_handler.analyze_dung_framework.call_args
+        # Should have called analyze_multi_semantics with default placeholder argument
+        call_args = mock_handler.analyze_multi_semantics.call_args
         assert call_args[0][0] == ["argument_placeholder"]
 
     async def test_invoke_formal_synthesis_no_phases(self):
