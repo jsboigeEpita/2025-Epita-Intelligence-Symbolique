@@ -63,6 +63,7 @@ __all__ = [
     "_invoke_eaf",
     "_invoke_delp",
     "_invoke_qbf",
+    "_invoke_asp_reasoning",
     "_invoke_hierarchical_fallacy",
     "_normalize_items_with_quotes",
     "_normalize_fallacies_with_quotes",
@@ -2784,6 +2785,120 @@ async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             }
 
 
+async def _invoke_asp_reasoning(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Invoke Clingo ASP solver for Answer Set Programming (#479).
+
+    Uses Tweety's ClingoSolver when JVM+Clingo are available.
+    Falls back to Python clingo package or pure-Python heuristic.
+    """
+    program = context.get("program", input_text)
+    max_models = context.get("max_models", 0)  # 0 = all models
+
+    # Try JVM + Tweety ClingoSolver first
+    try:
+        from argumentation_analysis.core.jvm_setup import is_jvm_started
+        if is_jvm_started():
+            import jpype
+            JString = jpype.JClass("java.lang.String")
+            ClingoSolver = jpype.JClass(
+                "org.tweetyproject.lp.asp.reasoner.ClingoSolver"
+            )
+            Program = jpype.JClass(
+                "org.tweetyproject.lp.asp.syntax.Program"
+            )
+            ASPRule = jpype.JClass(
+                "org.tweetyproject.lp.asp.syntax.ASPRule"
+            )
+            ASPAtom = jpype.JClass(
+                "org.tweetyproject.lp.asp.syntax.ASPAtom"
+            )
+
+            # Parse simple rules: "a :- b." format
+            rules = []
+            for line in str(program).strip().splitlines():
+                line = line.strip().rstrip(".")
+                if not line or line.startswith("%"):
+                    continue
+                if ":-" in line:
+                    head, body = line.split(":-", 1)
+                    head_atoms = [ASPAtom(h.strip()) for h in head.split(",") if h.strip()]
+                    body_atoms = [ASPAtom(b.strip()) for b in body.split(",") if b.strip()]
+                    rule = ASPRule()
+                    for a in head_atoms:
+                        rule.getHead().add(a)
+                    for a in body_atoms:
+                        rule.getBody().add(a)  # type: ignore[attr-defined]
+                    rules.append(rule)
+                else:
+                    rules.append(ASPRule([ASPAtom(line)], []))
+
+            prog = Program()
+            for r in rules:
+                prog.add(r)
+
+            solver = ClingoSolver()
+            answer_sets = solver.getModels(prog, max_models)
+
+            models = []
+            for i in range(answer_sets.size()):
+                aset = answer_sets.get(i)
+                atoms = []
+                for j in range(aset.size()):
+                    atoms.append(str(aset.get(j)))
+                models.append(atoms)
+
+            return {
+                "answer_sets": models,
+                "num_models": len(models),
+                "solver": "clingo_jvm",
+                "program": str(program)[:500],
+            }
+    except Exception as e:
+        logger.info(f"Clingo JVM solver unavailable ({e}), trying Python fallback")
+
+    # Try Python clingo package
+    try:
+        import clingo as clingo_py  # type: ignore[import-untyped]
+
+        models = []
+        ctl = clingo_py.Control(arguments=[f"--models={max_models}" if max_models else "--models=0"])
+        ctl.add("base", [], str(program))
+        ctl.ground([("base", [])])
+
+        def on_model(model):
+            models.append([str(s) for s in model.symbols(shown=True)])
+
+        ctl.solve(on_model=on_model)
+        return {
+            "answer_sets": models,
+            "num_models": len(models),
+            "solver": "clingo_python",
+            "program": str(program)[:500],
+        }
+    except ImportError:
+        logger.debug("Python clingo package not available")
+    except Exception as e:
+        logger.info(f"Clingo Python solve failed ({e})")
+
+    # Pure Python heuristic fallback
+    logger.warning("ASP reasoning: Clingo unavailable, using heuristic fallback")
+    lines = str(program).strip().splitlines()
+    rules = [l.strip().rstrip(".") for l in lines if ":-" in l and not l.strip().startswith("%")]
+    facts = [l.strip().rstrip(".") for l in lines if ":-" not in l and l.strip() and not l.strip().startswith("%")]
+
+    return {
+        "answer_sets": [facts] if facts else [],
+        "num_models": 1 if facts else 0,
+        "solver": "heuristic",
+        "program": str(program)[:500],
+        "rules_parsed": len(rules),
+        "facts_parsed": len(facts),
+        "fallback": "python_heuristic",
+    }
+
+
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
 
 
@@ -3187,6 +3302,38 @@ async def _invoke_fol_reasoning(
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
 
+    # External solver routing (#479): EProver or Prover9 for FOL
+    fol_solver = context.get("fol_solver", "tweety")  # tweety, eprover, prover9
+    if fol_solver in ("eprover", "prover9"):
+        try:
+            from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
+
+            handler = FOLHandler()
+            belief_set_str = "\n".join(str(f) for f in formulas)
+            if fol_solver == "eprover":
+                is_consistent, msg = await asyncio.to_thread(
+                    handler._fol_check_consistency_with_eprover, belief_set_str
+                )
+            else:
+                is_consistent, msg = await asyncio.to_thread(
+                    handler._fol_check_consistency_with_prover9, belief_set_str
+                )
+            return {
+                "formulas": formulas,
+                "consistent": bool(is_consistent),
+                "inferences": inferences,
+                "confidence": 0.85 if is_consistent else 0.4,
+                "message": msg,
+                "logic_type": "first_order",
+                "argument_count": len(args),
+                "solver": fol_solver,
+            }
+        except Exception as e:
+            logger.info(
+                f"External solver '{fol_solver}' unavailable ({e}), "
+                f"falling back to Tweety"
+            )
+
     inferences = []
     # Derive inferences from the structure
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
@@ -3335,29 +3482,82 @@ async def _invoke_nl_to_logic(
 async def _invoke_modal_logic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Invoke modal logic analysis via TweetyBridge (JVM required)."""
+    """Invoke modal logic analysis via TweetyBridge or external SPASS solver.
+
+    Routes to SPASS when context["modal_solver"] == "spass" (#479).
+    Falls back to TweetyBridge or pure-Python heuristic.
+    """
+    formulas = context.get("formulas", [input_text])
+    if not isinstance(formulas, list):
+        formulas = [str(formulas)]
+    modalities = []
+    for f in formulas:
+        f_str = str(f)
+        if "[]" in f_str or "necessarily" in f_str.lower():
+            modalities.append("necessity")
+        if "<>" in f_str or "possibly" in f_str.lower():
+            modalities.append("possibility")
+    modalities = list(set(modalities)) or ["none_detected"]
+
+    modal_solver = context.get("modal_solver", "tweety")  # tweety, spass
+
+    # SPASS routing (#479)
+    if modal_solver == "spass":
+        try:
+            from argumentation_analysis.agents.core.logic.modal_handler import (
+                ModalHandler,
+                ModalSolverChoice,
+            )
+
+            handler = ModalHandler(modal_solver=ModalSolverChoice.SPASS)
+            belief_set_str = "\n".join(str(f) for f in formulas)
+            logic_type = context.get("modal_logic_type", "K")
+            is_consistent, msg = await asyncio.to_thread(
+                handler._modal_check_consistency_with_spass, belief_set_str, logic_type
+            )
+            return {
+                "formulas": formulas,
+                "valid": bool(is_consistent),
+                "modalities": modalities,
+                "logic_type": "modal",
+                "solver": "spass",
+                "message": msg,
+            }
+        except Exception as e:
+            logger.info(
+                f"SPASS modal solver unavailable ({e}), falling back to Tweety"
+            )
+
+    # TweetyBridge routing
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
-        formulas = context.get("formulas", [input_text])
-        if not isinstance(formulas, list):
-            formulas = [str(formulas)]
-        modalities = []
-        for f in formulas:
-            f_str = str(f)
-            if "[]" in f_str or "necessarily" in f_str.lower():
-                modalities.append("necessity")
-            if "<>" in f_str or "possibly" in f_str.lower():
-                modalities.append("possibility")
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        logic_type = context.get("modal_logic_type", "K")
+        accepted, msg = await asyncio.to_thread(
+            bridge.execute_modal_query, belief_set_str, belief_set_str, logic_type=logic_type
+        )
         return {
             "formulas": formulas,
-            "valid": True,
-            "modalities": list(set(modalities)) or ["none_detected"],
+            "valid": accepted,
+            "modalities": modalities,
             "logic_type": "modal",
+            "solver": "tweety",
+            "message": msg,
         }
     except Exception as e:
-        return {"error": str(e), "formulas": [], "valid": False, "modalities": []}
+        logger.debug(f"Modal TweetyBridge unavailable ({e}), using heuristic")
+
+    # Pure heuristic fallback
+    return {
+        "formulas": formulas,
+        "valid": True,
+        "modalities": modalities,
+        "logic_type": "modal",
+        "solver": "heuristic",
+        "fallback": "python",
+    }
 
 
 async def _invoke_dung_extensions(

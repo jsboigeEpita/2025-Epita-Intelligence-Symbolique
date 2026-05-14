@@ -50,6 +50,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_eaf,
     _invoke_delp,
     _invoke_qbf,
+    _invoke_asp_reasoning,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -511,6 +512,13 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
             ["qbf_reasoning"],
             "Quantified Boolean Formulas (∀/∃ over PL)",
             _invoke_qbf,
+        ),
+        # Clingo/ASP solver (#479)
+        (
+            "asp_reasoning_handler",
+            ["asp_reasoning", "answer_set_programming"],
+            "Answer Set Programming via Clingo (JVM or Python)",
+            _invoke_asp_reasoning,
         ),
     ]
     for name, caps, desc, invoke_fn in tweety_handlers:
