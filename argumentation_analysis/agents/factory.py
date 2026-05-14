@@ -47,7 +47,7 @@ _factory_logger = logging.getLogger("AgentFactory")
 AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
     "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
-    "extract": ["toulmin"],
+    "extract": ["toulmin", "text_to_kb"],
     "formal_logic": [
         "tweety_logic",
         "nl_to_logic",
@@ -57,6 +57,8 @@ AGENT_SPECIALITY_MAP = {
         "belief_revision",
         "logic_agents",
         "tweety_interpretation",
+        "text_to_kb",
+        "kb_to_tweety",
     ],
     "quality": ["quality_scoring"],
     "debate": ["debate"],
@@ -130,6 +132,16 @@ _PLUGIN_REGISTRY = {
     "tweety_interpretation": (
         "argumentation_analysis.plugins.tweety_result_interpretation_plugin",
         "TweetyResultInterpretationPlugin",
+    ),
+    # NL → KB extraction with iterative descent (#474)
+    "text_to_kb": (
+        "argumentation_analysis.plugins.text_to_kb_plugin",
+        "TextToKBPlugin",
+    ),
+    # KB → Tweety formula translation with retry (#475)
+    "kb_to_tweety": (
+        "argumentation_analysis.plugins.kb_to_tweety_plugin",
+        "KBToTweetyPlugin",
     ),
     "narrative_synthesis": (
         "argumentation_analysis.plugins.narrative_synthesis_plugin",
