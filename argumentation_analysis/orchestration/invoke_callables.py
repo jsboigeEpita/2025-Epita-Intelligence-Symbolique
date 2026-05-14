@@ -2862,18 +2862,18 @@ async def _invoke_asp_reasoning(
     try:
         import clingo as clingo_py  # type: ignore[import-untyped,unused-ignore]
 
-        models: list[list[str]] = []
+        py_models: list[list[str]] = []
         ctl = clingo_py.Control(arguments=[f"--models={max_models}" if max_models else "--models=0"])
         ctl.add("base", [], str(program))
         ctl.ground([("base", [])])
 
         def on_model(model: Any) -> None:
-            models.append([str(s) for s in model.symbols(shown=True)])
+            py_models.append([str(s) for s in model.symbols(shown=True)])
 
         ctl.solve(on_model=on_model)
         return {
-            "answer_sets": models,
-            "num_models": len(models),
+            "answer_sets": py_models,
+            "num_models": len(py_models),
             "solver": "clingo_python",
             "program": str(program)[:500],
         }
@@ -3482,7 +3482,7 @@ async def _invoke_modal_logic(
 
             if not settings.modal_solver == ModalSolverChoice.SPASS:
                 object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
-            initializer = TweetyInitializer()
+            initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
             handler = ModalHandler(initializer_instance=initializer)
             belief_set_str = "\n".join(str(f) for f in formulas)
             is_consistent, msg = await asyncio.to_thread(
