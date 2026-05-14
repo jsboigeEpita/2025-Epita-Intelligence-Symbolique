@@ -32,20 +32,38 @@ DOC_IDS = ["src0_ext0", "src3_ext0", "src6_ext0"]
 
 def load_document_text(doc_id: str) -> Optional[str]:
     """Load document text from the encrypted dataset."""
+    import os
     try:
-        from argumentation_analysis.core.io_manager import load_extract_definitions
-        from argumentation_analysis.core.environment import get_text_config_passphrase
+        from dotenv import load_dotenv
+        load_dotenv(Path(__file__).parent.parent / ".env")
+    except ImportError:
+        pass
 
-        passphrase = get_text_config_passphrase()
+    try:
+        from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+        from argumentation_analysis.core.io_manager import load_extract_definitions
+
+        passphrase = os.environ.get("TEXT_CONFIG_PASSPHRASE", "")
         if not passphrase:
-            print(f"Warning: No passphrase available for dataset", file=sys.stderr)
+            print("Warning: TEXT_CONFIG_PASSPHRASE not set", file=sys.stderr)
             return None
 
-        definitions = load_extract_definitions(passphrase)
-        for source in definitions:
-            for extract in source.get("extracts", []):
-                if extract.get("id") == doc_id or f"src{definitions.index(source)}_ext{source.get('extracts', []).index(extract)}" == doc_id:
-                    return extract.get("full_text", "")
+        key = derive_encryption_key(passphrase)
+        config_file = Path(__file__).parent.parent / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
+        if not config_file.exists():
+            print(f"Error: Encrypted config not found at {config_file}", file=sys.stderr)
+            return None
+
+        definitions = load_extract_definitions(config_file, key)
+        for src_idx, source in enumerate(definitions):
+            # Try source-level full_text first
+            source_ft = source.get("full_text", "")
+            for ext_idx, extract in enumerate(source.get("extracts", [])):
+                synthetic_id = f"src{src_idx}_ext{ext_idx}"
+                if synthetic_id == doc_id:
+                    # Prefer extract-level text, fall back to source-level
+                    text = extract.get("full_text", "") or source_ft
+                    return text if text else None
         print(f"Warning: Document '{doc_id}' not found in dataset", file=sys.stderr)
         return None
     except Exception as e:
@@ -53,43 +71,55 @@ def load_document_text(doc_id: str) -> Optional[str]:
         return None
 
 
-def run_workflow_on_text(
+async def run_workflow_on_text(
     text: str, doc_id: str, workflow_name: str
 ) -> Dict[str, Any]:
     """Run a workflow on text and return metrics."""
+    import asyncio
     try:
         from argumentation_analysis.orchestration.unified_pipeline import (
-            UnifiedPipeline,
+            run_unified_analysis,
         )
 
-        pipeline = UnifiedPipeline()
-        registry = pipeline.registry
-
-        from argumentation_analysis.orchestration.workflows import get_workflow_catalog
-        catalog = get_workflow_catalog()
-
-        if workflow_name not in catalog:
-            print(f"Workflow '{workflow_name}' not in catalog. Available: {list(catalog.keys())}", file=sys.stderr)
-            return {"error": f"Workflow '{workflow_name}' not found"}
-
         start = time.time()
-        result = pipeline.run_workflow(workflow_name, text)
+        results = await run_unified_analysis(text=text, workflow_name=workflow_name)
         duration = time.time() - start
 
-        # Extract metrics from result
-        state = result.get("state")
-        if state is not None:
-            metrics = extract_state_metrics(state)
-        else:
-            metrics = {"error": "No state returned"}
+        state = results.get("state_snapshot", {})
+        summary = results.get("summary", {})
 
-        metrics.update({
+        metrics = {
             "document": doc_id,
             "mode": "pipeline",
             "workflow": workflow_name,
             "duration_seconds": round(duration, 1),
+            "phases_completed": f"{summary.get('completed', 0)}/{summary.get('total', 0)}",
+            "phases_failed": summary.get("failed", 0),
+            "phases_skipped": summary.get("skipped", 0),
+            "non_empty_fields": 0,
+            "total_fields": 0,
+            "state_json_size_bytes": len(json.dumps(state, default=str).encode()) if state else 0,
+            "arguments_count": len(state.get("arguments", [])) if state else 0,
+            "fallacies_count": len(state.get("fallacies", [])) if state else 0,
+            "formal_results_keys": list(state.get("formal_analysis", {}).keys()) if isinstance(state.get("formal_analysis"), dict) else [],
+            "jtms_beliefs_count": len(state.get("jtms_beliefs", [])) if state else 0,
+            "quality_scores": state.get("quality_scores", {}) if state else {},
+            "counter_arguments_count": len(state.get("counter_arguments", [])) if state else 0,
+            "debate_results_keys": list(state.get("debate_results", {}).keys()) if isinstance(state.get("debate_results"), dict) else [],
+            "governance_results_keys": list(state.get("governance_results", {}).keys()) if isinstance(state.get("governance_results"), dict) else [],
+            "capabilities_used": results.get("capabilities_used", []),
+            "capabilities_missing": results.get("capabilities_missing", []),
             "timestamp": datetime.now().isoformat(),
-        })
+        }
+
+        if state:
+            non_empty = sum(
+                1 for v in state.values()
+                if v is not None and v != "" and v != [] and v != {}
+            )
+            metrics["non_empty_fields"] = non_empty
+            metrics["total_fields"] = len(state)
+
         return metrics
 
     except Exception as e:
@@ -160,7 +190,8 @@ def extract_state_metrics(state: Any) -> Dict[str, Any]:
     return metrics
 
 
-def main():
+async def main():
+    import asyncio
     parser = argparse.ArgumentParser(description="Run Epic G baselines")
     parser.add_argument(
         "--workflow",
@@ -199,7 +230,7 @@ def main():
             print(f"({len(text)} chars)")
 
             print(f"Running {workflow_name} on {doc_id}...", end=" ", flush=True)
-            result = run_workflow_on_text(text, doc_id, workflow_name)
+            result = await run_workflow_on_text(text, doc_id, workflow_name)
 
             if "error" in result:
                 print(f"ERROR: {result['error']}")
@@ -219,4 +250,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
