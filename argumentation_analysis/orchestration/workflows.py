@@ -36,6 +36,7 @@ __all__ = [
     "build_neural_symbolic_fallacy_workflow",
     "build_hierarchical_fallacy_workflow",
     "build_spectacular_workflow",
+    "build_formal_extended_workflow",
     "build_sherlock_modern_workflow",
     "WORKFLOW_CATALOG",
     "get_workflow_catalog",
@@ -547,6 +548,9 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         L1  quality | nl_to_logic | neural_detect | hierarchical_fallacy
         L2  pl | fol | modal                     (from nl_to_logic)
         L3  dung_extensions                       (from fallacy + pl)
+        L3b ranking                               (from dung)
+        L3c bipolar                               (from counter)
+        L3d probabilistic                         (from fallacy)
         L4  aspic_analysis                        (from dung)
         L5  counter                               (from quality)
         L6  jtms | debate                         (from counter)
@@ -601,6 +605,27 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             "dung_extensions",
             capability="dung_extensions",
             depends_on=["hierarchical_fallacy", "pl"],
+            optional=True,
+        )
+        # L3b — Ranking semantics (score arguments after Dung)
+        .add_phase(
+            "ranking",
+            capability="ranking_semantics",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L3c — Bipolar argumentation (support + attack)
+        .add_phase(
+            "bipolar",
+            capability="bipolar_argumentation",
+            depends_on=["counter"],
+            optional=True,
+        )
+        # L3d — Probabilistic acceptance (confidence-weighted fallacies)
+        .add_phase(
+            "probabilistic",
+            capability="probabilistic_argumentation",
+            depends_on=["hierarchical_fallacy"],
             optional=True,
         )
         # L4 — ASPIC+ structured argumentation
@@ -659,6 +684,125 @@ def build_spectacular_workflow() -> WorkflowDefinition:
     )
 
 
+def build_formal_extended_workflow() -> WorkflowDefinition:
+    """Extended formal analysis chaining all Tweety extensions (#480).
+
+    Chains: extract → nl_to_logic → pl → fol → modal → dung_extensions
+    → aspic → aba → adf → bipolar → ranking → probabilistic → dialogue
+    → belief_revision → tweety_interpretation
+
+    Inspired by CoursIA notebooks 5/6/7a/7b (Belief-Revision, Abstract-Arg,
+    Structured-Arg, Extended-Frameworks).
+
+    All phases except extract are optional so the workflow degrades
+    gracefully when JVM or specific handlers are unavailable.
+    """
+    return (
+        WorkflowBuilder("formal_extended")
+        # L0 — extract facts from text
+        .add_phase("extract", capability="fact_extraction")
+        # L1 — NL to formal logic
+        .add_phase(
+            "nl_to_logic",
+            capability="nl_to_logic_translation",
+            depends_on=["extract"],
+            optional=True,
+        )
+        # L2 — propositional logic
+        .add_phase(
+            "pl",
+            capability="propositional_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        # L3 — first-order logic
+        .add_phase(
+            "fol",
+            capability="fol_reasoning",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        # L4 — modal logic
+        .add_phase(
+            "modal",
+            capability="modal_logic",
+            depends_on=["nl_to_logic"],
+            optional=True,
+        )
+        # L5 — Dung argumentation frameworks (11 semantics)
+        .add_phase(
+            "dung_extensions",
+            capability="dung_extensions",
+            depends_on=["pl"],
+            optional=True,
+        )
+        # L6 — ASPIC+ structured argumentation
+        .add_phase(
+            "aspic",
+            capability="aspic_plus_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L7 — Assumption-Based Argumentation
+        .add_phase(
+            "aba",
+            capability="aba_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L8 — Abstract Dialectical Frameworks
+        .add_phase(
+            "adf",
+            capability="adf_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L9 — Bipolar argumentation (support + attack)
+        .add_phase(
+            "bipolar",
+            capability="bipolar_argumentation",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L10 — Ranking semantics
+        .add_phase(
+            "ranking",
+            capability="ranking_semantics",
+            depends_on=["dung_extensions"],
+            optional=True,
+        )
+        # L11 — Probabilistic argumentation
+        .add_phase(
+            "probabilistic",
+            capability="probabilistic_argumentation",
+            depends_on=["ranking"],
+            optional=True,
+        )
+        # L12 — Dialogue protocols
+        .add_phase(
+            "dialogue",
+            capability="dialogue_protocols",
+            depends_on=["aspic"],
+            optional=True,
+        )
+        # L13 — Belief revision
+        .add_phase(
+            "belief_revision",
+            capability="belief_revision",
+            depends_on=["fol", "modal"],
+            optional=True,
+        )
+        # L14 — Interpret formal results as NL
+        .add_phase(
+            "tweety_interpretation",
+            capability="formal_result_interpretation",
+            depends_on=["dung_extensions", "fol", "aspic", "ranking", "belief_revision"],
+            optional=True,
+        )
+        .build()
+    )
+
+
 WORKFLOW_CATALOG: Dict[str, WorkflowDefinition] = {}
 
 
@@ -678,6 +822,7 @@ def get_workflow_catalog() -> Dict[str, WorkflowDefinition]:
             "hierarchical_fallacy": build_hierarchical_fallacy_workflow(),
             "nl_to_logic": build_nl_to_logic_workflow(),
             "spectacular": build_spectacular_workflow(),
+            "formal_extended": build_formal_extended_workflow(),
         }
         # Collaborative multi-agent debate (#175)
         try:

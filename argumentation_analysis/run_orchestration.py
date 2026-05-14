@@ -242,6 +242,7 @@ Exemples:
   %(prog)s --file texte.txt                    # Workflow standard (défaut)
   %(prog)s --text "Mon argument" --workflow light  # Workflow light
   %(prog)s --file texte.txt --workflow collaborative  # Débat multi-agents
+  %(prog)s --file texte.txt --workflow formal_extended  # Full formal chain
   %(prog)s --list-workflows                    # Lister les workflows
   %(prog)s --file texte.txt --output results.json  # Sauvegarder résultats
   %(prog)s --file texte.txt --legacy           # Mode legacy (AnalysisRunner)
