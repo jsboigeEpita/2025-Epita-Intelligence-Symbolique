@@ -554,6 +554,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         L4  aspic_analysis                        (from dung)
         L5  counter                               (from quality)
         L6  jtms | debate                         (from counter)
+        L6b belief_revision                       (from jtms + dung)
         L7  atms                                  (from jtms)
         L8  governance | formal_synthesis         (aggregation)
     """
@@ -699,6 +700,13 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             "tweety_interpretation",
             capability="formal_result_interpretation",
             depends_on=["fol", "modal", "dung_extensions", "aspic_analysis", "ranking"],
+            optional=True,
+        )
+        # L6b — Belief revision (Dalal/Levi distance under contradictions) (#507)
+        .add_phase(
+            "belief_revision",
+            capability="belief_revision",
+            depends_on=["jtms", "dung_extensions"],
             optional=True,
         )
         .build()
