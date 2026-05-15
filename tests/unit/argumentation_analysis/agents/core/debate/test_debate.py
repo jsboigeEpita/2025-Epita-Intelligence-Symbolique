@@ -1050,3 +1050,174 @@ class TestDebateModerator:
         assert state.phase == DebatePhase.CONCLUDED
         assert len(state.arguments) == 14  # 2+6+4+2
         assert state.winner is not None
+
+
+# ---------------------------------------------------------------------------
+# _coerce_score tests (SCDA Sprint 2 — #538)
+# ---------------------------------------------------------------------------
+
+
+class TestCoerceScore:
+    """Test _coerce_score handles string quality descriptors robustly."""
+
+    def test_numeric_int(self):
+        """Integer input converts to float."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score(1) == 1.0
+        assert _coerce_score(0) == 0.0
+
+    def test_numeric_float(self):
+        """Float input passes through."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score(0.85) == 0.85
+        assert _coerce_score(0.0) == 0.0
+
+    def test_high_descriptor(self):
+        """'high' maps to 0.85."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("high") == 0.85
+
+    def test_elevé_descriptor(self):
+        """French 'élevé' maps to 0.85."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("élevé") == 0.85
+
+    def test_medium_descriptor(self):
+        """'medium' maps to 0.5."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("medium") == 0.5
+
+    def test_mixed_descriptor(self):
+        """'mixed' maps to 0.5 — the original crash case."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("mixed") == 0.5
+
+    def test_moyen_descriptor(self):
+        """French 'moyen' maps to 0.5."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("moyen") == 0.5
+
+    def test_low_descriptor(self):
+        """'low' maps to 0.2."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("low") == 0.2
+
+    def test_faible_descriptor(self):
+        """French 'faible' maps to 0.2."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("faible") == 0.2
+
+    def test_unknown_string_defaults_neutral(self):
+        """Unknown descriptor defaults to 0.5 with warning."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("inconclusive") == 0.5
+        assert _coerce_score("N/A") == 0.5
+
+    def test_numeric_string(self):
+        """String containing a number converts correctly."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("0.75") == 0.75
+        assert _coerce_score("0.3") == 0.3
+
+    def test_whitespace_trimmed(self):
+        """Whitespace around descriptor is trimmed."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("  high  ") == 0.85
+        assert _coerce_score(" mixed ") == 0.5
+
+    def test_case_insensitive(self):
+        """Descriptor matching is case-insensitive."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score("High") == 0.85
+        assert _coerce_score("MIXED") == 0.5
+        assert _coerce_score("Low") == 0.2
+
+    def test_non_string_non_numeric_defaults(self):
+        """Non-string, non-numeric input defaults to 0.5."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            _coerce_score,
+        )
+
+        assert _coerce_score(None) == 0.5
+
+
+class TestSuggestDebateStrategyWithDescriptors:
+    """Test suggest_debate_strategy with string descriptors."""
+
+    def test_mixed_strength_no_crash(self):
+        """'mixed' opponent strength does not raise ValueError."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.suggest_debate_strategy(
+            phase="main_arguments", turn_number="5", opponent_strength="mixed"
+        )
+        data = json.loads(result)
+        assert "strategy" in data
+
+    def test_high_strength_aggressive(self):
+        """'high' opponent strength triggers aggressive strategy."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.suggest_debate_strategy(
+            phase="main_arguments", turn_number="5", opponent_strength="high"
+        )
+        data = json.loads(result)
+        assert data["strategy"] == "aggressive"
+
+    def test_low_strength_evidence_heavy(self):
+        """'low' opponent strength after turn 3 triggers evidence_heavy."""
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        plugin = DebatePlugin()
+        result = plugin.suggest_debate_strategy(
+            phase="main_arguments", turn_number="5", opponent_strength="low"
+        )
+        data = json.loads(result)
+        assert data["strategy"] == "evidence_heavy"
