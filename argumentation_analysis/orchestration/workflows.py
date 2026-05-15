@@ -589,18 +589,21 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="propositional_logic",
             depends_on=["nl_to_logic"],
             optional=True,
+            timeout_seconds=180,
         )
         .add_phase(
             "fol",
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
             optional=True,
+            timeout_seconds=180,
         )
         .add_phase(
             "modal",
             capability="modal_logic",
             depends_on=["nl_to_logic"],
             optional=True,
+            timeout_seconds=180,
         )
         # L2c — external solver routing: FOL→EProver/Prover9 (#504)
         .add_phase(
@@ -608,6 +611,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="external_fol_solving",
             depends_on=["fol"],
             optional=True,
+            timeout_seconds=180,
         )
         # L2d — external solver routing: Modal→SPASS (#504)
         .add_phase(
@@ -615,6 +619,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="external_modal_solving",
             depends_on=["modal"],
             optional=True,
+            timeout_seconds=180,
         )
         # L3 — Dung extensions (from fallacy + PL results)
         .add_phase(
@@ -622,6 +627,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="dung_extensions",
             depends_on=["hierarchical_fallacy", "pl"],
             optional=True,
+            timeout_seconds=300,
         )
         # L3b — Ranking semantics (score arguments after Dung)
         .add_phase(
@@ -629,6 +635,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="ranking_semantics",
             depends_on=["dung_extensions"],
             optional=True,
+            timeout_seconds=180,
         )
         # L3c — Bipolar argumentation (support + attack)
         .add_phase(
@@ -636,6 +643,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="bipolar_argumentation",
             depends_on=["counter"],
             optional=True,
+            timeout_seconds=180,
         )
         # L3d — Probabilistic acceptance (confidence-weighted fallacies)
         .add_phase(
@@ -643,6 +651,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="probabilistic_argumentation",
             depends_on=["hierarchical_fallacy"],
             optional=True,
+            timeout_seconds=180,
         )
         # L4 — ASPIC+ structured argumentation
         .add_phase(
@@ -650,6 +659,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="aspic_plus_reasoning",
             depends_on=["dung_extensions"],
             optional=True,
+            timeout_seconds=180,
         )
         # L5 — counter-argument generation
         .add_phase(
@@ -709,6 +719,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="kb_to_tweety",
             depends_on=["text_to_kb"],
             optional=True,
+            timeout_seconds=180,
         )
         # L9b — Interpret all formal results as NL (#506)
         .add_phase(
@@ -723,6 +734,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="belief_revision",
             depends_on=["jtms", "dung_extensions"],
             optional=True,
+            timeout_seconds=180,
         )
         # L9 — terminal synthesis aggregation (#508)
         .add_phase(
