@@ -22,6 +22,7 @@ See docs/architecture/ARCHEOLOGIE_ORCHESTRATION.md for pattern origins.
 import asyncio
 import logging
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -43,6 +44,49 @@ from argumentation_analysis.orchestration.trace_analyzer import (
 )
 
 logger = logging.getLogger("ConversationalOrchestrator")
+
+
+def _detect_language(text: str) -> str:
+    """Detect text language using heuristic word-frequency analysis.
+
+    Distinguishes DE, FR, EN based on common function words and articles.
+    Returns ISO 639-1 code: 'de', 'fr', 'en', or 'unknown'.
+    """
+    sample = text[:3000].lower()
+    scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
+
+    de_markers = [
+        r"\bder\b", r"\bdie\b", r"\bdas\b", r"\bund\b", r"\bist\b",
+        r"\bein\b", r"\beine\b", r"\bden\b", r"\bmit\b", r"\bfür\b",
+        r"\bauf\b", r"\bdes\b", r"\bsich\b", r"\bnicht\b", r"\bvon\b",
+        r"\bsind\b", r"\bwird\b", r"\bdurch\b", r"\bwir\b", r"\bals\b",
+        r"\bauch\b", r"\bnoch\b", r"\bnach\b", r"\büber\b",
+    ]
+    fr_markers = [
+        r"\ble\b", r"\bla\b", r"\bles\b", r"\bde\b", r"\bdes\b",
+        r"\bet\b", r"\best\b", r"\bque\b", r"\bqui\b", r"\bdu\b",
+        r"\bun\b", r"\bune\b", r"\bpour\b", r"\bdans\b", r"\bsur\b",
+        r"\bce\b", r"\bil\b", r"\bne\b", r"\bse\b", r"\bsont\b",
+    ]
+    en_markers = [
+        r"\bthe\b", r"\band\b", r"\bis\b", r"\bto\b", r"\bof\b",
+        r"\bin\b", r"\bthat\b", r"\bfor\b", r"\bit\b", r"\bwith\b",
+        r"\bas\b", r"\bwas\b", r"\bon\b", r"\bare\b", r"\bhave\b",
+        r"\bthis\b", r"\bwe\b", r"\bour\b", r"\bthey\b", r"\bnot\b",
+    ]
+
+    for pattern in de_markers:
+        scores["de"] += len(re.findall(pattern, sample))
+    for pattern in fr_markers:
+        scores["fr"] += len(re.findall(pattern, sample))
+    for pattern in en_markers:
+        scores["en"] += len(re.findall(pattern, sample))
+
+    if max(scores.values()) < 3:
+        return "unknown"
+
+    return max(scores, key=scores.get)
+
 
 # ---------------------------------------------------------------------------
 # Agent configuration: instructions + speciality key for plugin loading.
@@ -354,18 +398,37 @@ async def run_conversational_analysis(
     trace = ConversationalTraceAnalyzer()
     trace.start()
 
+    # 4b. Detect text language for adaptive prompting (#539)
+    detected_lang = _detect_language(text)
+    if detected_lang != "en" and detected_lang != "unknown":
+        logger.info(f"Detected non-English text language: {detected_lang}")
+
     # 5. Run 3 macro-phases
     conversation_log = []
+
+    extraction_prompt = (
+        f"Analysez ce texte argumentatif. Identifiez les arguments, "
+        f"claims et sophismes.\n\nTexte:\n{text}"
+    )
+    if detected_lang == "de":
+        extraction_prompt = (
+            f"Analysez ce texte argumentatif. Identifiez les arguments, "
+            f"claims et sophismes.\n\n"
+            f"IMPORTANT : Le texte est en allemand. Pour la detection de sophismes "
+            f"(InformalAgent), traduisez mentalement les passages en anglais avant "
+            f"d'appliquer la taxonomie de sophismes. Pour les citations textuelles, "
+            f"conservez IMPERATIVEMENT le texte original allemand — ne traduisez "
+            f"jamais les citations. Les arguments doivent etre extraits en anglais "
+            f"avec citations en allemand.\n\n"
+            f"Texte:\n{text}"
+        )
 
     phase_configs = [
         {
             "name": "Extraction & Detection",
             "agents": ["ProjectManager", "ExtractAgent", "InformalAgent"],
             "max_turns": 7,  # More turns for thorough extraction
-            "initial_prompt": (
-                f"Analysez ce texte argumentatif. Identifiez les arguments, "
-                f"claims et sophismes.\n\nTexte:\n{text}"
-            ),
+            "initial_prompt": extraction_prompt,
         },
         {
             "name": "Formal Analysis & Quality",
@@ -493,6 +556,12 @@ async def run_conversational_analysis(
                         "- QualityAgent : ajustez les scores de qualite\n"
                         "- GovernanceAgent : re-evaluez le consensus\n"
                         "Basez-vous sur les retractations JTMS et les lacunes identifiees."
+                        + (
+                            "\n\nRAPPEL : Le texte est en allemand. Traduisez mentalement "
+                            "en anglais pour la detection de sophismes. "
+                            "Conservez les citations en allemand."
+                            if detected_lang == "de" else ""
+                        )
                     ),
                 }
 
