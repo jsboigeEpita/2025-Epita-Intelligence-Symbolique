@@ -423,6 +423,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.workflow_results: Dict[str, Any] = {}
         # Narrative synthesis (#351)
         self.narrative_synthesis: str = ""
+        # PL 2-pass pipeline: shared atom inventory (#547)
+        self.atomic_propositions: Dict[str, List[str]] = {}
 
     def add_counter_argument(
         self, original_arg: str, counter_content: str, strategy: str, score: float

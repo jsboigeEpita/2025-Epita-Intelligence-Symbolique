@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import Dict, Any, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -3116,10 +3117,32 @@ async def _invoke_fact_extraction(
     }
 
 
+def _parse_json_from_llm(raw: str) -> dict:
+    """Extract JSON from LLM response, handling markdown fences and noise."""
+    text = raw.strip()
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0]
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0]
+    start = text.find("{")
+    end = text.rfind("}") + 1
+    if start >= 0 and end > start:
+        try:
+            return json.loads(text[start:end])
+        except json.JSONDecodeError:
+            pass
+    return {}
+
+
 async def _invoke_propositional_logic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Invoke propositional logic analysis — translate arguments to propositions.
+
+    Uses a 2-pass coordinated pipeline when possible (#547):
+      Pass 1: Extract shared atom inventory from full source text
+      Pass 2: Generate per-argument formulas using ONLY shared atoms
+    Falls back to on-the-fly NL translation, then template variables.
 
     If NL-to-logic translations are available from an upstream phase, uses
     those validated formulas. Otherwise falls back to template generation.
@@ -3129,6 +3152,10 @@ async def _invoke_propositional_logic(
     args = _extract_arguments_from_context(input_text, context)
     formulas = context.get("formulas")
     argument_mapping = {}
+    shared_atoms: List[str] = []
+
+    # Retrieve state object for atomic_propositions storage
+    state_obj = context.get("_state_object")
 
     if not formulas:
         # (#208-H) Check if NL-to-logic phase already produced PL translations
@@ -3156,30 +3183,111 @@ async def _invoke_propositional_logic(
                 f"(from upstream phase)"
             )
         else:
-            # Fallback: try on-the-fly NL translation if LLM available
+            # ── 2-pass coordinated pipeline (#547) ──────────────────────
+            # Try the coordinated 2-pass: Pass 1 (atom inventory) → Pass 2 (formulas with shared atoms)
             try:
-                from argumentation_analysis.services.nl_to_logic import (
-                    NLToLogicTranslator,
-                )
+                from openai import AsyncOpenAI
+                import json as _json
 
-                translator = NLToLogicTranslator(
-                    max_retries=2, logic_type="propositional"
-                )
-                batch = await translator.translate_batch(
-                    args[:4], logic_type="propositional", check_consistency=False
-                )
-                valid = [t for t in batch.translations if t.is_valid]
-                if valid:
-                    formulas = [t.formula for t in valid]
-                    argument_mapping = {
-                        t.formula[:30]: t.original_text[:60] for t in valid
-                    }
-                    logger.info(
-                        f"NL-to-logic translated {len(valid)}/{len(args)} "
-                        f"arguments to PL"
+                api_key = os.environ.get("OPENAI_API_KEY", "")
+                if api_key and input_text and len(input_text) > 100:
+                    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+                    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+                    # ── Pass 1: Atom inventory from full source text ──
+                    pass1_prompt = (
+                        "You are an expert in propositional logic. Your task is to identify "
+                        "atomic propositions (basic facts) in the given text.\n\n"
+                        "Output a JSON object with a single key 'propositions' mapping to a "
+                        "list of strings. Each string is an atomic proposition name in "
+                        "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
+                        f"Text:\n{input_text[:4000]}"
                     )
+                    pass1_resp = await client.chat.completions.create(
+                        model=model_id,
+                        messages=[{"role": "user", "content": pass1_prompt}],
+                    )
+                    pass1_raw = pass1_resp.choices[0].message.content or ""
+
+                    # Parse propositions
+                    props_data = _parse_json_from_llm(pass1_raw)
+                    raw_atoms = props_data.get("propositions", [])
+
+                    # Validate atoms: must be alphanumeric + underscore
+                    valid_atoms = [a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)]
+                    if valid_atoms:
+                        shared_atoms = valid_atoms
+                        logger.info(f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted from full text")
+
+                        # Store in state
+                        if state_obj is not None and hasattr(state_obj, "atomic_propositions"):
+                            source_id = context.get("source_metadata", {}).get("opaque_id", "default")
+                            state_obj.atomic_propositions[source_id] = shared_atoms
+
+                    # ── Pass 2: Per-argument formula generation with shared atoms ──
+                    if shared_atoms and args:
+                        atoms_json = _json.dumps({"propositions": shared_atoms}, indent=2)
+                        for arg_text in args[:6]:
+                            pass2_prompt = (
+                                "You are an expert in propositional logic. Translate the text "
+                                "into logical formulas using ONLY the provided atomic propositions.\n\n"
+                                "Rules:\n"
+                                "- Use ONLY the propositions from the list below. Do NOT invent new ones.\n"
+                                "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
+                                "- Output a JSON object with a single key 'formulas' mapping to a "
+                                "list of formula strings.\n\n"
+                                f"Text:\n{arg_text[:2000]}\n\n"
+                                f"Allowed propositions:\n{atoms_json}"
+                            )
+                            try:
+                                pass2_resp = await client.chat.completions.create(
+                                    model=model_id,
+                                    messages=[{"role": "user", "content": pass2_prompt}],
+                                )
+                                pass2_raw = pass2_resp.choices[0].message.content or ""
+                                formulas_data = _parse_json_from_llm(pass2_raw)
+                                arg_formulas = formulas_data.get("formulas", [])
+                                for f in arg_formulas:
+                                    if f and f not in formulas:
+                                        formulas.append(f)
+                                        argument_mapping[f[:30]] = arg_text[:60]
+                            except Exception as arg_err:
+                                logger.debug(f"Pass 2 failed for argument: {arg_err}")
+
+                        if formulas:
+                            logger.info(
+                                f"PL 2-pass Pass 2: {len(formulas)} formulas generated "
+                                f"with {len(shared_atoms)} shared atoms"
+                            )
             except Exception as e:
-                logger.debug(f"NL-to-logic PL translation unavailable: {e}")
+                logger.debug(f"PL 2-pass pipeline unavailable: {e}")
+
+            # Fallback: try on-the-fly NL translation if LLM available (and 2-pass didn't produce formulas)
+            if not formulas:
+                try:
+                    from argumentation_analysis.services.nl_to_logic import (
+                        NLToLogicTranslator,
+                    )
+
+                    translator = NLToLogicTranslator(
+                        max_retries=2, logic_type="propositional"
+                    )
+                    batch = await translator.translate_batch(
+                        args[:4], logic_type="propositional", check_consistency=False
+                    )
+                    valid = [t for t in batch.translations if t.is_valid]
+                    if valid:
+                        formulas = [t.formula for t in valid]
+                        argument_mapping = {
+                            t.formula[:30]: t.original_text[:60] for t in valid
+                        }
+                        logger.info(
+                            f"NL-to-logic translated {len(valid)}/{len(args)} "
+                            f"arguments to PL"
+                        )
+                except Exception as e:
+                    logger.debug(f"NL-to-logic PL translation unavailable: {e}")
 
         if not formulas:
             # Final fallback: template-based variables
