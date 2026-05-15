@@ -49,6 +49,8 @@ __all__ = [
     "_write_qbf_to_state",
     "_write_collaborative_analysis_to_state",
     "_write_narrative_synthesis_to_state",
+    "_write_external_fol_solver_to_state",
+    "_write_external_modal_solver_to_state",
     "CAPABILITY_STATE_WRITERS",
 ]
 
@@ -889,6 +891,8 @@ def _write_tweety_interpretation_to_state(
             add_extract("formal_interpretation", interpretation)
         elif hasattr(state, "formal_interpretation"):
             state.formal_interpretation = interpretation
+
+
 def _write_analysis_synthesis_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -903,6 +907,48 @@ def _write_analysis_synthesis_to_state(
                 "phase_count": output.get("phase_count", 0),
                 "overall_completeness": output.get("overall_completeness", 0.0),
             }
+
+
+def _write_external_fol_solver_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write external FOL solver results to UnifiedAnalysisState (#504)."""
+    if not output or not isinstance(output, dict):
+        return
+    solver = output.get("solver", "none")
+    consistent = output.get("consistent")
+    if isinstance(state, dict):
+        state["external_fol_solver"] = {
+            "solver": solver,
+            "consistent": consistent,
+        }
+    else:
+        if hasattr(state, "fol_analysis_results") and isinstance(
+            state.fol_analysis_results, dict
+        ):
+            state.fol_analysis_results["external_solver"] = solver
+            state.fol_analysis_results["external_consistent"] = consistent
+
+
+def _write_external_modal_solver_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write external modal solver results to UnifiedAnalysisState (#504)."""
+    if not output or not isinstance(output, dict):
+        return
+    solver = output.get("solver", "none")
+    valid = output.get("valid")
+    if isinstance(state, dict):
+        state["external_modal_solver"] = {
+            "solver": solver,
+            "valid": valid,
+        }
+    else:
+        if hasattr(state, "modal_analysis_results") and isinstance(
+            state.modal_analysis_results, dict
+        ):
+            state.modal_analysis_results["external_solver"] = solver
+            state.modal_analysis_results["external_valid"] = valid
 
 
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
@@ -946,4 +992,6 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "kb_to_tweety": _write_kb_to_tweety_to_state,
     "formal_result_interpretation": _write_tweety_interpretation_to_state,
     "analysis_synthesis": _write_analysis_synthesis_to_state,
+    "external_fol_solving": _write_external_fol_solver_to_state,
+    "external_modal_solving": _write_external_modal_solver_to_state,
 }

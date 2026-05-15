@@ -602,6 +602,20 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        # L2c — external solver routing: FOL→EProver/Prover9 (#504)
+        .add_phase(
+            "fol_solver",
+            capability="external_fol_solving",
+            depends_on=["fol"],
+            optional=True,
+        )
+        # L2d — external solver routing: Modal→SPASS (#504)
+        .add_phase(
+            "modal_solver",
+            capability="external_modal_solving",
+            depends_on=["modal"],
+            optional=True,
+        )
         # L3 — Dung extensions (from fallacy + PL results)
         .add_phase(
             "dung_extensions",
