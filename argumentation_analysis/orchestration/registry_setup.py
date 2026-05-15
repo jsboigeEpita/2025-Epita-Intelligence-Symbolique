@@ -54,6 +54,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_text_to_kb,
     _invoke_kb_to_tweety,
     _invoke_tweety_interpretation,
+    _invoke_analysis_synthesis,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -496,6 +497,23 @@ def setup_registry(
             registered.append(name)
         except Exception as e:
             skipped.append((name, str(e)))
+    # --- Analysis synthesis service (#508) ---
+    try:
+        registry.register_service(
+            name="analysis_synthesis_service",
+            service_class=type("analysis_synthesis_service", (), {}),
+            capabilities=["analysis_synthesis"],
+            metadata={
+                "description": (
+                    "Terminal aggregation of all analysis phase outputs "
+                    "into a structured synthesis report"
+                )
+            },
+            invoke=_invoke_analysis_synthesis,
+        )
+        registered.append("analysis_synthesis_service")
+    except Exception as e:
+        skipped.append(("analysis_synthesis_service", str(e)))
 
     # --- Collaborative multi-agent debate (#175) ---
     try:

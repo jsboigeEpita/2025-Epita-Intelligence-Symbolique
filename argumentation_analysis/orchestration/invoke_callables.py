@@ -79,6 +79,7 @@ __all__ = [
     "_invoke_text_to_kb",
     "_invoke_kb_to_tweety",
     "_invoke_tweety_interpretation",
+    "_invoke_analysis_synthesis",
 ]
 
 
@@ -3803,6 +3804,106 @@ def _count_referenced_fields(state: Any) -> int:
         if val and (isinstance(val, (list, dict)) and len(val) > 0):
             count += 1
     return count
+
+
+# ---------------------------------------------------------------------------
+# Analysis synthesis invoke callable (#508)
+# ---------------------------------------------------------------------------
+
+
+async def _invoke_analysis_synthesis(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Aggregate all analysis phase outputs into a structured synthesis (#508).
+
+    Collects results from quality, fallacy, counter-argument, debate,
+    governance, and formal phases (from context), and produces a
+    structured summary with scores and key findings.
+    """
+    state = context.get("_state_object")
+    phase_results = {}
+
+    # Collect phase outputs from context
+    for key, val in context.items():
+        if (
+            key.startswith("phase_")
+            and key.endswith("_output")
+            and isinstance(val, dict)
+        ):
+            phase_name = key[len("phase_") : -len("_output")]
+            phase_results[phase_name] = val
+
+    # Build structured synthesis from state if available
+    sections = {}
+
+    # Quality summary
+    quality_scores = getattr(state, "argument_quality_scores", None) if state else None
+    if quality_scores and isinstance(quality_scores, (list, dict)):
+        sections["quality"] = {
+            "evaluated": (
+                len(quality_scores)
+                if isinstance(quality_scores, list)
+                else len(quality_scores)
+            ),
+            "summary": f"{len(quality_scores)} arguments evaluated",
+        }
+
+    # Fallacy summary
+    fallacies = getattr(state, "identified_fallacies", None) if state else None
+    if fallacies and isinstance(fallacies, list):
+        sections["fallacies"] = {
+            "count": len(fallacies),
+            "types": list(
+                set(f.get("type", "unknown") for f in fallacies if isinstance(f, dict))
+            ),
+        }
+
+    # Counter-argument summary
+    counter_args = getattr(state, "counter_arguments", None) if state else None
+    if counter_args and isinstance(counter_args, list):
+        sections["counter_arguments"] = {
+            "generated": len(counter_args),
+        }
+
+    # JTMS beliefs
+    jtms_beliefs = getattr(state, "jtms_beliefs", None) if state else None
+    if jtms_beliefs and isinstance(jtms_beliefs, (list, dict)):
+        sections["beliefs"] = {
+            "tracked": (
+                len(jtms_beliefs)
+                if isinstance(jtms_beliefs, list)
+                else len(jtms_beliefs)
+            ),
+        }
+
+    # Formal results
+    for field_name in [
+        "dung_frameworks",
+        "fol_analysis_results",
+        "propositional_analysis_results",
+        "modal_analysis_results",
+    ]:
+        formal = getattr(state, field_name, None) if state else None
+        if formal and isinstance(formal, (list, dict)):
+            sections[field_name] = {"present": True, "size": len(formal)}
+
+    # Overall assessment
+    total_phases = len(phase_results)
+    sections_count = len(sections)
+    overall_completeness = (
+        sections_count / max(total_phases, 1) if total_phases > 0 else 0.0
+    )
+
+    return {
+        "synthesis": sections,
+        "phase_count": total_phases,
+        "sections_count": sections_count,
+        "overall_completeness": round(overall_completeness, 2),
+        "phase_results_summary": {
+            name: "completed" if "error" not in res else f"error: {res['error'][:50]}"
+            for name, res in phase_results.items()
+        },
+    }
 
 
 # --- State writers: map capability → (output, state, ctx) → None ---
