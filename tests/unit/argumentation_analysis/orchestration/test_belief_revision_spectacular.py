@@ -23,7 +23,7 @@ class TestBeliefRevisionSpectacularPhase:
         )
 
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 21
+        assert len(wf.phases) == 27
 
     def test_belief_revision_state_writer_exists(self):
         from argumentation_analysis.orchestration.state_writers import (

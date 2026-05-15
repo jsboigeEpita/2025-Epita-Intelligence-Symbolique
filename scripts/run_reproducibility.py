@@ -34,18 +34,44 @@ RESULTS_DIR = Path("analysis_kb/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _phase_progress_callback(results: dict, ctx: dict) -> None:
+    """Print phase progress to stdout for the parent process to capture."""
+    for name, r in results.items():
+        if not hasattr(r, 'status'):
+            continue
+        status = r.status.value if hasattr(r.status, 'value') else str(r.status)
+        dur = getattr(r, 'duration_seconds', None)
+        dur_str = f" ({dur:.1f}s)" if dur else ""
+        print(f"[PHASE] {name}: {status}{dur_str}", flush=True)
+
+
 async def run_once(text: str, timeout_s: int, workflow_name: str) -> dict[str, Any]:
     from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
 
     start = time.time()
     results = await asyncio.wait_for(
-        run_unified_analysis(text=text, workflow_name=workflow_name),
+        run_unified_analysis(
+            text=text,
+            workflow_name=workflow_name,
+            checkpoint_callback=_phase_progress_callback,
+        ),
         timeout=timeout_s,
     )
     duration = time.time() - start
 
     state = results.get("state_snapshot", {})
     summary = results.get("summary", {})
+
+    # Extract per-phase timing from PhaseResult objects
+    phase_results = results.get("phases", {})
+    phase_timings = {}
+    for name, pr in phase_results.items():
+        if hasattr(pr, 'duration_seconds'):
+            status = pr.status.value if hasattr(pr.status, 'value') else str(pr.status)
+            phase_timings[name] = {
+                "duration_s": round(pr.duration_seconds, 1),
+                "status": status,
+            }
 
     return {
         "duration_seconds": round(duration, 1),
@@ -59,7 +85,18 @@ async def run_once(text: str, timeout_s: int, workflow_name: str) -> dict[str, A
         "arguments_count": len(state.get("arguments", [])),
         "jtms_beliefs_count": len(state.get("jtms_beliefs", [])),
         "capabilities_used": len(results.get("capabilities_used", [])),
+        "phase_timings": phase_timings,
     }
+
+
+def _dump_threads(pid: int) -> str:
+    """Attempt to dump thread stacks from a child process (best-effort, Windows)."""
+    try:
+        import ctypes
+        # On Windows, we can't easily inject a signal. Best-effort: return what we know.
+        return f"(Windows: thread dump not available for PID {pid})"
+    except Exception:
+        return "(thread dump failed)"
 
 
 def run_once_isolated(doc_id: str, timeout_s: int, workflow_name: str) -> dict[str, Any]:
@@ -68,6 +105,8 @@ def run_once_isolated(doc_id: str, timeout_s: int, workflow_name: str) -> dict[s
     The child invokes this same script with --child-mode and prints a JSON result
     on its last stdout line. We give the subprocess a small wall-clock buffer over
     the in-run timeout so it gets a chance to print the TimeoutError JSON itself.
+
+    Phase progress is logged via [PHASE] stdout markers captured in the output.
     """
     cmd = [
         sys.executable, "-u", str(Path(__file__).resolve()),
@@ -78,21 +117,51 @@ def run_once_isolated(doc_id: str, timeout_s: int, workflow_name: str) -> dict[s
     wall_clock = timeout_s + 60  # extra margin for import + load_document_text
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     start = time.time()
+
+    # Use Popen for better timeout control and diagnostic capture
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        encoding="utf-8",
+        errors="replace",
+    )
+    stdout = ""
+    stderr = ""
     try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=wall_clock,
-            env=env,
-            encoding="utf-8",
-            errors="replace",
-        )
+        stdout, stderr = proc.communicate(timeout=wall_clock)
     except subprocess.TimeoutExpired:
-        return {"error": f"SubprocessTimeout: exceeded {wall_clock}s wall clock"}
+        # Capture partial output before killing
+        proc.kill()
+        try:
+            stdout, stderr = proc.communicate(timeout=5)
+        except (subprocess.TimeoutExpired, Exception):
+            pass
+
+        # Extract phase progress from partial output
+        phases_seen = [
+            line.strip()
+            for line in (stdout or "").splitlines()
+            if line.strip().startswith("[PHASE]")
+        ]
+        # Last phase that completed before hang = suspect
+        last_phase = phases_seen[-1] if phases_seen else "(no phase progress)"
+
+        thread_info = _dump_threads(proc.pid)
+
+        return {
+            "error": f"SubprocessTimeout: exceeded {wall_clock}s wall clock",
+            "last_phase": last_phase,
+            "phases_seen": phases_seen,
+            "thread_dump": thread_info,
+            "stderr_tail": (stderr or "")[-500:].strip(),
+            "duration_seconds": round(time.time() - start, 1),
+        }
 
     if proc.returncode != 0:
-        tail = (proc.stderr or proc.stdout or "")[-400:]
+        tail = (stderr or stdout or "")[-400:]
         return {
             "error": f"SubprocessExit: rc={proc.returncode}",
             "stderr_tail": tail.strip(),
@@ -100,7 +169,7 @@ def run_once_isolated(doc_id: str, timeout_s: int, workflow_name: str) -> dict[s
         }
 
     last_json_line = None
-    for line in (proc.stdout or "").splitlines()[::-1]:
+    for line in (stdout or "").splitlines()[::-1]:
         line = line.strip()
         if line.startswith("{") and line.endswith("}"):
             last_json_line = line
