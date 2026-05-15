@@ -240,7 +240,6 @@ async def _run_single(
             ),
             timeout=timeout,
         )
-        )
         # Prefer full (non-summarized) state for pattern mining.
         state_snapshot = result.get("state_snapshot", {})
         # Prefer full (non-summarized) state for pattern mining.
