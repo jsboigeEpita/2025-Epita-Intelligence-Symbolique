@@ -58,6 +58,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_narrative_synthesis,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
+    _invoke_deep_synthesis,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -720,3 +721,19 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
             # Fall back to slot declaration if JVM not available
             for cap in caps:
                 registry.declare_slot(cap, requires=["jvm"], description=desc)
+
+    # Deep synthesis service (#532)
+    try:
+        registry.register_service(
+            name="deep_synthesis_service",
+            service_class=type("DeepSynthesisService", (), {}),
+            capabilities=["deep_synthesis", "multi_page_report", "grounded_analysis"],
+            metadata={
+                "description": "Aggregates spectacular-run state into multi-page grounded markdown report (9 sections)",
+                "sections": 9,
+            },
+            invoke=_invoke_deep_synthesis,
+        )
+        registered.append("deep_synthesis_service")
+    except Exception as e:
+        skipped.append(("deep_synthesis_service", str(e)))

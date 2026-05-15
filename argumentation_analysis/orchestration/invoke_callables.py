@@ -82,6 +82,7 @@ __all__ = [
     "_invoke_analysis_synthesis",
     "_invoke_external_fol_solver",
     "_invoke_external_modal_solver",
+    "_invoke_deep_synthesis",
 ]
 
 
@@ -4279,3 +4280,87 @@ async def _invoke_external_modal_solver(
             "error": str(e),
             "logic_type": "modal",
         }
+
+
+async def _invoke_deep_synthesis(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Invoke DeepSynthesisAgent on the current shared state (#532).
+
+    Reads the full UnifiedAnalysisState from context, runs the 9-section
+    template-driven synthesis, and returns both the report object and the
+    rendered markdown.
+    """
+    state = context.get("_state_object")
+    if state is None:
+        return {"error": "No shared state available for deep synthesis"}
+
+    from argumentation_analysis.agents.core.synthesis.deep_synthesis_agent import (
+        DeepSynthesisAgent,
+    )
+    from argumentation_analysis.agents.core.synthesis.deep_synthesis_models import (
+        DeepSynthesisReport,
+    )
+
+    try:
+        # Try full agent instantiation (with LLM for section 9)
+        from semantic_kernel import Kernel
+
+        kernel = Kernel()
+        try:
+            from argumentation_analysis.core.llm_service import create_llm_service
+
+            llm = create_llm_service()
+            if llm:
+                kernel.add_service(llm)
+        except Exception:
+            pass
+
+        try:
+            agent = DeepSynthesisAgent(kernel=kernel)
+            source_meta = context.get("source_metadata", {})
+            report = await agent.synthesize(state, source_metadata=source_meta)
+        except (ValueError, Exception) as agent_err:
+            # Agent init failed (no LLM service) — use static builders directly
+            logger.info(f"Agent instantiation failed ({agent_err}), using static builders")
+            source_meta = context.get("source_metadata", {})
+            report = DeepSynthesisReport(
+                source_overview=DeepSynthesisAgent._build_source_overview(state, source_meta),
+                argument_map=DeepSynthesisAgent._build_argument_map(state),
+                fallacy_diagnoses=DeepSynthesisAgent._build_fallacy_diagnoses(state),
+                formal_findings=DeepSynthesisAgent._build_formal_findings(state),
+                dung_structure=DeepSynthesisAgent._build_dung_structure(state),
+                belief_retractions=DeepSynthesisAgent._build_belief_retractions(state),
+                counter_arguments=DeepSynthesisAgent._build_counter_arguments(state),
+                cross_text_parallels=DeepSynthesisAgent._build_cross_text_parallels(state),
+            )
+            report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
+                state, report, []
+            )
+            report.total_state_fields = DeepSynthesisAgent._count_state_fields(state)
+            report.sections_populated = DeepSynthesisAgent._count_populated_sections(report)
+
+        markdown = DeepSynthesisAgent.render_markdown(report)
+
+        # Write markdown to gitignored output if path provided
+        output_path = context.get("deep_synthesis_output_path")
+        if output_path:
+            from pathlib import Path
+
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_text(markdown, encoding="utf-8")
+            logger.info(f"Deep synthesis report written to {output_path}")
+
+        return {
+            "report": report.to_dict(),
+            "markdown": markdown,
+            "sections_populated": report.sections_populated,
+            "total_state_fields": report.total_state_fields,
+            "summary": (
+                f"Deep synthesis: {report.sections_populated}/9 sections, "
+                f"{report.total_state_fields} state fields consumed"
+            ),
+        }
+    except Exception as e:
+        logger.error(f"Deep synthesis failed: {e}", exc_info=True)
+        return {"error": str(e)}
