@@ -80,6 +80,8 @@ __all__ = [
     "_invoke_kb_to_tweety",
     "_invoke_tweety_interpretation",
     "_invoke_analysis_synthesis",
+    "_invoke_external_fol_solver",
+    "_invoke_external_modal_solver",
 ]
 
 
@@ -4091,3 +4093,189 @@ async def _invoke_tweety_interpretation(
     except Exception as e:
         logger.warning(f"TweetyInterpretation failed: {e}")
         return {"error": str(e), "interpretation": ""}
+
+
+# ---------------------------------------------------------------------------
+# External solver routing — FOL → EProver/Prover9, Modal → SPASS (#504)
+# ---------------------------------------------------------------------------
+
+
+async def _invoke_external_fol_solver(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Route FOL formulas to external solver (EProver/Prover9) with fallback (#504).
+
+    Picks up formulas from the FOL phase output. Tries EProver via Tweety
+    EFOLReasoner first, then Prover9 subprocess. Falls back to TweetyBridge
+    (the default FOL path) when neither external solver is available.
+    """
+    fol_output = context.get("phase_fol_output", {})
+    if not isinstance(fol_output, dict):
+        fol_output = {}
+    formulas = fol_output.get("formulas", [input_text])
+    if not isinstance(formulas, list):
+        formulas = [str(formulas)]
+
+    fol_signature = fol_output.get("fol_signature", [])
+
+    # Try EProver via Tweety EFOLReasoner
+    try:
+        from argumentation_analysis.core.config import settings
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+            FOLLogicAgent,
+        )
+
+        # Check if EProver is configured
+        if getattr(settings, "fol_solver", None) == "eprover":
+            bridge = TweetyBridge()
+            meta = FOLLogicAgent.extract_fol_metadata(formulas)
+            sig = meta.get("signature_lines", fol_signature)
+            belief_set_str = "\n".join(str(f) for f in sig + [""] + formulas)
+            is_consistent, msg = await asyncio.to_thread(
+                bridge.check_consistency, belief_set_str, "first_order"
+            )
+            return {
+                "formulas": formulas,
+                "consistent": bool(is_consistent),
+                "solver": "eprover",
+                "message": msg,
+                "logic_type": "first_order",
+            }
+    except Exception as e:
+        logger.info(f"EProver unavailable ({e}), trying Prover9")
+
+    # Try Prover9 subprocess
+    try:
+        from argumentation_analysis.core.prover9_runner import run_prover9
+
+        belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
+        prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
+        result = await asyncio.to_thread(run_prover9, prover9_input)
+        proved = "THEOREM PROVED" in result or "Proof found" in result
+        return {
+            "formulas": formulas,
+            "consistent": proved,
+            "solver": "prover9",
+            "raw_output": result[:500],
+            "logic_type": "first_order",
+        }
+    except FileNotFoundError:
+        logger.info("Prover9 binary not found, falling back to TweetyBridge")
+    except Exception as e:
+        logger.info(f"Prover9 failed ({e}), falling back to TweetyBridge")
+
+    # Fallback: TweetyBridge (default path)
+    try:
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+            FOLLogicAgent,
+        )
+
+        bridge = TweetyBridge()
+        meta = FOLLogicAgent.extract_fol_metadata(formulas)
+        sig = meta.get("signature_lines", fol_signature)
+        belief_set_str = "\n".join(str(f) for f in sig + [""] + formulas)
+        is_consistent, msg = await asyncio.to_thread(
+            bridge.check_consistency, belief_set_str, "first_order"
+        )
+        return {
+            "formulas": formulas,
+            "consistent": bool(is_consistent),
+            "solver": "tweety_fallback",
+            "message": msg,
+            "logic_type": "first_order",
+        }
+    except Exception as e:
+        return {
+            "formulas": formulas,
+            "consistent": None,
+            "solver": "none",
+            "error": str(e),
+            "logic_type": "first_order",
+        }
+
+
+async def _invoke_external_modal_solver(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Route modal formulas to SPASS with TweetyBridge fallback (#504).
+
+    Picks up formulas from the modal phase output. Tries SPASS via
+    SPASSMlReasoner first. Falls back to TweetyBridge when SPASS is
+    not available.
+    """
+    modal_output = context.get("phase_modal_output", {})
+    if not isinstance(modal_output, dict):
+        modal_output = {}
+    formulas = modal_output.get("formulas", [input_text])
+    if not isinstance(formulas, list):
+        formulas = [str(formulas)]
+
+    modalities = modal_output.get("modalities", ["none_detected"])
+
+    # Try SPASS via ModalHandler
+    try:
+        from argumentation_analysis.core.config import settings, ModalSolverChoice
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        if not settings.modal_solver == ModalSolverChoice.SPASS:
+            object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
+        initializer = TweetyInitializer()
+        handler = ModalHandler(initializer_instance=initializer)
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        is_consistent, msg = await asyncio.to_thread(
+            handler.is_modal_kb_consistent, belief_set_str
+        )
+        return {
+            "formulas": formulas,
+            "valid": bool(is_consistent),
+            "modalities": modalities,
+            "solver": "spass",
+            "message": msg,
+            "logic_type": "modal",
+        }
+    except Exception as e:
+        logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
+
+    # Fallback: TweetyBridge
+    try:
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        bridge = TweetyBridge()
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        logic_type = context.get("modal_logic_type", "K")
+        accepted, msg = await asyncio.to_thread(
+            bridge.execute_modal_query,
+            belief_set_str,
+            belief_set_str,
+            logic_type=logic_type,
+        )
+        return {
+            "formulas": formulas,
+            "valid": accepted,
+            "modalities": modalities,
+            "solver": "tweety_fallback",
+            "message": msg,
+            "logic_type": "modal",
+        }
+    except Exception as e:
+        return {
+            "formulas": formulas,
+            "valid": None,
+            "modalities": modalities,
+            "solver": "none",
+            "error": str(e),
+            "logic_type": "modal",
+        }

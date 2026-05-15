@@ -56,6 +56,8 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_tweety_interpretation,
     _invoke_analysis_synthesis,
     _invoke_narrative_synthesis,
+    _invoke_external_fol_solver,
+    _invoke_external_modal_solver,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -516,6 +518,33 @@ def setup_registry(
         registered.append("narrative_synthesis_service")
     except Exception as e:
         skipped.append(("narrative_synthesis_service", str(e)))
+
+    # --- External solver routing services (#504) ---
+    for name, caps, desc, invoke_fn in [
+        (
+            "external_fol_solver_service",
+            ["external_fol_solving"],
+            "Route FOL formulas to EProver/Prover9 with TweetyBridge fallback",
+            _invoke_external_fol_solver,
+        ),
+        (
+            "external_modal_solver_service",
+            ["external_modal_solving"],
+            "Route modal formulas to SPASS with TweetyBridge fallback",
+            _invoke_external_modal_solver,
+        ),
+    ]:
+        try:
+            registry.register_service(
+                name=name,
+                service_class=type(name, (), {}),
+                capabilities=caps,
+                metadata={"description": desc},
+                invoke=invoke_fn,
+            )
+            registered.append(name)
+        except Exception as e:
+            skipped.append((name, str(e)))
 
     # --- Analysis synthesis service (#508) ---
     try:
