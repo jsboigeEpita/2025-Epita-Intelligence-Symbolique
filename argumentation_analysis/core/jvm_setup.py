@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # core/jvm_setup.py
 import os
+import argumentation_analysis.core.dll_guard  # noqa: F401 — must precede jpype import on Windows
 import jpype
 import jpype.imports
 import logging
