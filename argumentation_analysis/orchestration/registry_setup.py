@@ -594,6 +594,22 @@ def setup_registry(
     if skipped:
         logger.debug(f"Skipped components: {[s[0] for s in skipped]}")
 
+    # Deep synthesis service (#532)
+    try:
+        registry.register_service(
+            name="deep_synthesis_service",
+            service_class=type("DeepSynthesisService", (), {}),
+            capabilities=["deep_synthesis", "multi_page_report", "grounded_analysis"],
+            metadata={
+                "description": "Aggregates spectacular-run state into multi-page grounded markdown report (9 sections)",
+                "sections": 9,
+            },
+            invoke=_invoke_deep_synthesis,
+        )
+        registered.append("deep_synthesis_service")
+    except Exception as e:
+        skipped.append(("deep_synthesis_service", str(e)))
+
     return registry
 
 
@@ -721,19 +737,3 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
             # Fall back to slot declaration if JVM not available
             for cap in caps:
                 registry.declare_slot(cap, requires=["jvm"], description=desc)
-
-    # Deep synthesis service (#532)
-    try:
-        registry.register_service(
-            name="deep_synthesis_service",
-            service_class=type("DeepSynthesisService", (), {}),
-            capabilities=["deep_synthesis", "multi_page_report", "grounded_analysis"],
-            metadata={
-                "description": "Aggregates spectacular-run state into multi-page grounded markdown report (9 sections)",
-                "sections": 9,
-            },
-            invoke=_invoke_deep_synthesis,
-        )
-        registered.append("deep_synthesis_service")
-    except Exception as e:
-        skipped.append(("deep_synthesis_service", str(e)))

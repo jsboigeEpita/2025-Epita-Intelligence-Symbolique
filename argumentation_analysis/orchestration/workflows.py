@@ -749,6 +749,18 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             ],
             optional=True,
         )
+        # L10 — Deep synthesis: grounded 9-section markdown report (#534)
+        .add_phase(
+            "deep_synthesis",
+            capability="deep_synthesis",
+            depends_on=[
+                "synthesis",
+                "narrative_synthesis",
+                "belief_revision",
+            ],
+            optional=False,
+            timeout_seconds=180,
+        )
         .build()
     )
 
