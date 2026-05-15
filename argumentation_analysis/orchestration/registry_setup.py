@@ -55,6 +55,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_kb_to_tweety,
     _invoke_tweety_interpretation,
     _invoke_analysis_synthesis,
+    _invoke_narrative_synthesis,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -497,6 +498,25 @@ def setup_registry(
             registered.append(name)
         except Exception as e:
             skipped.append((name, str(e)))
+    # --- Narrative synthesis service (#503) ---
+    try:
+        registry.register_service(
+            name="narrative_synthesis_service",
+            service_class=type("narrative_synthesis_service", (), {}),
+            capabilities=["narrative_synthesis"],
+            metadata={
+                "description": (
+                    "Produce readable prose narrative weaving together all "
+                    "analysis phase outputs (quality, fallacies, JTMS, ATMS, "
+                    "Dung, formal logic)"
+                )
+            },
+            invoke=_invoke_narrative_synthesis,
+        )
+        registered.append("narrative_synthesis_service")
+    except Exception as e:
+        skipped.append(("narrative_synthesis_service", str(e)))
+
     # --- Analysis synthesis service (#508) ---
     try:
         registry.register_service(
