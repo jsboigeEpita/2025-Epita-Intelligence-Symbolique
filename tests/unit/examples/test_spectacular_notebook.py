@@ -1,6 +1,8 @@
 """Smoke tests for spectacular_analysis_tour.ipynb — #362"""
 
+import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -15,8 +17,12 @@ SCRIPT = Path(__file__).resolve().parent.parent.parent.parent / (
     "examples/02_core_system_demos/scripts_demonstration/demonstration_epita_spectacular.py"
 )
 
+_HAS_NBFORMAT = importlib.util.find_spec("nbformat") is not None
+_HAS_JUPYTER = importlib.util.find_spec("jupyter") is not None
+
 
 @pytest.mark.skipif(not NOTEBOOK.exists(), reason="Notebook not found")
+@pytest.mark.skipif(not _HAS_NBFORMAT, reason="nbformat not installed (optional test dep)")
 class TestSpectacularNotebook:
     """Verify the Jupyter companion notebook structure and execution."""
 
@@ -71,6 +77,7 @@ class TestSpectacularNotebook:
         assert "MOCK_SPECTACULAR_RESULT" in code_text
 
     @pytest.mark.skipif(not SCRIPT.exists(), reason="Demo script dependency not found")
+    @pytest.mark.skipif(not _HAS_JUPYTER, reason="jupyter not installed (optional test dep)")
     def test_notebook_executes_headless(self, tmp_path):
         """Execute the notebook via nbconvert and verify no errors.
 
