@@ -96,7 +96,9 @@ except (ImportError, AttributeError):
 _disable_jvm_early_check = any(arg == "--disable-jvm-session" for arg in sys.argv)
 if _disable_jvm_early_check:
     print("[INFO] Early check: --disable-jvm-session detected. Mocking jpype globally.")
-    sys.modules["jpype"] = MagicMock()
+    _mock_jpype = MagicMock()
+    _mock_jpype.__version__ = "1.6.0-mock"
+    sys.modules["jpype"] = _mock_jpype
     sys.modules["jpype.imports"] = MagicMock()
 
 # Désactive la vérification de l'environnement Conda pour les tests E2E
