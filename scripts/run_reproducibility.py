@@ -14,7 +14,9 @@ Acceptance (Epic G DEFERRED criterion):
 import argparse
 import asyncio
 import json
+import os
 import statistics
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -60,6 +62,78 @@ async def run_once(text: str, timeout_s: int, workflow_name: str) -> dict[str, A
     }
 
 
+def run_once_isolated(doc_id: str, timeout_s: int, workflow_name: str) -> dict[str, Any]:
+    """Spawn a fresh Python process to do one run — isolates JVM/asyncio/module state.
+
+    The child invokes this same script with --child-mode and prints a JSON result
+    on its last stdout line. We give the subprocess a small wall-clock buffer over
+    the in-run timeout so it gets a chance to print the TimeoutError JSON itself.
+    """
+    cmd = [
+        sys.executable, "-u", str(Path(__file__).resolve()),
+        "--child-mode", doc_id,
+        "--timeout", str(timeout_s),
+        "--workflow", workflow_name,
+    ]
+    wall_clock = timeout_s + 60  # extra margin for import + load_document_text
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    start = time.time()
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=wall_clock,
+            env=env,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.TimeoutExpired:
+        return {"error": f"SubprocessTimeout: exceeded {wall_clock}s wall clock"}
+
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout or "")[-400:]
+        return {
+            "error": f"SubprocessExit: rc={proc.returncode}",
+            "stderr_tail": tail.strip(),
+            "duration_seconds": round(time.time() - start, 1),
+        }
+
+    last_json_line = None
+    for line in (proc.stdout or "").splitlines()[::-1]:
+        line = line.strip()
+        if line.startswith("{") and line.endswith("}"):
+            last_json_line = line
+            break
+    if not last_json_line:
+        return {
+            "error": "SubprocessParse: no JSON line in stdout",
+            "duration_seconds": round(time.time() - start, 1),
+        }
+    try:
+        return json.loads(last_json_line)
+    except json.JSONDecodeError as e:
+        return {"error": f"SubprocessParse: {e}", "duration_seconds": round(time.time() - start, 1)}
+
+
+async def child_main(doc_id: str, timeout_s: int, workflow_name: str) -> int:
+    """Entry point for the --child-mode subprocess: one run, JSON to stdout, exit."""
+    text = load_document_text(doc_id)
+    if not text:
+        print(json.dumps({"error": "load_failed"}))
+        return 0
+    try:
+        res = await run_once(text, timeout_s=timeout_s, workflow_name=workflow_name)
+    except asyncio.TimeoutError:
+        print(json.dumps({"error": f"TimeoutError: exceeded {timeout_s}s"}))
+        return 0
+    except Exception as exc:
+        print(json.dumps({"error": f"{type(exc).__name__}: {exc}"}))
+        return 0
+    print(json.dumps(res))
+    return 0
+
+
 def _range(values: list[float]) -> dict[str, Any]:
     return {
         "values": values,
@@ -72,28 +146,38 @@ def _range(values: list[float]) -> dict[str, Any]:
 
 
 async def reproducibility_for_doc(
-    doc_id: str, n_runs: int, timeout_s: int, workflow_name: str
+    doc_id: str, n_runs: int, timeout_s: int, workflow_name: str, isolate: bool = False
 ) -> dict[str, Any]:
     print(f"\n[{doc_id}] loading...")
-    text = load_document_text(doc_id)
-    if not text:
+    text = load_document_text(doc_id) if not isolate else None
+    if not isolate and not text:
         print(f"[{doc_id}] ERROR: could not load")
         return {"doc_id": doc_id, "error": "load_failed"}
-    print(f"[{doc_id}] loaded {len(text)} chars")
+    if text:
+        print(f"[{doc_id}] loaded {len(text)} chars")
+    else:
+        print(f"[{doc_id}] (isolate mode — child process loads document per run)")
 
     runs: list[dict[str, Any]] = []
     for i in range(1, n_runs + 1):
         print(f"[{doc_id}] run {i}/{n_runs}...", end=" ", flush=True)
-        try:
-            res = await run_once(text, timeout_s=timeout_s, workflow_name=workflow_name)
-        except asyncio.TimeoutError:
-            print(f"TIMEOUT (>{timeout_s}s)")
-            runs.append({"run": i, "error": f"TimeoutError: exceeded {timeout_s}s"})
-            continue
-        except Exception as exc:
-            print(f"FAIL ({type(exc).__name__}: {exc})")
-            runs.append({"run": i, "error": f"{type(exc).__name__}: {exc}"})
-            continue
+        if isolate:
+            res = run_once_isolated(doc_id, timeout_s=timeout_s, workflow_name=workflow_name)
+            if "error" in res:
+                print(res["error"])
+                runs.append({"run": i, **res})
+                continue
+        else:
+            try:
+                res = await run_once(text, timeout_s=timeout_s, workflow_name=workflow_name)
+            except asyncio.TimeoutError:
+                print(f"TIMEOUT (>{timeout_s}s)")
+                runs.append({"run": i, "error": f"TimeoutError: exceeded {timeout_s}s"})
+                continue
+            except Exception as exc:
+                print(f"FAIL ({type(exc).__name__}: {exc})")
+                runs.append({"run": i, "error": f"{type(exc).__name__}: {exc}"})
+                continue
         res["run"] = i
         runs.append(res)
         print(
@@ -143,14 +227,22 @@ async def main() -> None:
                         help=f"Per-run timeout in seconds (default: {RUN_TIMEOUT_DEFAULT})")
     parser.add_argument("--workflow", default="spectacular",
                         help="Workflow name (default: spectacular)")
+    parser.add_argument("--isolate", action="store_true",
+                        help="Run each iteration in a fresh subprocess (eliminates JVM/asyncio state accumulation)")
+    parser.add_argument("--child-mode", default=None,
+                        help=argparse.SUPPRESS)
     args = parser.parse_args()
+
+    if args.child_mode:
+        rc = await child_main(args.child_mode, timeout_s=args.timeout, workflow_name=args.workflow)
+        sys.exit(rc)
 
     started = datetime.now(timezone.utc).isoformat()
     per_doc: list[dict[str, Any]] = []
 
     for doc_id in args.docs:
         per_doc.append(await reproducibility_for_doc(
-            doc_id, args.runs, timeout_s=args.timeout, workflow_name=args.workflow
+            doc_id, args.runs, timeout_s=args.timeout, workflow_name=args.workflow, isolate=args.isolate
         ))
 
     finished = datetime.now(timezone.utc).isoformat()
@@ -159,6 +251,7 @@ async def main() -> None:
         "issue": "#509",
         "workflow": args.workflow,
         "timeout_per_run_s": args.timeout,
+        "isolate_subprocess": bool(args.isolate),
         "n_runs_per_doc": args.runs,
         "doc_count": len(args.docs),
         "started_utc": started,
