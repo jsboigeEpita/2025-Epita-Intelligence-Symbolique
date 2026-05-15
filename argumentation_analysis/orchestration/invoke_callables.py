@@ -3198,6 +3198,27 @@ async def _invoke_propositional_logic(
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
 
+    # Sanitize formulas for Tweety compatibility (#537)
+    try:
+        from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
+            PLFormulaSanitizer,
+        )
+        sanitizer = PLFormulaSanitizer()
+        san_result = sanitizer.sanitize_batch(formulas)
+        if san_result.sanitized_formulas:
+            logger.info(
+                f"PL sanitizer: {san_result.total_sanitized}/{san_result.total_input} "
+                f"formulas sanitized"
+            )
+            formulas = san_result.sanitized_formulas
+            # Store symbol mapping for interpretation
+            if san_result.symbol_mapping:
+                argument_mapping.update(
+                    {v: k for k, v in san_result.symbol_mapping.items()}
+                )
+    except Exception as san_err:
+        logger.debug(f"PL sanitizer unavailable ({san_err}), using raw formulas")
+
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
