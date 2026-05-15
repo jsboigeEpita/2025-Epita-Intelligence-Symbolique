@@ -10,10 +10,14 @@ Phase 1: SynthesisAgent Core - Coordination basique des agents existants
 
 from .synthesis_agent import SynthesisAgent
 from .data_models import LogicAnalysisResult, InformalAnalysisResult, UnifiedReport
+from .deep_synthesis_agent import DeepSynthesisAgent
+from .deep_synthesis_models import DeepSynthesisReport
 
 __all__ = [
     "SynthesisAgent",
     "LogicAnalysisResult",
     "InformalAnalysisResult",
     "UnifiedReport",
+    "DeepSynthesisAgent",
+    "DeepSynthesisReport",
 ]
