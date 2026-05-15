@@ -18,7 +18,58 @@ import random
 import statistics
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+_DESCRIPTOR_MAP: Dict[str, float] = {
+    "high": 0.85,
+    "élevé": 0.85,
+    "eleve": 0.85,
+    "strong": 0.8,
+    "fort": 0.8,
+    "medium": 0.5,
+    "moyen": 0.5,
+    "mixed": 0.5,
+    "mitigé": 0.5,
+    "mitige": 0.5,
+    "moderate": 0.5,
+    "modéré": 0.5,
+    "modere": 0.5,
+    "low": 0.2,
+    "faible": 0.2,
+    "weak": 0.2,
+    "faible": 0.2,
+    "very_low": 0.1,
+    "très_faible": 0.1,
+    "tres_faible": 0.1,
+}
+
+
+def _coerce_score(value: Union[str, int, float]) -> float:
+    """Convert a quality score to float, handling string descriptors.
+
+    Maps known qualitative descriptors (high/medium/low and FR equivalents)
+    to numeric scores. Unknown strings default to 0.5 (neutral).
+
+    Args:
+        value: Numeric value or qualitative descriptor string.
+
+    Returns:
+        Float score in [0, 1].
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _DESCRIPTOR_MAP:
+            return _DESCRIPTOR_MAP[normalized]
+        try:
+            return float(normalized)
+        except ValueError:
+            logger.warning(
+                "Unknown quality descriptor '%s', defaulting to 0.5", value
+            )
+            return 0.5
+    return 0.5
 
 from pydantic import PrivateAttr
 from semantic_kernel import Kernel
@@ -119,7 +170,7 @@ class DebatePlugin:
     ) -> str:
         """Suggest a debate strategy based on context."""
         turn = int(turn_number) if turn_number.isdigit() else 0
-        opp = float(opponent_strength)
+        opp = _coerce_score(opponent_strength)
 
         if turn < 3:
             strategy = "balanced"
