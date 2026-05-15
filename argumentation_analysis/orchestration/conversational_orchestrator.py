@@ -545,6 +545,39 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Re-analysis phase check failed: {e}")
 
+    # 5c. Deep Synthesis post-phase (#534)
+    # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
+    # grounded markdown report. Appended as terminal step after all agents.
+    deep_synthesis_result = None
+    if spectacular:
+        try:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _invoke_deep_synthesis,
+            )
+
+            source_meta = {
+                "opaque_id": source_id or "unknown",
+                "era": "",
+                "language": "",
+                "discourse_type": "",
+            }
+            ctx = {
+                "_state_object": state,
+                "source_metadata": source_meta,
+            }
+            deep_synthesis_result = await _invoke_deep_synthesis("", ctx)
+            if "error" not in deep_synthesis_result:
+                logger.info(
+                    f"Deep synthesis completed: "
+                    f"{deep_synthesis_result.get('sections_populated', '?')}/9 sections"
+                )
+            else:
+                logger.warning(
+                    f"Deep synthesis skipped: {deep_synthesis_result.get('error', '?')}"
+                )
+        except Exception as e:
+            logger.warning(f"Deep synthesis post-phase failed: {e}")
+
     # 6. Stop trace and build results
     trace.stop()
     duration = time.time() - start_time
@@ -569,6 +602,7 @@ async def run_conversational_analysis(
         "conversation_log": conversation_log,
         "total_messages": len(conversation_log),
         "duration_seconds": duration,
+        "deep_synthesis": deep_synthesis_result,
         "state_snapshot": state_snapshot,
         "state_non_empty_fields": non_empty,
         "state_total_fields": len(state_snapshot),
