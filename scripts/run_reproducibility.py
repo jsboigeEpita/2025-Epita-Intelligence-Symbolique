@@ -27,15 +27,19 @@ from scripts.run_epic_g_baselines import load_document_text
 
 DOC_IDS = ["src0_ext0", "src3_ext0", "src6_ext0"]
 N_RUNS_DEFAULT = 5
+RUN_TIMEOUT_DEFAULT = 600  # seconds — hard cap per run (spectacular workflow can hang on Dung/AF phases)
 RESULTS_DIR = Path("analysis_kb/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-async def run_once(text: str) -> dict[str, Any]:
+async def run_once(text: str, timeout_s: int, workflow_name: str) -> dict[str, Any]:
     from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
 
     start = time.time()
-    results = await run_unified_analysis(text=text, workflow_name="spectacular")
+    results = await asyncio.wait_for(
+        run_unified_analysis(text=text, workflow_name=workflow_name),
+        timeout=timeout_s,
+    )
     duration = time.time() - start
 
     state = results.get("state_snapshot", {})
@@ -67,7 +71,9 @@ def _range(values: list[float]) -> dict[str, Any]:
     }
 
 
-async def reproducibility_for_doc(doc_id: str, n_runs: int) -> dict[str, Any]:
+async def reproducibility_for_doc(
+    doc_id: str, n_runs: int, timeout_s: int, workflow_name: str
+) -> dict[str, Any]:
     print(f"\n[{doc_id}] loading...")
     text = load_document_text(doc_id)
     if not text:
@@ -79,7 +85,11 @@ async def reproducibility_for_doc(doc_id: str, n_runs: int) -> dict[str, Any]:
     for i in range(1, n_runs + 1):
         print(f"[{doc_id}] run {i}/{n_runs}...", end=" ", flush=True)
         try:
-            res = await run_once(text)
+            res = await run_once(text, timeout_s=timeout_s, workflow_name=workflow_name)
+        except asyncio.TimeoutError:
+            print(f"TIMEOUT (>{timeout_s}s)")
+            runs.append({"run": i, "error": f"TimeoutError: exceeded {timeout_s}s"})
+            continue
         except Exception as exc:
             print(f"FAIL ({type(exc).__name__}: {exc})")
             runs.append({"run": i, "error": f"{type(exc).__name__}: {exc}"})
@@ -129,19 +139,26 @@ async def main() -> None:
                         help=f"Runs per document (default: {N_RUNS_DEFAULT})")
     parser.add_argument("--docs", nargs="+", default=DOC_IDS,
                         help="Opaque doc IDs (default: all 3)")
+    parser.add_argument("--timeout", type=int, default=RUN_TIMEOUT_DEFAULT,
+                        help=f"Per-run timeout in seconds (default: {RUN_TIMEOUT_DEFAULT})")
+    parser.add_argument("--workflow", default="spectacular",
+                        help="Workflow name (default: spectacular)")
     args = parser.parse_args()
 
     started = datetime.now(timezone.utc).isoformat()
     per_doc: list[dict[str, Any]] = []
 
     for doc_id in args.docs:
-        per_doc.append(await reproducibility_for_doc(doc_id, args.runs))
+        per_doc.append(await reproducibility_for_doc(
+            doc_id, args.runs, timeout_s=args.timeout, workflow_name=args.workflow
+        ))
 
     finished = datetime.now(timezone.utc).isoformat()
 
     aggregate = {
         "issue": "#509",
-        "workflow": "spectacular",
+        "workflow": args.workflow,
+        "timeout_per_run_s": args.timeout,
         "n_runs_per_doc": args.runs,
         "doc_count": len(args.docs),
         "started_utc": started,
