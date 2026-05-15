@@ -112,6 +112,22 @@ class PLHandler:
         normalized_formula = self._normalize_formula(formula_str)
         logger.debug(f"Attempting to parse normalized PL formula: {normalized_formula}")
 
+        # Pre-validation via PLFormulaSanitizer (#537)
+        try:
+            from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
+                PLFormulaSanitizer,
+            )
+            sanitizer = PLFormulaSanitizer()
+            is_valid, reason = sanitizer.validate_formula(normalized_formula)
+            if not is_valid:
+                logger.warning(
+                    f"Formula failed pre-validation, skipping Tweety parse: "
+                    f"'{formula_str}' (normalized: '{normalized_formula}', reason: {reason})"
+                )
+                return None
+        except Exception:
+            pass  # Sanitizer unavailable, proceed with existing normalization
+
         try:
             if constants:
                 PlSignature = jpype.JClass(
