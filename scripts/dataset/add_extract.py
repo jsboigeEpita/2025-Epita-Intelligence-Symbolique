@@ -134,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         "schema": "v1",
         "host_parts": metadata.get("host_parts", "local").split(","),
         "path": metadata.get("path", ""),
+        "full_text": plaintext,
         "extracts": [
             {
                 "full_text": plaintext,
@@ -151,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         config_file=ENCRYPTED_PATH,
         b64_derived_key=b64_key,
         embed_full_text=True,
-        text_retriever=lambda x: plaintext,
+        text_retriever=lambda source_info, **_kwargs: source_info.get("full_text", ""),
     )
     if not ok:
         print("ERROR: failed to save encrypted dataset.", file=sys.stderr)
