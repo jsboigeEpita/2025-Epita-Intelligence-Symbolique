@@ -889,6 +889,20 @@ def _write_tweety_interpretation_to_state(
             add_extract("formal_interpretation", interpretation)
         elif hasattr(state, "formal_interpretation"):
             state.formal_interpretation = interpretation
+def _write_analysis_synthesis_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write analysis synthesis results to UnifiedAnalysisState (#508)."""
+    if not output or not isinstance(output, dict):
+        return
+    synthesis = output.get("synthesis", {})
+    if isinstance(synthesis, dict) and synthesis:
+        if hasattr(state, "analysis_synthesis"):
+            state.analysis_synthesis = {
+                "synthesis": synthesis,
+                "phase_count": output.get("phase_count", 0),
+                "overall_completeness": output.get("overall_completeness", 0.0),
+            }
 
 
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
@@ -931,4 +945,5 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "nl_extraction": _write_text_to_kb_to_state,
     "kb_to_tweety": _write_kb_to_tweety_to_state,
     "formal_result_interpretation": _write_tweety_interpretation_to_state,
+    "analysis_synthesis": _write_analysis_synthesis_to_state,
 }

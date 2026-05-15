@@ -557,6 +557,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         L6b belief_revision                       (from jtms + dung)
         L7  atms                                  (from jtms)
         L8  governance | formal_synthesis         (aggregation)
+        L9  synthesis                               (terminal aggregation)
     """
     return (
         WorkflowBuilder("spectacular_analysis")
@@ -707,6 +708,19 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             "belief_revision",
             capability="belief_revision",
             depends_on=["jtms", "dung_extensions"],
+            optional=True,
+        )
+        # L9 — terminal synthesis aggregation (#508)
+        .add_phase(
+            "synthesis",
+            capability="analysis_synthesis",
+            depends_on=[
+                "quality",
+                "counter",
+                "debate",
+                "governance",
+                "formal_synthesis",
+            ],
             optional=True,
         )
         .build()
