@@ -51,6 +51,9 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_delp,
     _invoke_qbf,
     _invoke_asp_reasoning,
+    _invoke_text_to_kb,
+    _invoke_kb_to_tweety,
+    _invoke_tweety_interpretation,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -448,6 +451,40 @@ def setup_registry(
         ),
     ]
     for name, caps, desc, invoke_fn in logic_capabilities:
+        try:
+            registry.register_service(
+                name=name,
+                service_class=type(name, (), {}),
+                capabilities=caps,
+                metadata={"description": desc},
+                invoke=invoke_fn,
+            )
+            registered.append(name)
+        except Exception as e:
+            skipped.append((name, str(e)))
+
+    # --- TextToKB / KBToTweety / TweetyInterpretation services (#506) ---
+    kb_invoke_services = [
+        (
+            "text_to_kb_service",
+            ["nl_extraction", "argument_extraction", "kb_construction"],
+            "NL→KB extraction with iterative descent (#474)",
+            _invoke_text_to_kb,
+        ),
+        (
+            "kb_to_tweety_service",
+            ["kb_to_tweety", "formula_translation", "tweety_validation"],
+            "KB→Tweety formula translation with retry (#475)",
+            _invoke_kb_to_tweety,
+        ),
+        (
+            "tweety_interpretation_service",
+            ["formal_result_interpretation", "dung_interpretation"],
+            "Tweety formal results → NL interpretation (#476)",
+            _invoke_tweety_interpretation,
+        ),
+    ]
+    for name, caps, desc, invoke_fn in kb_invoke_services:
         try:
             registry.register_service(
                 name=name,

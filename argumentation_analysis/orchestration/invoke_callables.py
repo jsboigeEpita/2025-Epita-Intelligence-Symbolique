@@ -76,6 +76,9 @@ __all__ = [
     "_python_dung_fallback",
     "_invoke_formal_synthesis",
     "_invoke_narrative_synthesis",
+    "_invoke_text_to_kb",
+    "_invoke_kb_to_tweety",
+    "_invoke_tweety_interpretation",
 ]
 
 
@@ -2799,21 +2802,17 @@ async def _invoke_asp_reasoning(
     # Try JVM + Tweety ClingoSolver first
     try:
         from argumentation_analysis.core.jvm_setup import is_jvm_started
+
         if is_jvm_started():
             import jpype
+
             JString = jpype.JClass("java.lang.String")
             ClingoSolver = jpype.JClass(
                 "org.tweetyproject.lp.asp.reasoner.ClingoSolver"
             )
-            Program = jpype.JClass(
-                "org.tweetyproject.lp.asp.syntax.Program"
-            )
-            ASPRule = jpype.JClass(
-                "org.tweetyproject.lp.asp.syntax.ASPRule"
-            )
-            ASPAtom = jpype.JClass(
-                "org.tweetyproject.lp.asp.syntax.ASPAtom"
-            )
+            Program = jpype.JClass("org.tweetyproject.lp.asp.syntax.Program")
+            ASPRule = jpype.JClass("org.tweetyproject.lp.asp.syntax.ASPRule")
+            ASPAtom = jpype.JClass("org.tweetyproject.lp.asp.syntax.ASPAtom")
 
             # Parse simple rules: "a :- b." format
             rules = []
@@ -2823,8 +2822,12 @@ async def _invoke_asp_reasoning(
                     continue
                 if ":-" in line:
                     head, body = line.split(":-", 1)
-                    head_atoms = [ASPAtom(h.strip()) for h in head.split(",") if h.strip()]
-                    body_atoms = [ASPAtom(b.strip()) for b in body.split(",") if b.strip()]
+                    head_atoms = [
+                        ASPAtom(h.strip()) for h in head.split(",") if h.strip()
+                    ]
+                    body_atoms = [
+                        ASPAtom(b.strip()) for b in body.split(",") if b.strip()
+                    ]
                     rule = ASPRule()
                     for a in head_atoms:
                         rule.getHead().add(a)
@@ -2863,7 +2866,9 @@ async def _invoke_asp_reasoning(
         import clingo as clingo_py  # type: ignore[import-untyped,unused-ignore]
 
         py_models: list[list[str]] = []
-        ctl = clingo_py.Control(arguments=[f"--models={max_models}" if max_models else "--models=0"])
+        ctl = clingo_py.Control(
+            arguments=[f"--models={max_models}" if max_models else "--models=0"]
+        )
         ctl.add("base", [], str(program))
         ctl.ground([("base", [])])
 
@@ -2885,8 +2890,16 @@ async def _invoke_asp_reasoning(
     # Pure Python heuristic fallback
     logger.warning("ASP reasoning: Clingo unavailable, using heuristic fallback")
     lines = str(program).strip().splitlines()
-    rules = [l.strip().rstrip(".") for l in lines if ":-" in l and not l.strip().startswith("%")]
-    facts = [l.strip().rstrip(".") for l in lines if ":-" not in l and l.strip() and not l.strip().startswith("%")]
+    rules = [
+        l.strip().rstrip(".")
+        for l in lines
+        if ":-" in l and not l.strip().startswith("%")
+    ]
+    facts = [
+        l.strip().rstrip(".")
+        for l in lines
+        if ":-" not in l and l.strip() and not l.strip().startswith("%")
+    ]
 
     return {
         "answer_sets": [facts] if facts else [],
@@ -3497,9 +3510,7 @@ async def _invoke_modal_logic(
                 "message": msg,
             }
         except Exception as e:
-            logger.info(
-                f"SPASS modal solver unavailable ({e}), falling back to Tweety"
-            )
+            logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
 
     # TweetyBridge routing
     try:
@@ -3509,7 +3520,10 @@ async def _invoke_modal_logic(
         belief_set_str = "\n".join(str(f) for f in formulas)
         logic_type = context.get("modal_logic_type", "K")
         accepted, msg = await asyncio.to_thread(
-            bridge.execute_modal_query, belief_set_str, belief_set_str, logic_type=logic_type
+            bridge.execute_modal_query,
+            belief_set_str,
+            belief_set_str,
+            logic_type=logic_type,
         )
         return {
             "formulas": formulas,
@@ -3795,3 +3809,184 @@ def _count_referenced_fields(state: Any) -> int:
 # Each writer extracts relevant data from phase output and writes to
 # UnifiedAnalysisState via its typed add_*() methods.
 # Writers are defensive: guard with isinstance checks and .get() everywhere.
+
+
+# ---------------------------------------------------------------------------
+# TextToKB / KBToTweety / TweetyInterpretation invoke callables (#506)
+# ---------------------------------------------------------------------------
+
+
+async def _invoke_text_to_kb(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Extract a knowledge base from NL text via TextToKBPlugin (#474).
+
+    Uses extract_kb for structured extraction (arguments, beliefs, FOL signature).
+    Falls back to extract_arguments_only if LLM unavailable.
+    """
+    if not input_text or not input_text.strip():
+        return {"error": "empty input", "arguments": [], "belief_candidates": []}
+
+    try:
+        from argumentation_analysis.plugins.text_to_kb_plugin import TextToKBPlugin
+
+        plugin = TextToKBPlugin()
+        result_json = await plugin.extract_kb(input_text, target_logic="fol")
+        result = (
+            json.loads(result_json) if isinstance(result_json, str) else result_json
+        )
+
+        arguments = result.get("arguments", [])
+        belief_candidates = result.get("belief_candidates", [])
+        fol_signature = result.get("fol_signature")
+
+        return {
+            "arguments": arguments,
+            "belief_candidates": belief_candidates,
+            "fol_signature": fol_signature,
+            "count": result.get("count", len(arguments)),
+            "source_length": len(input_text),
+        }
+    except Exception as e:
+        logger.warning(f"TextToKB extraction failed: {e}")
+        return {"error": str(e), "arguments": [], "belief_candidates": []}
+
+
+async def _invoke_kb_to_tweety(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Translate KB entries to Tweety formulas via KBToTweetyPlugin (#475).
+
+    Reads upstream text_to_kb output from context and translates each
+    belief candidate into a Tweety-compatible formula.
+    """
+    if not input_text or not input_text.strip():
+        return {"error": "empty input", "formulas": []}
+
+    try:
+        from argumentation_analysis.plugins.kb_to_tweety_plugin import KBToTweetyPlugin
+
+        plugin = KBToTweetyPlugin()
+
+        # Try batch translation first (more efficient)
+        batch_json = await plugin.translate_batch_to_tweety(input_text)
+        batch_result = (
+            json.loads(batch_json) if isinstance(batch_json, str) else batch_json
+        )
+
+        formulas = batch_result.get("results", [])
+
+        # Also try Dung and ASPIC if the input looks like it has structure
+        dung_result = None
+        aspic_result = None
+        try:
+            dung_json = await plugin.translate_dung(input_text)
+            dung_result = (
+                json.loads(dung_json) if isinstance(dung_json, str) else dung_json
+            )
+        except Exception:
+            pass
+        try:
+            aspic_json = await plugin.translate_aspic(input_text)
+            aspic_result = (
+                json.loads(aspic_json) if isinstance(aspic_json, str) else aspic_json
+            )
+        except Exception:
+            pass
+
+        result = {
+            "formulas": formulas,
+            "formula_count": len(formulas),
+        }
+        if dung_result:
+            result["dung_framework"] = dung_result
+        if aspic_result:
+            result["aspic_system"] = aspic_result
+
+        return result
+    except Exception as e:
+        logger.warning(f"KBToTweety translation failed: {e}")
+        return {"error": str(e), "formulas": []}
+
+
+async def _invoke_tweety_interpretation(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Interpret formal results as NL via TweetyResultInterpretationPlugin (#476).
+
+    Uses interpret_full_analysis for a comprehensive multi-section synthesis.
+    Falls back to individual interpreters based on available data.
+    """
+    if not input_text or not input_text.strip():
+        return {"error": "empty input", "interpretation": ""}
+
+    try:
+        from argumentation_analysis.plugins.tweety_result_interpretation_plugin import (
+            TweetyResultInterpretationPlugin,
+        )
+
+        plugin = TweetyResultInterpretationPlugin()
+
+        # Try full analysis interpretation first
+        try:
+            full_json = await plugin.interpret_full_analysis(input_text)
+            full_result = (
+                json.loads(full_json) if isinstance(full_json, str) else full_json
+            )
+            interpretation = (
+                full_result
+                if isinstance(full_result, str)
+                else full_result.get("interpretation", str(full_result))
+            )
+
+            if interpretation:
+                return {"interpretation": interpretation}
+        except Exception:
+            pass
+
+        # Fallback: try individual interpreters based on context data
+        parts = []
+        state = context.get("state")
+
+        # Dung extensions
+        dung_data = getattr(state, "dung_frameworks", None) if state else None
+        if dung_data:
+            try:
+                dung_json = await plugin.interpret_dung_results(
+                    json.dumps(dung_data)
+                    if isinstance(dung_data, dict)
+                    else str(dung_data)
+                )
+                dung_interp = (
+                    json.loads(dung_json) if isinstance(dung_json, str) else dung_json
+                )
+                parts.append(str(dung_interp))
+            except Exception:
+                pass
+
+        # FOL results
+        fol_data = getattr(state, "fol_analysis_results", None) if state else None
+        if fol_data:
+            try:
+                fol_json = await plugin.interpret_fol_results(
+                    json.dumps(fol_data)
+                    if isinstance(fol_data, dict)
+                    else str(fol_data)
+                )
+                fol_interp = (
+                    json.loads(fol_json) if isinstance(fol_json, str) else fol_json
+                )
+                parts.append(str(fol_interp))
+            except Exception:
+                pass
+
+        combined = " ".join(parts) if parts else ""
+        if not combined:
+            combined = (
+                "Interpretation non disponible (donnees formelles insuffisantes)."
+            )
+
+        return {"interpretation": combined}
+    except Exception as e:
+        logger.warning(f"TweetyInterpretation failed: {e}")
+        return {"error": str(e), "interpretation": ""}

@@ -815,6 +815,82 @@ def _write_narrative_synthesis_to_state(
         state.narrative_synthesis = narrative
 
 
+def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Write TextToKB extraction results to UnifiedAnalysisState (#506)."""
+    if not output or not isinstance(output, dict):
+        return
+
+    arguments = output.get("arguments", [])
+    belief_candidates = output.get("belief_candidates", [])
+
+    add_arg = getattr(state, "add_argument", None)
+    if callable(add_arg):
+        for arg_data in arguments:
+            text = (
+                arg_data.get("text", "")
+                if isinstance(arg_data, dict)
+                else str(arg_data)
+            )
+            if text:
+                add_arg(text)
+
+    add_bs = getattr(state, "add_belief_set", None)
+    if callable(add_bs):
+        for belief_text in belief_candidates:
+            if isinstance(belief_text, str) and belief_text.strip():
+                add_bs("fol", belief_text)
+
+    if hasattr(state, "knowledge_base"):
+        kb = {"arguments": arguments, "belief_candidates": belief_candidates}
+        fol_sig = output.get("fol_signature")
+        if fol_sig:
+            kb["fol_signature"] = fol_sig
+        state.knowledge_base = kb
+
+
+def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Write KBToTweety translation results to UnifiedAnalysisState (#506)."""
+    if not output or not isinstance(output, dict):
+        return
+
+    formulas = output.get("formulas", [])
+    add_bs = getattr(state, "add_belief_set", None)
+    if callable(add_bs):
+        for f in formulas:
+            formula = f.get("formula", "") if isinstance(f, dict) else str(f)
+            logic_type = (
+                f.get("logic_type", "propositional")
+                if isinstance(f, dict)
+                else "propositional"
+            )
+            if formula:
+                add_bs(logic_type, formula)
+
+    if hasattr(state, "tweety_formulas_from_kb"):
+        state.tweety_formulas_from_kb = {
+            "formulas": formulas,
+            "formula_count": output.get("formula_count", len(formulas)),
+            "dung_framework": output.get("dung_framework"),
+            "aspic_system": output.get("aspic_system"),
+        }
+
+
+def _write_tweety_interpretation_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write TweetyInterpretation NL results to UnifiedAnalysisState (#506)."""
+    if not output or not isinstance(output, dict):
+        return
+
+    interpretation = output.get("interpretation", "")
+    if isinstance(interpretation, str) and interpretation:
+        add_extract = getattr(state, "add_extract", None)
+        if callable(add_extract):
+            add_extract("formal_interpretation", interpretation)
+        elif hasattr(state, "formal_interpretation"):
+            state.formal_interpretation = interpretation
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -852,4 +928,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "collaborative_analysis": _write_collaborative_analysis_to_state,
     "nl_to_logic_translation": _write_nl_to_logic_to_state,
     "narrative_synthesis": _write_narrative_synthesis_to_state,
+    "nl_extraction": _write_text_to_kb_to_state,
+    "kb_to_tweety": _write_kb_to_tweety_to_state,
+    "formal_result_interpretation": _write_tweety_interpretation_to_state,
 }

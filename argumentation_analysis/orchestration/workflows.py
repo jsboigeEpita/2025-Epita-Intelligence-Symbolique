@@ -680,6 +680,27 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["quality", "jtms", "atms", "dung_extensions"],
             optional=True,
         )
+        # L1b — KB extraction from extracted facts (#506)
+        .add_phase(
+            "text_to_kb",
+            capability="nl_extraction",
+            depends_on=["extract"],
+            optional=True,
+        )
+        # L2b — KB → Tweety formula translation (#506)
+        .add_phase(
+            "kb_to_tweety",
+            capability="kb_to_tweety",
+            depends_on=["text_to_kb"],
+            optional=True,
+        )
+        # L9b — Interpret all formal results as NL (#506)
+        .add_phase(
+            "tweety_interpretation",
+            capability="formal_result_interpretation",
+            depends_on=["fol", "modal", "dung_extensions", "aspic_analysis", "ranking"],
+            optional=True,
+        )
         .build()
     )
 
@@ -796,10 +817,15 @@ def build_formal_extended_workflow() -> WorkflowDefinition:
         .add_phase(
             "tweety_interpretation",
             capability="formal_result_interpretation",
-            depends_on=["dung_extensions", "fol", "aspic", "ranking", "belief_revision"],
+            depends_on=[
+                "dung_extensions",
+                "fol",
+                "aspic",
+                "ranking",
+                "belief_revision",
+            ],
             optional=True,
-        )
-        .build()
+        ).build()
     )
 
 
