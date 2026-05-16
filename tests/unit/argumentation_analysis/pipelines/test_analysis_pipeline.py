@@ -27,7 +27,6 @@ def mock_perform_analysis():
         yield mock
 
 
-@pytest.fixture
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_success(
     mock_initialize_services, mock_perform_analysis
