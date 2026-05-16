@@ -240,19 +240,31 @@ AGENT_CONFIG = {
         "speciality": "counter_argument",
         "instructions": (
             "Tu es l'agent de contre-argumentation. Quand le PM te donne la parole :\n"
-            "1. Lis les arguments, sophismes ET scores de qualite dans l'etat\n"
-            "2. CIBLE en priorite :\n"
-            "   a. Les arguments marques comme fallacieux par InformalAgent\n"
-            "   b. Les arguments avec le score de qualite le plus bas\n"
+            "1. Lis l'etat courant via get_current_state_snapshot()\n"
+            "2. IDENTIFIE tes cibles dans cet ordre de priorite :\n"
+            "   a. TOUS les arguments marques comme fallacieux par InformalAgent\n"
+            "   b. Les 3 arguments avec le score de qualite le plus bas\n"
             "   c. Les arguments formellement inconsistants (si FormalAgent l'a signale)\n"
-            "3. Utilise parse_argument() et suggest_strategy() pour choisir ta strategie\n"
-            "4. Genere des contre-arguments precis (reductio, contre-exemple, distinction, reformulation)\n\n"
-            "CROSS-KB (#208-I) : Adapte ta strategie au type de faiblesse :\n"
-            "- Sophisme ad hominem → reformulation\n"
-            "- Generalisation hative → contre-exemple\n"
-            "- Faux dilemme → distinction\n"
-            "- Inconsistance logique → reductio ad absurdum\n"
-            "Fournis des contre-arguments substantiels, pas des templates."
+            "3. Pour CHAQUE cible, genere un contre-argument dedie :\n"
+            "   - Appelle identify_vulnerabilities(text=argument_cible)\n"
+            "   - Choisis la strategie en fonction du type de faiblesse :\n"
+            "     * Sophisme ad hominem → reformulation\n"
+            "     * Generalisation hative → contre-exemple\n"
+            "     * Faux dilemme → distinction\n"
+            "     * Inconsistance logique → reductio ad absurdum\n"
+            "     * Score evidence faible → contre-exemple avec sources\n"
+            "     * Assertion forte sans preuve → distinction\n"
+            "   - Genere le contre-argument via suggest_strategy()\n"
+            "4. Pour chaque contre-argument, appelle add_counter_argument(\n"
+            "   target_argument_id=..., strategy='...', counter_text='...')\n"
+            "5. OBJECTIF : produire au moins 1 contre-argument par cible identifiee.\n"
+            "   Tu dois traiter TOUTES les cibles, pas seulement la premiere.\n\n"
+            "CROSS-KB (#208-I) : Chaque contre-argument DOIT referenceer explicitement :\n"
+            "- Le type de faiblesse cible (fallacy type ou quality dimension)\n"
+            "- La citation exacte du passage contre-argue\n"
+            "- La strategie rhetorique choisie et POURQUOI elle est adaptee\n\n"
+            "QUANTITE : Vise au minimum 10 contre-arguments sur un texte dense.\n"
+            "Un seul contre-argument generique = echec. Chaque cible merit un contre-argument dedie."
         ),
     },
     "GovernanceAgent": {
@@ -450,12 +462,15 @@ async def run_conversational_analysis(
                 "CounterAgent",
                 "GovernanceAgent",
             ],
-            "max_turns": 8,  # More turns for debate + vote + conclusion
+            "max_turns": 10,  # Extra turns for exhaustive counter-argumentation
             "initial_prompt": (
                 "Finalisez l'analyse en exploitant TOUTES les contributions precedentes.\n"
                 "CROSS-KB: Utilisez les resultats des phases 1 et 2 :\n"
                 "- DebateAgent : ciblez les arguments avec les scores les plus bas\n"
-                "- CounterAgent : ciblez en priorite les arguments fallacieux\n"
+                "- CounterAgent : TRAITEZ SYSTEMATIQUEMENT chaque argument fallacieux ET chaque "
+                "argument faible. Ne vous contentez pas d'un contre-argument generique. "
+                "Pour CHAQUE cible, produisez un contre-argument dedie avec la strategie "
+                "rhetorique adaptee au type de faiblesse. Visez au moins 10 contre-arguments.\n"
                 "- GovernanceAgent : evaluez le consensus en tenant compte de la qualite globale\n"
                 "Menez un debat adversarial, generez des contre-arguments, evaluez le consensus, "
                 "et produisez une conclusion finale."
