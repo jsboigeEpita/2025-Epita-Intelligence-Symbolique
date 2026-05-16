@@ -425,6 +425,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.narrative_synthesis: str = ""
         # PL 2-pass pipeline: shared atom inventory (#547)
         self.atomic_propositions: Dict[str, List[str]] = {}
+        # FOL 2-pass pipeline: shared signature per source (#544)
+        self.fol_shared_signature: Dict[str, Dict[str, Any]] = {}
 
     def add_counter_argument(
         self, original_arg: str, counter_content: str, strategy: str, score: float
