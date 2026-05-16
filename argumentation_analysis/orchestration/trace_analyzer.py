@@ -181,8 +181,11 @@ class ConversationalTraceAnalyzer:
                 metrics.state_fields_populated += 1
 
         # Count specific dimensions
-        if isinstance(state_snapshot.get("identified_arguments"), list):
-            metrics.arguments_found = len(state_snapshot["identified_arguments"])
+        identified_args = state_snapshot.get("identified_arguments")
+        if isinstance(identified_args, dict):
+            metrics.arguments_found = len(identified_args)
+        elif isinstance(identified_args, list):
+            metrics.arguments_found = len(identified_args)
         if isinstance(state_snapshot.get("identified_fallacies"), list):
             metrics.fallacies_found = len(state_snapshot["identified_fallacies"])
         if isinstance(state_snapshot.get("argument_quality_scores"), dict):

@@ -57,11 +57,8 @@ class TestSynthesisPhaseConfig:
 
     def test_synthesis_max_turns_at_least_10(self):
         """Synthesis phase must have >= 10 turns for exhaustive counter-argumentation."""
-        # The phase configs are built with hardcoded values in the function
-        # We check by reading the relevant section
         import inspect
         from argumentation_analysis.orchestration import conversational_orchestrator as co
 
-        source = inspect.getsource(co.run_conversational_analysis)
-        # Look for the Synthesis & Debate max_turns
-        assert "max_turns\": 10" in source or "max_turns\": 10" in source
+        sig = inspect.signature(co.run_conversational_analysis)
+        assert sig.parameters["synthesis_max_turns"].default >= 10

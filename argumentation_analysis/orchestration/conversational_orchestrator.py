@@ -370,6 +370,10 @@ async def run_conversational_analysis(
     max_turns_per_phase: int = 5,
     agent_names: Optional[List[str]] = None,
     spectacular: bool = True,
+    extraction_max_turns: int = 7,
+    formal_max_turns: int = 5,
+    synthesis_max_turns: int = 10,
+    reanalysis_max_turns: int = 5,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -380,10 +384,14 @@ async def run_conversational_analysis(
 
     Args:
         text: Input text to analyze.
-        max_turns_per_phase: Max agent turns per phase.
+        max_turns_per_phase: Default max turns per phase (overridden by specific params).
         agent_names: Optional subset of agent names to use.
         spectacular: If True, use UnifiedAnalysisState for 28+/32 field
             coverage matching the spectacular workflow profile (#363).
+        extraction_max_turns: Max turns for Extraction & Detection phase.
+        formal_max_turns: Max turns for Formal Analysis & Quality phase.
+        synthesis_max_turns: Max turns for Synthesis & Debate phase.
+        reanalysis_max_turns: Max turns for Re-Analysis phase (if triggered).
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -448,13 +456,13 @@ async def run_conversational_analysis(
         {
             "name": "Extraction & Detection",
             "agents": ["ProjectManager", "ExtractAgent", "InformalAgent"],
-            "max_turns": 7,  # More turns for thorough extraction
+            "max_turns": extraction_max_turns,
             "initial_prompt": extraction_prompt,
         },
         {
             "name": "Formal Analysis & Quality",
             "agents": ["ProjectManager", "FormalAgent", "QualityAgent"],
-            "max_turns": 5,
+            "max_turns": formal_max_turns,
             "initial_prompt": (
                 "Continuez l'analyse en tenant compte des resultats de Phase 1.\n"
                 "CROSS-KB: Les sophismes detectes doivent influencer :\n"
@@ -471,7 +479,7 @@ async def run_conversational_analysis(
                 "CounterAgent",
                 "GovernanceAgent",
             ],
-            "max_turns": 10,  # Extra turns for exhaustive counter-argumentation
+            "max_turns": synthesis_max_turns,
             "initial_prompt": (
                 "Finalisez l'analyse en exploitant TOUTES les contributions precedentes.\n"
                 "CROSS-KB: Utilisez les resultats des phases 1 et 2 :\n"
@@ -572,7 +580,7 @@ async def run_conversational_analysis(
                         "QualityAgent",
                         "GovernanceAgent",
                     ],
-                    "max_turns": 5,
+                    "max_turns": reanalysis_max_turns,
                     "initial_prompt": (
                         "Re-analysez en tenant compte des resultats de l'analyse formelle.\n"
                         "JTMS a retracte certaines croyances. Re-evaluez :\n"
