@@ -648,6 +648,25 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Re-analysis phase check failed: {e}")
 
+    # 5b-2. Dung framework construction (#564)
+    # Build Dung AF from identified_arguments + counter_arguments/fallacies
+    # after all conversational phases have populated the state.
+    dung_result = None
+    if spectacular and hasattr(state, "dung_frameworks"):
+        try:
+            dung_result = _build_dung_framework_from_state(state)
+            if dung_result:
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "dung_framework",
+                        "arguments": dung_result["arguments"],
+                        "attacks": dung_result["attacks"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Dung framework post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.
@@ -1223,3 +1242,101 @@ def _retract_fallacious_beliefs(
         "retraction_count": len(retractions),
         "retractions": retractions,
     }
+
+
+def _build_dung_framework_from_state(state: Any) -> Optional[Dict[str, Any]]:
+    """Build a Dung AF from identified_arguments + counter_arguments (#564).
+
+    Constructs attack relations from counter-argument strategies (UNDERCUT,
+    REBUT) and computes grounded extension via pure-Python DungFramework.
+    Writes the result to state.dung_frameworks if non-trivial.
+    """
+    if not hasattr(state, "identified_arguments") or not state.identified_arguments:
+        return None
+
+    if not hasattr(state, "add_dung_framework"):
+        return None
+
+    # Collect argument IDs as Dung nodes
+    arg_ids = list(state.identified_arguments.keys())
+    if len(arg_ids) < 2:
+        return None
+
+    # Build attack relations from counter-arguments
+    attacks = []
+    counter_args = getattr(state, "counter_arguments", [])
+    for ca in counter_args:
+        strategy = ca.get("strategy", "").upper()
+        if strategy in ("UNDERCUT", "REBUT", "REBUTTAL"):
+            original = ca.get("original_argument", "")
+            counter_text = ca.get("counter_argument", "")
+            if not original:
+                continue
+            # Match counter-arg to argument IDs
+            source_id = None
+            target_id = None
+            for aid, desc in state.identified_arguments.items():
+                if desc and (original[:60] in desc or desc[:60] in original):
+                    target_id = aid
+                    break
+            # Source: find which argument the counter supports
+            for aid, desc in state.identified_arguments.items():
+                if desc and counter_text and (counter_text[:40] in desc or desc[:40] in counter_text):
+                    source_id = aid
+                    break
+            if source_id and target_id and source_id != target_id:
+                attacks.append([source_id, target_id])
+
+    # Also build attacks from fallacies targeting arguments
+    fallacies = getattr(state, "identified_fallacies", {})
+    if isinstance(fallacies, dict):
+        fallacies = list(fallacies.values())
+    for fallacy in fallacies:
+        if not isinstance(fallacy, dict):
+            continue
+        target_arg = fallacy.get("target_argument_id", "")
+        fallacy_type = fallacy.get("type", fallacy.get("fallacy_type", ""))
+        if target_arg and target_arg in state.identified_arguments:
+            # Fallacy undermines the target — find an attacker
+            # Use fallacy_type as a pseudo-argument attacking the target
+            attacker = f"fallacy_{fallacy_type[:20]}"
+            if attacker not in arg_ids:
+                arg_ids.append(attacker)
+            attacks.append([attacker, target_arg])
+
+    if not attacks:
+        return None
+
+    # Compute extensions via pure-Python DungFramework
+    try:
+        from argumentation_analysis.agents.core.logic.dung_native import DungFramework
+
+        fw = DungFramework()
+        for aid in arg_ids:
+            fw.add_argument(aid)
+        for src, tgt in attacks:
+            fw.add_attack(src, tgt)
+
+        grounded = fw.grounded_extension()
+        extensions = {"grounded": sorted(grounded)} if grounded else {}
+
+        state.add_dung_framework(
+            name="conversational_dung",
+            arguments=arg_ids,
+            attacks=attacks,
+            extensions=extensions,
+        )
+
+        logger.info(
+            f"Dung AF built: {len(arg_ids)} arguments, {len(attacks)} attacks, "
+            f"grounded extension size={len(grounded)}"
+        )
+
+        return {
+            "arguments": len(arg_ids),
+            "attacks": len(attacks),
+            "grounded_extension": sorted(grounded),
+        }
+    except Exception as e:
+        logger.warning(f"Dung framework construction failed: {e}")
+        return None
