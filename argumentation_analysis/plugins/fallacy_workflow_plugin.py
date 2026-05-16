@@ -377,13 +377,25 @@ class FallacyWorkflowPlugin:
             for item in parsed_list:
                 if not isinstance(item, dict) or not item.get("name"):
                     continue
+                name = item["name"]
+                # Try to find the deepest matching PK for this subtype
+                subtype_pk = pk
+                name_lower = name.lower().strip()
+                best_depth = int(node.get("depth", "1"))
+                for tnode in self.taxonomy_navigator.taxonomy_data:
+                    tname = tnode.get(f"text_{self.language}", tnode.get("nom_vulgarisé", ""))
+                    if tname and tname.lower().strip() == name_lower:
+                        td = int(tnode.get("depth", "0"))
+                        if td >= best_depth:
+                            subtype_pk = tnode.get("PK", pk)
+                            best_depth = td
                 results.append(IdentifiedFallacy(
-                    fallacy_type=item["name"],
-                    taxonomy_pk=pk,
+                    fallacy_type=name,
+                    taxonomy_pk=subtype_pk,
                     explanation=item.get("explanation", ""),
                     problematic_quote=item.get("quote", ""),
                     confidence=item.get("confidence", 0.7),
-                    navigation_trace=[pk],
+                    navigation_trace=[pk, subtype_pk] if subtype_pk != pk else [pk],
                 ))
 
             if not results:
