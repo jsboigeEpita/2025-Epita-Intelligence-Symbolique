@@ -429,7 +429,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.fol_shared_signature: Dict[str, Dict[str, Any]] = {}
 
     def add_counter_argument(
-        self, original_arg: str, counter_content: str, strategy: str, score: float
+        self,
+        original_arg: str,
+        counter_content: str,
+        strategy: str,
+        score: float,
+        target_arg_id: Optional[str] = None,
     ) -> str:
         """Add a counter-argument result."""
         ca_id = self._generate_id("ca", self.counter_arguments)
@@ -440,6 +445,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "strategy": strategy,
             "score": score,
         }
+        if target_arg_id:
+            entry["target_arg_id"] = target_arg_id
         self.counter_arguments.append(entry)
         state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
         return ca_id
@@ -817,19 +824,23 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         if arg_id in self.argument_quality_scores:
             profile.quality_score = self.argument_quality_scores[arg_id]
 
-        # Counter-arguments — matched by substring on original_argument text
+        # Counter-arguments — prefer ID-based matching, fall back to text
         arg_desc = description
-        if arg_desc:
+        for ca in self.counter_arguments:
+            if ca.get("target_arg_id") == arg_id:
+                profile.counter_arguments.append(ca)
+                continue
+            if not arg_desc:
+                continue
+            original = ca.get("original_argument", "")
             match_prefix = arg_desc[:60]
-            for ca in self.counter_arguments:
-                original = ca.get("original_argument", "")
-                if original and (
-                    original == arg_desc
-                    or original[:60] == match_prefix
-                    or match_prefix in original
-                    or original in arg_desc
-                ):
-                    profile.counter_arguments.append(ca)
+            if original and (
+                original == arg_desc
+                or original[:60] == match_prefix
+                or match_prefix in original
+                or original in arg_desc
+            ):
+                profile.counter_arguments.append(ca)
 
         # JTMS beliefs referencing this argument (by name containing arg_id or description prefix)
         for _bid, bdata in self.jtms_beliefs.items():
@@ -880,15 +891,21 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             self.identified_arguments.keys()
         )
 
-        # Counter-arguments use text matching
+        # Counter-arguments: prefer ID-based matching, fall back to text matching
         with_counter: set[str] = set()
-        for arg_id, desc in self.identified_arguments.items():
-            if not desc:
+        for ca in self.counter_arguments:
+            tid = ca.get("target_arg_id")
+            if tid and tid in self.identified_arguments:
+                with_counter.add(tid)
                 continue
-            match_prefix = desc[:60]
-            for ca in self.counter_arguments:
-                original = ca.get("original_argument", "")
-                if original and (
+            original = ca.get("original_argument", "")
+            if not original:
+                continue
+            for arg_id, desc in self.identified_arguments.items():
+                if arg_id in with_counter or not desc:
+                    continue
+                match_prefix = desc[:60]
+                if (
                     original == desc
                     or original[:60] == match_prefix
                     or match_prefix in original
