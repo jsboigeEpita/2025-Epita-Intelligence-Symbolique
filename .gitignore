@@ -135,6 +135,11 @@ libs/*.jar
 .claude/code-history/
 .claude/memory/
 .claude/local/
+.claude/review_*.txt
+.claude/*.lock
+.claude/*.log
+.claude/sprint*_dispatch.sh
+.claude/worktrees/
 .benchmarks/
 
 # Generated analysis reports (reproductible pipeline outputs)
