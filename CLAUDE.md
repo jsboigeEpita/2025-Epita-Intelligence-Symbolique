@@ -259,6 +259,18 @@ The canonical dataset is `argumentation_analysis/data/extract_sources.json.gz.en
 
 A verification script lives at `scripts/security/verify_encrypted_dataset_completeness.py` — run it before deleting any plaintext file to confirm the encrypted dataset is a superset.
 
+## Cleanup Gate — PR Deletion Policy
+
+Established 2026-05-16 after the audit at `docs/reports/AUDIT_ROGUE_CLEANUP_2026-05-16.md` (issues #580 #581). The "Consolider != Archiver" rule (global CLAUDE.md) was not enough on its own — design docs kept being silently deleted as "cleanup" (e.g. `DESIGN_PARALLEL_WORKFLOW.md` via PR #130, `architecture_fallacy_workflows.md` via PR #442). Rules below apply prospectively to all PRs opened after their adoption.
+
+### Rules
+
+1. **Per-file justification.** Any cleanup PR deleting `.py`, `.md`, `.json`, `.yaml`, or `.toml` files MUST include a `## Files removed and why` section in the PR body. Each entry lists the file with its **role** (design / archive / draft / test / config / other) and a **1-sentence reason**. Reviewers MUST request changes if missing.
+2. **Origin check.** Before deleting any file not referenced in the last 3 months, run `git log --all -- <path>` to verify origin. If the most recent commit touching it is a `feat(` commit, treat as HIGH suspicion — design docs are `feat(` artifacts and have been mistaken for drafts. Require explicit justification.
+3. **Bulk deletion table.** Cleanup PRs with more than 5 file deletions MUST include a markdown table in the PR body: `| File | Type | Last useful date | Reason for deletion |`. Bulk deletions without this table are NOT to be merged.
+
+Full proposal text + reviewer checklist + commit-template are in `docs/proposals/CLAUDE_MD_CLEANUP_GATE_ADDENDUM.md`. A pre-commit hook sketch enforcing Rule A is in `docs/proposals/PRE_COMMIT_HOOK_CLEANUP_GATE.md`.
+
 ## Related Resources
 
 - `D:\CoursIA` — Professor's course repository with Tweety notebooks (`MyIA.AI.Notebooks/SymbolicAI/Tweety/`) — reference for Tweety/JPype best practices
