@@ -404,7 +404,13 @@ class FallacyWorkflowPlugin:
                 self.logger.info(f"  Direct confirm: {len(results)} {node_name} instances")
             return results
 
-        tasks = [_confirm_one(pk) for pk in candidate_pks]
+        async def _confirm_with_delay(idx_pk):
+            idx, pk = idx_pk
+            if idx > 0:
+                await asyncio.sleep(idx * 2)  # Stagger to avoid rate limiting
+            return await _confirm_one(pk)
+
+        tasks = [_confirm_with_delay((i, pk)) for i, pk in enumerate(candidate_pks)]
         task_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         confirmed = []
