@@ -703,6 +703,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         consistent: bool,
         inferences: List[str],
         confidence: float = 0.0,
+        arg_id: Optional[str] = None,
     ) -> str:
         """Add a first-order logic analysis result."""
         fol_id = self._generate_id("fol", self.fol_analysis_results)
@@ -713,6 +714,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "inferences": inferences,
             "confidence": confidence,
         }
+        if arg_id:
+            entry["arg_id"] = arg_id
         self.fol_analysis_results.append(entry)
         state_logger.info(f"FOL analysis added: {fol_id} (consistent={consistent})")
         return fol_id
@@ -722,6 +725,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         formulas: List[str],
         satisfiable: bool,
         model: Optional[Dict[str, bool]] = None,
+        arg_id: Optional[str] = None,
     ) -> str:
         """Add a propositional logic analysis result."""
         pl_id = self._generate_id("pl", self.propositional_analysis_results)
@@ -731,6 +735,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "satisfiable": satisfiable,
             "model": model or {},
         }
+        if arg_id:
+            entry["arg_id"] = arg_id
         self.propositional_analysis_results.append(entry)
         state_logger.info(f"PL analysis added: {pl_id} (satisfiable={satisfiable})")
         return pl_id
@@ -781,6 +787,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         is_valid: bool,
         variables: Optional[Dict[str, str]] = None,
         confidence: float = 0.0,
+        arg_id: Optional[str] = None,
     ) -> str:
         """Add a NL-to-formal-logic translation result (#173)."""
         tr_id = self._generate_id("nll", self.nl_to_logic_translations)
@@ -793,6 +800,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "variables": variables or {},
             "confidence": confidence,
         }
+        if arg_id:
+            entry["arg_id"] = arg_id
         self.nl_to_logic_translations.append(entry)
         state_logger.info(
             f"NL→logic translation added: {tr_id} ({logic_type}, valid={is_valid})"
@@ -848,13 +857,23 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             if arg_id in belief_name or (arg_desc and arg_desc[:40] in belief_name):
                 profile.jtms_beliefs.append(bdata)
 
-        # Formal results — NL-to-logic translations whose original_text matches
-        if arg_desc:
+        # Formal results — PL/FOL/NL-to-logic matched by arg_id or text
+        for pl in self.propositional_analysis_results:
+            if pl.get("arg_id") == arg_id:
+                profile.formal_results.append(pl)
+        for fol in self.fol_analysis_results:
+            if fol.get("arg_id") == arg_id:
+                profile.formal_results.append(fol)
+        for tr in self.nl_to_logic_translations:
+            if tr.get("arg_id") == arg_id:
+                profile.formal_results.append(tr)
+                continue
+            if not arg_desc:
+                continue
+            orig = tr.get("original_text", "")
             match_prefix = arg_desc[:60]
-            for tr in self.nl_to_logic_translations:
-                orig = tr.get("original_text", "")
-                if orig and (match_prefix in orig or orig in arg_desc):
-                    profile.formal_results.append(tr)
+            if orig and (match_prefix in orig or orig in arg_desc):
+                profile.formal_results.append(tr)
 
         return profile
 
@@ -914,15 +933,32 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     with_counter.add(arg_id)
                     break
 
-        # Formal verification (NL-to-logic translations)
+        # Formal verification: check PL, FOL, and NL-to-logic translations
         with_formal: set[str] = set()
-        for arg_id, desc in self.identified_arguments.items():
-            if not desc:
+        # PL results with arg_id
+        for pl in self.propositional_analysis_results:
+            aid = pl.get("arg_id")
+            if aid and aid in self.identified_arguments:
+                with_formal.add(aid)
+        # FOL results with arg_id
+        for fol in self.fol_analysis_results:
+            aid = fol.get("arg_id")
+            if aid and aid in self.identified_arguments:
+                with_formal.add(aid)
+        # NL-to-logic translations: prefer arg_id, fall back to text match
+        for tr in self.nl_to_logic_translations:
+            aid = tr.get("arg_id")
+            if aid and aid in self.identified_arguments:
+                with_formal.add(aid)
                 continue
-            match_prefix = desc[:60]
-            for tr in self.nl_to_logic_translations:
-                orig = tr.get("original_text", "")
-                if orig and (match_prefix in orig or orig in desc):
+            orig = tr.get("original_text", "")
+            if not orig:
+                continue
+            for arg_id, desc in self.identified_arguments.items():
+                if arg_id in with_formal or not desc:
+                    continue
+                match_prefix = desc[:60]
+                if match_prefix in orig or orig in desc:
                     with_formal.add(arg_id)
                     break
 
