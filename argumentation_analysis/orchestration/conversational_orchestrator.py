@@ -667,6 +667,24 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Dung framework post-processing failed: {e}")
 
+    # 5b-3. Modal logic analysis (#563)
+    # Detect modal markers in arguments and persist modal_analysis_results.
+    modal_result = None
+    if spectacular and hasattr(state, "modal_analysis_results"):
+        try:
+            modal_result = _detect_and_run_modal_analysis(state)
+            if modal_result:
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "modal_analysis",
+                        "results": modal_result["modal_results"],
+                        "modalities": modal_result["modalities_found"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Modal analysis post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.
@@ -1340,3 +1358,90 @@ def _build_dung_framework_from_state(state: Any) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.warning(f"Dung framework construction failed: {e}")
         return None
+
+
+def _detect_and_run_modal_analysis(state: Any) -> Optional[Dict[str, Any]]:
+    """Scan arguments for modal markers and persist modal analysis (#563).
+
+    Detects epistemic (believes, knows), deontic (must, should, ought),
+    and alethic (possible, necessary) markers in argument text. For each
+    argument containing modal language, creates a modal_analysis_result
+    entry in state.
+    """
+    if not hasattr(state, "identified_arguments") or not state.identified_arguments:
+        return None
+    if not hasattr(state, "add_modal_analysis_result"):
+        return None
+    if not hasattr(state, "modal_analysis_results"):
+        return None
+
+    # Already populated — skip
+    if state.modal_analysis_results:
+        return None
+
+    import re
+
+    MODAL_PATTERNS = {
+        "epistemic": [
+            r"\b(believes?|knows?|is aware|certain|convinced|doubts?)\b",
+            r"\b(il croit|elle sait|il est certain|convaincu|doute)\b",
+        ],
+        "deontic": [
+            r"\b(must|should|ought|obliged|required|has to|shall|may not)\b",
+            r"\b(doit|devrait|il faut|obligé?e?|nécessaire|interdit)\b",
+        ],
+        "alethic": [
+            r"\b(possible|possibly|necessary|necessarily|can|could|impossible)\b",
+            r"\b(possible|nécessaire|impossible|peut|pourrait)\b",
+        ],
+    }
+
+    results_count = 0
+    for arg_id, desc in state.identified_arguments.items():
+        if not desc or not isinstance(desc, str):
+            continue
+
+        detected_modalities = []
+        for modality, patterns in MODAL_PATTERNS.items():
+            for pat in patterns:
+                if re.search(pat, desc, re.IGNORECASE):
+                    detected_modalities.append(modality)
+                    break
+
+        if not detected_modalities:
+            continue
+
+        # Build modal formula representation
+        formulas = []
+        for mod in detected_modalities:
+            if mod == "epistemic":
+                formulas.append(f"K(agent, prop({arg_id}))")
+            elif mod == "deontic":
+                formulas.append(f"O(prop({arg_id}))")
+            elif mod == "alethic":
+                formulas.append(f"<>({arg_id})")
+
+        try:
+            state.add_modal_analysis_result(
+                formulas=formulas,
+                valid=True,
+                modalities=detected_modalities,
+            )
+            results_count += 1
+        except Exception as e:
+            logger.warning(f"Modal analysis failed for {arg_id}: {e}")
+
+    if results_count == 0:
+        return None
+
+    logger.info(f"Modal analysis: {results_count} arguments with modal markers")
+    return {
+        "modal_results": results_count,
+        "modalities_found": list(
+            {
+                m
+                for r in state.modal_analysis_results
+                for m in r.get("modalities", [])
+            }
+        ),
+    }
