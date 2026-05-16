@@ -310,6 +310,30 @@ Exemples:
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
     )
+    parser.add_argument(
+        "--extraction-turns",
+        type=int,
+        default=7,
+        help="Max turns for Extraction & Detection phase (default: 7)",
+    )
+    parser.add_argument(
+        "--formal-turns",
+        type=int,
+        default=5,
+        help="Max turns for Formal Analysis & Quality phase (default: 5)",
+    )
+    parser.add_argument(
+        "--synthesis-turns",
+        type=int,
+        default=10,
+        help="Max turns for Synthesis & Debate phase (default: 10)",
+    )
+    parser.add_argument(
+        "--reanalysis-turns",
+        type=int,
+        default=5,
+        help="Max turns for Re-Analysis phase if triggered (default: 5)",
+    )
 
     args = parser.parse_args()
 
@@ -441,6 +465,10 @@ Exemples:
         results = await run_conversational_analysis(
             text=text_content,
             max_turns_per_phase=5,
+            extraction_max_turns=args.extraction_turns,
+            formal_max_turns=args.formal_turns,
+            synthesis_max_turns=args.synthesis_turns,
+            reanalysis_max_turns=args.reanalysis_turns,
         )
 
         # Afficher le résumé
