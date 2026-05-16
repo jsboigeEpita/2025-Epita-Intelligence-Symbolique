@@ -187,13 +187,10 @@ class TestDedupInPhase3:
 class TestDirectConfirmCandidates:
     def test_confirms_matching_fallacy(self):
         plugin = _make_plugin()
-        confirm_response = json.dumps({
-            "confirmed": True,
-            "name": "Ad hominem",
-            "explanation": "The text attacks the person",
-            "quote": "he is a liar",
-            "confidence": 0.85,
-        })
+        confirm_response = json.dumps([
+            {"name": "Ad hominem", "explanation": "The text attacks the person",
+             "quote": "he is a liar", "confidence": 0.85},
+        ])
         mock_result = MagicMock()
         mock_result.__str__ = lambda self: confirm_response
         plugin.llm_service.get_chat_message_content = AsyncMock(return_value=mock_result)
@@ -206,7 +203,7 @@ class TestDirectConfirmCandidates:
 
     def test_rejects_non_matching(self):
         plugin = _make_plugin()
-        reject_response = json.dumps({"confirmed": False, "reason": "No fallacy here"})
+        reject_response = "[]"
         mock_result = MagicMock()
         mock_result.__str__ = lambda self: reject_response
         plugin.llm_service.get_chat_message_content = AsyncMock(return_value=mock_result)
@@ -215,6 +212,23 @@ class TestDirectConfirmCandidates:
             plugin._direct_confirm_candidates("Simple factual statement", ["2"])
         )
         assert len(result) == 0
+
+    def test_multiple_instances_per_family(self):
+        plugin = _make_plugin()
+        response = json.dumps([
+            {"name": "Ad hominem abusif", "explanation": "attack 1",
+             "quote": "liar", "confidence": 0.9},
+            {"name": "Ad hominem circonstanciel", "explanation": "attack 2",
+             "quote": "hypocrite", "confidence": 0.7},
+        ])
+        mock_result = MagicMock()
+        mock_result.__str__ = lambda self: response
+        plugin.llm_service.get_chat_message_content = AsyncMock(return_value=mock_result)
+
+        result = asyncio.get_event_loop().run_until_complete(
+            plugin._direct_confirm_candidates("text", ["2"])
+        )
+        assert len(result) == 2
 
 
 class TestExplorationMethodField:

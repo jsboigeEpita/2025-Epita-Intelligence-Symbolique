@@ -293,43 +293,51 @@ class FallacyWorkflowPlugin:
     ) -> List[IdentifiedFallacy]:
         """Direct 1-shot confirmation for each candidate PK (bypasses iterative deepening).
 
-        For each candidate, asks the LLM: 'Does this fallacy exist in the text?'
-        Returns confirmed fallacies with the deepest matching node.
+        For each candidate, asks the LLM to find ALL instances of that fallacy family
+        in the text. Returns confirmed fallacies with the deepest matching node.
         """
         kernel, settings = self._create_one_shot_kernel()
 
-        async def _confirm_one(pk: str) -> Optional[IdentifiedFallacy]:
+        async def _confirm_one(pk: str) -> List[IdentifiedFallacy]:
             node = self.taxonomy_navigator.get_node(pk)
             if not node:
-                return None
+                return []
             node_name = node.get(f"text_{self.language}", node.get("nom_vulgarisé", pk))
             node_desc = node.get(f"desc_{self.language}", "")
-            children = self.taxonomy_navigator.get_children(pk)
 
-            children_text = ""
+            # Build sub-tree text (children + grandchildren)
+            children = self.taxonomy_navigator.get_children(pk)
+            subtypes_text = ""
             for c in children:
                 cname = c.get(f"text_{self.language}", c.get("nom_vulgarisé", ""))
                 cdesc = c.get(f"desc_{self.language}", "")
-                children_text += f"  - {cname}: {cdesc}\n"
+                subtypes_text += f"  - {cname}: {cdesc}\n"
+                grandchildren = self.taxonomy_navigator.get_children(c.get("PK", ""))
+                for gc in grandchildren:
+                    gcname = gc.get(f"text_{self.language}", gc.get("nom_vulgarisé", ""))
+                    gcdesc = gc.get(f"desc_{self.language}", "")
+                    subtypes_text += f"    - {gcname}: {gcdesc}\n"
 
             prompt = (
-                f"Analyze this text for a SPECIFIC fallacy:\n\n"
+                f"Analyze this text exhaustively for ALL instances of the '{node_name}' "
+                f"fallacy family:\n\n"
                 f"--- TEXT ---\n{argument_text[:6000]}\n--- END ---\n\n"
-                f"Fallacy candidate: {node_name}\n"
+                f"Parent fallacy: {node_name}\n"
                 f"Description: {node_desc}\n"
             )
-            if children_text:
-                prompt += f"Sub-types:\n{children_text}\n"
+            if subtypes_text:
+                prompt += f"Known sub-types:\n{subtypes_text}\n"
             prompt += (
-                "Does this fallacy (or one of its sub-types) appear in the text?\n"
-                "Respond with JSON ONLY:\n"
-                '{"confirmed": true, "name": "exact fallacy name", "explanation": "why it applies", '
-                '"quote": "exact quote from text", "confidence": 0.0-1.0}\n'
-                'or {"confirmed": false, "reason": "why not"}'
+                "Find EVERY instance of this fallacy family in the text. "
+                "Each instance should be a separate object.\n"
+                "Respond with a JSON array:\n"
+                '[{"name": "exact subtype name", "explanation": "why it applies", '
+                '"quote": "exact quote from text", "confidence": 0.0-1.0}]\n'
+                "If NO instance found, respond with: []"
             )
 
             history = ChatHistory(
-                system_message="You are a fallacy detection expert. Respond ONLY with JSON."
+                system_message="You are a fallacy detection expert. Be thorough. Respond ONLY with JSON."
             )
             history.add_user_message(prompt)
 
@@ -338,47 +346,59 @@ class FallacyWorkflowPlugin:
                     self.llm_service.get_chat_message_content(
                         chat_history=history, settings=settings, kernel=kernel
                     ),
-                    timeout=30.0,
+                    timeout=60.0,
                 )
                 raw = str(response).strip()
+            except asyncio.TimeoutError:
+                self.logger.warning(f"Direct confirm timed out for {pk}")
+                return []
             except Exception as e:
-                self.logger.warning(f"Direct confirm failed for {pk}: {e}")
-                return None
+                self.logger.warning(f"Direct confirm failed for {pk}: {type(e).__name__}: {e}", exc_info=True)
+                return []
 
             try:
                 if "```json" in raw:
                     raw = raw.split("```json")[1].split("```")[0]
                 elif "```" in raw:
                     raw = raw.split("```")[1].split("```")[0]
-                start = raw.find("{")
-                end = raw.rfind("}") + 1
+                start = raw.find("[")
+                end = raw.rfind("]") + 1
                 if start >= 0 and end > start:
-                    parsed = json.loads(raw[start:end])
+                    parsed_list = json.loads(raw[start:end])
                 else:
-                    return None
+                    return []
             except (json.JSONDecodeError, ValueError):
-                return None
+                return []
 
-            if not parsed.get("confirmed"):
-                self.logger.info(f"  Direct confirm rejected: {pk} — {parsed.get('reason', '')}")
-                return None
+            if not isinstance(parsed_list, list):
+                parsed_list = [parsed_list] if isinstance(parsed_list, dict) else []
 
-            return IdentifiedFallacy(
-                fallacy_type=parsed.get("name", node_name),
-                taxonomy_pk=pk,
-                explanation=parsed.get("explanation", ""),
-                problematic_quote=parsed.get("quote", ""),
-                confidence=parsed.get("confidence", 0.7),
-                navigation_trace=[pk],
-            )
+            results = []
+            for item in parsed_list:
+                if not isinstance(item, dict) or not item.get("name"):
+                    continue
+                results.append(IdentifiedFallacy(
+                    fallacy_type=item["name"],
+                    taxonomy_pk=pk,
+                    explanation=item.get("explanation", ""),
+                    problematic_quote=item.get("quote", ""),
+                    confidence=item.get("confidence", 0.7),
+                    navigation_trace=[pk],
+                ))
+
+            if not results:
+                self.logger.info(f"  Direct confirm: no {node_name} instances found")
+            else:
+                self.logger.info(f"  Direct confirm: {len(results)} {node_name} instances")
+            return results
 
         tasks = [_confirm_one(pk) for pk in candidate_pks]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        task_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         confirmed = []
-        for r in results:
-            if isinstance(r, IdentifiedFallacy):
-                confirmed.append(r)
+        for r in task_results:
+            if isinstance(r, list):
+                confirmed.extend(r)
             elif isinstance(r, Exception):
                 self.logger.warning(f"Direct confirm error: {r}")
 
