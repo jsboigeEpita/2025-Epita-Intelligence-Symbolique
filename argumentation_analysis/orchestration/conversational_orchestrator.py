@@ -1179,6 +1179,15 @@ def _retract_fallacious_beliefs(
             ext_belief.context["retracted"] = True
             ext_belief.context["retraction_reason"] = reason
 
+            # Sync retraction to state.jtms_beliefs dict (#562)
+            if hasattr(state, "jtms_beliefs"):
+                for bid, bdata in state.jtms_beliefs.items():
+                    if bdata.get("name") == belief_name:
+                        bdata["valid"] = False
+                        bdata["retracted"] = True
+                        bdata["retraction_reason"] = reason
+                        break
+
             # Count affected beliefs
             affected = []
             for name, b in session.extended_beliefs.items():

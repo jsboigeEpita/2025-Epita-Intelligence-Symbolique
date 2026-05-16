@@ -410,6 +410,15 @@ class StateManagerPlugin:
                 confidence=confidence,
             )
 
+            # Sync to state.jtms_beliefs dict so enrichment summary sees it (#562)
+            if hasattr(self._state, "add_jtms_belief"):
+                justification_names = []
+                self._state.add_jtms_belief(
+                    name=belief_name,
+                    valid=True,
+                    justifications=justification_names,
+                )
+
             self._logger.info(
                 f" -> Belief '{belief_name}' created with ExtendedBelief metadata"
             )
@@ -605,6 +614,15 @@ class StateManagerPlugin:
             )
             ext_belief.context["retracted"] = True
             ext_belief.context["retraction_reason"] = reason
+
+            # Sync retraction to state.jtms_beliefs dict so enrichment sees it (#562)
+            if hasattr(self._state, "jtms_beliefs"):
+                for bid, bdata in self._state.jtms_beliefs.items():
+                    if bdata.get("name") == belief_name:
+                        bdata["valid"] = False
+                        bdata["retracted"] = True
+                        bdata["retraction_reason"] = reason
+                        break
 
             # Count affected beliefs (beliefs that lost their justification)
             affected = []
