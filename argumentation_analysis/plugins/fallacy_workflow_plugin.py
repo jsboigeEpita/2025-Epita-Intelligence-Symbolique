@@ -14,6 +14,7 @@ import asyncio
 import csv
 import json
 import logging
+from pathlib import Path
 from typing import Annotated, Dict, List, Optional, Tuple
 
 from semantic_kernel.kernel import Kernel
@@ -701,13 +702,30 @@ class FallacyWorkflowPlugin:
                     f"--- Analysis complete: {len(identified)} fallacies identified "
                     f"via iterative deepening ---"
                 )
-                return analysis_result.model_dump_json(indent=2)
+                result_json = analysis_result.model_dump_json(indent=2)
+                self._persist_trace(trace_log_path, analysis_result, argument_text)
+                return result_json
 
             # Phase 4: Fallback to one-shot
             self.logger.info(
                 "No fallacies found via iterative deepening — falling back to one-shot"
             )
-            return await self._run_one_shot(argument_text)
+            one_shot_result = await self._run_one_shot(argument_text)
+            if trace_log_path:
+                try:
+                    parsed = json.loads(one_shot_result)
+                    if "fallacies" in parsed:
+                        parsed["trace_note"] = "one_shot_fallback"
+                        parsed["argument_excerpt"] = argument_text[:200]
+                        trace_path = Path(trace_log_path)
+                        trace_path.parent.mkdir(parents=True, exist_ok=True)
+                        trace_path.write_text(
+                            json.dumps(parsed, indent=2, ensure_ascii=False),
+                            encoding="utf-8",
+                        )
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            return one_shot_result
 
         except Exception as e:
             self.logger.error(f"Analysis error: {e}", exc_info=True)
@@ -716,6 +734,46 @@ class FallacyWorkflowPlugin:
             if file_handler:
                 self.logger.removeHandler(file_handler)
                 file_handler.close()
+
+    def _persist_trace(
+        self, trace_log_path: Optional[str], result: "FallacyAnalysisResult", argument_text: str
+    ) -> None:
+        """Persist structured taxonomy traversal trace to JSON file."""
+        if not trace_log_path:
+            return
+        try:
+            trace_entries = []
+            for fallacy in result.fallacies:
+                node = self.taxonomy_navigator.get_node(fallacy.taxonomy_pk)
+                parent_chain = []
+                if node and node.get("path"):
+                    parent_chain = node["path"].split(" > ")
+                trace_entries.append({
+                    "taxonomy_node_id": fallacy.taxonomy_pk,
+                    "fallacy_type": fallacy.fallacy_type,
+                    "parent_chain": parent_chain,
+                    "navigation_trace": fallacy.navigation_trace,
+                    "decision_rationale": fallacy.explanation,
+                    "citation_excerpt": argument_text[:200],
+                    "confidence": fallacy.confidence,
+                })
+
+            trace_data = {
+                "exploration_method": result.exploration_method,
+                "branches_explored": result.branches_explored,
+                "total_iterations": result.total_iterations,
+                "traversal_paths": trace_entries,
+            }
+
+            trace_path = Path(trace_log_path)
+            trace_path.parent.mkdir(parents=True, exist_ok=True)
+            trace_path.write_text(
+                json.dumps(trace_data, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            self.logger.info(f"Trace persisted to {trace_log_path}")
+        except Exception as e:
+            self.logger.warning(f"Failed to persist trace: {e}")
 
     def _build_compact_taxonomy(self, max_depth: int = 4) -> str:
         """Build a compact taxonomy representation (PK + name + path) to fit in context."""
