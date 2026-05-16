@@ -964,6 +964,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "modal_analysis_count": len(self.modal_analysis_results),
                     "formal_synthesis_count": len(self.formal_synthesis_reports),
                     "workflow_results_count": len(self.workflow_results),
+                    "atomic_propositions_count": sum(
+                        len(v) for v in self.atomic_propositions.values()
+                    ),
+                    "fol_shared_signature_sources": list(
+                        self.fol_shared_signature.keys()
+                    ),
                 }
             )
         else:
@@ -989,6 +995,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "modal_analysis_results": self.modal_analysis_results,
                     "formal_synthesis_reports": self.formal_synthesis_reports,
                     "workflow_results": self.workflow_results,
+                    "atomic_propositions": self.atomic_propositions,
+                    "fol_shared_signature": self.fol_shared_signature,
                 }
             )
         return base
