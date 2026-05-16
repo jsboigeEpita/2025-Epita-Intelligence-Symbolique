@@ -66,6 +66,7 @@ __all__ = [
     "_invoke_qbf",
     "_invoke_asp_reasoning",
     "_invoke_hierarchical_fallacy",
+    "_invoke_hierarchical_fallacy_per_argument",
     "_normalize_items_with_quotes",
     "_normalize_fallacies_with_quotes",
     "_invoke_fact_extraction",
@@ -3001,7 +3002,211 @@ async def _invoke_hierarchical_fallacy(
         raise
 
 
-# --- Invoke callables for logic agent capabilities (#71 Formal Verification) ---
+async def _invoke_hierarchical_fallacy_per_argument(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Parent harness: run hierarchical fallacy detection per-argument in parallel (#578 tier 3).
+
+    Extracts individual arguments from the input text, then invokes
+    FallacyWorkflowPlugin.run_guided_analysis() in parallel via asyncio.gather
+    for each argument. This is the tier 3 parent harness that complements
+    tier 1 (wide-net Phase 1) and tier 2 (parallel deepening Phase 2) inside
+    the plugin itself.
+
+    Falls back to single-text analysis if argument extraction is unavailable.
+    """
+    taxonomy_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data",
+        "argumentum_fallacies_taxonomy.csv",
+    )
+    if not os.path.isfile(taxonomy_path):
+        logger.warning(
+            "Taxonomy CSV not found at %s — per-argument fallacy detection skipped",
+            taxonomy_path,
+        )
+        return {
+            "fallacies": [],
+            "exploration_method": "skipped",
+            "reason": "taxonomy file not found",
+        }
+
+    try:
+        from openai import AsyncOpenAI
+        from semantic_kernel.kernel import Kernel
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+            FallacyWorkflowPlugin,
+        )
+
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            raise RuntimeError("No OPENAI_API_KEY available")
+
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
+        # Extract individual arguments from context or input text
+        arguments = _extract_arguments_for_parallel(input_text, context)
+
+        if not arguments:
+            logger.info("No individual arguments extracted — falling back to single-text analysis")
+            return await _invoke_hierarchical_fallacy(input_text, context)
+
+        logger.info(
+            "Parent harness: running parallel fallacy detection on %d arguments",
+            len(arguments),
+        )
+
+        # Create plugin instances — one per argument for isolation
+        async def _analyze_single_arg(arg_text: str, arg_id: str) -> Dict[str, Any]:
+            """Analyze a single argument with its own plugin instance."""
+            try:
+                async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+                llm_service = OpenAIChatCompletion(
+                    ai_model_id=model_id,
+                    async_client=async_client,
+                )
+                master_kernel = Kernel()
+                master_kernel.add_service(llm_service)
+
+                plugin = FallacyWorkflowPlugin(
+                    master_kernel=master_kernel,
+                    llm_service=llm_service,
+                    taxonomy_file_path=taxonomy_path,
+                )
+
+                result_json = await asyncio.wait_for(
+                    plugin.run_guided_analysis(argument_text=arg_text),
+                    timeout=60.0,
+                )
+                result = json.loads(result_json)
+                result["source_arg_id"] = arg_id
+                return result
+            except asyncio.TimeoutError:
+                logger.warning("Timeout analyzing argument %s", arg_id)
+                return {"fallacies": [], "source_arg_id": arg_id, "timed_out": True}
+            except Exception as e:
+                logger.warning("Error analyzing argument %s: %s", arg_id, e)
+                return {"fallacies": [], "source_arg_id": arg_id, "error": str(e)}
+
+        # Parallel execution via asyncio.gather
+        tasks = [
+            _analyze_single_arg(arg_text, arg_id)
+            for arg_id, arg_text in arguments
+        ]
+        per_arg_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Aggregate: collect all fallacies with source arg metadata
+        all_fallacies = []
+        total_iterations = 0
+        methods_used = set()
+        for result in per_arg_results:
+            if isinstance(result, Exception):
+                logger.warning("Per-argument analysis error: %s", result)
+                continue
+            if isinstance(result, dict):
+                fallacies = result.get("fallacies", [])
+                source_arg_id = result.get("source_arg_id", "unknown")
+                for f in fallacies:
+                    if isinstance(f, dict):
+                        f["source_arg_id"] = source_arg_id
+                all_fallacies.extend(fallacies)
+                total_iterations += result.get("total_iterations", 0)
+                method = result.get("exploration_method", "")
+                if method:
+                    methods_used.add(method)
+
+        # Dedup by (taxonomy_pk, source_arg_id) — keep highest confidence
+        seen = {}
+        deduped = []
+        for f in all_fallacies:
+            if not isinstance(f, dict):
+                continue
+            key = (f.get("taxonomy_pk", f.get("fallacy_type", "")), f.get("source_arg_id", ""))
+            if key in seen and seen[key].get("confidence", 0) >= f.get("confidence", 0):
+                continue
+            seen[key] = f
+            deduped = [x for x in deduped if (x.get("taxonomy_pk", x.get("fallacy_type", "")), x.get("source_arg_id", "")) != key]
+            deduped.append(f)
+
+        exploration_method = "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
+
+        logger.info(
+            "Parent harness: %d fallacies from %d arguments (deduped to %d)",
+            len(all_fallacies), len(arguments), len(deduped),
+        )
+
+        return {
+            "fallacies": deduped,
+            "total_iterations": total_iterations,
+            "exploration_method": exploration_method,
+            "extraction_method": exploration_method,
+            "per_argument_count": len(arguments),
+            "parallel_executed": True,
+        }
+
+    except (ImportError, RuntimeError) as e:
+        logger.warning("Per-argument hierarchical fallacy detection unavailable: %s", e)
+        return {
+            "fallacies": [],
+            "exploration_method": "unavailable",
+            "error": str(e),
+            "extraction_method": "unavailable",
+        }
+    except Exception as e:
+        import traceback
+        logger.error(
+            "Per-argument hierarchical fallacy detection failed:\n%s",
+            traceback.format_exc(),
+        )
+        raise
+
+
+def _extract_arguments_for_parallel(
+    input_text: str, context: Dict[str, Any]
+) -> List[tuple]:
+    """Extract individual argument texts from context for parallel processing.
+
+    Looks for arguments in:
+    1. context['_state_object'].identified_arguments (from pipeline state)
+    2. context['extracted_arguments'] (from extraction phase output)
+    3. Falls back to splitting input_text by paragraph breaks
+
+    Returns list of (arg_id, arg_text) tuples. Max 10 arguments.
+    """
+    # Source 1: pipeline state object with identified_arguments
+    state_obj = context.get("_state_object")
+    if state_obj and hasattr(state_obj, "identified_arguments"):
+        args = state_obj.identified_arguments
+        if isinstance(args, dict) and args:
+            result = []
+            for arg_id, desc in list(args.items())[:10]:
+                text = desc if isinstance(desc, str) else str(desc)
+                if text and len(text.strip()) > 20:
+                    result.append((arg_id, text.strip()))
+            if result:
+                return result
+
+    # Source 2: extraction phase output
+    extraction_output = context.get("phase_extraction_output")
+    if extraction_output and isinstance(extraction_output, dict):
+        arguments = extraction_output.get("arguments", [])
+        if arguments:
+            result = []
+            for i, arg in enumerate(arguments[:10]):
+                text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)
+                if text and len(text.strip()) > 20:
+                    result.append((f"arg_{i+1}", text.strip()))
+            if result:
+                return result
+
+    # Source 3: split by paragraph breaks (heuristic fallback)
+    paragraphs = [p.strip() for p in input_text.split("\n\n") if p.strip()]
+    if len(paragraphs) >= 2:
+        return [(f"paragraph_{i+1}", p) for i, p in enumerate(paragraphs[:10]) if len(p) > 20]
+
+    return []
 
 
 def _normalize_items_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
