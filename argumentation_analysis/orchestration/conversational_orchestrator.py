@@ -705,6 +705,24 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"ASPIC post-processing failed: {e}")
 
+    # 5b-5. Belief revision (#566)
+    # Contract beliefs contradicted by detected fallacies (AGM pattern).
+    revision_result = None
+    if spectacular and hasattr(state, "belief_revision_results"):
+        try:
+            revision_result = _run_belief_revision_from_state(state)
+            if revision_result:
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "belief_revision",
+                        "method": revision_result["method"],
+                        "removed": revision_result["removed"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Belief revision post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.
@@ -1585,4 +1603,78 @@ def _build_aspic_from_state(state: Any) -> Optional[Dict[str, Any]]:
         "defeasible_rules": len(defeasible_rules),
         "surviving": len(surviving),
         "defeated": len(defeated),
+    }
+
+
+def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
+    """Run AGM belief revision when fallacy-triggered contradictions exist (#566).
+
+    When fallacies target arguments that have JTMS beliefs, the beliefs are
+    contradicted. This function records the revision: original beliefs →
+    revised (contradicted beliefs removed).
+    """
+    if not hasattr(state, "belief_revision_results"):
+        return None
+    if not hasattr(state, "add_belief_revision_result"):
+        return None
+    if not hasattr(state, "identified_fallacies"):
+        return None
+
+    # Already populated — skip
+    if state.belief_revision_results:
+        return None
+
+    fallacies = list(state.identified_fallacies.values())
+    if not fallacies:
+        return None
+
+    # Collect beliefs that should be revised (targeted by fallacies)
+    jtms_beliefs = getattr(state, "jtms_beliefs", {})
+    original_beliefs = [bdata.get("name", "") for bdata in jtms_beliefs.values()
+                        if bdata.get("valid", False)]
+    if not original_beliefs:
+        return None
+
+    revised = list(original_beliefs)
+    removed = []
+
+    for f in fallacies:
+        if not isinstance(f, dict):
+            continue
+        target_arg = f.get("target_argument_id", "")
+        fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))
+        if not target_arg:
+            continue
+
+        # Find belief matching the targeted argument
+        for bname in original_beliefs:
+            if bname == target_arg or target_arg in bname:
+                if bname in revised:
+                    revised.remove(bname)
+                    removed.append(f"{bname} (undermined by {fallacy_type})")
+                    break
+
+    if not removed:
+        return None
+
+    try:
+        state.add_belief_revision_result(
+            method="fallacy_contraction",
+            original=original_beliefs,
+            revised=revised,
+        )
+    except Exception as e:
+        logger.warning(f"Belief revision persistence failed: {e}")
+        return None
+
+    logger.info(
+        f"Belief revision: {len(removed)} beliefs contracted "
+        f"({len(original_beliefs)} → {len(revised)})"
+    )
+
+    return {
+        "method": "fallacy_contraction",
+        "original_count": len(original_beliefs),
+        "revised_count": len(revised),
+        "removed": removed,
     }
