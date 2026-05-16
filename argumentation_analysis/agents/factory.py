@@ -51,6 +51,7 @@ AGENT_SPECIALITY_MAP = {
     "formal_logic": [
         "tweety_logic",
         "nl_to_logic",
+        "coordinated_logic",
         "atms",
         "ranking",
         "aspic",
@@ -150,6 +151,11 @@ _PLUGIN_REGISTRY = {
     "toulmin": (
         "argumentation_analysis.plugins.toulmin_plugin",
         "ToulminPlugin",
+    ),
+    # 2-pass coordinated logic (PL atoms + FOL signature) (#560, #561)
+    "coordinated_logic": (
+        "argumentation_analysis.plugins.coordinated_logic_plugin",
+        "CoordinatedLogicPlugin",
     ),
     # Complex plugins (need constructor args — loaded via special handling)
     # "exploration": needs TaxonomyNavigator — loaded by FallacyWorkflowPlugin
