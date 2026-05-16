@@ -3374,6 +3374,11 @@ async def _invoke_fol_reasoning(
     """
     args = _extract_arguments_from_context(input_text, context)
     formulas = context.get("formulas")
+    fol_metadata_shared: Dict[str, Any] = {}
+
+    # Retrieve state object for fol_shared_signature storage
+    state_obj = context.get("_state_object")
+
     if not formulas:
         # (#208-H) Check if NL-to-logic phase already produced FOL translations
         nl_output = context.get("phase_nl_to_logic_output", {})
@@ -3401,30 +3406,131 @@ async def _invoke_fol_reasoning(
                 f"(from upstream phase)"
             )
         else:
-            # Fallback: try on-the-fly NL translation
+            # ── FOL 2-pass coordinated pipeline (#544) ───────────────────
+            # Pass 1: Extract shared FOL signature (sorts, predicates, constants) from full text
+            # Pass 2: Generate per-argument formulas using ONLY shared signature
             try:
-                from argumentation_analysis.services.nl_to_logic import (
-                    NLToLogicTranslator,
-                )
+                from openai import AsyncOpenAI
 
-                translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
-                batch = await translator.translate_batch(
-                    args[:4], logic_type="fol", check_consistency=False
-                )
-                valid = [t for t in batch.translations if t.is_valid]
-                if valid:
-                    formulas = []
-                    for t in valid:  # type: ignore[assignment]
-                        for f in t.formula.split(";"):  # type: ignore[attr-defined]
-                            f = f.strip()
-                            if f:
-                                formulas.append(f)
-                    logger.info(
-                        f"NL-to-logic translated {len(valid)}/{len(args)} "
-                        f"arguments to FOL"
+                api_key = os.environ.get("OPENAI_API_KEY", "")
+                if api_key and input_text and len(input_text) > 100:
+                    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+                    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+                    # ── Pass 1: Shared FOL signature from full text ──
+                    pass1_prompt = (
+                        "You are a formal logic expert. Analyze the text and extract a "
+                        "first-order logic signature.\n\n"
+                        "Output a JSON object with:\n"
+                        '- "sorts": dict mapping sort_name -> list of constant names '
+                        '(e.g. {"Person": ["socrates", "plato"]})\n'
+                        '- "predicates": dict mapping pred_name -> list of arg sort names '
+                        '(e.g. {"Mortal": ["Person"], "Human": ["Person"]})\n'
+                        '- "constants": dict mapping const_name -> description '
+                        '(e.g. {"socrates": "the philosopher"})\n\n'
+                        "Rules:\n"
+                        "- Sorts: group related constants (Person, Country, etc.)\n"
+                        "- Predicates: CamelCase, list arg sorts\n"
+                        "- Constants: lowercase\n"
+                        '- If unsure about sort, use "Thing"\n\n'
+                        f"Text:\n{input_text[:4000]}"
                     )
+                    pass1_resp = await client.chat.completions.create(
+                        model=model_id,
+                        messages=[{"role": "user", "content": pass1_prompt}],
+                    )
+                    pass1_raw = pass1_resp.choices[0].message.content or ""
+
+                    sig_data = _parse_json_from_llm(pass1_raw)
+                    sorts = sig_data.get("sorts", {})
+                    predicates = sig_data.get("predicates", {})
+                    constants_raw = sig_data.get("constants", {})
+
+                    if sorts or constants_raw:
+                        if not sorts and constants_raw:
+                            sorts = {"Thing": list(constants_raw.keys())}
+                        fol_metadata_shared = {
+                            "sorts": sorts,
+                            "predicates": predicates,
+                            "constants_raw": constants_raw,
+                        }
+                        logger.info(
+                            f"FOL 2-pass Pass 1: {len(sorts)} sorts, "
+                            f"{len(predicates)} predicates, "
+                            f"{sum(len(v) for v in sorts.values())} constants extracted"
+                        )
+
+                        # Store in state
+                        if state_obj is not None and hasattr(state_obj, "fol_shared_signature"):
+                            source_id = context.get("source_metadata", {}).get("opaque_id", "default")
+                            state_obj.fol_shared_signature[source_id] = fol_metadata_shared
+
+                        # ── Pass 2: Per-argument FOL formula generation ──
+                        if args:
+                            sig_json = json.dumps(sig_data, indent=2)
+                            for arg_text in args[:6]:
+                                pass2_prompt = (
+                                    "You are a formal logic expert. Translate the text "
+                                    "into first-order logic formulas using ONLY the "
+                                    "provided signature.\n\n"
+                                    "Rules:\n"
+                                    "- Use ONLY the predicates and constants from the signature\n"
+                                    "- Predicates: CamelCase, constants: lowercase\n"
+                                    "- Quantifiers: forall X: (...), exists X: (...)\n"
+                                    "- Operators: ! (not), && (and), || (or), => (implies)\n"
+                                    "- Output JSON with key 'formulas' (list of formula strings)\n\n"
+                                    f"Text:\n{arg_text[:2000]}\n\n"
+                                    f"Signature:\n{sig_json}"
+                                )
+                                try:
+                                    pass2_resp = await client.chat.completions.create(
+                                        model=model_id,
+                                        messages=[{"role": "user", "content": pass2_prompt}],
+                                    )
+                                    pass2_raw = pass2_resp.choices[0].message.content or ""
+                                    formulas_data = _parse_json_from_llm(pass2_raw)
+                                    arg_formulas = formulas_data.get("formulas", [])
+                                    for f in arg_formulas:
+                                        f = f.strip()
+                                        if f and f not in formulas:
+                                            formulas.append(f)
+                                except Exception as arg_err:
+                                    logger.debug(f"FOL Pass 2 failed for argument: {arg_err}")
+
+                            if formulas:
+                                logger.info(
+                                    f"FOL 2-pass Pass 2: {len(formulas)} formulas generated "
+                                    f"with shared signature"
+                                )
             except Exception as e:
-                logger.debug(f"NL-to-logic FOL translation unavailable: {e}")
+                logger.debug(f"FOL 2-pass pipeline unavailable: {e}")
+
+            # Fallback: try on-the-fly NL translation
+            if not formulas:
+                try:
+                    from argumentation_analysis.services.nl_to_logic import (
+                        NLToLogicTranslator,
+                    )
+
+                    translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
+                    batch = await translator.translate_batch(
+                        args[:4], logic_type="fol", check_consistency=False
+                    )
+                    valid = [t for t in batch.translations if t.is_valid]
+                    if valid:
+                        formulas = []
+                        for t in valid:  # type: ignore[assignment]
+                            for f in t.formula.split(";"):  # type: ignore[attr-defined]
+                                f = f.strip()
+                                if f:
+                                    formulas.append(f)
+                        logger.info(
+                            f"NL-to-logic translated {len(valid)}/{len(args)} "
+                            f"arguments to FOL"
+                        )
+                except Exception as e:
+                    logger.debug(f"NL-to-logic FOL translation unavailable: {e}")
 
         if not formulas:
             # Final fallback: template-based FOL predicates
