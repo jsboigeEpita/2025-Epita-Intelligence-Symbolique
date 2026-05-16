@@ -257,15 +257,27 @@ class FallacyWorkflowPlugin:
             candidates_raw = [candidates_raw]
 
         roots_index = self._build_roots_index()
+        pk_index = {}
+        for node in self.taxonomy_navigator.taxonomy_data:
+            name = node.get(f"text_{self.language}", node.get("nom_vulgarisé", ""))
+            if name:
+                pk_index[name.lower().strip()] = node.get("PK", "")
+
         candidate_pks = []
         for c in candidates_raw:
             if not isinstance(c, dict):
                 continue
+            fallacy_name = c.get("fallacy_name", c.get("name", ""))
             root_cat = c.get("root_category", "")
-            pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
+
+            # Try exact match on full taxonomy first (deepest level)
+            pk = pk_index.get(fallacy_name.lower().strip(), "")
             if not pk:
-                fallacy_name = c.get("fallacy_name", "")
+                pk = pk_index.get(root_cat.lower().strip(), "")
+            if not pk:
                 pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
+            if not pk:
+                pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
             if pk and pk not in candidate_pks:
                 candidate_pks.append(pk)
 
@@ -275,6 +287,102 @@ class FallacyWorkflowPlugin:
             f"{len(candidate_pks)} unique root PKs: {candidate_pks}"
         )
         return candidate_pks
+
+    async def _direct_confirm_candidates(
+        self, argument_text: str, candidate_pks: List[str]
+    ) -> List[IdentifiedFallacy]:
+        """Direct 1-shot confirmation for each candidate PK (bypasses iterative deepening).
+
+        For each candidate, asks the LLM: 'Does this fallacy exist in the text?'
+        Returns confirmed fallacies with the deepest matching node.
+        """
+        kernel, settings = self._create_one_shot_kernel()
+
+        async def _confirm_one(pk: str) -> Optional[IdentifiedFallacy]:
+            node = self.taxonomy_navigator.get_node(pk)
+            if not node:
+                return None
+            node_name = node.get(f"text_{self.language}", node.get("nom_vulgarisé", pk))
+            node_desc = node.get(f"desc_{self.language}", "")
+            children = self.taxonomy_navigator.get_children(pk)
+
+            children_text = ""
+            for c in children:
+                cname = c.get(f"text_{self.language}", c.get("nom_vulgarisé", ""))
+                cdesc = c.get(f"desc_{self.language}", "")
+                children_text += f"  - {cname}: {cdesc}\n"
+
+            prompt = (
+                f"Analyze this text for a SPECIFIC fallacy:\n\n"
+                f"--- TEXT ---\n{argument_text[:6000]}\n--- END ---\n\n"
+                f"Fallacy candidate: {node_name}\n"
+                f"Description: {node_desc}\n"
+            )
+            if children_text:
+                prompt += f"Sub-types:\n{children_text}\n"
+            prompt += (
+                "Does this fallacy (or one of its sub-types) appear in the text?\n"
+                "Respond with JSON ONLY:\n"
+                '{"confirmed": true, "name": "exact fallacy name", "explanation": "why it applies", '
+                '"quote": "exact quote from text", "confidence": 0.0-1.0}\n'
+                'or {"confirmed": false, "reason": "why not"}'
+            )
+
+            history = ChatHistory(
+                system_message="You are a fallacy detection expert. Respond ONLY with JSON."
+            )
+            history.add_user_message(prompt)
+
+            try:
+                response = await asyncio.wait_for(
+                    self.llm_service.get_chat_message_content(
+                        chat_history=history, settings=settings, kernel=kernel
+                    ),
+                    timeout=30.0,
+                )
+                raw = str(response).strip()
+            except Exception as e:
+                self.logger.warning(f"Direct confirm failed for {pk}: {e}")
+                return None
+
+            try:
+                if "```json" in raw:
+                    raw = raw.split("```json")[1].split("```")[0]
+                elif "```" in raw:
+                    raw = raw.split("```")[1].split("```")[0]
+                start = raw.find("{")
+                end = raw.rfind("}") + 1
+                if start >= 0 and end > start:
+                    parsed = json.loads(raw[start:end])
+                else:
+                    return None
+            except (json.JSONDecodeError, ValueError):
+                return None
+
+            if not parsed.get("confirmed"):
+                self.logger.info(f"  Direct confirm rejected: {pk} — {parsed.get('reason', '')}")
+                return None
+
+            return IdentifiedFallacy(
+                fallacy_type=parsed.get("name", node_name),
+                taxonomy_pk=pk,
+                explanation=parsed.get("explanation", ""),
+                problematic_quote=parsed.get("quote", ""),
+                confidence=parsed.get("confidence", 0.7),
+                navigation_trace=[pk],
+            )
+
+        tasks = [_confirm_one(pk) for pk in candidate_pks]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        confirmed = []
+        for r in results:
+            if isinstance(r, IdentifiedFallacy):
+                confirmed.append(r)
+            elif isinstance(r, Exception):
+                self.logger.warning(f"Direct confirm error: {r}")
+
+        return confirmed
 
     async def _execute_tool_calls(
         self,
@@ -715,38 +823,10 @@ class FallacyWorkflowPlugin:
                 f"Phase 1: {len(candidate_pks)} wide-net candidates: {candidate_pks}"
             )
 
-            # Phase 2: Parallel iterative deepening on ALL candidates
-            slave_kernel, slave_settings = self._create_slave_kernel()
-            exploration_tasks = [
-                self._explore_single_branch(
-                    argument_text,
-                    pk,
-                    slave_kernel,
-                    slave_settings,
-                    reasoning_history=None,
-                )
-                for pk in candidate_pks
-            ]
-            branch_results = await asyncio.gather(
-                *exploration_tasks, return_exceptions=True
+            # Phase 2: Direct parallel confirmation (bypass iterative deepening)
+            identified = await self._direct_confirm_candidates(
+                argument_text, candidate_pks
             )
-
-            # Phase 3: Collect + dedup by leaf taxonomy_pk (keep highest confidence)
-            identified = []
-            seen_pks = {}
-            total_iterations = 0
-            for result in branch_results:
-                if isinstance(result, Exception):
-                    self.logger.warning(f"Branch exploration error: {result}")
-                    continue
-                if isinstance(result, IdentifiedFallacy):
-                    total_iterations += len(result.navigation_trace)
-                    leaf_pk = result.fallacy_type
-                    if leaf_pk in seen_pks and seen_pks[leaf_pk].confidence >= result.confidence:
-                        continue
-                    seen_pks[leaf_pk] = result
-                    identified = [r for r in identified if r.fallacy_type != leaf_pk]
-                    identified.append(result)
 
             if identified:
                 identified.sort(key=lambda f: f.confidence, reverse=True)
@@ -754,7 +834,7 @@ class FallacyWorkflowPlugin:
                     fallacies=identified,
                     exploration_method="wide_net_parallel",
                     branches_explored=len(candidate_pks),
-                    total_iterations=total_iterations,
+                    total_iterations=len(candidate_pks),
                 )
                 self.logger.info(
                     f"--- Analysis complete: {len(identified)} fallacies identified "

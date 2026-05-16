@@ -79,7 +79,8 @@ class TestWideNetCandidates:
         result = asyncio.get_event_loop().run_until_complete(
             plugin._wide_net_candidates("Some argument text here")
         )
-        assert "2" in result  # Ad hominem PK
+        # Ad hominem maps to a child PK since "ad hominem abusif" contains "ad hominem"
+        assert len(result) >= 2
         assert "175" in result  # Manipulation mentale PK
 
     def test_handles_empty_response(self):
@@ -181,6 +182,39 @@ class TestDedupInPhase3:
             identified.append(r)
 
         assert len(identified) == 2
+
+
+class TestDirectConfirmCandidates:
+    def test_confirms_matching_fallacy(self):
+        plugin = _make_plugin()
+        confirm_response = json.dumps({
+            "confirmed": True,
+            "name": "Ad hominem",
+            "explanation": "The text attacks the person",
+            "quote": "he is a liar",
+            "confidence": 0.85,
+        })
+        mock_result = MagicMock()
+        mock_result.__str__ = lambda self: confirm_response
+        plugin.llm_service.get_chat_message_content = AsyncMock(return_value=mock_result)
+
+        result = asyncio.get_event_loop().run_until_complete(
+            plugin._direct_confirm_candidates("He is a liar so don't trust him", ["2"])
+        )
+        assert len(result) == 1
+        assert result[0].confidence == 0.85
+
+    def test_rejects_non_matching(self):
+        plugin = _make_plugin()
+        reject_response = json.dumps({"confirmed": False, "reason": "No fallacy here"})
+        mock_result = MagicMock()
+        mock_result.__str__ = lambda self: reject_response
+        plugin.llm_service.get_chat_message_content = AsyncMock(return_value=mock_result)
+
+        result = asyncio.get_event_loop().run_until_complete(
+            plugin._direct_confirm_candidates("Simple factual statement", ["2"])
+        )
+        assert len(result) == 0
 
 
 class TestExplorationMethodField:
