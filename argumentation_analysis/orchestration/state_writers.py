@@ -8,7 +8,7 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -104,6 +104,32 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         state.add_quality_score(arg_id, scores, float(overall))
 
 
+def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
+    """Resolve target text to an arg_id from identified_arguments.
+
+    Checks exact ID match first, then text-based matching.
+    Returns None if no match found.
+    """
+    if not target_text:
+        return None
+    # Direct ID match
+    if target_text in state.identified_arguments:
+        return target_text
+    # Text-based matching (same heuristic as get_enrichment_summary)
+    for arg_id, desc in state.identified_arguments.items():
+        if not desc:
+            continue
+        match_prefix = desc[:60]
+        if (
+            target_text == desc
+            or target_text[:60] == match_prefix
+            or match_prefix in target_text
+            or target_text in desc
+        ):
+            return arg_id
+    return None
+
+
 def _write_counter_argument_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -127,7 +153,10 @@ def _write_counter_argument_to_state(
                 score = float(evaluation["overall_score"])
             else:
                 score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
-            state.add_counter_argument(target, counter_text, strategy_name, score)
+            arg_id = _resolve_target_arg_id(state, target)
+            state.add_counter_argument(
+                target, counter_text, strategy_name, score, target_arg_id=arg_id
+            )
         return
 
     # Backward compat: single LLM counter-argument
@@ -137,7 +166,10 @@ def _write_counter_argument_to_state(
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
-        state.add_counter_argument(target, counter_text, strategy_name, score)
+        arg_id = _resolve_target_arg_id(state, target)
+        state.add_counter_argument(
+            target, counter_text, strategy_name, score, target_arg_id=arg_id
+        )
         return
 
     # Fallback to heuristic plugin output
@@ -152,7 +184,10 @@ def _write_counter_argument_to_state(
     score = strategy.get("confidence", 0.0)
     if not isinstance(score, (int, float)):
         score = 0.0
-    state.add_counter_argument(original, strategy_name, strategy_name, float(score))
+    arg_id = _resolve_target_arg_id(state, original)
+    state.add_counter_argument(
+        original, strategy_name, strategy_name, float(score), target_arg_id=arg_id
+    )
 
 
 def _write_jtms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

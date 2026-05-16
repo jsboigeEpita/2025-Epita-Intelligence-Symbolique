@@ -670,15 +670,24 @@ class StateManagerPlugin:
             return f"FUNC_ERROR: {e}"
 
     @kernel_function(
-        description="Add a counter-argument result. Params: original_arg, counter_content, strategy, score (0-1).",
+        description="Add a counter-argument result. Params: original_arg, counter_content, strategy, score (0-1), target_arg_id (optional).",
         name="add_counter_argument",
     )
     def add_counter_argument(
-        self, original_arg: str, counter_content: str, strategy: str, score: str = "0.5"
+        self,
+        original_arg: str,
+        counter_content: str,
+        strategy: str,
+        score: str = "0.5",
+        target_arg_id: str = "",
     ) -> str:
         try:
             ca_id = self._state.add_counter_argument(
-                original_arg, counter_content, strategy, float(score)
+                original_arg,
+                counter_content,
+                strategy,
+                float(score),
+                target_arg_id=target_arg_id or None,
             )
             return ca_id
         except Exception as e:
