@@ -61,6 +61,7 @@ class FallacyWorkflowPlugin:
 
     MAX_DEPTH_PER_BRANCH = 8
     MAX_BRANCHES = 4
+    MAX_CANDIDATES = 20  # Wide-net Phase 1 cap (#578)
     MIN_CONFIRM_DEPTH = 2  # Don't accept confirmations at depth < 2 (too generic)
 
     def __init__(
@@ -146,6 +147,134 @@ class FallacyWorkflowPlugin:
                 lines.append(f"   - {cname} (ID: {cpk}): {cdesc}")
 
         return "\n".join(lines)
+
+    def _build_roots_index(self) -> Dict[str, str]:
+        """Build a lookup: lowercase root name → root PK."""
+        roots = self.taxonomy_navigator.get_root_nodes()
+        index = {}
+        for root in roots:
+            pk = root.get("PK", "")
+            name = root.get(f"text_{self.language}", root.get("nom_vulgarisé", ""))
+            index[name.lower().strip()] = pk
+        return index
+
+    def _map_fallacy_to_root_pk(self, fallacy_name: str, roots_index: Dict[str, str]) -> Optional[str]:
+        """Map a free-text fallacy name to the closest root PK via keyword matching."""
+        name_lower = fallacy_name.lower().strip()
+        if name_lower in roots_index:
+            return roots_index[name_lower]
+
+        root_keywords = {
+            "authority": ["autorit"],
+            "ad hominem": ["ad hominem", "attaque", "personne"],
+            "straw man": ["paille", "distortion"],
+            "slippery slope": ["pente glissante"],
+            "emotion": ["émotion", "sentiment"],
+            "false dilemma": ["faux dilemme", "dilemme"],
+            "hasty generalization": ["généralisation"],
+            "circular reasoning": ["circulaire", "pétition"],
+            "red herring": ["hareng", "diversion"],
+            "tu quoque": ["tu quoque", "hypocrisie"],
+            "guilt by association": ["association", "culpabilité"],
+            "bandwagon": ["ad populum", "majeure"],
+            "tradition": ["tradition"],
+            "non sequitur": ["non sequitur", "inconséquence"],
+            "poisoning the well": ["empoisonnement"],
+            "no true scotsman": ["vrai écossais"],
+            "false cause": ["fausse cause", "causalité"],
+            "loaded question": ["question chargée"],
+            "manipulation": ["manipulation"],
+        }
+
+        for keyword, patterns in root_keywords.items():
+            if keyword in name_lower or any(p in name_lower for p in patterns):
+                for root_name, pk in roots_index.items():
+                    if any(p in root_name for p in patterns):
+                        return pk
+
+        for root_name, pk in roots_index.items():
+            if root_name in name_lower or name_lower in root_name:
+                return pk
+
+        return None
+
+    async def _wide_net_candidates(self, argument_text: str) -> List[str]:
+        """Phase 1 wide-net: LLM lists all candidate fallacies 0-shot-style.
+
+        Returns list of root PKs, one per candidate, up to MAX_CANDIDATES.
+        """
+        kernel, settings = self._create_one_shot_kernel()
+        roots = self.taxonomy_navigator.get_root_nodes()
+        roots_text = "\n".join(
+            f"- {r.get('text_fr', r.get('nom_vulgarisé', r.get('PK', '')))} (PK: {r.get('PK', '')})"
+            for r in roots
+        )
+
+        prompt = (
+            f"Analyze this text exhaustively for logical fallacies:\n\n"
+            f"--- TEXT ---\n{argument_text[:8000]}\n--- END ---\n\n"
+            "List EVERY fallacy you can find. For each, respond with a JSON object:\n"
+            '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0}\n\n'
+            "Respond with a JSON array of objects. Be thorough — aim for 10-20 fallacies.\n"
+            "Even borderline or arguable cases should be included.\n\n"
+            f"Available root categories:\n{roots_text}"
+        )
+
+        history = ChatHistory(
+            system_message="You are a fallacy detection expert. Be exhaustive. Respond ONLY with a JSON array."
+        )
+        history.add_user_message(prompt)
+
+        try:
+            response = await asyncio.wait_for(
+                self.llm_service.get_chat_message_content(
+                    chat_history=history, settings=settings, kernel=kernel
+                ),
+                timeout=60.0,
+            )
+            raw = str(response).strip()
+        except Exception as e:
+            self.logger.warning(f"Wide-net Phase 1 failed: {e}")
+            return []
+
+        candidates_raw = []
+        try:
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            start = raw.find("[")
+            end = raw.rfind("]") + 1
+            if start >= 0 and end > start:
+                candidates_raw = json.loads(raw[start:end])
+            elif raw.strip().startswith("{"):
+                candidates_raw = [json.loads(raw)]
+        except (json.JSONDecodeError, ValueError):
+            self.logger.warning(f"Wide-net parse failed, raw: {raw[:200]}")
+            return []
+
+        if not isinstance(candidates_raw, list):
+            candidates_raw = [candidates_raw]
+
+        roots_index = self._build_roots_index()
+        candidate_pks = []
+        for c in candidates_raw:
+            if not isinstance(c, dict):
+                continue
+            root_cat = c.get("root_category", "")
+            pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
+            if not pk:
+                fallacy_name = c.get("fallacy_name", "")
+                pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
+            if pk and pk not in candidate_pks:
+                candidate_pks.append(pk)
+
+        candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
+        self.logger.info(
+            f"Phase 1 wide-net: {len(candidates_raw)} candidates, "
+            f"{len(candidate_pks)} unique root PKs: {candidate_pks}"
+        )
+        return candidate_pks
 
     async def _execute_tool_calls(
         self,
@@ -576,101 +705,25 @@ class FallacyWorkflowPlugin:
             if use_one_shot:
                 return await self._run_one_shot(argument_text)
 
-            # Phase 1: Root category selection
-            slave_kernel, slave_settings = self._create_slave_kernel()
-            root_presentation = self._build_root_presentation()
-
-            selection_prompt = (
-                f'Text to analyze: "{argument_text[:800]}"\n\n'
-                f"Below are the ROOT CATEGORIES of the fallacy taxonomy:\n"
-                f"{root_presentation}\n\n"
-                "CRITICAL MULTI-BRANCH SELECTION:\n"
-                "You MUST select 2-3 DIFFERENT candidate branches by calling explore_branch(node_pk='<ID>') "
-                "for EACH branch that COULD POTENTIALLY contain a fallacy.\n\n"
-                "Why multi-branch? The text may contain MULTIPLE fallacies from different families. "
-                "Exploring multiple branches in parallel ensures comprehensive coverage.\n\n"
-                "Instructions:\n"
-                "- Call explore_branch 2-3 times with DIFFERENT root category IDs\n"
-                "- Even if one branch seems most likely, explore 1-2 others as backup\n"
-                "- Do NOT stop after a single branch selection\n"
-                "- Consider: Appeal to authority (relevance), Ad hominem (attack), Slippery slope (relevance), etc."
-            )
-
-            history = ChatHistory(
-                system_message=(
-                    "You are a fallacy classifier. Your task is to select which taxonomy "
-                    "branches might contain fallacies present in the given text.\n\n"
-                    "IMPORTANT: The text likely contains MULTIPLE fallacies from DIFFERENT families. "
-                    "You MUST call explore_branch 2-3 times for DIFFERENT root categories.\n\n"
-                    "Call explore_branch for each candidate branch. "
-                    "Do NOT respond with text — only function calls.\n"
-                    "Note: Only select branches if you genuinely suspect fallacious "
-                    "reasoning. Legitimate rhetorical techniques (citing authority "
-                    "with proper credentials, emotional appeals grounded in facts, "
-                    "referencing tradition as context) are not fallacies."
-                )
-            )
-            history.add_user_message(selection_prompt)
-
-            try:
-                response = await asyncio.wait_for(
-                    self.llm_service.get_chat_message_contents(
-                        chat_history=history,
-                        settings=slave_settings,
-                        kernel=slave_kernel,
-                    ),
-                    timeout=30.0,
-                )
-            except asyncio.TimeoutError:
-                self.logger.warning(
-                    "Root selection LLM call timed out. Falling back to one-shot."
-                )
-                return await self._run_one_shot(argument_text)
-            except Exception as e:
-                self.logger.warning(
-                    f"Root selection LLM call failed: {e}. Falling back to one-shot."
-                )
+            # Phase 1: Wide-net candidate selection (#578)
+            candidate_pks = await self._wide_net_candidates(argument_text)
+            if not candidate_pks:
+                self.logger.info("Wide-net produced no candidates — falling back to one-shot")
                 return await self._run_one_shot(argument_text)
 
-            # Extract selected branches from function calls
-            all_items = []
-            if response:
-                for msg in response:
-                    if hasattr(msg, "items"):
-                        all_items.extend(msg.items)
-
-            tool_calls = [i for i in all_items if isinstance(i, FunctionCallContent)]
-            if not tool_calls:
-                self.logger.info("No branches selected — falling back to one-shot")
-                return await self._run_one_shot(argument_text)
-
-            # Extract candidate PKs from explore_branch calls
-            candidate_pks = []
-            for tc in tool_calls:
-                args = tc.arguments or {}
-                if isinstance(args, str):
-                    try:
-                        args = json.loads(args)
-                    except (json.JSONDecodeError, TypeError):
-                        args = {}
-                pk = args.get("node_pk", "")
-                if pk and pk not in candidate_pks:
-                    candidate_pks.append(pk)
-
-            candidate_pks = candidate_pks[: self.MAX_BRANCHES]
             self.logger.info(
-                f"Phase 1: {len(candidate_pks)} candidate branches selected: {candidate_pks}"
+                f"Phase 1: {len(candidate_pks)} wide-net candidates: {candidate_pks}"
             )
 
-            # Phase 2: Parallel iterative deepening
-            # Each branch gets its own reasoning history (no shared state)
+            # Phase 2: Parallel iterative deepening on ALL candidates
+            slave_kernel, slave_settings = self._create_slave_kernel()
             exploration_tasks = [
                 self._explore_single_branch(
                     argument_text,
                     pk,
                     slave_kernel,
                     slave_settings,
-                    reasoning_history=None,  # Each branch starts fresh
+                    reasoning_history=None,
                 )
                 for pk in candidate_pks
             ]
@@ -678,29 +731,34 @@ class FallacyWorkflowPlugin:
                 *exploration_tasks, return_exceptions=True
             )
 
-            # Phase 3: Collect results
+            # Phase 3: Collect + dedup by leaf taxonomy_pk (keep highest confidence)
             identified = []
+            seen_pks = {}
             total_iterations = 0
             for result in branch_results:
                 if isinstance(result, Exception):
                     self.logger.warning(f"Branch exploration error: {result}")
                     continue
                 if isinstance(result, IdentifiedFallacy):
-                    identified.append(result)
                     total_iterations += len(result.navigation_trace)
+                    leaf_pk = result.fallacy_type
+                    if leaf_pk in seen_pks and seen_pks[leaf_pk].confidence >= result.confidence:
+                        continue
+                    seen_pks[leaf_pk] = result
+                    identified = [r for r in identified if r.fallacy_type != leaf_pk]
+                    identified.append(result)
 
             if identified:
-                # Sort by confidence, take best
                 identified.sort(key=lambda f: f.confidence, reverse=True)
                 analysis_result = FallacyAnalysisResult(
                     fallacies=identified,
-                    exploration_method="iterative_deepening",
+                    exploration_method="wide_net_parallel",
                     branches_explored=len(candidate_pks),
                     total_iterations=total_iterations,
                 )
                 self.logger.info(
                     f"--- Analysis complete: {len(identified)} fallacies identified "
-                    f"via iterative deepening ---"
+                    f"via wide-net parallel ({len(candidate_pks)} branches) ---"
                 )
                 result_json = analysis_result.model_dump_json(indent=2)
                 self._persist_trace(trace_log_path, analysis_result, argument_text)
