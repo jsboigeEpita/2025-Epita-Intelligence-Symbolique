@@ -104,7 +104,9 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
     overall = output.get("note_finale", 0.0)
     if isinstance(overall, (int, float)) and (scores or overall > 0):
         resolved = _resolve_target_arg_id(state, arg_id)
-        state.add_quality_score(arg_id, scores, float(overall), resolved_arg_id=resolved)
+        state.add_quality_score(
+            arg_id, scores, float(overall), resolved_arg_id=resolved
+        )
 
 
 def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
@@ -131,7 +133,6 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
         ):
             return str(arg_id)
     return None
-
 
 
 def _write_counter_argument_to_state(
