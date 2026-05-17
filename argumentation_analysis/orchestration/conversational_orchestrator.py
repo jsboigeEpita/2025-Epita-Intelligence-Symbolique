@@ -652,7 +652,7 @@ async def run_conversational_analysis(
     # Build Dung AF from identified_arguments + counter_arguments/fallacies
     # after all conversational phases have populated the state.
     dung_result = None
-    if spectacular and hasattr(state, "dung_frameworks"):
+    if spectacular and hasattr(state, "dung_frameworks") and not state.dung_frameworks:
         try:
             dung_result = _build_dung_framework_from_state(state)
             if dung_result:
@@ -688,7 +688,7 @@ async def run_conversational_analysis(
     # 5b-4. ASPIC+ framework construction (#565)
     # Build ASPIC strict/defeasible rules from arguments and fallacy targeting.
     aspic_result = None
-    if spectacular and hasattr(state, "aspic_results"):
+    if spectacular and hasattr(state, "aspic_results") and not state.aspic_results:
         try:
             aspic_result = _build_aspic_from_state(state)
             if aspic_result:
@@ -734,7 +734,7 @@ async def run_conversational_analysis(
             )
 
             source_meta = {
-                "opaque_id": source_id or "unknown",
+                "opaque_id": "conversational_unknown",
                 "era": "",
                 "language": "",
                 "discourse_type": "",
