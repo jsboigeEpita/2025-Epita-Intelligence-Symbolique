@@ -143,6 +143,36 @@ async def run_unified_analysis(
             )
         workflow = catalog[workflow_name]
 
+    # JPype warmup: eagerly initialise JVM + Tweety classes before DAG
+    # execution to eliminate the race condition where multiple parallel
+    # phases call asyncio.to_thread() → TweetyInitializer concurrently
+    # (root cause of the ~20% timeout rate observed in #529).
+    _jpype_phases = {
+        "pl",
+        "fol",
+        "modal",
+        "dung_extensions",
+        "ranking",
+        "bipolar",
+        "probabilistic",
+        "aspic_analysis",
+        "fol_solver",
+        "modal_solver",
+    }
+    if workflow_name == "spectacular" and any(
+        p.name in _jpype_phases for p in workflow.phases
+    ):
+        try:
+            from argumentation_analysis.agents.core.logic.tweety_initializer import (
+                TweetyInitializer,
+            )
+
+            init = TweetyInitializer()
+            init.ensure_jvm_and_components_are_ready()
+            logger.info("JPype/Tweety warmup complete before DAG execution")
+        except Exception as e:
+            logger.warning(f"JPype warmup failed (will retry in-phase): {e}")
+
     executor = WorkflowExecutor(registry)
     phase_results = await executor.execute(
         workflow,
