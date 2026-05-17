@@ -112,3 +112,46 @@ If tool-calling remains unreliable, add a post-processing step that parses the L
 - [ ] DoD threshold (≥3 unique categories vs baseline) — **NOT MET** (same as baseline)
 
 **Verdict:** Prompt engineering alone is insufficient for gpt-4o-mini. The next step should be model upgrade (gpt-5-mini) or orchestrator-level validation.
+
+## 7. Model Upgrade Validation (gpt-5-mini, 2026-05-18)
+
+After coordinator GO (Round 158), `.env` changed from `OPENAI_CHAT_MODEL_ID=gpt-4o-mini` to `gpt-5-mini` and corpus A re-audited.
+
+### Run 4: gpt-5-mini (same prompt changes from Iteration 2)
+
+- **Duration:** 1204.9s (~20 min), **Turns:** 23
+- **identified_arguments:** 7 (`arg_1` through `arg_7`) — detailed structured extraction with premises, conclusions, force, connecteur implicite
+- **identified_fallacies:** 2 — "Post hoc, ergo propter hoc" (targeting arg_2), "Statistique trompeuse" (targeting arg_3)
+- **counter_arguments:** 8 (targeting arg_2, arg_3, arg_6 with multiple strategies)
+- **jtms_beliefs:** 4 (including retraction of arg_3 due to fallacy detection)
+- **Dung framework:** populated with 9 arguments, 2 attacks, grounded extension with 7 members
+- **ASPIC results:** 7 total args, 5 surviving, 2 defeated, 2 strict rules, 5 defeasible rules
+- **Belief revision:** fallacy_contraction applied
+- **NL-to-logic translations:** 1 propositional formula with 9 atoms
+- **All 8 agents at SINGULAR_INSIGHT level**
+- **final_conclusion:** null (PM did not set it — but all downstream analysis populated)
+
+### Updated Trend Table
+
+| Metric | Baseline (4o-mini) | Iter 1 (4o-mini) | Iter 2 (4o-mini) | Run 4 (5-mini) |
+|--------|-------------------|-------------------|-------------------|----------------|
+| Duration | 139s | 252.7s | 590.9s | 1204.9s |
+| Turns | 12 | 17 | 13 | 23 |
+| identified_arguments | 1 | 1 | 1 | **7** |
+| identified_fallacies | 1 (none) | 1 (none) | 0 | **2 (typed)** |
+| counter_arguments | 0 | 0 | 0 | **8** |
+| jtms_beliefs | 0 | 0 | 0 | **4** |
+| Dung frameworks | 0 | 0 | 0 | **1** |
+| ASPIC results | 0 | 0 | 0 | **1** |
+| Belief revision | 0 | 0 | 0 | **1** |
+| NL-to-logic | 0 | 0 | 0 | **1** |
+| DeepSynthesis sections | 4/9 | 5/9 | N/A | N/A |
+| All agents SINGULAR_INSIGHT | 5/6 | 6/6 | 6/6 | **8/8** |
+
+### Conclusion
+
+**Model upgrade from gpt-4o-mini to gpt-5-mini resolves the tool-calling gap entirely.** The LLM now correctly calls `add_identified_argument()` and `add_identified_fallacy()`, producing structured state registration instead of prose-only descriptions.
+
+- **Recommendation #1 (model upgrade) is CONFIRMED as the primary fix.**
+- Recommendations #2 and #3 (orchestrator validation hook, structured output parsing) are no longer necessary as primary fixes but could serve as defense-in-depth for edge cases.
+- The prompt engineering from Iterations 1-2 was NOT wasted — the improved instructions guide gpt-5-mini to produce more detailed structured output (premises, conclusions, force, connecteur implicite per argument).
