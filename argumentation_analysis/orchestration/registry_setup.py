@@ -26,6 +26,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_semantic_index,
     _invoke_speech_transcription,
     _invoke_hierarchical_fallacy,
+    _invoke_hierarchical_fallacy_per_argument,
     _invoke_fact_extraction,
     _invoke_propositional_logic,
     _invoke_fol_reasoning,
@@ -264,6 +265,32 @@ def setup_registry(
             registered.append("hierarchical_fallacy_detector")
         except ImportError as e:
             skipped.append(("hierarchical_fallacy_detector", str(e)))
+
+        # Per-argument parallel fallacy detection (#578 tier 3)
+        try:
+            from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+                FallacyWorkflowPlugin,
+            )
+
+            registry.register_service(
+                name="hierarchical_fallacy_per_argument",
+                service_class=FallacyWorkflowPlugin,
+                capabilities=[
+                    "hierarchical_fallacy_detection",
+                    "per_argument_fallacy_detection",
+                    "fallacy_detection",
+                ],
+                metadata={
+                    "description": (
+                        "Parallel per-argument hierarchical fallacy detection. "
+                        "Runs FallacyWorkflowPlugin on each argument via asyncio.gather (#578 tier 3)"
+                    )
+                },
+                invoke=_invoke_hierarchical_fallacy_per_argument,
+            )
+            registered.append("hierarchical_fallacy_per_argument")
+        except ImportError as e:
+            skipped.append(("hierarchical_fallacy_per_argument", str(e)))
 
         # Semantic index service (Arg_Semantic_Index)
         try:
