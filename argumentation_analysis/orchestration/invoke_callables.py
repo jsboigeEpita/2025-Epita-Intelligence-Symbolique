@@ -3123,11 +3123,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
         for f in all_fallacies:
             if not isinstance(f, dict):
                 continue
-            key = (f.get("taxonomy_pk", f.get("fallacy_type", "")), f.get("source_arg_id", ""))
+            key: tuple[str, str] = (str(f.get("taxonomy_pk", f.get("fallacy_type", "")) or ""), str(f.get("source_arg_id", "") or ""))
             if key in seen and seen[key].get("confidence", 0) >= f.get("confidence", 0):
                 continue
             seen[key] = f
-            deduped = [x for x in deduped if (x.get("taxonomy_pk", x.get("fallacy_type", "")), x.get("source_arg_id", "")) != key]
+            deduped = [x for x in deduped if (str(x.get("taxonomy_pk", x.get("fallacy_type", "")) or ""), str(x.get("source_arg_id", "") or "")) != key]
             deduped.append(f)
 
         exploration_method = "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
