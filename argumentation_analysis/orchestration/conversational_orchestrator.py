@@ -734,9 +734,9 @@ async def run_conversational_analysis(
             )
 
             source_meta = {
-                "opaque_id": source_id or "unknown",
+                "opaque_id": getattr(state, "source_id", "conversational_analysis"),
                 "era": "",
-                "language": "",
+                "language": detected_lang if detected_lang != "unknown" else "",
                 "discourse_type": "",
             }
             ctx = {
@@ -903,8 +903,10 @@ def _check_convergence(state, phase_name: str, messages: list) -> bool:
     2. State hasn't changed in last 2 agent turns (stagnation)
     3. Agent explicitly signals completion in content
     """
-    # Signal 1: conclusion set during Synthesis
-    if state and state.final_conclusion:
+    # Signal 1: conclusion set during Synthesis phase only
+    # (final_conclusion persists across phases — checking it in Extraction or
+    # Formal Analysis would cause premature convergence before downstream agents run)
+    if state and state.final_conclusion and "ynthesis" in phase_name:
         logger.info(
             f"  [{phase_name}] CONVERGENCE: final conclusion set, exiting early"
         )
