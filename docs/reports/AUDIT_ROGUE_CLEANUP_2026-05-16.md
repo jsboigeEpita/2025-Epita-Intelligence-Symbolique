@@ -130,18 +130,18 @@
 
 ### Wave 6: e016e59b / PR #449 -- archive stale documentation (2026-05-05)
 
-**Deletions**: 202 files moved to docs/_archived/ (not deleted from git)
+**Deletions**: 202 files moved to docs/archives/ (not deleted from git)
 **Rationale claimed**: stale since June/August 2025
 
 | File | LoC | Class | Excerpt / Rationale |
 |------|-----|-------|---------------------|
-| sherlock_watson/guide_unifie_sherlock_watson.md | ~500 | MEDIUM | Comprehensive Sherlock/Watson guide. Moved to _archived, not deleted. |
+| sherlock_watson/guide_unifie_sherlock_watson.md | ~500 | MEDIUM | Comprehensive Sherlock/Watson guide. Moved to archives, not deleted. |
 | sherlock_watson/ARCHITECTURE_MULTI_AGENTS_TECHNIQUE.md | -- | MEDIUM | Multi-agent architecture doc. |
 | investigations/DESIGN_DOC.md | ~200 | MEDIUM | FOL agent robust design from 18 code snapshots analysis. |
 | investigations/investigation_report_sophism_systems.md | -- | MEDIUM | Cartography of fallacy detection systems. |
 | All other files | -- | LOW | Archived (recoverable), not truly deleted. |
 
-**Note**: This wave is a *move* to _archived/, not a deletion. Content is recoverable from git history. Classification reflects whether content should be in active docs/.
+**Note**: This wave is a *move* to docs/archives/, not a deletion. Content is recoverable from git history. Classification reflects whether content should be in active docs/.
 
 ### Wave 7: 066de435 / PR #33 -- reorganize docs/ (2026-02-24)
 
@@ -229,7 +229,7 @@ These commits followed proper consolidation protocol (archive with header, move 
 | PR #330 (1d2af658) | Security: plaintext dataset removal |
 | PR #338 (d8338bc6) | Archive 86 reports -- mixed move+delete |
 | PR #442/#447 (48f514c5) | Remove dead directories -- **worst offender** |
-| PR #444/#449 (e016e59b) | Archive stale docs -- moved to _archived/ |
+| PR #444/#449 (e016e59b) | Archive stale docs -- moved to docs/archives/ |
 | Session 101 | Post-mortem establishing Consolider != Archiver rule |
 | CLAUDE.md (global) | Contains the violated consolidation rule |
 
@@ -255,6 +255,6 @@ No commit was found referencing Session 101 directly in the commit log. The Cons
 
 1. **Branch coverage**: Only investigated commits reachable from main and active branches. Stale feature branches may contain additional deletions.
 2. **MEDIUM depth**: MEDIUM-classified files were not fully audited for current relevance -- only first 30 lines examined. Some may warrant promotion to HIGH.
-3. **Move vs delete**: Several commits (e016e59b, 43d6f0d7, 4a09a948) moved files to _archived/ or docs/archives/ rather than deleting. These are recoverable but the moves effectively remove them from active documentation.
+3. **Move vs delete**: Several commits (e016e59b, 43d6f0d7, 4a09a948) moved files to docs/archives/ rather than deleting. These are recoverable but the moves effectively remove them from active documentation.
 4. **commit_analysis/ raw dumps**: The 268K-line targeted_analysis_raw.md and 20 analysis lot files (~190K LoC) were not individually reviewed -- classified as LOW bulk data.
 5. **Author attribution**: All cleanup commits are authored by jsboigeEpita with Co-Authored-By: Claude -- indicates AI-assisted cleanup that may have lacked human verification of content value.
