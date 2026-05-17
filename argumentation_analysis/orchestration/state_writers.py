@@ -117,7 +117,7 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
         return None
     # Direct ID match
     if target_text in state.identified_arguments:
-        return target_text
+        return str(target_text)
     # Text-based matching (same heuristic as get_enrichment_summary)
     for arg_id, desc in state.identified_arguments.items():
         if not desc:
@@ -129,34 +129,9 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
             or match_prefix in target_text
             or target_text in desc
         ):
-            return arg_id
+            return str(arg_id)
     return None
 
-
-def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
-    """Resolve target text to an arg_id from identified_arguments.
-
-    Checks exact ID match first, then text-based matching.
-    Returns None if no match found.
-    """
-    if not target_text:
-        return None
-    # Direct ID match
-    if target_text in state.identified_arguments:
-        return target_text
-    # Text-based matching (same heuristic as get_enrichment_summary)
-    for arg_id, desc in state.identified_arguments.items():
-        if not desc:
-            continue
-        match_prefix = desc[:60]
-        if (
-            target_text == desc
-            or target_text[:60] == match_prefix
-            or match_prefix in target_text
-            or target_text in desc
-        ):
-            return arg_id
-    return None
 
 
 def _write_counter_argument_to_state(

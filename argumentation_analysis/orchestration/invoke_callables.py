@@ -3080,7 +3080,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
                     plugin.run_guided_analysis(argument_text=arg_text),
                     timeout=60.0,
                 )
-                result = json.loads(result_json)
+                result: Dict[str, Any] = json.loads(result_json)
                 result["source_arg_id"] = arg_id
                 return result
             except asyncio.TimeoutError:
@@ -3118,8 +3118,8 @@ async def _invoke_hierarchical_fallacy_per_argument(
                     methods_used.add(method)
 
         # Dedup by (taxonomy_pk, source_arg_id) — keep highest confidence
-        seen = {}
-        deduped = []
+        seen: Dict[tuple[str, str], Dict[str, Any]] = {}
+        deduped: List[Dict[str, Any]] = []
         for f in all_fallacies:
             if not isinstance(f, dict):
                 continue
@@ -3165,7 +3165,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
 
 def _extract_arguments_for_parallel(
     input_text: str, context: Dict[str, Any]
-) -> List[tuple]:
+) -> List[tuple[str, str]]:
     """Extract individual argument texts from context for parallel processing.
 
     Looks for arguments in:
@@ -3322,7 +3322,7 @@ async def _invoke_fact_extraction(
     }
 
 
-def _parse_json_from_llm(raw: str) -> dict:
+def _parse_json_from_llm(raw: str) -> Dict[str, Any]:
     """Extract JSON from LLM response, handling markdown fences and noise."""
     text = raw.strip()
     if "```json" in text:
@@ -3333,7 +3333,8 @@ def _parse_json_from_llm(raw: str) -> dict:
     end = text.rfind("}") + 1
     if start >= 0 and end > start:
         try:
-            return json.loads(text[start:end])
+            parsed: Dict[str, Any] = json.loads(text[start:end])
+            return parsed
         except json.JSONDecodeError:
             pass
     return {}
@@ -3355,14 +3356,16 @@ async def _invoke_propositional_logic(
     """
     # Build propositional formulas from upstream arguments
     args = _extract_arguments_from_context(input_text, context)
-    formulas = context.get("formulas")
-    argument_mapping = {}
+    formulas: Optional[List[str]] = context.get("formulas")
+    argument_mapping: Dict[str, str] = {}
     shared_atoms: List[str] = []
 
     # Retrieve state object for atomic_propositions storage
     state_obj = context.get("_state_object")
 
     if not formulas:
+        # Ensure formulas is a list for mypy
+        formulas = []
         # (#208-H) Check if NL-to-logic phase already produced PL translations
         nl_output = context.get("phase_nl_to_logic_output", {})
         nl_translations = (
@@ -3578,13 +3581,15 @@ async def _invoke_fol_reasoning(
     (#208-H: wire NL-to-logic as pre-processing)
     """
     args = _extract_arguments_from_context(input_text, context)
-    formulas = context.get("formulas")
+    formulas: Optional[List[str]] = context.get("formulas")
     fol_metadata_shared: Dict[str, Any] = {}
 
     # Retrieve state object for fol_shared_signature storage
     state_obj = context.get("_state_object")
 
     if not formulas:
+        # Ensure formulas is a list for mypy
+        formulas = []
         # (#208-H) Check if NL-to-logic phase already produced FOL translations
         nl_output = context.get("phase_nl_to_logic_output", {})
         nl_translations = (
@@ -4671,7 +4676,7 @@ async def _invoke_external_modal_solver(
 
         if not settings.modal_solver == ModalSolverChoice.SPASS:
             object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
-        initializer = TweetyInitializer()
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = ModalHandler(initializer_instance=initializer)
         belief_set_str = "\n".join(str(f) for f in formulas)
         is_consistent, msg = await asyncio.to_thread(
@@ -4750,7 +4755,7 @@ async def _invoke_deep_synthesis(
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
 
-            llm = create_llm_service()
+            llm = create_llm_service(service_id="default")
             if llm:
                 kernel.add_service(llm)
         except Exception:
