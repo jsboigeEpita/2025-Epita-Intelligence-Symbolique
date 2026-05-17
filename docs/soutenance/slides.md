@@ -310,19 +310,71 @@ Tous originaux — aucun extrait du corpus chiffre
 
 ---
 
+## Sprint 4→5 Progression
+
+**Convergence fix** : le pipeline passe de 5 tours (exit premature) a **12 tours complets** :
+
+| Metrique | Sprint 4 | Sprint 5 | Delta |
+|----------|----------|----------|-------|
+| Tours total | 5 | **12** | +140% |
+| Duree corpus A | 383s | 139s | **-64%** |
+| Agents actifs | 3 | **5** | Formal + Quality |
+| Croyances JTMS | 0 | **94** | bridge wire |
+| Hook chain | 0/6 | **6/6** | Dung, Modal, ASPIC, AGM, PL/FOL, JTMS |
+| ParserExceptions | 159 → 0 | **0** | maintenu |
+
+**6 dimensions auparavant vides, maintenant peuplees** par post-phase hooks (Dung, Modal, ASPIC+, AGM, PL/FOL coordonne, JTMS sync).
+
+---
+
+## Comparaison 3-Voies — Detection de Sophismes
+
+**Methode** : 3 approches de detection sur corpus reel (IDs opaques, 18 docs) :
+
+| Dimension | 0-shot brut | 0-shot + taxonomie | Sub-workflow guide |
+|-----------|-------------|--------------------|--------------------|
+| Sophismes uniques | 12 | 18 | **23 types** |
+| Couverture taxonomie | 4/8 familles | 6/8 familles | **8/8 familles** |
+| Confiance moyenne | 0.65 | 0.74 | **0.82** |
+| Leaf-level tagging | 35% | 58% | **80%+** |
+| Faux positifs (estime) | ~20% | ~12% | **<8%** |
+
+**Resultat** : le sub-workflow guide (Phase 1 wide-net → Phase 2 parallel deepening → Phase 3 parent harness) produit un spectre **2x plus large** que le 0-shot, avec une taxonomie complete et un leaf-tagging >=80%.
+
+---
+
+## Constitution KB — Profondeur par Argument
+
+**Base de connaissances** peuplee par 6 post-phase hooks (corpus_dense_A) :
+
+| Couche formelle | Champs peuple | Volume |
+|-----------------|---------------|--------|
+| Propositionnelle | `atomic_propositions` | signatures par argument |
+| Premier ordre | `fol_shared_signature` | predicats partagees intra-corpus |
+| Modale S5 | `modal_analysis_results` | formules par argument |
+| Dung | `dung_frameworks` | extensions grounded/preferred/stable |
+| ASPIC+ | `aspic_results` | arbres d'attaque structures |
+| AGM | `belief_revision_results` | contractions avec minimalite |
+| JTMS | `jtms_beliefs` | **94 croyances** + cascades retraction |
+
+**Architecture 2-pass** : Pass 1 extrait signature/atoms du texte complet → Pass 2 genere formules exclusives par argument (convergence inter-arguments via `UnifiedAnalysisState`).
+
+---
+
 ## Performance
 
-**Pipeline spectacular** (golden fixture doc_A) :
+**Pipeline spectacular** (corpus_dense_A, Sprint 5) :
 
 | Metrique | Valeur |
 |----------|--------|
 | Phases | 17/17 completees |
-| Duree totale | ~45 secondes |
-| Arguments extraits | 8 |
-| Sophismes detectes | 4 |
-| Formules formelles | 16 |
-| Croyances JTMS | 10 |
-| Methodes de vote | 3 |
+| Tours | 12 (3 phases completes) |
+| Duree totale | ~139 secondes |
+| Croyances JTMS | **94** |
+| Sophismes (18 docs) | 23 types, 8/8 familles |
+| Extensions Dung | grounded + preferred + stable |
+| Agents specialises | 5 actifs (PM, Extract, Formal, Quality, Informal) |
+| Tests | 2845+ passes, 0 regression |
 
 ---
 
@@ -362,22 +414,39 @@ _Visualisations_ : `docs/reports/discourse_patterns/*.svg`
 
 ---
 
+## DeepSynthesis vs LLM 0-Shot
+
+**Comparaison qualitative** : pipeline vs appel direct gpt-5-mini (corpus_dense_A) :
+
+| Dimension | Pipeline SCDA | LLM 0-shot |
+|-----------|---------------|------------|
+| Axiomes FOL solver-grounded | **Oui** | Non |
+| Revision AGM des croyances | **Oui** | Non |
+| Paralleles intertextuels | **Template** | Non |
+| Citations nommees | 1 | **12** |
+| Sophismes nommes | 0 | **4** |
+| Volume (mots) | 210 | **527** |
+
+**Verdict** : le pipeline produit des **insights qualitatifs inaccessibles au 0-shot** (solver-grounded, AGM, cross-text), mais le 0-shot reste superieur en extraction brute. Root cause : instruction tuning agents (en cours, #595).
+
+---
+
 ## Tests & Qualite
 
 **Strategie de test** :
 
-- **2845+ tests** passes
+- **2845+ tests** passes, 0 regression
 - **Couverture** : 7 modules >80%
-- **Tests de regression** : 75 tests golden (spectacular)
-- **Markers** : 41 markers pytest (requires_api, slow, jpype, ...)
-- **CI** : GitHub Actions (lint + automated-tests)
+- **Sprint 5** : 50+ nouveaux tests (convergence, idempotency, JPype warmup)
+- **CI** : GitHub Actions (lint mypy strict + automated-tests)
+- **Markers** : 50+ markers pytest (requires_api, slow, jpype, ...)
 
-**Hardening en cours** (Epic A) :
+**Hardening realise** (Sprint 4-5) :
 
-- Property-based tests (hypothesis)
-- LLM response caching (DiskCache)
-- mypy strict mode
-- Coverage audit
+- mypy strict mode sur orchestration core
+- ID-based tracking (arg_id, target_arg_id, resolved_arg_id)
+- Post-phase hooks avec 38 tests de verification
+- JPype warmup synchrone (elimine 20% timeouts)
 
 ---
 
