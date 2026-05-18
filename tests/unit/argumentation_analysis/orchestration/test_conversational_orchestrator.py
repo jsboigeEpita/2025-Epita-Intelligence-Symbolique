@@ -536,7 +536,8 @@ class TestRunConversationalAnalysis:
         phase_names_seen = []
 
         async def tracking_run_phase(
-            agents, prompt, max_turns=5, phase_name="", state=None
+            agents, prompt, max_turns=5, phase_name="", state=None,
+            enable_growth_validation=True, growth_re_prompt_limit=2,
         ):
             phase_names_seen.append(phase_name)
             return [
