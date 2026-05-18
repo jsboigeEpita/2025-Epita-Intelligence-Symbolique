@@ -326,20 +326,32 @@ def create_conversational_agents(
     state: RhetoricalAnalysisState,
     llm_service_id: str,
     agent_names: Optional[List[str]] = None,
+    agent_state_class: Optional[Dict[str, type]] = None,
 ) -> List[ChatCompletionAgent]:
     """Create agents with specialized plugins for conversational mode.
 
     Each agent gets:
-    - StateManagerPlugin (shared, for reading/writing analysis state)
+    - StateManagerPlugin (or phase-scoped variant if tool gating is enabled)
     - Its own specialized plugins (loaded via factory.get_plugin_instances())
     - FunctionChoiceBehavior.Auto() for auto tool invocation
 
     Plugin loading is delegated to the central factory registry
     (AGENT_SPECIALITY_MAP + _PLUGIN_REGISTRY) to avoid duplication.
+
+    Args:
+        kernel: SK Kernel instance.
+        state: Shared analysis state.
+        llm_service_id: LLM service ID in the kernel.
+        agent_names: Optional subset of agent names to create.
+        agent_state_class: Optional mapping of agent_name → phase-scoped state
+            plugin class (#605). When provided, the mapped agent gets the
+            scoped class instead of the full StateManagerPlugin.
     """
     from argumentation_analysis.agents.factory import get_plugin_instances
 
     llm_service = kernel.get_service(llm_service_id)
+    if agent_state_class is None:
+        agent_state_class = {}
 
     if agent_names is None:
         agent_names = list(AGENT_CONFIG.keys())
@@ -353,8 +365,10 @@ def create_conversational_agents(
 
         # Get plugin instances from central factory registry
         speciality = config["speciality"]
+        state_cls = agent_state_class.get(name)
         plugins = get_plugin_instances(
-            speciality, state=state, kernel=kernel, llm_service=llm_service
+            speciality, state=state, kernel=kernel, llm_service=llm_service,
+            state_plugin_class=state_cls,
         )
 
         agent = ChatCompletionAgent(
@@ -370,8 +384,10 @@ def create_conversational_agents(
         )
         agents.append(agent)
         plugin_names = [type(p).__name__ for p in plugins]
+        state_type = state_cls.__name__ if state_cls else "StateManagerPlugin"
         logger.info(
-            f"Created agent '{name}' (speciality={speciality}) with plugins: {plugin_names}"
+            f"Created agent '{name}' (speciality={speciality}, state={state_type}) "
+            f"with plugins: {plugin_names}"
         )
 
     return agents
@@ -388,6 +404,7 @@ async def run_conversational_analysis(
     reanalysis_max_turns: int = 5,
     enable_growth_validation: bool = True,
     growth_re_prompt_limit: int = 2,
+    enable_tool_gating: bool = False,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -409,6 +426,8 @@ async def run_conversational_analysis(
         enable_growth_validation: If True, re-prompt agents on zero-growth
             turns in Extraction/Detection/Re-Analysis phases (#597).
         growth_re_prompt_limit: Max re-prompts per turn when growth is absent.
+        enable_tool_gating: If True, use phase-scoped state plugins so agents
+            only see StateManagerPlugin functions relevant to their phase (#605).
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -418,6 +437,11 @@ async def run_conversational_analysis(
     _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
     if _env_growth in ("0", "false", "no"):
         enable_growth_validation = False
+
+    # 0c. Env var override for tool gating (#605)
+    _env_gating = os.environ.get("ENABLE_TOOL_GATING", "").lower()
+    if _env_gating in ("1", "true", "yes"):
+        enable_tool_gating = True
 
     # 1. Setup kernel + LLM
     kernel = sk.Kernel()
@@ -439,9 +463,19 @@ async def run_conversational_analysis(
     state_cls = UnifiedAnalysisState if spectacular else RhetoricalAnalysisState
     state = state_cls(text)
 
+    # 2b. Build agent → phase-scoped state plugin mapping (#605)
+    agent_state_class = {}
+    if enable_tool_gating:
+        from argumentation_analysis.core.phase_scoped_state import AGENT_PHASE_MAP
+        agent_state_class = dict(AGENT_PHASE_MAP)
+        logger.info(
+            f"Tool gating enabled: {len(agent_state_class)} agents get phase-scoped state plugins"
+        )
+
     # 3. Create all agents
     all_agents = create_conversational_agents(
-        kernel, state, "conversational_llm", agent_names
+        kernel, state, "conversational_llm", agent_names,
+        agent_state_class=agent_state_class,
     )
     agent_by_name = {a.name: a for a in all_agents}
 
