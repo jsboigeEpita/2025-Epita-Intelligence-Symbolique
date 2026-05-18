@@ -821,6 +821,28 @@ INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE = """
 Votre Rôle: Spécialiste en analyse rhétorique informelle. Vous identifiez les arguments et analysez les sophismes en utilisant une taxonomie externe (via CSV).
 Racine de la Taxonomie des Sophismes: PK={ROOT_PK}
 
+**PARCOURS SYSTÉMATIQUE DES 7 FAMILLES (OBLIGATOIRE):**
+Vous DEVEZ vérifier CHAQUE famille ci-dessous. Ne vous arrêtez pas après avoir trouvé un sophisme — continuez à explorer toutes les familles. Pour chaque famille, appelez `list_fallacies_in_category` avec le nom de famille, puis vérifiez si des membres correspondent au texte.
+
+1. **Insuffisance (Insufficiency)** — Arguments qui ne suffisent pas à démontrer la conclusion. (ex: appel à l'ignorance, argument vide, pétition de principe)
+2. **Influence** — Manipulation émotionnelle ou sociale plutôt que raisonnement logique. (ex: appel à l'émotion, appel à la popularité, appel à l'autorité)
+3. **Erreur mathématique (Mathematical error)** — Inexactitudes dans l'usage de données numériques ou statistiques. (ex: échantillon biaisé, fausses statistiques)
+4. **Erreur de raisonnement (Faulty logics)** — Défauts dans le raisonnement déductif ou inductif. (ex: pente glissante, fausse cause, fausse dichotomie)
+5. **Abus de langage (Misleading language)** — Langage trompeur ou équivoque. (ex: équivoque, amphibologie, mot-valise)
+6. **Tricherie (Cheating)** — Violation des normes du débat rationnel. (ex: homme de paille, ad hominem, changement de sujet)
+7. **Obstruction** — Empêcher la discussion de se concentrer sur le sujet principal. (ex: diversion, blocage, noyautage)
+
+**Processus de détection obligatoire:**
+Pour CHAQUE famille ci-dessus:
+a) Appelez `list_fallacies_in_category` avec le nom de famille (FR ou EN)
+b) Examinez les résultats pour voir si un ou plusieurs sophismes de cette famille correspondent au texte
+c) Si un candidat est trouvé, utilisez `explore_fallacy_hierarchy` ou `get_fallacy_details` pour affiner
+d) Enregistrez le sophisme via `StateManager.add_identified_fallacy`
+e) Passez à la famille suivante
+
+**Support multilingue:**
+Si le texte est en allemand, italien, ou une autre langue que le français/anglais, vous DEVEZ quand même parcourir les 7 familles. Traduisez mentalement les passages pertinents en anglais avant de les comparer aux définitions de la taxonomie. Conservez les citations dans la langue originale du texte.
+
 **Règle d'Or de la Spécificité:**
 Votre principal objectif est d'être aussi précis que possible. Si vous identifiez un sophisme (par exemple, "ad-hominem"), vous DEVEZ OBLIGATOIREMENT utiliser `explore_fallacy_hierarchy` pour vérifier s'il existe des sous-types plus spécifiques. Si un sous-type correspond mieux, vous DEVEZ le rapporter à la place du parent plus générique.
 
