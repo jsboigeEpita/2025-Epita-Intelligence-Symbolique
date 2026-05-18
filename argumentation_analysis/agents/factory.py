@@ -168,6 +168,7 @@ def get_plugin_instances(
     state: Any = None,
     kernel: Optional[Kernel] = None,
     llm_service: Any = None,
+    state_plugin_class: Optional[type] = None,
 ) -> list[Any]:
     """Return instantiated plugin objects for an agent's speciality.
 
@@ -179,22 +180,32 @@ def get_plugin_instances(
         state: Optional RhetoricalAnalysisState for StateManagerPlugin.
         kernel: Optional SK Kernel for complex plugins (e.g. FallacyWorkflowPlugin).
         llm_service: Optional LLM service for complex plugins.
+        state_plugin_class: Optional phase-scoped state plugin class to use
+            instead of the full StateManagerPlugin (#605). When provided,
+            this class is instantiated with ``state`` and used as the state
+            plugin. Pass ``None`` (default) to use the full StateManagerPlugin.
 
     Returns:
-        List of plugin instances (StateManagerPlugin first if state provided).
+        List of plugin instances (state plugin first if state provided).
     """
     instances = []
 
-    # Always include StateManager if state is available
+    # State plugin: phase-scoped class or full StateManagerPlugin
     if state is not None:
         try:
-            mod = importlib.import_module(
-                "argumentation_analysis.core.state_manager_plugin"
-            )
-            plugin_cls = getattr(mod, "StateManagerPlugin")
-            instances.append(plugin_cls(state=state))
+            if state_plugin_class is not None:
+                instances.append(state_plugin_class(state=state))
+                _factory_logger.debug(
+                    "Using phase-scoped state plugin: %s", state_plugin_class.__name__
+                )
+            else:
+                mod = importlib.import_module(
+                    "argumentation_analysis.core.state_manager_plugin"
+                )
+                plugin_cls = getattr(mod, "StateManagerPlugin")
+                instances.append(plugin_cls(state=state))
         except Exception as e:
-            _factory_logger.debug("StateManagerPlugin not instantiated: %s", e)
+            _factory_logger.debug("State plugin not instantiated: %s", e)
 
     # Load speciality plugins
     plugin_names = AGENT_SPECIALITY_MAP.get(agent_speciality, [])
