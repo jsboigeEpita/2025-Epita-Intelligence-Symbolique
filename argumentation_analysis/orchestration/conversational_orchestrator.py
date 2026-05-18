@@ -386,6 +386,8 @@ async def run_conversational_analysis(
     formal_max_turns: int = 5,
     synthesis_max_turns: int = 10,
     reanalysis_max_turns: int = 5,
+    enable_growth_validation: bool = True,
+    growth_re_prompt_limit: int = 2,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -404,10 +406,18 @@ async def run_conversational_analysis(
         formal_max_turns: Max turns for Formal Analysis & Quality phase.
         synthesis_max_turns: Max turns for Synthesis & Debate phase.
         reanalysis_max_turns: Max turns for Re-Analysis phase (if triggered).
+        enable_growth_validation: If True, re-prompt agents on zero-growth
+            turns in Extraction/Detection/Re-Analysis phases (#597).
+        growth_re_prompt_limit: Max re-prompts per turn when growth is absent.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
     start_time = time.time()
+
+    # 0b. Env var override for growth validation (#597)
+    _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
+    if _env_growth in ("0", "false", "no"):
+        enable_growth_validation = False
 
     # 1. Setup kernel + LLM
     kernel = sk.Kernel()
@@ -538,6 +548,8 @@ async def run_conversational_analysis(
             max_turns=phase_max_turns,
             phase_name=phase_name,
             state=state,
+            enable_growth_validation=enable_growth_validation,
+            growth_re_prompt_limit=growth_re_prompt_limit,
         )
         conversation_log.extend(phase_log)
 
@@ -636,6 +648,8 @@ async def run_conversational_analysis(
                         max_turns=reanalysis_cfg["max_turns"],
                         phase_name=phase_name,
                         state=state,
+                        enable_growth_validation=enable_growth_validation,
+                        growth_re_prompt_limit=growth_re_prompt_limit,
                     )
                     conversation_log.extend(phase_log)
 
@@ -934,6 +948,60 @@ def _check_convergence(state, phase_name: str, messages: list) -> bool:
     return False
 
 
+def _get_growth_fingerprint(state: Any) -> tuple[int, ...]:
+    """Return a tuple of key state counters for growth detection."""
+    if state is None:
+        return (0,)
+    return (
+        len(getattr(state, "identified_arguments", {})),
+        len(getattr(state, "identified_fallacies", {})),
+        len(getattr(state, "counter_arguments", [])),
+        len(getattr(state, "jtms_beliefs", {})),
+        len(getattr(state, "dung_frameworks", {})),
+        len(getattr(state, "aspic_results", [])),
+        len(getattr(state, "belief_revision_results", [])),
+        len(getattr(state, "nl_to_logic_translations", [])),
+        len(getattr(state, "fol_analysis_results", [])),
+        len(getattr(state, "propositional_analysis_results", [])),
+        len(getattr(state, "modal_analysis_results", [])),
+    )
+
+
+# Phases where state growth is expected (Extraction, Fallacy, Re-Analysis).
+_GROWTH_EXPECTING_PATTERNS = (
+    "xtraction",
+    "etection",
+    "e-Analysis",
+    "e-analysis",
+    "Reanalysis",
+)
+
+# Re-prompt feedback templates.
+_RE_PROMPT_FEEDBACK = (
+    "Your previous response did not produce any state changes. "
+    "You MUST call the provided functions (add_identified_argument, "
+    "add_identified_fallacy, etc.) to register your findings. "
+    "Do not just describe your analysis in prose — use the tools."
+)
+
+
+def _validate_state_growth(
+    fingerprint_before: tuple[int, ...],
+    fingerprint_after: tuple[int, ...],
+    phase_name: str,
+) -> bool:
+    """Check whether a phase that expects growth actually produced any.
+
+    Returns True if growth was detected (or phase doesn't require growth).
+    Returns False if a growth-expecting phase produced zero delta.
+    """
+    expects_growth = any(p in phase_name for p in _GROWTH_EXPECTING_PATTERNS)
+    if not expects_growth:
+        return True
+
+    return fingerprint_after != fingerprint_before
+
+
 def _select_next_agent(
     state, agents: list, turn: int, agent_by_name: dict = None
 ) -> "ChatCompletionAgent":
@@ -971,13 +1039,22 @@ async def _run_phase(
     max_turns: int = 5,
     phase_name: str = "",
     state=None,
+    enable_growth_validation: bool = True,
+    growth_re_prompt_limit: int = 2,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
     Uses SK AgentGroupChat if available, otherwise falls back to
     round-robin invocation with PM designation support and convergence detection.
+
+    When ``enable_growth_validation`` is True, after each agent turn in a
+    growth-expecting phase (Extraction, Detection, Re-Analysis), the hook
+    compares a state fingerprint before/after.  If no growth occurred, the
+    agent is re-prompted with explicit function-call feedback up to
+    ``growth_re_prompt_limit`` times per turn.
     """
-    messages = []
+    messages: List[Dict[str, Any]] = []
+    total_re_prompts = 0
     chat_history = ChatHistory()
     chat_history.add_user_message(initial_prompt)
 
@@ -995,6 +1072,7 @@ async def _run_phase(
         turn = 0
         async for response in chat.invoke():
             turn += 1
+            fp_before = _get_growth_fingerprint(state)
             msg_entry = {
                 "phase": phase_name,
                 "turn": turn,
@@ -1010,6 +1088,41 @@ async def _run_phase(
             if turn >= max_turns:
                 break
 
+            # Growth validation hook (AgentGroupChat path)
+            if enable_growth_validation:
+                fp_after = _get_growth_fingerprint(state)
+                if not _validate_state_growth(fp_before, fp_after, phase_name):
+                    for rp in range(growth_re_prompt_limit):
+                        logger.info(
+                            f"  [{phase_name}] Growth re-prompt {rp + 1}/{growth_re_prompt_limit}"
+                        )
+                        await chat.add_chat_message(
+                            _RE_PROMPT_FEEDBACK
+                        )
+                        async for rp_response in chat.invoke():
+                            msg_entry = {
+                                "phase": phase_name,
+                                "turn": turn,
+                                "agent": getattr(
+                                    rp_response, "name",
+                                    getattr(rp_response, "role", "?"),
+                                ),
+                                "content": str(
+                                    getattr(rp_response, "content", rp_response)
+                                ),
+                                "re_prompt": rp + 1,
+                            }
+                            messages.append(msg_entry)
+                            total_re_prompts += 1
+                        fp_after = _get_growth_fingerprint(state)
+                        if _validate_state_growth(fp_before, fp_after, phase_name):
+                            break
+
+        if total_re_prompts > 0:
+            messages.append(
+                {"phase": phase_name, "type": "growth_validation", "re_prompt_count": total_re_prompts}
+            )
+
         return messages
 
     except ImportError:
@@ -1024,6 +1137,7 @@ async def _run_phase(
     for turn in range(1, max_turns + 1):
         agent = _select_next_agent(state, agents, turn)
         try:
+            fp_before = _get_growth_fingerprint(state)
             content = ""
             # SK 1.40: invoke() is an async generator, iterate to collect messages
             async for response in agent.invoke(chat_history):
@@ -1053,6 +1167,41 @@ async def _run_phase(
             if _check_convergence(state, phase_name, messages):
                 break
 
+            # Growth validation hook (round-robin path)
+            if enable_growth_validation:
+                fp_after = _get_growth_fingerprint(state)
+                if not _validate_state_growth(fp_before, fp_after, phase_name):
+                    for rp in range(growth_re_prompt_limit):
+                        logger.info(
+                            f"  [{phase_name}] Growth re-prompt {rp + 1}/{growth_re_prompt_limit}"
+                        )
+                        chat_history.add_user_message(_RE_PROMPT_FEEDBACK)
+                        rp_content = ""
+                        async for response in agent.invoke(chat_history):
+                            chunk = ""
+                            if hasattr(response, "content"):
+                                chunk = str(response.content)
+                            elif hasattr(response, "value"):
+                                chunk = str(response.value)
+                            else:
+                                chunk = str(response)
+                            rp_content += chunk
+                        if rp_content:
+                            chat_history.add_assistant_message(rp_content)
+                        messages.append(
+                            {
+                                "phase": phase_name,
+                                "turn": turn,
+                                "agent": agent.name,
+                                "content": rp_content[:500] if rp_content else "(empty)",
+                                "re_prompt": rp + 1,
+                            }
+                        )
+                        total_re_prompts += 1
+                        fp_after = _get_growth_fingerprint(state)
+                        if _validate_state_growth(fp_before, fp_after, phase_name):
+                            break
+
         except Exception as exc:
             logger.error(f"  [{phase_name}] Turn {turn}: {agent.name} failed: {exc}")
             messages.append(
@@ -1063,6 +1212,11 @@ async def _run_phase(
                     "content": f"ERROR: {exc}",
                 }
             )
+
+    if total_re_prompts > 0:
+        messages.append(
+            {"phase": phase_name, "type": "growth_validation", "re_prompt_count": total_re_prompts}
+        )
 
     return messages
 
