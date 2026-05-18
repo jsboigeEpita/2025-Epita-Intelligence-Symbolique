@@ -567,6 +567,12 @@ async def run_conversational_analysis(
                 }
             )
 
+        # Parent harness (#578 tier 3): always fire on dense texts after Detection
+        if "etection" in phase_name and len(text) > 5000:
+            harness_log = await _run_parent_harness_fallback(text, state)
+            if harness_log:
+                conversation_log.append(harness_log)
+
         # JTMS retraction on fallacies (#287): automatically retract beliefs
         # associated with detected fallacies between phases.
         retraction_log = _retract_fallacious_beliefs(state, phase_name)
@@ -1219,6 +1225,69 @@ async def _run_phase(
         )
 
     return messages
+
+
+async def _run_parent_harness_fallback(
+    text: str, state: Any
+) -> Optional[Dict[str, Any]]:
+    """Invoke tier-3 parent harness on dense texts after Detection phase (#578, #600).
+
+    Always fires on texts > 5000 chars to catch fallacies the single-pass
+    InformalAgent may have missed. Falls back silently if unavailable.
+    """
+    try:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_hierarchical_fallacy_per_argument,
+        )
+
+        context = {"_state_object": state}
+        result = await _invoke_hierarchical_fallacy_per_argument(text, context)
+
+        fallacies = result.get("fallacies", [])
+        if not fallacies:
+            logger.info("Parent harness: no additional fallacies found")
+            return None
+
+        # Register any new fallacies into state
+        added = 0
+        for f in fallacies:
+            if not isinstance(f, dict):
+                continue
+            if hasattr(state, "add_identified_fallacy"):
+                try:
+                    state.add_identified_fallacy(
+                        fallacy_type=f.get("fallacy_type") or f.get("nom", "unknown"),
+                        justification=f.get(
+                            "justification",
+                            f"Detected by parent harness (confidence: {f.get('confidence', 'N/A')})",
+                        ),
+                        confidence=f.get("confidence", 0.6),
+                        source_arg_id=f.get("source_arg_id"),
+                    )
+                    added += 1
+                except Exception:
+                    pass
+
+        logger.info(
+            "Parent harness: %d fallacies found, %d registered into state",
+            len(fallacies),
+            added,
+        )
+
+        return {
+            "phase": "Detection",
+            "type": "parent_harness",
+            "fallacies_found": len(fallacies),
+            "fallacies_registered": added,
+            "exploration_method": result.get("exploration_method", "per_argument_parallel"),
+        }
+
+    except ImportError:
+        logger.debug("Parent harness not available (import error)")
+        return None
+    except Exception as e:
+        logger.warning("Parent harness fallback failed: %s", e)
+        return None
 
 
 async def _resolve_phase_conflicts(

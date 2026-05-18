@@ -158,32 +158,94 @@ class FallacyWorkflowPlugin:
             index[name.lower().strip()] = pk
         return index
 
+    # German → English keyword bridge for multilingual support (#600)
+    _DE_TO_EN_KEYWORDS: Dict[str, str] = {
+        "strohmann": "straw man",
+        "strohmann-argument": "straw man",
+        "dammbruch": "slippery slope",
+        "rückführung": "slippery slope",
+        "gefühl": "emotion",
+        "emotionale appellation": "emotion",
+        "entweder-oder": "false dilemma",
+        "schwarz-weiß": "false dilemma",
+        "vorschnelle verallgemeinerung": "hasty generalization",
+        "übergeneralisierung": "hasty generalization",
+        "zirkelschluss": "circular reasoning",
+        "zirkulär": "circular reasoning",
+        "roter hering": "red herring",
+        "nebenthema": "red herring",
+        "ablenkung": "red herring",
+        "heuchlerisch": "tu quoque",
+        "schuld durch assoziation": "guilt by association",
+        "mitläufereffekt": "bandwagon",
+        "mehrheitsargument": "bandwagon",
+        "traditionsargument": "tradition",
+        "brunnenvergiftung": "poisoning the well",
+        "wahrer schotte": "no true scotsman",
+        "fehlschluss der ursache": "false cause",
+        "suggestivfrage": "loaded question",
+        "fangfrage": "loaded question",
+        "angst": "appeal to fear",
+        "mitleid": "appeal to pity",
+        "rosinenpickerei": "cherry picking",
+        "personenangriff": "ad hominem",
+        "autorität": "authority",
+        "berufung auf": "authority",
+        "unzureichend": "insufficiency",
+        "beeinflussung": "influence",
+        "betrug": "cheating",
+        "täuschung": "cheating",
+        "behinderung": "obstruction",
+        "blockade": "obstruction",
+        "obstruktion": "obstruction",
+    }
+
     def _map_fallacy_to_root_pk(self, fallacy_name: str, roots_index: Dict[str, str]) -> Optional[str]:
-        """Map a free-text fallacy name to the closest root PK via keyword matching."""
+        """Map a free-text fallacy name to the closest root PK via keyword matching.
+
+        Supports FR/EN/DE keywords via a three-pass strategy:
+        1. Direct lookup in roots_index
+        2. German → English keyword bridge, then roots_index
+        3. Pattern-based fuzzy matching (FR/EN/DE patterns)
+        """
         name_lower = fallacy_name.lower().strip()
         if name_lower in roots_index:
             return roots_index[name_lower]
 
+        # Pass 2: German bridge — translate DE keyword to EN, then lookup
+        for de_keyword, en_keyword in self._DE_TO_EN_KEYWORDS.items():
+            if de_keyword in name_lower and en_keyword in roots_index:
+                return roots_index[en_keyword]
+
         root_keywords = {
-            "authority": ["autorit"],
-            "ad hominem": ["ad hominem", "attaque", "personne"],
-            "straw man": ["paille", "distortion"],
-            "slippery slope": ["pente glissante"],
-            "emotion": ["émotion", "sentiment"],
-            "false dilemma": ["faux dilemme", "dilemme"],
-            "hasty generalization": ["généralisation"],
-            "circular reasoning": ["circulaire", "pétition"],
-            "red herring": ["hareng", "diversion"],
-            "tu quoque": ["tu quoque", "hypocrisie"],
-            "guilt by association": ["association", "culpabilité"],
-            "bandwagon": ["ad populum", "majeure"],
-            "tradition": ["tradition"],
-            "non sequitur": ["non sequitur", "inconséquence"],
-            "poisoning the well": ["empoisonnement"],
-            "no true scotsman": ["vrai écossais"],
-            "false cause": ["fausse cause", "causalité"],
-            "loaded question": ["question chargée"],
-            "manipulation": ["manipulation"],
+            "authority": ["autorit", "autorität", "berufung auf"],
+            "ad hominem": ["ad hominem", "attaque", "personne", "personenangriff", "ad-personam"],
+            "straw man": ["paille", "distortion", "strohmann", "strohmann-argument"],
+            "slippery slope": ["pente glissante", "dammbruch", "rückführung"],
+            "emotion": ["émotion", "sentiment", "gefühl", "emotionale appellation"],
+            "false dilemma": ["faux dilemme", "dilemme", "entweder-oder", "schwarz-weiß"],
+            "hasty generalization": ["généralisation", "vorschnelle verallgemeinerung", "übergeneralisierung"],
+            "circular reasoning": ["circulaire", "pétition", "zirkelschluss", "zirkulär"],
+            "red herring": ["hareng", "diversion", "roter hering", "nebenthema"],
+            "tu quoque": ["tu quoque", "hypocrisie", "heuchlerisch"],
+            "guilt by association": ["association", "culpabilité", "schuld durch assoziation"],
+            "bandwagon": ["ad populum", "majeure", "mitläufereffekt", "mehrheitsargument"],
+            "tradition": ["tradition", "traditionsargument"],
+            "non sequitur": ["non sequitur", "inconséquence", "nicht zwingend"],
+            "poisoning the well": ["empoisonnement", "brunnenvergiftung"],
+            "no true scotsman": ["vrai écossais", "wahrer schotte", "kein wahrer"],
+            "false cause": ["fausse cause", "causalité", "fehlschluss der ursache", "post hoc"],
+            "loaded question": ["question chargée", "suggestivfrage", "fangfrage"],
+            "manipulation": ["manipulation", "beeinflussung"],
+            "appeal to fear": ["angst", "appell an die angst"],
+            "appeal to pity": ["mitleid", "mitleidsappell"],
+            "begging the question": ["implikation", "voraussetzung"],
+            "cherry picking": ["rosinenpickerei", "auswahl"],
+            "deflection": ["ablenkung", "themenwechsel"],
+            "insufficiency": ["unzureichend", "mangelhaft", "insufficient"],
+            "influence": ["beeinflussung", "manipulation"],
+            "cheating": ["betrug", "trick", "täuschung"],
+            "obstruction": ["behinderung", "blockade", "obstruktion"],
         }
 
         for keyword, patterns in root_keywords.items():
