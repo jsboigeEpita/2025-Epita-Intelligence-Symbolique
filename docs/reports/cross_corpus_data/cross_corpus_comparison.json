@@ -1,0 +1,364 @@
+{
+  "metrics": {
+    "A": {
+      "corpus_id": "A",
+      "text_length": 58052,
+      "token_estimate": 14513,
+      "duration_seconds": 2327.5,
+      "conversation_turns": 37,
+      "identified_arguments": 20,
+      "identified_fallacies": 13,
+      "counter_arguments": 4,
+      "jtms_beliefs": 3,
+      "dung_frameworks": 1,
+      "aspic_results": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol_analysis": 0,
+      "propositional_analysis": 0,
+      "modal_analysis": 3,
+      "quality_scores": 3,
+      "governance_decisions": 0,
+      "debate_transcripts": 0,
+      "arguments_per_1k": 1.38,
+      "fallacies_per_1k": 0.9,
+      "counters_per_1k": 0.28
+    },
+    "B": {
+      "corpus_id": "B",
+      "text_length": 59092,
+      "token_estimate": 14773,
+      "duration_seconds": 2171.5,
+      "conversation_turns": 32,
+      "identified_arguments": 17,
+      "identified_fallacies": 17,
+      "counter_arguments": 7,
+      "jtms_beliefs": 13,
+      "dung_frameworks": 1,
+      "aspic_results": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol_analysis": 0,
+      "propositional_analysis": 0,
+      "modal_analysis": 8,
+      "quality_scores": 0,
+      "governance_decisions": 0,
+      "debate_transcripts": 0,
+      "arguments_per_1k": 1.15,
+      "fallacies_per_1k": 1.15,
+      "counters_per_1k": 0.47
+    },
+    "C": {
+      "corpus_id": "C",
+      "text_length": 46391,
+      "token_estimate": 11598,
+      "duration_seconds": 2438.7,
+      "conversation_turns": 36,
+      "identified_arguments": 10,
+      "identified_fallacies": 14,
+      "counter_arguments": 1,
+      "jtms_beliefs": 6,
+      "dung_frameworks": 1,
+      "aspic_results": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol_analysis": 0,
+      "propositional_analysis": 0,
+      "modal_analysis": 0,
+      "quality_scores": 5,
+      "governance_decisions": 0,
+      "debate_transcripts": 0,
+      "arguments_per_1k": 0.86,
+      "fallacies_per_1k": 1.21,
+      "counters_per_1k": 0.09
+    }
+  },
+  "fallacy_families": {
+    "A": {
+      "Post hoc ergo propter hoc": 7,
+      "Conspiracy theory": 4,
+      "Hasty generalization": 1,
+      "Cherry picking": 1
+    },
+    "B": {
+      "Appel à la pitié": 5,
+      "False dilemma": 1,
+      "Généralisation abusive / stéréotype": 1,
+      "Appel à la peur (argumentum ad metum)": 1,
+      "Poisoning the well": 4,
+      "Victim blaming": 3,
+      "Généralisation abusive": 2
+    },
+    "C": {
+      "Sophisme génétique": 8,
+      "Appel à la peur": 1,
+      "Homogénéisation / Caracterisation hâtive": 1,
+      "Appel à l'appartenance": 1,
+      "Simplicité causale": 1,
+      "Two wrongs make a right": 1,
+      "Single cause": 1
+    }
+  },
+  "cascade_depth": {
+    "A": {
+      "jtms_retraction_count": 0,
+      "jtms_retracted_args": [],
+      "jtms_belief_count": 3,
+      "jtms_belief_names": [
+        "jtms_1",
+        "jtms_2",
+        "jtms_3"
+      ],
+      "dung_count": 1,
+      "dung_arg_count": 24,
+      "dung_attack_count": 13,
+      "dung_grounded_size": 0,
+      "aspic_count": 1,
+      "aspic_total_args": 0,
+      "aspic_surviving": 0,
+      "aspic_defeated": 0,
+      "belief_revision_count": 1,
+      "nl_to_logic_count": 0
+    },
+    "B": {
+      "jtms_retraction_count": 0,
+      "jtms_retracted_args": [],
+      "jtms_belief_count": 13,
+      "jtms_belief_names": [
+        "jtms_1",
+        "jtms_2",
+        "jtms_3",
+        "jtms_4",
+        "jtms_5",
+        "jtms_6",
+        "jtms_7",
+        "jtms_8",
+        "jtms_9",
+        "jtms_10",
+        "jtms_11",
+        "jtms_12",
+        "jtms_13"
+      ],
+      "dung_count": 1,
+      "dung_arg_count": 26,
+      "dung_attack_count": 17,
+      "dung_grounded_size": 0,
+      "aspic_count": 1,
+      "aspic_total_args": 0,
+      "aspic_surviving": 0,
+      "aspic_defeated": 0,
+      "belief_revision_count": 1,
+      "nl_to_logic_count": 0
+    },
+    "C": {
+      "jtms_retraction_count": 0,
+      "jtms_retracted_args": [],
+      "jtms_belief_count": 6,
+      "jtms_belief_names": [
+        "jtms_1",
+        "jtms_2",
+        "jtms_3",
+        "jtms_4",
+        "jtms_5",
+        "jtms_6"
+      ],
+      "dung_count": 1,
+      "dung_arg_count": 17,
+      "dung_attack_count": 14,
+      "dung_grounded_size": 0,
+      "aspic_count": 1,
+      "aspic_total_args": 0,
+      "aspic_surviving": 0,
+      "aspic_defeated": 0,
+      "belief_revision_count": 1,
+      "nl_to_logic_count": 0
+    }
+  },
+  "formal_signatures": {
+    "A": {
+      "argument_extraction": 1,
+      "fallacy_detection": 1,
+      "counter_argument": 1,
+      "jtms": 1,
+      "dung": 1,
+      "aspic": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol": 0,
+      "propositional": 0,
+      "modal": 1,
+      "governance": 0,
+      "debate": 0,
+      "argument_count": 20,
+      "fallacy_count": 13,
+      "counter_count": 4,
+      "jtms_count": 3
+    },
+    "B": {
+      "argument_extraction": 1,
+      "fallacy_detection": 1,
+      "counter_argument": 1,
+      "jtms": 1,
+      "dung": 1,
+      "aspic": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol": 0,
+      "propositional": 0,
+      "modal": 1,
+      "governance": 0,
+      "debate": 0,
+      "argument_count": 17,
+      "fallacy_count": 17,
+      "counter_count": 7,
+      "jtms_count": 13
+    },
+    "C": {
+      "argument_extraction": 1,
+      "fallacy_detection": 1,
+      "counter_argument": 1,
+      "jtms": 1,
+      "dung": 1,
+      "aspic": 1,
+      "belief_revision": 1,
+      "nl_to_logic": 0,
+      "fol": 0,
+      "propositional": 0,
+      "modal": 0,
+      "governance": 0,
+      "debate": 0,
+      "argument_count": 10,
+      "fallacy_count": 14,
+      "counter_count": 1,
+      "jtms_count": 6
+    }
+  },
+  "agent_activity": {
+    "A": {
+      "ProjectManager": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 14,
+        "total_chars": 19979
+      },
+      "ExtractAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 3,
+        "total_chars": 1500
+      },
+      "InformalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 5,
+        "total_chars": 2276
+      },
+      "FormalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 2,
+        "total_chars": 30961
+      },
+      "QualityAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 3,
+        "total_chars": 8279
+      },
+      "DebateAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 1,
+        "total_chars": 28421
+      },
+      "CounterAgent": {
+        "level": "CITED_INSIGHT",
+        "messages": 1,
+        "total_chars": 606
+      },
+      "GovernanceAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 2,
+        "total_chars": 7513
+      }
+    },
+    "B": {
+      "ProjectManager": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 10,
+        "total_chars": 29291
+      },
+      "ExtractAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 3,
+        "total_chars": 1500
+      },
+      "InformalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 4,
+        "total_chars": 1774
+      },
+      "FormalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 2,
+        "total_chars": 21265
+      },
+      "QualityAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 3,
+        "total_chars": 12200
+      },
+      "DebateAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 1,
+        "total_chars": 6788
+      },
+      "CounterAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 1,
+        "total_chars": 18750
+      },
+      "GovernanceAgent": {
+        "level": "CITED_INSIGHT",
+        "messages": 2,
+        "total_chars": 2609
+      }
+    },
+    "C": {
+      "ProjectManager": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 12,
+        "total_chars": 26748
+      },
+      "ExtractAgent": {
+        "level": "CITED_INSIGHT",
+        "messages": 1,
+        "total_chars": 331
+      },
+      "InformalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 7,
+        "total_chars": 1666
+      },
+      "FormalAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 2,
+        "total_chars": 27858
+      },
+      "QualityAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 4,
+        "total_chars": 14662
+      },
+      "DebateAgent": {
+        "level": "CITED_INSIGHT",
+        "messages": 1,
+        "total_chars": 14945
+      },
+      "CounterAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 1,
+        "total_chars": 8470
+      },
+      "GovernanceAgent": {
+        "level": "SINGULAR_INSIGHT",
+        "messages": 3,
+        "total_chars": 8660
+      }
+    }
+  }
+}

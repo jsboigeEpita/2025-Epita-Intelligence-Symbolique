@@ -1,0 +1,19 @@
+family,A_count,A_per_1k,B_count,B_per_1k,C_count,C_per_1k
+Appel à l'appartenance,0,0.0,0,0.0,1,0.0862
+Appel à la peur,0,0.0,0,0.0,1,0.0862
+Appel à la peur (argumentum ad metum),0,0.0,1,0.0677,0,0.0
+Appel à la pitié,0,0.0,5,0.3385,0,0.0
+Cherry picking,1,0.0689,0,0.0,0,0.0
+Conspiracy theory,4,0.2756,0,0.0,0,0.0
+False dilemma,0,0.0,1,0.0677,0,0.0
+Généralisation abusive,0,0.0,2,0.1354,0,0.0
+Généralisation abusive / stéréotype,0,0.0,1,0.0677,0,0.0
+Hasty generalization,1,0.0689,0,0.0,0,0.0
+Homogénéisation / Caracterisation hâtive,0,0.0,0,0.0,1,0.0862
+Poisoning the well,0,0.0,4,0.2708,0,0.0
+Post hoc ergo propter hoc,7,0.4823,0,0.0,0,0.0
+Simplicité causale,0,0.0,0,0.0,1,0.0862
+Single cause,0,0.0,0,0.0,1,0.0862
+Sophisme génétique,0,0.0,0,0.0,8,0.6898
+Two wrongs make a right,0,0.0,0,0.0,1,0.0862
+Victim blaming,0,0.0,3,0.2031,0,0.0

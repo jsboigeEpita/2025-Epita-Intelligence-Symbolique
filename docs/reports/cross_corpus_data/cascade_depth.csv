@@ -1,0 +1,4 @@
+corpus,jtms_retraction_count,jtms_retracted_args,jtms_belief_count,jtms_belief_names,dung_count,dung_arg_count,dung_attack_count,dung_grounded_size,aspic_count,aspic_total_args,aspic_surviving,aspic_defeated,belief_revision_count,nl_to_logic_count
+A,0,[],3,"['jtms_1', 'jtms_2', 'jtms_3']",1,24,13,0,1,0,0,0,1,0
+B,0,[],13,"['jtms_1', 'jtms_2', 'jtms_3', 'jtms_4', 'jtms_5', 'jtms_6', 'jtms_7', 'jtms_8', 'jtms_9', 'jtms_10', 'jtms_11', 'jtms_12', 'jtms_13']",1,26,17,0,1,0,0,0,1,0
+C,0,[],6,"['jtms_1', 'jtms_2', 'jtms_3', 'jtms_4', 'jtms_5', 'jtms_6']",1,17,14,0,1,0,0,0,1,0
