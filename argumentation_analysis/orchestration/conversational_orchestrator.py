@@ -388,6 +388,7 @@ async def run_conversational_analysis(
     reanalysis_max_turns: int = 5,
     enable_growth_validation: bool = True,
     growth_re_prompt_limit: int = 2,
+    enable_reprompt_tracing: bool = False,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -409,6 +410,8 @@ async def run_conversational_analysis(
         enable_growth_validation: If True, re-prompt agents on zero-growth
             turns in Extraction/Detection/Re-Analysis phases (#597).
         growth_re_prompt_limit: Max re-prompts per turn when growth is absent.
+        enable_reprompt_tracing: If True, capture structured RepromptTrace
+            records from growth validation re-prompt events (#609).
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -418,6 +421,12 @@ async def run_conversational_analysis(
     _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
     if _env_growth in ("0", "false", "no"):
         enable_growth_validation = False
+
+    # 0c. Re-prompt trace accumulator (#609)
+    reprompt_extractor = None
+    if enable_reprompt_tracing:
+        from argumentation_analysis.reporting.reprompt_trace import RepromptTraceExtractor
+        reprompt_extractor = RepromptTraceExtractor()
 
     # 1. Setup kernel + LLM
     kernel = sk.Kernel()
@@ -550,6 +559,7 @@ async def run_conversational_analysis(
             state=state,
             enable_growth_validation=enable_growth_validation,
             growth_re_prompt_limit=growth_re_prompt_limit,
+            reprompt_extractor=reprompt_extractor,
         )
         conversation_log.extend(phase_log)
 
@@ -656,6 +666,7 @@ async def run_conversational_analysis(
                         state=state,
                         enable_growth_validation=enable_growth_validation,
                         growth_re_prompt_limit=growth_re_prompt_limit,
+                        reprompt_extractor=reprompt_extractor,
                     )
                     conversation_log.extend(phase_log)
 
@@ -819,6 +830,7 @@ async def run_conversational_analysis(
         ),
         "unified_state": state,
         "trace_report": trace_report,
+        "reprompt_traces": reprompt_extractor.to_dict() if reprompt_extractor else None,
         "summary": {
             "completed": len(phase_configs),
             "failed": 0,
@@ -1047,6 +1059,7 @@ async def _run_phase(
     state=None,
     enable_growth_validation: bool = True,
     growth_re_prompt_limit: int = 2,
+    reprompt_extractor=None,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
@@ -1106,13 +1119,14 @@ async def _run_phase(
                             _RE_PROMPT_FEEDBACK
                         )
                         async for rp_response in chat.invoke():
+                            rp_agent = getattr(
+                                rp_response, "name",
+                                getattr(rp_response, "role", "?"),
+                            )
                             msg_entry = {
                                 "phase": phase_name,
                                 "turn": turn,
-                                "agent": getattr(
-                                    rp_response, "name",
-                                    getattr(rp_response, "role", "?"),
-                                ),
+                                "agent": rp_agent,
                                 "content": str(
                                     getattr(rp_response, "content", rp_response)
                                 ),
@@ -1121,6 +1135,18 @@ async def _run_phase(
                             messages.append(msg_entry)
                             total_re_prompts += 1
                         fp_after = _get_growth_fingerprint(state)
+                        # Record re-prompt trace (#609)
+                        if reprompt_extractor is not None:
+                            rp_outcome = "ok" if _validate_state_growth(fp_before, fp_after, phase_name) else ("reran" if rp + 1 < growth_re_prompt_limit else "gave_up")
+                            reprompt_extractor.record(
+                                phase_name=phase_name,
+                                turn=turn,
+                                attempt_idx=rp + 1,
+                                fingerprint_before=fp_before,
+                                fingerprint_after=fp_after,
+                                outcome=rp_outcome,
+                                agent_name=rp_agent,
+                            )
                         if _validate_state_growth(fp_before, fp_after, phase_name):
                             break
 
@@ -1205,6 +1231,18 @@ async def _run_phase(
                         )
                         total_re_prompts += 1
                         fp_after = _get_growth_fingerprint(state)
+                        # Record re-prompt trace (#609)
+                        if reprompt_extractor is not None:
+                            rp_outcome = "ok" if _validate_state_growth(fp_before, fp_after, phase_name) else ("reran" if rp + 1 < growth_re_prompt_limit else "gave_up")
+                            reprompt_extractor.record(
+                                phase_name=phase_name,
+                                turn=turn,
+                                attempt_idx=rp + 1,
+                                fingerprint_before=fp_before,
+                                fingerprint_after=fp_after,
+                                outcome=rp_outcome,
+                                agent_name=agent.name,
+                            )
                         if _validate_state_growth(fp_before, fp_after, phase_name):
                             break
 
