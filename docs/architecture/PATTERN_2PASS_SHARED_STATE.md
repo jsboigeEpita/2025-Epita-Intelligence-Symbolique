@@ -172,3 +172,7 @@ ParserExceptions dropped from 159 to 0 (EXCEED target). The shared vocabulary el
 2. **No validation**: LLM-generated symbols must be validated against Tweety grammar before use
 3. **Gating FOL on explicit quantifiers**: The 0-shot baseline showed this produces 0 formulas. FOL should be attempted by default.
 4. **Ignoring shared state in conversational mode**: The FormalAgent must read ETAPE 0 before translating, or it re-discovers vocabulary independently.
+
+## Related Patterns
+
+- **[Nested SK Kernels](PATTERN_NESTED_SK_KERNELS.md)** — master/slave kernel isolation for plugins that need internal LLM calls (e.g. `FallacyWorkflowPlugin`). Complements this pattern: 2-pass handles shared state across agents; nested kernels handle tool isolation within a single plugin.
