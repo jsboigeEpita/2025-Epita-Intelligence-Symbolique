@@ -1,6 +1,6 @@
 # SCDA State Export
 
-**Generated:** 2026-05-19 06:30 UTC
+**Generated:** 2026-05-19 07:46 UTC
 
 ## Analysis Tasks (0)
 
@@ -210,7 +210,7 @@ QualityAgent
 
 ## Nl To Logic Translations (1)
 
-1. **id:** nll_1 | **original_text:** <scrubbed> | **formula:** HasTitle(doc1, title_donald_trump_united_nations_general_assembly); Source(doc1, url_rev_com_transcr... | **logic_type:** fol | **is_valid:** True
+1. **id:** nll_1 | **original_text:** <scrubbed> | **formula:** <scrubbed> | **logic_type:** fol | **is_valid:** True
 
 ## Atms Contexts (0)
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <analysis_state>
-  <generated_at>2026-05-19T06:30:09.819999+00:00</generated_at>
+  <generated_at>2026-05-19T07:46:04.068949+00:00</generated_at>
   <analysis-tasks label="analysis_tasks">{}</analysis-tasks>
   <identified-arguments count="5" label="Arguments">
     <item key="arg_1">&lt;scrubbed&gt;</item>
@@ -76,10 +76,10 @@
     <entry>
       <id>nll_1</id>
       <original-text>&lt;scrubbed&gt;</original-text>
-      <formula>HasTitle(doc1, title_donald_trump_united_nations_general_assembly); Source(doc1, url_rev_com_transcripts_trump_speaks_at_un); PublishedTime(doc1, time_fri_15_may_truncated)</formula>
+      <formula>&lt;scrubbed&gt;</formula>
       <logic-type>fol</logic-type>
       <is-valid>True</is-valid>
-      <variables>{'HasTitle': ['Document', 'Text'], 'Source': ['Document', 'URL'], 'PublishedTime': ['Document', 'Time'], 'doc1': 'the Rev.com transcript document', 'title_donald_trump_united_nations_general_assembly': '&lt;scrubbed&gt;', 'url_rev_com_transcripts_trump_speaks-at-un': '&lt;scrubbed&gt;', 'time_fri_15_may_truncated': 'Published time: Fri, 15 May (year truncated in source)'}</variables>
+      <variables>{'HasTitle': ['Document', 'Text'], 'Source': ['Document', 'URL'], 'PublishedTime': ['Document', 'Time'], 'doc1': 'the Rev.com transcript document', 'var_4': '&lt;scrubbed&gt;', 'var_5': '&lt;scrubbed&gt;', 'time_fri_15_may_truncated': 'Published time: Fri, 15 May (year truncated in source)'}</variables>
       <confidence>0.7</confidence>
     </entry>
   </nl-to-logic-translations>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <analysis_state>
-  <generated_at>2026-05-19T06:30:09.857292+00:00</generated_at>
+  <generated_at>2026-05-19T07:46:04.113785+00:00</generated_at>
   <task-count label="task_count">0</task-count>
   <tasks-defined label="tasks_defined">[]</tasks-defined>
   <argument-count label="argument_count">16</argument-count>
@@ -46,4 +46,5 @@
   <belief-sets label="belief_sets">{}</belief-sets>
   <extracts label="Extracts">{}</extracts>
   <analysis-tasks label="analysis_tasks">{}</analysis-tasks>
+  <nl-to-logic-translations label="nl_to_logic_translations">[]</nl-to-logic-translations>
 </analysis_state>

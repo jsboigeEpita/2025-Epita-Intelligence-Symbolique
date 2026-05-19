@@ -16,7 +16,7 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 ## Quick Start — What to Open First
 
 | You want to see... | Open this file |
-||--------------------|---------------|
+|--------------------|---------------|
 | Executive summary + all 4 properties | `../EPIC_530_SCDA_SPECTACULAR_FINAL_REPORT.md` |
 | Soutenance slide deck (15 slides) | `soutenance_slides.md` |
 | Human-readable state dump | `corpus_A.md`, `corpus_B.md`, `corpus_C.md`, `corpus_D.md` |

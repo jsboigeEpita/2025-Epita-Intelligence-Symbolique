@@ -44,5 +44,6 @@
   "debate_transcripts": [],
   "belief_sets": {},
   "extracts": {},
-  "analysis_tasks": {}
+  "analysis_tasks": {},
+  "nl_to_logic_translations": []
 }

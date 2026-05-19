@@ -202,7 +202,35 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(conclusion, str) and len(conclusion) > 20:
         cleaned["final_conclusion"] = "<scrubbed>"
 
-    # Final pass: global regex scrub on ALL remaining strings
+    # Eleventh pass: scrub nl_to_logic_translations (FOL predicate slugs embed entities)
+    nl_trans = cleaned.get("nl_to_logic_translations", [])
+    if isinstance(nl_trans, list):
+        scrubbed_nl = []
+        for entry in nl_trans:
+            if isinstance(entry, dict):
+                scrubbed_entry = {}
+                for k, v in entry.items():
+                    if k == "formula":
+                        scrubbed_entry[k] = "<scrubbed>"
+                    elif k == "original_text":
+                        scrubbed_entry[k] = "<scrubbed>"
+                    elif k == "variables" and isinstance(v, dict):
+                        scrubbed_vars = {}
+                        for vk, vv in v.items():
+                            safe_key = _global_entity_scrub(vk) if isinstance(vk, str) else vk
+                            if isinstance(safe_key, str) and safe_key != vk:
+                                scrubbed_vars[f"var_{len(scrubbed_vars)}"] = vv
+                            else:
+                                scrubbed_vars[vk] = vv
+                        scrubbed_entry[k] = scrubbed_vars
+                    else:
+                        scrubbed_entry[k] = v
+                scrubbed_nl.append(scrubbed_entry)
+            else:
+                scrubbed_nl.append(entry)
+        cleaned["nl_to_logic_translations"] = scrubbed_nl
+
+    # Final pass: global regex scrub on ALL remaining strings (values AND keys)
     cleaned = _global_entity_scrub(cleaned)
 
     return cleaned
@@ -216,17 +244,31 @@ _ENTITY_PATTERN = re.compile(
     r"|\b(russie|chinese|américaine)\b",
 )
 
+# Substring pattern for snake_case identifiers where \b doesn't match
+_ENTITY_SUBSTR_PATTERN = re.compile(
+    r"(?i)(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu"
+    r"|iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik"
+    r"|kremlin|pentagon|white_house|united_nations)"
+)
+
 
 def _global_entity_scrub(data: Any, depth: int = 0) -> Any:
-    """Recursively replace any string containing entity names with <scrubbed>."""
+    """Recursively replace any string containing entity names with <scrubbed>.
+    Also scrubs dict keys that contain entity names (even in snake_case identifiers)."""
     if depth > 15:
         return data
     if isinstance(data, str):
-        if _ENTITY_PATTERN.search(data):
+        if _ENTITY_PATTERN.search(data) or _ENTITY_SUBSTR_PATTERN.search(data):
             return "<scrubbed>"
         return data
     if isinstance(data, dict):
-        return {k: _global_entity_scrub(v, depth + 1) for k, v in data.items()}
+        result = {}
+        for k, v in data.items():
+            safe_key = _global_entity_scrub(k, depth + 1) if isinstance(k, str) else k
+            if isinstance(safe_key, str) and safe_key == "<scrubbed>":
+                safe_key = f"key_{len(result)}"
+            result[safe_key] = _global_entity_scrub(v, depth + 1)
+        return result
     if isinstance(data, list):
         return [_global_entity_scrub(item, depth + 1) for item in data]
     return data

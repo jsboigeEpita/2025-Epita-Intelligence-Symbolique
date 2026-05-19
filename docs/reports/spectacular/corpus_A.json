@@ -113,7 +113,7 @@
     {
       "id": "nll_1",
       "original_text": "<scrubbed>",
-      "formula": "HasTitle(doc1, title_donald_trump_united_nations_general_assembly); Source(doc1, url_rev_com_transcripts_trump_speaks_at_un); PublishedTime(doc1, time_fri_15_may_truncated)",
+      "formula": "<scrubbed>",
       "logic_type": "fol",
       "is_valid": true,
       "variables": {
@@ -130,8 +130,8 @@
           "Time"
         ],
         "doc1": "the Rev.com transcript document",
-        "title_donald_trump_united_nations_general_assembly": "<scrubbed>",
-        "url_rev_com_transcripts_trump_speaks-at-un": "<scrubbed>",
+        "var_4": "<scrubbed>",
+        "var_5": "<scrubbed>",
         "time_fri_15_may_truncated": "Published time: Fri, 15 May (year truncated in source)"
       },
       "confidence": 0.7
