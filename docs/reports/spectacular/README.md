@@ -9,9 +9,11 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | A | 20 | 13 | 4 | 3 | ~39 min |
 | B | 17 | 17 | 7 | 13 | ~36 min |
 | C | 10 | 14 | 1 | 6 | ~41 min |
-| D | — | 17 | 4 | 5 | ~37 min |
+| D | 16* | 17 | 4 | 5 | ~37 min |
 
-**Total: 47 arguments, 44+ fallacies across 4 corpora.**
+**Total: 63 arguments, 44+ fallacies across 4 corpora.**
+
+*\*Corpus D: 16 arguments extracted by the pipeline (confirmed in `deep_synthesis_report.md`). Bundle artefacts show 0 due to a now-fixed snapshot bug — see `corpus_d_caveat_investigation.md` for details.*
 
 ## Quick Start — What to Open First
 
@@ -74,7 +76,7 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | "What fallacies are detected?" | `corpus_*.md` fallacy section | 44+ fallacies across 4 corpora, 6+ families |
 | "How do formal methods connect?" | `cross_ref_viz.html` | Interactive explorer: argument→fallacy→JTMS→BR cascade, filter by edge type, switch corpus |
 | "How do formal methods connect?" (static) | `cross_ref_graph_corpus_*.mmd` | Visual showing argument→fallacy→JTMS→BR cascade |
-| "Does it generalize?" | Corpus D (4th corpus) | Validated on N=4, distinct rhetorical profile |
+| "Does it generalize?" | Corpus D (4th corpus, 16 args) | Validated on N=4, distinct rhetorical profile, all ≥10 args |
 
 ## Privacy
 
