@@ -501,6 +501,11 @@ def main() -> None:
             logger.error("Skipping corpus %s — no state snapshot", corpus_id)
             continue
 
+        if not state_data.get("identified_arguments") and state_data.get("argument_count", 0) > 0:
+            logger.warning("State snapshot for corpus %s has argument_count=%d "
+                           "but no identified_arguments content. Was summarize=True used?",
+                           corpus_id, state_data.get("argument_count", 0))
+
         # Summary stats
         args = state_data.get("identified_arguments", {})
         fallacies = state_data.get("identified_fallacies", {})
