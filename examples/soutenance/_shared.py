@@ -137,8 +137,8 @@ def extract_metrics(state: Any, corpus_id: str) -> Dict[str, Any]:
     if state is None:
         return metrics
 
-    args = getattr(state, "arguments", []) or []
-    metrics["arguments_found"] = len(args)
+    args = getattr(state, "identified_arguments", {}) or {}
+    metrics["arguments_found"] = len(args) if isinstance(args, dict) else len(args)
 
     fallacies = getattr(state, "identified_fallacies", []) or []
     metrics["fallacies_found"] = len(fallacies)
@@ -234,7 +234,7 @@ def save_results(
     state_path = outputs_dir / "state.json"
     with open(state_path, "w", encoding="utf-8") as f:
         if state and hasattr(state, "get_state_snapshot"):
-            snap = state.get_state_snapshot(summarize=True)
+            snap = state.get_state_snapshot(summarize=False)
             json.dump(snap, f, indent=2, ensure_ascii=False, default=str)
         else:
             json.dump(metrics, f, indent=2, ensure_ascii=False, default=str)
