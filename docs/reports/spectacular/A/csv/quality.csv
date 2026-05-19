@@ -1,0 +1,4 @@
+id,scores,overall
+arg_1,"{'clarte': 6, 'pertinence': 6, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 5, 'analogie_pertinente': 1, 'fiabilite_sources': 2, 'exhaustivite': 2, 'redondance_faible': 4}",3.0
+arg_2,"{'clarte': 7, 'pertinence': 7, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 4, 'analogie_pertinente': 1, 'fiabilite_sources': 1, 'exhaustivite': 1, 'redondance_faible': 3}",3.0
+arg_3,"{'clarte': 7, 'pertinence': 7, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 4, 'analogie_pertinente': 1, 'fiabilite_sources': 1, 'exhaustivite': 1, 'redondance_faible': 3}",3.0

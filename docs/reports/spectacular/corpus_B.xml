@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<analysis_state>
+  <generated_at>2026-05-19T03:19:04.091256+00:00</generated_at>
+  <analysis-tasks count="1" label="analysis_tasks">
+    <item key="task_1">&lt;scrubbed&gt;</item>
+  </analysis-tasks>
+  <identified-arguments count="17" label="Arguments">
+    <item key="arg_1">&lt;scrubbed&gt;</item>
+    <item key="arg_2">&lt;scrubbed&gt;</item>
+    <item key="arg_3">&lt;scrubbed&gt;</item>
+    <item key="arg_4">&lt;scrubbed&gt;</item>
+    <item key="arg_5">&lt;scrubbed&gt;</item>
+    <item key="arg_6">&lt;scrubbed&gt;</item>
+    <item key="arg_7">&lt;scrubbed&gt;</item>
+    <item key="arg_8">&lt;scrubbed&gt;</item>
+    <item key="arg_9">&lt;scrubbed&gt;</item>
+    <item key="arg_10">&lt;scrubbed&gt;</item>
+    <item key="arg_11">&lt;scrubbed&gt;</item>
+    <item key="arg_12">&lt;scrubbed&gt;</item>
+    <item key="arg_13">&lt;scrubbed&gt;</item>
+    <item key="arg_14">&lt;scrubbed&gt;</item>
+    <item key="arg_15">&lt;scrubbed&gt;</item>
+    <item key="arg_16">&lt;scrubbed&gt;</item>
+    <item key="arg_17">&lt;scrubbed&gt;</item>
+  </identified-arguments>
+  <identified-fallacies count="17" label="Fallacies">
+    <entry id="fallacy_1">
+      <type>Appel à la pitié</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_2">
+      <type>Faux dilemme</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_3">
+      <type>Généralisation abusive / stéréotype</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_4">
+      <type>Appel à la peur (argumentum ad metum)</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_5">
+      <type>Poisoning the well (Empoisonnement du puits)</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_6">
+      <type>Victim blaming (Culpabilisation de la victime)</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_7">
+      <type>Appel à la pitié</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_8">
+      <type>Appel à la pitié</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_9">
+      <type>Poisoning the well</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_10">
+      <type>Généralisation abusive</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_11">
+      <type>Victim blaming</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_12">
+      <type>Appel à la pitié</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_13">
+      <type>Poisoning the well</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_14">
+      <type>Généralisation abusive</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_15">
+      <type>Victim blaming</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_16">
+      <type>Appel à la pitié</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_17">
+      <type>Empoisonnement du puits / Poisoning the well</type>
+      <justification>&lt;scrubbed&gt;</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+  </identified-fallacies>
+  <belief-sets count="2" label="belief_sets">
+    <entry id="propositional_bs_1">
+      <logic-type>Propositional</logic-type>
+      <content>&lt;scrubbed&gt;</content>
+    </entry>
+    <entry id="fol_bs_2">
+      <logic-type>FOL</logic-type>
+      <content>&lt;scrubbed&gt;</content>
+    </entry>
+  </belief-sets>
+  <query-log label="query_log">[]</query-log>
+  <answers label="answers">{}</answers>
+  <extracts label="Extracts">[]</extracts>
+  <errors label="errors">[]</errors>
+  <counter-arguments count="7" label="Counter-Arguments">
+    <entry>
+      <id>ca_1</id>
+      <original-argument>arg_1</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.6</score>
+      <target-arg-id>arg_1</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_2</id>
+      <original-argument>arg_2</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>demand_sources</strategy>
+      <score>0.55</score>
+      <target-arg-id>arg_2</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_3</id>
+      <original-argument>arg_3</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>undercut</strategy>
+      <score>0.5</score>
+      <target-arg-id>arg_3</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_4</id>
+      <original-argument>arg_4</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.65</score>
+      <target-arg-id>arg_4</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_5</id>
+      <original-argument>arg_5</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>undermining_evidence</strategy>
+      <score>0.95</score>
+      <target-arg-id>arg_5</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_6</id>
+      <original-argument>arg_1</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.6</score>
+      <target-arg-id>arg_1</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_7</id>
+      <original-argument>arg_2</original-argument>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
+      <strategy>demand_sources</strategy>
+      <score>0.55</score>
+      <target-arg-id>arg_2</target-arg-id>
+    </entry>
+  </counter-arguments>
+  <argument-quality-scores label="Quality Scores">{}</argument-quality-scores>
+  <jtms-beliefs count="13" label="JTMS Beliefs">
+    <entry id="jtms_1">
+      <name>arg_1</name>
+      <valid>False</valid>
+      <justifications>[]</justifications>
+      <retracted>True</retracted>
+      <retraction-reason>fallacy: Empoisonnement du puits / Appel à la pitié</retraction-reason>
+    </entry>
+    <entry id="jtms_2">
+      <name>arg_2</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_3">
+      <name>arg_3</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_4">
+      <name>arg_4</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_5">
+      <name>arg_5</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_6">
+      <name>arg_6</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_7">
+      <name>arg_7</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_8">
+      <name>arg_8</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_9">
+      <name>arg_9</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_10">
+      <name>arg_10</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_11">
+      <name>arg_11</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_12">
+      <name>fallacy_on_arg_1</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_13">
+      <name>fallacy_on_arg_1</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+  </jtms-beliefs>
+  <jtms-retraction-chain label="jtms_retraction_chain">[]</jtms-retraction-chain>
+  <dung-frameworks count="1" label="Dung Frameworks">
+    <entry id="dung_1">
+      <name>conversational_dung</name>
+      <arguments>['arg_1', 'arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'fallacy_Appel à la pitié', 'fallacy_Faux dilemme', 'fallacy_Généralisation abusi', 'fallacy_Appel à la peur (arg', 'fallacy_Poisoning the well (', 'fallacy_Victim blaming (Culp', 'fallacy_Poisoning the well', 'fallacy_Victim blaming', 'fallacy_Empoisonnement du pu']</arguments>
+      <attacks>[['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Faux dilemme', 'arg_4'], ['fallacy_Généralisation abusi', 'arg_5'], ['fallacy_Appel à la peur (arg', 'arg_4'], ['fallacy_Poisoning the well (', 'arg_1'], ['fallacy_Victim blaming (Culp', 'arg_2'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Poisoning the well', 'arg_1'], ['fallacy_Généralisation abusi', 'arg_5'], ['fallacy_Victim blaming', 'arg_2'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Poiso...</attacks>
+      <extensions>{'grounded': ['arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'arg_3', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'fallacy_Appel à la peur (arg', 'fallacy_Appel à la pitié', 'fallacy_Empoisonnement du pu', 'fallacy_Faux dilemme', 'fallacy_Généralisation abusi', 'fallacy_Poisoning the well', 'fallacy_Poisoning the well (', 'fallacy_Victim blaming', 'fallacy_Victim blaming (Culp']}</extensions>
+    </entry>
+  </dung-frameworks>
+  <governance-decisions label="Governance Decisions">[]</governance-decisions>
+  <debate-transcripts label="Debate Transcripts">[]</debate-transcripts>
+  <transcription-segments label="transcription_segments">[]</transcription-segments>
+  <semantic-index-refs label="semantic_index_refs">[]</semantic-index-refs>
+  <neural-fallacy-scores label="Neural Fallacy Scores">[]</neural-fallacy-scores>
+  <ranking-results label="Ranking Results">[]</ranking-results>
+  <aspic-results count="1" label="ASPIC Results">
+    <entry>
+      <id>aspic_1</id>
+      <reasoner-type>python_fallback</reasoner-type>
+      <extensions>[['premisses: La démocratie et la liberté individuelle mènent à la désorganisation ', 'arguments', 'premisses: Le peuple allemand a souffert pendant des décennies (sang versé, émig', &quot;premisses: Des provocations et mobilisations par Beneš et d'autres cercles étran&quot;, 'premisses: La démocratie et la liberté individuelle entraînent désorganisation, ', &quot;premisses: L'Allemagne est surpeuplée et manque de Lebensraum; importer nourritu&quot;, &quot;premisses: Les Juifs et l'‘international Jewry’ contrôlent press...</extensions>
+      <statistics>{'total_arguments': 17, 'surviving': 13, 'defeated': 4, 'strict_rules': 11, 'defeasible_rules': 6, 'fallacies_applied': 17}</statistics>
+    </entry>
+  </aspic-results>
+  <belief-revision-results count="1" label="Belief Revision Results">
+    <entry>
+      <id>brevision_1</id>
+      <method>fallacy_contraction</method>
+      <original>['arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'arg_11', 'fallacy_on_arg_1', 'fallacy_on_arg_1']</original>
+      <revised>['arg_3', 'arg_6', 'arg_7', 'arg_8', 'arg_9']</revised>
+    </entry>
+  </belief-revision-results>
+  <dialogue-results label="Dialogue Results">[]</dialogue-results>
+  <probabilistic-results label="Probabilistic Results">[]</probabilistic-results>
+  <bipolar-results label="Bipolar Results">[]</bipolar-results>
+  <fol-analysis-results label="FOL Analysis">[]</fol-analysis-results>
+  <fol-signature label="fol_signature">[]</fol-signature>
+  <propositional-analysis-results label="PL Analysis">[]</propositional-analysis-results>
+  <modal-analysis-results count="8" label="Modal Analysis">
+    <entry>
+      <id>modal_1</id>
+      <formulas>['O(prop(arg_2))', '&lt;&gt;(arg_2)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_2</id>
+      <formulas>['O(prop(arg_3))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_3</id>
+      <formulas>['O(prop(arg_8))', '&lt;&gt;(arg_8)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_4</id>
+      <formulas>['O(prop(arg_9))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_5</id>
+      <formulas>['O(prop(arg_10))', '&lt;&gt;(arg_10)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_6</id>
+      <formulas>['O(prop(arg_14))', '&lt;&gt;(arg_14)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_7</id>
+      <formulas>['O(prop(arg_15))', '&lt;&gt;(arg_15)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_8</id>
+      <formulas>['O(prop(arg_16))', '&lt;&gt;(arg_16)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+  </modal-analysis-results>
+  <formal-synthesis-reports label="Formal Synthesis">[]</formal-synthesis-reports>
+  <nl-to-logic-translations label="nl_to_logic_translations">[]</nl-to-logic-translations>
+  <atms-contexts label="atms_contexts">[]</atms-contexts>
+  <workflow-results label="Workflow Results">{}</workflow-results>
+  <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
+  <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
+  <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
+  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x00000221B55261D0&gt;</-jtms-session>
+</analysis_state>

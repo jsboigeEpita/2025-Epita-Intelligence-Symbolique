@@ -1,0 +1,8 @@
+id,original_argument,counter_content,strategy,score,target_arg_id
+ca_1,arg_1,<scrubbed>,expose_fallacy,0.6,arg_1
+ca_2,arg_2,<scrubbed>,demand_sources,0.55,arg_2
+ca_3,arg_3,<scrubbed>,undercut,0.5,arg_3
+ca_4,arg_4,<scrubbed>,expose_fallacy,0.65,arg_4
+ca_5,arg_5,<scrubbed>,undermining_evidence,0.95,arg_5
+ca_6,arg_1,<scrubbed>,expose_fallacy,0.6,arg_1
+ca_7,arg_2,<scrubbed>,demand_sources,0.55,arg_2

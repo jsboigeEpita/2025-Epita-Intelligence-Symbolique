@@ -1,0 +1,14 @@
+id,type,justification,target_argument_id
+fallacy_1,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_2,post_hoc_ergo_propter_hoc,<scrubbed>,arg_3
+fallacy_3,conspiracy_theory,<scrubbed>,arg_4
+fallacy_4,hasty_generalization,<scrubbed>,arg_5
+fallacy_5,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_6,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_7,conspiracy_theory,<scrubbed>,arg_4
+fallacy_8,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_9,conspiracy_theory,<scrubbed>,arg_4
+fallacy_10,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_11,conspiracy_theory,<scrubbed>,arg_4
+fallacy_12,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_13,cherry_picking,<scrubbed>,arg_4

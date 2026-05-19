@@ -1,0 +1,557 @@
+{
+  "analysis_tasks": {
+    "task_1": "<scrubbed>"
+  },
+  "identified_arguments": {
+    "arg_1": "<scrubbed>",
+    "arg_2": "<scrubbed>",
+    "arg_3": "<scrubbed>",
+    "arg_4": "<scrubbed>",
+    "arg_5": "<scrubbed>",
+    "arg_6": "<scrubbed>",
+    "arg_7": "<scrubbed>",
+    "arg_8": "<scrubbed>",
+    "arg_9": "<scrubbed>",
+    "arg_10": "<scrubbed>",
+    "arg_11": "<scrubbed>",
+    "arg_12": "<scrubbed>",
+    "arg_13": "<scrubbed>",
+    "arg_14": "<scrubbed>",
+    "arg_15": "<scrubbed>",
+    "arg_16": "<scrubbed>",
+    "arg_17": "<scrubbed>"
+  },
+  "identified_fallacies": {
+    "fallacy_1": {
+      "type": "Appel à la pitié",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_2": {
+      "type": "Faux dilemme",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_4"
+    },
+    "fallacy_3": {
+      "type": "Généralisation abusive / stéréotype",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_5"
+    },
+    "fallacy_4": {
+      "type": "Appel à la peur (argumentum ad metum)",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_4"
+    },
+    "fallacy_5": {
+      "type": "Poisoning the well (Empoisonnement du puits)",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_6": {
+      "type": "Victim blaming (Culpabilisation de la victime)",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_2"
+    },
+    "fallacy_7": {
+      "type": "Appel à la pitié",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_8": {
+      "type": "Appel à la pitié",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_9": {
+      "type": "Poisoning the well",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_10": {
+      "type": "Généralisation abusive",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_5"
+    },
+    "fallacy_11": {
+      "type": "Victim blaming",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_2"
+    },
+    "fallacy_12": {
+      "type": "Appel à la pitié",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_13": {
+      "type": "Poisoning the well",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_14": {
+      "type": "Généralisation abusive",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_5"
+    },
+    "fallacy_15": {
+      "type": "Victim blaming",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_2"
+    },
+    "fallacy_16": {
+      "type": "Appel à la pitié",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    },
+    "fallacy_17": {
+      "type": "Empoisonnement du puits / Poisoning the well",
+      "justification": "<scrubbed>",
+      "target_argument_id": "arg_1"
+    }
+  },
+  "belief_sets": {
+    "propositional_bs_1": {
+      "logic_type": "Propositional",
+      "content": "<scrubbed>"
+    },
+    "fol_bs_2": {
+      "logic_type": "FOL",
+      "content": "<scrubbed>"
+    }
+  },
+  "query_log": [],
+  "answers": {},
+  "extracts": [],
+  "errors": [],
+  "final_conclusion": null,
+  "_next_agent_designated": null,
+  "counter_arguments": [
+    {
+      "id": "ca_1",
+      "original_argument": "arg_1",
+      "counter_content": "<scrubbed>",
+      "strategy": "expose_fallacy",
+      "score": 0.6,
+      "target_arg_id": "arg_1"
+    },
+    {
+      "id": "ca_2",
+      "original_argument": "arg_2",
+      "counter_content": "<scrubbed>",
+      "strategy": "demand_sources",
+      "score": 0.55,
+      "target_arg_id": "arg_2"
+    },
+    {
+      "id": "ca_3",
+      "original_argument": "arg_3",
+      "counter_content": "<scrubbed>",
+      "strategy": "undercut",
+      "score": 0.5,
+      "target_arg_id": "arg_3"
+    },
+    {
+      "id": "ca_4",
+      "original_argument": "arg_4",
+      "counter_content": "<scrubbed>",
+      "strategy": "expose_fallacy",
+      "score": 0.65,
+      "target_arg_id": "arg_4"
+    },
+    {
+      "id": "ca_5",
+      "original_argument": "arg_5",
+      "counter_content": "<scrubbed>",
+      "strategy": "undermining_evidence",
+      "score": 0.95,
+      "target_arg_id": "arg_5"
+    },
+    {
+      "id": "ca_6",
+      "original_argument": "arg_1",
+      "counter_content": "<scrubbed>",
+      "strategy": "expose_fallacy",
+      "score": 0.6,
+      "target_arg_id": "arg_1"
+    },
+    {
+      "id": "ca_7",
+      "original_argument": "arg_2",
+      "counter_content": "<scrubbed>",
+      "strategy": "demand_sources",
+      "score": 0.55,
+      "target_arg_id": "arg_2"
+    }
+  ],
+  "argument_quality_scores": {},
+  "jtms_beliefs": {
+    "jtms_1": {
+      "name": "arg_1",
+      "valid": false,
+      "justifications": [],
+      "retracted": true,
+      "retraction_reason": "fallacy: Empoisonnement du puits / Appel à la pitié"
+    },
+    "jtms_2": {
+      "name": "arg_2",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_3": {
+      "name": "arg_3",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_4": {
+      "name": "arg_4",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_5": {
+      "name": "arg_5",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_6": {
+      "name": "arg_6",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_7": {
+      "name": "arg_7",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_8": {
+      "name": "arg_8",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_9": {
+      "name": "arg_9",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_10": {
+      "name": "arg_10",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_11": {
+      "name": "arg_11",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_12": {
+      "name": "fallacy_on_arg_1",
+      "valid": true,
+      "justifications": []
+    },
+    "jtms_13": {
+      "name": "fallacy_on_arg_1",
+      "valid": true,
+      "justifications": []
+    }
+  },
+  "jtms_retraction_chain": [],
+  "dung_frameworks": {
+    "dung_1": {
+      "name": "conversational_dung",
+      "arguments": [
+        "arg_1",
+        "arg_2",
+        "arg_3",
+        "arg_4",
+        "arg_5",
+        "arg_6",
+        "arg_7",
+        "arg_8",
+        "arg_9",
+        "arg_10",
+        "arg_11",
+        "arg_12",
+        "arg_13",
+        "arg_14",
+        "arg_15",
+        "arg_16",
+        "arg_17",
+        "fallacy_Appel à la pitié",
+        "fallacy_Faux dilemme",
+        "fallacy_Généralisation abusi",
+        "fallacy_Appel à la peur (arg",
+        "fallacy_Poisoning the well (",
+        "fallacy_Victim blaming (Culp",
+        "fallacy_Poisoning the well",
+        "fallacy_Victim blaming",
+        "fallacy_Empoisonnement du pu"
+      ],
+      "attacks": [
+        [
+          "fallacy_Appel à la pitié",
+          "arg_1"
+        ],
+        [
+          "fallacy_Faux dilemme",
+          "arg_4"
+        ],
+        [
+          "fallacy_Généralisation abusi",
+          "arg_5"
+        ],
+        [
+          "fallacy_Appel à la peur (arg",
+          "arg_4"
+        ],
+        [
+          "fallacy_Poisoning the well (",
+          "arg_1"
+        ],
+        [
+          "fallacy_Victim blaming (Culp",
+          "arg_2"
+        ],
+        [
+          "fallacy_Appel à la pitié",
+          "arg_1"
+        ],
+        [
+          "fallacy_Appel à la pitié",
+          "arg_1"
+        ],
+        [
+          "fallacy_Poisoning the well",
+          "arg_1"
+        ],
+        [
+          "fallacy_Généralisation abusi",
+          "arg_5"
+        ],
+        [
+          "fallacy_Victim blaming",
+          "arg_2"
+        ],
+        [
+          "fallacy_Appel à la pitié",
+          "arg_1"
+        ],
+        [
+          "fallacy_Poisoning the well",
+          "arg_1"
+        ],
+        [
+          "fallacy_Généralisation abusi",
+          "arg_5"
+        ],
+        [
+          "fallacy_Victim blaming",
+          "arg_2"
+        ],
+        [
+          "fallacy_Appel à la pitié",
+          "arg_1"
+        ],
+        [
+          "fallacy_Empoisonnement du pu",
+          "arg_1"
+        ]
+      ],
+      "extensions": {
+        "grounded": [
+          "arg_10",
+          "arg_11",
+          "arg_12",
+          "arg_13",
+          "arg_14",
+          "arg_15",
+          "arg_16",
+          "arg_17",
+          "arg_3",
+          "arg_6",
+          "arg_7",
+          "arg_8",
+          "arg_9",
+          "fallacy_Appel à la peur (arg",
+          "fallacy_Appel à la pitié",
+          "fallacy_Empoisonnement du pu",
+          "fallacy_Faux dilemme",
+          "fallacy_Généralisation abusi",
+          "fallacy_Poisoning the well",
+          "fallacy_Poisoning the well (",
+          "fallacy_Victim blaming",
+          "fallacy_Victim blaming (Culp"
+        ]
+      }
+    }
+  },
+  "governance_decisions": [],
+  "debate_transcripts": [],
+  "transcription_segments": [],
+  "semantic_index_refs": [],
+  "neural_fallacy_scores": [],
+  "ranking_results": [],
+  "aspic_results": [
+    {
+      "id": "aspic_1",
+      "reasoner_type": "python_fallback",
+      "extensions": [
+        [
+          "premisses: La démocratie et la liberté individuelle mènent à la désorganisation ",
+          "arguments",
+          "premisses: Le peuple allemand a souffert pendant des décennies (sang versé, émig",
+          "premisses: Des provocations et mobilisations par Beneš et d'autres cercles étran",
+          "premisses: La démocratie et la liberté individuelle entraînent désorganisation, ",
+          "premisses: L'Allemagne est surpeuplée et manque de Lebensraum; importer nourritu",
+          "premisses: Les Juifs et l'‘international Jewry’ contrôlent presse, finance, et c",
+          "arguments",
+          "premisses: Le peuple allemand a souffert pendant des décennies (sang versé, exil",
+          "premisses: L’ancien président tchécoslovaque Beneš a encouragé la mobilisation e",
+          "premisses: La démocratie et la liberté individuelle produisent désorganisation e",
+          "premisses: L’Allemagne souffre de surpopulation relative et manque de Lebensraum",
+          "premisses: Les Juifs et l’«international Jewry» contrôlent médias, finance et ch"
+        ]
+      ],
+      "statistics": {
+        "total_arguments": 17,
+        "surviving": 13,
+        "defeated": 4,
+        "strict_rules": 11,
+        "defeasible_rules": 6,
+        "fallacies_applied": 17
+      }
+    }
+  ],
+  "belief_revision_results": [
+    {
+      "id": "brevision_1",
+      "method": "fallacy_contraction",
+      "original": [
+        "arg_2",
+        "arg_3",
+        "arg_4",
+        "arg_5",
+        "arg_6",
+        "arg_7",
+        "arg_8",
+        "arg_9",
+        "arg_10",
+        "arg_11",
+        "fallacy_on_arg_1",
+        "fallacy_on_arg_1"
+      ],
+      "revised": [
+        "arg_3",
+        "arg_6",
+        "arg_7",
+        "arg_8",
+        "arg_9"
+      ]
+    }
+  ],
+  "dialogue_results": [],
+  "probabilistic_results": [],
+  "bipolar_results": [],
+  "fol_analysis_results": [],
+  "fol_signature": [],
+  "propositional_analysis_results": [],
+  "modal_analysis_results": [
+    {
+      "id": "modal_1",
+      "formulas": [
+        "O(prop(arg_2))",
+        "<>(arg_2)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    },
+    {
+      "id": "modal_2",
+      "formulas": [
+        "O(prop(arg_3))"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic"
+      ]
+    },
+    {
+      "id": "modal_3",
+      "formulas": [
+        "O(prop(arg_8))",
+        "<>(arg_8)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    },
+    {
+      "id": "modal_4",
+      "formulas": [
+        "O(prop(arg_9))"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic"
+      ]
+    },
+    {
+      "id": "modal_5",
+      "formulas": [
+        "O(prop(arg_10))",
+        "<>(arg_10)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    },
+    {
+      "id": "modal_6",
+      "formulas": [
+        "O(prop(arg_14))",
+        "<>(arg_14)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    },
+    {
+      "id": "modal_7",
+      "formulas": [
+        "O(prop(arg_15))",
+        "<>(arg_15)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    },
+    {
+      "id": "modal_8",
+      "formulas": [
+        "O(prop(arg_16))",
+        "<>(arg_16)"
+      ],
+      "valid": true,
+      "modalities": [
+        "deontic",
+        "alethic"
+      ]
+    }
+  ],
+  "formal_synthesis_reports": [],
+  "nl_to_logic_translations": [],
+  "atms_contexts": [],
+  "workflow_results": {},
+  "narrative_synthesis": "",
+  "atomic_propositions": {},
+  "fol_shared_signature": {},
+  "_jtms_session": "<argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x00000221B55261D0>"
+}

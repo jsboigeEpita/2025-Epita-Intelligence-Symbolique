@@ -1,0 +1,250 @@
+{
+  "generated_at": "2026-05-19T03:19:04.104907+00:00",
+  "total_traces": 5,
+  "phases_affected": [
+    "Re-Analysis",
+    "Extraction & Detection"
+  ],
+  "outcomes": {
+    "ok": 0,
+    "reran": 5,
+    "gave_up": 0
+  },
+  "traces": [
+    {
+      "phase_name": "Extraction & Detection",
+      "turn": 3,
+      "attempt_idx": 0,
+      "fingerprint_before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fingerprint_after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outcome": "reran",
+      "agent_name": "ProjectManager",
+      "timestamp": "2026-05-19T03:19:04.104907+00:00"
+    },
+    {
+      "phase_name": "Re-Analysis",
+      "turn": 1,
+      "attempt_idx": 0,
+      "fingerprint_before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fingerprint_after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outcome": "reran",
+      "agent_name": "InformalAgent",
+      "timestamp": "2026-05-19T03:19:04.104907+00:00"
+    },
+    {
+      "phase_name": "Re-Analysis",
+      "turn": 2,
+      "attempt_idx": 0,
+      "fingerprint_before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fingerprint_after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outcome": "reran",
+      "agent_name": "QualityAgent",
+      "timestamp": "2026-05-19T03:19:04.104907+00:00"
+    },
+    {
+      "phase_name": "Re-Analysis",
+      "turn": 3,
+      "attempt_idx": 0,
+      "fingerprint_before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fingerprint_after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outcome": "reran",
+      "agent_name": "GovernanceAgent",
+      "timestamp": "2026-05-19T03:19:04.104907+00:00"
+    },
+    {
+      "phase_name": "Re-Analysis",
+      "turn": 4,
+      "attempt_idx": 0,
+      "fingerprint_before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fingerprint_after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "outcome": "reran",
+      "agent_name": "ProjectManager",
+      "timestamp": "2026-05-19T03:19:04.104907+00:00"
+    }
+  ]
+}
