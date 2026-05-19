@@ -1,2 +1,2 @@
-id,original_argument,counter_content,strategy,score,target_arg_id
-ca_1,arg_2,<scrubbed>,déconstruction logique,0.8,arg_2
+id,original_argument,counter_content,strategy,score
+ca_1,<scrubbed>,<scrubbed>,demander preuves empiriques + fact-check historique,0.9

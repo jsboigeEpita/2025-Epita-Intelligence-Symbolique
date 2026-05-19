@@ -1,109 +1,11 @@
 {
-  "generated_at": "2026-05-19T03:19:04.093329+00:00",
-  "total_traces": 2,
-  "phases_affected": [
-    "Re-Analysis",
-    "Extraction & Detection"
-  ],
+  "generated_at": "2026-05-19T07:46:04.100663+00:00",
+  "total_traces": 0,
+  "phases_affected": [],
   "outcomes": {
     "ok": 0,
-    "reran": 2,
+    "reran": 0,
     "gave_up": 0
   },
-  "traces": [
-    {
-      "phase_name": "Extraction & Detection",
-      "turn": 3,
-      "attempt_idx": 0,
-      "fingerprint_before": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "fingerprint_after": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "delta": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "outcome": "reran",
-      "agent_name": "ProjectManager",
-      "timestamp": "2026-05-19T03:19:04.093329+00:00"
-    },
-    {
-      "phase_name": "Re-Analysis",
-      "turn": 2,
-      "attempt_idx": 0,
-      "fingerprint_before": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "fingerprint_after": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "delta": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "outcome": "reran",
-      "agent_name": "QualityAgent",
-      "timestamp": "2026-05-19T03:19:04.093329+00:00"
-    }
-  ]
+  "traces": []
 }

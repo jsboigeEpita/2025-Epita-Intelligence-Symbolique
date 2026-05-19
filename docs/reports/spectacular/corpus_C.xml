@@ -1,234 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <analysis_state>
-  <generated_at>2026-05-19T03:19:04.099888+00:00</generated_at>
-  <analysis-tasks label="analysis_tasks">{}</analysis-tasks>
-  <identified-arguments count="10" label="Arguments">
+  <generated_at>2026-05-19T07:46:04.106038+00:00</generated_at>
+  <analysis-tasks count="1" label="analysis_tasks">
+    <item key="task_1">&lt;scrubbed&gt;</item>
+  </analysis-tasks>
+  <identified-arguments count="2" label="Arguments">
     <item key="arg_1">&lt;scrubbed&gt;</item>
     <item key="arg_2">&lt;scrubbed&gt;</item>
-    <item key="arg_3">&lt;scrubbed&gt;</item>
-    <item key="arg_4">&lt;scrubbed&gt;</item>
-    <item key="arg_5">&lt;scrubbed&gt;</item>
-    <item key="arg_6">&lt;scrubbed&gt;</item>
-    <item key="arg_7">&lt;scrubbed&gt;</item>
-    <item key="arg_8">&lt;scrubbed&gt;</item>
-    <item key="arg_9">&lt;scrubbed&gt;</item>
-    <item key="arg_10">&lt;scrubbed&gt;</item>
   </identified-arguments>
-  <identified-fallacies count="14" label="Fallacies">
+  <identified-fallacies count="2" label="Fallacies">
     <entry id="fallacy_1">
-      <type>Sophisme génétique</type>
+      <type>appel à la tradition / appel à l'histoire (appeal to tradition)</type>
       <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_5</target-argument-id>
+      <target-argument-id>arg_arg1_conclusion</target-argument-id>
     </entry>
     <entry id="fallacy_2">
-      <type>Appel à la peur</type>
+      <type>genéralisation hâtive / essentialisation</type>
       <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_6</target-argument-id>
-    </entry>
-    <entry id="fallacy_3">
-      <type>Homogénéisation / Caracterisation hâtive</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_5</target-argument-id>
-    </entry>
-    <entry id="fallacy_4">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_5">
-      <type>Appel à l'appartenance</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_3</target-argument-id>
-    </entry>
-    <entry id="fallacy_6">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_7">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_8">
-      <type>Simplicité causale</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_3</target-argument-id>
-    </entry>
-    <entry id="fallacy_9">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_10">
-      <type>Deux torts font un droit</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_4</target-argument-id>
-    </entry>
-    <entry id="fallacy_11">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_12">
-      <type>Cause unique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_3</target-argument-id>
-    </entry>
-    <entry id="fallacy_13">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
-    </entry>
-    <entry id="fallacy_14">
-      <type>Sophisme génétique</type>
-      <justification>&lt;scrubbed&gt;</justification>
-      <target-argument-id>arg_2</target-argument-id>
+      <target-argument-id>arg_arg1_conclusion</target-argument-id>
     </entry>
   </identified-fallacies>
-  <belief-sets count="2" label="belief_sets">
-    <entry id="propositional_bs_1">
-      <logic-type>Propositional</logic-type>
-      <content>&lt;scrubbed&gt;</content>
-    </entry>
-    <entry id="fol_bs_2">
-      <logic-type>FOL</logic-type>
-      <content>&lt;scrubbed&gt;</content>
-    </entry>
-  </belief-sets>
+  <belief-sets label="belief_sets">{}</belief-sets>
   <query-log label="query_log">[]</query-log>
-  <answers count="4" label="answers">
+  <answers count="1" label="answers">
     <entry id="task_1">
       <author-agent>ProjectManager</author-agent>
-      <answer-text>Designated InformalAgent to analyze informal argument structure and fallacies. Question: Please parse the speech and provide a list of identified arguments (claim + support), label any implicit premises, estimate strength (weak/medium/strong), and list detected fallacies with brief justification. Also confirm state.identified_arguments is non-empty.</answer-text>
-      <source-ids>[]</source-ids>
-    </entry>
-    <entry id="task_2">
-      <author-agent>ProjectManager</author-agent>
-      <answer-text>Tâche pour InformalAgent (instructions précises) :
-1) Confirmez que state.identified_arguments contient au moins les arguments ajoutés par moi (Claim A..G). Si non, extraire immédiatement tous les arguments manquants (minimum 3).
-2) Pour chaque Claim (A..G) fournissez :
-   - Claim (version concise)
-   - Supporting premises (liste d’extraits/textes)
-   - Implicit premises (si présentes)
-   - Strength: faible/moyenne/forte + justification courte
-   - Sophismes détectés (type + justification + extr...</answer-text>
-      <source-ids>[]</source-ids>
-    </entry>
-    <entry id="task_3">
-      <author-agent>ProjectManager</author-agent>
       <answer-text>&lt;scrubbed&gt;</answer-text>
-      <source-ids>[]</source-ids>
-    </entry>
-    <entry id="task_4">
-      <author-agent>ProjectManager</author-agent>
-      <answer-text>Question pour CounterAgent :
-1) En vous focalisant sur les arguments faibles identifiés (score &lt; 5/10 selon QualityAgent) — cibles principales : arg_2, arg_3, arg_5, arg_6 — proposez pour chaque :
-   - 2 contre‑arguments concis (texte) visant précisément les prémisses contestées (référez-vous aux fallacy_ids correspondants).
-   - Pour chaque contre‑argument, donnez la stratégie (attaque sur l’épistémicité, attaque logique, attaque des sources, minimisation, alternative explicative) et une estima...</answer-text>
       <source-ids>[]</source-ids>
     </entry>
   </answers>
   <extracts label="Extracts">[]</extracts>
   <errors label="errors">[]</errors>
-  <final-conclusion label="Final Conclusion">&lt;scrubbed&gt;</final-conclusion>
+  <-next-agent-designated label="_next_agent_designated">InformalAgent</-next-agent-designated>
   <counter-arguments count="1" label="Counter-Arguments">
     <entry>
       <id>ca_1</id>
-      <original-argument>arg_2</original-argument>
+      <original-argument>&lt;scrubbed&gt;</original-argument>
       <counter-content>&lt;scrubbed&gt;</counter-content>
-      <strategy>déconstruction logique</strategy>
-      <score>0.8</score>
-      <target-arg-id>arg_2</target-arg-id>
+      <strategy>demander preuves empiriques + fact-check historique</strategy>
+      <score>0.9</score>
     </entry>
   </counter-arguments>
-  <argument-quality-scores count="5" label="Quality Scores">
-    <entry id="arg_2">
-      <scores>{'clarte': 6, 'pertinence': 5, 'presence_sources': 0, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 1, 'redondance_faible': 7}</scores>
-      <overall>0.32</overall>
-    </entry>
-    <entry id="arg_3">
-      <scores>{'clarte': 6, 'pertinence': 6, 'presence_sources': 0, 'refutation_constructive': 3, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 3, 'redondance_faible': 6}</scores>
-      <overall>0.36</overall>
-    </entry>
-    <entry id="arg_4">
-      <scores>{'clarte': 5, 'pertinence': 5, 'presence_sources': 0, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 2, 'fiabilite_sources': 0, 'exhaustivite': 2, 'redondance_faible': 6}</scores>
-      <overall>0.3</overall>
-    </entry>
-    <entry id="arg_5">
-      <scores>{'clarte': 6, 'pertinence': 5, 'presence_sources': 1, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 1, 'redondance_faible': 5}</scores>
-      <overall>0.31</overall>
-    </entry>
-    <entry id="arg_6">
-      <scores>{'clarte': 6, 'pertinence': 6, 'presence_sources': 1, 'refutation_constructive': 3, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 1, 'exhaustivite': 3, 'redondance_faible': 6}</scores>
-      <overall>0.38</overall>
-    </entry>
-  </argument-quality-scores>
-  <jtms-beliefs count="6" label="JTMS Beliefs">
-    <entry id="jtms_1">
-      <name>fallacy_on_arg_5</name>
-      <valid>True</valid>
-      <justifications>[]</justifications>
-    </entry>
-    <entry id="jtms_2">
-      <name>fallacy_on_arg_2</name>
-      <valid>False</valid>
-      <justifications>[]</justifications>
-      <retracted>True</retracted>
-      <retraction-reason>fallacy: Sophisme génétique</retraction-reason>
-    </entry>
-    <entry id="jtms_3">
-      <name>fallacy_on_arg_2</name>
-      <valid>True</valid>
-      <justifications>[]</justifications>
-    </entry>
-    <entry id="jtms_4">
-      <name>fallacy_on_arg_3</name>
-      <valid>True</valid>
-      <justifications>[]</justifications>
-    </entry>
-    <entry id="jtms_5">
-      <name>fallacy_on_arg_2</name>
-      <valid>True</valid>
-      <justifications>[]</justifications>
-    </entry>
-    <entry id="jtms_6">
-      <name>fallacy_on_arg_2</name>
-      <valid>True</valid>
-      <justifications>[]</justifications>
-    </entry>
-  </jtms-beliefs>
+  <argument-quality-scores label="Quality Scores">{}</argument-quality-scores>
+  <jtms-beliefs label="JTMS Beliefs">{}</jtms-beliefs>
   <jtms-retraction-chain label="jtms_retraction_chain">[]</jtms-retraction-chain>
-  <dung-frameworks count="1" label="Dung Frameworks">
-    <entry id="dung_1">
-      <name>conversational_dung</name>
-      <arguments>['arg_1', 'arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'fallacy_Sophisme génétique', 'fallacy_Appel à la peur', 'fallacy_Homogénéisation / Ca', &quot;fallacy_Appel à l'appartenan&quot;, 'fallacy_Simplicité causale', 'fallacy_Deux torts font un d', 'fallacy_Cause unique']</arguments>
-      <attacks>[['fallacy_Sophisme génétique', 'arg_5'], ['fallacy_Appel à la peur', 'arg_6'], ['fallacy_Homogénéisation / Ca', 'arg_5'], ['fallacy_Sophisme génétique', 'arg_2'], [&quot;fallacy_Appel à l'appartenan&quot;, 'arg_3'], ['fallacy_Sophisme génétique', 'arg_2'], ['fallacy_Sophisme génétique', 'arg_2'], ['fallacy_Simplicité causale', 'arg_3'], ['fallacy_Sophisme génétique', 'arg_2'], ['fallacy_Deux torts font un d', 'arg_4'], ['fallacy_Sophisme génétique', 'arg_2'], ['fallacy_Cause unique', 'arg_3'], ['fallacy_...</attacks>
-      <extensions>{'grounded': ['arg_1', 'arg_10', 'arg_7', 'arg_8', 'arg_9', &quot;fallacy_Appel à l'appartenan&quot;, 'fallacy_Appel à la peur', 'fallacy_Cause unique', 'fallacy_Deux torts font un d', 'fallacy_Homogénéisation / Ca', 'fallacy_Simplicité causale', 'fallacy_Sophisme génétique']}</extensions>
-    </entry>
-  </dung-frameworks>
+  <dung-frameworks label="Dung Frameworks">{}</dung-frameworks>
   <governance-decisions label="Governance Decisions">[]</governance-decisions>
   <debate-transcripts label="Debate Transcripts">[]</debate-transcripts>
   <transcription-segments label="transcription_segments">[]</transcription-segments>
   <semantic-index-refs label="semantic_index_refs">[]</semantic-index-refs>
   <neural-fallacy-scores label="Neural Fallacy Scores">[]</neural-fallacy-scores>
   <ranking-results label="Ranking Results">[]</ranking-results>
-  <aspic-results count="1" label="ASPIC Results">
-    <entry>
-      <id>aspic_1</id>
-      <reasoner-type>python_fallback</reasoner-type>
-      <extensions>[['arguments', 'arguments', 'arguments', 'arguments', '&lt;scrubbed&gt;']]</extensions>
-      <statistics>{'total_arguments': 10, 'surviving': 5, 'defeated': 5, 'strict_rules': 1, 'defeasible_rules': 9, 'fallacies_applied': 14}</statistics>
-    </entry>
-  </aspic-results>
-  <belief-revision-results count="1" label="Belief Revision Results">
-    <entry>
-      <id>brevision_1</id>
-      <method>fallacy_contraction</method>
-      <original>['fallacy_on_arg_5', 'fallacy_on_arg_2', 'fallacy_on_arg_3', 'fallacy_on_arg_2', 'fallacy_on_arg_2']</original>
-      <revised>[]</revised>
-    </entry>
-  </belief-revision-results>
+  <aspic-results label="ASPIC Results">[]</aspic-results>
+  <belief-revision-results label="Belief Revision Results">[]</belief-revision-results>
   <dialogue-results label="Dialogue Results">[]</dialogue-results>
   <probabilistic-results label="Probabilistic Results">[]</probabilistic-results>
   <bipolar-results label="Bipolar Results">[]</bipolar-results>
@@ -243,5 +67,5 @@
   <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
   <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
   <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
-  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000022897F5C0D0&gt;</-jtms-session>
+  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024B3507C8B0&gt;</-jtms-session>
 </analysis_state>
