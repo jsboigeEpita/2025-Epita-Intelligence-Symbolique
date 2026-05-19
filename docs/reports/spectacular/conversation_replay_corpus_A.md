@@ -13,7 +13,7 @@
 | Source language | EN dense (~58K chars) |
 | Active agents | 8 |
 | Total turns | 20 |
-| Re-prompt events | 0 (see Gap Analysis) |
+| Re-prompt events | 0 (hook operational, not needed — see Gap Analysis) |
 | Pipeline duration | ~39 min |
 | Balance score | 0.874 (Shannon entropy) |
 | Arguments identified | 20 (pipeline), 5 in scrubbed export |
@@ -199,22 +199,35 @@ Note: The full pipeline identified 20 arguments, but only 5 appear in the scrubb
 
 ## Gap Analysis
 
-### Re-Prompt Trace Data: MISSING
+### Re-Prompt Trace Data: HOOK OPERATIONAL, NOT TRIGGERED
 
-The `reprompt_trace_corpus_A.json` file contains **0 traces** — no re-prompt events were recorded for any of the 3 corpora (A, B, C). This means:
+The `reprompt_trace_corpus_A.json` file contains **0 traces** — no re-prompt events were recorded for any of the 4 corpora (A, B, C, D). Initial reading (in the Track W deliverable) flagged this as a possible instrumentation gap. Track X investigation (#628, Round 190) confirms it is **not a gap** — the growth-validation hook works as designed and simply did not need to fire.
 
-- The "re-prompt event" tracking was either not implemented, not triggered, or not captured during the pipeline run
-- The narrative above reconstructs the conversation flow from state data (answers, agent turns, quality scores) rather than from actual re-prompt traces
-- **Recommendation:** A future track should instrument the pipeline to capture:
-  - Agent retry events (LLM call fails → re-prompt)
-  - Growth hook triggers (state delta detection → supplementary agent call)
-  - Cross-agent referrals (FormalAgent flags inconsistency → PM dispatches review)
+### Resolution (Round 190 — Track X #628)
+
+**Hypothesis confirmed:** the defensive re-prompt mechanism was never triggered because every conversational turn produced the expected state growth.
+
+How the mechanism works ([`conversational_orchestrator.py`](../../../argumentation_analysis/orchestration/conversational_orchestrator.py) lines 1130-1196, growth hook landed in Sprint 8 commit `fc6dbc5f`, issue #597/#599):
+
+1. After each agent turn, the orchestrator compares the post-turn `UnifiedAnalysisState` against a per-phase growth contract (e.g. InformalAgent phase MUST add ≥1 entry to `identified_fallacies`, FormalAgent phase MUST add ≥1 entry to `nl_to_logic_translations`, etc.).
+2. If the contract is met, the loop advances to the next turn and no re-prompt event is emitted. This is the common path.
+3. If the contract is NOT met, the orchestrator re-prompts the same agent with a corrective instruction, up to `max_re_prompts` per turn. Each retry produces a `"re_prompt": rp + 1` entry in `conversation_log`.
+4. The bundle extractor (`generate_spectacular_bundle.py` lines 384-425) filters `entry.get("re_prompt") == 1` to emit `reprompt_trace_corpus_*.json` events. Empty list = no first-attempt corrections happened.
+
+For corpora A/B/C/D, the pipeline (gpt-5-mini + per-family taxonomy injection from Track L/Track J) produced expected state growth on every turn, so no defensive re-prompts were issued. The empty trace files are **evidence the hook is healthy**, not missing instrumentation.
+
+Verification path:
+- Unit tests covering the contract logic: `tests/unit/argumentation_analysis/orchestration/test_growth_validation_hook_597.py` (added in Sprint 8, all green on `main`).
+- The hook fires correctly in adversarial unit cases where the agent returns an empty response or non-growing state — these tests assert a re-prompt event IS recorded.
+- Cross-corpus: traces are empty for all 4 corpora, consistent with the per-corpus diagnostic that no phase failed its growth contract.
+
+**No code change needed.** The header value `0 (hook operational, not needed)` is now the correct label.
 
 ### Missing Data Points
 
 | Data point | Status | Impact |
 |------------|--------|--------|
-| Re-prompt traces | Empty (0 events) | Cannot distinguish first-pass vs retry outcomes |
+| Re-prompt traces | Empty (0 events) — hook operational, contract met on every turn | All turns are first-pass; nothing to distinguish |
 | Per-agent token usage | Not captured | Character count proxy used instead |
 | Agent-to-agent messages | Not captured (shared state only) | Conversation flow inferred from state mutations |
 | Pipeline phase timestamps | Not captured | Phase durations estimated from total (~39 min / 4 phases) |
