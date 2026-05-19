@@ -26,6 +26,7 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | Conversation balance per corpus | `balance_corpus_A.md`, `balance_corpus_B.md`, `balance_corpus_C.md` |
 | Interactive cross-ref graph explorer | `cross_ref_viz.html` (open in browser — D3.js, filter by edge type, corpus dropdown) |
 | Static cross-reference graphs | `cross_ref_graph_corpus_A.mmd` (Mermaid), `*.dot` (Graphviz) |
+| Conversation replay narrative | `conversation_replay_corpus_A.md` (timeline, Mermaid sequence diagram, gap analysis) |
 | Re-prompt trace evidence | `reprompt_trace_corpus_A.json` |
 | Machine-readable state | `corpus_A.json` |
 | Spreadsheet analysis | `A/csv/args.csv`, `A/csv/fallacies.csv`, etc. |
@@ -61,6 +62,10 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 - `reprompt_trace_corpus_B.json`
 - `reprompt_trace_corpus_C.json`
 
+### Conversation Replay (Track W)
+
+- `conversation_replay_corpus_A.md` — Narrative chronology of inter-agent dialogue: 4-phase timeline, Mermaid sequence diagram, state evolution table, dialogue pattern analysis, gap analysis for missing re-prompt data
+
 ### Soutenance Slide Deck
 
 - `soutenance_slides.md` — Marp-compatible 15-slide presentation (exportable to PPTX/PDF)
@@ -77,6 +82,7 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | "How do formal methods connect?" | `cross_ref_viz.html` | Interactive explorer: argument→fallacy→JTMS→BR cascade, filter by edge type, switch corpus |
 | "How do formal methods connect?" (static) | `cross_ref_graph_corpus_*.mmd` | Visual showing argument→fallacy→JTMS→BR cascade |
 | "Does it generalize?" | Corpus D (4th corpus, 16 args) | Validated on N=4, distinct rhetorical profile, all ≥10 args |
+| "Show the conversation dynamics" | `conversation_replay_corpus_A.md` | 4-phase timeline, 8 agents, Mermaid sequence diagram, state evolution, dialogue patterns |
 
 ## Privacy
 
