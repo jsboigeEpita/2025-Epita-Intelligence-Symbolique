@@ -62,9 +62,12 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 - `reprompt_trace_corpus_B.json`
 - `reprompt_trace_corpus_C.json`
 
-### Conversation Replay (Track W)
+### Conversation Replay (Tracks W / Y / Z / AA — full quartet)
 
-- `conversation_replay_corpus_A.md` — Narrative chronology of inter-agent dialogue: 4-phase timeline, Mermaid sequence diagram, state evolution table, dialogue pattern analysis, gap analysis for missing re-prompt data
+- `conversation_replay_corpus_A.md` — Narrative chronology of inter-agent dialogue: 4-phase timeline, Mermaid sequence diagram, state evolution table, dialogue pattern analysis, Round 190 hook resolution (Track W, PR #627)
+- `conversation_replay_corpus_B.md` — Companion narrative for corpus B: 17 args, 17 fallacies, 13 JTMS beliefs, 36K-char DebateAgent contribution (Track Y, PR #630)
+- `conversation_replay_corpus_C.md` — Companion narrative for corpus C: 10 args, 14 fallacies, stacked-fallacy cascade, ~201K cluster-heaviest output, 7/8 agents balanced (Track Z, PR #632)
+- `conversation_replay_corpus_D.md` — Companion narrative for corpus D: 16 args, 17 fallacies, richest formal stack (Dung + ASPIC + BR + Modal) — reconstructed from pipeline counters and `corpus_d_caveat_investigation.md` (Track AA)
 
 ### Soutenance Slide Deck
 
@@ -83,6 +86,7 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | "How do formal methods connect?" (static) | `cross_ref_graph_corpus_*.mmd` | Visual showing argument→fallacy→JTMS→BR cascade |
 | "Does it generalize?" | Corpus D (4th corpus, 16 args) | Validated on N=4, distinct rhetorical profile, all ≥10 args |
 | "Show the conversation dynamics" | `conversation_replay_corpus_A.md` | 4-phase timeline, 8 agents, Mermaid sequence diagram, state evolution, dialogue patterns |
+| "Show conversation dynamics across all 4 corpora" | `conversation_replay_corpus_{A,B,C,D}.md` | Full quartet narratives — each corpus has a distinctive trait (A: highest export args, B: heaviest JTMS+debate, C: most balanced+cascade, D: richest formal stack) |
 
 ## Privacy
 
