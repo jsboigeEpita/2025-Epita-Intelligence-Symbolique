@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<analysis_state>
+  <generated_at>2026-05-19T06:30:09.857292+00:00</generated_at>
+  <task-count label="task_count">0</task-count>
+  <tasks-defined label="tasks_defined">[]</tasks-defined>
+  <argument-count label="argument_count">16</argument-count>
+  <fallacy-count label="fallacy_count">17</fallacy-count>
+  <belief-set-count label="belief_set_count">2</belief-set-count>
+  <query-log-count label="query_log_count">0</query-log-count>
+  <answer-count label="answer_count">3</answer-count>
+  <extract-count label="extract_count">0</extract-count>
+  <error-count label="error_count">0</error-count>
+  <tasks-answered count="3" label="tasks_answered">
+    <item>task_extract_all_args</item>
+    <item>task_quality_evaluation_phase3</item>
+    <item>re-eval_post_jtms_retractions</item>
+  </tasks-answered>
+  <conclusion-present label="conclusion_present">False</conclusion-present>
+  <counter-argument-count label="counter_argument_count">4</counter-argument-count>
+  <quality-scores-count label="quality_scores_count">5</quality-scores-count>
+  <jtms-belief-count label="jtms_belief_count">5</jtms-belief-count>
+  <dung-framework-count label="dung_framework_count">1</dung-framework-count>
+  <governance-decision-count label="governance_decision_count">0</governance-decision-count>
+  <debate-transcript-count label="debate_transcript_count">0</debate-transcript-count>
+  <transcription-segment-count label="transcription_segment_count">0</transcription-segment-count>
+  <semantic-index-ref-count label="semantic_index_ref_count">0</semantic-index-ref-count>
+  <neural-fallacy-score-count label="neural_fallacy_score_count">0</neural-fallacy-score-count>
+  <ranking-result-count label="ranking_result_count">0</ranking-result-count>
+  <aspic-result-count label="aspic_result_count">1</aspic-result-count>
+  <belief-revision-result-count label="belief_revision_result_count">1</belief-revision-result-count>
+  <dialogue-result-count label="dialogue_result_count">0</dialogue-result-count>
+  <probabilistic-result-count label="probabilistic_result_count">0</probabilistic-result-count>
+  <bipolar-result-count label="bipolar_result_count">0</bipolar-result-count>
+  <fol-analysis-count label="fol_analysis_count">0</fol-analysis-count>
+  <propositional-analysis-count label="propositional_analysis_count">0</propositional-analysis-count>
+  <modal-analysis-count label="modal_analysis_count">2</modal-analysis-count>
+  <formal-synthesis-count label="formal_synthesis_count">0</formal-synthesis-count>
+  <workflow-results-count label="workflow_results_count">0</workflow-results-count>
+  <atomic-propositions-count label="atomic_propositions_count">0</atomic-propositions-count>
+  <fol-shared-signature-sources label="fol_shared_signature_sources">[]</fol-shared-signature-sources>
+  <identified-arguments label="Arguments">{}</identified-arguments>
+  <identified-fallacies label="Fallacies">{}</identified-fallacies>
+  <argument-quality-scores label="Quality Scores">{}</argument-quality-scores>
+  <counter-arguments label="Counter-Arguments">[]</counter-arguments>
+  <debate-transcripts label="Debate Transcripts">[]</debate-transcripts>
+  <belief-sets label="belief_sets">{}</belief-sets>
+  <extracts label="Extracts">{}</extracts>
+  <analysis-tasks label="analysis_tasks">{}</analysis-tasks>
+</analysis_state>

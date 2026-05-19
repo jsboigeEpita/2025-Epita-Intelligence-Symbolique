@@ -1,18 +1,2 @@
 id,type,justification,target_argument_id
-fallacy_1,Appel à la pitié,<scrubbed>,arg_1
-fallacy_2,Faux dilemme,<scrubbed>,arg_4
-fallacy_3,Généralisation abusive / stéréotype,<scrubbed>,arg_5
-fallacy_4,Appel à la peur (argumentum ad metum),<scrubbed>,arg_4
-fallacy_5,Poisoning the well (Empoisonnement du puits),<scrubbed>,arg_1
-fallacy_6,Victim blaming (Culpabilisation de la victime),<scrubbed>,arg_2
-fallacy_7,Appel à la pitié,<scrubbed>,arg_1
-fallacy_8,Appel à la pitié,<scrubbed>,arg_1
-fallacy_9,Poisoning the well,<scrubbed>,arg_1
-fallacy_10,Généralisation abusive,<scrubbed>,arg_5
-fallacy_11,Victim blaming,<scrubbed>,arg_2
-fallacy_12,Appel à la pitié,<scrubbed>,arg_1
-fallacy_13,Poisoning the well,<scrubbed>,arg_1
-fallacy_14,Généralisation abusive,<scrubbed>,arg_5
-fallacy_15,Victim blaming,<scrubbed>,arg_2
-fallacy_16,Appel à la pitié,<scrubbed>,arg_1
-fallacy_17,Empoisonnement du puits / Poisoning the well,<scrubbed>,arg_1
+fallacy_1,Appel au nationalisme,<scrubbed>,arg_1

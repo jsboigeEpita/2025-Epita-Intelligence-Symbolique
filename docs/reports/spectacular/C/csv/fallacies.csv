@@ -1,15 +1,3 @@
 id,type,justification,target_argument_id
-fallacy_1,Sophisme génétique,<scrubbed>,arg_5
-fallacy_2,Appel à la peur,<scrubbed>,arg_6
-fallacy_3,Homogénéisation / Caracterisation hâtive,<scrubbed>,arg_5
-fallacy_4,Sophisme génétique,<scrubbed>,arg_2
-fallacy_5,Appel à l'appartenance,<scrubbed>,arg_3
-fallacy_6,Sophisme génétique,<scrubbed>,arg_2
-fallacy_7,Sophisme génétique,<scrubbed>,arg_2
-fallacy_8,Simplicité causale,<scrubbed>,arg_3
-fallacy_9,Sophisme génétique,<scrubbed>,arg_2
-fallacy_10,Deux torts font un droit,<scrubbed>,arg_4
-fallacy_11,Sophisme génétique,<scrubbed>,arg_2
-fallacy_12,Cause unique,<scrubbed>,arg_3
-fallacy_13,Sophisme génétique,<scrubbed>,arg_2
-fallacy_14,Sophisme génétique,<scrubbed>,arg_2
+fallacy_1,appel à la tradition / appel à l'histoire (appeal to tradition),<scrubbed>,arg_arg1_conclusion
+fallacy_2,genéralisation hâtive / essentialisation,<scrubbed>,arg_arg1_conclusion

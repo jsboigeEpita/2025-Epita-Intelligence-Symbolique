@@ -31,328 +31,6 @@
       "metadata": {}
     },
     {
-      "id": "arg_6",
-      "label": "arg_6",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_7",
-      "label": "arg_7",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_8",
-      "label": "arg_8",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_9",
-      "label": "arg_9",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_10",
-      "label": "arg_10",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_11",
-      "label": "arg_11",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_12",
-      "label": "arg_12",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_13",
-      "label": "arg_13",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_14",
-      "label": "arg_14",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_15",
-      "label": "arg_15",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_16",
-      "label": "arg_16",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_17",
-      "label": "arg_17",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_18",
-      "label": "arg_18",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_19",
-      "label": "arg_19",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "arg_20",
-      "label": "arg_20",
-      "type": "argument",
-      "metadata": {}
-    },
-    {
-      "id": "fallacy_1",
-      "label": "fallacy_1",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_2",
-      "label": "fallacy_2",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_3"
-        }
-      }
-    },
-    {
-      "id": "fallacy_3",
-      "label": "fallacy_3",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "conspiracy_theory",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_4"
-        }
-      }
-    },
-    {
-      "id": "fallacy_4",
-      "label": "fallacy_4",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "hasty_generalization",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_5"
-        }
-      }
-    },
-    {
-      "id": "fallacy_5",
-      "label": "fallacy_5",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_6",
-      "label": "fallacy_6",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_7",
-      "label": "fallacy_7",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "conspiracy_theory",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_4"
-        }
-      }
-    },
-    {
-      "id": "fallacy_8",
-      "label": "fallacy_8",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_9",
-      "label": "fallacy_9",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "conspiracy_theory",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_4"
-        }
-      }
-    },
-    {
-      "id": "fallacy_10",
-      "label": "fallacy_10",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_11",
-      "label": "fallacy_11",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "conspiracy_theory",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_4"
-        }
-      }
-    },
-    {
-      "id": "fallacy_12",
-      "label": "fallacy_12",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "post_hoc_ergo_propter_hoc",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_2"
-        }
-      }
-    },
-    {
-      "id": "fallacy_13",
-      "label": "fallacy_13",
-      "type": "fallacy",
-      "metadata": {
-        "data": {
-          "type": "cherry_picking",
-          "justification": "<scrubbed>",
-          "target_argument_id": "arg_4"
-        }
-      }
-    },
-    {
-      "id": "jtms_1",
-      "label": "fallacy_on_arg_2",
-      "type": "jtms_belief",
-      "metadata": {
-        "data": {
-          "name": "fallacy_on_arg_2",
-          "valid": false,
-          "justifications": [],
-          "retracted": true,
-          "retraction_reason": "fallacy: post_hoc_ergo_propter_hoc"
-        }
-      }
-    },
-    {
-      "id": "jtms_2",
-      "label": "fallacy_on_arg_4",
-      "type": "jtms_belief",
-      "metadata": {
-        "data": {
-          "name": "fallacy_on_arg_4",
-          "valid": false,
-          "justifications": [],
-          "retracted": true,
-          "retraction_reason": "fallacy: conspiracy_theory"
-        }
-      }
-    },
-    {
-      "id": "jtms_3",
-      "label": "fallacy_on_arg_2",
-      "type": "jtms_belief",
-      "metadata": {
-        "data": {
-          "name": "fallacy_on_arg_2",
-          "valid": true,
-          "justifications": []
-        }
-      }
-    },
-    {
-      "id": "brevision_1",
-      "label": "brevision_1",
-      "type": "belief_revision",
-      "metadata": {}
-    },
-    {
-      "id": "ca_1",
-      "label": "<scrubbed>",
-      "type": "counter_argument",
-      "metadata": {}
-    },
-    {
-      "id": "ca_2",
-      "label": "<scrubbed>",
-      "type": "counter_argument",
-      "metadata": {}
-    },
-    {
-      "id": "ca_3",
-      "label": "<scrubbed>",
-      "type": "counter_argument",
-      "metadata": {}
-    },
-    {
-      "id": "ca_4",
-      "label": "<scrubbed>",
-      "type": "counter_argument",
-      "metadata": {}
-    },
-    {
-      "id": "qual_arg_1",
-      "label": "qual_arg_1",
-      "type": "quality_score",
-      "metadata": {}
-    },
-    {
       "id": "qual_arg_2",
       "label": "qual_arg_2",
       "type": "quality_score",
@@ -363,39 +41,21 @@
       "label": "qual_arg_3",
       "type": "quality_score",
       "metadata": {}
+    },
+    {
+      "id": "qual_arg_4",
+      "label": "qual_arg_4",
+      "type": "quality_score",
+      "metadata": {}
+    },
+    {
+      "id": "qual_arg_5",
+      "label": "qual_arg_5",
+      "type": "quality_score",
+      "metadata": {}
     }
   ],
   "edges": [
-    {
-      "source": "Arg1",
-      "target": "ca_1",
-      "type": "argument->counter_argument",
-      "weight": 1.0
-    },
-    {
-      "source": "Arg4",
-      "target": "ca_2",
-      "type": "argument->counter_argument",
-      "weight": 1.0
-    },
-    {
-      "source": "Arg7",
-      "target": "ca_3",
-      "type": "argument->counter_argument",
-      "weight": 1.0
-    },
-    {
-      "source": "Arg10",
-      "target": "ca_4",
-      "type": "argument->counter_argument",
-      "weight": 1.0
-    },
-    {
-      "source": "arg_1",
-      "target": "qual_arg_1",
-      "type": "argument->quality_score",
-      "weight": 1.0
-    },
     {
       "source": "arg_2",
       "target": "qual_arg_2",
@@ -405,6 +65,18 @@
     {
       "source": "arg_3",
       "target": "qual_arg_3",
+      "type": "argument->quality_score",
+      "weight": 1.0
+    },
+    {
+      "source": "arg_4",
+      "target": "qual_arg_4",
+      "type": "argument->quality_score",
+      "weight": 1.0
+    },
+    {
+      "source": "arg_5",
+      "target": "qual_arg_5",
       "type": "argument->quality_score",
       "weight": 1.0
     }
