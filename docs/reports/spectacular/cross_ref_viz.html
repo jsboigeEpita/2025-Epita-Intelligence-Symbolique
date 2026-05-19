@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCDA Cross-Reference Graph Visualizer</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; overflow: hidden; }
+#controls {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  background: #161b22; border-bottom: 1px solid #30363d;
+  padding: 12px 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+#controls h1 { font-size: 16px; font-weight: 600; color: #58a6ff; white-space: nowrap; }
+#corpus-select { background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+#corpus-select:focus { outline: none; border-color: #58a6ff; }
+#filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+#filters span.label { font-size: 12px; color: #8b949e; }
+.filter-btn {
+  background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+  border-radius: 16px; padding: 4px 12px; font-size: 12px; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filter-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.filter-btn:hover { border-color: #58a6ff; }
+#stats { margin-left: auto; font-size: 12px; color: #8b949e; white-space: nowrap; }
+#tooltip {
+  position: fixed; display: none; background: #1c2128; border: 1px solid #30363d;
+  border-radius: 8px; padding: 10px 14px; font-size: 12px; max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; pointer-events: none;
+}
+#tooltip .tt-title { font-weight: 600; color: #58a6ff; margin-bottom: 4px; }
+#tooltip .tt-row { color: #8b949e; }
+#tooltip .tt-row span { color: #c9d1d9; }
+#legend {
+  position: fixed; bottom: 16px; right: 16px; background: #161b22;
+  border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px; z-index: 10;
+}
+#legend h3 { font-size: 12px; color: #8b949e; margin-bottom: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+#loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 18px; color: #58a6ff; }
+svg { display: block; }
+.link { stroke-opacity: 0.6; }
+.link.hidden { display: none; }
+.node { cursor: pointer; transition: r 0.15s ease; }
+.node:hover { filter: brightness(1.4); }
+.node.hidden { display: none; }
+.node-label { font-size: 10px; fill: #8b949e; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <h1>SCDA Cross-Reference Visualizer</h1>
+  <select id="corpus-select">
+    <option value="cross_ref_graph_corpus_A.json">Corpus A</option>
+    <option value="cross_ref_graph_corpus_B.json">Corpus B</option>
+    <option value="cross_ref_graph_corpus_C.json">Corpus C</option>
+  </select>
+  <div id="filters">
+    <span class="label">Filter edges:</span>
+  </div>
+  <div id="stats"></div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-title"></div>
+  <div class="tt-body"></div>
+</div>
+
+<div id="legend">
+  <h3>Node Types</h3>
+</div>
+
+<div id="loading">Loading graph...</div>
+
+<script>
+const NODE_COLORS = {
+  argument:         "#58a6ff",
+  fallacy:          "#f85149",
+  jtms_belief:      "#3fb950",
+  counter_argument: "#d2a8ff",
+  quality_score:    "#f0883e",
+  belief_revision:  "#79c0ff",
+  dung_framework:   "#ffa657",
+  aspic_result:     "#ff7b72",
+  default:          "#8b949e"
+};
+
+const EDGE_COLORS = {
+  "argument->counter_argument": "#d2a8ff",
+  "argument->fallacy":          "#f85149",
+  "argument->quality_score":    "#f0883e",
+  "argument->jtms_belief":      "#3fb950",
+  "fallacy->jtms_belief":       "#79c0ff",
+  "argument->dung_framework":   "#ffa657",
+  "argument->aspic_result":     "#ff7b72",
+  default:                      "#8b949e"
+};
+
+let currentGraph = null;
+let simulation = null;
+let svg, g, linkGroup, nodeGroup, labelGroup;
+let activeFilters = new Set();
+let allEdgeTypes = [];
+
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+function init() {
+  svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on("zoom", (event) => {
+      g.attr("transform", event.transform);
+    });
+
+  svg.call(zoom);
+
+  g = svg.append("g");
+  linkGroup = g.append("g").attr("class", "links");
+  nodeGroup = g.append("g").attr("class", "nodes");
+  labelGroup = g.append("g").attr("class", "labels");
+
+  document.getElementById("corpus-select").addEventListener("change", (e) => {
+    loadGraph(e.target.value);
+  });
+
+  loadGraph(document.getElementById("corpus-select").value);
+}
+
+async function loadGraph(filename) {
+  document.getElementById("loading").style.display = "block";
+  try {
+    const resp = await fetch(filename);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    currentGraph = await resp.json();
+    render(currentGraph);
+  } catch (err) {
+    document.getElementById("loading").textContent = `Error: ${err.message}. Place this HTML alongside the JSON files.`;
+  }
+}
+
+function render(graph) {
+  document.getElementById("loading").style.display = "none";
+
+  if (simulation) simulation.stop();
+
+  const nodes = graph.nodes.map(n => ({...n}));
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const links = graph.edges.map(e => ({
+    source: e.source,
+    target: e.target,
+    type: e.type || "unknown",
+    weight: e.weight || 1.0
+  }));
+
+  // Collect edge types
+  allEdgeTypes = [...new Set(links.map(l => l.type))];
+  activeFilters = new Set(allEdgeTypes);
+  buildFilterButtons();
+  buildLegend(nodes);
+  updateStats(nodes, links);
+
+  // Simulation
+  simulation = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+    .force("charge", d3.forceManyBody().strength(-200))
+    .force("center", d3.forceCenter(width / 2, height / 2 + 30))
+    .force("collision", d3.forceCollide().radius(20));
+
+  // Links
+  linkGroup.selectAll("line").remove();
+  const link = linkGroup.selectAll("line")
+    .data(links)
+    .enter().append("line")
+    .attr("class", "link")
+    .attr("stroke", d => EDGE_COLORS[d.type] || EDGE_COLORS.default)
+    .attr("stroke-width", d => Math.max(1.5, d.weight * 2))
+    .attr("data-type", d => d.type);
+
+  // Nodes
+  nodeGroup.selectAll("circle").remove();
+  const node = nodeGroup.selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+    .attr("class", "node")
+    .attr("r", d => d.type === "argument" ? 8 : 6)
+    .attr("fill", d => NODE_COLORS[d.type] || NODE_COLORS.default)
+    .attr("data-type", d => d.type)
+    .on("mouseover", showTooltip)
+    .on("mouseout", hideTooltip)
+    .call(d3.drag()
+      .on("start", dragStarted)
+      .on("drag", dragged)
+      .on("end", dragEnded));
+
+  // Labels
+  labelGroup.selectAll("text").remove();
+  labelGroup.selectAll("text")
+    .data(nodes)
+    .enter().append("text")
+    .attr("class", "node-label")
+    .attr("dy", d => (d.type === "argument" ? 8 : 6) + 12)
+    .text(d => d.id);
+
+  simulation.on("tick", () => {
+    link
+      .attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y);
+    node
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y);
+    labelGroup.selectAll("text")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y);
+  });
+}
+
+function buildFilterButtons() {
+  const container = document.getElementById("filters");
+  container.querySelectorAll(".filter-btn").forEach(b => b.remove());
+
+  allEdgeTypes.forEach(type => {
+    const btn = document.createElement("button");
+    btn.className = "filter-btn active";
+    btn.textContent = type.replace(/->/g, " -> ");
+    btn.dataset.type = type;
+    btn.addEventListener("click", () => toggleFilter(type, btn));
+    container.appendChild(btn);
+  });
+}
+
+function toggleFilter(type, btn) {
+  if (activeFilters.has(type)) {
+    activeFilters.delete(type);
+    btn.classList.remove("active");
+  } else {
+    activeFilters.add(type);
+    btn.classList.add("active");
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  linkGroup.selectAll("line").each(function(d) {
+    d3.select(this).classed("hidden", !activeFilters.has(d.type));
+  });
+
+  // Hide disconnected nodes
+  const visibleTargets = new Set();
+  linkGroup.selectAll("line:not(.hidden)").each(function(d) {
+    visibleTargets.add(d.source.id || d.source);
+    visibleTargets.add(d.target.id || d.target);
+  });
+  // Always show isolated argument nodes
+  nodeGroup.selectAll("circle").each(function(d) {
+    const hasEdges = linkGroup.selectAll("line").data().some(
+      l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id
+    );
+    const visible = !hasEdges || visibleTargets.has(d.id);
+    d3.select(this).classed("hidden", !visible);
+  });
+  labelGroup.selectAll("text").each(function(d) {
+    const hasEdges = linkGroup.selectAll("line").data().some(
+      l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id
+    );
+    const visible = !hasEdges || visibleTargets.has(d.id);
+    d3.select(this).classed("hidden", !visible);
+  });
+}
+
+function buildLegend(nodes) {
+  const legend = document.getElementById("legend");
+  legend.querySelectorAll(".legend-item").forEach(i => i.remove());
+  const types = [...new Set(nodes.map(n => n.type))];
+  types.forEach(type => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-dot" style="background:${NODE_COLORS[type] || NODE_COLORS.default}"></span>${type}`;
+    legend.appendChild(item);
+  });
+}
+
+function updateStats(nodes, links) {
+  const typeCounts = {};
+  nodes.forEach(n => { typeCounts[n.type] = (typeCounts[n.type] || 0) + 1; });
+  const statsStr = Object.entries(typeCounts).map(([k,v]) => `${k}: ${v}`).join(" | ");
+  document.getElementById("stats").textContent = `${nodes.length} nodes, ${links.length} edges | ${statsStr}`;
+}
+
+function showTooltip(event, d) {
+  const tt = document.getElementById("tooltip");
+  tt.querySelector(".tt-title").textContent = `${d.id} (${d.type})`;
+
+  const connectedEdges = currentGraph.edges.filter(
+    e => e.source === d.id || e.target === d.id
+  );
+  let body = "";
+  if (connectedEdges.length === 0) {
+    body = '<div class="tt-row">No connections</div>';
+  } else {
+    connectedEdges.forEach(e => {
+      const dir = e.source === d.id ? "to" : "from";
+      const other = e.source === d.id ? e.target : e.source;
+      body += `<div class="tt-row">${dir}: <span>${other}</span> [${e.type}] w=${e.weight || 1.0}</div>`;
+    });
+  }
+  tt.querySelector(".tt-body").innerHTML = body;
+
+  tt.style.display = "block";
+  tt.style.left = (event.pageX + 12) + "px";
+  tt.style.top = (event.pageY - 10) + "px";
+}
+
+function hideTooltip() {
+  document.getElementById("tooltip").style.display = "none";
+}
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+
+function dragged(event, d) {
+  d.fx = event.x; d.fy = event.y;
+}
+
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+init();
+</script>
+</body>
+</html>
