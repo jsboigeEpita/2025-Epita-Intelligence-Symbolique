@@ -1,0 +1,17 @@
+id,original_argument,counter_content,strategy,score,target_arg_id
+ca_1,Arg1: Protecting American jobs requires restricting immigration and renegotiating trade deals to stop unfair competition.,"Conclusion: Broad immigration restrictions and protectionist trade renegotiation are not a reliable way to ‘protect’ American jobs and may produce net harm.
+Premises:
+1) Empirical studies (OECD, NBER summaries) show immigrants expand the labor force, complement native workers in many sectors, and raise overall productivity; they also found limited negative wage effects concentrated in narrow groups. 
+2) Trade liberalization creates both winners and losers: while some industries face competition,...","Rhetorical strategy: factual refutation + analytic reframing. Show empirical nuance, concede localized harms then propose targeted policy alternatives (concession + constructive alternative).",0.78,Arg1
+ca_2,"Arg4: Tax cuts for corporations and the wealthy stimulate investment and economic growth, benefiting everyone.","Conclusion: Large tax cuts for corporations and the wealthy do not reliably produce broad-based economic gains and can increase inequality and deficits.
+Premises:
+1) Empirical evidence (post-2017 US corporate tax cut analyses, IMF studies) indicates that large corporate tax cuts often increase shareholder payouts and buybacks more than new productive investment. 
+2) Growth benefits, where present, are often limited and regressive; fiscal deficits resulting from tax cuts can crowd out public inve...",Rhetorical strategy: empirical undermining + policy redirection. Show that intended mechanism (tax cuts→investment→jobs) is empirically weak and propose tied incentives instead.,0.73,Arg4
+ca_3,Arg7: Immigration increases crime and threatens national security.,"Conclusion: Immigration as a whole does not increase crime rates and sweeping claims about national security are unsupported.
+Premises:
+1) Multiple criminology studies show immigrants commit crimes at equal or lower rates than native-born populations; increases in immigration are not correlated with higher crime at the aggregate level. 
+2) National security risks are better addressed through targeted intelligence and vetting, not blanket restrictions; many terrorism cases involve citizens or res...",Rhetorical strategy: factual correction + moral framing. Use statistical evidence to debunk the causal claim and highlight policy alternatives that balance security and civil liberties.,0.82,Arg7
+ca_4,Arg10: Globalism harms American sovereignty and culture; we need nationalism.,"Conclusion: While globalization poses challenges, wholesale rejection in favor of nationalism risks economic harms and social isolation; nuanced international engagement can protect sovereignty while gaining benefits.
+Premises:
+1) Global trade and cooperation have raised living standards; selective engagement with safeguards (trade adjustment, cultural exchange programs) can mitigate harms without isolation. 
+2) Sovereignty concerns often stem from trade-offs that can be managed through transpar...","Rhetorical strategy: concession + comparative framing. Accept legitimate sovereignty concerns, then show superior alternatives to isolation—policy instruments that retain benefits while reducing costs.",0.69,Arg10

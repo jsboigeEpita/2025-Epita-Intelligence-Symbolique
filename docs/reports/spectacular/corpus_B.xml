@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<analysis_state>
+  <generated_at>2026-05-19T02:26:22.445270+00:00</generated_at>
+  <analysis-tasks count="1" label="analysis_tasks">
+    <item key="task_1">Extraire TOUS les arguments (claims, premisses, conclusions) du texte: '1939.03.15 - Adolf Hitler - Proclamation to the German Volk'. Minimum 3 arguments. Livrer liste structurée avec id, conclusion/c...</item>
+  </analysis-tasks>
+  <identified-arguments count="17" label="Arguments">
+    <item key="arg_1">premisses: Le peuple allemand a souffert pendant des décennies (sang versé, émigration, humiliations); la réunification (Anschluss et Sudètes) a réalisé les aspirations historiques du Volk; beaucoup o...</item>
+    <item key="arg_2">premisses: La mobilisation et les préparatifs militaires allemands étaient une réponse aux provocations (p.ex. mobilisations et actions de Beneš) et à la persécution des Allemands en Tchécoslovaquie; ...</item>
+    <item key="arg_3">premisses: La démocratie et la liberté individuelle mènent à la désorganisation et au gaspillage des forces; l’obéissance et la discipline mobilisent les forces nécessaires pour la survie nationale; l...</item>
+    <item key="arg_4">premisses: L’Allemagne souffre de surpopulation et manque de Lebensraum; importer nourriture nécessite exporter biens et ressources, menant à une spirale; l’expansion de Lebensraum domestique résoudra...</item>
+    <item key="arg_5">premisses: L’« international Jewry » contrôle la presse, l’argent, et pousse à la guerre et à l’hostilité contre l’Allemagne; les démocraties tolèrent ou soutiennent ces actions; l’antisémitisme est p...</item>
+    <item key="arg_6">arguments</item>
+    <item key="arg_7">premisses: Le peuple allemand a souffert pendant des décennies (sang versé, émigration, humiliations) et a longtemps désiré l’unité; les événements de 1938 réalisent ce désir; beaucoup se sacrifient p...</item>
+    <item key="arg_8">premisses: Des provocations et mobilisations par Beneš et d'autres cercles étrangers ont mis en péril la paix; l'Allemagne n'avait pas mobilisé; la protection des minorités allemandes était nécessaire...</item>
+    <item key="arg_9">premisses: La démocratie et la liberté individuelle entraînent désorganisation, gaspillage des forces, et paralysie; discipline et obéissance mobilisent la volonté nationale; le leadership doit privil...</item>
+    <item key="arg_10">premisses: L'Allemagne est surpeuplée et manque de Lebensraum; importer nourriture oblige à exporter biens et ressources, conduisant à une spirale qui ne résout pas le problème; l'expansion territoria...</item>
+    <item key="arg_11">premisses: Les Juifs et l'‘international Jewry’ contrôlent presse, finance, et cherchent à provoquer la guerre; les démocraties tolèrent ou participent à cette propagande; les Juifs ont causé des tort...</item>
+    <item key="arg_12">arguments</item>
+    <item key="arg_13">premisses: Le peuple allemand a souffert pendant des décennies (sang versé, exils, humiliations); l’unification récente (Anschluss, Sudètes) réalise des aspirations historiques profondes; certains che...</item>
+    <item key="arg_14">premisses: L’ancien président tchécoslovaque Beneš a encouragé la mobilisation et les rumeurs de mobilisation; des Allemands dans les Sudètes ont été persécutés; des tentatives diplomatiques n’ont pas...</item>
+    <item key="arg_15">premisses: La démocratie et la liberté individuelle produisent désorganisation et gaspillage; une communauté populaire disciplinée (Volksgemeinschaft) permet une mobilisation efficace; le leadership d...</item>
+    <item key="arg_16">premisses: L’Allemagne souffre de surpopulation relative et manque de Lebensraum; importer de la nourriture exige exporter des biens, ce qui épuise des matières premières et crée une spirale; une expa...</item>
+    <item key="arg_17">premisses: Les Juifs et l’«international Jewry» contrôlent médias, finance et cherchent vengeance/profits; les démocraties tolèrent ou propagent cette influence; les Juifs ont causé ont causé l’inflat...</item>
+  </identified-arguments>
+  <identified-fallacies count="17" label="Fallacies">
+    <entry id="fallacy_1">
+      <type>Appel à la pitié</type>
+      <justification>Utilise la souffrance et les sacrifices du peuple pour légitimer les annexions et disqualifier les critiques, substituant l'émotion à un argument factuel.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_2">
+      <type>Faux dilemme</type>
+      <justification>Présente seulement deux solutions opposées (importer ou expansion territoriale) comme si aucune autre option économique ou diplomatique n'existait, éliminant des alternatives raisonnables.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_3">
+      <type>Généralisation abusive / stéréotype</type>
+      <justification>Attribue des caractéristiques malveillantes et uniformes à l'ensemble d'un groupe (les Juifs), sans preuve suffisante, en les présentant comme une conspiration mondiale.</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_4">
+      <type>Appel à la peur (argumentum ad metum)</type>
+      <justification>Emploie la peur d'une menace existentielle (surpopulation, annihilation, Bolshevization, guerre mondiale orchestrée par les Juifs) pour justifier des politiques extrêmes.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_5">
+      <type>Poisoning the well (Empoisonnement du puits)</type>
+      <justification>Délégitime a priori les critiques en les traitant d’« indignes » et de pessimistes, neutralisant ainsi leurs objections sans les examiner.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_6">
+      <type>Victim blaming (Culpabilisation de la victime)</type>
+      <justification>Présente les Tchécoslovaques et leur gouvernement comme responsables des actions allemandes en affirmant que leurs « provocations » rendaient l’intervention nécessaire, inversant la responsabilité.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_7">
+      <type>Appel à la pitié</type>
+      <justification>Le texte présente la souffrance et les sacrifices du peuple allemand comme preuve morale suffisante pour légitimer les annexions; substitution de l'émotion à une justification normative.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_8">
+      <type>Appel à la pitié</type>
+      <justification>Argument arg_1 instrumentalise les souffrances historiques du Volk comme unique justification normative, substitution d'émotion à preuve juridique/morale.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_9">
+      <type>Poisoning the well</type>
+      <justification>Arg_1 dénigre d’avance les critiques (&quot;dwarfs&quot;, &quot;incorrigible pessimists&quot;) pour neutraliser l'objection sans examen.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_10">
+      <type>Généralisation abusive</type>
+      <justification>Arg_5 utilise des stéréotypes et généralisations envers un groupe (contenu antisémite), sans preuves empiriques.</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_11">
+      <type>Victim blaming</type>
+      <justification>Arg_2 attribue la responsabilité principale à la partie &quot;provocatrice&quot; sans preuves, inversant la charge de la preuve.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_12">
+      <type>Appel à la pitié</type>
+      <justification>Argument arg_1 instrumentalise la souffrance historique du Volk pour justifier annexions sans preuve juridique ou morale.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_13">
+      <type>Poisoning the well</type>
+      <justification>Argument arg_1 dénigre d'avance les critiques (« dwarfs », « incorrigible pessimists ») pour neutraliser l'opposition avant examen.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_14">
+      <type>Généralisation abusive</type>
+      <justification>Argument arg_5 utilise des stéréotypes collectifs et des assertions généralisées sur un groupe sans preuves empiriques.</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_15">
+      <type>Victim blaming</type>
+      <justification>Argument arg_2 attribue la responsabilité principale à la partie « provocatrice » sans preuve neutre, inversant la charge de la preuve.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_16">
+      <type>Appel à la pitié</type>
+      <justification>Confirmation: JTMS a rétracté arg_1 pour cause 'fallacy: Appel à la pitié'; InformalAgent re-analyse confirme instrumentalisation émotionnelle des souffrances du Volk.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+    <entry id="fallacy_17">
+      <type>Empoisonnement du puits / Poisoning the well</type>
+      <justification>Le texte discrédite d'avance les critiques («ces vieux pessimistes», «ces nains») pour les rendre suspects et neutraliser leurs objections sans examen.</justification>
+      <target-argument-id>arg_1</target-argument-id>
+    </entry>
+  </identified-fallacies>
+  <belief-sets count="2" label="belief_sets">
+    <entry id="propositional_bs_1">
+      <logic-type>Propositional</logic-type>
+      <content>List of shared_pl_atoms extracted from the source text (25 atoms)</content>
+    </entry>
+    <entry id="fol_bs_2">
+      <logic-type>FOL</logic-type>
+      <content>Shared FOL signature: sorts, predicates, constants extracted from source text</content>
+    </entry>
+  </belief-sets>
+  <query-log label="query_log">[]</query-log>
+  <answers label="answers">{}</answers>
+  <extracts label="Extracts">[]</extracts>
+  <errors label="errors">[]</errors>
+  <counter-arguments count="7" label="Counter-Arguments">
+    <entry>
+      <id>ca_1</id>
+      <original-argument>arg_1</original-argument>
+      <counter-content>Le fait que des Allemands aient souffert ne suffit pas à légitimer des annexions : l'appel aux sacrifices est émotionnel et ne fournit pas de principe juridique ou moral qui transforme une souffrance passée en droit territorial. Il faut distinguer fait historique et justification normative.</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.6</score>
+      <target-arg-id>arg_1</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_2</id>
+      <original-argument>arg_2</original-argument>
+      <counter-content>Attribuer la responsabilité de la crise uniquement à Beneš est une inférence hâtive. Il faut des preuves indépendantes (rapports diplomatiques, ordres militaires) montrant une provocation organisée; sans cela, la prémisse « provocation(Benes) » est contestable et affaiblit la conclusion de défense légitime.</counter-content>
+      <strategy>demand_sources</strategy>
+      <score>0.55</score>
+      <target-arg-id>arg_2</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_3</id>
+      <original-argument>arg_3</original-argument>
+      <counter-content>L'affirmation selon laquelle la sélection du leadership doit reposer sur des critères raciaux n'est pas un argument logique mais une préférence normative non démontrée. Sans preuve empirique montrant que ces critères produisent de meilleurs résultats, la prémisse est invalide en tant que justification universelle.</counter-content>
+      <strategy>undercut</strategy>
+      <score>0.5</score>
+      <target-arg-id>arg_3</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_4</id>
+      <original-argument>arg_4</original-argument>
+      <counter-content>Présenter seulement deux options (importer ou expansion territoriale) est un faux dilemme. D'autres politiques économiques (réforme agraire, accords commerciaux, augmentation de productivité) existent pour atténuer les pénuries; le dilemme exclut artificiellement ces alternatives.</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.65</score>
+      <target-arg-id>arg_4</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_5</id>
+      <original-argument>arg_5</original-argument>
+      <counter-content>La prémisse universelle selon laquelle tous les Juifs contrôlent la presse et la finance est une généralisation abusive sans fondement. Elle doit être rejetée : il n'existe aucune évidence empirique soutenant une telle universalisation. Recommander la rétractation JTMS de cette prémisse pour prévenir la propagation d'une croyance haineuse.</counter-content>
+      <strategy>undermining_evidence</strategy>
+      <score>0.95</score>
+      <target-arg-id>arg_5</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_6</id>
+      <original-argument>arg_1</original-argument>
+      <counter-content>La souffrance passée du peuple allemand n'accorde pas automatiquement un droit moral ou juridique à annexer des territoires. L’appel à la pitié (« nous avons tant souffert ») remplace une justification normative par une charge émotionnelle : il faut démontrer un principe justificatif (p.ex. droit d’autodétermination fondé sur des procédures légales) — et non confondre faits historiques et droits. Question de vérification : montrez la règle morale ou juridique qui transforme une souffrance collec...</counter-content>
+      <strategy>expose_fallacy</strategy>
+      <score>0.6</score>
+      <target-arg-id>arg_1</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_7</id>
+      <original-argument>arg_2</original-argument>
+      <counter-content>Attribuer la responsabilité principale à Beneš et qualifier l’intervention allemande de purement défensive repose sur une lecture sélective des événements. Cela exige des preuves indépendantes (ordres de mobilisation, communications diplomatiques) établissant une menace imminente. Sans ces preuves, l’argument « provocation =&gt; défense légitime » est une inférence hâtive. Question de vérification : fournissez les documents diplomatiques prouvant une mobilisation tchécoslovaque coercitive ciblant l...</counter-content>
+      <strategy>demand_sources</strategy>
+      <score>0.55</score>
+      <target-arg-id>arg_2</target-arg-id>
+    </entry>
+  </counter-arguments>
+  <argument-quality-scores label="Quality Scores">{}</argument-quality-scores>
+  <jtms-beliefs count="13" label="JTMS Beliefs">
+    <entry id="jtms_1">
+      <name>arg_1</name>
+      <valid>False</valid>
+      <justifications>[]</justifications>
+      <retracted>True</retracted>
+      <retraction-reason>fallacy: Empoisonnement du puits / Appel à la pitié</retraction-reason>
+    </entry>
+    <entry id="jtms_2">
+      <name>arg_2</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_3">
+      <name>arg_3</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_4">
+      <name>arg_4</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_5">
+      <name>arg_5</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_6">
+      <name>arg_6</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_7">
+      <name>arg_7</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_8">
+      <name>arg_8</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_9">
+      <name>arg_9</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_10">
+      <name>arg_10</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_11">
+      <name>arg_11</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_12">
+      <name>fallacy_on_arg_1</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+    <entry id="jtms_13">
+      <name>fallacy_on_arg_1</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+  </jtms-beliefs>
+  <jtms-retraction-chain label="jtms_retraction_chain">[]</jtms-retraction-chain>
+  <dung-frameworks count="1" label="Dung Frameworks">
+    <entry id="dung_1">
+      <name>conversational_dung</name>
+      <arguments>['arg_1', 'arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'fallacy_Appel à la pitié', 'fallacy_Faux dilemme', 'fallacy_Généralisation abusi', 'fallacy_Appel à la peur (arg', 'fallacy_Poisoning the well (', 'fallacy_Victim blaming (Culp', 'fallacy_Poisoning the well', 'fallacy_Victim blaming', 'fallacy_Empoisonnement du pu']</arguments>
+      <attacks>[['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Faux dilemme', 'arg_4'], ['fallacy_Généralisation abusi', 'arg_5'], ['fallacy_Appel à la peur (arg', 'arg_4'], ['fallacy_Poisoning the well (', 'arg_1'], ['fallacy_Victim blaming (Culp', 'arg_2'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Poisoning the well', 'arg_1'], ['fallacy_Généralisation abusi', 'arg_5'], ['fallacy_Victim blaming', 'arg_2'], ['fallacy_Appel à la pitié', 'arg_1'], ['fallacy_Poiso...</attacks>
+      <extensions>{'grounded': ['arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'arg_3', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'fallacy_Appel à la peur (arg', 'fallacy_Appel à la pitié', 'fallacy_Empoisonnement du pu', 'fallacy_Faux dilemme', 'fallacy_Généralisation abusi', 'fallacy_Poisoning the well', 'fallacy_Poisoning the well (', 'fallacy_Victim blaming', 'fallacy_Victim blaming (Culp']}</extensions>
+    </entry>
+  </dung-frameworks>
+  <governance-decisions label="Governance Decisions">[]</governance-decisions>
+  <debate-transcripts label="Debate Transcripts">[]</debate-transcripts>
+  <transcription-segments label="transcription_segments">[]</transcription-segments>
+  <semantic-index-refs label="semantic_index_refs">[]</semantic-index-refs>
+  <neural-fallacy-scores label="Neural Fallacy Scores">[]</neural-fallacy-scores>
+  <ranking-results label="Ranking Results">[]</ranking-results>
+  <aspic-results count="1" label="ASPIC Results">
+    <entry>
+      <id>aspic_1</id>
+      <reasoner-type>python_fallback</reasoner-type>
+      <extensions>[['premisses: La démocratie et la liberté individuelle mènent à la désorganisation ', 'arguments', 'premisses: Le peuple allemand a souffert pendant des décennies (sang versé, émig', &quot;premisses: Des provocations et mobilisations par Beneš et d'autres cercles étran&quot;, 'premisses: La démocratie et la liberté individuelle entraînent désorganisation, ', &quot;premisses: L'Allemagne est surpeuplée et manque de Lebensraum; importer nourritu&quot;, &quot;premisses: Les Juifs et l'‘international Jewry’ contrôlent press...</extensions>
+      <statistics>{'total_arguments': 17, 'surviving': 13, 'defeated': 4, 'strict_rules': 11, 'defeasible_rules': 6, 'fallacies_applied': 17}</statistics>
+    </entry>
+  </aspic-results>
+  <belief-revision-results count="1" label="Belief Revision Results">
+    <entry>
+      <id>brevision_1</id>
+      <method>fallacy_contraction</method>
+      <original>['arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'arg_11', 'fallacy_on_arg_1', 'fallacy_on_arg_1']</original>
+      <revised>['arg_3', 'arg_6', 'arg_7', 'arg_8', 'arg_9']</revised>
+    </entry>
+  </belief-revision-results>
+  <dialogue-results label="Dialogue Results">[]</dialogue-results>
+  <probabilistic-results label="Probabilistic Results">[]</probabilistic-results>
+  <bipolar-results label="Bipolar Results">[]</bipolar-results>
+  <fol-analysis-results label="FOL Analysis">[]</fol-analysis-results>
+  <fol-signature label="fol_signature">[]</fol-signature>
+  <propositional-analysis-results label="PL Analysis">[]</propositional-analysis-results>
+  <modal-analysis-results count="8" label="Modal Analysis">
+    <entry>
+      <id>modal_1</id>
+      <formulas>['O(prop(arg_2))', '&lt;&gt;(arg_2)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_2</id>
+      <formulas>['O(prop(arg_3))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_3</id>
+      <formulas>['O(prop(arg_8))', '&lt;&gt;(arg_8)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_4</id>
+      <formulas>['O(prop(arg_9))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_5</id>
+      <formulas>['O(prop(arg_10))', '&lt;&gt;(arg_10)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_6</id>
+      <formulas>['O(prop(arg_14))', '&lt;&gt;(arg_14)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_7</id>
+      <formulas>['O(prop(arg_15))', '&lt;&gt;(arg_15)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_8</id>
+      <formulas>['O(prop(arg_16))', '&lt;&gt;(arg_16)']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic', 'alethic']</modalities>
+    </entry>
+  </modal-analysis-results>
+  <formal-synthesis-reports label="Formal Synthesis">[]</formal-synthesis-reports>
+  <nl-to-logic-translations label="nl_to_logic_translations">[]</nl-to-logic-translations>
+  <atms-contexts label="atms_contexts">[]</atms-contexts>
+  <workflow-results label="Workflow Results">{}</workflow-results>
+  <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
+  <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
+  <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
+  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x00000221B55261D0&gt;</-jtms-session>
+</analysis_state>

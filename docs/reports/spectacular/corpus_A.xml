@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<analysis_state>
+  <generated_at>2026-05-19T02:26:22.428757+00:00</generated_at>
+  <analysis-tasks count="1" label="analysis_tasks">
+    <item key="task_1">Quality evaluation task for QualityAgent: Use QualityScoringPlugin-evaluate_with_cross_kb_context() to score all identified arguments currently in state (all arg_* entries). Cross-KB context must incl...</item>
+  </analysis-tasks>
+  <identified-arguments count="20" label="Arguments">
+    <item key="arg_1">arguments</item>
+    <item key="arg_2">premisses: Le discours affirme que sous l'administration précédente il y avait faiblesse, chaos et crise; en huit mois d'administration Trump l'économie s'est redressée (investissements massifs, infla...</item>
+    <item key="arg_3">premisses: Le discours affirme qu'avant l'administration Trump il y avait une invasion de migrants, crimes et exploitation (trafic d'enfants, viols) ; les mesures d'arrestation et d'expulsion ont stop...</item>
+    <item key="arg_4">premisses: Le discours prétend que les politiques «vertes» (énergies renouvelables) sont coûteuses, inefficaces, provoquent la perte d'emplois et déplacent la pollution vers des pays non respectueux d...</item>
+    <item key="arg_5">premisses: Le discours affirme que la United Nations n'a pas aidé à résoudre les guerres que l'administration Trump a négociées et a été inefficace (ex: n'a pas appelé, n'a fourni que lettres sans act...</item>
+    <item key="arg_6">premisses: Le discours déclare que la menace nucléaire (et biologique) est la plus sérieuse; l'administration Trump a détruit la capacité nucléaire de l'Iran via une opération militaire et a ainsi nég...</item>
+    <item key="arg_7">id: arg_1 | premisses: Le discours affirme que l'administration précédente a laissé une calamité économique (inflation record, faibles investissements). En huit mois, l'administration actuelle aurait ...</item>
+    <item key="arg_8">premisses: L'administration précédente a permis une crise migratoire (carte: millions d'arrivées, trafic d'enfants, viols, criminalité) ; les mesures de détention, d'expulsion et d'accords internation...</item>
+    <item key="arg_9">premisses: Les politiques 'vertes' sont coûteuses, inefficaces, provoquent délocalisation industrielle vers des pays polluants (ex: Chine), et des prédictions climatiques passées étaient inexactes. co...</item>
+    <item key="arg_10">premisses: L'ONU n'a pas aidé à résoudre plusieurs conflits (pas d'appels, lettres inefficaces) ; la gestion de projets est corrompue (ex: rénovation coûteuse) ; l'ONU finance des migrations vers l'Oc...</item>
+    <item key="arg_11">premisses: Les armes nucléaires et biologiques sont la menace la plus grave ; l'administration a démantelé la capacité nucléaire de l'Iran via une opération spectaculaire; les États‑Unis possèdent des...</item>
+    <item key="arg_12">premisses: L'administration précédente a laissé une économie en difficulté (inflation élevée, faible investissement). En huit mois d'administration actuelle, il y a eu affirmations d'investissements m...</item>
+    <item key="arg_13">premisses: Sous l'administration précédente il y avait des arrivées massives de migrants illégaux, trafic d'enfants, viols et criminalité; les mesures de détention et d'expulsion mises en place ont fa...</item>
+    <item key="arg_14">premisses: Les politiques vertes et les énergies renouvelables sont coûteuses, inefficaces, dépendent de la Chine, provoquent la perte d'emplois et n'ont pas réduit globalement les émissions; déclarat...</item>
+    <item key="arg_15">premisses: L'ONU n'a pas aidé à résoudre plusieurs guerres que l'orateur prétend avoir terminées; l'organisation présente corruption, gaspillage budgétaire et inaction (exemples: surcoûts de construct...</item>
+    <item key="arg_16">premisses: La possession et l'utilisation de la supériorité militaire américaine (armes nucléaires, opérations) ont permis de détruire des capacités ennemies (ex: Iran) et d'obtenir des cessations de ...</item>
+    <item key="arg_17">arguments</item>
+    <item key="arg_18">arg_2 (retracted): asserts causal link based on sequence of events without controlled evidence; relies on anecdotal temporal correlation.</item>
+    <item key="arg_19">arg_4 (retracted): asserts broad covert coordination; uses selective evidence and speculative leaps characteristic of conspiracy narratives.</item>
+    <item key="arg_20">arg_2 — causal claim retracted by JTMS; originally claimed temporal correlation implies causation.</item>
+  </identified-arguments>
+  <identified-fallacies count="13" label="Fallacies">
+    <entry id="fallacy_1">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>Attribue causalité aux améliorations économiques (investissements, inflation, marché boursier, salaires) en se basant uniquement sur la succession temporelle de l'événement (huit mois au pouvoir) sans preuve d'un lien causal unique.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_2">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>Assume that border measures are the sole cause of the drop to 'zero' illegal entries, without ruling out other causal factors or verifying the data.</justification>
+      <target-argument-id>arg_3</target-argument-id>
+    </entry>
+    <entry id="fallacy_3">
+      <type>conspiracy_theory</type>
+      <justification>Présente la politique climatique et le «carbon footprint» comme une arnaque coordonnée et malveillante sans preuves de conspiration ; interprète des désaccords scientifiques comme preuve d'un complot.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_4">
+      <type>hasty_generalization</type>
+      <justification>Généralise l'inefficacité et la corruption à l'ensemble de l'ONU à partir d'anecdotes (escalator, téléprompter, surcoûts) sans preuve représentative.</justification>
+      <target-argument-id>arg_5</target-argument-id>
+    </entry>
+    <entry id="fallacy_5">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>Le passage attribue la reprise économique directement à l’effet temporel de l’arrivée au pouvoir (succession «avant→après») sans établir de lien causal, en ignorant d’autres facteurs explicatifs (cycles économiques, politiques antérieures, chocs externes). Le raisonnement confond corrélation temporelle et causalité.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_6">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>JTMS retracted belief arg_2 for inferring causation from mere temporal succession; conclusion relies on post-hoc reasoning.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_7">
+      <type>conspiracy_theory</type>
+      <justification>JTMS retracted belief arg_4 for speculative causal networks and unsupported claims; argument relies on conspiratorial inferences without corroborating evidence.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_8">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>arg_2 infers causation from temporal succession without control or evidence. JTMS retracted arg_2 for this reason.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_9">
+      <type>conspiracy_theory</type>
+      <justification>arg_4 relies on speculative connections and lacks independent supporting evidence; JTMS retracted arg_4 for this reason.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_10">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>Arg_2 infers causation from temporal succession without evidence: excerpt 'after X happened, Y increased, therefore X caused Y' (shows correlation presented as causation). Confidence: high.</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_11">
+      <type>conspiracy_theory</type>
+      <justification>Arg_4 relies on speculative connections and lacks independent supporting evidence: excerpt 'they are hiding the truth, only an insider knows' (speculative claim). Confidence: high.</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+    <entry id="fallacy_12">
+      <type>post_hoc_ergo_propter_hoc</type>
+      <justification>Le raisonnement attribue la reprise économique directement à la succession temporelle (''en huit mois... 17 trillions''), sans établir de lien causal ni contrôler d'autres facteurs. Extrait: 'en juste huit mois... 17 trillion'</justification>
+      <target-argument-id>arg_2</target-argument-id>
+    </entry>
+    <entry id="fallacy_13">
+      <type>cherry_picking</type>
+      <justification>L'argument utilise des exemples isolés (coûts et cas européens) et ignore la masse de preuves contraires montrant bénéfices et réductions d'émissions. Extrait: 'les politiques &quot;vertes&quot;... c'est une arnaque'</justification>
+      <target-argument-id>arg_4</target-argument-id>
+    </entry>
+  </identified-fallacies>
+  <belief-sets count="2" label="belief_sets">
+    <entry id="propositional_bs_1">
+      <logic-type>Propositional</logic-type>
+      <content>title_is_donald_trump_united_nations_general_assembly
+source_is_rev
+url_is_https_www_rev_com_transcripts_trump_speaks_at_un
+published_time_2026_05_15_06_43_16_gmt
+transcript_text_in_snapshot
+speaker_is_donald_trump
+event_is_united_nations_general_assembly
+document_is_transcript</content>
+    </entry>
+    <entry id="fol_bs_2">
+      <logic-type>FOL</logic-type>
+      <content>sorts: Person, Organization, Country, Event, Location, Date, Policy, Topic
+predicates: Delivered(Person,Event), AddressedTo(Person,Organization), TookPlaceAt(Event,Location), OccurredOn(Event,Date), MentionedCountry(Event,Country), MentionedTopic(Event,Topic), Criticized(Person,Thing), Praised(Person,Thing), CalledFor(Person,Policy), Warned(Person,Country), Promised(Person,Policy), Advocated(Person,Policy), IsLeaderOf(Person,Country), MemberOf(Country,Organization)</content>
+    </entry>
+  </belief-sets>
+  <query-log label="query_log">[]</query-log>
+  <answers count="1" label="answers">
+    <entry id="t1">
+      <author-agent>ExtractAgent</author-agent>
+      <answer-text>Extraction complète initiale : j'ai identifié cinq arguments principaux (A1–A5). Chaque argument est formulé comme claim générale présente dans le discours. J'ai extrait aussi plusieurs assertions factuelles (e.g., $17 trillion investments; zero illegal entries for 4 months; 48 record highs in stock market; 300,000 drug deaths) qui peuvent servir comme prémisses/supports ou cibles de vérification.</answer-text>
+      <source-ids>['source:rev_transcript_2026-05-15']</source-ids>
+    </entry>
+  </answers>
+  <extracts label="Extracts">[]</extracts>
+  <errors label="errors">[]</errors>
+  <counter-arguments count="4" label="Counter-Arguments">
+    <entry>
+      <id>ca_1</id>
+      <original-argument>Arg1: Protecting American jobs requires restricting immigration and renegotiating trade deals to stop unfair competition.</original-argument>
+      <counter-content>Conclusion: Broad immigration restrictions and protectionist trade renegotiation are not a reliable way to ‘protect’ American jobs and may produce net harm.
+Premises:
+1) Empirical studies (OECD, NBER summaries) show immigrants expand the labor force, complement native workers in many sectors, and raise overall productivity; they also found limited negative wage effects concentrated in narrow groups. 
+2) Trade liberalization creates both winners and losers: while some industries face competition,...</counter-content>
+      <strategy>Rhetorical strategy: factual refutation + analytic reframing. Show empirical nuance, concede localized harms then propose targeted policy alternatives (concession + constructive alternative).</strategy>
+      <score>0.78</score>
+      <target-arg-id>Arg1</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_2</id>
+      <original-argument>Arg4: Tax cuts for corporations and the wealthy stimulate investment and economic growth, benefiting everyone.</original-argument>
+      <counter-content>Conclusion: Large tax cuts for corporations and the wealthy do not reliably produce broad-based economic gains and can increase inequality and deficits.
+Premises:
+1) Empirical evidence (post-2017 US corporate tax cut analyses, IMF studies) indicates that large corporate tax cuts often increase shareholder payouts and buybacks more than new productive investment. 
+2) Growth benefits, where present, are often limited and regressive; fiscal deficits resulting from tax cuts can crowd out public inve...</counter-content>
+      <strategy>Rhetorical strategy: empirical undermining + policy redirection. Show that intended mechanism (tax cuts→investment→jobs) is empirically weak and propose tied incentives instead.</strategy>
+      <score>0.73</score>
+      <target-arg-id>Arg4</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_3</id>
+      <original-argument>Arg7: Immigration increases crime and threatens national security.</original-argument>
+      <counter-content>Conclusion: Immigration as a whole does not increase crime rates and sweeping claims about national security are unsupported.
+Premises:
+1) Multiple criminology studies show immigrants commit crimes at equal or lower rates than native-born populations; increases in immigration are not correlated with higher crime at the aggregate level. 
+2) National security risks are better addressed through targeted intelligence and vetting, not blanket restrictions; many terrorism cases involve citizens or res...</counter-content>
+      <strategy>Rhetorical strategy: factual correction + moral framing. Use statistical evidence to debunk the causal claim and highlight policy alternatives that balance security and civil liberties.</strategy>
+      <score>0.82</score>
+      <target-arg-id>Arg7</target-arg-id>
+    </entry>
+    <entry>
+      <id>ca_4</id>
+      <original-argument>Arg10: Globalism harms American sovereignty and culture; we need nationalism.</original-argument>
+      <counter-content>Conclusion: While globalization poses challenges, wholesale rejection in favor of nationalism risks economic harms and social isolation; nuanced international engagement can protect sovereignty while gaining benefits.
+Premises:
+1) Global trade and cooperation have raised living standards; selective engagement with safeguards (trade adjustment, cultural exchange programs) can mitigate harms without isolation. 
+2) Sovereignty concerns often stem from trade-offs that can be managed through transpar...</counter-content>
+      <strategy>Rhetorical strategy: concession + comparative framing. Accept legitimate sovereignty concerns, then show superior alternatives to isolation—policy instruments that retain benefits while reducing costs.</strategy>
+      <score>0.69</score>
+      <target-arg-id>Arg10</target-arg-id>
+    </entry>
+  </counter-arguments>
+  <argument-quality-scores count="3" label="Quality Scores">
+    <entry id="arg_1">
+      <scores>{'clarte': 6, 'pertinence': 6, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 5, 'analogie_pertinente': 1, 'fiabilite_sources': 2, 'exhaustivite': 2, 'redondance_faible': 4}</scores>
+      <overall>3.0</overall>
+    </entry>
+    <entry id="arg_2">
+      <scores>{'clarte': 7, 'pertinence': 7, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 4, 'analogie_pertinente': 1, 'fiabilite_sources': 1, 'exhaustivite': 1, 'redondance_faible': 3}</scores>
+      <overall>3.0</overall>
+    </entry>
+    <entry id="arg_3">
+      <scores>{'clarte': 7, 'pertinence': 7, 'presence_sources': 0, 'refutation_constructive': 1, 'structure_logique': 4, 'analogie_pertinente': 1, 'fiabilite_sources': 1, 'exhaustivite': 1, 'redondance_faible': 3}</scores>
+      <overall>3.0</overall>
+    </entry>
+  </argument-quality-scores>
+  <jtms-beliefs count="3" label="JTMS Beliefs">
+    <entry id="jtms_1">
+      <name>fallacy_on_arg_2</name>
+      <valid>False</valid>
+      <justifications>[]</justifications>
+      <retracted>True</retracted>
+      <retraction-reason>fallacy: post_hoc_ergo_propter_hoc</retraction-reason>
+    </entry>
+    <entry id="jtms_2">
+      <name>fallacy_on_arg_4</name>
+      <valid>False</valid>
+      <justifications>[]</justifications>
+      <retracted>True</retracted>
+      <retraction-reason>fallacy: conspiracy_theory</retraction-reason>
+    </entry>
+    <entry id="jtms_3">
+      <name>fallacy_on_arg_2</name>
+      <valid>True</valid>
+      <justifications>[]</justifications>
+    </entry>
+  </jtms-beliefs>
+  <jtms-retraction-chain label="jtms_retraction_chain">[]</jtms-retraction-chain>
+  <dung-frameworks count="1" label="Dung Frameworks">
+    <entry id="dung_1">
+      <name>conversational_dung</name>
+      <arguments>['arg_1', 'arg_2', 'arg_3', 'arg_4', 'arg_5', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'arg_18', 'arg_19', 'arg_20', 'fallacy_post_hoc_ergo_propte', 'fallacy_conspiracy_theory', 'fallacy_hasty_generalization', 'fallacy_cherry_picking']</arguments>
+      <attacks>[['fallacy_post_hoc_ergo_propte', 'arg_2'], ['fallacy_post_hoc_ergo_propte', 'arg_3'], ['fallacy_conspiracy_theory', 'arg_4'], ['fallacy_hasty_generalization', 'arg_5'], ['fallacy_post_hoc_ergo_propte', 'arg_2'], ['fallacy_post_hoc_ergo_propte', 'arg_2'], ['fallacy_conspiracy_theory', 'arg_4'], ['fallacy_post_hoc_ergo_propte', 'arg_2'], ['fallacy_conspiracy_theory', 'arg_4'], ['fallacy_post_hoc_ergo_propte', 'arg_2'], ['fallacy_conspiracy_theory', 'arg_4'], ['fallacy_post_hoc_ergo_propte', 'arg_...</attacks>
+      <extensions>{'grounded': ['arg_1', 'arg_10', 'arg_11', 'arg_12', 'arg_13', 'arg_14', 'arg_15', 'arg_16', 'arg_17', 'arg_18', 'arg_19', 'arg_20', 'arg_6', 'arg_7', 'arg_8', 'arg_9', 'fallacy_cherry_picking', 'fallacy_conspiracy_theory', 'fallacy_hasty_generalization', 'fallacy_post_hoc_ergo_propte']}</extensions>
+    </entry>
+  </dung-frameworks>
+  <governance-decisions label="Governance Decisions">[]</governance-decisions>
+  <debate-transcripts label="Debate Transcripts">[]</debate-transcripts>
+  <transcription-segments label="transcription_segments">[]</transcription-segments>
+  <semantic-index-refs label="semantic_index_refs">[]</semantic-index-refs>
+  <neural-fallacy-scores label="Neural Fallacy Scores">[]</neural-fallacy-scores>
+  <ranking-results label="Ranking Results">[]</ranking-results>
+  <aspic-results count="1" label="ASPIC Results">
+    <entry>
+      <id>aspic_1</id>
+      <reasoner-type>python_fallback</reasoner-type>
+      <extensions>[['arguments', 'premisses: Le discours déclare que la menace nucléaire (et biologique) est la pl', &quot;id: arg_1 | premisses: Le discours affirme que l'administration précédente a lai&quot;, &quot;premisses: L'administration précédente a permis une crise migratoire (carte: mil&quot;, &quot;premisses: Les politiques 'vertes' sont coûteuses, inefficaces, provoquent déloc&quot;, &quot;premisses: L'ONU n'a pas aidé à résoudre plusieurs conflits (pas d'appels, lettr&quot;, &quot;premisses: Les armes nucléaires et biologiques sont la menace la...</extensions>
+      <statistics>{'total_arguments': 20, 'surviving': 16, 'defeated': 4, 'strict_rules': 11, 'defeasible_rules': 9, 'fallacies_applied': 13}</statistics>
+    </entry>
+  </aspic-results>
+  <belief-revision-results count="1" label="Belief Revision Results">
+    <entry>
+      <id>brevision_1</id>
+      <method>fallacy_contraction</method>
+      <original>['fallacy_on_arg_2']</original>
+      <revised>[]</revised>
+    </entry>
+  </belief-revision-results>
+  <dialogue-results label="Dialogue Results">[]</dialogue-results>
+  <probabilistic-results label="Probabilistic Results">[]</probabilistic-results>
+  <bipolar-results label="Bipolar Results">[]</bipolar-results>
+  <fol-analysis-results label="FOL Analysis">[]</fol-analysis-results>
+  <fol-signature label="fol_signature">[]</fol-signature>
+  <propositional-analysis-results label="PL Analysis">[]</propositional-analysis-results>
+  <modal-analysis-results count="3" label="Modal Analysis">
+    <entry>
+      <id>modal_1</id>
+      <formulas>['O(prop(arg_4))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_2</id>
+      <formulas>['O(prop(arg_9))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+    <entry>
+      <id>modal_3</id>
+      <formulas>['O(prop(arg_14))']</formulas>
+      <valid>True</valid>
+      <modalities>['deontic']</modalities>
+    </entry>
+  </modal-analysis-results>
+  <formal-synthesis-reports label="Formal Synthesis">[]</formal-synthesis-reports>
+  <nl-to-logic-translations label="nl_to_logic_translations">[]</nl-to-logic-translations>
+  <atms-contexts label="atms_contexts">[]</atms-contexts>
+  <workflow-results label="Workflow Results">{}</workflow-results>
+  <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
+  <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
+  <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
+  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x000001BF9ABD65F0&gt;</-jtms-session>
+</analysis_state>

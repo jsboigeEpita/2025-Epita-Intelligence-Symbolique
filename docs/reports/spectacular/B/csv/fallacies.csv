@@ -1,0 +1,18 @@
+id,type,justification,target_argument_id
+fallacy_1,Appel à la pitié,"Utilise la souffrance et les sacrifices du peuple pour légitimer les annexions et disqualifier les critiques, substituant l'émotion à un argument factuel.",arg_1
+fallacy_2,Faux dilemme,"Présente seulement deux solutions opposées (importer ou expansion territoriale) comme si aucune autre option économique ou diplomatique n'existait, éliminant des alternatives raisonnables.",arg_4
+fallacy_3,Généralisation abusive / stéréotype,"Attribue des caractéristiques malveillantes et uniformes à l'ensemble d'un groupe (les Juifs), sans preuve suffisante, en les présentant comme une conspiration mondiale.",arg_5
+fallacy_4,Appel à la peur (argumentum ad metum),"Emploie la peur d'une menace existentielle (surpopulation, annihilation, Bolshevization, guerre mondiale orchestrée par les Juifs) pour justifier des politiques extrêmes.",arg_4
+fallacy_5,Poisoning the well (Empoisonnement du puits),"Délégitime a priori les critiques en les traitant d’« indignes » et de pessimistes, neutralisant ainsi leurs objections sans les examiner.",arg_1
+fallacy_6,Victim blaming (Culpabilisation de la victime),"Présente les Tchécoslovaques et leur gouvernement comme responsables des actions allemandes en affirmant que leurs « provocations » rendaient l’intervention nécessaire, inversant la responsabilité.",arg_2
+fallacy_7,Appel à la pitié,Le texte présente la souffrance et les sacrifices du peuple allemand comme preuve morale suffisante pour légitimer les annexions; substitution de l'émotion à une justification normative.,arg_1
+fallacy_8,Appel à la pitié,"Argument arg_1 instrumentalise les souffrances historiques du Volk comme unique justification normative, substitution d'émotion à preuve juridique/morale.",arg_1
+fallacy_9,Poisoning the well,"Arg_1 dénigre d’avance les critiques (""dwarfs"", ""incorrigible pessimists"") pour neutraliser l'objection sans examen.",arg_1
+fallacy_10,Généralisation abusive,"Arg_5 utilise des stéréotypes et généralisations envers un groupe (contenu antisémite), sans preuves empiriques.",arg_5
+fallacy_11,Victim blaming,"Arg_2 attribue la responsabilité principale à la partie ""provocatrice"" sans preuves, inversant la charge de la preuve.",arg_2
+fallacy_12,Appel à la pitié,Argument arg_1 instrumentalise la souffrance historique du Volk pour justifier annexions sans preuve juridique ou morale.,arg_1
+fallacy_13,Poisoning the well,"Argument arg_1 dénigre d'avance les critiques (« dwarfs », « incorrigible pessimists ») pour neutraliser l'opposition avant examen.",arg_1
+fallacy_14,Généralisation abusive,Argument arg_5 utilise des stéréotypes collectifs et des assertions généralisées sur un groupe sans preuves empiriques.,arg_5
+fallacy_15,Victim blaming,"Argument arg_2 attribue la responsabilité principale à la partie « provocatrice » sans preuve neutre, inversant la charge de la preuve.",arg_2
+fallacy_16,Appel à la pitié,Confirmation: JTMS a rétracté arg_1 pour cause 'fallacy: Appel à la pitié'; InformalAgent re-analyse confirme instrumentalisation émotionnelle des souffrances du Volk.,arg_1
+fallacy_17,Empoisonnement du puits / Poisoning the well,"Le texte discrédite d'avance les critiques («ces vieux pessimistes», «ces nains») pour les rendre suspects et neutraliser leurs objections sans examen.",arg_1

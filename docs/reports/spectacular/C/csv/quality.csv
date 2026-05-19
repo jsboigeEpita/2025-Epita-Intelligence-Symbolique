@@ -1,0 +1,6 @@
+id,scores,overall
+arg_2,"{'clarte': 6, 'pertinence': 5, 'presence_sources': 0, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 1, 'redondance_faible': 7}",0.32
+arg_3,"{'clarte': 6, 'pertinence': 6, 'presence_sources': 0, 'refutation_constructive': 3, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 3, 'redondance_faible': 6}",0.36
+arg_4,"{'clarte': 5, 'pertinence': 5, 'presence_sources': 0, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 2, 'fiabilite_sources': 0, 'exhaustivite': 2, 'redondance_faible': 6}",0.3
+arg_5,"{'clarte': 6, 'pertinence': 5, 'presence_sources': 1, 'refutation_constructive': 2, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 0, 'exhaustivite': 1, 'redondance_faible': 5}",0.31
+arg_6,"{'clarte': 6, 'pertinence': 6, 'presence_sources': 1, 'refutation_constructive': 3, 'structure_logique': 2, 'analogie_pertinente': 3, 'fiabilite_sources': 1, 'exhaustivite': 3, 'redondance_faible': 6}",0.38
