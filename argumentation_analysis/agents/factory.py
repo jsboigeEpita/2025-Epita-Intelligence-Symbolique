@@ -160,6 +160,7 @@ _PLUGIN_REGISTRY = {
     # Complex plugins (need constructor args — loaded via special handling)
     # "exploration": needs TaxonomyNavigator — loaded by FallacyWorkflowPlugin
     # "jtms": needs JTMSService — loaded by orchestration layer
+    # See docs/architecture/PATTERN_NESTED_SK_KERNELS.md for master/slave kernel pattern
 }
 
 
