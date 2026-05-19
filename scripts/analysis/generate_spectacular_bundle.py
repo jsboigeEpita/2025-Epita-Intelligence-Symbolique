@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -25,10 +26,17 @@ sys.path.insert(0, str(ROOT))
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-# Fields to strip for privacy
+# Top-level fields to remove entirely
 _PRIVACY_STRIP_FIELDS = frozenset({
     "raw_text", "full_text", "raw_text_snippet", "full_text_segment",
     "source_text", "text_content", "original_text",
+})
+
+# NL fields inside dict values to replace with opaque markers
+_NL_SCRUB_KEYS = frozenset({
+    "premisses", "conclusion", "text", "justification", "quote",
+    "reformulation", "llm_assessment", "content", "description",
+    "counter_content", "topic", "reason",
 })
 
 CORPORA = {
@@ -50,18 +58,176 @@ def _load_json(path: Path) -> Optional[Dict[str, Any]]:
         return json.load(f)
 
 
+def _scrub_nl(value: Any) -> Any:
+    """Replace natural-language string values with opaque marker."""
+    if isinstance(value, str) and len(value) > 10:
+        return "<scrubbed>"
+    return value
+
+
 def _strip_privacy(data: Any, depth: int = 0) -> Any:
-    """Recursively strip plaintext fields from nested dicts."""
-    if depth > 10:
+    """Recursively strip plaintext fields and scrub NL content."""
+    if depth > 12:
         return data
     if isinstance(data, dict):
-        return {
-            k: _strip_privacy(v, depth + 1)
-            for k, v in data.items()
-            if k not in _PRIVACY_STRIP_FIELDS
-        }
+        result = {}
+        for k, v in data.items():
+            if k in _PRIVACY_STRIP_FIELDS:
+                continue
+            if k in _NL_SCRUB_KEYS and isinstance(v, str):
+                result[k] = "<scrubbed>"
+            elif k == "content" and isinstance(v, str) and len(v) > 50:
+                result[k] = "<scrubbed>"
+            else:
+                result[k] = _strip_privacy(v, depth + 1)
+        return result
     if isinstance(data, list):
         return [_strip_privacy(item, depth + 1) for item in data]
+    if isinstance(data, str) and depth == 1 and len(data) > 80:
+        # Top-level string values in dicts (e.g. arg values that are raw strings)
+        return "<scrubbed>"
+    return data
+
+
+def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Full privacy scrub: strip raw text + scrub NL in analysis dimensions."""
+    # First pass: strip top-level privacy fields
+    cleaned = {k: v for k, v in state_data.items() if k not in _PRIVACY_STRIP_FIELDS}
+
+    # Second pass: scrub identified_arguments
+    args = cleaned.get("identified_arguments", {})
+    if isinstance(args, dict):
+        scrubbed_args = {}
+        for arg_id, arg_val in args.items():
+            if isinstance(arg_val, dict):
+                scrubbed_args[arg_id] = {
+                    k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+                    for k, v in arg_val.items()
+                }
+            elif isinstance(arg_val, str):
+                scrubbed_args[arg_id] = "<scrubbed>"
+            else:
+                scrubbed_args[arg_id] = arg_val
+        cleaned["identified_arguments"] = scrubbed_args
+
+    # Third pass: scrub identified_fallacies
+    fallacies = cleaned.get("identified_fallacies", {})
+    if isinstance(fallacies, dict):
+        scrubbed_fallacies = {}
+        for f_id, f_val in fallacies.items():
+            if isinstance(f_val, dict):
+                scrubbed_fallacies[f_id] = {
+                    k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+                    for k, v in f_val.items()
+                }
+            else:
+                scrubbed_fallacies[f_id] = f_val
+        cleaned["identified_fallacies"] = scrubbed_fallacies
+
+    # Fourth pass: scrub argument_quality_scores
+    quality = cleaned.get("argument_quality_scores", {})
+    if isinstance(quality, dict):
+        scrubbed_quality = {}
+        for q_id, q_val in quality.items():
+            if isinstance(q_val, dict):
+                scrubbed_quality[q_id] = {
+                    k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+                    for k, v in q_val.items()
+                }
+            else:
+                scrubbed_quality[q_id] = q_val
+        cleaned["argument_quality_scores"] = scrubbed_quality
+
+    # Fifth pass: scrub counter_arguments
+    counters = cleaned.get("counter_arguments", [])
+    if isinstance(counters, list):
+        cleaned["counter_arguments"] = [
+            {k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+             for k, v in ca.items()}
+            if isinstance(ca, dict) else ca
+            for ca in counters
+        ]
+
+    # Sixth pass: scrub debate_transcripts
+    debates = cleaned.get("debate_transcripts", [])
+    if isinstance(debates, list):
+        cleaned["debate_transcripts"] = [
+            {k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+             for k, v in dt.items()}
+            if isinstance(dt, dict) else dt
+            for dt in debates
+        ]
+
+    # Seventh pass: scrub belief_sets content
+    belief_sets = cleaned.get("belief_sets", {})
+    if isinstance(belief_sets, dict):
+        scrubbed_bs = {}
+        for bs_id, bs_val in belief_sets.items():
+            if isinstance(bs_val, dict):
+                content = bs_val.get("content", "")
+                if isinstance(content, str) and len(content) > 20:
+                    bs_val = {**bs_val, "content": "<scrubbed>"}
+                scrubbed_bs[bs_id] = bs_val
+            else:
+                scrubbed_bs[bs_id] = bs_val
+        cleaned["belief_sets"] = scrubbed_bs
+
+    # Eighth pass: scrub extracts
+    extracts = cleaned.get("extracts", {})
+    if isinstance(extracts, dict):
+        scrubbed_extracts = {}
+        for e_id, e_val in extracts.items():
+            if isinstance(e_val, str) and len(e_val) > 20:
+                scrubbed_extracts[e_id] = "<scrubbed>"
+            elif isinstance(e_val, dict):
+                scrubbed_extracts[e_id] = {
+                    k: ("<scrubbed>" if isinstance(v, str) and len(v) > 20 else v)
+                    for k, v in e_val.items()
+                }
+            else:
+                scrubbed_extracts[e_id] = e_val
+        cleaned["extracts"] = scrubbed_extracts
+
+    # Ninth pass: scrub analysis_tasks (may contain NL instructions)
+    tasks = cleaned.get("analysis_tasks", {})
+    if isinstance(tasks, dict):
+        cleaned["analysis_tasks"] = {
+            k: ("<scrubbed>" if isinstance(v, str) and len(v) > 50 else v)
+            for k, v in tasks.items()
+        }
+
+    # Tenth pass: scrub final_conclusion if present
+    conclusion = cleaned.get("final_conclusion")
+    if isinstance(conclusion, str) and len(conclusion) > 20:
+        cleaned["final_conclusion"] = "<scrubbed>"
+
+    # Final pass: global regex scrub on ALL remaining strings
+    cleaned = _global_entity_scrub(cleaned)
+
+    return cleaned
+
+
+# Entity patterns that must never appear in exports
+_ENTITY_PATTERN = re.compile(
+    r"(?i)\b(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu)"
+    r"|\b(iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik|bolchévik)"
+    r"|\b(kremlin|pentagon|white\s*house|united\s*nations|un\s*general\s*assembly)"
+    r"|\b(russie|chinese|américaine)\b",
+)
+
+
+def _global_entity_scrub(data: Any, depth: int = 0) -> Any:
+    """Recursively replace any string containing entity names with <scrubbed>."""
+    if depth > 15:
+        return data
+    if isinstance(data, str):
+        if _ENTITY_PATTERN.search(data):
+            return "<scrubbed>"
+        return data
+    if isinstance(data, dict):
+        return {k: _global_entity_scrub(v, depth + 1) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_global_entity_scrub(item, depth + 1) for item in data]
     return data
 
 
@@ -97,7 +263,7 @@ def generate_multi_format(corpus_id: str, state_data: Dict[str, Any]) -> None:
     """Generate JSON, XML, MD, CSV bundle, HTML for one corpus."""
     from argumentation_analysis.reporting.multi_format_exporter import MultiFormatExporter
 
-    safe_data = _strip_privacy(state_data)
+    safe_data = _scrub_state_for_export(state_data)
     proxy = _DictStateProxy(safe_data)
     exporter = MultiFormatExporter(proxy)
 
@@ -145,11 +311,20 @@ def generate_cross_ref_graph(corpus_id: str, state_data: Dict[str, Any]) -> None
     """Generate cross-reference graph in JSON, DOT, Mermaid."""
     from argumentation_analysis.reporting.cross_reference_graph import CrossReferenceGraph
 
-    safe_data = _strip_privacy(state_data)
+    safe_data = _scrub_state_for_export(state_data)
     proxy = _DictStateProxy(safe_data)
 
     graph = CrossReferenceGraph()
     graph.build_from_state(proxy)
+
+    # Replace NL labels with opaque IDs
+    for nid, node in graph.nodes.items():
+        if node.node_type == "argument":
+            node.label = nid
+        elif node.node_type == "fallacy":
+            node.label = nid
+        elif node.node_type == "quality_score":
+            node.label = nid
 
     json_path = OUT_DIR / f"cross_ref_graph_corpus_{corpus_id}.json"
     json_path.write_text(graph.to_json(), encoding="utf-8")

@@ -2,121 +2,121 @@
   "nodes": [
     {
       "id": "arg_1",
-      "label": "arguments",
+      "label": "arg_1",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_2",
-      "label": "premisses: Le discours affirme que sous l'administration pré",
+      "label": "arg_2",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_3",
-      "label": "premisses: Le discours affirme qu'avant l'administration Tru",
+      "label": "arg_3",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_4",
-      "label": "premisses: Le discours prétend que les politiques «vertes» (",
+      "label": "arg_4",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_5",
-      "label": "premisses: Le discours affirme que la United Nations n'a pas",
+      "label": "arg_5",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_6",
-      "label": "premisses: Le discours déclare que la menace nucléaire (et b",
+      "label": "arg_6",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_7",
-      "label": "id: arg_1 | premisses: Le discours affirme que l'administrat",
+      "label": "arg_7",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_8",
-      "label": "premisses: L'administration précédente a permis une crise mi",
+      "label": "arg_8",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_9",
-      "label": "premisses: Les politiques 'vertes' sont coûteuses, inefficac",
+      "label": "arg_9",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_10",
-      "label": "premisses: L'ONU n'a pas aidé à résoudre plusieurs conflits ",
+      "label": "arg_10",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_11",
-      "label": "premisses: Les armes nucléaires et biologiques sont la menac",
+      "label": "arg_11",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_12",
-      "label": "premisses: L'administration précédente a laissé une économie",
+      "label": "arg_12",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_13",
-      "label": "premisses: Sous l'administration précédente il y avait des a",
+      "label": "arg_13",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_14",
-      "label": "premisses: Les politiques vertes et les énergies renouvelabl",
+      "label": "arg_14",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_15",
-      "label": "premisses: L'ONU n'a pas aidé à résoudre plusieurs guerres q",
+      "label": "arg_15",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_16",
-      "label": "premisses: La possession et l'utilisation de la supériorité ",
+      "label": "arg_16",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_17",
-      "label": "arguments",
+      "label": "arg_17",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_18",
-      "label": "arg_2 (retracted): asserts causal link based on sequence of ",
+      "label": "arg_18",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_19",
-      "label": "arg_4 (retracted): asserts broad covert coordination; uses s",
+      "label": "arg_19",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_20",
-      "label": "arg_2 — causal claim retracted by JTMS; originally claimed t",
+      "label": "arg_20",
       "type": "argument",
       "metadata": {}
     },
@@ -127,7 +127,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "Attribue causalité aux améliorations économiques (investissements, inflation, marché boursier, salaires) en se basant uniquement sur la succession temporelle de l'événement (huit mois au pouvoir) sans preuve d'un lien causal unique.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -139,7 +139,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "Assume that border measures are the sole cause of the drop to 'zero' illegal entries, without ruling out other causal factors or verifying the data.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_3"
         }
       }
@@ -151,7 +151,7 @@
       "metadata": {
         "data": {
           "type": "conspiracy_theory",
-          "justification": "Présente la politique climatique et le «carbon footprint» comme une arnaque coordonnée et malveillante sans preuves de conspiration ; interprète des désaccords scientifiques comme preuve d'un complot.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -163,7 +163,7 @@
       "metadata": {
         "data": {
           "type": "hasty_generalization",
-          "justification": "Généralise l'inefficacité et la corruption à l'ensemble de l'ONU à partir d'anecdotes (escalator, téléprompter, surcoûts) sans preuve représentative.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_5"
         }
       }
@@ -175,7 +175,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "Le passage attribue la reprise économique directement à l’effet temporel de l’arrivée au pouvoir (succession «avant→après») sans établir de lien causal, en ignorant d’autres facteurs explicatifs (cycles économiques, politiques antérieures, chocs externes). Le raisonnement confond corrélation temporelle et causalité.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -187,7 +187,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "JTMS retracted belief arg_2 for inferring causation from mere temporal succession; conclusion relies on post-hoc reasoning.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -199,7 +199,7 @@
       "metadata": {
         "data": {
           "type": "conspiracy_theory",
-          "justification": "JTMS retracted belief arg_4 for speculative causal networks and unsupported claims; argument relies on conspiratorial inferences without corroborating evidence.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -211,7 +211,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "arg_2 infers causation from temporal succession without control or evidence. JTMS retracted arg_2 for this reason.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -223,7 +223,7 @@
       "metadata": {
         "data": {
           "type": "conspiracy_theory",
-          "justification": "arg_4 relies on speculative connections and lacks independent supporting evidence; JTMS retracted arg_4 for this reason.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -235,7 +235,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "Arg_2 infers causation from temporal succession without evidence: excerpt 'after X happened, Y increased, therefore X caused Y' (shows correlation presented as causation). Confidence: high.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -247,7 +247,7 @@
       "metadata": {
         "data": {
           "type": "conspiracy_theory",
-          "justification": "Arg_4 relies on speculative connections and lacks independent supporting evidence: excerpt 'they are hiding the truth, only an insider knows' (speculative claim). Confidence: high.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -259,7 +259,7 @@
       "metadata": {
         "data": {
           "type": "post_hoc_ergo_propter_hoc",
-          "justification": "Le raisonnement attribue la reprise économique directement à la succession temporelle (''en huit mois... 17 trillions''), sans établir de lien causal ni contrôler d'autres facteurs. Extrait: 'en juste huit mois... 17 trillion'",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -271,7 +271,7 @@
       "metadata": {
         "data": {
           "type": "cherry_picking",
-          "justification": "L'argument utilise des exemples isolés (coûts et cas européens) et ignore la masse de preuves contraires montrant bénéfices et réductions d'émissions. Extrait: 'les politiques \"vertes\"... c'est une arnaque'",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -324,43 +324,43 @@
     },
     {
       "id": "ca_1",
-      "label": "Conclusion: Broad immigration restrictions and protectionist",
+      "label": "<scrubbed>",
       "type": "counter_argument",
       "metadata": {}
     },
     {
       "id": "ca_2",
-      "label": "Conclusion: Large tax cuts for corporations and the wealthy ",
+      "label": "<scrubbed>",
       "type": "counter_argument",
       "metadata": {}
     },
     {
       "id": "ca_3",
-      "label": "Conclusion: Immigration as a whole does not increase crime r",
+      "label": "<scrubbed>",
       "type": "counter_argument",
       "metadata": {}
     },
     {
       "id": "ca_4",
-      "label": "Conclusion: While globalization poses challenges, wholesale ",
+      "label": "<scrubbed>",
       "type": "counter_argument",
       "metadata": {}
     },
     {
       "id": "qual_arg_1",
-      "label": "Q:3.0",
+      "label": "qual_arg_1",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_2",
-      "label": "Q:3.0",
+      "label": "qual_arg_2",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_3",
-      "label": "Q:3.0",
+      "label": "qual_arg_3",
       "type": "quality_score",
       "metadata": {}
     }

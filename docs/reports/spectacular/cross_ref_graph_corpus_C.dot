@@ -2,16 +2,16 @@ digraph CrossReference {
   rankdir=LR;
   node [shape=box, style=filled];
 
-  arg_1 [label="arguments", fillcolor="#4CAF50"];
-  arg_2 [label="premisses: L'Ukraine moderne a été créée artificiellement pa", fillcolor="#4CAF50"];
-  arg_3 [label="premisses: Les frontières et droits des républiques soviétiq", fillcolor="#4CAF50"];
-  arg_4 [label="premisses: Après 1991, la Russie a soutenu économiquement l'", fillcolor="#4CAF50"];
-  arg_5 [label="premisses: Depuis les années 1990 et surtout après 2014, l'U", fillcolor="#4CAF50"];
-  arg_6 [label="premisses: L'OTAN et les États-Unis ont promis de ne pas éte", fillcolor="#4CAF50"];
-  arg_7 [label="arguments", fillcolor="#4CAF50"];
-  arg_8 [label="arguments", fillcolor="#4CAF50"];
-  arg_9 [label="arguments", fillcolor="#4CAF50"];
-  arg_10 [label="arg_2: premisses: L'Ukraine moderne a été créée artificielle", fillcolor="#4CAF50"];
+  arg_1 [label="arg_1", fillcolor="#4CAF50"];
+  arg_2 [label="arg_2", fillcolor="#4CAF50"];
+  arg_3 [label="arg_3", fillcolor="#4CAF50"];
+  arg_4 [label="arg_4", fillcolor="#4CAF50"];
+  arg_5 [label="arg_5", fillcolor="#4CAF50"];
+  arg_6 [label="arg_6", fillcolor="#4CAF50"];
+  arg_7 [label="arg_7", fillcolor="#4CAF50"];
+  arg_8 [label="arg_8", fillcolor="#4CAF50"];
+  arg_9 [label="arg_9", fillcolor="#4CAF50"];
+  arg_10 [label="arg_10", fillcolor="#4CAF50"];
   fallacy_1 [label="fallacy_1", fillcolor="#F44336"];
   fallacy_2 [label="fallacy_2", fillcolor="#F44336"];
   fallacy_3 [label="fallacy_3", fillcolor="#F44336"];
@@ -33,12 +33,12 @@ digraph CrossReference {
   jtms_5 [label="fallacy_on_arg_2", fillcolor="#2196F3"];
   jtms_6 [label="fallacy_on_arg_2", fillcolor="#2196F3"];
   brevision_1 [label="brevision_1", fillcolor="#9C27B0"];
-  ca_1 [label="Type de faiblesse: Sophisme génétique. Citation: \"modern Ukr", fillcolor="#FF9800"];
-  qual_arg_2 [label="Q:0.3", fillcolor="#00BCD4"];
-  qual_arg_3 [label="Q:0.4", fillcolor="#00BCD4"];
-  qual_arg_4 [label="Q:0.3", fillcolor="#00BCD4"];
-  qual_arg_5 [label="Q:0.3", fillcolor="#00BCD4"];
-  qual_arg_6 [label="Q:0.4", fillcolor="#00BCD4"];
+  ca_1 [label="<scrubbed>", fillcolor="#FF9800"];
+  qual_arg_2 [label="qual_arg_2", fillcolor="#00BCD4"];
+  qual_arg_3 [label="qual_arg_3", fillcolor="#00BCD4"];
+  qual_arg_4 [label="qual_arg_4", fillcolor="#00BCD4"];
+  qual_arg_5 [label="qual_arg_5", fillcolor="#00BCD4"];
+  qual_arg_6 [label="qual_arg_6", fillcolor="#00BCD4"];
 
   arg_2 -> ca_1 [label="counter_argument"];
   arg_2 -> qual_arg_2 [label="quality_score"];

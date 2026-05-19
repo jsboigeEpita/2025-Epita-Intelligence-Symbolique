@@ -1,6 +1,6 @@
 # SCDA State Export
 
-**Generated:** 2026-05-19 02:26 UTC
+**Generated:** 2026-05-19 03:19 UTC
 
 ## Analysis Tasks (0)
 
@@ -10,87 +10,87 @@
 
 ## Arguments (10)
 
-- **arg_1:** arguments
-- **arg_2:** premisses: L'Ukraine moderne a été créée artificiellement par la Russie bolchevique (transferts de territoires, 1917-1954, dont la Crimée). conclusion: L'Ukraine est en grande partie une entité artificielle et historiquement liée à la Russie ; cela légitime des revendications historiques et culturel...
-- **arg_3:** premisses: Les frontières et droits des républiques soviétiques (droit de secession) introduites par Lénine et les politiques ultérieures ont affaibli l'unité de l'État, créant un 'mine' de nationalisme; erreurs historiques des bolcheviks et du PCUS ont conduit à la dissolution de l'URSS. conclusion...
-- **arg_4:** premisses: Après 1991, la Russie a soutenu économiquement l'Ukraine (subventions, prêts, reprise des dettes, appels non honorés sur actifs), tandis que l'Ukraine a agi comme 'parasite' (blackmail énergétique, vol de gaz, ne respectant pas obligations). conclusion: La Russie a été généreuse et respec...
-- **arg_5:** premisses: Depuis les années 1990 et surtout après 2014, l'Ukraine a connu une montée du nationalisme, néo-nazisme et russophobie; les autorités ont persécuté opposants et la société est divisée; Maidan 2014 fut un coup d'État aidé par l'étranger; incidences: violences, Odessa, impunité. conclusion:...
-- **arg_6:** premisses: L'OTAN et les États-Unis ont promis de ne pas étendre l'OTAN à l'est (1990 assurances) mais ont ensuite étendu l'OTAN en plusieurs vagues, intégrant des pays frontaliers; l'OTAN déploie infrastructures et armes (bases, radars, missiles), et Ukraine aspire à rejoindre l'OTAN. conclusion: L...
-- **arg_7:** arguments
-- **arg_8:** arguments
-- **arg_9:** arguments
-- **arg_10:** arg_2: premisses: L'Ukraine moderne a été créée artificiellement par la Russie bolchevique (transferts de territoires, 1917-1954, dont la Crimée). conclusion: L'Ukraine est en grande partie une entité artificielle et historiquement liée à la Russie ; cela légitime des revendications historiques et c...
+- **arg_1:** <scrubbed>
+- **arg_2:** <scrubbed>
+- **arg_3:** <scrubbed>
+- **arg_4:** <scrubbed>
+- **arg_5:** <scrubbed>
+- **arg_6:** <scrubbed>
+- **arg_7:** <scrubbed>
+- **arg_8:** <scrubbed>
+- **arg_9:** <scrubbed>
+- **arg_10:** <scrubbed>
 
 ## Fallacies (14)
 
 ### fallacy_1
 - **type:** Sophisme génétique
-- **justification:** Affirme que l’origine historique (création par les bolcheviks/la Russie) détermine la légitimité actuelle de l’Ukraine — rejet/acceptation basé seulement sur l’origine.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_5
 
 ### fallacy_2
 - **type:** Appel à la peur
-- **justification:** Le discours exagère et instrumentalise une menace militaire (détails sur Tomahawk, temps de vol, 'couteau à la gorge') pour justifier des mesures préventives. Extrait: «Le temps de vol... moins de 35 minutes... C’est comme un couteau à la gorge.» Ceci mobilise la peur pour légitimer une réponse.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_6
 
 ### fallacy_3
 - **type:** Homogénéisation / Caracterisation hâtive
-- **justification:** Généralise que l'ensemble du régime et de la société ukrainienne est néo-nazi ou russophobe sur la base d'exemples et de certains groupes marginalisés, sans preuve proportionnée.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_5
 
 ### fallacy_4
 - **type:** Sophisme génétique
-- **justification:** Argue que parce que l'Ukraine a été créée par les bolcheviks, sa légitimité actuelle est invalide ou inférieure — rejeton fallacieux basé sur l'origine historique.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_5
 - **type:** Appel à l'appartenance
-- **justification:** Le passage présente Ukraine comme 'une partie inaliénable de notre histoire' et invoque liens de sang et camaraderie pour légitimer une revendication politique — argument basé sur l'appartenance plutôt que des raisons politiques objectives.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_3
 
 ### fallacy_6
 - **type:** Sophisme génétique
-- **justification:** L’argument rejette la légitimité actuelle de l’Ukraine en se fondant uniquement sur son origine (création par les bolchéviques), sans discuter de sa réalité présente — extrait : “modern Ukraine was entirely created by Russia… Nobody asked the millions of people living there what they thought.”
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_7
 - **type:** Sophisme génétique
-- **justification:** Le raisonnement rejette la légitimité d’un État moderne en se fondant uniquement sur son origine historique (création par les bolcheviks) et conclut que cela légitime des revendications russes. C’est une attaque basée sur l’origine plutôt que sur des preuves actuelles.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_8
 - **type:** Simplicité causale
-- **justification:** Le discours attribue principalement au bolchevisme/PCUS la responsabilité de l'effondrement de l'URSS et de la formation de l'Ukraine indépendante, ignorant la multiplicité des causes (facteurs économiques, politiques, mouvements nationaux, acteurs externes). C'est une réduction abusive de la causal...
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_3
 
 ### fallacy_9
 - **type:** Sophisme génétique
-- **justification:** Rejette la légitimité actuelle de l'Ukraine en se fondant uniquement sur son origine historique (création par les bolcheviks/transferts territoriaux), confondant origine et souveraineté contemporaine.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_10
 - **type:** Deux torts font un droit
-- **justification:** Justifie une conduite russe en invoquant les mauvais actes présumés de l'Ukraine (logique «si l’autre a mal agi, nous avons le droit»), ce qui légitime la rétorsion plutôt qu'une analyse normative objective.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_4
 
 ### fallacy_11
 - **type:** Sophisme génétique
-- **justification:** L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur critères juridiques ou consentement contemporain.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_12
 - **type:** Cause unique
-- **justification:** Attribution excessive d'une cause unique (les politiques bolcheviques/PCUS) à l'effondrement de l'URSS.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_3
 
 ### fallacy_13
 - **type:** Sophisme génétique
-- **justification:** L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur des critères contemporains.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 ### fallacy_14
 - **type:** Sophisme génétique
-- **justification:** L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (création par les bolcheviks) plutôt que sur des critères contemporains.
+- **justification:** <scrubbed>
 - **target_argument_id:** arg_2
 
 
@@ -98,17 +98,11 @@
 
 ### propositional_bs_1
 - **logic_type:** Propositional
-- **content:** vladimir_putin_is_president_of_russia
-speech_addresses_events_in_ukraine
-ukraine_is_inalienable_part_of_russian_history_culture_and_spiritual_space
-modern_ukraine_was_created_by_bolshevik_communist_russia
-khrushchev_transferred_crimea_from_russia_to_ukraine_in_1954
-stalin_transferred_to_ukraine_land...
+- **content:** <scrubbed>
 
 ### fol_bs_2
 - **logic_type:** FOL
-- **content:** sorts: Person, Country, Territory, Organization, Event, Position, Policy, AdministrativeUnit, Document
-predicates: PresidentOf(Person,Country), Addresses(Person,Speech), AddressedTo(Speech,Audience), HistoricallyPartOf(Territory,Country), CreatedBy(Country,Organization), Transferred(Territory,Countr...
+- **content:** <scrubbed>
 
 
 ## Query Log (0)
@@ -135,8 +129,7 @@ predicates: PresidentOf(Person,Country), Addresses(Person,Speech), AddressedTo(S
 
 ### task_3
 - **author_agent:** ProjectManager
-- **answer_text:** Question pour FormalAgent :
-1) En tenant compte des sophismes identifiés dans state.identified_fallacies (voir snapshot), indiquez quelles prémisses doivent être contestées ou marquées comme problématiques dans la formalisation formelle (PL ou FOL). Pour chaque sophisme, fournissez la correspondance...
+- **answer_text:** <scrubbed>
 - **source_ids:** []
 
 ### task_4
@@ -162,27 +155,14 @@ predicates: PresidentOf(Person,Country), Addresses(Person,Speech), AddressedTo(S
 ## Final Conclusion (1)
 
 ```
-Synthèse finale de l’analyse :
-
-Constat principal : le discours étudié présente des motifs historiques et sécuritaires (arg_2, arg_3, arg_5, arg_6) qui cherchent à légitimer des mesures coercitives. Cependant l’argumentation contient de nombreux sophismes (sophisme génétique, appel à la peur, homogénéisation, simplicité causale, appel à l’appartenance) et des extrapolations factuelles non étayées.
-
-Travail réalisé et résultats cross‑KB :
-- Extraction / identification : arguments clés (arg_2, arg_3, arg_4, arg_5, arg_6) correctement repérés dans l’état.
-- Quality / Debate : analyses automatiques fournissent des scores modérés (persuasivité/cohérence ≈ 0.60 sur 1). QualityAgent a rencontré une erreur technique et doit être relancé pour obtenir scores 0–9 exploitables.
-- Contre‑arguments : CounterAgent a produit et enregistré 10 contre‑arguments ciblés (IDs ca_1 … ca_10) attaquant précisément les prémisses fallacieuses et proposant preuves concrètes à collecter (archives diplomatiques, référendums, inventaires militaires, rapports OSCE/ONG, enquêtes judiciaires). Plusieurs contre‑arguments ont une efficacité estimée élevée.
-- Débat : DebateAgent a analysé la qualité des arguments, recommandé une stratégie équilibrée (attaquer d’abord arg_6 puis arg_3, arg_5, arg_2) et préparé éléments de réplique.
-- Gouvernance : GovernanceAgent a détecté des conflits entre agents et exécuté un vote Schulze simulé ; résultat : option « diplomatie » gagnante (vote étroit). Les métriques de consensus indiquent un consensus faible/fragile (consensus_rate, fairness_index, satisfaction = 0.0) — la décision est politiquement vulnérable et nécessite consolidation.
-
-Conclusion normée et recommandations (actions immédiates) :
-1) Suspendre toute mesure irréversible ou coercitive en l’absence de preuves indépendantes et vérifiables.  
-2) Mandater immédiatement une mission d’évaluation indépendante (OSCE/ONU/experts internationaux) pour : inventorier déploiements/positions d’armes, enquêter sur al...
+<scrubbed>
 ```
 
 ##  Next Agent Designated (0)
 
 ## Counter-Arguments (1)
 
-1. **id:** ca_1 | **original_argument:** arg_2 | **counter_content:** Type de faiblesse: Sophisme génétique. Citation: "modern Ukraine was entirely created by Russia..." ... | **strategy:** déconstruction logique | **score:** 0.8
+1. **id:** ca_1 | **original_argument:** arg_2 | **counter_content:** <scrubbed> | **strategy:** déconstruction logique | **score:** 0.8
 
 ## Quality Scores (5)
 
@@ -295,7 +275,7 @@ Conclusion normée et recommandations (actions immédiates) :
 
 ## ASPIC Results (1)
 
-1. **id:** aspic_1 | **reasoner_type:** python_fallback | **extensions:** [['arguments', 'arguments', 'arguments', 'arguments', "arg_2: premisses: L'Ukraine moderne a été cré... | **statistics:** {'total_arguments': 10, 'surviving': 5, 'defeated': 5, 'strict_rules': 1, 'defeasible_rules': 9, 'fa...
+1. **id:** aspic_1 | **reasoner_type:** python_fallback | **extensions:** [['arguments', 'arguments', 'arguments', 'arguments', '<scrubbed>']] | **statistics:** {'total_arguments': 10, 'surviving': 5, 'defeated': 5, 'strict_rules': 1, 'defeasible_rules': 9, 'fa...
 
 ## Belief Revision Results (1)
 

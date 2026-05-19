@@ -1,107 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <analysis_state>
-  <generated_at>2026-05-19T02:26:22.454973+00:00</generated_at>
+  <generated_at>2026-05-19T03:19:04.099888+00:00</generated_at>
   <analysis-tasks label="analysis_tasks">{}</analysis-tasks>
   <identified-arguments count="10" label="Arguments">
-    <item key="arg_1">arguments</item>
-    <item key="arg_2">premisses: L'Ukraine moderne a été créée artificiellement par la Russie bolchevique (transferts de territoires, 1917-1954, dont la Crimée). conclusion: L'Ukraine est en grande partie une entité artifi...</item>
-    <item key="arg_3">premisses: Les frontières et droits des républiques soviétiques (droit de secession) introduites par Lénine et les politiques ultérieures ont affaibli l'unité de l'État, créant un 'mine' de nationalis...</item>
-    <item key="arg_4">premisses: Après 1991, la Russie a soutenu économiquement l'Ukraine (subventions, prêts, reprise des dettes, appels non honorés sur actifs), tandis que l'Ukraine a agi comme 'parasite' (blackmail éner...</item>
-    <item key="arg_5">premisses: Depuis les années 1990 et surtout après 2014, l'Ukraine a connu une montée du nationalisme, néo-nazisme et russophobie; les autorités ont persécuté opposants et la société est divisée; Maid...</item>
-    <item key="arg_6">premisses: L'OTAN et les États-Unis ont promis de ne pas étendre l'OTAN à l'est (1990 assurances) mais ont ensuite étendu l'OTAN en plusieurs vagues, intégrant des pays frontaliers; l'OTAN déploie inf...</item>
-    <item key="arg_7">arguments</item>
-    <item key="arg_8">arguments</item>
-    <item key="arg_9">arguments</item>
-    <item key="arg_10">arg_2: premisses: L'Ukraine moderne a été créée artificiellement par la Russie bolchevique (transferts de territoires, 1917-1954, dont la Crimée). conclusion: L'Ukraine est en grande partie une entité...</item>
+    <item key="arg_1">&lt;scrubbed&gt;</item>
+    <item key="arg_2">&lt;scrubbed&gt;</item>
+    <item key="arg_3">&lt;scrubbed&gt;</item>
+    <item key="arg_4">&lt;scrubbed&gt;</item>
+    <item key="arg_5">&lt;scrubbed&gt;</item>
+    <item key="arg_6">&lt;scrubbed&gt;</item>
+    <item key="arg_7">&lt;scrubbed&gt;</item>
+    <item key="arg_8">&lt;scrubbed&gt;</item>
+    <item key="arg_9">&lt;scrubbed&gt;</item>
+    <item key="arg_10">&lt;scrubbed&gt;</item>
   </identified-arguments>
   <identified-fallacies count="14" label="Fallacies">
     <entry id="fallacy_1">
       <type>Sophisme génétique</type>
-      <justification>Affirme que l’origine historique (création par les bolcheviks/la Russie) détermine la légitimité actuelle de l’Ukraine — rejet/acceptation basé seulement sur l’origine.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_5</target-argument-id>
     </entry>
     <entry id="fallacy_2">
       <type>Appel à la peur</type>
-      <justification>Le discours exagère et instrumentalise une menace militaire (détails sur Tomahawk, temps de vol, 'couteau à la gorge') pour justifier des mesures préventives. Extrait: «Le temps de vol... moins de 35 minutes... C’est comme un couteau à la gorge.» Ceci mobilise la peur pour légitimer une réponse.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_6</target-argument-id>
     </entry>
     <entry id="fallacy_3">
       <type>Homogénéisation / Caracterisation hâtive</type>
-      <justification>Généralise que l'ensemble du régime et de la société ukrainienne est néo-nazi ou russophobe sur la base d'exemples et de certains groupes marginalisés, sans preuve proportionnée.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_5</target-argument-id>
     </entry>
     <entry id="fallacy_4">
       <type>Sophisme génétique</type>
-      <justification>Argue que parce que l'Ukraine a été créée par les bolcheviks, sa légitimité actuelle est invalide ou inférieure — rejeton fallacieux basé sur l'origine historique.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_5">
       <type>Appel à l'appartenance</type>
-      <justification>Le passage présente Ukraine comme 'une partie inaliénable de notre histoire' et invoque liens de sang et camaraderie pour légitimer une revendication politique — argument basé sur l'appartenance plutôt que des raisons politiques objectives.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_3</target-argument-id>
     </entry>
     <entry id="fallacy_6">
       <type>Sophisme génétique</type>
-      <justification>L’argument rejette la légitimité actuelle de l’Ukraine en se fondant uniquement sur son origine (création par les bolchéviques), sans discuter de sa réalité présente — extrait : “modern Ukraine was entirely created by Russia… Nobody asked the millions of people living there what they thought.”</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_7">
       <type>Sophisme génétique</type>
-      <justification>Le raisonnement rejette la légitimité d’un État moderne en se fondant uniquement sur son origine historique (création par les bolcheviks) et conclut que cela légitime des revendications russes. C’est une attaque basée sur l’origine plutôt que sur des preuves actuelles.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_8">
       <type>Simplicité causale</type>
-      <justification>Le discours attribue principalement au bolchevisme/PCUS la responsabilité de l'effondrement de l'URSS et de la formation de l'Ukraine indépendante, ignorant la multiplicité des causes (facteurs économiques, politiques, mouvements nationaux, acteurs externes). C'est une réduction abusive de la causalité.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_3</target-argument-id>
     </entry>
     <entry id="fallacy_9">
       <type>Sophisme génétique</type>
-      <justification>Rejette la légitimité actuelle de l'Ukraine en se fondant uniquement sur son origine historique (création par les bolcheviks/transferts territoriaux), confondant origine et souveraineté contemporaine.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_10">
       <type>Deux torts font un droit</type>
-      <justification>Justifie une conduite russe en invoquant les mauvais actes présumés de l'Ukraine (logique «si l’autre a mal agi, nous avons le droit»), ce qui légitime la rétorsion plutôt qu'une analyse normative objective.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_4</target-argument-id>
     </entry>
     <entry id="fallacy_11">
       <type>Sophisme génétique</type>
-      <justification>L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur critères juridiques ou consentement contemporain.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_12">
       <type>Cause unique</type>
-      <justification>Attribution excessive d'une cause unique (les politiques bolcheviques/PCUS) à l'effondrement de l'URSS.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_3</target-argument-id>
     </entry>
     <entry id="fallacy_13">
       <type>Sophisme génétique</type>
-      <justification>L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur des critères contemporains.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
     <entry id="fallacy_14">
       <type>Sophisme génétique</type>
-      <justification>L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (création par les bolcheviks) plutôt que sur des critères contemporains.</justification>
+      <justification>&lt;scrubbed&gt;</justification>
       <target-argument-id>arg_2</target-argument-id>
     </entry>
   </identified-fallacies>
   <belief-sets count="2" label="belief_sets">
     <entry id="propositional_bs_1">
       <logic-type>Propositional</logic-type>
-      <content>vladimir_putin_is_president_of_russia
-speech_addresses_events_in_ukraine
-ukraine_is_inalienable_part_of_russian_history_culture_and_spiritual_space
-modern_ukraine_was_created_by_bolshevik_communist_russia
-khrushchev_transferred_crimea_from_russia_to_ukraine_in_1954
-stalin_transferred_to_ukraine_lands_previously_belonging_to_poland_romania_and_hungary
-millions_living_in_transferred_territories_were_not_asked</content>
+      <content>&lt;scrubbed&gt;</content>
     </entry>
     <entry id="fol_bs_2">
       <logic-type>FOL</logic-type>
-      <content>sorts: Person, Country, Territory, Organization, Event, Position, Policy, AdministrativeUnit, Document
-predicates: PresidentOf(Person,Country), Addresses(Person,Speech), AddressedTo(Speech,Audience), HistoricallyPartOf(Territory,Country), CreatedBy(Country,Organization), Transferred(Territory,Country,Country,Person), IncorporatedInto(Territory,Country,Event), HeldPosition(Person,Position), ProposedPolicy(Person,Policy), ConfirmedIn(Policy,Document)
-constants: vladimir_putin, lenin, stalin, khrus...</content>
+      <content>&lt;scrubbed&gt;</content>
     </entry>
   </belief-sets>
   <query-log label="query_log">[]</query-log>
@@ -125,9 +117,7 @@ constants: vladimir_putin, lenin, stalin, khrus...</content>
     </entry>
     <entry id="task_3">
       <author-agent>ProjectManager</author-agent>
-      <answer-text>Question pour FormalAgent :
-1) En tenant compte des sophismes identifiés dans state.identified_fallacies (voir snapshot), indiquez quelles prémisses doivent être contestées ou marquées comme problématiques dans la formalisation formelle (PL ou FOL). Pour chaque sophisme, fournissez la correspondance : fallacy_id → prémisses ciblées → justification concise.
-2) Traduisez en logique propositionnelle ou FOL (précisez le choix) les arguments suivants : arg_2, arg_3, arg_5, arg_6. Pour chaque argument...</answer-text>
+      <answer-text>&lt;scrubbed&gt;</answer-text>
       <source-ids>[]</source-ids>
     </entry>
     <entry id="task_4">
@@ -141,14 +131,12 @@ constants: vladimir_putin, lenin, stalin, khrus...</content>
   </answers>
   <extracts label="Extracts">[]</extracts>
   <errors label="errors">[]</errors>
-  <final-conclusion label="Final Conclusion">Synthèse finale de l’analyse :
-
-Constat principal : le discours étudié présente des motifs historiques et sécuritaires (arg_2, arg_3, arg_5, arg_6) qui cherchent à légitimer des mesures coercitives. C...</final-conclusion>
+  <final-conclusion label="Final Conclusion">&lt;scrubbed&gt;</final-conclusion>
   <counter-arguments count="1" label="Counter-Arguments">
     <entry>
       <id>ca_1</id>
       <original-argument>arg_2</original-argument>
-      <counter-content>Type de faiblesse: Sophisme génétique. Citation: &quot;modern Ukraine was entirely created by Russia...&quot; Stratégie choisie: Déconstruction logique (exposer le sophisme) — expliquer pourquoi l'origine historique n'invalide pas la souveraineté actuelle. Pourquoi adaptée: le raisonnement confond cause historique et légitimité politique moderne; la réfutation neutralise directement cette transition illégitime.</counter-content>
+      <counter-content>&lt;scrubbed&gt;</counter-content>
       <strategy>déconstruction logique</strategy>
       <score>0.8</score>
       <target-arg-id>arg_2</target-arg-id>
@@ -229,7 +217,7 @@ Constat principal : le discours étudié présente des motifs historiques et sé
     <entry>
       <id>aspic_1</id>
       <reasoner-type>python_fallback</reasoner-type>
-      <extensions>[['arguments', 'arguments', 'arguments', 'arguments', &quot;arg_2: premisses: L'Ukraine moderne a été créée artificiellement par la Russie b&quot;]]</extensions>
+      <extensions>[['arguments', 'arguments', 'arguments', 'arguments', '&lt;scrubbed&gt;']]</extensions>
       <statistics>{'total_arguments': 10, 'surviving': 5, 'defeated': 5, 'strict_rules': 1, 'defeasible_rules': 9, 'fallacies_applied': 14}</statistics>
     </entry>
   </aspic-results>

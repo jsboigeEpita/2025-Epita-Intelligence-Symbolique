@@ -1,14 +1,14 @@
 id,type,justification,target_argument_id
-fallacy_1,post_hoc_ergo_propter_hoc,"Attribue causalité aux améliorations économiques (investissements, inflation, marché boursier, salaires) en se basant uniquement sur la succession temporelle de l'événement (huit mois au pouvoir) sans preuve d'un lien causal unique.",arg_2
-fallacy_2,post_hoc_ergo_propter_hoc,"Assume that border measures are the sole cause of the drop to 'zero' illegal entries, without ruling out other causal factors or verifying the data.",arg_3
-fallacy_3,conspiracy_theory,Présente la politique climatique et le «carbon footprint» comme une arnaque coordonnée et malveillante sans preuves de conspiration ; interprète des désaccords scientifiques comme preuve d'un complot.,arg_4
-fallacy_4,hasty_generalization,"Généralise l'inefficacité et la corruption à l'ensemble de l'ONU à partir d'anecdotes (escalator, téléprompter, surcoûts) sans preuve représentative.",arg_5
-fallacy_5,post_hoc_ergo_propter_hoc,"Le passage attribue la reprise économique directement à l’effet temporel de l’arrivée au pouvoir (succession «avant→après») sans établir de lien causal, en ignorant d’autres facteurs explicatifs (cycles économiques, politiques antérieures, chocs externes). Le raisonnement confond corrélation temporelle et causalité.",arg_2
-fallacy_6,post_hoc_ergo_propter_hoc,JTMS retracted belief arg_2 for inferring causation from mere temporal succession; conclusion relies on post-hoc reasoning.,arg_2
-fallacy_7,conspiracy_theory,JTMS retracted belief arg_4 for speculative causal networks and unsupported claims; argument relies on conspiratorial inferences without corroborating evidence.,arg_4
-fallacy_8,post_hoc_ergo_propter_hoc,arg_2 infers causation from temporal succession without control or evidence. JTMS retracted arg_2 for this reason.,arg_2
-fallacy_9,conspiracy_theory,arg_4 relies on speculative connections and lacks independent supporting evidence; JTMS retracted arg_4 for this reason.,arg_4
-fallacy_10,post_hoc_ergo_propter_hoc,"Arg_2 infers causation from temporal succession without evidence: excerpt 'after X happened, Y increased, therefore X caused Y' (shows correlation presented as causation). Confidence: high.",arg_2
-fallacy_11,conspiracy_theory,"Arg_4 relies on speculative connections and lacks independent supporting evidence: excerpt 'they are hiding the truth, only an insider knows' (speculative claim). Confidence: high.",arg_4
-fallacy_12,post_hoc_ergo_propter_hoc,"Le raisonnement attribue la reprise économique directement à la succession temporelle (''en huit mois... 17 trillions''), sans établir de lien causal ni contrôler d'autres facteurs. Extrait: 'en juste huit mois... 17 trillion'",arg_2
-fallacy_13,cherry_picking,"L'argument utilise des exemples isolés (coûts et cas européens) et ignore la masse de preuves contraires montrant bénéfices et réductions d'émissions. Extrait: 'les politiques ""vertes""... c'est une arnaque'",arg_4
+fallacy_1,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_2,post_hoc_ergo_propter_hoc,<scrubbed>,arg_3
+fallacy_3,conspiracy_theory,<scrubbed>,arg_4
+fallacy_4,hasty_generalization,<scrubbed>,arg_5
+fallacy_5,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_6,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_7,conspiracy_theory,<scrubbed>,arg_4
+fallacy_8,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_9,conspiracy_theory,<scrubbed>,arg_4
+fallacy_10,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_11,conspiracy_theory,<scrubbed>,arg_4
+fallacy_12,post_hoc_ergo_propter_hoc,<scrubbed>,arg_2
+fallacy_13,cherry_picking,<scrubbed>,arg_4

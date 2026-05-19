@@ -1,21 +1,21 @@
 id,value
-arg_1,arguments
-arg_2,"premisses: Le discours affirme que sous l'administration précédente il y avait faiblesse, chaos et crise; en huit mois d'administration Trump l'économie s'est redressée (investissements massifs, inflation maîtrisée, marché boursier record, salaires en hausse). conclusion: La présidence Trump a rendu les États‑Unis plus forts et a créé un nouvel «âge d'or» américain."
-arg_3,"premisses: Le discours affirme qu'avant l'administration Trump il y avait une invasion de migrants, crimes et exploitation (trafic d'enfants, viols) ; les mesures d'arrestation et d'expulsion ont stoppé les arrivées et sauvé des vies. conclusion: Le contrôle strict des frontières et l'expulsion des migrants illégaux sont justifiés, efficaces et humanitaires."
-arg_4,"premisses: Le discours prétend que les politiques «vertes» (énergies renouvelables) sont coûteuses, inefficaces, provoquent la perte d'emplois et déplacent la pollution vers des pays non respectueux des règles (ex: Chine); des prédictions climatiques passées se sont révélées fausses. conclusion: La transition vers les énergies renouvelables est un 'scam' qui menace la prospérité nationale et doit être rejetée."
-arg_5,"premisses: Le discours affirme que la United Nations n'a pas aidé à résoudre les guerres que l'administration Trump a négociées et a été inefficace (ex: n'a pas appelé, n'a fourni que lettres sans actions). conclusion: L'ONU est inefficace et ne remplit pas sa mission; les nations doivent s'appuyer sur l'action nationale, pas sur l'ONU."
-arg_6,premisses: Le discours déclare que la menace nucléaire (et biologique) est la plus sérieuse; l'administration Trump a détruit la capacité nucléaire de l'Iran via une opération militaire et a ainsi négocié la fin d'un conflit; les États-Unis possèdent des armes que personne d'autre n'a. conclusion: La force militaire et la supériorité militaire américaine sont nécessaires et légitimes pour empêcher la prolifération nucléaire et préserver la paix.
-arg_7,"id: arg_1 | premisses: Le discours affirme que l'administration précédente a laissé une calamité économique (inflation record, faibles investissements). En huit mois, l'administration actuelle aurait attiré 17 trillions $ d'investissements, fait baisser l'inflation, fait monter la bourse et augmenté les salaires. conclusion: Sous la présidence actuelle les États‑Unis vivent un 'âge d'or' économique et la politique économique du président est la cause principale de cette amélioration."
-arg_8,"premisses: L'administration précédente a permis une crise migratoire (carte: millions d'arrivées, trafic d'enfants, viols, criminalité) ; les mesures de détention, d'expulsion et d'accords internationaux ont réduit à zéro les traversées illégales pendant plusieurs mois et sauvé des vies. conclusion: Les politiques de frontière stricte et d'expulsion sont efficaces, nécessaires et moralement justifiables."
-arg_9,"premisses: Les politiques 'vertes' sont coûteuses, inefficaces, provoquent délocalisation industrielle vers des pays polluants (ex: Chine), et des prédictions climatiques passées étaient inexactes. conclusion: La transition vers les énergies renouvelables est une 'arnaque' qui nuira aux nations; il faut privilégier l'énergie fossile et nucléaire propre."
-arg_10,"premisses: L'ONU n'a pas aidé à résoudre plusieurs conflits (pas d'appels, lettres inefficaces) ; la gestion de projets est corrompue (ex: rénovation coûteuse) ; l'ONU finance des migrations vers l'Occident. conclusion: L'ONU est inefficace et parfois contre‑productive ; les nations doivent privilégier l'action unilatérale ou les coalitions dirigées par des États souverains."
-arg_11,premisses: Les armes nucléaires et biologiques sont la menace la plus grave ; l'administration a démantelé la capacité nucléaire de l'Iran via une opération spectaculaire; les États‑Unis possèdent des armes et la capacité que personne d'autre n'a. conclusion: La supériorité militaire américaine et l'usage de la force préventive sont nécessaires et légitimes pour assurer la sécurité mondiale.
-arg_12,"premisses: L'administration précédente a laissé une économie en difficulté (inflation élevée, faible investissement). En huit mois d'administration actuelle, il y a eu affirmations d'investissements massifs ($17T), baisse des prix de l'énergie et des produits, marché boursier record, salaires en hausse. conclusion: Les politiques de l'administration actuelle ont rapidement revitalisé l'économie et créé un nouvel «âge d'or» pour l'Amérique."
-arg_13,"premisses: Sous l'administration précédente il y avait des arrivées massives de migrants illégaux, trafic d'enfants, viols et criminalité; les mesures de détention et d'expulsion mises en place ont fait chuter les passages et sauvé des vies. conclusion: Des contrôles frontaliers stricts et des expulsions massives sont justifiés, efficaces et humanitaires."
-arg_14,"premisses: Les politiques vertes et les énergies renouvelables sont coûteuses, inefficaces, dépendent de la Chine, provoquent la perte d'emplois et n'ont pas réduit globalement les émissions; déclarations historiques du climat se sont révélées fausses. conclusion: La transition vers les énergies renouvelables est une escroquerie ('scam') qui menace la prospérité nationale et doit être rejetée."
-arg_15,"premisses: L'ONU n'a pas aidé à résoudre plusieurs guerres que l'orateur prétend avoir terminées; l'organisation présente corruption, gaspillage budgétaire et inaction (exemples: surcoûts de construction, escalator, téléprompter). conclusion: L'ONU est inefficace, corrompue et ne mérite pas la confiance; les nations doivent agir unilatéralement sous direction américaine."
-arg_16,"premisses: La possession et l'utilisation de la supériorité militaire américaine (armes nucléaires, opérations) ont permis de détruire des capacités ennemies (ex: Iran) et d'obtenir des cessations de conflits; aucune autre nation possède de telles capacités. conclusion: La force militaire américaine et des actions préventives sont nécessaires et légitimes pour empêcher la prolifération et préserver la paix."
-arg_17,arguments
-arg_18,arg_2 (retracted): asserts causal link based on sequence of events without controlled evidence; relies on anecdotal temporal correlation.
-arg_19,arg_4 (retracted): asserts broad covert coordination; uses selective evidence and speculative leaps characteristic of conspiracy narratives.
-arg_20,arg_2 — causal claim retracted by JTMS; originally claimed temporal correlation implies causation.
+arg_1,<scrubbed>
+arg_2,<scrubbed>
+arg_3,<scrubbed>
+arg_4,<scrubbed>
+arg_5,<scrubbed>
+arg_6,<scrubbed>
+arg_7,<scrubbed>
+arg_8,<scrubbed>
+arg_9,<scrubbed>
+arg_10,<scrubbed>
+arg_11,<scrubbed>
+arg_12,<scrubbed>
+arg_13,<scrubbed>
+arg_14,<scrubbed>
+arg_15,<scrubbed>
+arg_16,<scrubbed>
+arg_17,<scrubbed>
+arg_18,<scrubbed>
+arg_19,<scrubbed>
+arg_20,<scrubbed>

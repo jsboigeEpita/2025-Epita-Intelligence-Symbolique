@@ -2,61 +2,61 @@
   "nodes": [
     {
       "id": "arg_1",
-      "label": "arguments",
+      "label": "arg_1",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_2",
-      "label": "premisses: L'Ukraine moderne a été créée artificiellement pa",
+      "label": "arg_2",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_3",
-      "label": "premisses: Les frontières et droits des républiques soviétiq",
+      "label": "arg_3",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_4",
-      "label": "premisses: Après 1991, la Russie a soutenu économiquement l'",
+      "label": "arg_4",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_5",
-      "label": "premisses: Depuis les années 1990 et surtout après 2014, l'U",
+      "label": "arg_5",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_6",
-      "label": "premisses: L'OTAN et les États-Unis ont promis de ne pas éte",
+      "label": "arg_6",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_7",
-      "label": "arguments",
+      "label": "arg_7",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_8",
-      "label": "arguments",
+      "label": "arg_8",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_9",
-      "label": "arguments",
+      "label": "arg_9",
       "type": "argument",
       "metadata": {}
     },
     {
       "id": "arg_10",
-      "label": "arg_2: premisses: L'Ukraine moderne a été créée artificielle",
+      "label": "arg_10",
       "type": "argument",
       "metadata": {}
     },
@@ -67,7 +67,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "Affirme que l’origine historique (création par les bolcheviks/la Russie) détermine la légitimité actuelle de l’Ukraine — rejet/acceptation basé seulement sur l’origine.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_5"
         }
       }
@@ -79,7 +79,7 @@
       "metadata": {
         "data": {
           "type": "Appel à la peur",
-          "justification": "Le discours exagère et instrumentalise une menace militaire (détails sur Tomahawk, temps de vol, 'couteau à la gorge') pour justifier des mesures préventives. Extrait: «Le temps de vol... moins de 35 minutes... C’est comme un couteau à la gorge.» Ceci mobilise la peur pour légitimer une réponse.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_6"
         }
       }
@@ -91,7 +91,7 @@
       "metadata": {
         "data": {
           "type": "Homogénéisation / Caracterisation hâtive",
-          "justification": "Généralise que l'ensemble du régime et de la société ukrainienne est néo-nazi ou russophobe sur la base d'exemples et de certains groupes marginalisés, sans preuve proportionnée.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_5"
         }
       }
@@ -103,7 +103,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "Argue que parce que l'Ukraine a été créée par les bolcheviks, sa légitimité actuelle est invalide ou inférieure — rejeton fallacieux basé sur l'origine historique.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -115,7 +115,7 @@
       "metadata": {
         "data": {
           "type": "Appel à l'appartenance",
-          "justification": "Le passage présente Ukraine comme 'une partie inaliénable de notre histoire' et invoque liens de sang et camaraderie pour légitimer une revendication politique — argument basé sur l'appartenance plutôt que des raisons politiques objectives.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_3"
         }
       }
@@ -127,7 +127,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "L’argument rejette la légitimité actuelle de l’Ukraine en se fondant uniquement sur son origine (création par les bolchéviques), sans discuter de sa réalité présente — extrait : “modern Ukraine was entirely created by Russia… Nobody asked the millions of people living there what they thought.”",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -139,7 +139,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "Le raisonnement rejette la légitimité d’un État moderne en se fondant uniquement sur son origine historique (création par les bolcheviks) et conclut que cela légitime des revendications russes. C’est une attaque basée sur l’origine plutôt que sur des preuves actuelles.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -151,7 +151,7 @@
       "metadata": {
         "data": {
           "type": "Simplicité causale",
-          "justification": "Le discours attribue principalement au bolchevisme/PCUS la responsabilité de l'effondrement de l'URSS et de la formation de l'Ukraine indépendante, ignorant la multiplicité des causes (facteurs économiques, politiques, mouvements nationaux, acteurs externes). C'est une réduction abusive de la causalité.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_3"
         }
       }
@@ -163,7 +163,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "Rejette la légitimité actuelle de l'Ukraine en se fondant uniquement sur son origine historique (création par les bolcheviks/transferts territoriaux), confondant origine et souveraineté contemporaine.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -175,7 +175,7 @@
       "metadata": {
         "data": {
           "type": "Deux torts font un droit",
-          "justification": "Justifie une conduite russe en invoquant les mauvais actes présumés de l'Ukraine (logique «si l’autre a mal agi, nous avons le droit»), ce qui légitime la rétorsion plutôt qu'une analyse normative objective.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_4"
         }
       }
@@ -187,7 +187,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur critères juridiques ou consentement contemporain.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -199,7 +199,7 @@
       "metadata": {
         "data": {
           "type": "Cause unique",
-          "justification": "Attribution excessive d'une cause unique (les politiques bolcheviques/PCUS) à l'effondrement de l'URSS.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_3"
         }
       }
@@ -211,7 +211,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (transferts soviétiques) plutôt que sur des critères contemporains.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -223,7 +223,7 @@
       "metadata": {
         "data": {
           "type": "Sophisme génétique",
-          "justification": "L'argument rejette la légitimité actuelle en se fondant sur l'origine historique (création par les bolcheviks) plutôt que sur des critères contemporains.",
+          "justification": "<scrubbed>",
           "target_argument_id": "arg_2"
         }
       }
@@ -310,37 +310,37 @@
     },
     {
       "id": "ca_1",
-      "label": "Type de faiblesse: Sophisme génétique. Citation: \"modern Ukr",
+      "label": "<scrubbed>",
       "type": "counter_argument",
       "metadata": {}
     },
     {
       "id": "qual_arg_2",
-      "label": "Q:0.3",
+      "label": "qual_arg_2",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_3",
-      "label": "Q:0.4",
+      "label": "qual_arg_3",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_4",
-      "label": "Q:0.3",
+      "label": "qual_arg_4",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_5",
-      "label": "Q:0.3",
+      "label": "qual_arg_5",
       "type": "quality_score",
       "metadata": {}
     },
     {
       "id": "qual_arg_6",
-      "label": "Q:0.4",
+      "label": "qual_arg_6",
       "type": "quality_score",
       "metadata": {}
     }
