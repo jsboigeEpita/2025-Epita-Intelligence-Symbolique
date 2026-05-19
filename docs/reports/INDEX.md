@@ -14,7 +14,7 @@ The SCDA (Spectacular Conversational Discourse Analysis) reports document the de
 
 | Directory | Description |
 |-----------|-------------|
-| [spectacular/](spectacular/) | Full artefact bundle: state dumps (6 formats), balance reports, cross-reference graphs, re-prompt traces for corpora A/B/C |
+| [spectacular/](spectacular/) | Full artefact bundle: state dumps (5 formats), balance reports, cross-reference graphs, re-prompt traces for corpora A/B/C (42 files, ~454K) |
 
 ### Sprint Audit Trail (chronological)
 
