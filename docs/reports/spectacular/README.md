@@ -18,7 +18,8 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | Human-readable state dump | `corpus_A.md`, `corpus_B.md`, `corpus_C.md` |
 | Interactive HTML presentation | `corpus_A.html` (collapsible sections + summary cards) |
 | Conversation balance per corpus | `balance_corpus_A.md`, `balance_corpus_B.md`, `balance_corpus_C.md` |
-| Cross-reference graph visualization | `cross_ref_graph_corpus_A.mmd` (Mermaid), `*.dot` (Graphviz) |
+| Interactive cross-ref graph explorer | `cross_ref_viz.html` (open in browser — D3.js, filter by edge type, corpus dropdown) |
+| Static cross-reference graphs | `cross_ref_graph_corpus_A.mmd` (Mermaid), `*.dot` (Graphviz) |
 | Re-prompt trace evidence | `reprompt_trace_corpus_A.json` |
 | Machine-readable state | `corpus_A.json` |
 | Spreadsheet analysis | `A/csv/args.csv`, `A/csv/fallacies.csv`, etc. |
@@ -41,8 +42,9 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 - `balance_corpus_B.md`
 - `balance_corpus_C.md`
 
-### Cross-Reference Graphs (Track Q, 3 formats × 3 corpora)
+### Cross-Reference Graphs (Track Q + R, 4 formats × 3 corpora)
 
+- `cross_ref_viz.html` — **Interactive D3.js visualizer** (force-directed layout, edge-type filters, corpus dropdown, hover tooltips, zoom/pan)
 - `cross_ref_graph_corpus_A.json` — Full graph data (nodes + edges + metadata)
 - `cross_ref_graph_corpus_A.dot` — Graphviz DOT format
 - `cross_ref_graph_corpus_A.mmd` — Mermaid diagram (renderable in GitHub)
@@ -62,7 +64,8 @@ Full artefact bundle for Epic #530 (Spectacular Demonstrator for Conversational 
 | "Can you export in multiple formats?" | 15+ state dump files across 5 formats | JSON, XML, Markdown, CSV, HTML |
 | "How do you handle LLM failures?" | `reprompt_trace_corpus_*.json` | Fingerprint-delta tracking, ok/reran/gave_up outcomes (12 events across 3 corpora) |
 | "What fallacies are detected?" | `corpus_*.md` fallacy section | 44 total fallacies across 3 corpora, 6 families |
-| "How do formal methods connect?" | `cross_ref_graph_corpus_*.mmd` | Visual showing argument→fallacy→JTMS→BR cascade |
+| "How do formal methods connect?" | `cross_ref_viz.html` | Interactive explorer: argument→fallacy→JTMS→BR cascade, filter by edge type, switch corpus |
+| "How do formal methods connect?" (static) | `cross_ref_graph_corpus_*.mmd` | Visual showing argument→fallacy→JTMS→BR cascade |
 
 ## Privacy
 
