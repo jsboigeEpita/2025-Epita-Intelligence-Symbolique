@@ -43,6 +43,7 @@ CORPORA = {
     "A": ROOT / "outputs/scda_audit/corpus_dense_A",
     "B": ROOT / "outputs/scda_audit/corpus_dense_B",
     "C": ROOT / "outputs/scda_audit/corpus_dense_C",
+    "D": ROOT / "outputs/scda_audit/corpus_dense_D",
 }
 
 OUT_DIR = ROOT / "docs/reports/spectacular"

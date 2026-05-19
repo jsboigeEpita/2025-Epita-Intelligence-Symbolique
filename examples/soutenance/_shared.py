@@ -49,6 +49,16 @@ CORPORA = {
             "unique_formal_categories": {"min": 3},
         },
     },
+    "D": {
+        "src_idx": 0,
+        "label": "corpus_dense_D",
+        "desc": "EN dense (~99K)",
+        "tolerance": {
+            "arguments_found": {"target": 15, "delta": 5},
+            "fallacies_found": {"target": 10, "delta": 5},
+            "unique_formal_categories": {"min": 3},
+        },
+    },
 }
 
 
