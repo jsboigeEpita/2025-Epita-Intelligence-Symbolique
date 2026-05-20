@@ -970,12 +970,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             :80
         ]
 
-    arg_beliefs = [_text(a) for a in raw_args[:10]]
+    _raw_arg_texts = [_text(a) for a in raw_args[:10]]
     claim_beliefs = [_text(c) for c in raw_claims[:6]]
 
-    if not arg_beliefs and not claim_beliefs:
+    if not _raw_arg_texts and not claim_beliefs:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
-        arg_beliefs = [s[:80] for s in sentences[:8]]
+        _raw_arg_texts = [s[:73] for s in sentences[:8]]
+
+    # Prefix each belief name with its arg_id so compute_argument_convergence
+    # can index JTMS signals by arg_id (startswith "arg_N:").  Without the
+    # prefix, names are raw text excerpts and the arg_id substring check never
+    # matches, silently dropping the JTMS convergence signal for every corpus.
+    arg_beliefs = [f"arg_{i+1}:{t[:66]}" for i, t in enumerate(_raw_arg_texts)]
 
     # ── Step 1: Add argument and claim beliefs (with ExtendedBelief metadata) ─
     for i, name in enumerate(arg_beliefs + claim_beliefs):
@@ -3050,7 +3056,9 @@ async def _invoke_hierarchical_fallacy_per_argument(
         arguments = _extract_arguments_for_parallel(input_text, context)
 
         if not arguments:
-            logger.info("No individual arguments extracted — falling back to single-text analysis")
+            logger.info(
+                "No individual arguments extracted — falling back to single-text analysis"
+            )
             return await _invoke_hierarchical_fallacy(input_text, context)
 
         logger.info(
@@ -3123,8 +3131,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
 
         # Parallel execution via asyncio.gather
         tasks = [
-            _analyze_single_arg(arg_text, arg_id)
-            for arg_id, arg_text in arguments
+            _analyze_single_arg(arg_text, arg_id) for arg_id, arg_text in arguments
         ]
         per_arg_results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -3162,16 +3169,25 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 continue
             seen[key] = f
             deduped = [
-                x for x in deduped
-                if (str(x.get("taxonomy_pk") or x.get("fallacy_type") or ""), str(x.get("source_arg_id") or "")) != key
+                x
+                for x in deduped
+                if (
+                    str(x.get("taxonomy_pk") or x.get("fallacy_type") or ""),
+                    str(x.get("source_arg_id") or ""),
+                )
+                != key
             ]
             deduped.append(f)
 
-        exploration_method = "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
+        exploration_method = (
+            "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
+        )
 
         logger.info(
             "Parent harness: %d fallacies from %d arguments (deduped to %d)",
-            len(all_fallacies), len(arguments), len(deduped),
+            len(all_fallacies),
+            len(arguments),
+            len(deduped),
         )
 
         return {
@@ -3193,6 +3209,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
         }
     except Exception as e:
         import traceback
+
         logger.error(
             "Per-argument hierarchical fallacy detection failed:\n%s",
             traceback.format_exc(),
@@ -3241,7 +3258,11 @@ def _extract_arguments_for_parallel(
     # Source 3: split by paragraph breaks (heuristic fallback)
     paragraphs = [p.strip() for p in input_text.split("\n\n") if p.strip()]
     if len(paragraphs) >= 2:
-        return [(f"paragraph_{i+1}", p) for i, p in enumerate(paragraphs[:10]) if len(p) > 20]
+        return [
+            (f"paragraph_{i+1}", p)
+            for i, p in enumerate(paragraphs[:10])
+            if len(p) > 20
+        ]
 
     return []
 
@@ -3436,7 +3457,9 @@ async def _invoke_propositional_logic(
 
                 api_key = os.environ.get("OPENAI_API_KEY", "")
                 if api_key and input_text and len(input_text) > 100:
-                    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                    base_url = os.environ.get(
+                        "OPENAI_BASE_URL", "https://api.openai.com/v1"
+                    )
                     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
                     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
@@ -3460,19 +3483,29 @@ async def _invoke_propositional_logic(
                     raw_atoms = props_data.get("propositions", [])
 
                     # Validate atoms: must be alphanumeric + underscore
-                    valid_atoms = [a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)]
+                    valid_atoms = [
+                        a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
+                    ]
                     if valid_atoms:
                         shared_atoms = valid_atoms
-                        logger.info(f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted from full text")
+                        logger.info(
+                            f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted from full text"
+                        )
 
                         # Store in state
-                        if state_obj is not None and hasattr(state_obj, "atomic_propositions"):
-                            source_id = context.get("source_metadata", {}).get("opaque_id", "default")
+                        if state_obj is not None and hasattr(
+                            state_obj, "atomic_propositions"
+                        ):
+                            source_id = context.get("source_metadata", {}).get(
+                                "opaque_id", "default"
+                            )
                             state_obj.atomic_propositions[source_id] = shared_atoms
 
                     # ── Pass 2: Per-argument formula generation with shared atoms ──
                     if shared_atoms and args:
-                        atoms_json = _json.dumps({"propositions": shared_atoms}, indent=2)
+                        atoms_json = _json.dumps(
+                            {"propositions": shared_atoms}, indent=2
+                        )
                         for arg_text in args[:6]:
                             pass2_prompt = (
                                 "You are an expert in propositional logic. Translate the text "
@@ -3488,7 +3521,9 @@ async def _invoke_propositional_logic(
                             try:
                                 pass2_resp = await client.chat.completions.create(
                                     model=model_id,
-                                    messages=[{"role": "user", "content": pass2_prompt}],
+                                    messages=[
+                                        {"role": "user", "content": pass2_prompt}
+                                    ],
                                 )
                                 pass2_raw = pass2_resp.choices[0].message.content or ""
                                 formulas_data = _parse_json_from_llm(pass2_raw)
@@ -3556,6 +3591,7 @@ async def _invoke_propositional_logic(
         from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
             PLFormulaSanitizer,
         )
+
         sanitizer = PLFormulaSanitizer()
         san_result = sanitizer.sanitize_batch(formulas)
         if san_result.sanitized_formulas:
@@ -3661,7 +3697,9 @@ async def _invoke_fol_reasoning(
 
                 api_key = os.environ.get("OPENAI_API_KEY", "")
                 if api_key and input_text and len(input_text) > 100:
-                    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                    base_url = os.environ.get(
+                        "OPENAI_BASE_URL", "https://api.openai.com/v1"
+                    )
                     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
                     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
@@ -3709,9 +3747,15 @@ async def _invoke_fol_reasoning(
                         )
 
                         # Store in state
-                        if state_obj is not None and hasattr(state_obj, "fol_shared_signature"):
-                            source_id = context.get("source_metadata", {}).get("opaque_id", "default")
-                            state_obj.fol_shared_signature[source_id] = fol_metadata_shared
+                        if state_obj is not None and hasattr(
+                            state_obj, "fol_shared_signature"
+                        ):
+                            source_id = context.get("source_metadata", {}).get(
+                                "opaque_id", "default"
+                            )
+                            state_obj.fol_shared_signature[source_id] = (
+                                fol_metadata_shared
+                            )
 
                         # ── Pass 2: Per-argument FOL formula generation ──
                         if args:
@@ -3733,9 +3777,13 @@ async def _invoke_fol_reasoning(
                                 try:
                                     pass2_resp = await client.chat.completions.create(
                                         model=model_id,
-                                        messages=[{"role": "user", "content": pass2_prompt}],
+                                        messages=[
+                                            {"role": "user", "content": pass2_prompt}
+                                        ],
                                     )
-                                    pass2_raw = pass2_resp.choices[0].message.content or ""
+                                    pass2_raw = (
+                                        pass2_resp.choices[0].message.content or ""
+                                    )
                                     formulas_data = _parse_json_from_llm(pass2_raw)
                                     arg_formulas = formulas_data.get("formulas", [])
                                     for f in arg_formulas:
@@ -3743,7 +3791,9 @@ async def _invoke_fol_reasoning(
                                         if f and f not in formulas:
                                             formulas.append(f)
                                 except Exception as arg_err:
-                                    logger.debug(f"FOL Pass 2 failed for argument: {arg_err}")
+                                    logger.debug(
+                                        f"FOL Pass 2 failed for argument: {arg_err}"
+                                    )
 
                             if formulas:
                                 logger.info(
@@ -4804,23 +4854,31 @@ async def _invoke_deep_synthesis(
             report = await agent.synthesize(state, source_metadata=source_meta)
         except (ValueError, Exception) as agent_err:
             # Agent init failed (no LLM service) — use static builders directly
-            logger.info(f"Agent instantiation failed ({agent_err}), using static builders")
+            logger.info(
+                f"Agent instantiation failed ({agent_err}), using static builders"
+            )
             source_meta = context.get("source_metadata", {})
             report = DeepSynthesisReport(
-                source_overview=DeepSynthesisAgent._build_source_overview(state, source_meta),
+                source_overview=DeepSynthesisAgent._build_source_overview(
+                    state, source_meta
+                ),
                 argument_map=DeepSynthesisAgent._build_argument_map(state),
                 fallacy_diagnoses=DeepSynthesisAgent._build_fallacy_diagnoses(state),
                 formal_findings=DeepSynthesisAgent._build_formal_findings(state),
                 dung_structure=DeepSynthesisAgent._build_dung_structure(state),
                 belief_retractions=DeepSynthesisAgent._build_belief_retractions(state),
                 counter_arguments=DeepSynthesisAgent._build_counter_arguments(state),
-                cross_text_parallels=DeepSynthesisAgent._build_cross_text_parallels(state),
+                cross_text_parallels=DeepSynthesisAgent._build_cross_text_parallels(
+                    state
+                ),
             )
             report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
                 state, report, []
             )
             report.total_state_fields = DeepSynthesisAgent._count_state_fields(state)
-            report.sections_populated = DeepSynthesisAgent._count_populated_sections(report)
+            report.sections_populated = DeepSynthesisAgent._count_populated_sections(
+                report
+            )
 
         markdown = DeepSynthesisAgent.render_markdown(report)
 
