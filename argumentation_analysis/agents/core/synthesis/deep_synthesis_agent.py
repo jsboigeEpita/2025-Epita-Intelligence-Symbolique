@@ -125,9 +125,10 @@ class DeepSynthesisAgent(BaseAgent):
 
         # Convergence layer (Track DD #637) — cross-method agreement, computed
         # before section 9 so both the LLM and template thesis can ground in it.
-        report.convergent_verdicts, report.convergence_conclusion = (
-            self._build_convergent_verdicts(state)
-        )
+        (
+            report.convergent_verdicts,
+            report.convergence_conclusion,
+        ) = self._build_convergent_verdicts(state)
 
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
@@ -321,8 +322,10 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_belief_retractions(state: Any) -> List[BeliefRetraction]:
+        retractions: List[BeliefRetraction] = []
+
+        # Source 1: JTMS retraction cascade chain (jtms_core → jtms_retraction_chain)
         chain = getattr(state, "jtms_retraction_chain", [])
-        retractions = []
         for entry in chain:
             retractions.append(
                 BeliefRetraction(
@@ -331,6 +334,26 @@ class DeepSynthesisAgent(BaseAgent):
                     trigger=entry.get("trigger", ""),
                 )
             )
+
+        # Source 2: AGM belief revision results (conversational_orchestrator
+        # _run_belief_revision_from_state → belief_revision_results).
+        # Each entry has {id, method, original: List[str], revised: List[str]}.
+        # Beliefs present in original but absent from revised were contracted.
+        br_results = getattr(state, "belief_revision_results", [])
+        for br in br_results:
+            original = set(br.get("original", []))
+            revised = set(br.get("revised", []))
+            contracted = original - revised
+            method = br.get("method", "unknown")
+            for belief in contracted:
+                retractions.append(
+                    BeliefRetraction(
+                        belief_name=belief,
+                        was_valid=True,
+                        trigger=f"{method}_contraction",
+                    )
+                )
+
         return retractions
 
     @staticmethod
