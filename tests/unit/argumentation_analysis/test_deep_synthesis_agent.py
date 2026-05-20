@@ -8,6 +8,9 @@ Section builders are tested via static method calls on the class.
 """
 
 import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
@@ -444,3 +447,93 @@ class TestConvergenceWiring:
         )
         assert "Convergent Verdicts" in result["markdown"]
         assert "Verdict convergent sur arg_2" in result["markdown"]
+
+
+class TestConvergenceProse:
+    """Track GG #644 — wire CC's LLM prose into the convergence section.
+
+    The section must render LLM prose when a kernel produces it, and fall back
+    to the template verdict statements otherwise. ``_llm_convergence_prose`` is
+    exercised against a stub bearing ``_llm_service_id`` + ``kernel`` so no real
+    SK kernel is needed (consistent with this module's no-instantiation policy).
+    """
+
+    @staticmethod
+    def _run(coro):
+        return asyncio.get_event_loop().run_until_complete(coro)
+
+    def test_prose_returned_when_kernel_present(self):
+        kernel = MagicMock()
+        kernel.get_prompt_execution_settings_from_service_id = MagicMock(
+            return_value=MagicMock()
+        )
+        kernel.invoke_prompt = AsyncMock(
+            return_value="POLISHED CONVERGENCE PROSE citing arg_2 across methods."
+        )
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        prose = self._run(
+            DeepSynthesisAgent._llm_convergence_prose(stub, _convergent_state())
+        )
+        assert prose == "POLISHED CONVERGENCE PROSE citing arg_2 across methods."
+        kernel.invoke_prompt.assert_awaited_once()
+
+    def test_empty_when_no_llm_service(self):
+        stub = SimpleNamespace(_llm_service_id=None, kernel=MagicMock())
+        prose = self._run(
+            DeepSynthesisAgent._llm_convergence_prose(stub, _convergent_state())
+        )
+        assert prose == ""
+
+    def test_empty_when_no_convergent_verdicts(self):
+        # Clean state → build_convergent_synthesis yields no verdicts → no LLM call.
+        state = UnifiedAnalysisState("solid discourse")
+        state.add_argument("robust argument")
+        state.add_quality_score("arg_1", {"clarity": 9.0}, 9.0)
+        kernel = MagicMock()
+        kernel.invoke_prompt = AsyncMock()
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        prose = self._run(DeepSynthesisAgent._llm_convergence_prose(stub, state))
+        assert prose == ""
+        kernel.invoke_prompt.assert_not_awaited()
+
+    def test_empty_on_llm_exception(self):
+        kernel = MagicMock()
+        kernel.get_prompt_execution_settings_from_service_id = MagicMock(
+            return_value=MagicMock()
+        )
+        kernel.invoke_prompt = AsyncMock(side_effect=RuntimeError("LLM down"))
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        prose = self._run(
+            DeepSynthesisAgent._llm_convergence_prose(stub, _convergent_state())
+        )
+        assert prose == ""
+
+    def test_render_uses_prose_when_present(self):
+        state = _convergent_state()
+        report = _build_report_from_state(state)
+        report.convergent_verdicts, report.convergence_conclusion = (
+            DeepSynthesisAgent._build_convergent_verdicts(state)
+        )
+        report.convergence_prose = (
+            "LLM PROSE: arg_2 is undermined by three independent methods."
+        )
+        md = DeepSynthesisAgent.render_markdown(report)
+        assert "LLM PROSE: arg_2 is undermined" in md
+        # The template verdict statement is replaced by the prose, not duplicated.
+        assert "Verdict convergent sur arg_2" not in md
+
+    def test_render_falls_back_to_statements_without_prose(self):
+        state = _convergent_state()
+        report = _build_report_from_state(state)
+        report.convergent_verdicts, report.convergence_conclusion = (
+            DeepSynthesisAgent._build_convergent_verdicts(state)
+        )
+        assert report.convergence_prose == ""  # default
+        md = DeepSynthesisAgent.render_markdown(report)
+        assert "Verdict convergent sur arg_2" in md
+
+    def test_to_dict_includes_convergence_prose(self):
+        report = DeepSynthesisReport()
+        report.convergence_prose = "some prose"
+        d = report.to_dict()
+        assert d["convergence_prose"] == "some prose"

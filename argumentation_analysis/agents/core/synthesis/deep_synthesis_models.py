@@ -130,6 +130,10 @@ class DeepSynthesisReport:
     final_synthesis: str = ""
     convergent_verdicts: List[ConvergentVerdict] = field(default_factory=list)
     convergence_conclusion: str = ""
+    # LLM-polished prose for the convergence section (Track GG #644).
+    # Empty when no kernel is configured or no verdicts exist; renderer then
+    # falls back to the template verdict statements.
+    convergence_prose: str = ""
     # Metadata
     report_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     total_state_fields: int = 0
@@ -149,6 +153,7 @@ class DeepSynthesisReport:
             "final_synthesis": self.final_synthesis,
             "convergent_verdicts": [v.__dict__ for v in self.convergent_verdicts],
             "convergence_conclusion": self.convergence_conclusion,
+            "convergence_prose": self.convergence_prose,
             "report_timestamp": self.report_timestamp,
             "total_state_fields": self.total_state_fields,
             "sections_populated": self.sections_populated,
