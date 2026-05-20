@@ -200,10 +200,18 @@ def detect_formal_method_findings(text: str) -> dict:
 
 
 def detect_cross_text_parallels(text: str) -> bool:
-    """Check for intertextual/cross-corpus references."""
+    """Check for *populated* intertextual/cross-corpus references.
+
+    The section heading "Cross-Text Rhetorical Parallels" must not by itself
+    count as a parallel: the DeepSynthesis report always emits the heading, even
+    when the body says "No cross-text parallels in this run". Guard against that
+    explicit-negation false-positive, then look for substantive markers only
+    (the heading-matching "cross-text"/"cross text" tokens are excluded).
+    """
+    low = text.lower()
+    if re.search(r"no cross-text parallels|pas de parall|aucun parall", low):
+        return False
     markers = [
-        "cross-text",
-        "cross text",
         "intertextuel",
         "parallèle",
         "comparison with",
@@ -215,7 +223,66 @@ def detect_cross_text_parallels(text: str) -> bool:
         "récurrence",
         "motif récurrent",
     ]
-    return any(m in text.lower() for m in markers)
+    return any(m in low for m in markers)
+
+
+def count_convergence_depth(text: str) -> dict:
+    """Count cross-method convergent verdicts in a report.
+
+    A convergent verdict — "N independent methods concur on arg_X" — is the one
+    artifact a single LLM pass structurally cannot fabricate: it requires several
+    independent solvers (fallacy / quality / counter-arg / JTMS / Dung) to be run
+    and their agreement tallied. Parsed from the "Convergent Verdicts" section.
+    """
+    # e.g. "**Verdict convergent sur arg_1** : 5 methodes independantes ..."
+    pattern = re.compile(
+        r"verdict convergent sur\s+([\w-]+)\D*?(\d+)\s*m[ée]thodes",
+        re.IGNORECASE,
+    )
+    matches = pattern.findall(text)
+    scores = [int(n) for _, n in matches]
+    return {
+        "verdict_count": len(scores),
+        "max_convergence": max(scores) if scores else 0,
+        "total_method_signals": sum(scores),
+    }
+
+
+def detect_computed_artifacts(text: str) -> dict:
+    """Detect *computed* (not merely described) formal artifacts.
+
+    These require concrete solver output — a membership set, an edge list, a
+    numeric measure, a retraction count. A 0-shot that describes Dung/ASPIC in
+    the abstract emits none of them, so they cannot be name-dropped into a win.
+    """
+    low = text.lower()
+    artifacts = {}
+
+    # (a) Grounded-extension *membership set*: an explicit list of arg ids tied
+    #     to the grounded extension (not just the phrase "grounded extension").
+    if re.search(r"grounded extension[^\n]*?(?:contains|:)[^\n]*?\barg_?\d+", low):
+        artifacts["grounded_extension_members"] = True
+
+    # (b) Attack *edge list*: concrete attacker → target relations.
+    edge_count = len(re.findall(r"`[^`]+`\s*(?:→|->)\s*`?arg_?\d+", text))
+    if edge_count == 0:
+        edge_count = len(re.findall(r"→\s*arg_?\d+", text))
+    if edge_count > 0:
+        artifacts["attack_edge_list"] = edge_count
+
+    # (c) Numeric inconsistency / framework measures (a number attached to a
+    #     formal measure, e.g. "11 surviving", "inconsistency: 0.4").
+    if re.search(r"(?:inconsisten|inconsistan)\w*[^\n]*?\d", low) or re.search(
+        r"\d+\s+(?:surviving|defeated|strict|defeasible)\b", low
+    ):
+        artifacts["inconsistency_measures"] = True
+
+    # (d) JTMS retraction / belief-contraction *count*.
+    m = re.search(r"(\d+)\s+(?:beliefs?\s+)?(?:contracted|retract\w*)", low)
+    if m and int(m.group(1)) > 0:
+        artifacts["jtms_retraction_count"] = int(m.group(1))
+
+    return artifacts
 
 
 def analyze_report(text: str) -> dict:
@@ -225,6 +292,8 @@ def analyze_report(text: str) -> dict:
         "named_fallacies": count_named_fallacies_with_taxonomy(text),
         "formal_method_findings": detect_formal_method_findings(text),
         "has_cross_text_parallels": detect_cross_text_parallels(text),
+        "convergence": count_convergence_depth(text),
+        "computed_artifacts": detect_computed_artifacts(text),
         "word_count": len(text.split()),
         "section_count": len(re.findall(r"^#{1,3}\s", text, re.MULTILINE)),
     }
@@ -403,7 +472,27 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
         "baseline": bl_analysis.get("has_cross_text_parallels", False),
     }
 
-    # Verdict
+    # Convergence depth (substance: unfakeable by a 0-shot)
+    ds_conv = ds_analysis.get("convergence", {})
+    bl_conv = bl_analysis.get("convergence", {})
+    comparison["deltas"]["convergence_depth"] = {
+        "pipeline": ds_conv.get("verdict_count", 0),
+        "baseline": bl_conv.get("verdict_count", 0),
+        "delta": ds_conv.get("verdict_count", 0) - bl_conv.get("verdict_count", 0),
+        "pipeline_max_convergence": ds_conv.get("max_convergence", 0),
+    }
+
+    # Computed artifacts (substance: concrete solver output, not name-dropping)
+    ds_art = ds_analysis.get("computed_artifacts", {})
+    bl_art = bl_analysis.get("computed_artifacts", {})
+    comparison["deltas"]["computed_artifacts"] = {
+        "pipeline": list(ds_art.keys()),
+        "baseline": list(bl_art.keys()),
+        "pipeline_unique": list(set(ds_art.keys()) - set(bl_art.keys())),
+    }
+
+    # Verdict — surface (vocabulary) + substance (computation) categories.
+    # The substance categories are the ones a 0-shot structurally cannot win.
     pipeline_advantages = []
     if comparison["deltas"]["textual_citations"]["delta"] > 0:
         pipeline_advantages.append("more_textual_citations")
@@ -416,10 +505,21 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
         and not comparison["deltas"]["cross_text_parallels"]["baseline"]
     ):
         pipeline_advantages.append("cross_text_parallels_unique")
+    if comparison["deltas"]["convergence_depth"]["delta"] > 0:
+        pipeline_advantages.append("convergence_depth_unique")
+    if comparison["deltas"]["computed_artifacts"]["pipeline_unique"]:
+        pipeline_advantages.append("computed_artifacts_unique")
 
+    substance_categories = [
+        c
+        for c in pipeline_advantages
+        if c in ("convergence_depth_unique", "computed_artifacts_unique")
+    ]
     comparison["verdict"] = {
         "pipeline_advantage_categories": pipeline_advantages,
+        "substance_advantage_categories": substance_categories,
         "meets_threshold": len(pipeline_advantages) >= 3,
+        "meets_substance_threshold": len(substance_categories) >= 1,
     }
 
     # Save comparison
@@ -446,8 +546,18 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
     print(
         f"Cross-text parallels: pipeline={ds_analysis.get('has_cross_text_parallels', False)}, baseline={bl_analysis.get('has_cross_text_parallels', False)}"
     )
+    print(
+        f"Convergence verdicts: pipeline={ds_conv.get('verdict_count', 0)} (max {ds_conv.get('max_convergence', 0)} methods), baseline={bl_conv.get('verdict_count', 0)}"
+    )
+    print(
+        f"Computed artifacts: pipeline={list(ds_art.keys())}, baseline={list(bl_art.keys())}"
+    )
     print(f"Pipeline advantages: {pipeline_advantages}")
+    print(f"  of which SUBSTANCE (unfakeable): {substance_categories}")
     print(f"Meets ≥3 categories threshold: {comparison['verdict']['meets_threshold']}")
+    print(
+        f"Meets substance threshold (≥1): {comparison['verdict']['meets_substance_threshold']}"
+    )
     print(f"\nSaved to {out_dir}/")
 
     return comparison
@@ -478,8 +588,13 @@ async def main():
             label = c["corpus_label"]
             v = c["verdict"]
             icon = "PASS" if v["meets_threshold"] else "FAIL"
+            sub = (
+                "SUBSTANCE-WIN"
+                if v.get("meets_substance_threshold")
+                else "no-substance"
+            )
             print(
-                f"  [{icon}] {label}: {len(v['pipeline_advantage_categories'])} advantage categories — {v['pipeline_advantage_categories']}"
+                f"  [{icon}] [{sub}] {label}: {len(v['pipeline_advantage_categories'])} advantage categories — {v['pipeline_advantage_categories']}"
             )
 
 

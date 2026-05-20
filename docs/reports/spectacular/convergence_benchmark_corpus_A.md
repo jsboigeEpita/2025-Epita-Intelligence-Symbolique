@@ -100,3 +100,52 @@ described) in the baseline — and **none are in the scoring rubric**:
 Once (1) lands, re-run on corpora A/B/C: the expectation is that the pipeline's
 margin widens decisively on the *substance* metrics even where it ties or trails on
 the surface ones — which is the honest definition of "spectacular" for this system.
+
+---
+
+## 7. Track EE result — hardened substance rubric (#641)
+
+The recommendations in §6.1 and §6.2 are now implemented. Re-ran corpus A under
+the hardened rubric (cached pipeline report, freshly regenerated 0-shot baseline).
+
+### Surface vs substance, side by side
+
+| Dimension | Type | Pipeline | 0-shot | Winner |
+|---|---|---|---|---|
+| Textual citations | surface | 85 | **106** | 0-shot |
+| Named fallacies | surface | 6 | **8** | 0-shot |
+| Formal methods (named) | surface | 4 | **5** | 0-shot |
+| Cross-text parallels | surface (fixed) | false | false | — (phantom win removed) |
+| **Convergence verdicts** | **substance** | **5 (max 5 methods)** | **0** | **pipeline** |
+| **Computed artifacts** | **substance** | **grounded-ext members + attack edge list** | **none** | **pipeline** |
+
+Verdict: `meets ≥3 overall: False` · **`meets_substance_threshold (≥1): True`**.
+
+### What this proves
+
+This is the sharp, honest answer to *"is the analysis spectacular vs a 0-shot?"*:
+
+- On every **fakeable surface metric**, a strong 0-shot now **matches or beats** the
+  pipeline (it produced *more* citations and *more* fallacy names this run). The
+  surface gap is not just closed — it can reverse with baseline variance. Chasing
+  surface metrics is a dead end.
+- On the **unfakeable substance metrics**, the pipeline wins **2/2 and the 0-shot
+  scores 0/2**, exactly as predicted. A single LLM pass cannot run five independent
+  solvers and tally their agreement (5 convergent verdicts, `arg_1` by 5 methods),
+  nor emit a computed grounded-extension membership set and attack edge list.
+
+### Consequence for the bar
+
+The `≥3 advantage categories` threshold is the **wrong bar** — it pools fakeable and
+unfakeable categories, so a name-dropping 0-shot can deny the pipeline a "pass" on
+metrics that prove nothing. The meaningful bar is **`meets_substance_threshold`**:
+does the pipeline win on at least one dimension a 0-shot structurally cannot fake?
+On corpus A: **yes, decisively (2/2, baseline 0).** That is where the spectacular
+value lives, and it is now measured.
+
+### Still open
+- The cross-text fix removed a phantom advantage; the pipeline's S8 is genuinely
+  empty for single-corpus runs (cross-corpus parallels need a multi-corpus run).
+- §6.3 (Belief Revision Trace) → tracked in **#642 (Track FF)**, not in this PR.
+- §6.4 (PL formula bottleneck) remains.
+- B/C/D re-runs under the hardened rubric are the natural confirmatory follow-up.
