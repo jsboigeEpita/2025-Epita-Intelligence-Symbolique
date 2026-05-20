@@ -56,21 +56,25 @@ def _make_fixture_state() -> UnifiedAnalysisState:
 
     # Belief sets + query log (Section 4)
     state.add_belief_set("propositional", "p => q\np")
-    state.query_log.append({
-        "log_id": "log_1",
-        "belief_set_id": "bs_1",
-        "query": "q",
-        "raw_result": "ENTAILMENT: q is entailed",
-    })
+    state.query_log.append(
+        {
+            "log_id": "log_1",
+            "belief_set_id": "bs_1",
+            "query": "q",
+            "raw_result": "ENTAILMENT: q is entailed",
+        }
+    )
 
     # Propositional analysis (Section 4)
-    state.propositional_analysis_results.append({
-        "axioms": ["p => q", "p"],
-        "queries": ["q"],
-        "results": ["q is entailed"],
-        "inconsistency_measures": {"drastic": 0},
-        "linked_args": ["arg_1"],
-    })
+    state.propositional_analysis_results.append(
+        {
+            "axioms": ["p => q", "p"],
+            "queries": ["q"],
+            "results": ["q is entailed"],
+            "inconsistency_measures": {"drastic": 0},
+            "linked_args": ["arg_1"],
+        }
+    )
 
     # Dung framework (Section 5)
     state.add_dung_framework(
@@ -86,11 +90,13 @@ def _make_fixture_state() -> UnifiedAnalysisState:
 
     # JTMS beliefs + retractions (Section 6)
     state.add_jtms_belief("sovereignty_threatened", True, ["arg_1 supports"])
-    state.jtms_retraction_chain.append({
-        "belief_name": "sovereignty_threatened",
-        "was_valid": True,
-        "trigger": "Contradicted by cooperation evidence (arg_3)",
-    })
+    state.jtms_retraction_chain.append(
+        {
+            "belief_name": "sovereignty_threatened",
+            "was_valid": True,
+            "trigger": "Contradicted by cooperation evidence (arg_3)",
+        }
+    )
 
     # Counter-arguments (Section 7)
     state.add_counter_argument(
@@ -133,6 +139,7 @@ def _build_report_from_state(state, meta=None):
 # Test: Helpers
 # =========================================================================
 
+
 class TestHelpers:
 
     def test_infer_stance_pro(self):
@@ -158,7 +165,9 @@ class TestHelpers:
     def test_count_populated_sections_partial(self):
         report = DeepSynthesisReport()
         report.source_overview = SourceOverview(length_chars=100)
-        report.argument_map = [ArgumentMapEntry(arg_id="a1", stance="pro", description="test")]
+        report.argument_map = [
+            ArgumentMapEntry(arg_id="a1", stance="pro", description="test")
+        ]
         assert DeepSynthesisAgent._count_populated_sections(report) == 2
 
     def test_count_state_fields(self):
@@ -170,6 +179,7 @@ class TestHelpers:
 # =========================================================================
 # Test: Section builders (1–9)
 # =========================================================================
+
 
 class TestSectionBuilders:
 
@@ -246,11 +256,17 @@ class TestSectionBuilders:
 # Test: Markdown rendering
 # =========================================================================
 
+
 class TestMarkdownRendering:
 
     def test_render_full_report(self):
         state = _make_fixture_state()
-        meta = {"opaque_id": "test_corpus", "era": "2020s", "language": "en", "discourse_type": "populist"}
+        meta = {
+            "opaque_id": "test_corpus",
+            "era": "2020s",
+            "language": "en",
+            "discourse_type": "populist",
+        }
         report = _build_report_from_state(state, meta)
 
         md = DeepSynthesisAgent.render_markdown(report)
@@ -266,7 +282,12 @@ class TestMarkdownRendering:
 
     def test_render_minimum_length(self):
         state = _make_fixture_state()
-        meta = {"opaque_id": "test_corpus", "era": "2020s", "language": "en", "discourse_type": "populist"}
+        meta = {
+            "opaque_id": "test_corpus",
+            "era": "2020s",
+            "language": "en",
+            "discourse_type": "populist",
+        }
         report = _build_report_from_state(state, meta)
         md = DeepSynthesisAgent.render_markdown(report)
         assert len(md) >= 1500
@@ -285,12 +306,14 @@ class TestMarkdownRendering:
 # Test: Invoke callable
 # =========================================================================
 
+
 class TestInvokeCallable:
 
     def test_invoke_no_state(self):
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_deep_synthesis,
         )
+
         result = asyncio.get_event_loop().run_until_complete(
             _invoke_deep_synthesis("", {})
         )
@@ -300,10 +323,16 @@ class TestInvokeCallable:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_deep_synthesis,
         )
+
         state = _make_fixture_state()
         context = {
             "_state_object": state,
-            "source_metadata": {"opaque_id": "test", "era": "2020s", "language": "en", "discourse_type": "populist"},
+            "source_metadata": {
+                "opaque_id": "test",
+                "era": "2020s",
+                "language": "en",
+                "discourse_type": "populist",
+            },
         }
         result = asyncio.get_event_loop().run_until_complete(
             _invoke_deep_synthesis("", context)
@@ -312,3 +341,106 @@ class TestInvokeCallable:
         assert "markdown" in result
         assert result["sections_populated"] >= 4
         assert "## 1. Source Overview" in result["markdown"]
+
+
+# =========================================================================
+# Test: Convergence wiring (Track DD #637)
+# =========================================================================
+
+
+def _convergent_state() -> UnifiedAnalysisState:
+    """State where arg_2 is flagged by 3 independent methods."""
+    state = UnifiedAnalysisState("Discourse with a multiply-flawed argument.")
+    state.add_argument("clean argument")  # arg_1 — no signals
+    state.add_argument("multiply flawed argument")  # arg_2
+    state.add_fallacy("false_dilemma", "either/or framing", "arg_2")
+    state.add_quality_score("arg_2", {"coherence": 1.0}, 2.0)  # < 5.0
+    state.add_counter_argument(
+        "multiply flawed argument",
+        "reductio counter",
+        "reductio",
+        0.9,
+        target_arg_id="arg_2",
+    )
+    return state
+
+
+class TestConvergenceWiring:
+    """DeepSynthesisAgent surfaces cross-method convergent verdicts (#637)."""
+
+    def test_build_convergent_verdicts_flags_multi_method_arg(self):
+        verdicts, conclusion = DeepSynthesisAgent._build_convergent_verdicts(
+            _convergent_state()
+        )
+        assert any(v.arg_id == "arg_2" for v in verdicts)
+        top = verdicts[0]
+        assert top.arg_id == "arg_2"
+        assert top.score >= 3
+        assert conclusion  # non-empty conclusion line
+
+    def test_clean_arg_not_flagged(self):
+        verdicts, _ = DeepSynthesisAgent._build_convergent_verdicts(_convergent_state())
+        assert all(v.arg_id != "arg_1" for v in verdicts)
+
+    def test_no_signals_returns_empty(self):
+        state = UnifiedAnalysisState("solid discourse")
+        state.add_argument("robust argument")
+        state.add_quality_score("arg_1", {"clarity": 9.0}, 9.0)
+        verdicts, conclusion = DeepSynthesisAgent._build_convergent_verdicts(state)
+        assert verdicts == []
+        assert "robuste" in conclusion or "robust" in conclusion.lower()
+
+    def test_render_markdown_includes_convergent_section(self):
+        state = _convergent_state()
+        report = _build_report_from_state(state)
+        report.convergent_verdicts, report.convergence_conclusion = (
+            DeepSynthesisAgent._build_convergent_verdicts(state)
+        )
+        md = DeepSynthesisAgent.render_markdown(report)
+        assert "## Convergent Verdicts (cross-method agreement)" in md
+        assert "Verdict convergent sur arg_2" in md
+
+    def test_render_markdown_no_convergence_message(self):
+        report = DeepSynthesisReport()
+        md = DeepSynthesisAgent.render_markdown(report)
+        assert "## Convergent Verdicts (cross-method agreement)" in md
+        assert "resists cross-method scrutiny" in md
+
+    def test_final_synthesis_references_convergence(self):
+        state = _convergent_state()
+        report = DeepSynthesisReport(
+            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
+            argument_map=DeepSynthesisAgent._build_argument_map(state),
+            fallacy_diagnoses=DeepSynthesisAgent._build_fallacy_diagnoses(state),
+        )
+        report.convergent_verdicts, report.convergence_conclusion = (
+            DeepSynthesisAgent._build_convergent_verdicts(state)
+        )
+        thesis = asyncio.get_event_loop().run_until_complete(
+            DeepSynthesisAgent._build_final_synthesis(state, report, [])
+        )
+        assert "converge across independent methods" in thesis
+        assert "arg_2" in thesis
+
+    def test_to_dict_includes_convergent_verdicts(self):
+        state = _convergent_state()
+        report = DeepSynthesisReport()
+        report.convergent_verdicts, report.convergence_conclusion = (
+            DeepSynthesisAgent._build_convergent_verdicts(state)
+        )
+        d = report.to_dict()
+        assert "convergent_verdicts" in d
+        assert "convergence_conclusion" in d
+        assert d["convergent_verdicts"][0]["arg_id"] == "arg_2"
+
+    def test_invoke_deep_synthesis_surfaces_convergence(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_deep_synthesis,
+        )
+
+        state = _convergent_state()
+        result = asyncio.get_event_loop().run_until_complete(
+            _invoke_deep_synthesis("", {"_state_object": state})
+        )
+        assert "Convergent Verdicts" in result["markdown"]
+        assert "Verdict convergent sur arg_2" in result["markdown"]
