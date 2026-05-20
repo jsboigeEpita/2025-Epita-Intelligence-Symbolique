@@ -3060,7 +3060,17 @@ async def _invoke_hierarchical_fallacy_per_argument(
 
         # Create plugin instances — one per argument for isolation
         async def _analyze_single_arg(arg_text: str, arg_id: str) -> Dict[str, Any]:
-            """Analyze a single argument with its own plugin instance."""
+            """Analyze a single argument with its own plugin instance.
+
+            On timeout, retry once with the fast one-shot path before giving
+            up (#652 Track II). The full guided analysis (wide-net + iterative
+            deepening) is several LLM calls and exceeds budget under API
+            latency; returning empty here directly starves the report's fallacy
+            section AND the convergence layer (fallacy is one of its inputs).
+            The one-shot is a single taxonomy-mapped call, so it recovers
+            recall cheaply when the API is slow.
+            """
+            plugin = None
             try:
                 async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
                 llm_service = OpenAIChatCompletion(
@@ -3078,13 +3088,34 @@ async def _invoke_hierarchical_fallacy_per_argument(
 
                 result_json = await asyncio.wait_for(
                     plugin.run_guided_analysis(argument_text=arg_text),
-                    timeout=60.0,
+                    timeout=120.0,
                 )
                 result: Dict[str, Any] = json.loads(result_json)
                 result["source_arg_id"] = arg_id
                 return result
             except asyncio.TimeoutError:
-                logger.warning("Timeout analyzing argument %s", arg_id)
+                logger.warning(
+                    "Timeout analyzing argument %s — retrying with fast one-shot",
+                    arg_id,
+                )
+                if plugin is not None:
+                    try:
+                        oneshot_json = await asyncio.wait_for(
+                            plugin.run_guided_analysis(
+                                argument_text=arg_text, use_one_shot=True
+                            ),
+                            timeout=45.0,
+                        )
+                        oneshot: Dict[str, Any] = json.loads(oneshot_json)
+                        oneshot["source_arg_id"] = arg_id
+                        oneshot["timed_out_fallback"] = True
+                        return oneshot
+                    except Exception as e:
+                        logger.warning(
+                            "One-shot fallback also failed for argument %s: %s",
+                            arg_id,
+                            e,
+                        )
                 return {"fallacies": [], "source_arg_id": arg_id, "timed_out": True}
             except Exception as e:
                 logger.warning("Error analyzing argument %s: %s", arg_id, e)

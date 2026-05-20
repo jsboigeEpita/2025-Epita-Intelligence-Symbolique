@@ -380,6 +380,76 @@ class TestInvokeHierarchicalFallacyPerArgument:
         assert result["parallel_executed"] is True
 
     @pytest.mark.asyncio
+    async def test_timeout_falls_back_to_oneshot(self):
+        """On primary timeout, the fast one-shot retry recovers the fallacy (#652)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_hierarchical_fallacy_per_argument,
+        )
+
+        arguments = [
+            ("arg_1", "First argument text is long enough for the test here"),
+        ]
+
+        # Primary guided path hangs (times out); one-shot returns quickly.
+        async def guided(*args, **kwargs):
+            if kwargs.get("use_one_shot"):
+                return json.dumps({
+                    "fallacies": [
+                        {"fallacy_type": "post_hoc", "taxonomy_pk": "pk_2", "confidence": 0.7}
+                    ],
+                    "exploration_method": "one_shot",
+                })
+            await asyncio.sleep(10)
+            return json.dumps({"fallacies": [], "exploration_method": "wide_net"})
+
+        instance = MagicMock()
+        instance.run_guided_analysis = guided
+
+        mock_plugin_class = MagicMock(return_value=instance)
+        mock_llm_service = AsyncMock()
+        mock_llm_service.get_chat_message_contents = AsyncMock(return_value=[])
+
+        modules = {
+            "openai": MagicMock(AsyncOpenAI=MagicMock(return_value=MagicMock())),
+            "semantic_kernel.kernel": MagicMock(Kernel=MagicMock),
+            "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                OpenAIChatCompletion=MagicMock(return_value=mock_llm_service),
+            ),
+            "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                FallacyWorkflowPlugin=mock_plugin_class,
+            ),
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.os.path.isfile",
+            return_value=True,
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
+            return_value=arguments,
+        ), patch.dict("sys.modules", modules), patch(
+            "argumentation_analysis.orchestration.invoke_callables.os.environ",
+            {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": "https://api.test.com/v1", "OPENAI_CHAT_MODEL_ID": "test-model"},
+        ):
+            original_wait_for = asyncio.wait_for
+
+            # Force only the primary (120s) call to time out; the one-shot
+            # (45s) keeps its real budget so its instant coro completes.
+            async def patched_wait_for(coro, timeout=60):
+                if timeout == 120.0:
+                    return await original_wait_for(coro, timeout=0.5)
+                return await original_wait_for(coro, timeout=timeout)
+
+            with patch(
+                "argumentation_analysis.orchestration.invoke_callables.asyncio.wait_for",
+                side_effect=patched_wait_for,
+            ):
+                result = await _invoke_hierarchical_fallacy_per_argument("full text", {})
+
+        # The one-shot fallback recovered the fallacy instead of returning empty.
+        assert len(result["fallacies"]) == 1
+        assert result["fallacies"][0]["fallacy_type"] == "post_hoc"
+
+    @pytest.mark.asyncio
     async def test_no_api_key_returns_unavailable(self):
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_hierarchical_fallacy_per_argument,
