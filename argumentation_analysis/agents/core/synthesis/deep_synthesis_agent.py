@@ -707,22 +707,99 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _fallacy_family(fallacy_type: str) -> str:
-        ft_lower = fallacy_type.lower()
-        families = {
-            "appeal": "relevance",
-            "ad hominem": "relevance",
-            "hasty": "inductive",
-            "generalization": "inductive",
-            "slippery": "causal",
-            "false cause": "causal",
-            "straw": "presumption",
-            "begging": "presumption",
-            "false dilemma": "presumption",
-            "equivocation": "ambiguity",
-            "amphiboly": "ambiguity",
-        }
-        for key, family in families.items():
-            if key in ft_lower:
+        """Map a free-text fallacy label to its taxonomic family.
+
+        The per-argument detector emits free-text leaf names (bilingual FR/EN,
+        e.g. "Sophisme génétique", "causal oversimplification", "appel au
+        peuple") rather than a taxonomy_pk, so the report must re-derive the
+        family here. The previous 11-keyword English-only map sent ~90% of real
+        detections to "other" — every dense-corpus report was a wall of
+        `fallacy/other/...`, which reads worse to a jury than a one-shot naming
+        recognizable families. This bilingual table covers the labels the
+        detector actually produces. Rules are checked in order and the first
+        matching substring wins, so disambiguating multi-word keys are placed
+        before the generic ones they contain (e.g. "appel au peuple" before the
+        bare "appel" relevance catch-all; the inductive/causal/presumption
+        blocks precede the relevance block so "appel à l'anecdote" resolves to
+        inductive and "appel aux conséquences" to presumption).
+        """
+        ft = fallacy_type.lower()
+        rules = [
+            # presumption (precedes "nature"/"naturalistic" → relevance)
+            ("is→ought", "presumption"),
+            ("is-ought", "presumption"),
+            ("faux dilemme", "presumption"),
+            ("false dilemma", "presumption"),
+            ("false dichotomy", "presumption"),
+            ("homme de paille", "presumption"),
+            ("straw", "presumption"),
+            ("pétition de principe", "presumption"),
+            ("begging", "presumption"),
+            ("circular", "presumption"),
+            ("enthym", "presumption"),
+            ("package", "presumption"),
+            ("conséquences", "presumption"),
+            ("consequences", "presumption"),
+            ("fin justifie", "presumption"),
+            # causal
+            ("simplification causale", "causal"),
+            ("causal oversimplification", "causal"),
+            ("causalité", "causal"),
+            ("false cause", "causal"),
+            ("fausse cause", "causal"),
+            ("post hoc", "causal"),
+            ("temporalité-cause", "causal"),
+            ("pente", "causal"),
+            ("slippery", "causal"),
+            ("complot", "causal"),
+            ("conspiracy", "causal"),
+            # inductive
+            ("généralisation", "inductive"),
+            ("generaliz", "inductive"),
+            ("hasty", "inductive"),
+            ("anecdote", "inductive"),
+            ("anecdotal", "inductive"),
+            ("regroupement", "inductive"),
+            ("clustering", "inductive"),
+            ("cherry", "inductive"),
+            ("suppression des preuves", "inductive"),
+            ("comparaison trompeuse", "inductive"),
+            ("false analogy", "inductive"),
+            ("fausse analogie", "inductive"),
+            # relevance
+            ("génétique", "relevance"),
+            ("genetic", "relevance"),
+            ("ad hominem", "relevance"),
+            ("attaque personnelle", "relevance"),
+            ("appel à l'émotion", "relevance"),
+            ("appel a l'emotion", "relevance"),
+            ("appeal to emotion", "relevance"),
+            ("appel à la peur", "relevance"),
+            ("appeal to fear", "relevance"),
+            ("appel au peuple", "relevance"),
+            ("ad populum", "relevance"),
+            ("bandwagon", "relevance"),
+            ("appel à l'autorité", "relevance"),
+            ("appeal to authority", "relevance"),
+            ("nature", "relevance"),
+            ("naturalistic", "relevance"),
+            ("scapegoat", "relevance"),
+            ("red herring", "relevance"),
+            ("hareng rouge", "relevance"),
+            ("tu quoque", "relevance"),
+            ("appel", "relevance"),
+            ("appeal", "relevance"),
+            # ambiguity
+            ("equivocation", "ambiguity"),
+            ("équivoque", "ambiguity"),
+            ("amphiboly", "ambiguity"),
+            ("amphibologie", "ambiguity"),
+            ("tromperie implicite", "ambiguity"),
+            ("étiquetage", "ambiguity"),
+            ("mislabel", "ambiguity"),
+        ]
+        for kw, family in rules:
+            if kw in ft:
                 return family
         return "other"
 
