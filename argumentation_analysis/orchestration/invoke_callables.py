@@ -3421,6 +3421,19 @@ async def _invoke_propositional_logic(
     # Retrieve state object for atomic_propositions storage
     state_obj = context.get("_state_object")
 
+    # Track formula pipeline metrics (#655 Track MM)
+    pl_metrics: Dict[str, int] = {
+        "upstream_nl": 0,
+        "pass1_atoms": 0,
+        "pass2_candidates": 0,
+        "fallback_nl": 0,
+        "template": 0,
+        "pre_sanitize": 0,
+        "post_sanitize": 0,
+        "post_tweety": 0,
+        "wide_net_extras": 0,
+    }
+
     if not formulas:
         # Ensure formulas is a list for mypy
         formulas = []
@@ -3444,6 +3457,7 @@ async def _invoke_propositional_logic(
                 t["formula"][:30]: t.get("original_text", "")[:60]
                 for t in pl_translations
             }
+            pl_metrics["upstream_nl"] = len(formulas)
             logger.info(
                 f"Using {len(formulas)} NL-to-logic PL translations "
                 f"(from upstream phase)"
@@ -3488,6 +3502,7 @@ async def _invoke_propositional_logic(
                     ]
                     if valid_atoms:
                         shared_atoms = valid_atoms
+                        pl_metrics["pass1_atoms"] = len(shared_atoms)
                         logger.info(
                             f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted from full text"
                         )
@@ -3506,7 +3521,7 @@ async def _invoke_propositional_logic(
                         atoms_json = _json.dumps(
                             {"propositions": shared_atoms}, indent=2
                         )
-                        for arg_text in args[:6]:
+                        for arg_text in args[:10]:
                             pass2_prompt = (
                                 "You are an expert in propositional logic. Translate the text "
                                 "into logical formulas using ONLY the provided atomic propositions.\n\n"
@@ -3536,10 +3551,50 @@ async def _invoke_propositional_logic(
                                 logger.debug(f"Pass 2 failed for argument: {arg_err}")
 
                         if formulas:
+                            pl_metrics["pass2_candidates"] = len(formulas)
                             logger.info(
                                 f"PL 2-pass Pass 2: {len(formulas)} formulas generated "
                                 f"with {len(shared_atoms)} shared atoms"
                             )
+
+                        # ── Whole-text formula pass (wide-net) ──
+                        # Generate formulas from full text to capture
+                        # structural/tonal patterns missed by per-arg analysis.
+                        per_arg_set = set(formulas)
+                        try:
+                            wt_prompt = (
+                                "You are an expert in propositional logic. "
+                                "Translate the FULL text below into logical formulas "
+                                "using ONLY the provided atomic propositions.\n\n"
+                                "Focus on overarching logical structure: implications "
+                                "between major claims, contradictions, conditional chains.\n"
+                                "Rules:\n"
+                                "- Use ONLY the propositions from the list below.\n"
+                                "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
+                                "- Output JSON with key 'formulas' (list of strings).\n\n"
+                                f"Text:\n{input_text[:4000]}\n\n"
+                                f"Allowed propositions:\n{_json.dumps({'propositions': shared_atoms}, indent=2)}"
+                            )
+                            wt_resp = await client.chat.completions.create(
+                                model=model_id,
+                                messages=[{"role": "user", "content": wt_prompt}],
+                            )
+                            wt_raw = wt_resp.choices[0].message.content or ""
+                            wt_data = _parse_json_from_llm(wt_raw)
+                            wt_formulas = wt_data.get("formulas", [])
+                            wide_net_extras = 0
+                            for f in wt_formulas:
+                                if f and f not in per_arg_set and f not in formulas:
+                                    formulas.append(f)
+                                    argument_mapping[f[:30]] = input_text[:60]
+                                    wide_net_extras += 1
+                            if wide_net_extras:
+                                pl_metrics["wide_net_extras"] = wide_net_extras
+                                logger.info(
+                                    f"PL whole-text pass: {wide_net_extras} extra formulas"
+                                )
+                        except Exception as wt_err:
+                            logger.debug(f"PL whole-text pass unavailable: {wt_err}")
             except Exception as e:
                 logger.debug(f"PL 2-pass pipeline unavailable: {e}")
 
@@ -3562,6 +3617,7 @@ async def _invoke_propositional_logic(
                         argument_mapping = {
                             t.formula[:30]: t.original_text[:60] for t in valid
                         }
+                        pl_metrics["fallback_nl"] = len(valid)
                         logger.info(
                             f"NL-to-logic translated {len(valid)}/{len(args)} "
                             f"arguments to PL"
@@ -3573,6 +3629,7 @@ async def _invoke_propositional_logic(
             # Final fallback: template-based variables
             prop_vars = [f"p{i+1}" for i in range(len(args))]
             formulas = list(prop_vars)
+            pl_metrics["template"] = len(prop_vars)
             argument_mapping = {f"p{i+1}": a[:60] for i, a in enumerate(args)}
             fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
             fallacies = (
@@ -3587,6 +3644,7 @@ async def _invoke_propositional_logic(
         formulas = [str(formulas)]
 
     # Sanitize formulas for Tweety compatibility (#537)
+    pl_metrics["pre_sanitize"] = len(formulas)
     try:
         from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
             PLFormulaSanitizer,
@@ -3595,6 +3653,7 @@ async def _invoke_propositional_logic(
         sanitizer = PLFormulaSanitizer()
         san_result = sanitizer.sanitize_batch(formulas)
         if san_result.sanitized_formulas:
+            pl_metrics["post_sanitize"] = len(san_result.sanitized_formulas)
             logger.info(
                 f"PL sanitizer: {san_result.total_sanitized}/{san_result.total_input} "
                 f"formulas sanitized"
@@ -3616,6 +3675,7 @@ async def _invoke_propositional_logic(
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "propositional"
         )
+        pl_metrics["post_tweety"] = len(formulas)
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
@@ -3624,6 +3684,7 @@ async def _invoke_propositional_logic(
             "logic_type": "propositional",
             "argument_mapping": argument_mapping
             or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+            "pl_metrics": pl_metrics,
         }
     except Exception as e:
         # Fallback: basic consistency check
@@ -3633,6 +3694,7 @@ async def _invoke_propositional_logic(
             for f2 in formulas
             if f2.startswith("!")
         )
+        pl_metrics["post_tweety"] = 0
         return {
             "formulas": formulas,
             "satisfiable": not has_contradiction,
@@ -3641,6 +3703,7 @@ async def _invoke_propositional_logic(
             "argument_mapping": argument_mapping
             or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
             "fallback": "python",
+            "pl_metrics": pl_metrics,
         }
 
 
@@ -3659,6 +3722,19 @@ async def _invoke_fol_reasoning(
 
     # Retrieve state object for fol_shared_signature storage
     state_obj = context.get("_state_object")
+
+    # Track FOL formula pipeline metrics (#655 Track MM)
+    fol_metrics: Dict[str, int] = {
+        "upstream_nl": 0,
+        "pass1_sorts": 0,
+        "pass1_predicates": 0,
+        "pass2_candidates": 0,
+        "fallback_nl": 0,
+        "template": 0,
+        "pre_tweety": 0,
+        "post_tweety": 0,
+        "isolation_survivors": 0,
+    }
 
     if not formulas:
         # Ensure formulas is a list for mypy
@@ -3735,6 +3811,8 @@ async def _invoke_fol_reasoning(
                     if sorts or constants_raw:
                         if not sorts and constants_raw:
                             sorts = {"Thing": list(constants_raw.keys())}
+                        fol_metrics["pass1_sorts"] = len(sorts)
+                        fol_metrics["pass1_predicates"] = len(predicates)
                         fol_metadata_shared = {
                             "sorts": sorts,
                             "predicates": predicates,
@@ -3760,7 +3838,7 @@ async def _invoke_fol_reasoning(
                         # ── Pass 2: Per-argument FOL formula generation ──
                         if args:
                             sig_json = json.dumps(sig_data, indent=2)
-                            for arg_text in args[:6]:
+                            for arg_text in args[:10]:
                                 pass2_prompt = (
                                     "You are a formal logic expert. Translate the text "
                                     "into first-order logic formulas using ONLY the "
@@ -3796,6 +3874,7 @@ async def _invoke_fol_reasoning(
                                     )
 
                             if formulas:
+                                fol_metrics["pass2_candidates"] = len(formulas)
                                 logger.info(
                                     f"FOL 2-pass Pass 2: {len(formulas)} formulas generated "
                                     f"with shared signature"
@@ -3832,6 +3911,7 @@ async def _invoke_fol_reasoning(
         if not formulas:
             # Final fallback: template-based FOL predicates
             formulas = []
+            fol_metrics["template"] = len(args)
             for i in range(len(args)):
                 formulas.append(f"Asserted(arg{i+1})")
             fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
@@ -3874,9 +3954,11 @@ async def _invoke_fol_reasoning(
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
         fol_signature = meta.get("signature_lines", [])
         belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
+        fol_metrics["pre_tweety"] = len(formulas)
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "first_order"
         )
+        fol_metrics["post_tweety"] = len(formulas)
         return {
             "formulas": formulas,
             "fol_signature": fol_signature,
@@ -3887,6 +3969,7 @@ async def _invoke_fol_reasoning(
             "message": msg,
             "logic_type": "first_order",
             "argument_count": len(args),
+            "fol_metrics": fol_metrics,
         }
     except Exception as tweety_err:
         logger.warning(
@@ -3912,6 +3995,7 @@ async def _invoke_fol_reasoning(
         if valid_formulas:
             meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
             fol_signature = meta.get("signature_lines", [])
+            fol_metrics["isolation_survivors"] = len(valid_formulas)
             logger.info(
                 f"FOL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
                 f"formulas accepted by Tweety"
@@ -3927,11 +4011,14 @@ async def _invoke_fol_reasoning(
                 "argument_count": len(args),
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
+                "fol_metrics": fol_metrics,
             }
 
         # All formulas failed — use Python fallback
         has_fallacious = any("Fallacious" in f for f in formulas)
         fol_signature = []
+        fol_metrics["post_tweety"] = 0
+        fol_metrics["isolation_survivors"] = 0
         try:
             meta = FOLLogicAgent.extract_fol_metadata(formulas)
             fol_signature = meta.get("signature_lines", [])
@@ -3947,6 +4034,7 @@ async def _invoke_fol_reasoning(
             "argument_count": len(args),
             "fallback": "python",
             "diagnostic": str(tweety_err),
+            "fol_metrics": fol_metrics,
         }
 
 
