@@ -4,6 +4,8 @@ Produces 1-2 paragraphs of human-readable narrative weaving together
 results from all analysis KBs (fallacies, JTMS, ATMS, Dung, quality,
 counter-arguments). Reads from UnifiedAnalysisState and generates
 prose without LLM calls — purely template-based for reliability.
+Track CC (#636) adds an optional LLM prose layer over the convergent
+synthesis skeleton produced by Track BB (#634).
 """
 
 import logging
@@ -390,12 +392,53 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
     }
 
 
+_PROSE_INSTRUCTIONS = (
+    "You are an expert argumentation analyst. Transform the structured convergence "
+    "evidence below into polished analytical prose in French. "
+    "Rules: (1) Only reference arguments, fallacies, and methods listed in the evidence. "
+    "(2) Name every concordant method explicitly (e.g. 'detection rhetorique', "
+    "'argumentation abstraite', 'maintenance de verite', 'scoring de qualite'). "
+    "(3) Do not invent claims or details absent from the evidence. "
+    "(4) Each paragraph covers one argument; cite at least two methods by name. "
+    "(5) Maximum 300 words."
+)
+
+
+def _build_prose_prompt(synthesis_result: Dict[str, Any]) -> str:
+    """Build a strictly-grounded LLM prompt from convergent synthesis evidence."""
+    verdicts = synthesis_result.get("convergent_verdicts", {})
+    conclusion = synthesis_result.get("conclusion", "")
+
+    if verdicts:
+        evidence_lines = []
+        for arg_id, data in sorted(verdicts.items(), key=lambda kv: -kv[1]["score"]):
+            sig_parts = [f"{m}: {d}" for m, d in data["signals"]]
+            evidence_lines.append(
+                f"- {arg_id} ({data['score']} methods): {'; '.join(sig_parts)}"
+            )
+        evidence_block = "\n".join(evidence_lines)
+    else:
+        evidence_block = "(no convergent arguments detected)"
+
+    return (
+        f"{_PROSE_INSTRUCTIONS}\n\n"
+        f"## Convergence Evidence\n{evidence_block}\n\n"
+        f"## Structural Conclusion\n{conclusion}\n\n"
+        f"Write the analytical prose report:"
+    )
+
+
 class NarrativeSynthesisPlugin:
     """Semantic Kernel plugin for narrative synthesis (#351).
 
     Produces human-readable analysis summaries by weaving together
-    outputs from all pipeline phases.
+    outputs from all pipeline phases. Pass an SK Kernel instance to
+    enable the LLM prose layer (Track CC #636); without it the plugin
+    falls back to template-based output.
     """
+
+    def __init__(self, kernel: Optional[Any] = None) -> None:
+        self._kernel = kernel
 
     @kernel_function(
         name="narrative_synthesis",
@@ -437,3 +480,46 @@ class NarrativeSynthesisPlugin:
         ns = type("State", (), state_data)()
         result = build_convergent_synthesis(ns)
         return json.dumps(result, ensure_ascii=False)
+
+    @kernel_function(
+        name="narrate_convergence",
+        description="Generate LLM-grounded analytical prose over convergent "
+        "synthesis results. Each verdict paragraph cites the concordant methods "
+        "by name with specific evidence (fallacy type, quality score, Dung "
+        "semantics, JTMS retraction). Strictly grounded — no hallucinated claims. "
+        "Falls back to template narrative when no LLM kernel is configured or "
+        "when the LLM call fails.",
+    )
+    async def narrate_convergence(self, state_json: str = "{}") -> str:
+        """Generate LLM-polished prose from convergent synthesis evidence.
+
+        Calls build_convergent_synthesis internally, then invokes the kernel's
+        LLM with a strictly grounded prompt. Falls back to the template narrative
+        when no kernel is configured, no convergent verdicts exist, or the LLM
+        call raises an exception.
+        """
+        import json
+
+        try:
+            state_data = json.loads(state_json)
+        except (json.JSONDecodeError, TypeError):
+            state_data = {}
+
+        ns = type("State", (), state_data)()
+        synthesis = build_convergent_synthesis(ns)
+
+        if not synthesis.get("convergent_verdicts") or self._kernel is None:
+            return synthesis["narrative"]
+
+        prompt = _build_prose_prompt(synthesis)
+        try:
+            result = await self._kernel.invoke_prompt(prompt)
+            prose = str(result).strip()
+            if prose:
+                return prose
+            return synthesis["narrative"]
+        except Exception:
+            logger.warning(
+                "narrate_convergence: LLM call failed, falling back to template"
+            )
+            return synthesis["narrative"]
