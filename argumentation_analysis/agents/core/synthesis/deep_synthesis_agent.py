@@ -130,6 +130,11 @@ class DeepSynthesisAgent(BaseAgent):
             report.convergence_conclusion,
         ) = self._build_convergent_verdicts(state)
 
+        # Convergence prose (Track GG #644) — citation-rich LLM narration of the
+        # convergence evidence, grounded strictly in the structured verdicts.
+        # Empty when no kernel/verdicts; renderer falls back to template statements.
+        report.convergence_prose = await self._llm_convergence_prose(state)
+
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
             thesis = await self._llm_synthesis(report)
@@ -658,9 +663,16 @@ class DeepSynthesisAgent(BaseAgent):
         # from the structured field so it appears regardless of synthesis path.
         sections.append("## Convergent Verdicts (cross-method agreement)\n")
         if report.convergent_verdicts:
-            for v in report.convergent_verdicts:
-                sections.append(v.statement)
+            if report.convergence_prose:
+                # Track GG #644 — citation-rich LLM narration grounded in the
+                # verdicts. The structured statements remain available via
+                # report.convergent_verdicts for downstream/JSON consumers.
+                sections.append(report.convergence_prose)
                 sections.append("")
+            else:
+                for v in report.convergent_verdicts:
+                    sections.append(v.statement)
+                    sections.append("")
             if report.convergence_conclusion:
                 sections.append(f"**Conclusion** : {report.convergence_conclusion}\n")
         else:
@@ -782,6 +794,44 @@ class DeepSynthesisAgent(BaseAgent):
         if report.final_synthesis:
             n += 1
         return n
+
+    async def _llm_convergence_prose(self, state: Any) -> str:
+        """Track GG #644 — LLM prose for the convergence section.
+
+        Reuses Track CC's grounded prompt builder (``_build_prose_prompt``) over
+        the convergent-synthesis evidence and invokes this agent's own kernel.
+        Returns "" (renderer falls back to template verdict statements) when no
+        LLM service is configured, no convergent verdicts exist, or the call
+        fails. The prompt is strictly grounded in arg IDs / methods / scores, so
+        the prose cannot introduce content absent from the structured evidence.
+        """
+        if not self._llm_service_id:
+            return ""
+        try:
+            from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+                build_convergent_synthesis,
+                _build_prose_prompt,
+            )
+
+            synthesis = build_convergent_synthesis(state)
+            if not synthesis.get("convergent_verdicts"):
+                return ""
+
+            prompt = _build_prose_prompt(synthesis)
+            settings = self.kernel.get_prompt_execution_settings_from_service_id(
+                self._llm_service_id
+            )
+            result = await self.kernel.invoke_prompt(
+                function_name="deep_synthesis_convergence_prose",
+                plugin_name="deep_synthesis",
+                prompt=prompt,
+                settings=settings,
+            )
+            prose = str(result).strip() if result else ""
+            return prose
+        except Exception as e:
+            logger.debug(f"LLM convergence prose skipped: {e}")
+            return ""
 
     async def _llm_synthesis(self, report: DeepSynthesisReport) -> Optional[str]:
         """Attempt to use the SK kernel for a thesis-style synthesis."""
