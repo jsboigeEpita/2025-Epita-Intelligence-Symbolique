@@ -200,7 +200,9 @@ class FallacyWorkflowPlugin:
         "obstruktion": "obstruction",
     }
 
-    def _map_fallacy_to_root_pk(self, fallacy_name: str, roots_index: Dict[str, str]) -> Optional[str]:
+    def _map_fallacy_to_root_pk(
+        self, fallacy_name: str, roots_index: Dict[str, str]
+    ) -> Optional[str]:
         """Map a free-text fallacy name to the closest root PK via keyword matching.
 
         Supports FR/EN/DE keywords via a three-pass strategy:
@@ -219,22 +221,56 @@ class FallacyWorkflowPlugin:
 
         root_keywords = {
             "authority": ["autorit", "autorität", "berufung auf"],
-            "ad hominem": ["ad hominem", "attaque", "personne", "personenangriff", "ad-personam"],
+            "ad hominem": [
+                "ad hominem",
+                "attaque",
+                "personne",
+                "personenangriff",
+                "ad-personam",
+            ],
             "straw man": ["paille", "distortion", "strohmann", "strohmann-argument"],
             "slippery slope": ["pente glissante", "dammbruch", "rückführung"],
             "emotion": ["émotion", "sentiment", "gefühl", "emotionale appellation"],
-            "false dilemma": ["faux dilemme", "dilemme", "entweder-oder", "schwarz-weiß"],
-            "hasty generalization": ["généralisation", "vorschnelle verallgemeinerung", "übergeneralisierung"],
-            "circular reasoning": ["circulaire", "pétition", "zirkelschluss", "zirkulär"],
+            "false dilemma": [
+                "faux dilemme",
+                "dilemme",
+                "entweder-oder",
+                "schwarz-weiß",
+            ],
+            "hasty generalization": [
+                "généralisation",
+                "vorschnelle verallgemeinerung",
+                "übergeneralisierung",
+            ],
+            "circular reasoning": [
+                "circulaire",
+                "pétition",
+                "zirkelschluss",
+                "zirkulär",
+            ],
             "red herring": ["hareng", "diversion", "roter hering", "nebenthema"],
             "tu quoque": ["tu quoque", "hypocrisie", "heuchlerisch"],
-            "guilt by association": ["association", "culpabilité", "schuld durch assoziation"],
-            "bandwagon": ["ad populum", "majeure", "mitläufereffekt", "mehrheitsargument"],
+            "guilt by association": [
+                "association",
+                "culpabilité",
+                "schuld durch assoziation",
+            ],
+            "bandwagon": [
+                "ad populum",
+                "majeure",
+                "mitläufereffekt",
+                "mehrheitsargument",
+            ],
             "tradition": ["tradition", "traditionsargument"],
             "non sequitur": ["non sequitur", "inconséquence", "nicht zwingend"],
             "poisoning the well": ["empoisonnement", "brunnenvergiftung"],
             "no true scotsman": ["vrai écossais", "wahrer schotte", "kein wahrer"],
-            "false cause": ["fausse cause", "causalité", "fehlschluss der ursache", "post hoc"],
+            "false cause": [
+                "fausse cause",
+                "causalité",
+                "fehlschluss der ursache",
+                "post hoc",
+            ],
             "loaded question": ["question chargée", "suggestivfrage", "fangfrage"],
             "manipulation": ["manipulation", "beeinflussung"],
             "appeal to fear": ["angst", "appell an die angst"],
@@ -770,7 +806,9 @@ class FallacyWorkflowPlugin:
             # Phase 1: Wide-net candidate selection (#578)
             candidate_pks = await self._wide_net_candidates(argument_text)
             if not candidate_pks:
-                self.logger.info("Wide-net produced no candidates — falling back to one-shot")
+                self.logger.info(
+                    "Wide-net produced no candidates — falling back to one-shot"
+                )
                 return await self._run_one_shot(argument_text)
 
             self.logger.info(
@@ -804,7 +842,10 @@ class FallacyWorkflowPlugin:
                 if isinstance(result, IdentifiedFallacy):
                     total_iterations += len(result.navigation_trace)
                     leaf_pk = result.fallacy_type
-                    if leaf_pk in seen_pks and seen_pks[leaf_pk].confidence >= result.confidence:
+                    if (
+                        leaf_pk in seen_pks
+                        and seen_pks[leaf_pk].confidence >= result.confidence
+                    ):
                         continue
                     seen_pks[leaf_pk] = result
                     identified = [r for r in identified if r.fallacy_type != leaf_pk]
@@ -856,7 +897,10 @@ class FallacyWorkflowPlugin:
                 file_handler.close()
 
     def _persist_trace(
-        self, trace_log_path: Optional[str], result: "FallacyAnalysisResult", argument_text: str
+        self,
+        trace_log_path: Optional[str],
+        result: "FallacyAnalysisResult",
+        argument_text: str,
     ) -> None:
         """Persist structured taxonomy traversal trace to JSON file."""
         if not trace_log_path:
@@ -868,15 +912,17 @@ class FallacyWorkflowPlugin:
                 parent_chain = []
                 if node and node.get("path"):
                     parent_chain = node["path"].split(" > ")
-                trace_entries.append({
-                    "taxonomy_node_id": fallacy.taxonomy_pk,
-                    "fallacy_type": fallacy.fallacy_type,
-                    "parent_chain": parent_chain,
-                    "navigation_trace": fallacy.navigation_trace,
-                    "decision_rationale": fallacy.explanation,
-                    "citation_excerpt": argument_text[:200],
-                    "confidence": fallacy.confidence,
-                })
+                trace_entries.append(
+                    {
+                        "taxonomy_node_id": fallacy.taxonomy_pk,
+                        "fallacy_type": fallacy.fallacy_type,
+                        "parent_chain": parent_chain,
+                        "navigation_trace": fallacy.navigation_trace,
+                        "decision_rationale": fallacy.explanation,
+                        "citation_excerpt": argument_text[:200],
+                        "confidence": fallacy.confidence,
+                    }
+                )
 
             trace_data = {
                 "exploration_method": result.exploration_method,
@@ -894,6 +940,44 @@ class FallacyWorkflowPlugin:
             self.logger.info(f"Trace persisted to {trace_log_path}")
         except Exception as e:
             self.logger.warning(f"Failed to persist trace: {e}")
+
+    def _match_taxonomy_name(self, text: str) -> str:
+        """Try to find a taxonomy fallacy name within free-form LLM text (#655 Track KK).
+
+        Returns the longest matching taxonomy name, or "" if nothing matches.
+        """
+        known_names: list[str] = []
+        for node in self.taxonomy_navigator.taxonomy_data:
+            for key in ("text_fr", "nom_vulgarisé"):
+                name = node.get(key, "")
+                if name and len(name) > 4:
+                    known_names.append(name)
+        # Also check common French fallacy names not in taxonomy
+        known_names.extend(
+            [
+                "Ad hominem",
+                "Appel à l'autorité",
+                "Pente glissante",
+                "Homme de paille",
+                "Faux dilemme",
+                "Pétition de principe",
+                "Appel à la tradition",
+                "Appel à la nouveauté",
+                "Généralisation hâtive",
+                "Fausse cause",
+                "Appel aux émotions",
+                "Changement de sujet",
+                "Fausse équivalence",
+                "Empoisonnement du puits",
+                "Appel à l'ignorance",
+            ]
+        )
+        text_lower = text.lower()
+        best = ""
+        for name in known_names:
+            if name.lower() in text_lower and len(name) > len(best):
+                best = name
+        return best
 
     def _build_compact_taxonomy(self, max_depth: int = 4) -> str:
         """Build a compact taxonomy representation (PK + name + path) to fit in context."""
@@ -944,43 +1028,56 @@ class FallacyWorkflowPlugin:
             )
             raw = str(response).strip()
 
-            # Try to parse structured response
+            # Try to parse structured JSON response
             try:
-                if "```json" in raw:
-                    raw = raw.split("```json")[1].split("```")[0]
-                elif "```" in raw:
-                    raw = raw.split("```")[1].split("```")[0]
-                start = raw.find("{")
-                end = raw.rfind("}") + 1
+                text_to_parse = raw
+                if "```json" in text_to_parse:
+                    text_to_parse = text_to_parse.split("```json")[1].split("```")[0]
+                elif "```" in text_to_parse:
+                    text_to_parse = text_to_parse.split("```")[1].split("```")[0]
+                start = text_to_parse.find("{")
+                end = text_to_parse.rfind("}") + 1
                 if start >= 0 and end > start:
-                    parsed = json.loads(raw[start:end])
-                    fallacy = IdentifiedFallacy(
-                        fallacy_type=parsed.get("fallacy_name", raw),
-                        taxonomy_pk=parsed.get("taxonomy_pk", ""),
-                        explanation=parsed.get("explanation", ""),
-                        confidence=float(parsed.get("confidence", 0.5)),
-                        navigation_trace=[],
-                    )
-                    result = FallacyAnalysisResult(
-                        fallacies=[fallacy],
-                        exploration_method="one_shot",
-                    )
-                    return result.model_dump_json(indent=2)
+                    parsed = json.loads(text_to_parse[start:end])
+                    fallacy_name = parsed.get("fallacy_name", "")
+                    if fallacy_name:
+                        fallacy = IdentifiedFallacy(
+                            fallacy_type=fallacy_name,
+                            taxonomy_pk=parsed.get("taxonomy_pk", ""),
+                            explanation=parsed.get("explanation", ""),
+                            confidence=float(parsed.get("confidence", 0.5)),
+                            navigation_trace=[],
+                        )
+                        result = FallacyAnalysisResult(
+                            fallacies=[fallacy],
+                            exploration_method="one_shot",
+                        )
+                        return result.model_dump_json(indent=2)
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
 
-            # Plain text fallback
-            fallacy = IdentifiedFallacy(
-                fallacy_type=raw[:200],
-                taxonomy_pk="",
-                explanation="One-shot identification (plain text response)",
-                confidence=0.3,
-                navigation_trace=[],
+            # Fallback: try to match a taxonomy name in the raw text (#655 Track KK).
+            matched_name = self._match_taxonomy_name(raw)
+            if matched_name:
+                fallacy = IdentifiedFallacy(
+                    fallacy_type=matched_name,
+                    taxonomy_pk="",
+                    explanation="One-shot identification (taxonomy name extracted from response)",
+                    confidence=0.35,
+                    navigation_trace=[],
+                )
+                result = FallacyAnalysisResult(
+                    fallacies=[fallacy], exploration_method="one_shot"
+                )
+                return result.model_dump_json(indent=2)
+
+            # No usable fallacy found — return empty rather than garbage
+            self.logger.warning(
+                "One-shot: could not extract usable fallacy name from response"
             )
-            result = FallacyAnalysisResult(
-                fallacies=[fallacy], exploration_method="one_shot"
+            return json.dumps(
+                {"fallacies": [], "exploration_method": "one_shot_no_match"}
             )
-            return result.model_dump_json(indent=2)
 
         except Exception as e:
             self.logger.error(f"One-shot fallback failed: {e}")
