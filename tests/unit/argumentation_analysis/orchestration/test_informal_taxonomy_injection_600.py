@@ -218,13 +218,23 @@ class TestParentHarnessFallback:
 
     @pytest.mark.asyncio
     async def test_harness_registers_fallacies(self):
-        """Harness registers found fallacies into state."""
+        """Harness registers found fallacies into a REAL UnifiedAnalysisState (#648).
+
+        Regression for Track HH: the previous version of this test used a bare
+        MagicMock state, on which every attribute (incl. the nonexistent
+        ``add_identified_fallacy``) auto-exists — so it passed while the harness
+        silently dropped every fallacy on the real state. Use the real state so
+        the registration path is actually exercised end-to-end.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_parent_harness_fallback,
         )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
-        mock_state = MagicMock()
-        mock_state.add_identified_fallacy = MagicMock()
+        state = UnifiedAnalysisState(initial_text="x")
+        # The real state must NOT have the singular method the old code relied on.
+        assert not hasattr(state, "add_identified_fallacy")
+        assert hasattr(state, "add_fallacy")
 
         fake_fallacies = [
             {
@@ -250,11 +260,43 @@ class TestParentHarnessFallback:
                 "exploration_method": "per_argument_parallel",
             },
         ):
-            result = await _run_parent_harness_fallback("long text" * 200, mock_state)
+            result = await _run_parent_harness_fallback("long text" * 200, state)
             assert result is not None
             assert result["fallacies_found"] == 2
             assert result["fallacies_registered"] == 2
-            assert mock_state.add_identified_fallacy.call_count == 2
+            # The fallacies must actually land in the canonical state field that
+            # DeepSynthesisAgent._build_fallacy_diagnoses reads.
+            assert len(state.identified_fallacies) == 2
+            types = {f["type"] for f in state.identified_fallacies.values()}
+            assert types == {"straw_man", "ad_hominem"}
+            targets = {
+                f.get("target_argument_id") for f in state.identified_fallacies.values()
+            }
+            assert targets == {"arg-1", "arg-2"}
+
+    @pytest.mark.asyncio
+    async def test_harness_singular_method_fallback(self):
+        """State types exposing only add_identified_fallacy still register (#648)."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _run_parent_harness_fallback,
+        )
+
+        # A state spec'd to expose ONLY the singular method (e.g. PhaseScopedState).
+        state = MagicMock(spec=["add_identified_fallacy"])
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables."
+            "_invoke_hierarchical_fallacy_per_argument",
+            new_callable=AsyncMock,
+            return_value={
+                "fallacies": [{"type": "post_hoc", "explanation": "x"}],
+                "exploration_method": "per_argument_parallel",
+            },
+        ):
+            result = await _run_parent_harness_fallback("long text" * 200, state)
+            assert result is not None
+            assert result["fallacies_registered"] == 1
+            assert state.add_identified_fallacy.call_count == 1
 
     @pytest.mark.asyncio
     async def test_harness_handles_import_error(self):
