@@ -56,23 +56,74 @@ def _detect_language(text: str) -> str:
     scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
 
     de_markers = [
-        r"\bder\b", r"\bdie\b", r"\bdas\b", r"\bund\b", r"\bist\b",
-        r"\bein\b", r"\beine\b", r"\bden\b", r"\bmit\b", r"\bfür\b",
-        r"\bauf\b", r"\bdes\b", r"\bsich\b", r"\bnicht\b", r"\bvon\b",
-        r"\bsind\b", r"\bwird\b", r"\bdurch\b", r"\bwir\b", r"\bals\b",
-        r"\bauch\b", r"\bnoch\b", r"\bnach\b", r"\büber\b",
+        r"\bder\b",
+        r"\bdie\b",
+        r"\bdas\b",
+        r"\bund\b",
+        r"\bist\b",
+        r"\bein\b",
+        r"\beine\b",
+        r"\bden\b",
+        r"\bmit\b",
+        r"\bfür\b",
+        r"\bauf\b",
+        r"\bdes\b",
+        r"\bsich\b",
+        r"\bnicht\b",
+        r"\bvon\b",
+        r"\bsind\b",
+        r"\bwird\b",
+        r"\bdurch\b",
+        r"\bwir\b",
+        r"\bals\b",
+        r"\bauch\b",
+        r"\bnoch\b",
+        r"\bnach\b",
+        r"\büber\b",
     ]
     fr_markers = [
-        r"\ble\b", r"\bla\b", r"\bles\b", r"\bde\b", r"\bdes\b",
-        r"\bet\b", r"\best\b", r"\bque\b", r"\bqui\b", r"\bdu\b",
-        r"\bun\b", r"\bune\b", r"\bpour\b", r"\bdans\b", r"\bsur\b",
-        r"\bce\b", r"\bil\b", r"\bne\b", r"\bse\b", r"\bsont\b",
+        r"\ble\b",
+        r"\bla\b",
+        r"\bles\b",
+        r"\bde\b",
+        r"\bdes\b",
+        r"\bet\b",
+        r"\best\b",
+        r"\bque\b",
+        r"\bqui\b",
+        r"\bdu\b",
+        r"\bun\b",
+        r"\bune\b",
+        r"\bpour\b",
+        r"\bdans\b",
+        r"\bsur\b",
+        r"\bce\b",
+        r"\bil\b",
+        r"\bne\b",
+        r"\bse\b",
+        r"\bsont\b",
     ]
     en_markers = [
-        r"\bthe\b", r"\band\b", r"\bis\b", r"\bto\b", r"\bof\b",
-        r"\bin\b", r"\bthat\b", r"\bfor\b", r"\bit\b", r"\bwith\b",
-        r"\bas\b", r"\bwas\b", r"\bon\b", r"\bare\b", r"\bhave\b",
-        r"\bthis\b", r"\bwe\b", r"\bour\b", r"\bthey\b", r"\bnot\b",
+        r"\bthe\b",
+        r"\band\b",
+        r"\bis\b",
+        r"\bto\b",
+        r"\bof\b",
+        r"\bin\b",
+        r"\bthat\b",
+        r"\bfor\b",
+        r"\bit\b",
+        r"\bwith\b",
+        r"\bas\b",
+        r"\bwas\b",
+        r"\bon\b",
+        r"\bare\b",
+        r"\bhave\b",
+        r"\bthis\b",
+        r"\bwe\b",
+        r"\bour\b",
+        r"\bthey\b",
+        r"\bnot\b",
     ]
 
     for pattern in de_markers:
@@ -367,7 +418,10 @@ def create_conversational_agents(
         speciality = config["speciality"]
         state_cls = agent_state_class.get(name)
         plugins = get_plugin_instances(
-            speciality, state=state, kernel=kernel, llm_service=llm_service,
+            speciality,
+            state=state,
+            kernel=kernel,
+            llm_service=llm_service,
             state_plugin_class=state_cls,
         )
 
@@ -454,7 +508,10 @@ async def run_conversational_analysis(
     # 0e. Re-prompt trace accumulator (#609)
     reprompt_extractor = None
     if enable_reprompt_tracing:
-        from argumentation_analysis.reporting.reprompt_trace import RepromptTraceExtractor
+        from argumentation_analysis.reporting.reprompt_trace import (
+            RepromptTraceExtractor,
+        )
+
         reprompt_extractor = RepromptTraceExtractor()
 
     # 1. Setup kernel + LLM
@@ -481,6 +538,7 @@ async def run_conversational_analysis(
     agent_state_class = {}
     if enable_tool_gating:
         from argumentation_analysis.core.phase_scoped_state import AGENT_PHASE_MAP
+
         agent_state_class = dict(AGENT_PHASE_MAP)
         logger.info(
             f"Tool gating enabled: {len(agent_state_class)} agents get phase-scoped state plugins"
@@ -488,7 +546,10 @@ async def run_conversational_analysis(
 
     # 3. Create all agents
     all_agents = create_conversational_agents(
-        kernel, state, "conversational_llm", agent_names,
+        kernel,
+        state,
+        "conversational_llm",
+        agent_names,
         agent_state_class=agent_state_class,
     )
     agent_by_name = {a.name: a for a in all_agents}
@@ -671,7 +732,8 @@ async def run_conversational_analysis(
                             "\n\nRAPPEL : Le texte est en allemand. Traduisez mentalement "
                             "en anglais pour la detection de sophismes. "
                             "Conservez les citations en allemand."
-                            if detected_lang == "de" else ""
+                            if detected_lang == "de"
+                            else ""
                         )
                     ),
                 }
@@ -1154,15 +1216,14 @@ async def _run_phase(
                         logger.info(
                             f"  [{phase_name}] Growth re-prompt {rp + 1}/{growth_re_prompt_limit}"
                         )
-                        await chat.add_chat_message(
-                            _RE_PROMPT_FEEDBACK
-                        )
+                        await chat.add_chat_message(_RE_PROMPT_FEEDBACK)
                         async for rp_response in chat.invoke():
                             msg_entry = {
                                 "phase": phase_name,
                                 "turn": turn,
                                 "agent": getattr(
-                                    rp_response, "name",
+                                    rp_response,
+                                    "name",
                                     getattr(rp_response, "role", "?"),
                                 ),
                                 "content": str(
@@ -1175,7 +1236,17 @@ async def _run_phase(
                         fp_after = _get_growth_fingerprint(state)
                         # Record re-prompt trace (#609)
                         if reprompt_extractor is not None:
-                            rp_outcome = "ok" if _validate_state_growth(fp_before, fp_after, phase_name) else ("reran" if rp + 1 < growth_re_prompt_limit else "gave_up")
+                            rp_outcome = (
+                                "ok"
+                                if _validate_state_growth(
+                                    fp_before, fp_after, phase_name
+                                )
+                                else (
+                                    "reran"
+                                    if rp + 1 < growth_re_prompt_limit
+                                    else "gave_up"
+                                )
+                            )
                             reprompt_extractor.record(
                                 phase_name=phase_name,
                                 turn=turn,
@@ -1183,14 +1254,22 @@ async def _run_phase(
                                 fingerprint_before=fp_before,
                                 fingerprint_after=fp_after,
                                 outcome=rp_outcome,
-                                agent_name=getattr(rp_response, "name", getattr(rp_response, "role", "?")),
+                                agent_name=getattr(
+                                    rp_response,
+                                    "name",
+                                    getattr(rp_response, "role", "?"),
+                                ),
                             )
                         if _validate_state_growth(fp_before, fp_after, phase_name):
                             break
 
         if total_re_prompts > 0:
             messages.append(
-                {"phase": phase_name, "type": "growth_validation", "re_prompt_count": total_re_prompts}
+                {
+                    "phase": phase_name,
+                    "type": "growth_validation",
+                    "re_prompt_count": total_re_prompts,
+                }
             )
 
         return messages
@@ -1263,7 +1342,9 @@ async def _run_phase(
                                 "phase": phase_name,
                                 "turn": turn,
                                 "agent": agent.name,
-                                "content": rp_content[:500] if rp_content else "(empty)",
+                                "content": (
+                                    rp_content[:500] if rp_content else "(empty)"
+                                ),
                                 "re_prompt": rp + 1,
                             }
                         )
@@ -1271,7 +1352,17 @@ async def _run_phase(
                         fp_after = _get_growth_fingerprint(state)
                         # Record re-prompt trace (#609)
                         if reprompt_extractor is not None:
-                            rp_outcome = "ok" if _validate_state_growth(fp_before, fp_after, phase_name) else ("reran" if rp + 1 < growth_re_prompt_limit else "gave_up")
+                            rp_outcome = (
+                                "ok"
+                                if _validate_state_growth(
+                                    fp_before, fp_after, phase_name
+                                )
+                                else (
+                                    "reran"
+                                    if rp + 1 < growth_re_prompt_limit
+                                    else "gave_up"
+                                )
+                            )
                             reprompt_extractor.record(
                                 phase_name=phase_name,
                                 turn=turn,
@@ -1297,10 +1388,52 @@ async def _run_phase(
 
     if total_re_prompts > 0:
         messages.append(
-            {"phase": phase_name, "type": "growth_validation", "re_prompt_count": total_re_prompts}
+            {
+                "phase": phase_name,
+                "type": "growth_validation",
+                "re_prompt_count": total_re_prompts,
+            }
         )
 
     return messages
+
+
+_UNUSABLE_FALLACY_NAMES = frozenset(
+    {
+        "Type Inconnu",
+        "Type inconnu",
+        "type inconnu",
+        "TYPE INCONNU",
+        "unknown",
+        "Unknown",
+        "Sophisme inconnu",
+        "",
+    }
+)
+
+
+def _is_usable_fallacy_type(name: str) -> bool:
+    """Return False for empty, generic, or machine-generated fallacy type names (#655 Track KK)."""
+    if not name or not name.strip():
+        return False
+    if name.strip() in _UNUSABLE_FALLACY_NAMES:
+        return False
+    if name.startswith("unknown_class_"):
+        return False
+    return True
+
+
+def _extract_fallacy_type(fallacy_dict: Dict[str, Any]) -> str:
+    """Extract the best available fallacy type name from a fallacy dict (#655 Track KK).
+
+    Tries multiple key names in priority order, then validates via
+    _is_usable_fallacy_type. Returns "" if no usable name found.
+    """
+    for key in ("fallacy_type", "type", "nom", "name", "name_fr"):
+        val = fallacy_dict.get(key, "")
+        if isinstance(val, str) and _is_usable_fallacy_type(val):
+            return val.strip()
+    return ""
 
 
 async def _run_parent_harness_fallback(
@@ -1310,35 +1443,77 @@ async def _run_parent_harness_fallback(
 
     Always fires on texts > 5000 chars to catch fallacies the single-pass
     InformalAgent may have missed. Falls back silently if unavailable.
+
+    #655 Track KK: skips fallacies with unusable type names (Type Inconnu,
+    unknown, empty) and adds a wide-net whole-text fusion pass after the
+    per-argument pass to capture framing/tonal fallacies.
     """
     try:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_hierarchical_fallacy_per_argument,
+            _invoke_hierarchical_fallacy,
         )
 
         context = {"_state_object": state}
-        result = await _invoke_hierarchical_fallacy_per_argument(text, context)
 
-        fallacies = result.get("fallacies", [])
+        # --- Per-argument pass (existing) ---
+        per_arg_result = await _invoke_hierarchical_fallacy_per_argument(text, context)
+        fallacies = per_arg_result.get("fallacies", [])
+
+        # --- Wide-net whole-text fusion pass (#655 Track KK) ---
+        # Catch framing, tonal, or discourse-level fallacies that span
+        # multiple arguments and are invisible in per-argument extraction.
+        whole_text_fallacies: List[Dict[str, Any]] = []
+        if len(text) > 500:
+            try:
+                whole_result = await _invoke_hierarchical_fallacy(text, context)
+                whole_text_fallacies = whole_result.get("fallacies", [])
+            except Exception as e:
+                logger.debug("Wide-net whole-text pass failed: %s", e)
+
+        # Deduplicate whole-text findings against per-argument results
+        per_arg_signatures: set = set()
+        for f in fallacies:
+            if isinstance(f, dict):
+                sig = (
+                    str(f.get("taxonomy_pk") or f.get("fallacy_type") or ""),
+                    str(f.get("source_arg_id") or ""),
+                )
+                per_arg_signatures.add(sig)
+
+        extra_count = 0
+        for wf in whole_text_fallacies:
+            if not isinstance(wf, dict):
+                continue
+            sig = (
+                str(wf.get("taxonomy_pk") or wf.get("fallacy_type") or ""),
+                "",
+            )
+            if sig not in per_arg_signatures:
+                wf["source_arg_id"] = "whole_text"
+                wf["wide_net"] = True
+                fallacies.append(wf)
+                extra_count += 1
+
+        if extra_count:
+            logger.info(
+                "Wide-net whole-text pass: %d additional fallacies", extra_count
+            )
+
         if not fallacies:
             logger.info("Parent harness: no additional fallacies found")
             return None
 
-        # Register any new fallacies into state (#648 Track HH).
-        # UnifiedAnalysisState exposes add_fallacy(fallacy_type, justification,
-        # target_arg_id) — NOT add_identified_fallacy (that singular method lives
-        # only on StateManagerPlugin / PhaseScopedState). The previous guard
-        # `hasattr(state, "add_identified_fallacy")` was always False here, so the
-        # harness silently dropped every fallacy it found (empty Section 3 +
-        # starved convergence on dense corpora). Prefer add_fallacy; keep the
-        # singular path only as a fallback for state types that provide it.
+        # Register fallacies into state — skip unusable type names (#655 Track KK).
         added = 0
+        skipped_unusable = 0
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
-            fallacy_type = (
-                f.get("fallacy_type") or f.get("type") or f.get("nom") or "unknown"
-            )
+            fallacy_type = _extract_fallacy_type(f)
+            if not fallacy_type:
+                skipped_unusable += 1
+                continue
             justification = (
                 f.get("justification")
                 or f.get("explanation")
@@ -1363,9 +1538,12 @@ async def _run_parent_harness_fallback(
                 pass
 
         logger.info(
-            "Parent harness: %d fallacies found, %d registered into state",
+            "Parent harness: %d fallacies found (%d whole-text extra), "
+            "%d registered, %d skipped (unusable type)",
             len(fallacies),
+            extra_count,
             added,
+            skipped_unusable,
         )
 
         return {
@@ -1373,7 +1551,11 @@ async def _run_parent_harness_fallback(
             "type": "parent_harness",
             "fallacies_found": len(fallacies),
             "fallacies_registered": added,
-            "exploration_method": result.get("exploration_method", "per_argument_parallel"),
+            "fallacies_skipped_unusable": skipped_unusable,
+            "wide_net_extras": extra_count,
+            "exploration_method": per_arg_result.get(
+                "exploration_method", "per_argument_parallel"
+            ),
         }
 
     except ImportError:
@@ -1666,7 +1848,11 @@ def _build_dung_framework_from_state(state: Any) -> Optional[Dict[str, Any]]:
                     break
             # Source: find which argument the counter supports
             for aid, desc in state.identified_arguments.items():
-                if desc and counter_text and (counter_text[:40] in desc or desc[:40] in counter_text):
+                if (
+                    desc
+                    and counter_text
+                    and (counter_text[:40] in desc or desc[:40] in counter_text)
+                ):
                     source_id = aid
                     break
             if source_id and target_id and source_id != target_id:
@@ -1805,11 +1991,7 @@ def _detect_and_run_modal_analysis(state: Any) -> Optional[Dict[str, Any]]:
     return {
         "modal_results": results_count,
         "modalities_found": list(
-            {
-                m
-                for r in state.modal_analysis_results
-                for m in r.get("modalities", [])
-            }
+            {m for r in state.modal_analysis_results for m in r.get("modalities", [])}
         ),
     }
 
@@ -1889,8 +2071,9 @@ def _build_aspic_from_state(state: Any) -> Optional[Dict[str, Any]]:
             arg_ids = list(state.identified_arguments.keys())
             target = f.get("target_argument_id", "")
             target_text = f.get("target_argument", "")
-            if (target and target == (arg_ids[i] if i < len(arg_ids) else "")) or \
-               (target_text and target_text.lower()[:30] in desc.lower()):
+            if (target and target == (arg_ids[i] if i < len(arg_ids) else "")) or (
+                target_text and target_text.lower()[:30] in desc.lower()
+            ):
                 is_undermined = True
                 break
         if is_undermined:
@@ -1959,8 +2142,11 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
 
     # Collect beliefs that should be revised (targeted by fallacies)
     jtms_beliefs = getattr(state, "jtms_beliefs", {})
-    original_beliefs = [bdata.get("name", "") for bdata in jtms_beliefs.values()
-                        if bdata.get("valid", False)]
+    original_beliefs = [
+        bdata.get("name", "")
+        for bdata in jtms_beliefs.values()
+        if bdata.get("valid", False)
+    ]
     if not original_beliefs:
         return None
 
