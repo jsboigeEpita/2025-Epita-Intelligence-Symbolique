@@ -1324,25 +1324,43 @@ async def _run_parent_harness_fallback(
             logger.info("Parent harness: no additional fallacies found")
             return None
 
-        # Register any new fallacies into state
+        # Register any new fallacies into state (#648 Track HH).
+        # UnifiedAnalysisState exposes add_fallacy(fallacy_type, justification,
+        # target_arg_id) — NOT add_identified_fallacy (that singular method lives
+        # only on StateManagerPlugin / PhaseScopedState). The previous guard
+        # `hasattr(state, "add_identified_fallacy")` was always False here, so the
+        # harness silently dropped every fallacy it found (empty Section 3 +
+        # starved convergence on dense corpora). Prefer add_fallacy; keep the
+        # singular path only as a fallback for state types that provide it.
         added = 0
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
-            if hasattr(state, "add_identified_fallacy"):
-                try:
-                    state.add_identified_fallacy(
-                        fallacy_type=f.get("fallacy_type") or f.get("nom", "unknown"),
-                        justification=f.get(
-                            "justification",
-                            f"Detected by parent harness (confidence: {f.get('confidence', 'N/A')})",
-                        ),
-                        confidence=f.get("confidence", 0.6),
-                        source_arg_id=f.get("source_arg_id"),
+            fallacy_type = (
+                f.get("fallacy_type") or f.get("type") or f.get("nom") or "unknown"
+            )
+            justification = (
+                f.get("justification")
+                or f.get("explanation")
+                or f"Detected by parent harness (confidence: {f.get('confidence', 'N/A')})"
+            )
+            target_arg_id = f.get("source_arg_id") or f.get("target_argument_id")
+            try:
+                if hasattr(state, "add_fallacy"):
+                    state.add_fallacy(
+                        fallacy_type=fallacy_type,
+                        justification=justification,
+                        target_arg_id=target_arg_id,
                     )
                     added += 1
-                except Exception:
-                    pass
+                elif hasattr(state, "add_identified_fallacy"):
+                    state.add_identified_fallacy(
+                        fallacy_type=fallacy_type,
+                        justification=justification,
+                    )
+                    added += 1
+            except Exception:
+                pass
 
         logger.info(
             "Parent harness: %d fallacies found, %d registered into state",
