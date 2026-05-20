@@ -9,6 +9,7 @@ Usage:
 
 Outputs: outputs/deep_analysis/ (gitignored)
 """
+
 import argparse
 import asyncio
 import json
@@ -68,7 +69,7 @@ def load_corpus(corpus_id: str) -> str:
     text = src.get("full_text", "")
 
     if corpus_id == "B":
-        speech_markers = re.split(r'(?=\d{4}\.\d{2}\.\d{2})', text)
+        speech_markers = re.split(r"(?=\d{4}\.\d{2}\.\d{2})", text)
         best_chunk = ""
         for chunk in speech_markers:
             if 30000 <= len(chunk) <= 60000:
@@ -79,7 +80,7 @@ def load_corpus(corpus_id: str) -> str:
             boundary = text.find("\n\n", start)
             if boundary > 0:
                 start = boundary
-            best_chunk = text[start:start + 50000]
+            best_chunk = text[start : start + 50000]
         text = best_chunk
 
     return text
@@ -104,20 +105,37 @@ def count_textual_citations(text: str) -> int:
 def count_named_fallacies_with_taxonomy(text: str) -> list[dict]:
     """Extract named fallacies with taxonomy paths."""
     fallacy_families = [
-        "Appel à l'autorité", "Appel a l'autorite", "Appeal to authority",
-        "Appel à la popularité", "Appel a la popularite", "Bandwagon",
-        "Appel à l'émotion", "Appeal to emotion",
-        "Attaque personnelle", "Ad hominem",
-        "Pente glissante", "Slippery slope",
-        "Faux dilemme", "False dilemma", "Black and white",
-        "Homme de paille", "Straw man",
-        "Pétition de principe", "Begging the question", "Circular reasoning",
-        "Hasty generalization", "Généralisation hâtive",
-        "Post hoc", "Corrélation causale",
+        "Appel à l'autorité",
+        "Appel a l'autorite",
+        "Appeal to authority",
+        "Appel à la popularité",
+        "Appel a la popularite",
+        "Bandwagon",
+        "Appel à l'émotion",
+        "Appeal to emotion",
+        "Attaque personnelle",
+        "Ad hominem",
+        "Pente glissante",
+        "Slippery slope",
+        "Faux dilemme",
+        "False dilemma",
+        "Black and white",
+        "Homme de paille",
+        "Straw man",
+        "Pétition de principe",
+        "Begging the question",
+        "Circular reasoning",
+        "Hasty generalization",
+        "Généralisation hâtive",
+        "Post hoc",
+        "Corrélation causale",
         "Non sequitur",
-        "Appel à l'ignorance", "Appeal to ignorance",
-        "Fausse équivalence", "False equivalence",
-        "Red herring", "Hareng rouge",
+        "Appel à l'ignorance",
+        "Appeal to ignorance",
+        "Fausse équivalence",
+        "False equivalence",
+        "Red herring",
+        "Hareng rouge",
         "Tu quoque",
         "Cherry picking",
         "Reductio ad absurdum",
@@ -126,20 +144,57 @@ def count_named_fallacies_with_taxonomy(text: str) -> list[dict]:
     lines = text.lower()
     for fallacy in fallacy_families:
         if fallacy.lower() in lines:
-            found.append({"name": fallacy, "has_taxonomy": ">" in text or "/" in text or ":" in text})
+            found.append(
+                {
+                    "name": fallacy,
+                    "has_taxonomy": ">" in text or "/" in text or ":" in text,
+                }
+            )
     return found
 
 
 def detect_formal_method_findings(text: str) -> dict:
     """Check for formal method markers in report."""
     markers = {
-        "tweety_kb": any(kw in text.lower() for kw in ["tweety", "belief set", "ensemble de croyances", "pl satisfiability"]),
-        "dung_extensions": any(kw in text.lower() for kw in ["dung", "extension", "attaque", "framework", "cadre de dung"]),
-        "aspic_inconsistency": any(kw in text.lower() for kw in ["aspic", "inconsistance", "defeasible", "strict rule"]),
-        "fol_analysis": any(kw in text.lower() for kw in ["first-order logic", "fol", "logique du premier ordre", "prédicat", "quantifie"]),
-        "pl_analysis": any(kw in text.lower() for kw in ["propositional", "pl ", "logique propositionnelle", "sat solver"]),
-        "modal_analysis": any(kw in text.lower() for kw in ["modal logic", "modalité", "nécessairement", "possibly"]),
-        "agm_revision": any(kw in text.lower() for kw in ["agm", "belief revision", "rétractation", "contraction"]),
+        "tweety_kb": any(
+            kw in text.lower()
+            for kw in [
+                "tweety",
+                "belief set",
+                "ensemble de croyances",
+                "pl satisfiability",
+            ]
+        ),
+        "dung_extensions": any(
+            kw in text.lower()
+            for kw in ["dung", "extension", "attaque", "framework", "cadre de dung"]
+        ),
+        "aspic_inconsistency": any(
+            kw in text.lower()
+            for kw in ["aspic", "inconsistance", "defeasible", "strict rule"]
+        ),
+        "fol_analysis": any(
+            kw in text.lower()
+            for kw in [
+                "first-order logic",
+                "fol",
+                "logique du premier ordre",
+                "prédicat",
+                "quantifie",
+            ]
+        ),
+        "pl_analysis": any(
+            kw in text.lower()
+            for kw in ["propositional", "pl ", "logique propositionnelle", "sat solver"]
+        ),
+        "modal_analysis": any(
+            kw in text.lower()
+            for kw in ["modal logic", "modalité", "nécessairement", "possibly"]
+        ),
+        "agm_revision": any(
+            kw in text.lower()
+            for kw in ["agm", "belief revision", "rétractation", "contraction"]
+        ),
     }
     return {k: v for k, v in markers.items() if v}
 
@@ -147,10 +202,18 @@ def detect_formal_method_findings(text: str) -> dict:
 def detect_cross_text_parallels(text: str) -> bool:
     """Check for intertextual/cross-corpus references."""
     markers = [
-        "cross-text", "cross text", "intertextuel", "parallèle",
-        "comparison with", "similar to", "pattern also found",
-        "comparaison avec", "similaire à", "pattern également",
-        "récurrence", "motif récurrent",
+        "cross-text",
+        "cross text",
+        "intertextuel",
+        "parallèle",
+        "comparison with",
+        "similar to",
+        "pattern also found",
+        "comparaison avec",
+        "similaire à",
+        "pattern également",
+        "récurrence",
+        "motif récurrent",
     ]
     return any(m in text.lower() for m in markers)
 
@@ -163,7 +226,7 @@ def analyze_report(text: str) -> dict:
         "formal_method_findings": detect_formal_method_findings(text),
         "has_cross_text_parallels": detect_cross_text_parallels(text),
         "word_count": len(text.split()),
-        "section_count": len(re.findall(r'^#{1,3}\s', text, re.MULTILINE)),
+        "section_count": len(re.findall(r"^#{1,3}\s", text, re.MULTILINE)),
     }
 
 
@@ -178,15 +241,31 @@ async def run_baseline_0shot(text: str, model: str = "gpt-4o-mini") -> str:
     if len(text) > 30000:
         truncated += "\n\n[... texte tronqué ...]"
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "Tu es un expert en analyse rhétorique et en logique formelle."},
-            {"role": "user", "content": BASELINE_PROMPT + truncated},
-        ],
-        temperature=0.3,
-        max_tokens=4096,
-    )
+    # gpt-5 family rejects `max_tokens` (needs `max_completion_tokens`) and
+    # non-default `temperature`; fall back gracefully for older models.
+    messages = [
+        {
+            "role": "system",
+            "content": "Tu es un expert en analyse rhétorique et en logique formelle.",
+        },
+        {"role": "user", "content": BASELINE_PROMPT + truncated},
+    ]
+    # gpt-5 reasoning models spend completion tokens on hidden reasoning before
+    # any visible output, so the budget must be generous or the answer comes back
+    # empty. 16384 leaves ample room for a full analysis after reasoning.
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_completion_tokens=16384,
+        )
+    except openai.BadRequestError:
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.3,
+            max_tokens=4096,
+        )
     return response.choices[0].message.content
 
 
@@ -236,7 +315,7 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
             print("WARNING: No DeepSynthesis report generated")
 
         # Also save state for reference
-        if state and hasattr(state, 'get_state_snapshot'):
+        if state and hasattr(state, "get_state_snapshot"):
             snap = state.get_state_snapshot(summarize=True)
             with open(out_dir / "pipeline_state.json", "w", encoding="utf-8") as f:
                 json.dump(snap, f, indent=2, ensure_ascii=False, default=str)
@@ -246,12 +325,16 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
 
         results["pipeline_duration"] = round(pipeline_duration, 1)
         results["pipeline_turns"] = len(conversation_log)
-        results["deepsynth_word_count"] = len(deepsynth_report.split()) if deepsynth_report else 0
+        results["deepsynth_word_count"] = (
+            len(deepsynth_report.split()) if deepsynth_report else 0
+        )
     else:
         print("\n--- Step 1: SKIPPED (using cached results) ---")
         # Try to load cached
         cached_report = out_dir / "deepsynth_report.md"
-        deepsynth_report = cached_report.read_text(encoding="utf-8") if cached_report.exists() else ""
+        deepsynth_report = (
+            cached_report.read_text(encoding="utf-8") if cached_report.exists() else ""
+        )
         results["pipeline_duration"] = "cached"
         results["pipeline_turns"] = "cached"
 
@@ -328,7 +411,10 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
         pipeline_advantages.append("more_named_fallacies")
     if ds_formal and not bl_formal:
         pipeline_advantages.append("formal_methods_unique_to_pipeline")
-    if comparison["deltas"]["cross_text_parallels"]["pipeline"] and not comparison["deltas"]["cross_text_parallels"]["baseline"]:
+    if (
+        comparison["deltas"]["cross_text_parallels"]["pipeline"]
+        and not comparison["deltas"]["cross_text_parallels"]["baseline"]
+    ):
         pipeline_advantages.append("cross_text_parallels_unique")
 
     comparison["verdict"] = {
@@ -342,12 +428,24 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
 
     # Print summary
     print(f"\n--- Comparison Summary: {info['label']} ---")
-    print(f"Pipeline report: {ds_analysis.get('word_count', 0)} words, {ds_analysis.get('section_count', 0)} sections")
-    print(f"Baseline report: {bl_analysis.get('word_count', 0)} words, {bl_analysis.get('section_count', 0)} sections")
-    print(f"Textual citations: pipeline={ds_analysis.get('textual_citations', 0)}, baseline={bl_analysis.get('textual_citations', 0)}")
-    print(f"Named fallacies: pipeline={len(ds_fallacies)}, baseline={len(bl_fallacies)}")
-    print(f"Formal methods: pipeline={list(ds_formal.keys())}, baseline={list(bl_formal.keys())}")
-    print(f"Cross-text parallels: pipeline={ds_analysis.get('has_cross_text_parallels', False)}, baseline={bl_analysis.get('has_cross_text_parallels', False)}")
+    print(
+        f"Pipeline report: {ds_analysis.get('word_count', 0)} words, {ds_analysis.get('section_count', 0)} sections"
+    )
+    print(
+        f"Baseline report: {bl_analysis.get('word_count', 0)} words, {bl_analysis.get('section_count', 0)} sections"
+    )
+    print(
+        f"Textual citations: pipeline={ds_analysis.get('textual_citations', 0)}, baseline={bl_analysis.get('textual_citations', 0)}"
+    )
+    print(
+        f"Named fallacies: pipeline={len(ds_fallacies)}, baseline={len(bl_fallacies)}"
+    )
+    print(
+        f"Formal methods: pipeline={list(ds_formal.keys())}, baseline={list(bl_formal.keys())}"
+    )
+    print(
+        f"Cross-text parallels: pipeline={ds_analysis.get('has_cross_text_parallels', False)}, baseline={bl_analysis.get('has_cross_text_parallels', False)}"
+    )
     print(f"Pipeline advantages: {pipeline_advantages}")
     print(f"Meets ≥3 categories threshold: {comparison['verdict']['meets_threshold']}")
     print(f"\nSaved to {out_dir}/")
@@ -357,10 +455,12 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
 
 async def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--corpus", required=True,
-                        help="Corpus ID (A, B, C) or 'all'")
-    parser.add_argument("--skip-pipeline", action="store_true",
-                        help="Skip pipeline run, use cached results")
+    parser.add_argument("--corpus", required=True, help="Corpus ID (A, B, C) or 'all'")
+    parser.add_argument(
+        "--skip-pipeline",
+        action="store_true",
+        help="Skip pipeline run, use cached results",
+    )
     args = parser.parse_args()
 
     corpora = ["A", "B", "C"] if args.corpus.lower() == "all" else [args.corpus.upper()]
@@ -378,7 +478,9 @@ async def main():
             label = c["corpus_label"]
             v = c["verdict"]
             icon = "PASS" if v["meets_threshold"] else "FAIL"
-            print(f"  [{icon}] {label}: {len(v['pipeline_advantage_categories'])} advantage categories — {v['pipeline_advantage_categories']}")
+            print(
+                f"  [{icon}] {label}: {len(v['pipeline_advantage_categories'])} advantage categories — {v['pipeline_advantage_categories']}"
+            )
 
 
 if __name__ == "__main__":
