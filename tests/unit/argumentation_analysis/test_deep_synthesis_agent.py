@@ -161,6 +161,50 @@ class TestHelpers:
         assert DeepSynthesisAgent._fallacy_family("straw man") == "presumption"
         assert DeepSynthesisAgent._fallacy_family("unknown thing") == "other"
 
+    def test_fallacy_family_real_labels_french(self):
+        """Labels the per-arg detector actually emits (FR) must not fall to 'other'.
+
+        These are verbatim leaf names observed in dense-corpus reports that the
+        old 11-keyword English map dumped into `fallacy/other/...`.
+        """
+        ff = DeepSynthesisAgent._fallacy_family
+        assert ff("Sophisme génétique") == "relevance"
+        assert ff("Simplification causale") == "causal"
+        assert ff("Causalité insuffisante / post hoc") == "causal"
+        assert ff("Théorie du complot") == "causal"
+        assert ff("généralisation hâtive") == "inductive"
+        assert ff("Suppression des preuves (cherry picking)") == "inductive"
+        assert ff("Illusion de regroupement") == "inductive"
+        assert ff("Faux dilemme") == "presumption"
+        assert ff("Enthymême invalide") == "presumption"
+        assert ff("Argument du package") == "presumption"
+        assert ff("Appel au peuple (argumentum ad populum)") == "relevance"
+        assert ff("Appel à l'émotion") == "relevance"
+        assert ff("Mauvaise étiquetage") == "ambiguity"
+        assert ff("tromperie implicite") == "ambiguity"
+
+    def test_fallacy_family_real_labels_english(self):
+        ff = DeepSynthesisAgent._fallacy_family
+        assert ff("Genetic fallacy") == "relevance"
+        assert ff("Causal oversimplification") == "causal"
+        assert ff("post hoc ergo propter hoc") == "causal"
+        assert ff("Appeal to fear / incitement") == "relevance"
+        assert ff("Naturalistic fallacy (is→ought)") == "presumption"
+
+    def test_fallacy_family_ordering_disambiguation(self):
+        """Generic 'appel'/'appeal' must not shadow more specific families."""
+        ff = DeepSynthesisAgent._fallacy_family
+        # 'anecdote' (inductive) wins over the bare 'appel' relevance catch-all
+        assert ff("appel à l'anecdote") == "inductive"
+        # 'conséquences' (presumption) wins over bare 'appel'
+        assert ff("Appel aux conséquences") == "presumption"
+        # 'temporalité-cause' (causal) wins over bare 'appel'
+        assert ff("Appel à la temporalité-cause") == "causal"
+        # bare appeal still resolves to relevance as last resort
+        assert ff("appel vague non spécifié") == "relevance"
+        # genuinely unknown stays 'other'
+        assert ff("Type Inconnu") == "other"
+
     def test_count_populated_sections_empty(self):
         report = DeepSynthesisReport()
         assert DeepSynthesisAgent._count_populated_sections(report) == 0
