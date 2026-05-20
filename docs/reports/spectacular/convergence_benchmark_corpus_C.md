@@ -72,12 +72,51 @@ fallacy count *and* the convergence depth. Fixing the fallacy→report plumbing
 (plus Track GG's prose layer) is the path to winning surface and substance
 together rather than depending on a coin flip.
 
-## 5. Still open
+## 5. Post-fix re-run (Track FF #642 + GG #644 + HH #648)
+
+Re-ran the same corpus C harness on main `c7350a9f` after the three fixes
+landed. The fallacy section is no longer empty, and — as predicted — the
+convergence layer recovered once it stopped being starved of fallacy signals.
+
+| Metric | Pre-fix (`8cc25ac8`) | Post-fix (`c7350a9f`) | Δ |
+|---|---|---|---|
+| Named fallacies (report Section 3) | **0** | **populated** (e.g. genetic-fallacy, cherry-picking diagnoses) | empty → non-empty |
+| Convergence verdicts | 2 | **4** | +2 (doubled) |
+| Convergence method signals | 6 | **10** | +4 |
+| Textual citations (pipeline) | 37 | **49** | +12 |
+| Attack-edge list | 6 | **15** | +9 |
+| Section count | 18 | 34 | +16 |
+| **Overall ≥3 threshold** | **FAIL** | **PASS** | flipped |
+| **Substance threshold** | PASS | **PASS** | held |
+
+Root cause was **not** a report-reader mismatch. The deterministic parent-harness
+fallacy fallback was already wired and *did* detect fallacies, but its
+registration guarded on `hasattr(state, "add_identified_fallacy")` — always
+False on `UnifiedAnalysisState` (which exposes `add_fallacy`, not the singular).
+So every detected fallacy was silently dropped (#648). The fix registers via
+`add_fallacy`.
+
+The knock-on prediction held exactly: with fallacies now in state, the
+convergence layer's rhetoric signal feeds `compute_argument_convergence`, and the
+top verdict (arg_1) is now flagged by **4 independent methods** — rhetoric/fallacy
++ quality + JTMS + Dung — rendered as Track GG citation-rich prose in the report
+the jury reads. Corpus C went from the *weakest* showing (FAIL overall) to a full
+PASS on **both** surface and substance.
+
+> Single-run caveat: LLM detection depth varies run-to-run; the structural
+> change (0 → non-empty fallacies, 2 → 4 convergence, FAIL → PASS) is the durable
+> signal, not the exact counts.
+
+## 6. Still open
 
 - **Corpus D** completes the 4-corpus set.
-- **Fallacy→report plumbing**: corpus C surfaced 0 named fallacies in the report
-  despite upstream fallacy detection — investigate why (likely the same
-  source-of-truth mismatch class as #642).
-- **Surface-axis lift (Track GG #644)**: citation-rich prose by construction.
-- **BR-trace rendering (#642, Track FF)** and the **PL formula bottleneck**
-  (Tweety constant pre-declaration) remain.
+- ~~**Fallacy→report plumbing**~~ — **RESOLVED** (#648, Track HH; see §5).
+- ~~**Surface-axis lift (Track GG #644)**~~ — **DONE** (CC convergence prose now
+  rendered in the report; citation-rich by construction).
+- ~~**BR-trace rendering (#642, Track FF)**~~ — **RESOLVED** (dual-source belief
+  retractions: JTMS chain + AGM contractions).
+- **PL formula bottleneck** (Tweety constant pre-declaration) remains — formal
+  findings still bottleneck at a small formula count.
+- **Fallacy detection depth**: the harness now *registers* fallacies, but named
+  count (1 this run) still trails the 0-shot's prose enumeration (7) — a
+  detection-recall question, no longer a plumbing one.
