@@ -8,6 +8,7 @@ from datetime import datetime
 @dataclass
 class SourceOverview:
     """Section 1: contextual frame for the analysed source."""
+
     opaque_id: str = ""
     era: str = ""
     language: str = ""
@@ -20,6 +21,7 @@ class SourceOverview:
 @dataclass
 class ArgumentMapEntry:
     """A single argument in the argument map (Section 2)."""
+
     arg_id: str
     stance: str  # "pro" | "con" | "neutral"
     description: str
@@ -30,6 +32,7 @@ class ArgumentMapEntry:
 @dataclass
 class FallacyDiagnosis:
     """Section 3: a single fallacy anchored in taxonomy."""
+
     fallacy_id: str
     family: str
     taxonomy_path: str
@@ -41,6 +44,7 @@ class FallacyDiagnosis:
 @dataclass
 class FormalFinding:
     """Section 4: a single formal-method finding."""
+
     logic_type: str  # "PL", "FOL", "Modal", "ASPIC", etc.
     axioms: List[str] = field(default_factory=list)
     queries: List[str] = field(default_factory=list)
@@ -52,6 +56,7 @@ class FormalFinding:
 @dataclass
 class DungStructure:
     """Section 5: Dung AF analysis."""
+
     framework_name: str = ""
     arguments: List[str] = field(default_factory=list)
     attacks: List[List[str]] = field(default_factory=list)
@@ -64,6 +69,7 @@ class DungStructure:
 @dataclass
 class BeliefRetraction:
     """Section 6: a single JTMS belief retraction."""
+
     belief_name: str
     was_valid: Optional[bool]
     trigger: str  # fallacy or contradiction that caused retraction
@@ -72,6 +78,7 @@ class BeliefRetraction:
 @dataclass
 class CounterArgumentEntry:
     """Section 7: a scored counter-argument."""
+
     counter_id: str
     original_arg: str
     counter_content: str
@@ -84,6 +91,7 @@ class CounterArgumentEntry:
 @dataclass
 class CrossTextParallel:
     """Section 8: a rhetorical parallel between corpora."""
+
     corpus_x: str
     corpus_y: str
     move_x: str
@@ -93,8 +101,24 @@ class CrossTextParallel:
 
 
 @dataclass
+class ConvergentVerdict:
+    """A cross-method convergence verdict (Track DD #637).
+
+    Surfaces an argument flagged as weak by several *independent* analysis
+    methods. The agreement across perspectives is the spectacular insight a
+    0-shot LLM cannot reproduce.
+    """
+
+    arg_id: str
+    score: int  # number of independent methods concurring
+    methods: List[str] = field(default_factory=list)
+    statement: str = ""  # human-readable named verdict
+
+
+@dataclass
 class DeepSynthesisReport:
     """Complete multi-page deep synthesis report with 9 sections."""
+
     source_overview: SourceOverview = field(default_factory=SourceOverview)
     argument_map: List[ArgumentMapEntry] = field(default_factory=list)
     fallacy_diagnoses: List[FallacyDiagnosis] = field(default_factory=list)
@@ -104,6 +128,8 @@ class DeepSynthesisReport:
     counter_arguments: List[CounterArgumentEntry] = field(default_factory=list)
     cross_text_parallels: List[CrossTextParallel] = field(default_factory=list)
     final_synthesis: str = ""
+    convergent_verdicts: List[ConvergentVerdict] = field(default_factory=list)
+    convergence_conclusion: str = ""
     # Metadata
     report_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     total_state_fields: int = 0
@@ -121,6 +147,8 @@ class DeepSynthesisReport:
             "counter_arguments": [c.__dict__ for c in self.counter_arguments],
             "cross_text_parallels": [p.__dict__ for p in self.cross_text_parallels],
             "final_synthesis": self.final_synthesis,
+            "convergent_verdicts": [v.__dict__ for v in self.convergent_verdicts],
+            "convergence_conclusion": self.convergence_conclusion,
             "report_timestamp": self.report_timestamp,
             "total_state_fields": self.total_state_fields,
             "sections_populated": self.sections_populated,

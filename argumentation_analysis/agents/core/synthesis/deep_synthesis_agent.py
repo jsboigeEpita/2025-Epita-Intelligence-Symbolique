@@ -25,6 +25,7 @@ from ..abc.agent_bases import BaseAgent
 from .deep_synthesis_models import (
     ArgumentMapEntry,
     BeliefRetraction,
+    ConvergentVerdict,
     CounterArgumentEntry,
     CrossTextParallel,
     DeepSynthesisReport,
@@ -76,7 +77,9 @@ class DeepSynthesisAgent(BaseAgent):
         transcript = kwargs.get("transcript", [])
         source_meta = kwargs.get("source_metadata", {})
         if state is None:
-            raise ValueError("DeepSynthesisAgent requires a 'state' kwarg (UnifiedAnalysisState)")
+            raise ValueError(
+                "DeepSynthesisAgent requires a 'state' kwarg (UnifiedAnalysisState)"
+            )
         return await self.synthesize(state, transcript, source_meta)
 
     async def get_response(self, *args, **kwargs):
@@ -120,14 +123,22 @@ class DeepSynthesisAgent(BaseAgent):
         # Section 8 — cross-text parallels (if available)
         report.cross_text_parallels = self._build_cross_text_parallels(state)
 
+        # Convergence layer (Track DD #637) — cross-method agreement, computed
+        # before section 9 so both the LLM and template thesis can ground in it.
+        report.convergent_verdicts, report.convergence_conclusion = (
+            self._build_convergent_verdicts(state)
+        )
+
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
             thesis = await self._llm_synthesis(report)
             if thesis:
                 report.final_synthesis = thesis
             else:
-                report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
-                    state, report, transcript
+                report.final_synthesis = (
+                    await DeepSynthesisAgent._build_final_synthesis(
+                        state, report, transcript
+                    )
                 )
         except Exception as e:
             logger.warning(f"LLM synthesis failed, using template: {e}")
@@ -151,7 +162,9 @@ class DeepSynthesisAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _build_source_overview(state: Any, meta: Optional[Dict[str, str]]) -> SourceOverview:
+    def _build_source_overview(
+        state: Any, meta: Optional[Dict[str, str]]
+    ) -> SourceOverview:
         text = getattr(state, "raw_text", "")
         meta = meta or {}
         return SourceOverview(
@@ -195,13 +208,15 @@ class DeepSynthesisAgent(BaseAgent):
             attacked_by = [
                 src for src, targets in attack_map.items() if arg_id in targets
             ]
-            entries.append(ArgumentMapEntry(
-                arg_id=arg_id,
-                stance=DeepSynthesisAgent._infer_stance(desc),
-                description=desc,
-                attacks=[],
-                attacked_by=attacked_by,
-            ))
+            entries.append(
+                ArgumentMapEntry(
+                    arg_id=arg_id,
+                    stance=DeepSynthesisAgent._infer_stance(desc),
+                    description=desc,
+                    attacks=[],
+                    attacked_by=attacked_by,
+                )
+            )
         return entries
 
     @staticmethod
@@ -212,17 +227,20 @@ class DeepSynthesisAgent(BaseAgent):
         entries = []
         for fid, fdata in fallacies.items():
             ftype = fdata.get("type", "unknown")
-            entries.append(FallacyDiagnosis(
-                fallacy_id=fid,
-                family=DeepSynthesisAgent._fallacy_family(ftype),
-                taxonomy_path=f"fallacy/{DeepSynthesisAgent._fallacy_family(ftype)}/{ftype}",
-                textual_span=fdata.get("justification", "")[:200],
-                commentary=fdata.get("justification", ""),
-                impacted_args=(
-                    [fdata["target_argument_id"]]
-                    if fdata.get("target_argument_id") else []
-                ),
-            ))
+            entries.append(
+                FallacyDiagnosis(
+                    fallacy_id=fid,
+                    family=DeepSynthesisAgent._fallacy_family(ftype),
+                    taxonomy_path=f"fallacy/{DeepSynthesisAgent._fallacy_family(ftype)}/{ftype}",
+                    textual_span=fdata.get("justification", "")[:200],
+                    commentary=fdata.get("justification", ""),
+                    impacted_args=(
+                        [fdata["target_argument_id"]]
+                        if fdata.get("target_argument_id")
+                        else []
+                    ),
+                )
+            )
         return entries
 
     @staticmethod
@@ -230,34 +248,40 @@ class DeepSynthesisAgent(BaseAgent):
         findings = []
         # PL results
         for r in getattr(state, "propositional_analysis_results", []):
-            findings.append(FormalFinding(
-                logic_type="PL",
-                axioms=r.get("axioms", []),
-                queries=r.get("queries", []),
-                results=r.get("results", []),
-                inconsistency_measures=r.get("inconsistency_measures", {}),
-                linked_args=r.get("linked_args", []),
-            ))
+            findings.append(
+                FormalFinding(
+                    logic_type="PL",
+                    axioms=r.get("axioms", []),
+                    queries=r.get("queries", []),
+                    results=r.get("results", []),
+                    inconsistency_measures=r.get("inconsistency_measures", {}),
+                    linked_args=r.get("linked_args", []),
+                )
+            )
         # FOL results
         for r in getattr(state, "fol_analysis_results", []):
-            findings.append(FormalFinding(
-                logic_type="FOL",
-                axioms=r.get("axioms", []),
-                queries=r.get("queries", []),
-                results=r.get("results", []),
-                inconsistency_measures=r.get("inconsistency_measures", {}),
-                linked_args=r.get("linked_args", []),
-            ))
+            findings.append(
+                FormalFinding(
+                    logic_type="FOL",
+                    axioms=r.get("axioms", []),
+                    queries=r.get("queries", []),
+                    results=r.get("results", []),
+                    inconsistency_measures=r.get("inconsistency_measures", {}),
+                    linked_args=r.get("linked_args", []),
+                )
+            )
         # Modal results
         for r in getattr(state, "modal_analysis_results", []):
-            findings.append(FormalFinding(
-                logic_type="Modal",
-                axioms=r.get("axioms", []),
-                queries=r.get("queries", []),
-                results=r.get("results", []),
-                inconsistency_measures=r.get("inconsistency_measures", {}),
-                linked_args=r.get("linked_args", []),
-            ))
+            findings.append(
+                FormalFinding(
+                    logic_type="Modal",
+                    axioms=r.get("axioms", []),
+                    queries=r.get("queries", []),
+                    results=r.get("results", []),
+                    inconsistency_measures=r.get("inconsistency_measures", {}),
+                    linked_args=r.get("linked_args", []),
+                )
+            )
         # Belief sets + query log
         belief_sets = getattr(state, "belief_sets", {})
         query_log = getattr(state, "query_log", [])
@@ -266,13 +290,15 @@ class DeepSynthesisAgent(BaseAgent):
                 related_queries = [
                     q for q in query_log if q.get("belief_set_id") == bs_id
                 ]
-                findings.append(FormalFinding(
-                    logic_type=bs_data.get("logic_type", "unknown"),
-                    axioms=[bs_data.get("content", "")],
-                    queries=[q.get("query", "") for q in related_queries],
-                    results=[q.get("raw_result", "") for q in related_queries],
-                    linked_args=[],
-                ))
+                findings.append(
+                    FormalFinding(
+                        logic_type=bs_data.get("logic_type", "unknown"),
+                        axioms=[bs_data.get("content", "")],
+                        queries=[q.get("query", "") for q in related_queries],
+                        results=[q.get("raw_result", "") for q in related_queries],
+                        linked_args=[],
+                    )
+                )
         return findings
 
     @staticmethod
@@ -298,11 +324,13 @@ class DeepSynthesisAgent(BaseAgent):
         chain = getattr(state, "jtms_retraction_chain", [])
         retractions = []
         for entry in chain:
-            retractions.append(BeliefRetraction(
-                belief_name=entry.get("belief_name", ""),
-                was_valid=entry.get("was_valid"),
-                trigger=entry.get("trigger", ""),
-            ))
+            retractions.append(
+                BeliefRetraction(
+                    belief_name=entry.get("belief_name", ""),
+                    was_valid=entry.get("was_valid"),
+                    trigger=entry.get("trigger", ""),
+                )
+            )
         return retractions
 
     @staticmethod
@@ -318,15 +346,19 @@ class DeepSynthesisAgent(BaseAgent):
         entries = []
         for ca in cas:
             ca_id = ca.get("id", "")
-            entries.append(CounterArgumentEntry(
-                counter_id=ca_id,
-                original_arg=ca.get("original_argument", ""),
-                counter_content=ca.get("counter_content", ""),
-                strategy=ca.get("strategy", ""),
-                score=ca.get("score", 0.0),
-                criteria_scores=ca.get("criteria_scores", {}),
-                targets_weakest=any(a in weak_args for a in ca.get("target_arg_ids", [])),
-            ))
+            entries.append(
+                CounterArgumentEntry(
+                    counter_id=ca_id,
+                    original_arg=ca.get("original_argument", ""),
+                    counter_content=ca.get("counter_content", ""),
+                    strategy=ca.get("strategy", ""),
+                    score=ca.get("score", 0.0),
+                    criteria_scores=ca.get("criteria_scores", {}),
+                    targets_weakest=any(
+                        a in weak_args for a in ca.get("target_arg_ids", [])
+                    ),
+                )
+            )
         return entries
 
     @staticmethod
@@ -335,10 +367,44 @@ class DeepSynthesisAgent(BaseAgent):
         # Placeholder — will be populated when multi-corpus runs happen.
         parallels = getattr(state, "cross_text_parallels", [])
         if parallels:
-            return [
-                CrossTextParallel(**p) for p in parallels
-            ]
+            return [CrossTextParallel(**p) for p in parallels]
         return []
+
+    @staticmethod
+    def _build_convergent_verdicts(state: Any) -> tuple:
+        """Compute cross-method convergence verdicts (Track DD #637).
+
+        Delegates to ``build_convergent_synthesis`` (Track BB #634) and maps its
+        output onto ``ConvergentVerdict`` records ordered by descending
+        convergence strength. Returns ``(verdicts, conclusion)``.
+        """
+        from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+            build_convergent_synthesis,
+        )
+
+        try:
+            synthesis = build_convergent_synthesis(state)
+        except Exception as e:  # never let synthesis crash report generation
+            logger.warning(f"Convergence computation failed: {e}")
+            return [], ""
+
+        verdicts_dict = synthesis.get("convergent_verdicts", {})
+        insights = synthesis.get("emergent_insights", [])
+        ordered = sorted(
+            verdicts_dict.items(), key=lambda kv: kv[1]["score"], reverse=True
+        )
+        verdicts = []
+        for (arg_id, data), statement in zip(ordered, insights):
+            methods = [m for m, _ in data["signals"]]
+            verdicts.append(
+                ConvergentVerdict(
+                    arg_id=arg_id,
+                    score=data["score"],
+                    methods=methods,
+                    statement=statement,
+                )
+            )
+        return verdicts, synthesis.get("conclusion", "")
 
     @staticmethod
     async def _build_final_synthesis(
@@ -349,7 +415,9 @@ class DeepSynthesisAgent(BaseAgent):
         n_fallacies = len(report.fallacy_diagnoses)
         n_formal = len(report.formal_findings)
         n_counters = len(report.counter_arguments)
-        n_dung_args = len(report.dung_structure.arguments) if report.dung_structure else 0
+        n_dung_args = (
+            len(report.dung_structure.arguments) if report.dung_structure else 0
+        )
         n_retractions = len(report.belief_retractions)
 
         # Template synthesis (LLM version called from instance synthesize())
@@ -370,12 +438,26 @@ class DeepSynthesisAgent(BaseAgent):
                 f" {n_retractions} belief(s) were retracted during analysis due to contradictions."
             )
         if n_counters:
-            best = max(report.counter_arguments, key=lambda c: c.score) if report.counter_arguments else None
+            best = (
+                max(report.counter_arguments, key=lambda c: c.score)
+                if report.counter_arguments
+                else None
+            )
             if best:
                 parts.append(
                     f" The strongest counter-argument (score {best.score:.2f}, strategy: {best.strategy}) "
-                    f"targets: \"{best.original_arg[:80]}...\""
+                    f'targets: "{best.original_arg[:80]}..."'
                 )
+        if report.convergent_verdicts:
+            n_conv = len(report.convergent_verdicts)
+            top = report.convergent_verdicts[0]
+            parts.append(
+                f"\n\nCrucially, **{n_conv} argument(s) converge across independent "
+                f"methods** — the strongest, {top.arg_id}, is flagged by {top.score} "
+                f"distinct analyses ({', '.join(top.methods)}). This cross-method "
+                f"agreement is the signature insight unavailable to a single LLM pass "
+                f"(see the Convergent Verdicts section)."
+            )
         parts.append(
             "\n\nThese findings demonstrate that the multi-agent orchestration produces "
             "insights unattainable by 0-shot analysis — particularly the formal-method "
@@ -407,7 +489,9 @@ class DeepSynthesisAgent(BaseAgent):
         sections.append(f"| Era | {so.era} |")
         sections.append(f"| Language | {so.language} |")
         sections.append(f"| Discourse type | {so.discourse_type} |")
-        sections.append(f"| Length | {so.length_chars:,} chars / {so.length_words:,} words |\n")
+        sections.append(
+            f"| Length | {so.length_chars:,} chars / {so.length_words:,} words |\n"
+        )
         if so.contextual_frame:
             sections.append(f"{so.contextual_frame}\n")
 
@@ -428,11 +512,15 @@ class DeepSynthesisAgent(BaseAgent):
         sections.append("## 3. Fallacy Diagnosis by Family\n")
         if report.fallacy_diagnoses:
             for f in report.fallacy_diagnoses:
-                sections.append(f"### {f.fallacy_id}: {f.family} — `{f.taxonomy_path}`\n")
-                sections.append(f"> **Textual span**: \"{f.textual_span}\"\n")
+                sections.append(
+                    f"### {f.fallacy_id}: {f.family} — `{f.taxonomy_path}`\n"
+                )
+                sections.append(f'> **Textual span**: "{f.textual_span}"\n')
                 sections.append(f"{f.commentary}\n")
                 if f.impacted_args:
-                    sections.append(f"_Impacts: {', '.join(f'`{a}`' for a in f.impacted_args)}_\n")
+                    sections.append(
+                        f"_Impacts: {', '.join(f'`{a}`' for a in f.impacted_args)}_\n"
+                    )
         else:
             sections.append("_No fallacies detected in this run._\n")
 
@@ -457,9 +545,13 @@ class DeepSynthesisAgent(BaseAgent):
                         sections.append(f"- {r}")
                     sections.append("")
                 if ff.inconsistency_measures:
-                    sections.append(f"**Inconsistency measures:** `{ff.inconsistency_measures}`\n")
+                    sections.append(
+                        f"**Inconsistency measures:** `{ff.inconsistency_measures}`\n"
+                    )
                 if ff.linked_args:
-                    sections.append(f"_Linked to arguments: {', '.join(f'`{a}`' for a in ff.linked_args)}_\n")
+                    sections.append(
+                        f"_Linked to arguments: {', '.join(f'`{a}`' for a in ff.linked_args)}_\n"
+                    )
         else:
             sections.append("_No formal findings in this run._\n")
 
@@ -467,14 +559,18 @@ class DeepSynthesisAgent(BaseAgent):
         sections.append("## 5. Dialectical Structure (Dung)\n")
         ds = report.dung_structure
         if ds and ds.arguments:
-            sections.append(f"**Framework**: {ds.framework_name} ({len(ds.arguments)} arguments, {len(ds.attacks)} attacks)\n")
+            sections.append(
+                f"**Framework**: {ds.framework_name} ({len(ds.arguments)} arguments, {len(ds.attacks)} attacks)\n"
+            )
             if ds.attacks:
                 sections.append("**Attack relations:**")
                 for atk in ds.attacks:
                     sections.append(f"- `{atk[0]}` → `{atk[1]}`")
                 sections.append("")
             if ds.grounded_extension:
-                sections.append(f"**Grounded extension**: {', '.join(f'`{a}`' for a in ds.grounded_extension)}\n")
+                sections.append(
+                    f"**Grounded extension**: {', '.join(f'`{a}`' for a in ds.grounded_extension)}\n"
+                )
             if ds.preferred_extensions:
                 sections.append("**Preferred extensions:**")
                 for ext in ds.preferred_extensions:
@@ -495,7 +591,9 @@ class DeepSynthesisAgent(BaseAgent):
         if report.belief_retractions:
             for br in report.belief_retractions:
                 status = "valid" if br.was_valid else "invalid"
-                sections.append(f"- **{br.belief_name}** (was {status}): retracted because _{br.trigger}_")
+                sections.append(
+                    f"- **{br.belief_name}** (was {status}): retracted because _{br.trigger}_"
+                )
             sections.append("")
         else:
             sections.append("_No belief retractions in this run._\n")
@@ -506,9 +604,13 @@ class DeepSynthesisAgent(BaseAgent):
             sections.append("| ID | Strategy | Score | Targets weakest | Content |")
             sections.append("|----|----------|-------|-----------------|---------|")
             for ca in report.counter_arguments:
-                content = ca.counter_content[:80] + ("..." if len(ca.counter_content) > 80 else "")
+                content = ca.counter_content[:80] + (
+                    "..." if len(ca.counter_content) > 80 else ""
+                )
                 weakest = "Yes" if ca.targets_weakest else "No"
-                sections.append(f"| `{ca.counter_id}` | {ca.strategy} | {ca.score:.2f} | {weakest} | {content} |")
+                sections.append(
+                    f"| `{ca.counter_id}` | {ca.strategy} | {ca.score:.2f} | {weakest} | {content} |"
+                )
             sections.append("")
         else:
             sections.append("_No counter-arguments generated in this run._\n")
@@ -519,16 +621,37 @@ class DeepSynthesisAgent(BaseAgent):
             for p in report.cross_text_parallels:
                 sections.append(
                     f"- **{p.corpus_x}** ↔ **{p.corpus_y}** ({p.parallel_type}): "
-                    f"\"{p.move_x[:60]}...\" ↔ \"{p.move_y[:60]}...\""
+                    f'"{p.move_x[:60]}..." ↔ "{p.move_y[:60]}..."'
                 )
                 if p.commentary:
                     sections.append(f"  _{p.commentary}_")
             sections.append("")
         else:
-            sections.append("_No cross-text parallels in this run (single-corpus analysis)._\n")
+            sections.append(
+                "_No cross-text parallels in this run (single-corpus analysis)._\n"
+            )
+
+        # Convergent verdicts (Track DD #637) — cross-method agreement, rendered
+        # from the structured field so it appears regardless of synthesis path.
+        sections.append("## Convergent Verdicts (cross-method agreement)\n")
+        if report.convergent_verdicts:
+            for v in report.convergent_verdicts:
+                sections.append(v.statement)
+                sections.append("")
+            if report.convergence_conclusion:
+                sections.append(f"**Conclusion** : {report.convergence_conclusion}\n")
+        else:
+            sections.append(
+                "_No argument was independently flagged by two or more methods — "
+                "the argumentative structure resists cross-method scrutiny._\n"
+            )
 
         # S9 — Final synthesis
-        sections.append(report.final_synthesis if report.final_synthesis else "_Final synthesis not generated._\n")
+        sections.append(
+            report.final_synthesis
+            if report.final_synthesis
+            else "_Final synthesis not generated._\n"
+        )
 
         return "\n".join(sections)
 
@@ -576,7 +699,9 @@ class DeepSynthesisAgent(BaseAgent):
         grounded = extensions.get("grounded", [])
         if not args:
             return ""
-        lines = [f"The framework contains {len(args)} arguments and {len(attacks)} attacks."]
+        lines = [
+            f"The framework contains {len(args)} arguments and {len(attacks)} attacks."
+        ]
         if grounded:
             lines.append(
                 f"The grounded extension contains {len(grounded)} argument(s): "
@@ -588,13 +713,24 @@ class DeepSynthesisAgent(BaseAgent):
     def _count_state_fields(state: Any) -> int:
         count = 0
         for attr in [
-            "identified_arguments", "identified_fallacies", "belief_sets",
-            "query_log", "counter_arguments", "argument_quality_scores",
-            "jtms_beliefs", "jtms_retraction_chain", "dung_frameworks",
-            "propositional_analysis_results", "fol_analysis_results",
-            "modal_analysis_results", "formal_synthesis_reports",
-            "aspic_results", "belief_revision_results", "ranking_results",
-            "debate_transcripts", "narrative_synthesis",
+            "identified_arguments",
+            "identified_fallacies",
+            "belief_sets",
+            "query_log",
+            "counter_arguments",
+            "argument_quality_scores",
+            "jtms_beliefs",
+            "jtms_retraction_chain",
+            "dung_frameworks",
+            "propositional_analysis_results",
+            "fol_analysis_results",
+            "modal_analysis_results",
+            "formal_synthesis_reports",
+            "aspic_results",
+            "belief_revision_results",
+            "ranking_results",
+            "debate_transcripts",
+            "narrative_synthesis",
         ]:
             val = getattr(state, attr, None)
             if val:
@@ -629,6 +765,21 @@ class DeepSynthesisAgent(BaseAgent):
         if not self._llm_service_id:
             return None
         try:
+            convergence_block = ""
+            if report.convergent_verdicts:
+                verdict_lines = "\n".join(
+                    f"- {v.arg_id}: {v.score} independent methods concur "
+                    f"({', '.join(v.methods)})"
+                    for v in report.convergent_verdicts
+                )
+                convergence_block = (
+                    "\nThe analysis surfaced CROSS-METHOD CONVERGENT VERDICTS — "
+                    "arguments independently flagged as weak by several methods. "
+                    "Anchor your thesis on these; this multi-perspective agreement is "
+                    "the central insight a single LLM pass cannot reproduce:\n"
+                    f"{verdict_lines}\n"
+                    f"Convergence conclusion: {report.convergence_conclusion}\n"
+                )
             prompt = (
                 "Write a 2-3 paragraph closing thesis for the following analysis report. "
                 "Do NOT summarize — take a position grounded in the evidence. "
@@ -642,6 +793,7 @@ class DeepSynthesisAgent(BaseAgent):
                 f"{', '.join(report.dung_structure.grounded_extension) or 'none'}. "
                 "Strongest counter-argument score: "
                 f"{max((c.score for c in report.counter_arguments), default=0):.2f}."
+                f"{convergence_block}"
             )
             # Use SK chat completion
             settings = self.kernel.get_prompt_execution_settings_from_service_id(
