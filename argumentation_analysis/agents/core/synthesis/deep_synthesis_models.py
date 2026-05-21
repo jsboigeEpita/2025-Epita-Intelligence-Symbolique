@@ -134,6 +134,9 @@ class DeepSynthesisReport:
     # Empty when no kernel is configured or no verdicts exist; renderer then
     # falls back to the template verdict statements.
     convergence_prose: str = ""
+    # Adjudication table (Track NN #659) — grounded vs claimed fallacy families.
+    # Each entry: {"family": str, "status": "grounded"|"claimed", "evidence": str}
+    adjudication_table: List[Dict[str, str]] = field(default_factory=list)
     # Metadata
     report_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     total_state_fields: int = 0
@@ -154,6 +157,7 @@ class DeepSynthesisReport:
             "convergent_verdicts": [v.__dict__ for v in self.convergent_verdicts],
             "convergence_conclusion": self.convergence_conclusion,
             "convergence_prose": self.convergence_prose,
+            "adjudication_table": self.adjudication_table,
             "report_timestamp": self.report_timestamp,
             "total_state_fields": self.total_state_fields,
             "sections_populated": self.sections_populated,

@@ -135,6 +135,11 @@ class DeepSynthesisAgent(BaseAgent):
         # Empty when no kernel/verdicts; renderer falls back to template statements.
         report.convergence_prose = await self._llm_convergence_prose(state)
 
+        # Adjudication table (Track NN #659) — grounded vs claimed families.
+        report.adjudication_table = self._build_adjudication_table(
+            report.fallacy_diagnoses, report.convergent_verdicts
+        )
+
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
             thesis = await self._llm_synthesis(report)
@@ -681,6 +686,20 @@ class DeepSynthesisAgent(BaseAgent):
                 "the argumentative structure resists cross-method scrutiny._\n"
             )
 
+        # Adjudication (Track NN #659) — grounded vs claimed families
+        sections.append("## Adjudication: Claimed vs Grounded Fallacy Families\n")
+        if report.adjudication_table:
+            sections.append("| Family | Status | Evidence |")
+            sections.append("|--------|--------|----------|")
+            for row in report.adjudication_table:
+                icon = "✅" if row["status"] == "grounded" else "⚠️"
+                sections.append(
+                    f"| {row['family']} | {icon} {row['status']} | {row['evidence']} |"
+                )
+            sections.append("")
+        else:
+            sections.append("_No fallacy families to adjudicate._\n")
+
         # S9 — Final synthesis
         sections.append(
             report.final_synthesis
@@ -871,6 +890,56 @@ class DeepSynthesisAgent(BaseAgent):
         if report.final_synthesis:
             n += 1
         return n
+
+    @staticmethod
+    def _build_adjudication_table(
+        fallacy_diagnoses: List[FallacyDiagnosis],
+        convergent_verdicts: List[ConvergentVerdict],
+    ) -> List[Dict[str, str]]:
+        """Track NN #659 — adjudicate claimed vs grounded fallacy families.
+
+        For each detected family, decide:
+        - 'grounded': at least one per-argument detection targets an argument
+          that also appears in a convergent verdict (cross-method confirmed).
+        - 'claimed': detected, but no per-argument anchor with convergence
+          (wide-net only, or per-arg but without cross-method support).
+        """
+        converged_args: Dict[str, ConvergentVerdict] = {
+            v.arg_id: v for v in convergent_verdicts
+        }
+        family_entries: Dict[str, List[FallacyDiagnosis]] = {}
+        for fd in fallacy_diagnoses:
+            family_entries.setdefault(fd.family, []).append(fd)
+
+        rows: List[Dict[str, str]] = []
+        for family in sorted(family_entries):
+            entries = family_entries[family]
+            grounded_args = [
+                a for fd in entries for a in fd.impacted_args if a in converged_args
+            ]
+            if grounded_args:
+                best = grounded_args[0]
+                v = converged_args[best]
+                evidence = (
+                    f"`{best}` — {v.score} independent method(s): "
+                    f"{', '.join(v.methods)}"
+                )
+                rows.append(
+                    {"family": family, "status": "grounded", "evidence": evidence}
+                )
+            else:
+                per_arg_ids = sorted({a for fd in entries for a in fd.impacted_args})
+                if per_arg_ids:
+                    evidence = (
+                        f"per-argument detection "
+                        f"(`{'`, `'.join(per_arg_ids)}`) — no cross-method confirmation"
+                    )
+                else:
+                    evidence = "wide-net (whole-text) detection only — no argument-level anchor"
+                rows.append(
+                    {"family": family, "status": "claimed", "evidence": evidence}
+                )
+        return rows
 
     async def _llm_convergence_prose(self, state: Any) -> str:
         """Track GG #644 — LLM prose for the convergence section.
