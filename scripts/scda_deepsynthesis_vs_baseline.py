@@ -103,8 +103,16 @@ def count_textual_citations(text: str) -> int:
 
 
 def count_named_fallacies_with_taxonomy(text: str) -> list[dict]:
-    """Extract named fallacies with taxonomy paths."""
+    """Extract named fallacies with taxonomy paths.
+
+    Covers standard FR/EN names AND taxonomy-specific names emitted by the
+    pipeline's hierarchical detector (e.g. Enthymême invalide, Appel au
+    racisme, Tromperie implicite). Extended for Track PP (#665) so the
+    benchmark measures what the pipeline actually names, not just a fixed
+    set of 34 standard labels.
+    """
     fallacy_families = [
+        # Standard FR/EN names
         "Appel à l'autorité",
         "Appel a l'autorite",
         "Appeal to authority",
@@ -139,6 +147,47 @@ def count_named_fallacies_with_taxonomy(text: str) -> list[dict]:
         "Tu quoque",
         "Cherry picking",
         "Reductio ad absurdum",
+        # Taxonomy-specific names emitted by the pipeline detector
+        "Enthymême invalide",
+        "Appel au racisme",
+        "Appel à la panique morale",
+        "Tromperie implicite",
+        "Illusion de regroupement",
+        "Sophisme du faisceau de preuves",
+        "Argument du package",
+        "Appel à la temporalité",
+        "Sophisme de la cause unique",
+        "Sophisme de portée modale",
+        "Pseudorationalisme",
+        "Culpabilité par association",
+        "Empoisonnement du puits",
+        "Appel au peuple",
+        "Simplification excessive",
+        "Faux espoir",
+        "Appel à la tradition",
+        "Appel à la nouveauté",
+        "Sophisme génétique",
+        "Généralisation abusive",
+        "Argumentum ad populum",
+        "Argumentum ad consequentiam",
+        "Sophisme naturaliste",
+        "Is-ought",
+        "Appel à la pitié",
+        "Appel à la peur",
+        "Menace voilée",
+        "Discours de haine",
+        "Démonisation",
+        "Stigmatisation",
+        # Additional taxonomy names from pipeline reports (corpus B/C)
+        "Appel au nationalisme",
+        "Appel à l'identité nationale",
+        "Appel au drapeau rouge",
+        "Reductio ad Hitlerum",
+        "Amalgame",
+        "Cécité d'inattention",
+        "Argument par l'insinuation",
+        "Théorie du complot",
+        "Hyperbole",
     ]
     found = []
     lines = text.lower()
@@ -151,6 +200,32 @@ def count_named_fallacies_with_taxonomy(text: str) -> list[dict]:
                 }
             )
     return found
+
+
+def count_fallacy_families(text: str) -> dict:
+    """Count distinct fallacy families (causal, relevance, presumption, inductive, ambiguity).
+
+    Parses the Section 3 headers of the DeepSynthesis report which use the format:
+    ``### fallacy_N: family — `fallacy/family/Name````
+    """
+    families = {
+        "causal": 0,
+        "relevance": 0,
+        "presumption": 0,
+        "inductive": 0,
+        "ambiguity": 0,
+        "other": 0,
+    }
+    for line in text.splitlines():
+        if line.startswith("### fallacy_"):
+            m = re.match(r"### fallacy_\d+:\s*(\w+)", line)
+            if m:
+                family = m.group(1).lower()
+                if family in families:
+                    families[family] += 1
+                else:
+                    families["other"] += 1
+    return families
 
 
 def detect_formal_method_findings(text: str) -> dict:
@@ -290,6 +365,7 @@ def analyze_report(text: str) -> dict:
     return {
         "textual_citations": count_textual_citations(text),
         "named_fallacies": count_named_fallacies_with_taxonomy(text),
+        "fallacy_families": count_fallacy_families(text),
         "formal_method_findings": detect_formal_method_findings(text),
         "has_cross_text_parallels": detect_cross_text_parallels(text),
         "convergence": count_convergence_depth(text),
