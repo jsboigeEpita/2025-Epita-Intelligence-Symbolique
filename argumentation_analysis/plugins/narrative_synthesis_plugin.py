@@ -316,6 +316,57 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
     return result
 
 
+def _build_substantive_insight(
+    arg_id: str,
+    score: int,
+    method_phrases: List[str],
+    data: Dict[str, Any],
+) -> str:
+    """Build a substantive insight paragraph for high-convergence verdicts (>=3 methods).
+
+    Produces a conclusion anchored in the actual signals: names the argument,
+    lists the converging methods, and states WHY the cross-method agreement
+    makes the argument's weakness over-determined rather than a single-method
+    opinion.
+    """
+    joined = ", ".join(method_phrases)
+
+    signal_reasons = []
+    for method, detail in data["signals"]:
+        if method == "sophisme":
+            signal_reasons.append(
+                f"la detection rhetorique a identifie un probleme ({detail})"
+            )
+        elif method == "qualite faible":
+            signal_reasons.append(
+                f"le scoring de qualite signale une faiblesse ({detail})"
+            )
+        elif method == "contre-argument":
+            signal_reasons.append("un contre-argument solide a ete oppose")
+        elif method == "JTMS retracte":
+            signal_reasons.append(
+                "le systeme de maintenance de verite (JTMS) a retracte "
+                "la croyance associee"
+            )
+        elif method == "rejet Dung":
+            signal_reasons.append(
+                f"l'analyse argumentative abstraite (Dung) rejette l'argument "
+                f"({detail})"
+            )
+
+    reasons_text = " ; en outre, ".join(signal_reasons)
+
+    return (
+        f"**Insight convergent sur {arg_id}** : {score} methodes independantes "
+        f"concourent a signaler cet argument comme faible ({joined}). "
+        f"Cette faiblesse est sur-determinee, et non le produit d'une seule "
+        f"perspective : {reasons_text}. "
+        f"Un tel accord inter-methodes est inaccessible a une analyse "
+        f"LLM monotone et constitue un insight emergent propre au systeme "
+        f"multi-agents."
+    )
+
+
 def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
     """Build a spectacular synthesis surfacing cross-dimensional convergence.
 
@@ -350,12 +401,17 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
             else:
                 method_phrases.append(method)
         joined = ", ".join(method_phrases)
-        insights.append(
-            f"**Verdict convergent sur {arg_id}** : {data['score']} methodes "
-            f"independantes concourent a le signaler ({joined}). "
-            f"Cette convergence inter-perspectives est inaccessible a une passe "
-            f"LLM unique."
-        )
+        score = data["score"]
+        if score >= 3:
+            insight = _build_substantive_insight(arg_id, score, method_phrases, data)
+            insights.append(insight)
+        else:
+            insights.append(
+                f"**Verdict convergent sur {arg_id}** : {score} methodes "
+                f"independantes concourent a le signaler ({joined}). "
+                f"Cette convergence inter-perspectives est inaccessible a une passe "
+                f"LLM unique."
+            )
 
     # Build the conclusion line
     if ordered:
@@ -404,7 +460,12 @@ _PROSE_INSTRUCTIONS = (
     "'argumentation abstraite', 'maintenance de verite', 'scoring de qualite'). "
     "(3) Do not invent claims or details absent from the evidence. "
     "(4) Each paragraph covers one argument; cite at least two methods by name. "
-    "(5) Maximum 300 words."
+    "(5) For arguments flagged by 3+ methods, produce a SUBSTANTIVE CONCLUSION: "
+    "state WHY the cross-method agreement makes the weakness over-determined — "
+    "not just list methods, but articulate the insight that emerges from their "
+    "concordance (e.g. 'the argument combines X AND Y AND Z, making its weakness "
+    "structural rather than circumstantial'). "
+    "(6) Maximum 400 words."
 )
 
 
