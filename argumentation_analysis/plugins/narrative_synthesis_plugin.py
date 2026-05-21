@@ -187,6 +187,38 @@ def build_narrative(state: Any) -> str:
 QUALITY_WEAK_THRESHOLD = 5.0
 
 
+def _resolve_dung_arg_id(text: str, identified_args: Dict[str, Any]) -> str:
+    """Map a Dung framework argument (free text or canonical ID) to its canonical arg_id.
+
+    Dung arguments are extracted as free text by _extract_arguments_from_context
+    (e.g. "The policy increases unemployment...") while compute_argument_convergence
+    iterates over identified_arguments whose keys are canonical IDs ("arg_1", "arg_2"
+    etc.).  Without this resolution, signal 5 (Dung rejection) is a dead letter for
+    text-labelled frameworks — same root-cause pattern as Track LL (JTMS beliefs
+    named by raw text instead of prefixed canonical ID).
+    """
+    if not isinstance(identified_args, dict):
+        return text
+    # Direct canonical-ID match (when Dung was built with ID labels)
+    if text in identified_args:
+        return text
+    # Text-based match against argument descriptions
+    text_prefix = text[:60]
+    for aid, desc in identified_args.items():
+        if not desc:
+            continue
+        desc_str = str(desc)
+        if (
+            text == desc_str
+            or text_prefix == desc_str[:60]
+            or desc_str[:60] in text
+            or text in desc_str
+        ):
+            return str(aid)
+    # Unresolved: return as-is; won't match canonical lookup but causes no harm
+    return text
+
+
 def _dung_rejected_args(state: Any) -> Dict[str, str]:
     """Return {arg_id: semantics} for arguments present in a Dung framework
     but absent from its accepted extension (i.e. rejected by that semantics)."""
@@ -194,6 +226,7 @@ def _dung_rejected_args(state: Any) -> Dict[str, str]:
     frameworks = getattr(state, "dung_frameworks", {}) or {}
     if not isinstance(frameworks, dict):
         return rejected
+    identified_args: Dict[str, Any] = getattr(state, "identified_arguments", {}) or {}
     for _fid, fw in frameworks.items():
         if not isinstance(fw, dict):
             continue
@@ -228,8 +261,11 @@ def _dung_rejected_args(state: Any) -> Dict[str, str]:
                     accepted.add(item)
         for arg in fw_args:
             if isinstance(arg, str) and arg not in accepted:
+                # Resolve text → canonical arg_id so compute_argument_convergence
+                # can match the Dung rejection against identified_arguments keys.
+                canonical = _resolve_dung_arg_id(arg, identified_args)
                 # Don't overwrite a prior rejection from another framework
-                rejected.setdefault(arg, semantics)
+                rejected.setdefault(canonical, semantics)
     return rejected
 
 
