@@ -54,8 +54,9 @@ class TestInvokeJTMS:
 
         assert result["undermined_count"] > 0
         assert result["fallacy_count"] == 1
-        # The argument belief should be invalid
-        arg_belief = result["beliefs"].get("He is wrong because he is biased")
+        # Belief names carry an "arg_N:" prefix so compute_argument_convergence
+        # can index JTMS signals by arg_id (startswith check).
+        arg_belief = result["beliefs"].get("arg_1:He is wrong because he is biased")
         assert arg_belief is not None
         assert arg_belief["valid"] is False
 
@@ -103,7 +104,9 @@ class TestInvokeJTMS:
         }
         result = await _invoke_jtms("text", context)
 
-        arg_belief = result["beliefs"].get("A well-structured argument with evidence")
+        arg_belief = result["beliefs"].get(
+            "arg_1:A well-structured argument with evidence"
+        )
         assert arg_belief is not None
         assert "quality" in arg_belief
         assert arg_belief["quality"]["quality_score"] == 7.5

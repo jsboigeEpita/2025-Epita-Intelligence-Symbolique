@@ -291,13 +291,17 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
             signals.append(("contre-argument", str(counter_by_arg[arg_id])))
 
         # 4. JTMS belief retracted / invalid
+        # Beliefs are named "arg_N:<text_excerpt>" (see _invoke_jtms).  Use
+        # startswith for a precise match — substring check would false-positive
+        # on defeat beliefs and other arg_id occurrences in text.
+        jtms_prefix = f"{arg_id}:"
         if isinstance(jtms, dict):
             invalid = 0
             for _bid, bdata in jtms.items():
                 if not isinstance(bdata, dict):
                     continue
                 name = bdata.get("name", "")
-                if arg_id in name and bdata.get("valid") is False:
+                if name.startswith(jtms_prefix) and bdata.get("valid") is False:
                     invalid += 1
             if invalid:
                 signals.append(("JTMS retracte", str(invalid)))
