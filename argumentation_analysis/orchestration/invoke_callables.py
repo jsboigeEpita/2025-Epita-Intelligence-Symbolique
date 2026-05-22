@@ -1414,16 +1414,13 @@ def _generate_hypotheses(
     # Hypothesis 3: Only high-quality arguments (if quality data available)
     if per_arg_scores:
         high_quality = []
-        for arg_name in arg_names:
-            # Direct lookup first; fall back to exact-match against str(arg_id).
-            # Avoid arg_name[:30] in str(arg_id) — it falsely matched unrelated
-            # IDs like "counter_argument" / "target_argument" (review #376).
-            scores = per_arg_scores.get(arg_name)
+        # Build positional mapping: arg_names[i] -> canonical key "arg_{i+1}"
+        # per_arg_scores is keyed by canonical arg_id, arg_names are free text.
+        for idx, arg_name in enumerate(arg_names):
+            canonical = f"arg_{idx + 1}"
+            scores = per_arg_scores.get(canonical)
             if not isinstance(scores, dict):
-                for arg_id, candidate in per_arg_scores.items():
-                    if isinstance(candidate, dict) and str(arg_id) == arg_name:
-                        scores = candidate
-                        break
+                scores = per_arg_scores.get(arg_name)
             if isinstance(scores, dict):
                 if (
                     float(str(scores.get("overall", scores.get("note_finale", 0))))
@@ -2568,7 +2565,9 @@ def _python_social_fallback(
                 v[0] / (v[0] + v[1]) if isinstance(v, tuple) and sum(v) > 0 else 0.5
             )
         # Signal 2: quality score boost
-        q = quality_scores.get(arg)
+        # quality_scores keyed by canonical arg_id ("arg_N"), args are free text
+        canonical = f"arg_{i + 1}"
+        q = quality_scores.get(canonical, quality_scores.get(arg))
         quality_boost = 0.0
         if isinstance(q, (int, float)):
             quality_boost = q * 0.3  # quality contributes 30%

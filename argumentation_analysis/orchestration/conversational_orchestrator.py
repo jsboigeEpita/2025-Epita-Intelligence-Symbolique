@@ -2036,13 +2036,13 @@ def _build_aspic_from_state(state: Any) -> Optional[Dict[str, Any]]:
 
         # Fallacy-targeted arguments are defeasible regardless
         is_undermined = False
+        current_arg_id = f"arg_{i + 1}"
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
             target = f.get("target_argument_id", "")
             target_text = f.get("target_argument", "")
-            arg_ids = list(state.identified_arguments.keys())
-            if target and target == (arg_ids[i] if i < len(arg_ids) else ""):
+            if target and target == current_arg_id:
                 is_undermined = True
                 break
             if target_text and target_text.lower()[:30] in desc.lower():
@@ -2065,13 +2065,13 @@ def _build_aspic_from_state(state: Any) -> Optional[Dict[str, Any]]:
         if not desc:
             continue
         is_undermined = False
+        current_arg_id = f"arg_{i + 1}"
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
-            arg_ids = list(state.identified_arguments.keys())
             target = f.get("target_argument_id", "")
             target_text = f.get("target_argument", "")
-            if (target and target == (arg_ids[i] if i < len(arg_ids) else "")) or (
+            if (target and target == current_arg_id) or (
                 target_text and target_text.lower()[:30] in desc.lower()
             ):
                 is_undermined = True

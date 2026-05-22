@@ -135,9 +135,21 @@ class CrossReferenceGraph:
         arguments = getattr(state, "identified_arguments", None) or {}
         if isinstance(arguments, dict):
             for arg_id, arg_data in arguments.items():
-                label = str(arg_data)[:60] if not isinstance(arg_data, dict) else arg_data.get("text", arg_id)[:60]
-                self.add_node(Node(id=str(arg_id), label=label, node_type="argument",
-                                   metadata={"data": arg_data} if isinstance(arg_data, dict) else {}))
+                label = (
+                    str(arg_data)[:60]
+                    if not isinstance(arg_data, dict)
+                    else arg_data.get("text", arg_id)[:60]
+                )
+                self.add_node(
+                    Node(
+                        id=str(arg_id),
+                        label=label,
+                        node_type="argument",
+                        metadata=(
+                            {"data": arg_data} if isinstance(arg_data, dict) else {}
+                        ),
+                    )
+                )
         elif isinstance(arguments, list):
             for i, arg in enumerate(arguments):
                 arg_id = getattr(arg, "id", None) or f"arg_{i}"
@@ -148,30 +160,60 @@ class CrossReferenceGraph:
         fallacies = getattr(state, "identified_fallacies", None) or {}
         if isinstance(fallacies, dict):
             for f_id, f_data in fallacies.items():
-                label = str(f_data)[:60] if not isinstance(f_data, dict) else f_data.get("fallacy_type", f_id)[:60]
-                self.add_node(Node(id=str(f_id), label=label, node_type="fallacy",
-                                   metadata={"data": f_data} if isinstance(f_data, dict) else {}))
+                label = (
+                    str(f_data)[:60]
+                    if not isinstance(f_data, dict)
+                    else f_data.get("fallacy_type", f_id)[:60]
+                )
+                self.add_node(
+                    Node(
+                        id=str(f_id),
+                        label=label,
+                        node_type="fallacy",
+                        metadata={"data": f_data} if isinstance(f_data, dict) else {},
+                    )
+                )
                 # Edge: argument -> fallacy (via target_arg_id)
-                if isinstance(f_data, dict) and "target_arg_id" in f_data:
-                    target = str(f_data["target_arg_id"])
-                    self.add_edge(Edge(source=target, target=str(f_id),
-                                       edge_type=EdgeType.ARGUMENT_FALLACY))
+                if isinstance(f_data, dict) and "target_argument_id" in f_data:
+                    target = str(f_data["target_argument_id"])
+                    self.add_edge(
+                        Edge(
+                            source=target,
+                            target=str(f_id),
+                            edge_type=EdgeType.ARGUMENT_FALLACY,
+                        )
+                    )
         elif isinstance(fallacies, list):
             for i, f in enumerate(fallacies):
                 f_id = getattr(f, "id", None) or f"fal_{i}"
                 label = getattr(f, "fallacy_type", str(f))[:60]
                 self.add_node(Node(id=str(f_id), label=label, node_type="fallacy"))
-                target = getattr(f, "target_arg_id", None)
+                target = getattr(f, "target_argument_id", None)
                 if target:
-                    self.add_edge(Edge(source=str(target), target=str(f_id),
-                                       edge_type=EdgeType.ARGUMENT_FALLACY))
+                    self.add_edge(
+                        Edge(
+                            source=str(target),
+                            target=str(f_id),
+                            edge_type=EdgeType.ARGUMENT_FALLACY,
+                        )
+                    )
 
         # 3. JTMS beliefs
         beliefs = getattr(state, "jtms_beliefs", None) or {}
         for b_id, b_data in beliefs.items():
-            label = b_data.get("name", str(b_id))[:60] if isinstance(b_data, dict) else str(b_id)[:60]
-            self.add_node(Node(id=str(b_id), label=label, node_type="jtms_belief",
-                               metadata={"data": b_data} if isinstance(b_data, dict) else {}))
+            label = (
+                b_data.get("name", str(b_id))[:60]
+                if isinstance(b_data, dict)
+                else str(b_id)[:60]
+            )
+            self.add_node(
+                Node(
+                    id=str(b_id),
+                    label=label,
+                    node_type="jtms_belief",
+                    metadata={"data": b_data} if isinstance(b_data, dict) else {},
+                )
+            )
 
         # Edge: fallacy -> jtms_retraction (via retraction chain)
         retraction_chain = getattr(state, "jtms_retraction_chain", None) or []
@@ -180,19 +222,35 @@ class CrossReferenceGraph:
                 fallacy_id = str(entry.get("fallacy_id", ""))
                 belief_id = str(entry.get("belief_id", ""))
                 if fallacy_id and belief_id:
-                    self.add_edge(Edge(source=fallacy_id, target=belief_id,
-                                       edge_type=EdgeType.FALLACY_JTMS_RETRACTION))
+                    self.add_edge(
+                        Edge(
+                            source=fallacy_id,
+                            target=belief_id,
+                            edge_type=EdgeType.FALLACY_JTMS_RETRACTION,
+                        )
+                    )
 
         # 4. Belief revisions
         revisions = getattr(state, "belief_revision_results", None) or []
         for i, rev in enumerate(revisions):
             rev_id = rev.get("id", f"rev_{i}") if isinstance(rev, dict) else f"rev_{i}"
-            label = rev.get("description", rev_id)[:60] if isinstance(rev, dict) else str(rev)[:60]
-            self.add_node(Node(id=str(rev_id), label=label, node_type="belief_revision"))
+            label = (
+                rev.get("description", rev_id)[:60]
+                if isinstance(rev, dict)
+                else str(rev)[:60]
+            )
+            self.add_node(
+                Node(id=str(rev_id), label=label, node_type="belief_revision")
+            )
             # Edge: jtms_belief -> belief_revision
             if isinstance(rev, dict) and "belief_id" in rev:
-                self.add_edge(Edge(source=str(rev["belief_id"]), target=str(rev_id),
-                                   edge_type=EdgeType.JTMS_BELIEF_REVISION))
+                self.add_edge(
+                    Edge(
+                        source=str(rev["belief_id"]),
+                        target=str(rev_id),
+                        edge_type=EdgeType.JTMS_BELIEF_REVISION,
+                    )
+                )
 
         # 5. Counter-arguments
         counters = getattr(state, "counter_arguments", None) or []
@@ -200,20 +258,32 @@ class CrossReferenceGraph:
             if isinstance(ca, dict):
                 ca_id = ca.get("id", f"ca_{len(self.edges)}")
                 label = ca.get("counter_content", ca_id)[:60]
-                self.add_node(Node(id=str(ca_id), label=label, node_type="counter_argument"))
+                self.add_node(
+                    Node(id=str(ca_id), label=label, node_type="counter_argument")
+                )
                 target = ca.get("target_arg_id")
                 if target:
-                    self.add_edge(Edge(source=str(target), target=str(ca_id),
-                                       edge_type=EdgeType.ARGUMENT_COUNTER))
+                    self.add_edge(
+                        Edge(
+                            source=str(target),
+                            target=str(ca_id),
+                            edge_type=EdgeType.ARGUMENT_COUNTER,
+                        )
+                    )
 
         # 6. Quality scores
         quality = getattr(state, "argument_quality_scores", None) or {}
         for arg_id, q_data in quality.items():
             q_id = f"qual_{arg_id}"
             overall = q_data.get("overall", 0) if isinstance(q_data, dict) else 0
-            self.add_node(Node(id=q_id, label=f"Q:{overall:.1f}", node_type="quality_score"))
-            self.add_edge(Edge(source=str(arg_id), target=q_id,
-                               edge_type=EdgeType.ARGUMENT_QUALITY))
+            self.add_node(
+                Node(id=q_id, label=f"Q:{overall:.1f}", node_type="quality_score")
+            )
+            self.add_edge(
+                Edge(
+                    source=str(arg_id), target=q_id, edge_type=EdgeType.ARGUMENT_QUALITY
+                )
+            )
 
         # 7. Debate transcripts
         debates = getattr(state, "debate_transcripts", None) or []
@@ -221,7 +291,9 @@ class CrossReferenceGraph:
             if isinstance(dt, dict):
                 dt_id = dt.get("id", f"debate_{len(self.edges)}")
                 label = dt.get("topic", dt_id)[:60]
-                self.add_node(Node(id=str(dt_id), label=label, node_type="debate_outcome"))
+                self.add_node(
+                    Node(id=str(dt_id), label=label, node_type="debate_outcome")
+                )
 
         # 8. Governance decisions
         governance = getattr(state, "governance_decisions", None) or []
@@ -229,12 +301,19 @@ class CrossReferenceGraph:
             if isinstance(gd, dict):
                 gd_id = gd.get("id", f"gov_{len(self.edges)}")
                 winner = gd.get("winner", "?")
-                self.add_node(Node(id=str(gd_id), label=f"Vote:{winner}", node_type="governance"))
+                self.add_node(
+                    Node(id=str(gd_id), label=f"Vote:{winner}", node_type="governance")
+                )
                 # Edge: governance -> debate_outcome
                 debate_ref = gd.get("debate_id")
                 if debate_ref:
-                    self.add_edge(Edge(source=str(gd_id), target=str(debate_ref),
-                                       edge_type=EdgeType.GOVERNANCE_DEBATE))
+                    self.add_edge(
+                        Edge(
+                            source=str(gd_id),
+                            target=str(debate_ref),
+                            edge_type=EdgeType.GOVERNANCE_DEBATE,
+                        )
+                    )
 
     def density(self) -> float:
         """Compute graph density: ``|E| / (|V| * (|V| - 1))`` for directed graph."""
@@ -259,7 +338,9 @@ class CrossReferenceGraph:
             key = edge.edge_type.value
             edge_type_counts[key] = edge_type_counts.get(key, 0) + 1
         for node in self.nodes.values():
-            node_type_counts[node.node_type] = node_type_counts.get(node.node_type, 0) + 1
+            node_type_counts[node.node_type] = (
+                node_type_counts.get(node.node_type, 0) + 1
+            )
 
         return CrossReferenceReport(
             total_nodes=len(self.nodes),
@@ -274,12 +355,21 @@ class CrossReferenceGraph:
         """Serialize graph to JSON."""
         data = {
             "nodes": [
-                {"id": n.id, "label": n.label, "type": n.node_type, "metadata": n.metadata}
+                {
+                    "id": n.id,
+                    "label": n.label,
+                    "type": n.node_type,
+                    "metadata": n.metadata,
+                }
                 for n in self.nodes.values()
             ],
             "edges": [
-                {"source": e.source, "target": e.target, "type": e.edge_type.value,
-                 "weight": e.weight}
+                {
+                    "source": e.source,
+                    "target": e.target,
+                    "type": e.edge_type.value,
+                    "weight": e.weight,
+                }
                 for e in self.edges
             ],
         }
@@ -297,7 +387,12 @@ class CrossReferenceGraph:
             "debate_outcome": "#607D8B",
             "governance": "#795548",
         }
-        lines = ["digraph CrossReference {", '  rankdir=LR;', '  node [shape=box, style=filled];', ""]
+        lines = [
+            "digraph CrossReference {",
+            "  rankdir=LR;",
+            "  node [shape=box, style=filled];",
+            "",
+        ]
         for nid, node in self.nodes.items():
             color = type_colors.get(node.node_type, "#E0E0E0")
             safe_id = nid.replace(" ", "_").replace("-", "_").replace(".", "_")
@@ -326,13 +421,28 @@ class CrossReferenceGraph:
         }
         lines = ["graph LR"]
         for nid, node in self.nodes.items():
-            safe_id = nid.replace(" ", "_").replace("-", "_").replace(".", "_").replace("/", "_")
+            safe_id = (
+                nid.replace(" ", "_")
+                .replace("-", "_")
+                .replace(".", "_")
+                .replace("/", "_")
+            )
             safe_label = node.label.replace('"', "'").replace("\n", " ")[:30]
             open_b, close_b = type_shapes.get(node.node_type, ("[", "]"))
-            lines.append(f"  {safe_id}{open_b}\"{safe_label}\"{close_b}")
+            lines.append(f'  {safe_id}{open_b}"{safe_label}"{close_b}')
         for edge in self.edges:
-            src = edge.source.replace(" ", "_").replace("-", "_").replace(".", "_").replace("/", "_")
-            tgt = edge.target.replace(" ", "_").replace("-", "_").replace(".", "_").replace("/", "_")
+            src = (
+                edge.source.replace(" ", "_")
+                .replace("-", "_")
+                .replace(".", "_")
+                .replace("/", "_")
+            )
+            tgt = (
+                edge.target.replace(" ", "_")
+                .replace("-", "_")
+                .replace(".", "_")
+                .replace("/", "_")
+            )
             label = edge.edge_type.value.split("->")[-1]
             lines.append(f"  {src} -->|{label}| {tgt}")
         return "\n".join(lines)
