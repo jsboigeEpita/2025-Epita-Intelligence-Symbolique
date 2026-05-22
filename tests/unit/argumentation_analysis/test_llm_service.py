@@ -61,9 +61,22 @@ class TestLLMService:
         assert isinstance(
             service, OpenAIChatCompletion
         ), "Le service devrait être une instance de OpenAIChatCompletion."
+
+        # Le modèle attendu dépend du provider actif : en mode OpenRouter
+        # (OPENROUTER_BASE_URL + OPENROUTER_API_KEY définis), la factory substitue
+        # le slug préfixé OPENROUTER_CHAT_MODEL_ID ; sinon le modèle OpenAI demandé.
+        use_openrouter = bool(
+            os.environ.get("OPENROUTER_BASE_URL")
+            and os.environ.get("OPENROUTER_API_KEY")
+        )
+        expected_model = (
+            os.environ.get("OPENROUTER_CHAT_MODEL_ID", self.model_id)
+            if use_openrouter
+            else self.model_id
+        )
         assert (
-            service.ai_model_id == self.model_id
-        ), f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas à celui de l'environnement ({self.model_id})."
+            service.ai_model_id == expected_model
+        ), f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas au modèle attendu ({expected_model})."
 
     def test_create_llm_service_missing_api_key(self):
         """Teste que la création du service échoue sans aucun provider configuré."""
