@@ -3442,6 +3442,7 @@ async def _invoke_propositional_logic(
         "post_sanitize": 0,
         "post_tweety": 0,
         "wide_net_extras": 0,
+        "isolation_survivors": 0,
     }
 
     if not formulas:
@@ -3692,7 +3693,43 @@ async def _invoke_propositional_logic(
             "pl_metrics": pl_metrics,
         }
     except Exception as e:
-        # Fallback: basic consistency check
+        # Per-formula isolation retry: one bad formula should not kill the batch.
+        # Parse each formula individually and keep only those accepted by Tweety.
+        logger.warning(
+            f"PL Tweety batch parse failed ({e}). "
+            f"Attempting per-formula isolation with {len(formulas)} formulas."
+        )
+        valid_formulas = []
+        for formula in formulas:
+            try:
+                single_bs = str(formula)
+                await asyncio.to_thread(
+                    bridge.check_consistency, single_bs, "propositional"
+                )
+                valid_formulas.append(formula)
+            except Exception:
+                logger.debug(f"PL formula rejected by Tweety: {formula}")
+
+        if valid_formulas:
+            pl_metrics["post_tweety"] = len(valid_formulas)
+            pl_metrics["isolation_survivors"] = len(valid_formulas)
+            logger.info(
+                f"PL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
+                f"formulas accepted by Tweety"
+            )
+            return {
+                "formulas": valid_formulas,
+                "satisfiable": True,
+                "model": {f"p{i+1}": True for i in range(len(args))},
+                "logic_type": "propositional",
+                "argument_mapping": argument_mapping
+                or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+                "isolation_retry": True,
+                "rejected_count": len(formulas) - len(valid_formulas),
+                "pl_metrics": pl_metrics,
+            }
+
+        # All formulas failed — Python fallback
         has_contradiction = any(f.startswith("!") for f in formulas) and any(
             f == f2.lstrip("!")
             for f in formulas
@@ -3736,6 +3773,8 @@ async def _invoke_fol_reasoning(
         "pass2_candidates": 0,
         "fallback_nl": 0,
         "template": 0,
+        "pre_sanitize": 0,
+        "post_sanitize": 0,
         "pre_tweety": 0,
         "post_tweety": 0,
         "isolation_survivors": 0,
@@ -3949,9 +3988,36 @@ async def _invoke_fol_reasoning(
         )
 
         bridge = TweetyBridge()
-        # Pre-declare signature (sorts + types) for Tweety FolParser (#348)
+
+        # Convert Unicode FOL operators to ASCII before signature extraction (#677)
+        fol_metrics["pre_sanitize"] = len(formulas)
+        formulas = [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
+
+        # Sanitize formula identifiers to match signature naming (#677)
+        # extract_fol_metadata builds sanitized constant_map/predicate_map;
+        # apply those mappings to the raw formulas so identifiers match.
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
         fol_signature = meta.get("signature_lines", [])
+        constant_map = meta.get("constant_map", {})
+        predicate_map = meta.get("predicate_map", {})
+        if constant_map or predicate_map:
+            sanitized_formulas = []
+            for f in formulas:
+                sf = f
+                # Replace predicates first (longer names first to avoid partial matches)
+                for orig, safe in sorted(
+                    predicate_map.items(), key=lambda x: -len(x[0])
+                ):
+                    sf = re.sub(r"\b" + re.escape(orig) + r"\b", safe, sf)
+                # Replace constants (longer names first)
+                for orig, safe in sorted(
+                    constant_map.items(), key=lambda x: -len(x[0])
+                ):
+                    sf = re.sub(r"\b" + re.escape(orig) + r"\b", safe, sf)
+                sanitized_formulas.append(sf)
+            formulas = sanitized_formulas
+        fol_metrics["post_sanitize"] = len(formulas)
+
         belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
         fol_metrics["pre_tweety"] = len(formulas)
         is_consistent, msg = await asyncio.to_thread(
