@@ -66,19 +66,23 @@ class TestLLMService:
         ), f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas à celui de l'environnement ({self.model_id})."
 
     def test_create_llm_service_missing_api_key(self):
-        """Teste que la création du service échoue sans clé API."""
-        # Supprimer temporairement la clé API de l'environnement
-        if "OPENAI_API_KEY" in os.environ:
-            del os.environ["OPENAI_API_KEY"]
+        """Teste que la création du service échoue sans aucun provider configuré."""
+        # Supprimer temporairement toute clé API de l'environnement : ni OpenAI,
+        # ni le couple OpenRouter (base_url + api_key) ne doit rester défini,
+        # sinon la factory bascule sur le provider encore configuré.
+        for var in (
+            "OPENAI_API_KEY",
+            "OPENROUTER_API_KEY",
+            "OPENROUTER_BASE_URL",
+        ):
+            os.environ.pop(var, None)
 
         with pytest.raises(ValueError) as excinfo:
             create_llm_service(
                 service_id="test_service", model_id=self.model_id, force_authentic=True
             )
 
-        assert "La variable d'environnement OPENAI_API_KEY n'est pas définie." in str(
-            excinfo.value
-        )
+        assert "Aucune clé API LLM définie" in str(excinfo.value)
 
         assert "OPENAI_API_KEY" in str(excinfo.value)
 
