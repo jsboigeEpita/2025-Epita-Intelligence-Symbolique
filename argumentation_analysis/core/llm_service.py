@@ -108,13 +108,27 @@ def create_llm_service(
             f"Veuillez mettre à jour votre fichier .env avec OPENAI_CHAT_MODEL_ID={new_model_id}"
         )
         model_id = new_model_id
-    # Récupération directe depuis l'environnement
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # --- Sélection du provider : bascule OpenRouter si configurée ---
+    # Si OPENROUTER_BASE_URL est défini (+ OPENROUTER_API_KEY), les appels sont
+    # routés vers OpenRouter (API compatible OpenAI). Sinon, le comportement
+    # OpenAI officiel reste inchangé. Toggle réversible : retirer
+    # OPENROUTER_BASE_URL du .env pour revenir à OpenAI.
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+
+    if use_openrouter:
+        api_key = openrouter_api_key
+        # OpenRouter exige des slugs préfixés par le provider (ex. "openai/gpt-5-mini")
+        model_id = os.getenv("OPENROUTER_CHAT_MODEL_ID", model_id)
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY")
     org_id = os.environ.get("OPENAI_ORG_ID")
 
     if not api_key:
         raise ValueError(
-            "La variable d'environnement OPENAI_API_KEY n'est pas définie."
+            "Aucune clé API LLM définie. Définissez OPENAI_API_KEY, ou "
+            "OPENROUTER_API_KEY + OPENROUTER_BASE_URL pour router via OpenRouter."
         )
 
     resilient_client = get_resilient_async_client()
@@ -122,11 +136,16 @@ def create_llm_service(
 
     try:
         if service_type == "OpenAIChatCompletion":
+            provider_label = (
+                "OpenRouter" if use_openrouter else "l'API OpenAI officielle"
+            )
             logger.info(
-                "Configuration Service: OpenAIChatCompletion pour l'API OpenAI officielle..."
+                f"Configuration Service: OpenAIChatCompletion pour {provider_label}..."
             )
 
             client_kwargs = {"api_key": api_key, "http_client": resilient_client}
+            if use_openrouter:
+                client_kwargs["base_url"] = openrouter_base_url
             if org_id:
                 client_kwargs["organization"] = org_id
 

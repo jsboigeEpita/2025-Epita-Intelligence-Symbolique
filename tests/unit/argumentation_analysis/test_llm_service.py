@@ -61,24 +61,41 @@ class TestLLMService:
         assert isinstance(
             service, OpenAIChatCompletion
         ), "Le service devrait être une instance de OpenAIChatCompletion."
+
+        # Le modèle attendu dépend du provider actif : en mode OpenRouter
+        # (OPENROUTER_BASE_URL + OPENROUTER_API_KEY définis), la factory substitue
+        # le slug préfixé OPENROUTER_CHAT_MODEL_ID ; sinon le modèle OpenAI demandé.
+        use_openrouter = bool(
+            os.environ.get("OPENROUTER_BASE_URL")
+            and os.environ.get("OPENROUTER_API_KEY")
+        )
+        expected_model = (
+            os.environ.get("OPENROUTER_CHAT_MODEL_ID", self.model_id)
+            if use_openrouter
+            else self.model_id
+        )
         assert (
-            service.ai_model_id == self.model_id
-        ), f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas à celui de l'environnement ({self.model_id})."
+            service.ai_model_id == expected_model
+        ), f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas au modèle attendu ({expected_model})."
 
     def test_create_llm_service_missing_api_key(self):
-        """Teste que la création du service échoue sans clé API."""
-        # Supprimer temporairement la clé API de l'environnement
-        if "OPENAI_API_KEY" in os.environ:
-            del os.environ["OPENAI_API_KEY"]
+        """Teste que la création du service échoue sans aucun provider configuré."""
+        # Supprimer temporairement toute clé API de l'environnement : ni OpenAI,
+        # ni le couple OpenRouter (base_url + api_key) ne doit rester défini,
+        # sinon la factory bascule sur le provider encore configuré.
+        for var in (
+            "OPENAI_API_KEY",
+            "OPENROUTER_API_KEY",
+            "OPENROUTER_BASE_URL",
+        ):
+            os.environ.pop(var, None)
 
         with pytest.raises(ValueError) as excinfo:
             create_llm_service(
                 service_id="test_service", model_id=self.model_id, force_authentic=True
             )
 
-        assert "La variable d'environnement OPENAI_API_KEY n'est pas définie." in str(
-            excinfo.value
-        )
+        assert "Aucune clé API LLM définie" in str(excinfo.value)
 
         assert "OPENAI_API_KEY" in str(excinfo.value)
 

@@ -28,12 +28,12 @@ from typing import Any, Dict, List, Optional
 
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
 from semantic_kernel.contents.chat_history import ChatHistory
 
+from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
     UnifiedAnalysisState,
@@ -515,19 +515,25 @@ async def run_conversational_analysis(
         reprompt_extractor = RepromptTraceExtractor()
 
     # 1. Setup kernel + LLM
+    # Route through create_llm_service so the OpenRouter toggle applies: if
+    # OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, calls go to OpenRouter
+    # (OpenAI-compatible); otherwise the official OpenAI endpoint is used. This
+    # is the single linchpin service shared by every conversational agent and
+    # plugin, so the toggle here covers the whole pipeline. force_authentic=True
+    # preserves the prior behavior (a real LLM was always built here, never a
+    # mock, even under PYTEST_CURRENT_TEST).
     kernel = sk.Kernel()
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key:
-        raise RuntimeError(
-            "OPENAI_API_KEY not found. Conversational mode requires an LLM. "
-            "Ensure .env is loaded."
-        )
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-    llm_service = OpenAIChatCompletion(
-        service_id="conversational_llm",
-        ai_model_id=model_id,
-        api_key=api_key,
-    )
+    try:
+        llm_service = create_llm_service(
+            service_id="conversational_llm",
+            model_id=model_id,
+            force_authentic=True,
+        )
+    except ValueError as e:
+        raise RuntimeError(
+            f"{e} Conversational mode requires an LLM. Ensure .env is loaded."
+        )
     kernel.add_service(llm_service)
 
     # 2. Setup shared state (#363: UnifiedAnalysisState for spectacular coverage)

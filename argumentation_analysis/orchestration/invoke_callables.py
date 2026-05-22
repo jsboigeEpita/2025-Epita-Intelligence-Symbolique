@@ -89,18 +89,36 @@ __all__ = [
 
 
 def _get_openai_client() -> Tuple[Any, str]:
-    """Create an AsyncOpenAI client from environment variables.
+    """Create an AsyncOpenAI client + model id from environment variables.
 
-    Returns (client, model_id) or (None, "") if API key unavailable.
+    Honors the OpenRouter toggle (mirrors create_llm_service): if
+    OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, the client targets
+    OpenRouter (OpenAI-compatible) with the provider-prefixed
+    OPENROUTER_CHAT_MODEL_ID; otherwise the official OpenAI endpoint is used.
+    This routes every raw-SDK caller through the same provider, so they no
+    longer hit OpenAI's quota when OpenRouter is configured.
+
+    Returns (client, model_id) or (None, "") if no API key is available.
     """
-    api_key = os.environ.get("OPENAI_API_KEY", "")
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    if openrouter_base_url and openrouter_api_key:
+        api_key = openrouter_api_key
+        base_url = openrouter_base_url
+        model_id = os.environ.get(
+            "OPENROUTER_CHAT_MODEL_ID",
+            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini"),
+        )
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
     if not api_key:
         return None, ""
     try:
         from openai import AsyncOpenAI
 
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id
     except ImportError:
         return None, ""
@@ -2952,24 +2970,21 @@ async def _invoke_hierarchical_fallacy(
         }
 
     try:
-        from openai import AsyncOpenAI
         from semantic_kernel.kernel import Kernel
-        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from argumentation_analysis.core.llm_service import create_llm_service
         from argumentation_analysis.plugins.fallacy_workflow_plugin import (
             FallacyWorkflowPlugin,
         )
 
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("No OPENAI_API_KEY available")
-
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-
-        async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        llm_service = OpenAIChatCompletion(
-            ai_model_id=model_id,
-            async_client=async_client,
+        # Route through create_llm_service so the OpenRouter toggle applies:
+        # OPENROUTER_BASE_URL + OPENROUTER_API_KEY -> OpenRouter (OpenAI-compatible),
+        # else the official OpenAI endpoint. Building OpenAIChatCompletion directly
+        # here bypassed the toggle and kept hitting OpenAI's quota even when
+        # OpenRouter was configured. force_authentic=True preserves the prior
+        # always-real-service behavior (never a mock under PYTEST_CURRENT_TEST).
+        llm_service = create_llm_service(
+            service_id="fallacy_widenet",
+            force_authentic=True,
         )
         master_kernel = Kernel()
         master_kernel.add_service(llm_service)
@@ -2985,7 +3000,7 @@ async def _invoke_hierarchical_fallacy(
         result["extraction_method"] = result.get("exploration_method", "unknown")
         return result  # type: ignore[no-any-return]
 
-    except (ImportError, RuntimeError) as e:
+    except (ImportError, RuntimeError, ValueError) as e:
         # Expected failures: missing dependencies or API key — return empty gracefully
         logger.warning("Hierarchical fallacy detection unavailable: %s", e)
         return {
@@ -3037,19 +3052,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
         }
 
     try:
-        from openai import AsyncOpenAI
         from semantic_kernel.kernel import Kernel
-        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from argumentation_analysis.core.llm_service import create_llm_service
         from argumentation_analysis.plugins.fallacy_workflow_plugin import (
             FallacyWorkflowPlugin,
         )
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("No OPENAI_API_KEY available")
-
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
 
         # Extract individual arguments from context or input text
         arguments = _extract_arguments_for_parallel(input_text, context)
@@ -3063,6 +3070,15 @@ async def _invoke_hierarchical_fallacy_per_argument(
         logger.info(
             "Parent harness: running parallel fallacy detection on %d arguments",
             len(arguments),
+        )
+
+        # Route through create_llm_service so the OpenRouter toggle applies (see
+        # _invoke_hierarchical_fallacy). Build the service once and share it across
+        # the per-argument plugin instances; each keeps its own master_kernel for
+        # isolation. force_authentic=True preserves the always-real behavior.
+        shared_llm_service = create_llm_service(
+            service_id="fallacy_widenet_perarg",
+            force_authentic=True,
         )
 
         # Create plugin instances — one per argument for isolation
@@ -3079,17 +3095,12 @@ async def _invoke_hierarchical_fallacy_per_argument(
             """
             plugin = None
             try:
-                async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-                llm_service = OpenAIChatCompletion(
-                    ai_model_id=model_id,
-                    async_client=async_client,
-                )
                 master_kernel = Kernel()
-                master_kernel.add_service(llm_service)
+                master_kernel.add_service(shared_llm_service)
 
                 plugin = FallacyWorkflowPlugin(
                     master_kernel=master_kernel,
-                    llm_service=llm_service,
+                    llm_service=shared_llm_service,
                     taxonomy_file_path=taxonomy_path,
                 )
 
@@ -3198,7 +3209,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
             "parallel_executed": True,
         }
 
-    except (ImportError, RuntimeError) as e:
+    except (ImportError, RuntimeError, ValueError) as e:
         logger.warning("Per-argument hierarchical fallacy detection unavailable: %s", e)
         return {
             "fallacies": [],
@@ -3465,16 +3476,11 @@ async def _invoke_propositional_logic(
             # ── 2-pass coordinated pipeline (#547) ──────────────────────
             # Try the coordinated 2-pass: Pass 1 (atom inventory) → Pass 2 (formulas with shared atoms)
             try:
-                from openai import AsyncOpenAI
                 import json as _json
 
-                api_key = os.environ.get("OPENAI_API_KEY", "")
-                if api_key and input_text and len(input_text) > 100:
-                    base_url = os.environ.get(
-                        "OPENAI_BASE_URL", "https://api.openai.com/v1"
-                    )
-                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-                    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+                # Honors the OpenRouter toggle via _get_openai_client.
+                client, model_id = _get_openai_client()
+                if client is not None and input_text and len(input_text) > 100:
 
                     # ── Pass 1: Atom inventory from full source text ──
                     pass1_prompt = (
@@ -3768,15 +3774,9 @@ async def _invoke_fol_reasoning(
             # Pass 1: Extract shared FOL signature (sorts, predicates, constants) from full text
             # Pass 2: Generate per-argument formulas using ONLY shared signature
             try:
-                from openai import AsyncOpenAI
-
-                api_key = os.environ.get("OPENAI_API_KEY", "")
-                if api_key and input_text and len(input_text) > 100:
-                    base_url = os.environ.get(
-                        "OPENAI_BASE_URL", "https://api.openai.com/v1"
-                    )
-                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-                    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+                # Honors the OpenRouter toggle via _get_openai_client.
+                client, model_id = _get_openai_client()
+                if client is not None and input_text and len(input_text) > 100:
 
                     # ── Pass 1: Shared FOL signature from full text ──
                     pass1_prompt = (

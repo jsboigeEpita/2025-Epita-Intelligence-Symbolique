@@ -26,6 +26,9 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
 from semantic_kernel.contents import (
     ChatHistory,
     FunctionCallContent,
@@ -67,7 +70,7 @@ class FallacyWorkflowPlugin:
     def __init__(
         self,
         master_kernel: Kernel,
-        llm_service: OpenAIChatCompletion,
+        llm_service: ChatCompletionClientBase,
         taxonomy_file_path: Optional[str] = None,
         taxonomy_data: Optional[list] = None,
         logger: Optional[logging.Logger] = None,
