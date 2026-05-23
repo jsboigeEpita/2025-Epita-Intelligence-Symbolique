@@ -39,6 +39,10 @@ class TestGetDeterminismParams:
 
         os.environ.pop("LLM_TEMPERATURE", None)
         os.environ.pop("LLM_SEED", None)
+        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
+        # Use a standard (non-reasoning) model so params are not suppressed
+        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
+        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
         os.environ["LLM_DETERMINISTIC_MODE"] = "1"
         try:
             result = _get_determinism_params()
@@ -46,6 +50,10 @@ class TestGetDeterminismParams:
             assert result["seed"] == 42
         finally:
             os.environ.pop("LLM_DETERMINISTIC_MODE", None)
+            if prev_model is None:
+                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
+            else:
+                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
 
     def test_temperature_override(self):
         """LLM_TEMPERATURE=0.5 → temperature=0.5 only."""
@@ -55,12 +63,19 @@ class TestGetDeterminismParams:
 
         os.environ.pop("LLM_DETERMINISTIC_MODE", None)
         os.environ.pop("LLM_SEED", None)
+        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
+        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
+        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
         os.environ["LLM_TEMPERATURE"] = "0.5"
         try:
             result = _get_determinism_params()
             assert result == {"temperature": 0.5}
         finally:
             os.environ.pop("LLM_TEMPERATURE", None)
+            if prev_model is None:
+                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
+            else:
+                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
 
     def test_seed_override(self):
         """LLM_SEED=123 → seed=123 only."""
@@ -70,12 +85,19 @@ class TestGetDeterminismParams:
 
         os.environ.pop("LLM_DETERMINISTIC_MODE", None)
         os.environ.pop("LLM_TEMPERATURE", None)
+        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
+        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
+        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
         os.environ["LLM_SEED"] = "123"
         try:
             result = _get_determinism_params()
             assert result == {"seed": 123}
         finally:
             os.environ.pop("LLM_SEED", None)
+            if prev_model is None:
+                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
+            else:
+                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
 
     def test_individual_overrides_take_precedence(self):
         """LLM_TEMPERATURE and LLM_SEED override LLM_DETERMINISTIC_MODE values."""
@@ -83,6 +105,9 @@ class TestGetDeterminismParams:
             _get_determinism_params,
         )
 
+        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
+        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
+        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
         os.environ["LLM_DETERMINISTIC_MODE"] = "1"
         os.environ["LLM_TEMPERATURE"] = "0.7"
         os.environ["LLM_SEED"] = "999"
@@ -94,6 +119,10 @@ class TestGetDeterminismParams:
             os.environ.pop("LLM_DETERMINISTIC_MODE", None)
             os.environ.pop("LLM_TEMPERATURE", None)
             os.environ.pop("LLM_SEED", None)
+            if prev_model is None:
+                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
+            else:
+                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
 
     def test_invalid_temperature_ignored(self):
         """Non-numeric LLM_TEMPERATURE is silently skipped."""
