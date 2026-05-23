@@ -1158,7 +1158,25 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 if target_lower in ab.lower() or ab.lower() in target_lower:
                     target_idx = idx
                     break
-        # Fallback: index-based matching
+        # Fallback: try problematic_quote (exact text from source)
+        if target_idx < 0 and arg_beliefs:
+            quote_text = f.get("problematic_quote", "")
+            if quote_text:
+                quote_lower = quote_text.lower()[:80]
+                for idx, ab in enumerate(arg_beliefs):
+                    if quote_lower in ab.lower() or ab.lower() in quote_lower:
+                        target_idx = idx
+                        break
+        # Fallback: try explanation text
+        if target_idx < 0 and arg_beliefs:
+            expl_text = f.get("explanation", "")
+            if expl_text:
+                expl_lower = expl_text.lower()[:80]
+                for idx, ab in enumerate(arg_beliefs):
+                    if expl_lower in ab.lower() or ab.lower() in expl_lower:
+                        target_idx = idx
+                        break
+        # Final fallback: index-based matching
         if target_idx < 0 and arg_beliefs:
             target_idx = min(i, len(arg_beliefs) - 1)
 
