@@ -88,6 +88,34 @@ __all__ = [
 ]
 
 
+def _get_determinism_params() -> Dict[str, Any]:
+    """Read determinism settings from environment variables.
+
+    Supports two modes:
+    - LLM_DETERMINISTIC_MODE=1: shorthand for temperature=0, seed=42
+    - LLM_TEMPERATURE / LLM_SEED: fine-grained overrides (take precedence)
+
+    Returns a dict suitable for merging into ``client.chat.completions.create()``.
+    """
+    params: Dict[str, Any] = {}
+    if os.environ.get("LLM_DETERMINISTIC_MODE"):
+        params["temperature"] = 0.0
+        params["seed"] = 42
+    temp_str = os.environ.get("LLM_TEMPERATURE")
+    if temp_str is not None:
+        try:
+            params["temperature"] = float(temp_str)
+        except ValueError:
+            pass
+    seed_str = os.environ.get("LLM_SEED")
+    if seed_str is not None:
+        try:
+            params["seed"] = int(seed_str)
+        except ValueError:
+            pass
+    return params
+
+
 def _get_openai_client() -> Tuple[Any, str]:
     """Create an AsyncOpenAI client + model id from environment variables.
 
@@ -331,6 +359,7 @@ async def _llm_enrich_quality(
                     "on reasoning_assessment and evidence_quality."
                 )
 
+        det_params = _get_determinism_params()
         response = await client.chat.completions.create(
             model=model_id,
             messages=[
@@ -360,6 +389,7 @@ async def _llm_enrich_quality(
                     "content": "\n\n".join(score_summary) + fallacy_context,
                 },
             ],
+            **det_params,
         )
         raw = response.choices[0].message.content or ""
         text_content = raw.strip()
@@ -440,6 +470,7 @@ async def _invoke_counter_argument(
 
             # Ask for counter-arguments for ALL targets at once
             targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(targets))
+            det_params = _get_determinism_params()
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -458,6 +489,7 @@ async def _invoke_counter_argument(
                     },
                     {"role": "user", "content": targets_text},
                 ],
+                **det_params,
             )
             raw = response.choices[0].message.content or ""
             text_content = raw.strip()
@@ -678,6 +710,7 @@ async def _invoke_debate_analysis(
                 "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
             )
 
+            det_params = _get_determinism_params()
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -701,6 +734,7 @@ async def _invoke_debate_analysis(
                     },
                     {"role": "user", "content": debate_material},
                 ],
+                **det_params,
             )
             raw = response.choices[0].message.content or ""
             text_content = raw.strip()
@@ -875,6 +909,7 @@ async def _invoke_governance(
                 "\n\n".join(context_parts) if context_parts else input_text[:2000]
             )
 
+            det_params = _get_determinism_params()
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -898,6 +933,7 @@ async def _invoke_governance(
                     },
                     {"role": "user", "content": deliberation_input},
                 ],
+                **det_params,
             )
             raw = response.choices[0].message.content or ""
             text_content = raw.strip()
@@ -3321,6 +3357,7 @@ async def _invoke_fact_extraction(
         client, model_id = _get_openai_client()
 
         if client:
+            det_params = _get_determinism_params()
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -3343,6 +3380,7 @@ async def _invoke_fact_extraction(
                     },
                     {"role": "user", "content": input_text[:3000]},
                 ],
+                **det_params,
             )
             raw = response.choices[0].message.content or ""
             # Parse JSON from response
@@ -3491,9 +3529,11 @@ async def _invoke_propositional_logic(
                         "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
                         f"Text:\n{input_text[:4000]}"
                     )
+                    det_params = _get_determinism_params()
                     pass1_resp = await client.chat.completions.create(
                         model=model_id,
                         messages=[{"role": "user", "content": pass1_prompt}],
+                        **det_params,
                     )
                     pass1_raw = pass1_resp.choices[0].message.content or ""
 
@@ -3544,6 +3584,7 @@ async def _invoke_propositional_logic(
                                     messages=[
                                         {"role": "user", "content": pass2_prompt}
                                     ],
+                                    **det_params,
                                 )
                                 pass2_raw = pass2_resp.choices[0].message.content or ""
                                 formulas_data = _parse_json_from_llm(pass2_raw)
@@ -3583,6 +3624,7 @@ async def _invoke_propositional_logic(
                             wt_resp = await client.chat.completions.create(
                                 model=model_id,
                                 messages=[{"role": "user", "content": wt_prompt}],
+                                **det_params,
                             )
                             wt_raw = wt_resp.choices[0].message.content or ""
                             wt_data = _parse_json_from_llm(wt_raw)
@@ -3796,9 +3838,11 @@ async def _invoke_fol_reasoning(
                         '- If unsure about sort, use "Thing"\n\n'
                         f"Text:\n{input_text[:4000]}"
                     )
+                    det_params = _get_determinism_params()
                     pass1_resp = await client.chat.completions.create(
                         model=model_id,
                         messages=[{"role": "user", "content": pass1_prompt}],
+                        **det_params,
                     )
                     pass1_raw = pass1_resp.choices[0].message.content or ""
 
@@ -3857,6 +3901,7 @@ async def _invoke_fol_reasoning(
                                         messages=[
                                             {"role": "user", "content": pass2_prompt}
                                         ],
+                                        **det_params,
                                     )
                                     pass2_raw = (
                                         pass2_resp.choices[0].message.content or ""
