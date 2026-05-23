@@ -1,8 +1,30 @@
 # Track XX (#680): Extraction Run-to-Run Variance Report
 
+> **Updated by Track AA (#686):** The determinism knob is now **model-aware** — reasoning models (gpt-5*, o1*, o3*) automatically suppress temperature/seed params to avoid a 400 BadRequest. See the [Reasoning-Model Caveat](#reasoning-model-caveat-aa-686) section.
+
 ## Summary
 
 Characterization of non-determinism sources in the argument extraction pipeline. A **determinism knob** is implemented (`LLM_DETERMINISTIC_MODE`, `LLM_TEMPERATURE`, `LLM_SEED` env vars) that propagates `temperature=0` + `seed=42` (or custom values) to all 10 LLM call sites in `invoke_callables.py`. Downstream parsing and aggregation are confirmed deterministic.
+
+## Reasoning-Model Caveat (AA #686)
+
+Reasoning models (gpt-5 family, o1, o3) **reject** `temperature` and `seed` parameters with a `400 BadRequest`. Since the cluster's production model is `gpt-5-mini`, the knob would be a foot-gun if applied naively.
+
+**Solution**: `_get_determinism_params()` now detects the active model (via `OPENAI_CHAT_MODEL_ID` / `OPENROUTER_CHAT_MODEL_ID`) and **suppresses** temperature/seed for known reasoning-model prefixes. A `WARN` log is emitted when determinism is requested but unsupported.
+
+| Prefix | Classification |
+|--------|---------------|
+| `gpt-5` | Reasoning — suppress |
+| `o1` | Reasoning — suppress |
+| `o3` | Reasoning — suppress |
+| `openai/gpt-5` | Reasoning — suppress |
+| `openai/o1` | Reasoning — suppress |
+| `openai/o3` | Reasoning — suppress |
+| `gpt-4o` | Standard — allow |
+| `gpt-4` | Standard — allow |
+| Others | Standard — allow |
+
+**Escape hatch**: Set `LLM_FORCE_SAMPLING_PARAMS=1` to force sending temperature/seed regardless of model detection (e.g. for self-hosted endpoints that accept these params even on reasoning architectures).
 
 ## Sources of Non-Determinism
 
@@ -85,8 +107,9 @@ def _get_determinism_params() -> Dict[str, Any]:
 | `LLM_DETERMINISTIC_MODE` | Set `temperature=0` + `seed=42` | Not set (no effect) |
 | `LLM_TEMPERATURE` | Override temperature (float) | Not set |
 | `LLM_SEED` | Set seed (int) | Not set |
+| `LLM_FORCE_SAMPLING_PARAMS` | Force temperature/seed even on reasoning models | Not set |
 
-Fine-grained overrides take precedence over the shorthand.
+Fine-grained overrides take precedence over the shorthand. Reasoning models suppress params unless force flag is set.
 
 ### Usage
 
@@ -114,6 +137,13 @@ The knob applies to all 10 raw-SDK LLM call sites in `invoke_callables.py` (fact
 - 3 JSON parsing determinism tests
 - 3 extraction metrics determinism tests
 - 6 source wiring verification tests
+
+- 14 tests in `tests/unit/argumentation_analysis/test_track_aa_model_aware_determinism.py`:
+
+  - 3 model resolution tests (`_resolve_model_id`)
+  - 17 reasoning model classification tests (`_is_reasoning_model`, parametrized)
+  - 9 model-aware determinism tests (suppression, allow-list, force flag, fine-grained)
+  - 1 backward-compat test (XX default behavior preserved)
 
 ## Deferred
 
