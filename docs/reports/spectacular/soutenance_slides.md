@@ -125,6 +125,22 @@ Validé sur 3 corpus, ≥7 méthodes formelles activées par corpus
 
 ---
 
+# Propriété 5 — Raisonnement Formel Vérifié en Live
+
+**Probe séquentiel corpus C** (pipeline `full`, 430s, toggle OpenRouter ON)
+
+| Store | Entrées | Formules survivantes | Verdict Tweety |
+|-------|---------|---------------------|----------------|
+| PL (propositionnel) | 1 | **46** | satisfiable = true |
+| FOL (premier ordre) | 1 | **26** | consistent = false |
+| **Total** | | **72** | — |
+
+- **DoD ≥3 : 72 ≫ 3** — les fixes VV (PL isolation retry, FOL unicode→ascii, sanitize identifiants) franchissent le parse Tweety jusqu'à un verdict reasoner réel
+- FOL `consistent=false` = le reasoner trouve le jeu d'args **incohérent** (résultat substantiel)
+- **Caveat** : le mode conversationnel (spectaculaire) stocke le formel via `add_belief_set` (store séparé). Le probe volet-1 lit `propositional_analysis_results`/`fol_analysis_results` (store séquentiel). Les deux modes sont complémentaires.
+
+---
+
 # Métriques Finales — 3 Corpus
 
 | Métrique | A | B | C | Total |

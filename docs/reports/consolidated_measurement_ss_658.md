@@ -13,9 +13,9 @@ Three measurement volets were dispatched:
 
 | Volet | Target | Status | Evidence |
 |-------|--------|--------|----------|
-| 1. MM DoD ≥3 formal formulas | ≥3 surviving formulas on ≥1 corpus | **BLOCKED** (API 429) | Code analysis below |
-| 2. RR verification — corpus C depth ≥3 | Post-RR lift | **BLOCKED** (API 429) | Unit tests prove fix correct |
-| 3. Signal integrity — all 5 alive | No dead signals besides 4+5 (fixed) | **VERIFIED** (unit tests) | 14/14 tests pass |
+| 1. MM DoD ≥3 formal formulas | ≥3 surviving formulas on ≥1 corpus | **MET** (72 formulas, live R218) | Sequential probe corpus C: PL 46 SAT, FOL 26 UNSAT |
+| 2. RR verification — corpus C depth ≥3 | Post-RR lift | **MET** (depth 3, live R216c) | OpenRouter re-run confirms depth ≥3 |
+| 3. Signal integrity — all 5 alive | No dead signals besides 4+5 (fixed) | **3/5 alive** (live R216c) | Sophisme/contre-arg/Dung alive. JTMS-retracté sombre (→ ZZ). Qualité-faible 0 (upstream variance). |
 
 ### Key finding from code analysis
 
@@ -133,6 +133,20 @@ post_tweety: surviving formulas
 - **Template fallback**: If the 2-pass produces nothing, template variables `p1, p2...` are used. These always survive but carry no logical content.
 - **Tweety parse failure**: If the Tweety bridge is unavailable (JVM issues), `post_tweety` is set to 0 in the fallback path.
 
+### Live verification result (R218, ai-01, 2026-05-23)
+
+The DoD was confirmed in live by ai-01 using a **sequential pipeline `full`** probe on corpus C (toggle OpenRouter ON, 430.9s, 14/15 phases OK, 0 LLM error). The previous `0/0` result from the conversational/spectacular probe was a **mode mismatch** — the conversational mode stores formal results via `add_belief_set` (store `belief_sets`), never via `add_propositional_analysis_result`/`add_fol_analysis_result` (the stores volet-1 reads).
+
+| Store | Entries | Formulas surviving | Verdict |
+|-------|---------|-------------------|---------|
+| PL (`propositional_analysis_results`) | 1 (`pl_1`) | **46** | satisfiable = true |
+| FOL (`fol_analysis_results`) | 1 (`fol_1`) | **26** | consistent = false |
+| **Total** | | **72** | |
+
+**DoD ≥3 = ATTEINT (72 ≫ 3).** The VV fixes (PL isolation retry, FOL unicode→ascii, sanitize identifiants) pass through Tweety parsing to a real reasoner verdict. FOL `consistent=false` is a substantive finding — the reasoner deems the argument set incoherent.
+
+**Caveat**: The spectacular (conversational) mode and the sequential mode use different state stores for formal logic. Volet-1 measures only the sequential path. The two modes are complementary.
+
 ---
 
 ## Measurement Script
@@ -158,11 +172,14 @@ Outputs:
 | `tests/unit/argumentation_analysis/test_track_ss_consolidated_measurement.py` | Tests (14) | New, all passing |
 | `docs/reports/consolidated_measurement_ss_658.md` | This report | New |
 
-## Blocker
+## Blocker → Resolved
 
-**OpenAI API quota exhausted** (`insufficient_quota` 429). All pipeline runs fail. The measurement script, tests, and code analysis are ready. A live re-run is needed to:
-1. Confirm DoD ≥3 formulas (Volet 1)
-2. Confirm corpus C convergence depth ≥3 post-RR (Volet 2)
-3. Produce the before/after signal fire counts (Volet 3)
+**OpenAI API quota was restored** (OpenRouter credits recharged by user). Live re-runs completed by ai-01 on 2026-05-23 (R216c + R218):
 
-Once quota is restored, re-running `consolidated_measurement_658.py` will produce the final data. If the DoD is met, #658 can be closed.
+| Volet | Status | Evidence |
+|-------|--------|----------|
+| 1. DoD ≥3 formal formulas | **MET** (72) | Sequential probe corpus C, PL 46 + FOL 26, Tweety verdicts |
+| 2. Corpus C depth ≥3 post-RR | **MET** (depth 3) | R216c live re-run via OpenRouter |
+| 3. Signal integrity | 3/5 alive | Sophisme/contre-arg/Dung. JTMS-retracté sombre (→ ZZ #685). Qualité-faible 0 (upstream variance). |
+
+Issue #677 (VV) **CLOSED**. Issue #658 **CLOSED** (auto-closed by #671).
