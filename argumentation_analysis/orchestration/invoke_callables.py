@@ -3054,6 +3054,10 @@ async def _invoke_hierarchical_fallacy(
     Uses FallacyWorkflowPlugin with iterative deepening (master-slave kernel)
     and one-shot fallback. Requires a Semantic Kernel service + taxonomy CSV.
     Falls back to heuristic extraction if SK/API is unavailable.
+
+    After the wide-net pass, runs per-argument enrichment to lift recall on
+    dense text. Results are merged and deduplicated by taxonomy_pk, keeping
+    the highest-confidence entry for each unique fallacy.
     """
     taxonomy_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -3100,6 +3104,30 @@ async def _invoke_hierarchical_fallacy(
         result_json = await plugin.run_guided_analysis(argument_text=input_text)
         result = json.loads(result_json)
         result["extraction_method"] = result.get("exploration_method", "unknown")
+
+        # Per-argument enrichment pass: run _invoke_hierarchical_fallacy_per_argument
+        # and merge extras into the wide-net results to lift recall on dense text.
+        try:
+            per_arg_result = await _invoke_hierarchical_fallacy_per_argument(
+                input_text, context
+            )
+            wide_fallacies = result.get("fallacies", [])
+            per_arg_fallacies = per_arg_result.get("fallacies", [])
+            merged = _merge_fallacy_results(wide_fallacies, per_arg_fallacies)
+            result["fallacies"] = merged
+            result["extraction_method"] = "widenet+perarg_union"
+            logger.info(
+                "Fallacy recall lift: widenet=%d, perarg=%d, merged=%d",
+                len(wide_fallacies),
+                len(per_arg_fallacies),
+                len(merged),
+            )
+        except Exception as enrich_err:
+            logger.warning(
+                "Per-argument enrichment failed, keeping wide-net results only: %s",
+                enrich_err,
+            )
+
         return result  # type: ignore[no-any-return]
 
     except (ImportError, RuntimeError, ValueError) as e:
@@ -3122,6 +3150,40 @@ async def _invoke_hierarchical_fallacy(
             traceback.format_exc(),
         )
         raise
+
+
+def _merge_fallacy_results(
+    wide_fallacies: List[Dict[str, Any]],
+    per_arg_fallacies: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Merge wide-net and per-argument fallacy results, deduplicating by taxonomy_pk.
+
+    Keeps the highest-confidence entry for each unique taxonomy_pk.
+    Wide-net results are kept as the floor; per-argument extras are added
+    only if their taxonomy_pk is not already present.
+    """
+    seen: Dict[str, Dict[str, Any]] = {}
+    for f in wide_fallacies:
+        if not isinstance(f, dict):
+            continue
+        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
+        if pk and pk not in seen:
+            seen[pk] = f
+        elif pk and f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+            seen[pk] = f
+
+    for f in per_arg_fallacies:
+        if not isinstance(f, dict):
+            continue
+        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
+        if not pk:
+            continue
+        if pk not in seen:
+            seen[pk] = f
+        elif f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+            seen[pk] = f
+
+    return list(seen.values())
 
 
 async def _invoke_hierarchical_fallacy_per_argument(
@@ -3354,8 +3416,8 @@ def _extract_arguments_for_parallel(
             if result:
                 return result
 
-    # Source 2: extraction phase output
-    extraction_output = context.get("phase_extraction_output")
+    # Source 2: extraction phase output (key matches phase_extract_output used by all other callables)
+    extraction_output = context.get("phase_extract_output")
     if extraction_output and isinstance(extraction_output, dict):
         arguments = extraction_output.get("arguments", [])
         if arguments:
