@@ -871,6 +871,32 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Belief revision post-processing failed: {e}")
 
+    # 5b-6. Counter-argument enrichment (GG #696)
+    # The conversational dialogue under-produces counter-arguments (often 1),
+    # losing to the zero-shot baseline on the quantitative axis. Sweep every
+    # identified argument and ensure >=1 counter-argument per argument, so the
+    # collaborative path matches the sequential path's coverage.
+    n_args = len(getattr(state, "identified_arguments", []) or [])
+    n_cas = len(getattr(state, "counter_arguments", []) or [])
+    if spectacular and n_args and n_cas < n_args:
+        try:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _generate_counter_arguments_from_state,
+            )
+
+            ca_result = await _generate_counter_arguments_from_state(state)
+            if ca_result and ca_result.get("added"):
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "counter_argument_enrichment",
+                        "added": ca_result["added"],
+                        "targets": ca_result["targets"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Counter-argument enrichment post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.
