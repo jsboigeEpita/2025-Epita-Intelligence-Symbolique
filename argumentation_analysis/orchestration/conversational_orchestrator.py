@@ -897,6 +897,38 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Counter-argument enrichment post-processing failed: {e}")
 
+    # 5b-7. Formal logic enrichment — PL/FOL volet-1 writers (HH #697)
+    # The conversational dialogue routes formal logic to belief_sets, leaving
+    # propositional_analysis_results / fol_analysis_results empty (PL/FOL = 0,
+    # losing to the zero-shot baseline). Mirror the Dung/modal/ASPIC
+    # post-processors: reuse the sequential Tweety-verified PL/FOL invoke
+    # callables so the collaborative path emits the same volet-1 formulas.
+    if (
+        spectacular
+        and hasattr(state, "propositional_analysis_results")
+        and not state.propositional_analysis_results
+        and not getattr(state, "fol_analysis_results", None)
+    ):
+        try:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _run_formal_logic_from_state,
+            )
+
+            formal_result = await _run_formal_logic_from_state(state, text)
+            if formal_result and (
+                formal_result.get("pl_added") or formal_result.get("fol_added")
+            ):
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "formal_logic_enrichment",
+                        "pl_formulas": formal_result["pl_added"],
+                        "fol_formulas": formal_result["fol_added"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Formal logic enrichment post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.

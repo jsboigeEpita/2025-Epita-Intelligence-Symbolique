@@ -580,6 +580,88 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
     return {"added": added, "targets": len(targets)}
 
 
+async def _run_formal_logic_from_state(
+    state: Any, input_text: str = ""
+) -> Dict[str, int]:
+    """Populate PL/FOL volet-1 writers on the conversational path (HH #697).
+
+    The conversational dialogue routes formal logic to ``belief_sets`` and never
+    calls the volet-1 writers, so ``propositional_analysis_results`` /
+    ``fol_analysis_results`` stay empty (PL/FOL = 0) — losing the quantitative
+    axis vs the zero-shot baseline. This deterministic post-processor mirrors the
+    Dung/modal/ASPIC ones: it reuses ``_invoke_propositional_logic`` /
+    ``_invoke_fol_reasoning`` so the formulas are Tweety-verified exactly as on
+    the sequential path, then writes them back via the state's add_* methods.
+    """
+    result = {"pl_added": 0, "fol_added": 0}
+
+    ident = getattr(state, "identified_arguments", None)
+    if isinstance(ident, dict):
+        arg_texts = [str(v).strip() for v in ident.values() if v]
+    elif isinstance(ident, list):
+        arg_texts = [
+            (
+                str(
+                    a.get("text") or a.get("description") or a.get("content") or ""
+                ).strip()
+                if isinstance(a, dict)
+                else str(a).strip()
+            )
+            for a in ident
+        ]
+    else:
+        return result
+    arg_texts = [t for t in arg_texts if t]
+    if not arg_texts:
+        return result
+
+    context: Dict[str, Any] = {
+        "_state_object": state,
+        "phase_extract_output": {"arguments": [{"text": t} for t in arg_texts]},
+        "source_metadata": {"opaque_id": getattr(state, "source_id", "conversational")},
+    }
+
+    # Propositional logic — only if not already populated.
+    if hasattr(state, "add_propositional_analysis_result") and not getattr(
+        state, "propositional_analysis_results", None
+    ):
+        try:
+            pl_out = await _invoke_propositional_logic(input_text, context)
+            formulas = pl_out.get("formulas", []) if isinstance(pl_out, dict) else []
+            if formulas:
+                state.add_propositional_analysis_result(
+                    formulas,
+                    bool(pl_out.get("satisfiable", False)),
+                    pl_out.get("model", {}) or {},
+                )
+                result["pl_added"] = len(formulas)
+        except Exception as e:
+            logger.warning(f"Conversational PL enrichment failed: {e}")
+
+    # First-order logic — only if not already populated.
+    if hasattr(state, "add_fol_analysis_result") and not getattr(
+        state, "fol_analysis_results", None
+    ):
+        try:
+            fol_out = await _invoke_fol_reasoning(input_text, context)
+            formulas = fol_out.get("formulas", []) if isinstance(fol_out, dict) else []
+            if formulas:
+                state.add_fol_analysis_result(
+                    formulas,
+                    bool(fol_out.get("consistent", False)),
+                    fol_out.get("inferences", []) or [],
+                    float(fol_out.get("confidence", 0.0) or 0.0),
+                )
+                sig = fol_out.get("fol_signature", [])
+                if isinstance(sig, list) and sig:
+                    state.fol_signature = sig
+                result["fol_added"] = len(formulas)
+        except Exception as e:
+            logger.warning(f"Conversational FOL enrichment failed: {e}")
+
+    return result
+
+
 async def _invoke_counter_argument(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -3937,6 +4019,9 @@ async def _invoke_propositional_logic(
     except Exception as san_err:
         logger.debug(f"PL sanitizer unavailable ({san_err}), using raw formulas")
 
+    # Bind bridge outside the try so the except isolation loop can reference it
+    # even if TweetyBridge import/construction itself raises (#697 Track HH).
+    bridge = None
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -3964,15 +4049,16 @@ async def _invoke_propositional_logic(
             f"Attempting per-formula isolation with {len(formulas)} formulas."
         )
         valid_formulas = []
-        for formula in formulas:
-            try:
-                single_bs = str(formula)
-                await asyncio.to_thread(
-                    bridge.check_consistency, single_bs, "propositional"
-                )
-                valid_formulas.append(formula)
-            except Exception:
-                logger.debug(f"PL formula rejected by Tweety: {formula}")
+        if bridge is not None:
+            for formula in formulas:
+                try:
+                    single_bs = str(formula)
+                    await asyncio.to_thread(
+                        bridge.check_consistency, single_bs, "propositional"
+                    )
+                    valid_formulas.append(formula)
+                except Exception:
+                    logger.debug(f"PL formula rejected by Tweety: {formula}")
 
         if valid_formulas:
             pl_metrics["post_tweety"] = len(valid_formulas)
@@ -4248,6 +4334,9 @@ async def _invoke_fol_reasoning(
                 f"Argument undermined by {f.get('type', f.get('fallacy_type', 'unknown'))} fallacy"
             )
 
+    # Bind bridge outside the try so the except isolation loop can reference it
+    # even if TweetyBridge import/construction itself raises (#697 Track HH).
+    bridge = None
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
         from argumentation_analysis.agents.core.logic.fol_logic_agent import (
@@ -4312,17 +4401,18 @@ async def _invoke_fol_reasoning(
         # This handles the case where one bad formula causes the entire
         # batch to fail in Tweety's parser.
         valid_formulas = []
-        for formula in formulas:
-            try:
-                single_meta = FOLLogicAgent.extract_fol_metadata([formula])
-                single_sig = single_meta.get("signature_lines", [])
-                single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
-                await asyncio.to_thread(
-                    bridge.check_consistency, single_bs, "first_order"
-                )
-                valid_formulas.append(formula)
-            except Exception:
-                logger.debug(f"FOL formula rejected by Tweety: {formula}")
+        if bridge is not None:
+            for formula in formulas:
+                try:
+                    single_meta = FOLLogicAgent.extract_fol_metadata([formula])
+                    single_sig = single_meta.get("signature_lines", [])
+                    single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
+                    await asyncio.to_thread(
+                        bridge.check_consistency, single_bs, "first_order"
+                    )
+                    valid_formulas.append(formula)
+                except Exception:
+                    logger.debug(f"FOL formula rejected by Tweety: {formula}")
 
         if valid_formulas:
             meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
