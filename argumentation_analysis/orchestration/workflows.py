@@ -607,14 +607,21 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="propositional_logic",
             depends_on=["nl_to_logic"],
             optional=True,
-            timeout_seconds=180,
+            # #705 Track LL: the 2-pass coordinated generator now runs on the DAG
+            # path too (pass1 + per-arg pass2 + whole-text ≈ 12 LLM calls), so the
+            # old 180s ceiling timed the phase out (→ failed_phases). Time is not
+            # a constraint here; give the formal phases room to finish.
+            timeout_seconds=420,
         )
         .add_phase(
             "fol",
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
             optional=True,
-            timeout_seconds=180,
+            # #705 Track LL: FOL 2-pass + per-formula Tweety isolation is the
+            # slowest formal phase; 180s was the cause of the DAG fol collapse
+            # (failed_phases=['fol'] on A/C). Raised so it completes.
+            timeout_seconds=600,
         )
         .add_phase(
             "modal",

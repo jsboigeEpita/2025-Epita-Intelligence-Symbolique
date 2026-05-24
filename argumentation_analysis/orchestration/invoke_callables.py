@@ -3766,7 +3766,19 @@ async def _invoke_propositional_logic(
     """
     # Build propositional formulas from upstream arguments
     args = _extract_arguments_from_context(input_text, context)
-    formulas: Optional[List[str]] = context.get("formulas")
+    # #705 Track LL: upstream formulas (DAG path: context["formulas"] or the
+    # nl_to_logic phase) are whole-text/complex and frequently fail Tweety. We
+    # capture them separately and run the robust 2-pass coordinated generator
+    # ALWAYS, then UNION the upstream extras on top — instead of letting the
+    # upstream formulas short-circuit the generator. That short-circuit was the
+    # asymmetry that made the sequential/DAG path lose PL/FOL to the zero-shot
+    # baseline; the conversational path already wins because it always runs the
+    # 2-pass. Per-formula Tweety isolation below keeps only parseable survivors,
+    # so unioning the upstream extras can only add verified count, never lower it.
+    upstream_formulas: List[str] = [
+        str(f).strip() for f in (context.get("formulas") or []) if f
+    ]
+    formulas: Optional[List[str]] = None
     argument_mapping: Dict[str, str] = {}
     shared_atoms: List[str] = []
 
@@ -3804,20 +3816,25 @@ async def _invoke_propositional_logic(
         ]
 
         if pl_translations:
-            # Use validated NL-to-logic formulas
-            formulas = [t["formula"] for t in pl_translations]
-            argument_mapping = {
-                t["formula"][:30]: t.get("original_text", "")[:60]
-                for t in pl_translations
-            }
-            pl_metrics["upstream_nl"] = len(formulas)
-            logger.info(
-                f"Using {len(formulas)} NL-to-logic PL translations "
-                f"(from upstream phase)"
+            # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
+            # the 2-pass — they are unioned in after the robust generator runs.
+            upstream_formulas.extend(
+                t["formula"].strip() for t in pl_translations if t.get("formula")
             )
-        else:
-            # ── 2-pass coordinated pipeline (#547) ──────────────────────
-            # Try the coordinated 2-pass: Pass 1 (atom inventory) → Pass 2 (formulas with shared atoms)
+            argument_mapping.update(
+                {
+                    t["formula"][:30]: t.get("original_text", "")[:60]
+                    for t in pl_translations
+                }
+            )
+            pl_metrics["upstream_nl"] = len(upstream_formulas)
+            logger.info(
+                f"Captured {len(upstream_formulas)} upstream NL-to-logic PL "
+                f"formulas (unioned after 2-pass) (#705)"
+            )
+        # ── 2-pass coordinated pipeline (#547) — always runs now (#705 LL).
+        # Pass 1 (atom inventory) → Pass 2 (formulas using only shared atoms).
+        if not formulas:
             try:
                 import json as _json
 
@@ -3950,7 +3967,17 @@ async def _invoke_propositional_logic(
             except Exception as e:
                 logger.debug(f"PL 2-pass pipeline unavailable: {e}")
 
-            # Fallback: try on-the-fly NL translation if LLM available (and 2-pass didn't produce formulas)
+            # #705 Track LL: union upstream complex formulas (nl_to_logic /
+            # context["formulas"]) on top of the robust 2-pass formulas. The
+            # per-formula Tweety isolation below keeps only parseable ones, so
+            # this can only add verified survivors, never lower the count.
+            if formulas is None:
+                formulas = []
+            for f in upstream_formulas:
+                if f and f not in formulas:
+                    formulas.append(f)
+
+            # Fallback: on-the-fly NL translation only if nothing produced yet
             if not formulas:
                 try:
                     from argumentation_analysis.services.nl_to_logic import (
@@ -4109,7 +4136,15 @@ async def _invoke_fol_reasoning(
     (#208-H: wire NL-to-logic as pre-processing)
     """
     args = _extract_arguments_from_context(input_text, context)
-    formulas: Optional[List[str]] = context.get("formulas")
+    # #705 Track LL: capture upstream FOL formulas (DAG nl_to_logic /
+    # context["formulas"]) separately and run the robust 2-pass generator
+    # ALWAYS, then UNION the upstream extras — mirrors the PL fix so the
+    # sequential/DAG path stops losing FOL to the zero-shot baseline. Per-formula
+    # Tweety isolation keeps only parseable survivors.
+    upstream_formulas: List[str] = [
+        str(f).strip() for f in (context.get("formulas") or []) if f
+    ]
+    formulas: Optional[List[str]] = None
     fol_metadata_shared: Dict[str, Any] = {}
 
     # Retrieve state object for fol_shared_signature storage
@@ -4147,21 +4182,22 @@ async def _invoke_fol_reasoning(
         ]
 
         if fol_translations:
-            formulas = []
+            # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
+            # the 2-pass — they are unioned in after the robust generator runs.
             for t in fol_translations:
                 # FOL formulas may be semicolon-separated
                 for f in t["formula"].split(";"):
                     f = f.strip()
-                    if f:
-                        formulas.append(f)
+                    if f and f not in upstream_formulas:
+                        upstream_formulas.append(f)
             logger.info(
-                f"Using {len(formulas)} NL-to-logic FOL translations "
-                f"(from upstream phase)"
+                f"Captured {len(upstream_formulas)} upstream NL-to-logic FOL "
+                f"formulas (unioned after 2-pass) (#705)"
             )
-        else:
-            # ── FOL 2-pass coordinated pipeline (#544) ───────────────────
-            # Pass 1: Extract shared FOL signature (sorts, predicates, constants) from full text
-            # Pass 2: Generate per-argument formulas using ONLY shared signature
+        # ── FOL 2-pass coordinated pipeline (#544) — always runs (#705 LL).
+        # Pass 1: shared signature (sorts/predicates/constants) from full text.
+        # Pass 2: per-argument formulas using ONLY the shared signature.
+        if not formulas:
             try:
                 # Honors the OpenRouter toggle via _get_openai_client.
                 client, model_id = _get_openai_client()
@@ -4273,7 +4309,16 @@ async def _invoke_fol_reasoning(
             except Exception as e:
                 logger.debug(f"FOL 2-pass pipeline unavailable: {e}")
 
-            # Fallback: try on-the-fly NL translation
+            # #705 Track LL: union upstream complex FOL formulas on top of the
+            # robust 2-pass formulas. Per-formula Tweety isolation (below) keeps
+            # only parseable survivors, so this can only add verified count.
+            if formulas is None:
+                formulas = []
+            for f in upstream_formulas:
+                if f and f not in formulas:
+                    formulas.append(f)
+
+            # Fallback: on-the-fly NL translation only if nothing produced yet
             if not formulas:
                 try:
                     from argumentation_analysis.services.nl_to_logic import (
