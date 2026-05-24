@@ -70,3 +70,31 @@ class TestNarrativeSynthesisRegistration:
         assert "atms" in deps
         assert "dung_extensions" in deps
         assert phase["narrative_synthesis"].optional is True
+
+    def test_full_has_narrative_synthesis_phase(self):
+        """II #698: the sequential `full` path computes convergence in-run too.
+
+        Previously only build_spectacular_workflow ran narrative_synthesis, so
+        the `full` path produced no convergence metric in-run. This wires it,
+        depending on every phase that populates one of the 5 convergence
+        signals.
+        """
+        from argumentation_analysis.orchestration.workflows import (
+            build_full_workflow,
+        )
+
+        wf = build_full_workflow()
+        phase = {p.name: p for p in wf.phases}
+        assert "narrative_synthesis" in phase
+        assert phase["narrative_synthesis"].capability == "narrative_synthesis"
+        deps = phase["narrative_synthesis"].depends_on
+        # All 5 convergence-signal producers must be upstream dependencies.
+        for signal_phase in (
+            "quality",
+            "hierarchical_fallacy",
+            "counter",
+            "jtms",
+            "dung_extensions",
+        ):
+            assert signal_phase in deps, f"{signal_phase} missing from deps"
+        assert phase["narrative_synthesis"].optional is True

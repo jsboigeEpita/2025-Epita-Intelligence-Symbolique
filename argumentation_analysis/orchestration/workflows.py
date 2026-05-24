@@ -227,6 +227,24 @@ def build_full_workflow() -> WorkflowDefinition:
             depends_on=["dung_extensions"],
             optional=True,
         )
+        # Convergence synthesis (II #698): compute the 5-signal convergence
+        # metric in-run on the sequential `full` path too (previously only
+        # build_spectacular_workflow ran it). Depends on every phase that
+        # populates a convergence signal: hierarchical_fallacy (sophisme),
+        # quality (qualité faible), counter (contre-argument), jtms (JTMS
+        # rétracté), dung_extensions (rejet Dung).
+        .add_phase(
+            "narrative_synthesis",
+            capability="narrative_synthesis",
+            depends_on=[
+                "quality",
+                "hierarchical_fallacy",
+                "counter",
+                "jtms",
+                "dung_extensions",
+            ],
+            optional=True,
+        )
         .build()
     )
 
