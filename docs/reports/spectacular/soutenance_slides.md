@@ -199,16 +199,17 @@ Validé sur 3 corpus, ≥7 méthodes formelles activées par corpus
 conda activate projet-is-roo-new
 # API key in .env, model: gpt-5-mini
 
-# 2. Run pipeline on corpus A (~20 min)
-python examples/soutenance/run_corpus_a.py
+# 2. Reproduce all 3 volets (known results, no API key):
+python scripts/repro_soutenance_ee.py
 
-# 3. Generate full bundle (all formats)
+# 3. Live sequential probe (requires funded key):
+python scripts/repro_soutenance_ee.py --live
+
+# 4. Generate full bundle (all formats)
 python scripts/analysis/generate_spectacular_bundle.py
-
-# 4. Export single corpus
-python scripts/analysis/export_scda_state.py --format all
 ```
 
+**Rapport consolidé** : `docs/reports/soutenance_consolidated_ee_691.md`
 **Tolerance bands** : args ±2, fallacies ±3, ≥3 formal categories
 **18 CI smoke tests** avec mock LLM (0 API calls)
 
@@ -228,8 +229,8 @@ python scripts/analysis/export_scda_state.py --format all
 
 # Questions ?
 
+**Rapport consolidé** : `docs/reports/soutenance_consolidated_ee_691.md`
 **Bundle complet** : `docs/reports/spectacular/`
-**Rapport maître** : `docs/reports/EPIC_530_SCDA_SPECTACULAR_FINAL_REPORT.md`
-**Reproductibilité** : `docs/guides/SOUTENANCE_REPRODUCTION_GUIDE.md`
+**Reproductibilité** : `scripts/repro_soutenance_ee.py`
 
 Merci.
