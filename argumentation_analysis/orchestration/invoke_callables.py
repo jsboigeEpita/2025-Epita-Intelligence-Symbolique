@@ -454,6 +454,132 @@ async def _llm_enrich_quality(
     return None
 
 
+def _parse_counter_array(raw: str) -> List[Dict[str, Any]]:
+    """Extract a JSON array of counter-argument dicts from an LLM response."""
+    text_content = (raw or "").strip()
+    if "```json" in text_content:
+        text_content = text_content.split("```json")[1].split("```")[0]
+    elif "```" in text_content:
+        text_content = text_content.split("```")[1].split("```")[0]
+    start_arr = text_content.find("[")
+    end_arr = text_content.rfind("]") + 1
+    if start_arr >= 0 and end_arr > start_arr:
+        try:
+            parsed = json.loads(text_content[start_arr:end_arr])
+            if isinstance(parsed, list):
+                return [c for c in parsed if isinstance(c, dict)]
+        except Exception:
+            pass
+    start = text_content.find("{")
+    end = text_content.rfind("}") + 1
+    if start >= 0 and end > start:
+        try:
+            obj = json.loads(text_content[start:end])
+            if isinstance(obj, dict):
+                return [obj]
+        except Exception:
+            pass
+    return []
+
+
+async def _generate_counters_for_targets(
+    client: Any,
+    model_id: str,
+    targets: List[str],
+    batch_size: int = 12,
+) -> List[Dict[str, Any]]:
+    """Generate one counter-argument per target via the LLM (GG #696).
+
+    No cap on the number of targets — every fallacious/weak argument is swept,
+    so the pipeline beats the zero-shot baseline on counter-argument volume
+    instead of losing to it. Long target lists are split into batches because a
+    single mega-prompt silently drops items past the first handful.
+    """
+    counters: List[Dict[str, Any]] = []
+    det_params = _get_determinism_params()
+    system_prompt = (
+        "You are an expert in argumentation and counter-argument generation. "
+        "For EACH argument/fallacy listed, generate a targeted counter-argument "
+        "using the most appropriate strategy: reductio ad absurdum, "
+        "counter-example, distinction, reformulation, or concession+pivot. "
+        "Return EXACTLY one counter-argument per listed item. "
+        "Respond with ONLY a JSON array:\n"
+        '[{"counter_argument": "text", "strategy_used": "name", '
+        '"target_argument": "which argument", "strength": "weak|moderate|strong", '
+        '"reasoning": "why this works"}, ...]'
+    )
+    for start in range(0, len(targets), batch_size):
+        batch = targets[start : start + batch_size]
+        targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+        try:
+            response = await client.chat.completions.create(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": targets_text},
+                ],
+                **det_params,
+            )
+            raw = response.choices[0].message.content or ""
+            counters.extend(_parse_counter_array(raw))
+        except Exception as e:
+            logger.warning(
+                f"Counter-argument batch [{start}:{start + batch_size}] failed: {e}"
+            )
+    return counters
+
+
+async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
+    """Ensure >=1 counter-argument per identified argument (GG #696).
+
+    The conversational path under-produces counter-arguments (the agent emits a
+    handful before its turn budget runs out), so the collaborative path loses to
+    the zero-shot baseline on volume. This deterministic post-processor mirrors
+    the Dung/modal/ASPIC post-processors: after the dialogue, it sweeps every
+    identified argument and generates a targeted counter-argument, written back
+    via ``state.add_counter_argument``.
+    """
+    args = getattr(state, "identified_arguments", []) or []
+    targets: List[str] = []
+    for a in args:
+        if isinstance(a, dict):
+            text = a.get("text") or a.get("description") or a.get("content") or ""
+        else:
+            text = str(a)
+        text = str(text).strip()
+        if text:
+            targets.append(text)
+    if not targets:
+        return {"added": 0, "targets": 0}
+
+    client, model_id = _get_openai_client()
+    if not client:
+        return {"added": 0, "targets": len(targets)}
+
+    counters = await _generate_counters_for_targets(client, model_id, targets)
+    counters = _evaluate_counter_arguments(counters, targets[0])
+
+    added = 0
+    for ca in counters:
+        if not isinstance(ca, dict):
+            continue
+        content = ca.get("counter_argument", "")
+        if not content:
+            continue
+        score = float(ca.get("evaluation_score", ca.get("score", 0.0)) or 0.0)
+        try:
+            state.add_counter_argument(
+                original_arg=str(ca.get("target_argument", ""))[:300],
+                counter_content=str(content),
+                strategy=str(ca.get("strategy_used", "")),
+                score=score,
+            )
+            added += 1
+        except Exception as e:
+            logger.debug(f"add_counter_argument failed: {e}")
+    return {"added": added, "targets": len(targets)}
+
+
 async def _invoke_counter_argument(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -491,9 +617,13 @@ async def _invoke_counter_argument(
                 else {}
             )
 
-            # Build targets: fallacious arguments first, then weakest by quality
+            # Build targets: ALL fallacious arguments + ALL arguments by quality.
+            # GG #696: the previous top-3 fallacies + 5-total caps held output to
+            # <=5 counter-arguments, losing to the zero-shot baseline on volume.
+            # Sweep every target; _generate_counters_for_targets batches the
+            # LLM calls so coverage stays reliable on dense corpora.
             targets = []
-            for f in fallacies[:3]:  # Top 3 fallacies
+            for f in fallacies:
                 if isinstance(f, dict):
                     targets.append(
                         f"[FALLACY: {f.get('type', f.get('fallacy_type', ''))}] "
@@ -510,51 +640,15 @@ async def _invoke_counter_argument(
             scored_args.sort(key=lambda x: x[0])  # weakest first
 
             for score, text in scored_args:
-                if text and len(targets) < 5:
+                if text:
                     targets.append(f"[quality={score:.1f}/10] {text}")
 
             if not targets:
                 targets = [input_text[:500]]
 
-            # Ask for counter-arguments for ALL targets at once
-            targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(targets))
-            det_params = _get_determinism_params()
-            response = await client.chat.completions.create(
-                model=model_id,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert in argumentation and counter-argument generation. "
-                            "For EACH argument/fallacy listed, generate a targeted counter-argument "
-                            "using the most appropriate strategy: reductio ad absurdum, "
-                            "counter-example, distinction, reformulation, or concession+pivot. "
-                            "Respond with ONLY a JSON array:\n"
-                            '[{"counter_argument": "text", "strategy_used": "name", '
-                            '"target_argument": "which argument", "strength": "weak|moderate|strong", '
-                            '"reasoning": "why this works"}, ...]'
-                        ),
-                    },
-                    {"role": "user", "content": targets_text},
-                ],
-                **det_params,
+            llm_counters = await _generate_counters_for_targets(
+                client, model_id, targets
             )
-            raw = response.choices[0].message.content or ""
-            text_content = raw.strip()
-            if "```json" in text_content:
-                text_content = text_content.split("```json")[1].split("```")[0]
-            elif "```" in text_content:
-                text_content = text_content.split("```")[1].split("```")[0]
-            # Try to parse as array first, then single object
-            start_arr = text_content.find("[")
-            end_arr = text_content.rfind("]") + 1
-            if start_arr >= 0 and end_arr > start_arr:
-                llm_counters = json.loads(text_content[start_arr:end_arr])
-            else:
-                start = text_content.find("{")
-                end = text_content.rfind("}") + 1
-                if start >= 0 and end > start:
-                    llm_counters = [json.loads(text_content[start:end])]
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
 
