@@ -929,6 +929,31 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Formal logic enrichment post-processing failed: {e}")
 
+    # 5b-8. Quality sweep enrichment (JJ #699)
+    # The conversational QualityAgent depends on the agent turn budget; when it
+    # runs out the dialogue emits 0 quality scores (path-dependent, some corpora
+    # end at 0). Mirror the other post-processors: reuse the robust sequential
+    # 9-virtue evaluator over every identified argument so the collaborative path
+    # always has quality scores. Gated on under-production — fills gaps only.
+    n_quality = len(getattr(state, "argument_quality_scores", {}) or {})
+    if spectacular and n_args and n_quality < n_args:
+        try:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _run_quality_sweep_from_state,
+            )
+
+            q_result = await _run_quality_sweep_from_state(state)
+            if q_result and q_result.get("added"):
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "quality_sweep_enrichment",
+                        "added": q_result["added"],
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Quality sweep post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.

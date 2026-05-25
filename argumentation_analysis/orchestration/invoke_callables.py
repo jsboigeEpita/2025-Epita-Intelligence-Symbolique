@@ -662,6 +662,74 @@ async def _run_formal_logic_from_state(
     return result
 
 
+async def _run_quality_sweep_from_state(state: Any) -> Dict[str, int]:
+    """Score every identified argument's quality on the conversational path (JJ #699).
+
+    The conversational ``QualityAgent`` depends on the agent turn budget; when the
+    budget runs out the dialogue emits 0 quality scores, so the collaborative path
+    is non-deterministic and some corpora end with quality = 0. This deterministic
+    post-processor mirrors the Dung/modal/ASPIC/PL/FOL ones: it reuses the robust
+    sequential ``_invoke_quality_evaluator`` (9-virtue evaluator, deterministic —
+    the LLM enrichment pass is optional) over ``state.identified_arguments`` and
+    writes every score back via ``state.add_quality_score``. Gated by the caller on
+    under-production, so it only fills gaps — it never overwrites agent scores.
+    """
+    result = {"added": 0}
+
+    ident = getattr(state, "identified_arguments", None)
+    if isinstance(ident, dict):
+        arg_texts = [str(v).strip() for v in ident.values() if v]
+    elif isinstance(ident, list):
+        arg_texts = [
+            (
+                str(
+                    a.get("text") or a.get("description") or a.get("content") or ""
+                ).strip()
+                if isinstance(a, dict)
+                else str(a).strip()
+            )
+            for a in ident
+        ]
+    else:
+        return result
+    arg_texts = [t for t in arg_texts if t]
+    if not arg_texts:
+        return result
+
+    if not hasattr(state, "add_quality_score"):
+        return result
+
+    context: Dict[str, Any] = {
+        "phase_extract_output": {"arguments": [{"text": t} for t in arg_texts]},
+    }
+    try:
+        q_out = await _invoke_quality_evaluator("", context)
+    except Exception as e:
+        logger.warning(f"Conversational quality sweep failed: {e}")
+        return result
+
+    if not isinstance(q_out, dict):
+        return result
+
+    per_arg = q_out.get("per_argument_scores")
+    if isinstance(per_arg, dict) and per_arg:
+        already = set(getattr(state, "argument_quality_scores", {}) or {})
+        for arg_id, scored in per_arg.items():
+            if arg_id in already or not isinstance(scored, dict):
+                continue
+            try:
+                state.add_quality_score(
+                    arg_id,
+                    scored.get("scores_par_vertu", {}) or {},
+                    float(scored.get("note_finale", 0.0) or 0.0),
+                    llm_assessment=scored.get("llm_assessment"),
+                )
+                result["added"] += 1
+            except Exception as e:
+                logger.debug(f"add_quality_score failed for {arg_id}: {e}")
+    return result
+
+
 async def _invoke_counter_argument(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -3662,6 +3730,29 @@ async def _invoke_fact_extraction(
 
         if client:
             det_params = _get_determinism_params()
+            # JJ #699: non-English dense text under-recalls (corpus B/DE extracts
+            # ~2 args vs ~7/5 for A/C-EN), starving every downstream layer. The
+            # English-only prompt gives the model no cue to analyze in the source
+            # language. Detect the language (reusing the tested heuristic) and add
+            # a language-aware instruction so non-English extraction reaches parity.
+            lang_clause = ""
+            try:
+                from argumentation_analysis.orchestration.conversational_orchestrator import (
+                    _detect_language,
+                )
+
+                _lang = _detect_language(input_text)
+                _lang_names = {"de": "German", "fr": "French", "en": "English"}
+                if _lang in _lang_names and _lang != "en":
+                    lang_clause = (
+                        f" The source text is in {_lang_names[_lang]}. Analyze it in "
+                        f"its original language and extract ALL distinct arguments and "
+                        f"claims with the SAME thoroughness as you would for English — "
+                        f"do not under-extract because the text is non-English. Keep "
+                        f"the 'text' descriptions in {_lang_names[_lang]}."
+                    )
+            except Exception:
+                lang_clause = ""
             response = await client.chat.completions.create(
                 model=model_id,
                 messages=[
@@ -3676,7 +3767,8 @@ async def _invoke_fact_extraction(
                             "Focus on: (1) identifying distinct argumentative positions, "
                             "(2) extracting factual claims that can be verified, "
                             "(3) noting rhetorical strategies used (without labeling them as fallacies). "
-                            "Respond with ONLY a JSON object:\n"
+                            + lang_clause
+                            + " Respond with ONLY a JSON object:\n"
                             '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
                             '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
                             '"summary": "brief analysis summary"}'
