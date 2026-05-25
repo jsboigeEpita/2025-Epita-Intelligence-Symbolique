@@ -7,10 +7,12 @@ Split from unified_pipeline.py (#310).
 """
 
 import asyncio
+import contextvars
 import json
 import logging
 import os
 import re
+from contextlib import contextmanager
 from typing import Dict, Any, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -26,6 +28,9 @@ except ImportError:
 # Export all underscore-prefixed functions for star-import in unified_pipeline facade
 __all__ = [
     "_get_openai_client",
+    "_guarded_chat_completion",
+    "llm_budget_scope",
+    "LLMBudgetExceeded",
     "_invoke_quality_evaluator",
     "_aggregate_virtue_scores",
     "_llm_enrich_quality",
@@ -198,6 +203,107 @@ def _get_openai_client() -> Tuple[Any, str]:
         return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id
     except ImportError:
         return None, ""
+
+
+# --- Global per-run LLM-call circuit breaker (issue #708, Track LL-bis) ---
+#
+# A single analysis run funnels EVERY LLM chat-completion through
+# ``_guarded_chat_completion``, which counts the call against a per-run budget.
+# This is the only backstop that covers *every* phase: the counter-argument
+# chain (``_extract_arguments_from_context`` → ``_invoke_counter_argument`` →
+# ``_generate_counters_for_targets``) is otherwise uncapped and scales with the
+# upstream argument count, which is what produced the 8h / ~12,417-call DAG
+# runaway. Anti-pendulum: the ceiling is generous-but-finite (a healthy
+# ``spectacular`` run is ~60-100 calls), so it never bites a real run but stops
+# a runaway dead. It does NOT re-introduce a small per-phase cap (that would
+# undo the GG #696 volume win).
+
+
+class LLMBudgetExceeded(RuntimeError):
+    """Raised when one analysis run exceeds its global LLM-call ceiling (#708).
+
+    Caught per-phase by the workflow executor / each ``_invoke_*`` try/except,
+    so it degrades a runaway into a graceful fallback rather than propagating.
+    """
+
+
+class _LLMBudget:
+    """Mutable per-run LLM-call counter shared across phase sub-tasks.
+
+    Stored in a ``ContextVar`` set once at the start of a run. asyncio copies
+    the *context* (the var binding) into every child task spawned via
+    ``asyncio.gather`` / ``asyncio.wait_for``, but the bound object is shared by
+    reference — so incrementing ``count`` from any phase task aggregates into one
+    global per-run total. (A plain int in a ContextVar would NOT aggregate,
+    because each task gets its own binding.)
+    """
+
+    __slots__ = ("count", "ceiling")
+
+    def __init__(self, ceiling: int) -> None:
+        self.count = 0
+        self.ceiling = ceiling
+
+
+def _default_llm_call_budget() -> int:
+    """Generous per-run LLM-call ceiling (override via ``LLM_CALL_BUDGET``).
+
+    Healthy ``spectacular`` run ~60-100 calls; the default 500 never bites a
+    healthy run but stops a 12K-call runaway.
+    """
+    try:
+        return max(1, int(os.environ.get("LLM_CALL_BUDGET", "500")))
+    except (TypeError, ValueError):
+        return 500
+
+
+_llm_budget: "contextvars.ContextVar[Optional[_LLMBudget]]" = contextvars.ContextVar(
+    "llm_call_budget", default=None
+)
+
+
+@contextmanager
+def llm_budget_scope(ceiling: Optional[int] = None):
+    """Activate a per-run LLM-call circuit breaker for the duration of the block.
+
+    Every ``_guarded_chat_completion`` call made within (including in child
+    asyncio tasks) counts against one shared ceiling; exceeding it raises
+    ``LLMBudgetExceeded``. Re-entrant: a nested scope reuses the already-active
+    budget so the count stays global across the whole run.
+    """
+    existing = _llm_budget.get()
+    if existing is not None:
+        # Already inside a budget scope — keep one global count, don't reset it.
+        yield existing
+        return
+    budget = _LLMBudget(ceiling if ceiling is not None else _default_llm_call_budget())
+    token = _llm_budget.set(budget)
+    try:
+        yield budget
+    finally:
+        _llm_budget.reset(token)
+
+
+async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
+    """Single funnel for every LLM chat-completion call (#708 runaway guard).
+
+    Increments the active per-run budget (if any) and raises
+    ``LLMBudgetExceeded`` past the ceiling *before* issuing the network call, so
+    a degenerate upstream (e.g. a large argument list feeding the uncapped
+    counter sweep) cannot run away into thousands of round-trips. Inert when no
+    budget scope is active, so a direct unit-test call of a single callable is
+    unaffected.
+    """
+    budget = _llm_budget.get()
+    if budget is not None:
+        budget.count += 1
+        if budget.count > budget.ceiling:
+            raise LLMBudgetExceeded(
+                f"Global LLM-call budget exceeded "
+                f"({budget.count} > {budget.ceiling}) in a single analysis run "
+                f"— runaway guard (issue #708)."
+            )
+    return await client.chat.completions.create(**kwargs)
 
 
 # --- Invoke callables for registered components ---
@@ -408,7 +514,8 @@ async def _llm_enrich_quality(
                 )
 
         det_params = _get_determinism_params()
-        response = await client.chat.completions.create(
+        response = await _guarded_chat_completion(
+            client,
             model=model_id,
             messages=[
                 {
@@ -512,7 +619,8 @@ async def _generate_counters_for_targets(
         batch = targets[start : start + batch_size]
         targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
         try:
-            response = await client.chat.completions.create(
+            response = await _guarded_chat_completion(
+                client,
                 model=model_id,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -1003,7 +1111,8 @@ async def _invoke_debate_analysis(
             )
 
             det_params = _get_determinism_params()
-            response = await client.chat.completions.create(
+            response = await _guarded_chat_completion(
+                client,
                 model=model_id,
                 messages=[
                     {
@@ -1202,7 +1311,8 @@ async def _invoke_governance(
             )
 
             det_params = _get_determinism_params()
-            response = await client.chat.completions.create(
+            response = await _guarded_chat_completion(
+                client,
                 model=model_id,
                 messages=[
                     {
@@ -1957,13 +2067,17 @@ def _extract_arguments_from_context(
     ]:
         phase_out = context.get(phase_key, {})
         if isinstance(phase_out, dict):
-            # Primary: explicit arguments list (from fact_extraction LLM)
+            # Primary: explicit arguments list (from fact_extraction LLM).
+            # Generous cap [:40] (#708, anti-pendulum): this list feeds the
+            # uncapped counter sweep; bounding it stops a degenerate upstream
+            # from driving thousands of LLM calls, while 40 still far exceeds
+            # the 0-shot argument volume (the GG #696 volume win is preserved).
             if "arguments" in phase_out:
                 args = phase_out["arguments"]
                 if isinstance(args, list) and args:
                     return [
                         a.get("text", str(a)) if isinstance(a, dict) else str(a)
-                        for a in args
+                        for a in args[:40]
                     ]
             # Secondary: claims list (from fact_extraction heuristic fallback)
             if "claims" in phase_out:
@@ -3753,7 +3867,8 @@ async def _invoke_fact_extraction(
                     )
             except Exception:
                 lang_clause = ""
-            response = await client.chat.completions.create(
+            response = await _guarded_chat_completion(
+                client,
                 model=model_id,
                 messages=[
                     {
@@ -3944,7 +4059,8 @@ async def _invoke_propositional_logic(
                         f"Text:\n{input_text[:4000]}"
                     )
                     det_params = _get_determinism_params()
-                    pass1_resp = await client.chat.completions.create(
+                    pass1_resp = await _guarded_chat_completion(
+                        client,
                         model=model_id,
                         messages=[{"role": "user", "content": pass1_prompt}],
                         **det_params,
@@ -3993,7 +4109,8 @@ async def _invoke_propositional_logic(
                                 f"Allowed propositions:\n{atoms_json}"
                             )
                             try:
-                                pass2_resp = await client.chat.completions.create(
+                                pass2_resp = await _guarded_chat_completion(
+                                    client,
                                     model=model_id,
                                     messages=[
                                         {"role": "user", "content": pass2_prompt}
@@ -4035,7 +4152,8 @@ async def _invoke_propositional_logic(
                                 f"Text:\n{input_text[:4000]}\n\n"
                                 f"Allowed propositions:\n{_json.dumps({'propositions': shared_atoms}, indent=2)}"
                             )
-                            wt_resp = await client.chat.completions.create(
+                            wt_resp = await _guarded_chat_completion(
+                                client,
                                 model=model_id,
                                 messages=[{"role": "user", "content": wt_prompt}],
                                 **det_params,
@@ -4314,7 +4432,8 @@ async def _invoke_fol_reasoning(
                         f"Text:\n{input_text[:4000]}"
                     )
                     det_params = _get_determinism_params()
-                    pass1_resp = await client.chat.completions.create(
+                    pass1_resp = await _guarded_chat_completion(
+                        client,
                         model=model_id,
                         messages=[{"role": "user", "content": pass1_prompt}],
                         **det_params,
@@ -4371,7 +4490,8 @@ async def _invoke_fol_reasoning(
                                     f"Signature:\n{sig_json}"
                                 )
                                 try:
-                                    pass2_resp = await client.chat.completions.create(
+                                    pass2_resp = await _guarded_chat_completion(
+                                        client,
                                         model=model_id,
                                         messages=[
                                             {"role": "user", "content": pass2_prompt}

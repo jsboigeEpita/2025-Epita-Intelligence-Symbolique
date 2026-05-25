@@ -686,11 +686,16 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
-        # L5 — counter-argument generation
+        # L5 — counter-argument generation.
+        # timeout_seconds=420 (#708, anti-pendulum): the counter sweep is the
+        # only LLM-heavy phase that scales with the upstream argument count;
+        # generous enough never to bite a healthy run, but a finite wall-clock
+        # bound so a degenerate upstream cannot run away for hours.
         .add_phase(
             "counter",
             capability="counter_argument_generation",
             depends_on=["quality"],
+            timeout_seconds=420,
         )
         # L6 — JTMS belief tracking + adversarial debate (parallel)
         .add_phase(

@@ -317,6 +317,41 @@ class WorkflowExecutor:
         checkpoint_callback: Optional[Callable[..., None]] = None,
         resume_from: Optional[Set[str]] = None,
     ) -> Dict[str, PhaseResult]:
+        """Execute a workflow under a per-run LLM-call circuit breaker (#708).
+
+        Thin wrapper around :meth:`_execute_impl` that activates a global
+        per-run LLM-call budget (see ``invoke_callables.llm_budget_scope``).
+        Every phase's LLM calls count against one ceiling, so a degenerate
+        upstream (e.g. a large argument list feeding the uncapped counter
+        sweep) cannot run away into thousands of round-trips. The budget is
+        the only backstop that covers *every* phase. Re-entrant: a nested
+        workflow reuses the already-active budget.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            llm_budget_scope,
+        )
+
+        with llm_budget_scope():
+            return await self._execute_impl(
+                workflow,
+                input_data,
+                context=context,
+                state=state,
+                state_writers=state_writers,
+                checkpoint_callback=checkpoint_callback,
+                resume_from=resume_from,
+            )
+
+    async def _execute_impl(
+        self,
+        workflow: WorkflowDefinition,
+        input_data: Any,
+        context: Optional[Dict[str, Any]] = None,
+        state: Optional[Any] = None,
+        state_writers: Optional[Dict[str, Any]] = None,
+        checkpoint_callback: Optional[Callable[..., None]] = None,
+        resume_from: Optional[Set[str]] = None,
+    ) -> Dict[str, PhaseResult]:
         """
         Execute a workflow definition.
 
@@ -361,6 +396,7 @@ class WorkflowExecutor:
         ctx["correlation_id"] = correlation_id
 
         from argumentation_analysis.orchestration.structured_logging import PhaseLogger
+
         slog = PhaseLogger(self._base_logger, correlation_id=correlation_id)
 
         slog.info(
@@ -409,7 +445,10 @@ class WorkflowExecutor:
                 if phase:
                     slog.info(
                         "Starting phase",
-                        extra={"phase_name": phase_name, "capability": phase.capability},
+                        extra={
+                            "phase_name": phase_name,
+                            "capability": phase.capability,
+                        },
                     )
                     phase_coros.append(
                         self._execute_phase(phase, phase_name, input_data, ctx)
