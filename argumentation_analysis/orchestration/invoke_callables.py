@@ -13,7 +13,7 @@ import logging
 import os
 import re
 from contextlib import contextmanager
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Iterator, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -263,7 +263,7 @@ _llm_budget: "contextvars.ContextVar[Optional[_LLMBudget]]" = contextvars.Contex
 
 
 @contextmanager
-def llm_budget_scope(ceiling: Optional[int] = None):
+def llm_budget_scope(ceiling: Optional[int] = None) -> Iterator["_LLMBudget"]:
     """Activate a per-run LLM-call circuit breaker for the duration of the block.
 
     Every ``_guarded_chat_completion`` call made within (including in child
