@@ -53,6 +53,19 @@ ZERO_SHOT = {
     "C": {"counter_arguments": 18, "pl_formulas": 12, "fol_formulas": 12, "fallacies": 0},
 }
 CORPUS_SRC_IDX = {"A": 11, "B": 3, "C": 2}
+# PP #715: opaque metadata per corpus for qualitative synthesis.
+# speaker/venue are generic descriptors — no real names in commits.
+CORPUS_METADATA = {
+    "A": {"speaker": "Speaker_A", "date_or_year": "era_A",
+          "venue": "venue_A", "topic": "geopolitics_A",
+          "register": "formal", "synopsis": "Speech about territory and sovereignty"},
+    "B": {"speaker": "Speaker_B", "date_or_year": "era_B",
+          "venue": "venue_B", "topic": "geopolitics_B",
+          "register": "formal", "synopsis": "Collection of speeches on historical events"},
+    "C": {"speaker": "Speaker_C", "date_or_year": "era_C",
+          "venue": "venue_C", "topic": "geopolitics_C",
+          "register": "formal", "synopsis": "Address on territorial disputes and historical claims"},
+}
 OUTPUTS_DIR = Path("outputs/deep_analysis")
 
 
@@ -162,6 +175,7 @@ async def _generate_deep_synthesis(
             "source_metadata": {
                 "opaque_id": f"corpus_{corpus_label}",
                 "source_type": "encrypted_dataset",
+                **CORPUS_METADATA.get(corpus_label, {}),
             },
         }
         ds = await _invoke_deep_synthesis("", ctx)
