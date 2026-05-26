@@ -629,7 +629,29 @@ async def _generate_counters_for_targets(
                 **det_params,
             )
             raw = response.choices[0].message.content or ""
-            counters.extend(_parse_counter_array(raw))
+            parsed = _parse_counter_array(raw)
+            counters.extend(parsed)
+            # GG-bis #709: retry once if batch returned fewer CAs than targets
+            if parsed and len(parsed) < len(batch):
+                logger.info(
+                    f"Counter-argument batch [{start}:{start + batch_size}] "
+                    f"thin ({len(parsed)}/{len(batch)}), retrying"
+                )
+                try:
+                    retry = await _guarded_chat_completion(
+                        client,
+                        model=model_id,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": targets_text},
+                        ],
+                        **det_params,
+                    )
+                    retry_raw = retry.choices[0].message.content or ""
+                    retry_parsed = _parse_counter_array(retry_raw)
+                    counters.extend(retry_parsed)
+                except Exception as retry_err:
+                    logger.warning(f"Counter-argument retry failed: {retry_err}")
         except Exception as e:
             logger.warning(
                 f"Counter-argument batch [{start}:{start + batch_size}] failed: {e}"
@@ -685,6 +707,49 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
             added += 1
         except Exception as e:
             logger.debug(f"add_counter_argument failed: {e}")
+
+    # GG-bis #709: guarantee >=1 CA per argument — retry uncovered targets once
+    if added < len(targets) and client:
+        existing_cas = len(getattr(state, "counter_arguments", []) or [])
+        covered = set()
+        # Approximate: if we have >= n_args CAs total, we're likely covered
+        # Otherwise retry the shortfall
+        shortfall = len(targets) - added
+        if shortfall > 0:
+            logger.info(
+                f"GG-bis: {shortfall} targets uncovered ({added}/{len(targets)}), "
+                f"retrying uncovered"
+            )
+            try:
+                retry_targets = targets[added:]  # uncovered tail
+                retry_counters = await _generate_counters_for_targets(
+                    client, model_id, retry_targets
+                )
+                retry_counters = _evaluate_counter_arguments(
+                    retry_counters, retry_targets[0] if retry_targets else ""
+                )
+                for ca in retry_counters:
+                    if not isinstance(ca, dict):
+                        continue
+                    content = ca.get("counter_argument", "")
+                    if not content:
+                        continue
+                    score = float(
+                        ca.get("evaluation_score", ca.get("score", 0.0)) or 0.0
+                    )
+                    try:
+                        state.add_counter_argument(
+                            original_arg=str(ca.get("target_argument", ""))[:300],
+                            counter_content=str(content),
+                            strategy=str(ca.get("strategy_used", "")),
+                            score=score,
+                        )
+                        added += 1
+                    except Exception as e:
+                        logger.debug(f"add_counter_argument retry failed: {e}")
+            except Exception as e:
+                logger.warning(f"GG-bis coverage retry failed: {e}")
+
     return {"added": added, "targets": len(targets)}
 
 
