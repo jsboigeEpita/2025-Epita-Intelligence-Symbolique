@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 from semantic_kernel import Kernel
 from pydantic import PrivateAttr
@@ -41,6 +41,27 @@ logger = logging.getLogger("DeepSynthesisAgent")
 class DeepSynthesisAgent(BaseAgent):
     """Aggregates spectacular-run state into a multi-page grounded markdown report."""
 
+    SYSTEM_PROMPT: ClassVar[str] = (
+        "You are an intelligence analyst producing a briefing on a rhetorical "
+        "discourse. Your output is exactly 3 paragraphs:\n"
+        "\n"
+        "Paragraph 1 — IDENTIFICATION: Name the speaker, occasion, date/era, "
+        "venue, and topic. State the central thesis of the discourse in one "
+        "sentence. If any metadata is missing, infer from the text but mark as "
+        "inferred.\n"
+        "\n"
+        "Paragraph 2 — DIAGNOSTICS: Weave the analysis findings into a "
+        "narrative. Cite at least one named fallacy (with family), one scored "
+        "counter-argument, and one formal result. Do NOT list counts — name "
+        "specific findings and explain their significance.\n"
+        "\n"
+        "Paragraph 3 — CLOSING THESIS: One sentence taking a position on the "
+        "overall argument quality, grounded in the evidence cited above.\n"
+        "\n"
+        "Register: intelligence briefing — concise, factual, specific citations, "
+        "no academic hedging. Do NOT summarize the analysis pipeline."
+    )
+
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
 
     def __init__(
@@ -50,13 +71,7 @@ class DeepSynthesisAgent(BaseAgent):
         service_id: Optional[str] = None,
         **kwargs,
     ):
-        system_prompt = (
-            "You are a Deep Synthesis Agent. Given structured analytical data, "
-            "you produce a closing thesis (not a summary) that integrates findings "
-            "from formal logic, fallacy taxonomy, dialectical frameworks, and "
-            "counter-argument evaluation. Cite specific evidence. Take a position."
-        )
-        super().__init__(kernel, agent_name, system_prompt, **kwargs)
+        super().__init__(kernel, agent_name, self.SYSTEM_PROMPT, **kwargs)
         self._llm_service_id = service_id
 
     # ------------------------------------------------------------------

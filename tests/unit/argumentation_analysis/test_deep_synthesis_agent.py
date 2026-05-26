@@ -581,3 +581,30 @@ class TestConvergenceProse:
         report.convergence_prose = "some prose"
         d = report.to_dict()
         assert d["convergence_prose"] == "some prose"
+
+
+class TestSystemPromptIntelligenceBriefing:
+    """Track QQ (#721): system prompt uses intelligence-briefing register."""
+
+    def test_system_prompt_contains_intelligence_briefing(self):
+        prompt = DeepSynthesisAgent.SYSTEM_PROMPT
+        assert "intelligence" in prompt.lower()
+        assert "briefing" in prompt.lower()
+
+    def test_system_prompt_requires_identification(self):
+        assert "IDENTIFICATION" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+    def test_system_prompt_requires_diagnostics(self):
+        assert "DIAGNOSTICS" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+    def test_system_prompt_requires_closing_thesis(self):
+        assert "CLOSING THESIS" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+    def test_system_prompt_three_paragraph_structure(self):
+        prompt = DeepSynthesisAgent.SYSTEM_PROMPT
+        assert "Paragraph 1" in prompt
+        assert "Paragraph 2" in prompt
+        assert "Paragraph 3" in prompt
+
+    def test_system_prompt_anti_count_listing(self):
+        assert "Do NOT list counts" in DeepSynthesisAgent.SYSTEM_PROMPT
