@@ -16,6 +16,13 @@ class SourceOverview:
     length_chars: int = 0
     length_words: int = 0
     contextual_frame: str = ""
+    # PP #715: enriched context fields for qualitative synthesis
+    speaker: str = ""
+    date_or_year: str = ""
+    venue: str = ""
+    topic: str = ""
+    register: str = ""
+    synopsis: str = ""
 
 
 @dataclass

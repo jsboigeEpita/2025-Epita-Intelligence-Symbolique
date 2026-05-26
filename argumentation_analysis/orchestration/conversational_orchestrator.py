@@ -460,6 +460,7 @@ async def run_conversational_analysis(
     growth_re_prompt_limit: int = 2,
     enable_tool_gating: bool = False,
     enable_reprompt_tracing: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -970,6 +971,9 @@ async def run_conversational_analysis(
                 "language": detected_lang if detected_lang != "unknown" else "",
                 "discourse_type": "",
             }
+            # PP #715: merge caller-provided source_metadata
+            if source_metadata:
+                source_meta.update(source_metadata)
             ctx = {
                 "_state_object": state,
                 "source_metadata": source_meta,

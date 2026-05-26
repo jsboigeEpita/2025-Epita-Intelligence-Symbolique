@@ -178,6 +178,27 @@ class DeepSynthesisAgent(BaseAgent):
     ) -> SourceOverview:
         text = getattr(state, "raw_text", "")
         meta = meta or {}
+        speaker = meta.get("speaker", "")
+        date_or_year = meta.get("date_or_year", "")
+        venue = meta.get("venue", "")
+        topic = meta.get("topic", "")
+        register = meta.get("register", "")
+        synopsis = meta.get("synopsis", "")
+        # PP #715: build rich contextual frame when context is available
+        parts = [f"Source '{meta.get('opaque_id', '?')}'"]
+        if speaker:
+            parts.append(f"by {speaker}")
+        if date_or_year:
+            parts.append(f"({date_or_year})")
+        if venue:
+            parts.append(f"at {venue}")
+        if topic:
+            parts.append(f"— Topic: {topic}")
+        parts.append(
+            f"— {meta.get('discourse_type', '?')} discourse "
+            f"in {meta.get('language', '?')}, {meta.get('era', '?')} era, "
+            f"{len(text)} characters."
+        )
         return SourceOverview(
             opaque_id=meta.get("opaque_id", "unknown"),
             era=meta.get("era", ""),
@@ -185,11 +206,13 @@ class DeepSynthesisAgent(BaseAgent):
             discourse_type=meta.get("discourse_type", ""),
             length_chars=len(text),
             length_words=len(text.split()) if text else 0,
-            contextual_frame=(
-                f"Source '{meta.get('opaque_id', '?')}' — {meta.get('discourse_type', '?')} "
-                f"discourse in {meta.get('language', '?')}, {meta.get('era', '?')} era, "
-                f"{len(text)} characters."
-            ),
+            contextual_frame=" ".join(parts),
+            speaker=speaker,
+            date_or_year=date_or_year,
+            venue=venue,
+            topic=topic,
+            register=register,
+            synopsis=synopsis,
         )
 
     @staticmethod
@@ -1005,19 +1028,51 @@ class DeepSynthesisAgent(BaseAgent):
                     f"{verdict_lines}\n"
                     f"Convergence conclusion: {report.convergence_conclusion}\n"
                 )
+            # PP #715: build context-aware prompt with discourse metadata
+            so = report.source_overview
+            context_block = ""
+            if so.speaker or so.topic or so.venue:
+                context_block = (
+                    f"\nDiscourse context: "
+                    f"Speaker: {so.speaker or 'unknown'}. "
+                    f"Date/era: {so.date_or_year or so.era or 'unknown'}. "
+                    f"Venue: {so.venue or 'unknown'}. "
+                    f"Topic: {so.topic or 'unknown'}. "
+                    f"Register: {so.register or 'unknown'}. "
+                    f"Synopsis: {so.synopsis or 'not available'}.\n"
+                )
+            top_fallacies = ""
+            if report.fallacy_diagnoses:
+                top_3 = sorted(report.fallacy_diagnoses, key=lambda f: f.confidence, reverse=True)[:3]
+                top_fallacies = "\nTop fallacies:\n" + "\n".join(
+                    f"- {f.family}/{f.fallacy_type}: {f.explanation[:120]}"
+                    for f in top_3
+                )
+            top_counters = ""
+            if report.counter_arguments:
+                best = max(report.counter_arguments, key=lambda c: c.score)
+                top_counters = (
+                    f"\nStrongest counter-argument (score {best.score:.2f}): "
+                    f"{best.content[:150]}\n"
+                )
             prompt = (
                 "Write a 2-3 paragraph closing thesis for the following analysis report. "
-                "Do NOT summarize — take a position grounded in the evidence. "
-                f"The analysis found {len(report.argument_map)} arguments, "
+                "You are writing an intelligence-style briefing. Contextualize the speaker, "
+                "occasion, and central thesis. Weave the diagnostics into a narrative. "
+                "Cite specific findings. Take a position grounded in the evidence. "
+                "Do NOT just list counts."
+                f"\n\nSource: {so.contextual_frame}"
+                f"{context_block}"
+                f"\nThe analysis found {len(report.argument_map)} arguments, "
                 f"{len(report.fallacy_diagnoses)} fallacies, "
                 f"{len(report.formal_findings)} formal findings, "
                 f"and {len(report.counter_arguments)} counter-arguments. "
-                "Key fallacy families: "
+                f"Key fallacy families: "
                 f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
-                "Dung grounded extension: "
-                f"{', '.join(report.dung_structure.grounded_extension) or 'none'}. "
-                "Strongest counter-argument score: "
-                f"{max((c.score for c in report.counter_arguments), default=0):.2f}."
+                f"Dung grounded extension: "
+                f"{', '.join(report.dung_structure.grounded_extension) or 'none'}."
+                f"{top_fallacies}"
+                f"{top_counters}"
                 f"{convergence_block}"
             )
             # Use SK chat completion

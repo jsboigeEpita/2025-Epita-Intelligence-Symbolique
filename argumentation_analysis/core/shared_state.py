@@ -433,6 +433,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.workflow_results: Dict[str, Any] = {}
         # Narrative synthesis (#351)
         self.narrative_synthesis: str = ""
+        # PP #715: source-level metadata for qualitative synthesis
+        self.source_metadata: Dict[str, str] = {}
         # PL 2-pass pipeline: shared atom inventory (#547)
         self.atomic_propositions: Dict[str, List[str]] = {}
         # FOL 2-pass pipeline: shared signature per source (#544)
