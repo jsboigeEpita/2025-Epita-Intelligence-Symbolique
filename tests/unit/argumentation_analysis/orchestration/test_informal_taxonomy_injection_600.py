@@ -259,6 +259,11 @@ class TestParentHarnessFallback:
                 "fallacies": fake_fallacies,
                 "exploration_method": "per_argument_parallel",
             },
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables."
+            "_invoke_hierarchical_fallacy",
+            new_callable=AsyncMock,
+            return_value={"fallacies": [], "exploration_method": "skipped"},
         ):
             result = await _run_parent_harness_fallback("long text" * 200, state)
             assert result is not None
@@ -292,6 +297,11 @@ class TestParentHarnessFallback:
                 "fallacies": [{"type": "post_hoc", "explanation": "x"}],
                 "exploration_method": "per_argument_parallel",
             },
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables."
+            "_invoke_hierarchical_fallacy",
+            new_callable=AsyncMock,
+            return_value={"fallacies": [], "exploration_method": "skipped"},
         ):
             result = await _run_parent_harness_fallback("long text" * 200, state)
             assert result is not None
