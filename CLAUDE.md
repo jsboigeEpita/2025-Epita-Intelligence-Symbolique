@@ -47,11 +47,12 @@ Tests auto-skip when API keys are unavailable (no failures).
 
 ### GitHub CLI
 
-The repo is owned by `jsboigeEpita`. A `GH_TOKEN` in `.env` grants `gh` CLI access with the correct account. **Always prefix `gh` commands** with the token export:
+The repo is owned by `jsboigeEpita`. The keyring has multiple accounts (`jsboige`, `jsboigeEpita`, etc.). The default active account is `jsboige` which lacks write permissions on this repo. **Always switch before write operations**:
 ```bash
-export GH_TOKEN=$(grep "^GH_TOKEN=" .env | cut -d= -f2) && gh issue list
+gh auth switch --user jsboigeEpita
+gh pr create ...   # now works
 ```
-Without this, `gh` uses the global default account (`jsboige`) which lacks write permissions on this repo.
+Verify with `gh auth status` — the active account should show `jsboigeEpita`. Do NOT rely on `GH_TOKEN` env var from `.env` — it does not override the keyring default.
 
 ## Testing
 
