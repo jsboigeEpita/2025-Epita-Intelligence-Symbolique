@@ -2026,14 +2026,25 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Invoke semantic index service for argument search."""
+    """Invoke semantic index service for argument search.
+
+    KK #700: consults ``is_available()`` before attempting indexing.
+    Returns explicit status: ``ran`` (endpoint up, indexed) or
+    ``skipped: endpoint_unavailable`` (no silent optional skip).
+    """
     from argumentation_analysis.services.semantic_index_service import (
         SemanticIndexService,
     )
 
     service = SemanticIndexService()
+    if not service.is_available():
+        return {
+            "status": "skipped: endpoint_unavailable",
+            "reason": "SemanticIndexService at 127.0.0.1:9001 is not reachable",
+        }
+
     results = await asyncio.to_thread(service.search, input_text)
-    return {"results": results}
+    return {"status": "ran", "results": results}
 
 
 async def _invoke_speech_transcription(
