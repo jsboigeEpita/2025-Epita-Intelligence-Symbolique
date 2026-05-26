@@ -238,11 +238,17 @@ class DeepSynthesisAgent(BaseAgent):
         entries = []
         for fid, fdata in fallacies.items():
             ftype = fdata.get("type", "unknown")
+            family = fdata.get("family", "")
+            if not family:
+                family = DeepSynthesisAgent._fallacy_family(ftype)
+            taxonomy_path = fdata.get("taxonomy_path", "")
+            if not taxonomy_path:
+                taxonomy_path = f"fallacy/{family}/{ftype}"
             entries.append(
                 FallacyDiagnosis(
                     fallacy_id=fid,
-                    family=DeepSynthesisAgent._fallacy_family(ftype),
-                    taxonomy_path=f"fallacy/{DeepSynthesisAgent._fallacy_family(ftype)}/{ftype}",
+                    family=family,
+                    taxonomy_path=taxonomy_path,
                     textual_span=fdata.get("justification", "")[:200],
                     commentary=fdata.get("justification", ""),
                     impacted_args=(

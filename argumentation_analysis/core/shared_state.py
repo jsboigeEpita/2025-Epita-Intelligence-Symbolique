@@ -108,11 +108,20 @@ class RhetoricalAnalysisState:
         return arg_id
 
     def add_fallacy(
-        self, fallacy_type: str, justification: str, target_arg_id: Optional[str] = None
+        self,
+        fallacy_type: str,
+        justification: str,
+        target_arg_id: Optional[str] = None,
+        family: str = "",
+        taxonomy_path: str = "",
     ) -> str:
         """Ajoute un sophisme identifié et retourne son ID."""
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
         entry = {"type": fallacy_type, "justification": justification}
+        if family:
+            entry["family"] = family
+        if taxonomy_path:
+            entry["taxonomy_path"] = taxonomy_path
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:
@@ -204,7 +213,8 @@ class RhetoricalAnalysisState:
                 justification=fallacy_data.get(
                     "explication", "Justification manquante"
                 ),
-                # On pourrait aussi extraire la citation et la passer dans la justification
+                family=fallacy_data.get("famille", ""),
+                taxonomy_path=fallacy_data.get("taxonomy_path", ""),
             )
 
     def mark_task_as_answered(

@@ -562,6 +562,7 @@ class FallacyWorkflowPlugin:
                             explanation=lr.get("justification", ""),
                             confidence=lr.get("confidence", 0.7),
                             navigation_trace=navigation_trace,
+                            family=current_node.get("Famille", ""),
                         )
                     elif lr.get("function_name") == "conclude_no_fallacy":
                         self.logger.info(
@@ -731,6 +732,7 @@ class FallacyWorkflowPlugin:
                         explanation=full_explanation,
                         confidence=result.get("confidence", 0.7),
                         navigation_trace=navigation_trace,
+                        family=current_node.get("Famille", ""),
                     )
 
                 elif func_name == "conclude_no_fallacy":

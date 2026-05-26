@@ -90,7 +90,7 @@ class FallacyTaxonomyManager:
                     taxonomy_key=sophism.get("taxonomy_key", 0),
                     name=sophism.get("name", ""),
                     nom_vulgarise=sophism.get("nom_vulgarise", ""),
-                    family=FallacyFamily.LANGUAGE_AMBIGUITY,  # Default family
+                    family=sophism.get("famille", FallacyFamily.LANGUAGE_AMBIGUITY),
                     confidence=sophism.get("confidence", 0.0),
                     description=sophism.get("description", ""),
                     severity="Moyenne",

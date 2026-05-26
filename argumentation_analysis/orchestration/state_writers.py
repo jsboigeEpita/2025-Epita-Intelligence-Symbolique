@@ -381,6 +381,8 @@ def _write_hierarchical_fallacy_to_state(
         taxonomy_pk = f.get("taxonomy_pk", "")
         confidence = f.get("confidence", 0.0)
         trace = f.get("navigation_trace", [])
+        family = f.get("family", "")
+        taxonomy_path = f.get("taxonomy_path", "")
         full_justification = justification
         if taxonomy_pk:
             full_justification += f" [taxonomy:{taxonomy_pk}]"
@@ -403,6 +405,8 @@ def _write_hierarchical_fallacy_to_state(
             fallacy_type=fallacy_type,
             justification=full_justification,
             target_arg_id=target_arg_id,
+            family=family,
+            taxonomy_path=taxonomy_path,
         )
 
 

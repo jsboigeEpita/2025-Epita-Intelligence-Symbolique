@@ -30,6 +30,10 @@ class IdentifiedFallacy(BaseModel):
         default_factory=list,
         description="List of taxonomy node PKs visited during iterative deepening",
     )
+    family: str = Field(
+        default="",
+        description="The CSV 'Famille' column value (one of the 7 French families)",
+    )
 
 
 class FallacyAnalysisResult(BaseModel):

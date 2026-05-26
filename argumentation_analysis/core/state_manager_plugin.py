@@ -175,6 +175,7 @@ class StateManagerPlugin:
         fallacy_type: str,
         justification: str,
         target_argument_id: Optional[str] = None,
+        family: str = "",
     ) -> str:
         """Interface Kernel Function pour ajouter un sophisme via l'état."""
         self._logger.info(
@@ -182,7 +183,7 @@ class StateManagerPlugin:
         )
         try:
             fallacy_id = self._state.add_fallacy(
-                fallacy_type, justification, target_argument_id
+                fallacy_type, justification, target_argument_id, family=family
             )
             self._logger.info(
                 f" -> Sophisme '{fallacy_id}' ajouté avec succès via l'état."
