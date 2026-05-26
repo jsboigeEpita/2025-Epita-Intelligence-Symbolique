@@ -7,13 +7,19 @@ corpus, so we can see where each orchestration path beats / loses to zero-shot.
   - Path B: run_conversational_analysis(spectacular=True)       [SK AgentGroupChat]
   - Zero-shot reference: docs/reports/BASELINE_0SHOT_2026-05-16.md (corpus C)
 
+When --with-deep-synthesis (default), also produces a qualitative 9-section
+markdown report per path via DeepSynthesisAgent — source identification,
+argument map, fallacy diagnoses, formal findings, and a conclusion sentence.
+
 Counts are privacy-clean (cardinalities only, no dataset text). Output goes
 under outputs/ (gitignored).
 
 Usage:
     conda run -n projet-is-roo-new --no-capture-output python scripts/measure_both_paths_vs_zeroshot.py [--corpus C]
 
-Output: outputs/deep_analysis/both_paths_vs_zeroshot_<corpus>.json
+Output:
+    outputs/deep_analysis/both_paths_vs_zeroshot_<corpus>.json
+    outputs/deep_analysis/both_paths_vs_zeroshot_<corpus>_<path>.synthesis.md
 """
 
 import argparse
@@ -140,6 +146,42 @@ def verdict_vs_zeroshot(dims: Dict[str, Any], zs: Dict[str, int]) -> Dict[str, s
     return out
 
 
+async def _generate_deep_synthesis(
+    state: Any, corpus_label: str, path_name: str
+) -> Dict[str, Any]:
+    """Invoke DeepSynthesisAgent and return {markdown, sections_populated, ...}."""
+    if state is None:
+        return {"error": "no state", "markdown": "", "sections_populated": 0}
+    try:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_deep_synthesis,
+        )
+
+        ctx = {
+            "_state_object": state,
+            "source_metadata": {
+                "opaque_id": f"corpus_{corpus_label}",
+                "source_type": "encrypted_dataset",
+            },
+        }
+        ds = await _invoke_deep_synthesis("", ctx)
+        return {
+            "markdown": ds.get("markdown", ""),
+            "sections_populated": ds.get("sections_populated", 0),
+            "total_state_fields": ds.get("total_state_fields", 0),
+            "summary": ds.get("summary", ""),
+        }
+    except Exception as e:
+        import traceback
+
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "markdown": "",
+            "sections_populated": 0,
+        }
+
+
 async def run_path_dag(text: str) -> Dict[str, Any]:
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
@@ -155,6 +197,7 @@ async def run_path_dag(text: str) -> Dict[str, Any]:
         "summary": raw.get("summary", {}),
         "capabilities_missing": raw.get("capabilities_missing", []),
         "dimensions": count_dimensions(state),
+        "_state_object": state,
     }
 
 
@@ -174,6 +217,7 @@ async def run_path_conversational(text: str) -> Dict[str, Any]:
         "duration_s": round(duration, 1),
         "summary": res.get("summary", {}),
         "dimensions": count_dimensions(state),
+        "_state_object": state,
     }
 
 
@@ -184,6 +228,19 @@ async def main():
         "--paths",
         default="dag,conversational",
         help="comma list: dag,conversational",
+    )
+    ap.add_argument(
+        "--with-deep-synthesis",
+        dest="with_deep_synthesis",
+        action="store_true",
+        default=True,
+        help="Generate qualitative 9-section synthesis report (default: True)",
+    )
+    ap.add_argument(
+        "--no-deep-synthesis",
+        dest="with_deep_synthesis",
+        action="store_false",
+        help="Skip deep synthesis (counts only)",
     )
     args = ap.parse_args()
 
@@ -203,15 +260,38 @@ async def main():
     }
 
     wanted = [p.strip() for p in args.paths.split(",")]
+    do_synthesis = args.with_deep_synthesis
+
+    async def _run_and_enrich(path_key: str, runner, text: str):
+        """Run a path, add verdict, optionally deep synthesis, strip state."""
+        r = await runner(text)
+        r["verdict_vs_zeroshot"] = verdict_vs_zeroshot(r["dimensions"], zs)
+        state = r.pop("_state_object", None)
+
+        if do_synthesis and state is not None:
+            print(f"  Generating deep synthesis for {path_key}...")
+            ds = await _generate_deep_synthesis(state, label, path_key)
+            md = ds.pop("markdown", "")
+            r["deep_synthesis"] = ds
+            if md:
+                md_path = out_dir / f"both_paths_vs_zeroshot_{label}_{path_key}.synthesis.md"
+                md_path.write_text(md, encoding="utf-8")
+                print(f"  Synthesis report: {md_path}")
+            print(
+                f"  Sections populated: {ds.get('sections_populated', '?')}/9, "
+                f"state fields: {ds.get('total_state_fields', '?')}"
+            )
+        elif do_synthesis:
+            r["deep_synthesis"] = {"error": "no state available"}
+
+        results["paths"][path_key] = r
+        print(json.dumps(r["dimensions"], indent=2))
+        print("VERDICT:", json.dumps(r["verdict_vs_zeroshot"], indent=2))
 
     if "dag" in wanted:
         print("\n=== PATH A: DAG spectacular (run_unified_analysis) ===")
         try:
-            r = await run_path_dag(text)
-            r["verdict_vs_zeroshot"] = verdict_vs_zeroshot(r["dimensions"], zs)
-            results["paths"]["dag_spectacular"] = r
-            print(json.dumps(r["dimensions"], indent=2))
-            print("VERDICT:", json.dumps(r["verdict_vs_zeroshot"], indent=2))
+            await _run_and_enrich("dag_spectacular", run_path_dag, text)
         except Exception as e:
             import traceback
 
@@ -224,11 +304,7 @@ async def main():
     if "conversational" in wanted:
         print("\n=== PATH B: Conversational (run_conversational_analysis) ===")
         try:
-            r = await run_path_conversational(text)
-            r["verdict_vs_zeroshot"] = verdict_vs_zeroshot(r["dimensions"], zs)
-            results["paths"]["conversational"] = r
-            print(json.dumps(r["dimensions"], indent=2))
-            print("VERDICT:", json.dumps(r["verdict_vs_zeroshot"], indent=2))
+            await _run_and_enrich("conversational", run_path_conversational, text)
         except Exception as e:
             import traceback
 
