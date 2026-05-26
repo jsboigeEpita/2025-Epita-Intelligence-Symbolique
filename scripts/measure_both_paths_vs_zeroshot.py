@@ -10,6 +10,8 @@ corpus, so we can see where each orchestration path beats / loses to zero-shot.
 When --with-deep-synthesis (default), also produces a qualitative 9-section
 markdown report per path via DeepSynthesisAgent — source identification,
 argument map, fallacy diagnoses, formal findings, and a conclusion sentence.
+This adds ~30s + 1 LLM call per path. Use --no-deep-synthesis for counts-only
+mode (e.g. in CI pipelines where cost/latency matter).
 
 Counts are privacy-clean (cardinalities only, no dataset text). Output goes
 under outputs/ (gitignored).
@@ -149,7 +151,13 @@ def verdict_vs_zeroshot(dims: Dict[str, Any], zs: Dict[str, int]) -> Dict[str, s
 async def _generate_deep_synthesis(
     state: Any, corpus_label: str, path_name: str
 ) -> Dict[str, Any]:
-    """Invoke DeepSynthesisAgent and return {markdown, sections_populated, ...}."""
+    """Invoke DeepSynthesisAgent and return {markdown, sections_populated, ...}.
+
+    source_metadata uses opaque IDs (``corpus_{label}``, ``encrypted_dataset``)
+    to satisfy the privacy discipline — no author/title/source-text is embedded.
+    If downstream consumers need richer metadata, extend ``source_metadata``
+    with fields from the encrypted dataset (in-memory only).
+    """
     if state is None:
         return {"error": "no state", "markdown": "", "sections_populated": 0}
     try:
@@ -183,6 +191,9 @@ async def _generate_deep_synthesis(
 
 
 async def run_path_dag(text: str) -> Dict[str, Any]:
+    """Run DAG spectacular path. Returns result dict with ``_state_object``
+    key for downstream deep-synthesis consumption — must be popped before
+    JSON serialization (handled by ``_run_and_enrich``)."""
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
@@ -202,6 +213,7 @@ async def run_path_dag(text: str) -> Dict[str, Any]:
 
 
 async def run_path_conversational(text: str) -> Dict[str, Any]:
+    """Run conversational path. Same ``_state_object`` convention as ``run_path_dag``."""
     from argumentation_analysis.orchestration.conversational_orchestrator import (
         run_conversational_analysis,
     )
