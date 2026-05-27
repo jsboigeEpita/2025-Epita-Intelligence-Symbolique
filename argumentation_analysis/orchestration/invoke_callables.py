@@ -709,7 +709,7 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
 
     # GG-bis #709: guarantee >=1 CA per argument — retry uncovered targets once
     if added < len(targets) and client:
-        covered_indices: set = set()
+        covered_indices: set[int] = set()
         for ca in counters:
             if not isinstance(ca, dict):
                 continue
