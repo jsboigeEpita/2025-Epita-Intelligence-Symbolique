@@ -89,29 +89,6 @@ class RhetoricalAnalysisState:
         safe_index = min(index, 9999)
         return f"{prefix}_{safe_index + 1}"
 
-    def add_trace_entry(
-        self,
-        phase: str,
-        agent: str,
-        reacts_to: List[str],
-        summary: str,
-    ):
-        """Record a specialist commentary entry (Track UU #724)."""
-        summary = summary[:280]
-        entry = {
-            "phase": phase,
-            "agent": agent,
-            "reacts_to": reacts_to,
-            "summary": summary,
-            "timestamp": __import__("time").strftime(
-                "%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime()
-            ),
-        }
-        self.analysis_trace.append(entry)
-        state_logger.info(
-            f"Trace: [{agent}] ({phase}, reacts_to={reacts_to}) → {summary[:60]}..."
-        )
-
     def add_task(self, description: str) -> str:
         """Ajoute une tâche d'analyse et retourne son ID."""
         task_id = self._generate_id("task", self.analysis_tasks)
@@ -471,6 +448,29 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         # Track UU #724: specialist commentary + analysis trace
         self.analysis_trace: List[Dict[str, Any]] = []
+
+    def add_trace_entry(
+        self,
+        phase: str,
+        agent: str,
+        reacts_to: List[str],
+        summary: str,
+    ) -> None:
+        """Record a specialist commentary entry (Track UU #724)."""
+        summary = summary[:280]
+        import time as _time
+
+        entry = {
+            "phase": phase,
+            "agent": agent,
+            "reacts_to": reacts_to,
+            "summary": summary,
+            "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+        }
+        self.analysis_trace.append(entry)
+        state_logger.info(
+            f"Trace: [{agent}] ({phase}, reacts_to={reacts_to}) → {summary[:60]}..."
+        )
 
     def add_counter_argument(
         self,

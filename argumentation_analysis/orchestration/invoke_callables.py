@@ -999,6 +999,19 @@ async def _invoke_counter_argument(
         # Keep first as llm_counter_argument for backward compat
         result["llm_counter_argument"] = llm_counters[0] if llm_counters else None
         result["llm_counter_arguments"] = llm_counters
+    # Trace entry for counter-argument specialist (Track UU #724)
+    _state = context.get("_state_object")
+    if _state is not None and llm_counters:
+        _n_ca = len(llm_counters)
+        _top_strat = ""
+        if _n_ca > 0 and isinstance(llm_counters[0], dict):
+            _top_strat = str(llm_counters[0].get("strategy_used", ""))
+        _state.add_trace_entry(
+            phase="counter",
+            agent="CounterArgumentAgent",
+            reacts_to=["extract", "quality"],
+            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.",
+        )
     return result
 
 
@@ -1080,19 +1093,6 @@ def _evaluate_counter_arguments(
             }
         except Exception as e:
             logger.debug(f"Counter-argument evaluation skipped: {e}")
-    # Trace entry for counter-argument specialist
-    _state = context.get("_state_object")
-    if _state is not None and llm_counters:
-        _n_ca = len(llm_counters)
-        _top_strat = ""
-        if _n_ca > 0 and isinstance(llm_counters[0], dict):
-            _top_strat = str(llm_counters[0].get("strategy_used", ""))
-        _state.add_trace_entry(
-            phase="counter",
-            agent="CounterArgumentAgent",
-            reacts_to=["extract", "quality"],
-            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.",
-        )
     return llm_counters
 
 
@@ -1793,9 +1793,10 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     }
     # Trace entry for JTMS specialist
     _state = context.get("_state_object")
-    if _state is not None and _jtms_result.get("belief_count", 0) > 0:
-        _n_beliefs = _jtms_result.get("belief_count", 0)
-        _n_retracted = _jtms_result.get("undermined_count", 0)
+    _n_beliefs_raw = _jtms_result.get("belief_count", 0)
+    if _state is not None and isinstance(_n_beliefs_raw, int) and _n_beliefs_raw > 0:
+        _n_beliefs = _n_beliefs_raw
+        _n_retracted = _jtms_result.get("undermined_count", 0) if isinstance(_jtms_result.get("undermined_count"), int) else 0
         _state.add_trace_entry(
             phase="jtms",
             agent="JTMSAgent",
@@ -5100,10 +5101,13 @@ async def _invoke_dung_extensions(
         }
         # Trace entry for Dung extensions specialist
         _state = context.get("_state_object")
-        if _state is not None and _dung_result.get("arguments"):
-            _n_args = len(_dung_result.get("arguments", []))
-            _n_attacks = _dung_result.get("statistics", {}).get("attacks_count", 0)
-            _grounded = _dung_result.get("extensions", {}).get("extensions", [])
+        _dung_args = _dung_result.get("arguments")
+        if _state is not None and _dung_args:
+            _n_args = len(_dung_args)
+            _stats = _dung_result.get("statistics")
+            _n_attacks = _stats.get("attacks_count", 0) if isinstance(_stats, dict) else 0
+            _ext_block = _dung_result.get("extensions")
+            _grounded = _ext_block.get("extensions", []) if isinstance(_ext_block, dict) else []
             _g_size = len(_grounded[0]) if _grounded else 0
             _state.add_trace_entry(
                 phase="dung",
