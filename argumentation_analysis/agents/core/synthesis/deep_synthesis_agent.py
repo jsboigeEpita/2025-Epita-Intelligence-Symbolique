@@ -199,6 +199,10 @@ class DeepSynthesisAgent(BaseAgent):
         else:
             report._raw_stakes = {}
 
+        # UU #724: attach analysis trace for specialist commentary
+        analysis_trace = getattr(state, "analysis_trace", [])
+        report._raw_analysis_trace = analysis_trace if analysis_trace else []
+
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
             thesis = await self._llm_synthesis(report)
@@ -1245,7 +1249,17 @@ class DeepSynthesisAgent(BaseAgent):
             specialist_commentary = getattr(report, "_specialist_commentary", "")
             if specialist_commentary:
                 specialists_section += f"{specialist_commentary}\n"
-            else:
+            # UU #724: enrich with analysis_trace entries
+            trace_data = getattr(report, "_raw_analysis_trace", [])
+            if trace_data:
+                for entry in trace_data:
+                    agent = entry.get("agent", "?")
+                    reacts = ", ".join(entry.get("reacts_to", []))
+                    summary = entry.get("summary", "")
+                    specialists_section += (
+                        f"  [{agent}] (réagit à: {reacts}) → \"{summary}\"\n"
+                    )
+            if not specialist_commentary and not trace_data:
                 specialists_section += "  No specialist commentaries deposited.\n"
 
             # -- Section 6 data: Convergence (feeds Lecture politique) --
