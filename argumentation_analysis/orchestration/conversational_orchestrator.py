@@ -955,6 +955,38 @@ async def run_conversational_analysis(
         except Exception as e:
             logger.warning(f"Quality sweep post-processing failed: {e}")
 
+    # 5b-10. Stakes & Stakeholders extraction (Track TT #723)
+    if spectacular:
+        try:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _invoke_stakes_extractor,
+            )
+
+            stakes_ctx = {
+                "_state_object": state,
+                "source_metadata": source_metadata or {},
+            }
+            stakes_result = await _invoke_stakes_extractor("", stakes_ctx)
+            if "error" not in stakes_result:
+                n_stakes = len(stakes_result.get("stakes", []))
+                n_sh = len(stakes_result.get("stakeholders", []))
+                logger.info(
+                    f"Stakes extraction: {n_stakes} stakes, {n_sh} stakeholders"
+                )
+                conversation_log.append(
+                    {
+                        "phase": "post_processing",
+                        "type": "stakes_extraction",
+                        "stakes": n_stakes,
+                        "stakeholders": n_sh,
+                        "rhetorical_register": stakes_result.get(
+                            "rhetorical_register", ""
+                        ),
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Stakes extraction post-processing failed: {e}")
+
     # 5c. Deep Synthesis post-phase (#534)
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.

@@ -439,6 +439,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.atomic_propositions: Dict[str, List[str]] = {}
         # FOL 2-pass pipeline: shared signature per source (#544)
         self.fol_shared_signature: Dict[str, Dict[str, Any]] = {}
+        # Track TT #723: stakes & stakeholders extraction
+        self.stakes_and_stakeholders: Dict[str, Any] = {
+            "stakes": [],
+            "stakeholders": [],
+            "rhetorical_register": "",
+            "discursive_arena": "",
+        }
 
     def add_counter_argument(
         self,

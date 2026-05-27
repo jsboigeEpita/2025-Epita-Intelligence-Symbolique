@@ -155,6 +155,16 @@ class DeepSynthesisAgent(BaseAgent):
             report.fallacy_diagnoses, report.convergent_verdicts
         )
 
+        # TT #723: attach stakes data for use in LLM synthesis
+        stakes_data = getattr(state, "stakes_and_stakeholders", {})
+        if stakes_data and any(
+            stakes_data.get(k)
+            for k in ("stakes", "stakeholders", "rhetorical_register")
+        ):
+            report._raw_stakes = stakes_data
+        else:
+            report._raw_stakes = {}
+
         # Section 9 — final synthesis (tries LLM, falls back to template)
         try:
             thesis = await self._llm_synthesis(report)
@@ -1058,7 +1068,9 @@ class DeepSynthesisAgent(BaseAgent):
                 )
             top_fallacies = ""
             if report.fallacy_diagnoses:
-                top_3 = sorted(report.fallacy_diagnoses, key=lambda f: f.confidence, reverse=True)[:3]
+                top_3 = sorted(
+                    report.fallacy_diagnoses, key=lambda f: f.confidence, reverse=True
+                )[:3]
                 top_fallacies = "\nTop fallacies:\n" + "\n".join(
                     f"- {f.family}/{f.fallacy_type}: {f.explanation[:120]}"
                     for f in top_3
@@ -1070,6 +1082,40 @@ class DeepSynthesisAgent(BaseAgent):
                     f"\nStrongest counter-argument (score {best.score:.2f}): "
                     f"{best.content[:150]}\n"
                 )
+            # TT #723: stakes & stakeholders block
+            stakes_block = ""
+            stakes_data = getattr(report, "_raw_stakes", {})
+            if stakes_data:
+                stakes_list = stakes_data.get("stakes", [])
+                sh_list = stakes_data.get("stakeholders", [])
+                register = stakes_data.get("rhetorical_register", "")
+                arena = stakes_data.get("discursive_arena", "")
+                if stakes_list or sh_list:
+                    lines = []
+                    if stakes_list:
+                        top_stakes = stakes_list[:3]
+                        lines.append("Stakes:")
+                        for s in top_stakes:
+                            lines.append(
+                                f"  - [{s.get('stake_type', '?')}] {s.get('description', '')}"
+                            )
+                    if sh_list:
+                        top_sh = sh_list[:3]
+                        lines.append("Stakeholders:")
+                        for sh in top_sh:
+                            lines.append(
+                                f"  - {sh.get('name', '?')} ({sh.get('role', '?')}): "
+                                f"{sh.get('stance', '?')}"
+                            )
+                    if register:
+                        lines.append(f"Rhetorical register: {register}")
+                    if arena:
+                        lines.append(f"Discursive arena: {arena}")
+                    stakes_block = (
+                        "\nDiscourse analysis — stakes and parties:\n"
+                        + "\n".join(lines)
+                        + "\n"
+                    )
             prompt = (
                 "Write a 2-3 paragraph closing thesis for the following analysis report. "
                 "You are writing an intelligence-style briefing. Contextualize the speaker, "
@@ -1088,6 +1134,7 @@ class DeepSynthesisAgent(BaseAgent):
                 f"{', '.join(report.dung_structure.grounded_extension) or 'none'}."
                 f"{top_fallacies}"
                 f"{top_counters}"
+                f"{stakes_block}"
                 f"{convergence_block}"
             )
             # Use SK chat completion

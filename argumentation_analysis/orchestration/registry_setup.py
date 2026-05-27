@@ -637,6 +637,25 @@ def setup_registry(
     except Exception as e:
         skipped.append(("deep_synthesis_service", str(e)))
 
+    # Stakes & stakeholders extraction (Track TT #723)
+    try:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_stakes_extractor,
+        )
+
+        registry.register_service(
+            name="stakes_extractor_service",
+            service_class=type("StakesExtractorService", (), {}),
+            capabilities=["stakes_extraction", "stakeholder_analysis"],
+            metadata={
+                "description": "Extracts discourse stakes, stakeholders, rhetorical register, and discursive arena",
+            },
+            invoke=_invoke_stakes_extractor,
+        )
+        registered.append("stakes_extractor_service")
+    except Exception as e:
+        skipped.append(("stakes_extractor_service", str(e)))
+
     return registry
 
 

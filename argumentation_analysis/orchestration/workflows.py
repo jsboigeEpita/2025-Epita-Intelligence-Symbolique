@@ -697,6 +697,14 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["quality"],
             timeout_seconds=420,
         )
+        # L5b — Stakes & stakeholders extraction (Track TT #723)
+        .add_phase(
+            "stakes",
+            capability="stakes_extraction",
+            depends_on=["quality"],
+            optional=True,
+            timeout_seconds=120,
+        )
         # L6 — JTMS belief tracking + adversarial debate (parallel)
         .add_phase(
             "jtms",
@@ -787,6 +795,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
                 "synthesis",
                 "narrative_synthesis",
                 "belief_revision",
+                "stakes",
             ],
             optional=False,
             timeout_seconds=180,

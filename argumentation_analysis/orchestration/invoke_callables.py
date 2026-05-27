@@ -90,6 +90,7 @@ __all__ = [
     "_invoke_external_fol_solver",
     "_invoke_external_modal_solver",
     "_invoke_deep_synthesis",
+    "_invoke_stakes_extractor",
 ]
 
 
@@ -5746,3 +5747,75 @@ async def _invoke_deep_synthesis(
     except Exception as e:
         logger.error(f"Deep synthesis failed: {e}", exc_info=True)
         return {"error": str(e)}
+
+
+async def _invoke_stakes_extractor(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Extract stakes, stakeholders, register, and arena (Track TT #723).
+
+    Reads arguments from state, calls the StakesExtractor specialist,
+    writes results to state.stakes_and_stakeholders.
+    """
+    state = context.get("_state_object")
+    if state is None:
+        return {"error": "No shared state available for stakes extraction"}
+
+    from argumentation_analysis.agents.core.political.stakes_extractor import (
+        StakesExtractor,
+    )
+
+    extractor = StakesExtractor()
+
+    # Gather arguments from state
+    arguments = list(getattr(state, "identified_arguments", []) or [])
+
+    # Source metadata
+    source_metadata = getattr(state, "source_metadata", {})
+    if not source_metadata:
+        source_metadata = context.get("source_metadata", {})
+
+    # Get LLM client
+    llm_client = None
+    determinism_params = {}
+    try:
+        client = _get_openai_client()
+        if client:
+            llm_client = client
+            determinism_params = _get_determinism_params()
+    except Exception:
+        pass
+
+    raw_text = getattr(state, "raw_text", "") or input_text
+
+    result = extractor.extract(
+        arguments=arguments,
+        source_metadata=source_metadata,
+        raw_text=raw_text,
+        llm_client=llm_client,
+        determinism_params=determinism_params,
+    )
+
+    # Write to state
+    state.stakes_and_stakeholders = result
+
+    n_stakes = len(result.get("stakes", []))
+    n_stakeholders = len(result.get("stakeholders", []))
+    register = result.get("rhetorical_register", "")
+    arena = result.get("discursive_arena", "")
+
+    logger.info(
+        f"Stakes extraction: {n_stakes} stakes, {n_stakeholders} stakeholders, "
+        f"register={register}, arena={arena}"
+    )
+
+    return {
+        "stakes": result.get("stakes", []),
+        "stakeholders": result.get("stakeholders", []),
+        "rhetorical_register": register,
+        "discursive_arena": arena,
+        "summary": (
+            f"Extracted {n_stakes} stakes, {n_stakeholders} stakeholders, "
+            f"register={register}"
+        ),
+    }
