@@ -42,24 +42,58 @@ class DeepSynthesisAgent(BaseAgent):
     """Aggregates spectacular-run state into a multi-page grounded markdown report."""
 
     SYSTEM_PROMPT: ClassVar[str] = (
-        "You are an intelligence analyst producing a briefing on a rhetorical "
-        "discourse. Your output is exactly 3 paragraphs:\n"
+        "You are an intelligence analyst producing a political-rhetorical "
+        "briefing on a discourse. Your output is structured into exactly 6 "
+        "numbered sections (8-12 paragraphs total). Each section heading must "
+        "be on its own line, formatted as '## N. Title' (N = 1-6).\n"
         "\n"
-        "Paragraph 1 — IDENTIFICATION: Name the speaker, occasion, date/era, "
-        "venue, and topic. State the central thesis of the discourse in one "
-        "sentence. If any metadata is missing, infer from the text but mark as "
-        "inferred.\n"
+        "## 1. Contexte & énonciation (1-2 paragraphs)\n"
+        "Identify who is speaking (pseudonymised ID), to whom, in what venue "
+        "and era, on what topic. State the rhetorical register and discursive "
+        "arena. Articulate the central thesis of the discourse in one sentence. "
+        "If metadata is missing, infer from the text but mark as [inferred].\n"
         "\n"
-        "Paragraph 2 — DIAGNOSTICS: Weave the analysis findings into a "
-        "narrative. Cite at least one named fallacy (with family), one scored "
-        "counter-argument, and one formal result. Do NOT list counts — name "
-        "specific findings and explain their significance.\n"
+        "## 2. Enjeux soulevés (1-2 paragraphs)\n"
+        "List and explain the stakes at play — what is genuinely at issue "
+        "beneath the surface argument. Use the typed stakes data (economic, "
+        "political, ideological, security, identity…) and connect each to "
+        "specific argument passages. Do NOT paraphrase the discourse; explain "
+        "what the discourse reveals about underlying tensions.\n"
         "\n"
-        "Paragraph 3 — CLOSING THESIS: One sentence taking a position on the "
-        "overall argument quality, grounded in the evidence cited above.\n"
+        "## 3. Parties engagées & positionnement (1 paragraph)\n"
+        "Map the stakeholders: who is positioned where, with what stance (for, "
+        "against, ambivalent). Explain the power dynamics and alliances. "
+        "Reference at least one stakeholder by pseudonymised ID and their "
+        "relationship to the stakes identified in section 2.\n"
         "\n"
-        "Register: intelligence briefing — concise, factual, specific citations, "
-        "no academic hedging. Do NOT summarize the analysis pipeline."
+        "## 4. Ressorts rhétoriques (2-3 paragraphs)\n"
+        "Analyse the rhetorical devices employed: name specific fallacies (with "
+        "family), cite at least one scored counter-argument, and reference "
+        "formal-method results (PL entailments, Dung grounded extension). "
+        "Explain WHY these devices matter in context — what they achieve for "
+        "the speaker's strategy. Do NOT list counts; name findings and their "
+        "significance.\n"
+        "\n"
+        "## 5. Voix des spécialistes (1 paragraph)\n"
+        "If specialist commentaries are provided, synthesise them into a "
+        "narrative: which analysts flagged what, and where they agree or "
+        "diverge. If no commentaries are available, write: 'No specialist "
+        "commentaries were deposited during this analysis run.' and instead "
+        "highlight the convergent verdicts — arguments independently flagged "
+        "by multiple methods.\n"
+        "\n"
+        "## 6. Lecture politique (2-3 paragraphs)\n"
+        "Deliver the political reading: what does this discourse reveal about "
+        "the speaker's strategy, the power dynamics at play, and the broader "
+        "political stakes? Identify the dominant rhetorical strategy and "
+        "evaluate overall argument quality. Take a position grounded in the "
+        "evidence cited above. This is the closing thesis — it must not "
+        "paraphrase the discourse but interpret what it means politically.\n"
+        "\n"
+        "Register: intelligence briefing — concise, factual, specific "
+        "citations, no academic hedging. Journalistic-analytical tone. "
+        "Do NOT summarize the analysis pipeline. Use opaque IDs only "
+        "(Speaker_A, Authority_X, era_A) — never real names."
     )
 
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
@@ -497,60 +531,132 @@ class DeepSynthesisAgent(BaseAgent):
     async def _build_final_synthesis(
         state: Any, report: DeepSynthesisReport, transcript: Optional[List[Dict]] = None
     ) -> str:
-        """Section 9: closing thesis (template-only). Instance method tries LLM first."""
+        """Section 9: 6-section political-rhetorical briefing (template fallback)."""
+        so = report.source_overview
+        stakes_data = getattr(report, "_raw_stakes", {}) or {}
+        stakes_list = stakes_data.get("stakes", [])
+        sh_list = stakes_data.get("stakeholders", [])
+        register = stakes_data.get("rhetorical_register", "")
+        arena = stakes_data.get("discursive_arena", "")
+
+        # Section 1 — Contexte & énonciation
+        s1 = (
+            f"## 1. Contexte & énonciation\n\n"
+            f"This {so.discourse_type or 'unknown'} discourse originates from source "
+            f"'{so.opaque_id}', delivered in {so.language or 'unknown'} during the "
+            f"{so.era or 'unknown'} era"
+        )
+        if so.speaker:
+            s1 += f" by {so.speaker}"
+        if so.venue:
+            s1 += f" at {so.venue}"
+        if so.topic:
+            s1 += f" on the topic of {so.topic}"
+        s1 += f". The text comprises {so.length_words:,} words.\n"
+        if register:
+            s1 += f"Rhetorical register: {register}. "
+        if arena:
+            s1 += f"Discursive arena: {arena}."
+        s1 += "\n"
+
+        # Section 2 — Enjeux soulevés
+        s2 = "## 2. Enjeux soulevés\n\n"
+        if stakes_list:
+            for s in stakes_list[:5]:
+                s2 += (
+                    f"- **{s.get('stake_type', 'unknown')}**: "
+                    f"{s.get('description', 'No description')}\n"
+                )
+        else:
+            s2 += "No typed stakes were extracted for this discourse.\n"
+
+        # Section 3 — Parties engagées & positionnement
+        s3 = "## 3. Parties engagées & positionnement\n\n"
+        if sh_list:
+            for sh in sh_list[:5]:
+                s3 += (
+                    f"- **{sh.get('name', '?')}** (role: {sh.get('role', '?')}, "
+                    f"stance: {sh.get('stance', '?')})\n"
+                )
+        else:
+            s3 += "No stakeholders were identified in this analysis.\n"
+
+        # Section 4 — Ressorts rhétoriques
         n_args = len(report.argument_map)
         n_fallacies = len(report.fallacy_diagnoses)
         n_formal = len(report.formal_findings)
         n_counters = len(report.counter_arguments)
-        n_dung_args = (
-            len(report.dung_structure.arguments) if report.dung_structure else 0
+        families = sorted(set(f.family for f in report.fallacy_diagnoses))
+        dung_ext = ", ".join(report.dung_structure.grounded_extension) or "none"
+        s4 = (
+            f"## 4. Ressorts rhétoriques\n\n"
+            f"The analysis identified **{n_args} arguments**, "
+            f"**{n_fallacies} fallacies** across {len(families)} families "
+            f"({', '.join(families) or 'none'}), and **{n_formal} formal findings**. "
+            f"Dung grounded extension: [{dung_ext}].\n"
         )
-        n_retractions = len(report.belief_retractions)
+        if report.fallacy_diagnoses:
+            top = sorted(
+                report.fallacy_diagnoses,
+                key=lambda f: len(f.commentary),
+                reverse=True,
+            )[:3]
+            s4 += "\nTop fallacies:\n"
+            for f in top:
+                s4 += f"- {f.family} ({f.taxonomy_path}): " f"{f.commentary[:120]}\n"
+        if report.counter_arguments:
+            best = max(report.counter_arguments, key=lambda c: c.score)
+            s4 += (
+                f"\nStrongest counter-argument (score {best.score:.2f}, "
+                f"strategy: {best.strategy}): {best.counter_content[:120]}...\n"
+            )
 
-        # Template synthesis (LLM version called from instance synthesize())
-        parts = [
-            f"## Final Synthesis\n",
-            f"The analysis of this {report.source_overview.discourse_type} discourse "
-            f"identified **{n_args} arguments** structured in an attack graph, "
-            f"**{n_fallacies} fallacies** across {len(set(f.family for f in report.fallacy_diagnoses))} families, "
-            f"and **{n_formal} formal findings** from logic solvers.",
-        ]
-        if n_dung_args:
-            parts.append(
-                f" Dung analysis reveals {n_dung_args} abstract arguments with "
-                f"{len(report.dung_structure.attacks)} attack relations."
+        # Section 5 — Voix des spécialistes
+        specialist_commentary = getattr(report, "_specialist_commentary", "")
+        s5 = "## 5. Voix des spécialistes\n\n"
+        if specialist_commentary:
+            s5 += f"{specialist_commentary}\n"
+        elif report.convergent_verdicts:
+            s5 += "No specialist commentaries were deposited during this analysis run.\n\n"
+            s5 += "Convergent verdicts (cross-method agreement):\n"
+            for v in report.convergent_verdicts:
+                s5 += f"- {v.arg_id}: {v.score} methods ({', '.join(v.methods)})\n"
+        else:
+            s5 += (
+                "No specialist commentaries were deposited during this analysis run. "
+                "No cross-method convergence was detected.\n"
             )
-        if n_retractions:
-            parts.append(
-                f" {n_retractions} belief(s) were retracted during analysis due to contradictions."
-            )
-        if n_counters:
-            best = (
-                max(report.counter_arguments, key=lambda c: c.score)
-                if report.counter_arguments
-                else None
-            )
-            if best:
-                parts.append(
-                    f" The strongest counter-argument (score {best.score:.2f}, strategy: {best.strategy}) "
-                    f'targets: "{best.original_arg[:80]}..."'
-                )
+
+        # Section 6 — Lecture politique
+        s6 = (
+            f"## 6. Lecture politique\n\n"
+            f"This {so.discourse_type or 'unknown'} discourse deploys "
+            f"{n_args} arguments across {len(families)} fallacy families, "
+            f"revealing a structured rhetorical strategy."
+        )
+        if register:
+            s6 += f" The dominant register is **{register}**"
+            if arena:
+                s6 += f", deployed in a **{arena}** arena"
+            s6 += "."
+        s6 += (
+            f"\n\nThe multi-agent orchestration identified {n_fallacies} fallacies "
+            f"and {n_counters} counter-arguments, with {n_formal} formal-method "
+            f"findings providing independent verification. "
+            f"The Dung grounded extension contains [{dung_ext}], "
+            f"indicating which arguments survive dialectical scrutiny."
+        )
         if report.convergent_verdicts:
             n_conv = len(report.convergent_verdicts)
-            top = report.convergent_verdicts[0]
-            parts.append(
+            s6 += (
                 f"\n\nCrucially, **{n_conv} argument(s) converge across independent "
-                f"methods** — the strongest, {top.arg_id}, is flagged by {top.score} "
-                f"distinct analyses ({', '.join(top.methods)}). This cross-method "
-                f"agreement is the signature insight unavailable to a single LLM pass "
-                f"(see the Convergent Verdicts section)."
+                f"methods**, signalling robustness in the diagnostic findings. "
+                f"This cross-method agreement is the signature insight unavailable "
+                f"to a single LLM pass."
             )
-        parts.append(
-            "\n\nThese findings demonstrate that the multi-agent orchestration produces "
-            "insights unattainable by 0-shot analysis — particularly the formal-method "
-            "findings and taxonomy-anchored fallacy diagnoses that ground the argument map."
-        )
-        return "\n".join(parts)
+        s6 += "\n"
+
+        return "\n".join([s1, s2, s3, s4, s5, s6])
 
     # ------------------------------------------------------------------
     # Markdown rendering
@@ -1034,108 +1140,140 @@ class DeepSynthesisAgent(BaseAgent):
             return ""
 
     async def _llm_synthesis(self, report: DeepSynthesisReport) -> Optional[str]:
-        """Attempt to use the SK kernel for a thesis-style synthesis."""
+        """Produce a 6-section political-rhetorical briefing via LLM."""
         if not self._llm_service_id:
             return None
         try:
-            convergence_block = ""
-            if report.convergent_verdicts:
-                verdict_lines = "\n".join(
-                    f"- {v.arg_id}: {v.score} independent methods concur "
-                    f"({', '.join(v.methods)})"
-                    for v in report.convergent_verdicts
-                )
-                convergence_block = (
-                    "\nThe analysis surfaced CROSS-METHOD CONVERGENT VERDICTS — "
-                    "arguments independently flagged as weak by several methods. "
-                    "Anchor your thesis on these; this multi-perspective agreement is "
-                    "the central insight a single LLM pass cannot reproduce:\n"
-                    f"{verdict_lines}\n"
-                    f"Convergence conclusion: {report.convergence_conclusion}\n"
-                )
-            # PP #715: build context-aware prompt with discourse metadata
             so = report.source_overview
+
+            # -- Section 1 data: Contexte & énonciation --
             context_block = ""
             if so.speaker or so.topic or so.venue:
                 context_block = (
-                    f"\nDiscourse context: "
+                    f"\n[SECTION 1 DATA — Contexte & énonciation]\n"
                     f"Speaker: {so.speaker or 'unknown'}. "
                     f"Date/era: {so.date_or_year or so.era or 'unknown'}. "
                     f"Venue: {so.venue or 'unknown'}. "
                     f"Topic: {so.topic or 'unknown'}. "
                     f"Register: {so.register or 'unknown'}. "
                     f"Synopsis: {so.synopsis or 'not available'}.\n"
+                    f"Language: {so.language or 'unknown'}. "
+                    f"Length: {so.length_words} words.\n"
                 )
-            top_fallacies = ""
-            if report.fallacy_diagnoses:
-                top_3 = sorted(
-                    report.fallacy_diagnoses, key=lambda f: f.confidence, reverse=True
-                )[:3]
-                top_fallacies = "\nTop fallacies:\n" + "\n".join(
-                    f"- {f.family}/{f.fallacy_type}: {f.explanation[:120]}"
-                    for f in top_3
+            else:
+                context_block = (
+                    f"\n[SECTION 1 DATA — Contexte & énonciation]\n"
+                    f"Source: {so.contextual_frame}\n"
                 )
-            top_counters = ""
-            if report.counter_arguments:
-                best = max(report.counter_arguments, key=lambda c: c.score)
-                top_counters = (
-                    f"\nStrongest counter-argument (score {best.score:.2f}): "
-                    f"{best.content[:150]}\n"
-                )
-            # TT #723: stakes & stakeholders block
-            stakes_block = ""
+
+            # -- Section 2 data: Enjeux soulevés (from TT stakes) --
+            stakes_section = "\n[SECTION 2 DATA — Enjeux soulevés]\n"
             stakes_data = getattr(report, "_raw_stakes", {})
             if stakes_data:
                 stakes_list = stakes_data.get("stakes", [])
-                sh_list = stakes_data.get("stakeholders", [])
                 register = stakes_data.get("rhetorical_register", "")
                 arena = stakes_data.get("discursive_arena", "")
-                if stakes_list or sh_list:
-                    lines = []
-                    if stakes_list:
-                        top_stakes = stakes_list[:3]
-                        lines.append("Stakes:")
-                        for s in top_stakes:
-                            lines.append(
-                                f"  - [{s.get('stake_type', '?')}] {s.get('description', '')}"
-                            )
-                    if sh_list:
-                        top_sh = sh_list[:3]
-                        lines.append("Stakeholders:")
-                        for sh in top_sh:
-                            lines.append(
-                                f"  - {sh.get('name', '?')} ({sh.get('role', '?')}): "
-                                f"{sh.get('stance', '?')}"
-                            )
-                    if register:
-                        lines.append(f"Rhetorical register: {register}")
-                    if arena:
-                        lines.append(f"Discursive arena: {arena}")
-                    stakes_block = (
-                        "\nDiscourse analysis — stakes and parties:\n"
-                        + "\n".join(lines)
-                        + "\n"
-                    )
-            prompt = (
-                "Write a 2-3 paragraph closing thesis for the following analysis report. "
-                "You are writing an intelligence-style briefing. Contextualize the speaker, "
-                "occasion, and central thesis. Weave the diagnostics into a narrative. "
-                "Cite specific findings. Take a position grounded in the evidence. "
-                "Do NOT just list counts."
-                f"\n\nSource: {so.contextual_frame}"
-                f"{context_block}"
-                f"\nThe analysis found {len(report.argument_map)} arguments, "
-                f"{len(report.fallacy_diagnoses)} fallacies, "
-                f"{len(report.formal_findings)} formal findings, "
-                f"and {len(report.counter_arguments)} counter-arguments. "
-                f"Key fallacy families: "
+                if stakes_list:
+                    for s in stakes_list[:5]:
+                        stakes_section += (
+                            f"  Stake [{s.get('stake_type', '?')}]: "
+                            f"{s.get('description', '')}\n"
+                        )
+                else:
+                    stakes_section += "  No typed stakes extracted.\n"
+                if register:
+                    stakes_section += f"  Rhetorical register: {register}\n"
+                if arena:
+                    stakes_section += f"  Discursive arena: {arena}\n"
+            else:
+                stakes_section += "  No stakes data available.\n"
+
+            # -- Section 3 data: Parties engagées (from TT stakeholders) --
+            parties_section = "\n[SECTION 3 DATA — Parties engagées]\n"
+            if stakes_data:
+                sh_list = stakes_data.get("stakeholders", [])
+                if sh_list:
+                    for sh in sh_list[:5]:
+                        parties_section += (
+                            f"  {sh.get('name', '?')} "
+                            f"(role={sh.get('role', '?')}, "
+                            f"stance={sh.get('stance', '?')})\n"
+                        )
+                else:
+                    parties_section += "  No stakeholders identified.\n"
+            else:
+                parties_section += "  No stakeholder data available.\n"
+
+            # -- Section 4 data: Ressorts rhétoriques --
+            rhetoric_section = "\n[SECTION 4 DATA — Ressorts rhétoriques]\n"
+            rhetoric_section += (
+                f"  Arguments: {len(report.argument_map)}. "
+                f"Fallacies: {len(report.fallacy_diagnoses)}. "
+                f"Formal findings: {len(report.formal_findings)}. "
+                f"Counter-arguments: {len(report.counter_arguments)}.\n"
+                f"  Key fallacy families: "
                 f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
                 f"Dung grounded extension: "
-                f"{', '.join(report.dung_structure.grounded_extension) or 'none'}."
-                f"{top_fallacies}"
-                f"{top_counters}"
-                f"{stakes_block}"
-                f"{convergence_block}"
+                f"{', '.join(report.dung_structure.grounded_extension) or 'none'}.\n"
+            )
+            if report.fallacy_diagnoses:
+                top_3 = sorted(
+                    report.fallacy_diagnoses,
+                    key=lambda f: len(f.commentary),
+                    reverse=True,
+                )[:3]
+                for f in top_3:
+                    rhetoric_section += (
+                        f"  Fallacy: {f.family} ({f.taxonomy_path}): "
+                        f"{f.commentary[:150]}\n"
+                    )
+            if report.counter_arguments:
+                best = max(report.counter_arguments, key=lambda c: c.score)
+                rhetoric_section += (
+                    f"  Strongest counter-argument (score {best.score:.2f}): "
+                    f"{best.counter_content[:150]}\n"
+                )
+            if report.formal_findings:
+                for ff in report.formal_findings[:2]:
+                    rhetoric_section += (
+                        f"  Formal result ({ff.logic_type}): "
+                        f"{'; '.join(ff.results[:3]) if ff.results else 'no query results'}\n"
+                    )
+
+            # -- Section 5 data: Voix des spécialistes --
+            specialists_section = "\n[SECTION 5 DATA — Voix des spécialistes]\n"
+            specialist_commentary = getattr(report, "_specialist_commentary", "")
+            if specialist_commentary:
+                specialists_section += f"{specialist_commentary}\n"
+            else:
+                specialists_section += "  No specialist commentaries deposited.\n"
+
+            # -- Section 6 data: Convergence (feeds Lecture politique) --
+            convergence_section = "\n[SECTION 6 DATA — Convergence evidence]\n"
+            if report.convergent_verdicts:
+                for v in report.convergent_verdicts:
+                    convergence_section += (
+                        f"  {v.arg_id}: {v.score} methods concur "
+                        f"({', '.join(v.methods)})\n"
+                    )
+                convergence_section += (
+                    f"  Convergence conclusion: " f"{report.convergence_conclusion}\n"
+                )
+            else:
+                convergence_section += "  No cross-method convergence.\n"
+
+            prompt = (
+                "Produce the 6-section political-rhetorical briefing as specified "
+                "in your system prompt. Use the data blocks below. Each section "
+                "heading must be '## N. Title' on its own line. 8-12 paragraphs "
+                "total. Intelligence-briefing register. Opaque IDs only.\n"
+                f"\nSource: {so.contextual_frame}"
+                f"{context_block}"
+                f"{stakes_section}"
+                f"{parties_section}"
+                f"{rhetoric_section}"
+                f"{specialists_section}"
+                f"{convergence_section}"
             )
             # Use SK chat completion
             settings = self.kernel.get_prompt_execution_settings_from_service_id(

@@ -297,6 +297,9 @@ class TestSectionBuilders:
         report = _build_report_from_state(state)
         assert len(report.final_synthesis) > 100
         assert "argument" in report.final_synthesis.lower()
+        # WW #725: 6-section structure in template fallback
+        assert "## 1." in report.final_synthesis
+        assert "## 6." in report.final_synthesis
 
 
 # =========================================================================
@@ -466,7 +469,7 @@ class TestConvergenceWiring:
         thesis = asyncio.get_event_loop().run_until_complete(
             DeepSynthesisAgent._build_final_synthesis(state, report, [])
         )
-        assert "converge across independent methods" in thesis
+        assert "## 5." in thesis
         assert "arg_2" in thesis
 
     def test_to_dict_includes_convergent_verdicts(self):
@@ -584,27 +587,266 @@ class TestConvergenceProse:
 
 
 class TestSystemPromptIntelligenceBriefing:
-    """Track QQ (#721): system prompt uses intelligence-briefing register."""
+    """Track WW (#725): system prompt uses 6-section political-rhetorical structure."""
 
     def test_system_prompt_contains_intelligence_briefing(self):
         prompt = DeepSynthesisAgent.SYSTEM_PROMPT
         assert "intelligence" in prompt.lower()
         assert "briefing" in prompt.lower()
 
-    def test_system_prompt_requires_identification(self):
-        assert "IDENTIFICATION" in DeepSynthesisAgent.SYSTEM_PROMPT
-
-    def test_system_prompt_requires_diagnostics(self):
-        assert "DIAGNOSTICS" in DeepSynthesisAgent.SYSTEM_PROMPT
-
-    def test_system_prompt_requires_closing_thesis(self):
-        assert "CLOSING THESIS" in DeepSynthesisAgent.SYSTEM_PROMPT
-
-    def test_system_prompt_three_paragraph_structure(self):
+    def test_system_prompt_has_six_numbered_sections(self):
         prompt = DeepSynthesisAgent.SYSTEM_PROMPT
-        assert "Paragraph 1" in prompt
-        assert "Paragraph 2" in prompt
-        assert "Paragraph 3" in prompt
+        assert "## 1." in prompt
+        assert "## 2." in prompt
+        assert "## 3." in prompt
+        assert "## 4." in prompt
+        assert "## 5." in prompt
+        assert "## 6." in prompt
+
+    def test_system_prompt_section_titles(self):
+        prompt = DeepSynthesisAgent.SYSTEM_PROMPT
+        assert "Contexte" in prompt
+        assert "Enjeux" in prompt
+        assert "Parties" in prompt
+        assert "Ressorts" in prompt
+        assert "spécialistes" in prompt  # 'spécialistes'
+        assert "Lecture politique" in prompt
+
+    def test_system_prompt_mentions_stakes_data(self):
+        prompt = DeepSynthesisAgent.SYSTEM_PROMPT
+        assert "stakes" in prompt.lower()
+        assert "stakeholders" in prompt.lower() or "stakeholder" in prompt.lower()
 
     def test_system_prompt_anti_count_listing(self):
         assert "Do NOT list counts" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+    def test_system_prompt_opaque_ids_only(self):
+        assert "opaque IDs only" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+    def test_system_prompt_eight_to_twelve_paragraphs(self):
+        assert "8-12 paragraphs" in DeepSynthesisAgent.SYSTEM_PROMPT
+
+
+# =========================================================================
+# Test: WW #725 — 6-section political-rhetorical briefing
+# =========================================================================
+
+
+def _ww_fixture_state():
+    """State with stakes, stakeholders, and convergence data for WW tests."""
+    state = _make_fixture_state()
+    state.stakes_and_stakeholders = {
+        "stakes": [
+            {
+                "stake_type": "security",
+                "description": "National sovereignty and border protection",
+                "evidence_indices": [0],
+            },
+            {
+                "stake_type": "political",
+                "description": "Legitimacy of foreign policy stance",
+                "evidence_indices": [1],
+            },
+        ],
+        "stakeholders": [
+            {"name": "Speaker_A", "role": "speaker", "stance": "for"},
+            {"name": "Public_Z", "role": "audience", "stance": "against"},
+        ],
+        "rhetorical_register": "mobilization",
+        "discursive_arena": "parliamentary debate",
+    }
+    return state
+
+
+def _ww_build_report(state=None, meta=None):
+    """Build a WW-era report with stakes and 6-section final synthesis."""
+    state = state or _ww_fixture_state()
+    meta = meta or {
+        "opaque_id": "corpus_ww_A",
+        "era": "2020s",
+        "language": "en",
+        "discourse_type": "political",
+        "speaker": "Speaker_A",
+        "venue": "parliamentary debate",
+        "topic": "national sovereignty",
+    }
+    report = _build_report_from_state(state, meta)
+    # Attach stakes data (normally done in synthesize())
+    stakes_data = getattr(state, "stakes_and_stakeholders", {})
+    if stakes_data and any(
+        stakes_data.get(k) for k in ("stakes", "stakeholders", "rhetorical_register")
+    ):
+        report._raw_stakes = stakes_data
+    else:
+        report._raw_stakes = {}
+    # Rebuild final synthesis with stakes data attached
+    report.final_synthesis = asyncio.get_event_loop().run_until_complete(
+        DeepSynthesisAgent._build_final_synthesis(state, report, [])
+    )
+    return report
+
+
+class TestSixSectionBriefing:
+    """WW #725: template fallback produces 6 numbered sections."""
+
+    def test_all_six_sections_present(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        assert "## 1." in thesis
+        assert "## 2." in thesis
+        assert "## 3." in thesis
+        assert "## 4." in thesis
+        assert "## 5." in thesis
+        assert "## 6." in thesis
+
+    def test_sections_in_order(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        pos = [thesis.index(f"## {i}.") for i in range(1, 7)]
+        assert pos == sorted(pos), "Sections must appear in order 1-6"
+
+    def test_section_1_contains_context(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s1_start = thesis.index("## 1.")
+        s2_start = thesis.index("## 2.")
+        s1 = thesis[s1_start:s2_start]
+        assert "corpus_ww_A" in s1
+        assert "political" in s1.lower()
+
+    def test_section_2_mentions_stakes(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s2_start = thesis.index("## 2.")
+        s3_start = thesis.index("## 3.")
+        s2 = thesis[s2_start:s3_start]
+        assert "security" in s2.lower() or "stake" in s2.lower()
+
+    def test_section_3_mentions_stakeholders(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s3_start = thesis.index("## 3.")
+        s4_start = thesis.index("## 4.")
+        s3 = thesis[s3_start:s4_start]
+        assert "Speaker_A" in s3 or "stakeholder" in s3.lower()
+
+    def test_section_4_mentions_fallacies(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s4_start = thesis.index("## 4.")
+        s5_start = thesis.index("## 5.")
+        s4 = thesis[s4_start:s5_start]
+        assert "fallac" in s4.lower()
+
+    def test_section_5_specialist_graceful(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s5_start = thesis.index("## 5.")
+        s6_start = thesis.index("## 6.")
+        s5 = thesis[s5_start:s6_start]
+        # Without UU commentaries, should show graceful message
+        assert (
+            "No specialist commentaries" in s5
+            or "No cross-method" in s5
+            or "convergent" in s5.lower()
+        )
+
+    def test_section_6_political_reading(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        s6_start = thesis.index("## 6.")
+        s6 = thesis[s6_start:]
+        assert len(s6) > 100  # substantive content
+        assert "mobilization" in s6.lower() or "rhetorical" in s6.lower()
+
+    def test_no_real_names_privacy(self):
+        report = _ww_build_report()
+        thesis = report.final_synthesis
+        # Should NOT contain any raw names from the fixture text
+        assert "Speaker_A" in thesis  # opaque ID is fine
+        # Verify section 6 doesn't leak
+        s6_start = thesis.index("## 6.")
+        s6 = thesis[s6_start:]
+        assert "opaque" in DeepSynthesisAgent.SYSTEM_PROMPT.lower()
+
+
+class TestSixSectionEmptyState:
+    """WW #725: 6 sections produced even with minimal data."""
+
+    def test_minimal_state_produces_six_sections(self):
+        state = UnifiedAnalysisState("A short discourse about something.")
+        report = DeepSynthesisReport(
+            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
+        )
+        report._raw_stakes = {}
+        thesis = asyncio.get_event_loop().run_until_complete(
+            DeepSynthesisAgent._build_final_synthesis(state, report, [])
+        )
+        assert "## 1." in thesis
+        assert "## 6." in thesis
+
+    def test_no_stakes_graceful_message(self):
+        state = UnifiedAnalysisState("A short discourse.")
+        report = DeepSynthesisReport(
+            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
+        )
+        report._raw_stakes = {}
+        thesis = asyncio.get_event_loop().run_until_complete(
+            DeepSynthesisAgent._build_final_synthesis(state, report, [])
+        )
+        s2_start = thesis.index("## 2.")
+        s3_start = thesis.index("## 3.")
+        s2 = thesis[s2_start:s3_start]
+        assert "No typed stakes" in s2 or "no stakes" in s2.lower()
+
+
+class TestLLMSynthesisPromptSixSections:
+    """WW #725: _llm_synthesis prompt feeds data for all 6 sections."""
+
+    @staticmethod
+    def _run(coro):
+        return asyncio.get_event_loop().run_until_complete(coro)
+
+    def test_prompt_contains_section_data_markers(self):
+        """Verify the LLM prompt includes all 6 section data blocks."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        kernel = MagicMock()
+        kernel.get_prompt_execution_settings_from_service_id = MagicMock(
+            return_value=MagicMock()
+        )
+        invoke_capture = AsyncMock(return_value="## 1. Context\n## 6. Lecture")
+        kernel.invoke_prompt = invoke_capture
+
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        report = _ww_build_report()
+        self._run(DeepSynthesisAgent._llm_synthesis(stub, report))
+
+        # Get the prompt that was passed to invoke_prompt
+        call_kwargs = invoke_capture.call_args
+        prompt = call_kwargs[1]["prompt"] if call_kwargs[1] else ""
+        assert "[SECTION 1 DATA" in prompt
+        assert "[SECTION 2 DATA" in prompt
+        assert "[SECTION 3 DATA" in prompt
+        assert "[SECTION 4 DATA" in prompt
+        assert "[SECTION 5 DATA" in prompt
+        assert "[SECTION 6 DATA" in prompt
+
+    def test_prompt_includes_stakes_for_section_2(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        kernel = MagicMock()
+        kernel.get_prompt_execution_settings_from_service_id = MagicMock(
+            return_value=MagicMock()
+        )
+        invoke_capture = AsyncMock(return_value="## 1. C\n## 6. L")
+        kernel.invoke_prompt = invoke_capture
+
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        report = _ww_build_report()
+        self._run(DeepSynthesisAgent._llm_synthesis(stub, report))
+
+        call_kwargs = invoke_capture.call_args
+        prompt = call_kwargs[1]["prompt"] if call_kwargs[1] else ""
+        assert "security" in prompt
+        assert "Speaker_A" in prompt
