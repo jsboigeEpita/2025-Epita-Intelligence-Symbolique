@@ -629,7 +629,29 @@ async def _generate_counters_for_targets(
                 **det_params,
             )
             raw = response.choices[0].message.content or ""
-            counters.extend(_parse_counter_array(raw))
+            parsed = _parse_counter_array(raw)
+            counters.extend(parsed)
+            # GG-bis #709: retry once if batch returned fewer CAs than targets
+            if parsed and len(parsed) < len(batch):
+                logger.info(
+                    f"Counter-argument batch [{start}:{start + batch_size}] "
+                    f"thin ({len(parsed)}/{len(batch)}), retrying"
+                )
+                try:
+                    retry = await _guarded_chat_completion(
+                        client,
+                        model=model_id,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": targets_text},
+                        ],
+                        **det_params,
+                    )
+                    retry_raw = retry.choices[0].message.content or ""
+                    retry_parsed = _parse_counter_array(retry_raw)
+                    counters.extend(retry_parsed)
+                except Exception as retry_err:
+                    logger.warning(f"Counter-argument retry failed: {retry_err}")
         except Exception as e:
             logger.warning(
                 f"Counter-argument batch [{start}:{start + batch_size}] failed: {e}"
@@ -665,7 +687,6 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
         return {"added": 0, "targets": len(targets)}
 
     counters = await _generate_counters_for_targets(client, model_id, targets)
-    counters = _evaluate_counter_arguments(counters, targets[0])
 
     added = 0
     for ca in counters:
@@ -685,6 +706,49 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
             added += 1
         except Exception as e:
             logger.debug(f"add_counter_argument failed: {e}")
+
+    # GG-bis #709: guarantee >=1 CA per argument — retry uncovered targets once
+    if added < len(targets) and client:
+        covered_indices: set[int] = set()
+        for ca in counters:
+            if not isinstance(ca, dict):
+                continue
+            target_arg = str(ca.get("target_argument", ""))
+            for i, t in enumerate(targets):
+                if i not in covered_indices and t[:80] in target_arg:
+                    covered_indices.add(i)
+        uncovered = [t for i, t in enumerate(targets) if i not in covered_indices]
+        if uncovered:
+            logger.info(
+                f"GG-bis: {len(uncovered)} targets uncovered "
+                f"({len(covered_indices)}/{len(targets)}), retrying"
+            )
+            try:
+                retry_counters = await _generate_counters_for_targets(
+                    client, model_id, uncovered
+                )
+                for ca in retry_counters:
+                    if not isinstance(ca, dict):
+                        continue
+                    content = ca.get("counter_argument", "")
+                    if not content:
+                        continue
+                    score = float(
+                        ca.get("evaluation_score", ca.get("score", 0.0)) or 0.0
+                    )
+                    try:
+                        state.add_counter_argument(
+                            original_arg=str(ca.get("target_argument", ""))[:300],
+                            counter_content=str(content),
+                            strategy=str(ca.get("strategy_used", "")),
+                            score=score,
+                        )
+                        added += 1
+                    except Exception as e:
+                        logger.debug(f"add_counter_argument retry failed: {e}")
+            except Exception as e:
+                logger.warning(f"GG-bis coverage retry failed: {e}")
+
     return {"added": added, "targets": len(targets)}
 
 

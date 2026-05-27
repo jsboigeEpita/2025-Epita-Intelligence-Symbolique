@@ -105,6 +105,7 @@ class TestGenerateCountersForTargets:
             calls["n"] += 1
             if calls["n"] == 1:
                 raise RuntimeError("transient")
+            # Batch 2 returns 1/12 (thin) → triggers retry, which also returns 1.
             return _resp('[{"counter_argument": "ok"}]')
 
         client = MagicMock()
@@ -113,8 +114,8 @@ class TestGenerateCountersForTargets:
         out = await mod._generate_counters_for_targets(
             client, "model", targets, batch_size=12
         )
-        # First batch raised, second succeeded => still get the survivor.
-        assert len(out) == 1
+        # First batch raised. Second batch: 1 CA + 1 retry CA = 2 total.
+        assert len(out) == 2
 
 
 class TestInvokeCounterArgumentNoCaps:
@@ -153,9 +154,7 @@ class TestGenerateCounterArgumentsFromState:
         state.identified_arguments = [{"text": "a1"}, {"text": "a2"}, {"text": "a3"}]
         state.add_counter_argument = MagicMock(return_value="ca_1")
         client = _client_one_per_target()
-        with patch.object(
-            mod, "_get_openai_client", return_value=(client, "model")
-        ), patch.object(mod, "_evaluate_counter_arguments", side_effect=lambda c, t: c):
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
 
         assert result["targets"] == 3
@@ -182,9 +181,7 @@ class TestGenerateCounterArgumentsFromState:
         state.identified_arguments = ["bare string arg one", "bare string arg two"]
         state.add_counter_argument = MagicMock(return_value="ca")
         client = _client_one_per_target()
-        with patch.object(
-            mod, "_get_openai_client", return_value=(client, "model")
-        ), patch.object(mod, "_evaluate_counter_arguments", side_effect=lambda c, t: c):
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
         assert result["targets"] == 2
         assert result["added"] == 2
@@ -199,3 +196,113 @@ class TestConversationalWiring:
         assert hasattr(co, "run_conversational_analysis")
         # The helper the 5b-6 block calls must exist on the invoke module.
         assert hasattr(mod, "_generate_counter_arguments_from_state")
+
+
+class TestGGbisRetryOnThinBatch:
+    """GG-bis #709: retry once when a batch returns fewer CAs than targets."""
+
+    async def test_thin_batch_triggers_one_retry(self):
+        call_count = {"n": 0}
+
+        async def thin_then_full(**kwargs):
+            call_count["n"] += 1
+            user_msg = kwargs["messages"][1]["content"]
+            n = len([ln for ln in user_msg.splitlines() if ln.strip()])
+            if call_count["n"] == 1:
+                # First call: return only half
+                arr = [
+                    {
+                        "counter_argument": f"Counter {i}",
+                        "strategy_used": "distinction",
+                        "target_argument": f"target {i}",
+                        "strength": "moderate",
+                        "reasoning": "because",
+                    }
+                    for i in range(n // 2)
+                ]
+            else:
+                # Retry: return full
+                arr = [
+                    {
+                        "counter_argument": f"Counter {i}",
+                        "strategy_used": "distinction",
+                        "target_argument": f"target {i}",
+                        "strength": "moderate",
+                        "reasoning": "because",
+                    }
+                    for i in range(n)
+                ]
+            return _resp(json.dumps(arr))
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=thin_then_full)
+        targets = [f"arg {i}" for i in range(6)]
+        out = await mod._generate_counters_for_targets(
+            client, "model", targets, batch_size=12
+        )
+        # First call: 3 CAs (half of 6). Retry: 6 CAs. Total = 9.
+        assert len(out) == 9
+        assert call_count["n"] == 2
+
+    async def test_full_batch_no_retry(self):
+        client = _client_one_per_target()
+        targets = [f"arg {i}" for i in range(5)]
+        out = await mod._generate_counters_for_targets(
+            client, "model", targets, batch_size=12
+        )
+        # Full batch (5/5), no retry
+        assert len(out) == 5
+        assert client.chat.completions.create.call_count == 1
+
+
+class TestGGbisCoverageGuarantee:
+    """GG-bis #709: _generate_counter_arguments_from_state retries uncovered args."""
+
+    async def test_uncovered_arguments_get_retried(self):
+        """If first pass adds fewer CAs than targets, a retry fills the gap."""
+        state = MagicMock()
+        state.identified_arguments = [{"text": f"arg_{i}"} for i in range(5)]
+        state.counter_arguments = []
+        state.add_counter_argument = MagicMock(return_value="ca")
+
+        call_count = {"n": 0}
+
+        async def thin_first(**kwargs):
+            call_count["n"] += 1
+            user_msg = kwargs["messages"][1]["content"]
+            n = len([ln for ln in user_msg.splitlines() if ln.strip()])
+            if call_count["n"] == 1:
+                # First: only 2 out of 5
+                arr = [
+                    {
+                        "counter_argument": f"Counter {i}",
+                        "strategy_used": "distinction",
+                        "target_argument": f"target {i}",
+                        "strength": "moderate",
+                        "reasoning": "because",
+                    }
+                    for i in range(2)
+                ]
+            else:
+                # Retry: full coverage of uncovered targets
+                arr = [
+                    {
+                        "counter_argument": f"Counter {i}",
+                        "strategy_used": "distinction",
+                        "target_argument": f"target {i}",
+                        "strength": "moderate",
+                        "reasoning": "because",
+                    }
+                    for i in range(n)
+                ]
+            return _resp(json.dumps(arr))
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=thin_first)
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
+            result = await mod._generate_counter_arguments_from_state(state)
+
+        # First pass: 2 added. Retry covers the 3 uncovered => total >= 5.
+        assert result["targets"] == 5
+        assert result["added"] >= 5
+        assert call_count["n"] >= 2  # first pass + retry
