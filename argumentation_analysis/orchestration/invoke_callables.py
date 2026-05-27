@@ -687,7 +687,6 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
         return {"added": 0, "targets": len(targets)}
 
     counters = await _generate_counters_for_targets(client, model_id, targets)
-    counters = _evaluate_counter_arguments(counters, targets[0])
 
     added = 0
     for ca in counters:
@@ -710,23 +709,23 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
 
     # GG-bis #709: guarantee >=1 CA per argument — retry uncovered targets once
     if added < len(targets) and client:
-        existing_cas = len(getattr(state, "counter_arguments", []) or [])
-        covered = set()
-        # Approximate: if we have >= n_args CAs total, we're likely covered
-        # Otherwise retry the shortfall
-        shortfall = len(targets) - added
-        if shortfall > 0:
+        covered_indices: set = set()
+        for ca in counters:
+            if not isinstance(ca, dict):
+                continue
+            target_arg = str(ca.get("target_argument", ""))
+            for i, t in enumerate(targets):
+                if i not in covered_indices and t[:80] in target_arg:
+                    covered_indices.add(i)
+        uncovered = [t for i, t in enumerate(targets) if i not in covered_indices]
+        if uncovered:
             logger.info(
-                f"GG-bis: {shortfall} targets uncovered ({added}/{len(targets)}), "
-                f"retrying uncovered"
+                f"GG-bis: {len(uncovered)} targets uncovered "
+                f"({len(covered_indices)}/{len(targets)}), retrying"
             )
             try:
-                retry_targets = targets[added:]  # uncovered tail
                 retry_counters = await _generate_counters_for_targets(
-                    client, model_id, retry_targets
-                )
-                retry_counters = _evaluate_counter_arguments(
-                    retry_counters, retry_targets[0] if retry_targets else ""
+                    client, model_id, uncovered
                 )
                 for ca in retry_counters:
                     if not isinstance(ca, dict):

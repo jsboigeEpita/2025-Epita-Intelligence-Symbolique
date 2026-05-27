@@ -154,9 +154,7 @@ class TestGenerateCounterArgumentsFromState:
         state.identified_arguments = [{"text": "a1"}, {"text": "a2"}, {"text": "a3"}]
         state.add_counter_argument = MagicMock(return_value="ca_1")
         client = _client_one_per_target()
-        with patch.object(
-            mod, "_get_openai_client", return_value=(client, "model")
-        ), patch.object(mod, "_evaluate_counter_arguments", side_effect=lambda c, t: c):
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
 
         assert result["targets"] == 3
@@ -183,9 +181,7 @@ class TestGenerateCounterArgumentsFromState:
         state.identified_arguments = ["bare string arg one", "bare string arg two"]
         state.add_counter_argument = MagicMock(return_value="ca")
         client = _client_one_per_target()
-        with patch.object(
-            mod, "_get_openai_client", return_value=(client, "model")
-        ), patch.object(mod, "_evaluate_counter_arguments", side_effect=lambda c, t: c):
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
         assert result["targets"] == 2
         assert result["added"] == 2
@@ -288,7 +284,7 @@ class TestGGbisCoverageGuarantee:
                     for i in range(2)
                 ]
             else:
-                # Retry: full coverage
+                # Retry: full coverage of uncovered targets
                 arr = [
                     {
                         "counter_argument": f"Counter {i}",
@@ -303,12 +299,10 @@ class TestGGbisCoverageGuarantee:
 
         client = MagicMock()
         client.chat.completions.create = AsyncMock(side_effect=thin_first)
-        with patch.object(
-            mod, "_get_openai_client", return_value=(client, "model")
-        ), patch.object(mod, "_evaluate_counter_arguments", side_effect=lambda c, t: c):
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
 
-        # First pass: 2 added. Shortfall: 3 targets retried => 3 more.
+        # First pass: 2 added. Retry covers the 3 uncovered => total >= 5.
         assert result["targets"] == 5
-        assert result["added"] >= 2  # at minimum the first 2
+        assert result["added"] >= 5
         assert call_count["n"] >= 2  # first pass + retry
