@@ -4324,7 +4324,7 @@ async def _invoke_propositional_logic(
                         _pl_batch_size = 3
                         _pl_targets = args[:10]
 
-                        async def _pl_batch_coro(_batch: list) -> list:
+                        async def _pl_batch_coro(_batch: list[str]) -> list[str]:
                             if len(_batch) == 1:
                                 _texts_block = f"Text:\n{_batch[0][:2000]}"
                             else:
@@ -4348,7 +4348,10 @@ async def _invoke_propositional_logic(
                                 **det_params,
                             )
                             _raw = _resp.choices[0].message.content or ""
-                            return _parse_json_from_llm(_raw).get("formulas", [])
+                            _pl_out: list[str] = _parse_json_from_llm(_raw).get(
+                                "formulas", []
+                            )
+                            return _pl_out
 
                         _pl_coros = [
                             _pl_batch_coro(_pl_targets[_bi:_bi + _pl_batch_size])
@@ -4356,7 +4359,7 @@ async def _invoke_propositional_logic(
                         ]
                         _pl_results = await asyncio.gather(*_pl_coros, return_exceptions=True)
                         for _idx, _res in enumerate(_pl_results):
-                            if isinstance(_res, Exception):
+                            if isinstance(_res, BaseException):
                                 logger.debug(f"PL Pass 2 batch {_idx} failed: {_res}")
                                 continue
                             for f in _res:
@@ -4716,7 +4719,7 @@ async def _invoke_fol_reasoning(
                             _fol_batch_size = 3
                             _fol_targets = args[:10]
 
-                            async def _fol_batch_coro(_batch: list) -> list:
+                            async def _fol_batch_coro(_batch: list[str]) -> list[str]:
                                 if len(_batch) == 1:
                                     _texts_block = f"Text:\n{_batch[0][:2000]}"
                                 else:
@@ -4742,7 +4745,10 @@ async def _invoke_fol_reasoning(
                                     **det_params,
                                 )
                                 _raw = _resp.choices[0].message.content or ""
-                                return _parse_json_from_llm(_raw).get("formulas", [])
+                                _fol_out: list[str] = _parse_json_from_llm(_raw).get(
+                                    "formulas", []
+                                )
+                                return _fol_out
 
                             _fol_coros = [
                                 _fol_batch_coro(_fol_targets[_bi:_bi + _fol_batch_size])
@@ -4750,7 +4756,7 @@ async def _invoke_fol_reasoning(
                             ]
                             _fol_results = await asyncio.gather(*_fol_coros, return_exceptions=True)
                             for _idx, _res in enumerate(_fol_results):
-                                if isinstance(_res, Exception):
+                                if isinstance(_res, BaseException):
                                     logger.debug(f"FOL Pass 2 batch {_idx} failed: {_res}")
                                     continue
                                 for f in _res:
