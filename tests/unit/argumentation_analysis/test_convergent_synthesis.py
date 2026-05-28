@@ -127,8 +127,8 @@ class TestComputeConvergence:
 
     def test_jtms_invalid_belief_counts(self):
         state = _state_with_args("retracted argument")
-        # belief name must contain the arg_id to match
-        state.add_jtms_belief("belief_for_arg_1", False, justifications=["undermined"])
+        # belief name uses "arg_N:" prefix (NN wiring convention)
+        state.add_jtms_belief("arg_1:retracted argument", False, justifications=["undermined"])
         state.add_quality_score("arg_1", {"x": 1.0}, 2.0)
         conv = compute_argument_convergence(state)
         assert conv["arg_1"]["score"] == 2
