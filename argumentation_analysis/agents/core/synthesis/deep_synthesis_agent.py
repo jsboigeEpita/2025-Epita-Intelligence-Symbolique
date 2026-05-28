@@ -617,15 +617,28 @@ class DeepSynthesisAgent(BaseAgent):
 
         # Section 5 — Voix des spécialistes
         specialist_commentary = getattr(report, "_specialist_commentary", "")
+        trace_data = getattr(report, "_raw_analysis_trace", [])
         s5 = "## 5. Voix des spécialistes\n\n"
+        has_content = False
         if specialist_commentary:
             s5 += f"{specialist_commentary}\n"
-        elif report.convergent_verdicts:
-            s5 += "No specialist commentaries were deposited during this analysis run.\n\n"
+            has_content = True
+        if trace_data:
+            for entry in trace_data:
+                agent = entry.get("agent", "?")
+                reacts = ", ".join(entry.get("reacts_to", []))
+                summary = entry.get("summary", "")
+                s5 += f'- [{agent}] (réagit à: {reacts}) → "{summary}"\n'
+            has_content = True
+        if not has_content and report.convergent_verdicts:
+            s5 += (
+                "No specialist commentaries were deposited "
+                "during this analysis run.\n\n"
+            )
             s5 += "Convergent verdicts (cross-method agreement):\n"
             for v in report.convergent_verdicts:
                 s5 += f"- {v.arg_id}: {v.score} methods ({', '.join(v.methods)})\n"
-        else:
+        elif not has_content:
             s5 += (
                 "No specialist commentaries were deposited during this analysis run. "
                 "No cross-method convergence was detected.\n"
@@ -1257,7 +1270,7 @@ class DeepSynthesisAgent(BaseAgent):
                     reacts = ", ".join(entry.get("reacts_to", []))
                     summary = entry.get("summary", "")
                     specialists_section += (
-                        f"  [{agent}] (réagit à: {reacts}) → \"{summary}\"\n"
+                        f'  [{agent}] (réagit à: {reacts}) → "{summary}"\n'
                     )
             if not specialist_commentary and not trace_data:
                 specialists_section += "  No specialist commentaries deposited.\n"
