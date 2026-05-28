@@ -448,7 +448,11 @@ class TestConvergenceWiring:
         )
         md = DeepSynthesisAgent.render_markdown(report)
         assert "## Convergent Verdicts (cross-method agreement)" in md
-        assert "Verdict convergent sur arg_2" in md
+        # _convergent_state() flags arg_2 by 3 methods (sophisme + qualite faible
+        # + contre-argument), so build_convergent_synthesis emits the substantive
+        # variant ("Insight convergent sur ...") rather than the short variant
+        # ("Verdict convergent sur ...") used for score == 2.
+        assert "Insight convergent sur arg_2" in md
 
     def test_render_markdown_no_convergence_message(self):
         report = DeepSynthesisReport()
@@ -493,7 +497,9 @@ class TestConvergenceWiring:
             _invoke_deep_synthesis("", {"_state_object": state})
         )
         assert "Convergent Verdicts" in result["markdown"]
-        assert "Verdict convergent sur arg_2" in result["markdown"]
+        # See test_render_markdown_includes_convergent_section: score == 3 in
+        # the fixture triggers the substantive insight variant.
+        assert "Insight convergent sur arg_2" in result["markdown"]
 
 
 class TestConvergenceProse:
@@ -567,7 +573,8 @@ class TestConvergenceProse:
         md = DeepSynthesisAgent.render_markdown(report)
         assert "LLM PROSE: arg_2 is undermined" in md
         # The template verdict statement is replaced by the prose, not duplicated.
-        assert "Verdict convergent sur arg_2" not in md
+        # _convergent_state() yields score == 3 → substantive "Insight" variant.
+        assert "Insight convergent sur arg_2" not in md
 
     def test_render_falls_back_to_statements_without_prose(self):
         state = _convergent_state()
@@ -577,7 +584,8 @@ class TestConvergenceProse:
         )
         assert report.convergence_prose == ""  # default
         md = DeepSynthesisAgent.render_markdown(report)
-        assert "Verdict convergent sur arg_2" in md
+        # _convergent_state() yields score == 3 → substantive "Insight" variant.
+        assert "Insight convergent sur arg_2" in md
 
     def test_to_dict_includes_convergence_prose(self):
         report = DeepSynthesisReport()
