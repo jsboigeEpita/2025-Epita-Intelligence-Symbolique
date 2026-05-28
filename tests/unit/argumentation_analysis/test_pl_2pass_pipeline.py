@@ -292,3 +292,141 @@ class TestBackwardCompat:
             )
 
         assert result is not None
+
+
+class TestBatchedPass2:
+    """Tests for batched Pass 2 (Track XX #729).
+
+    Batch_size=3 reduces LLM calls from 10 to 4 for the per-argument pass,
+    preventing timeout on corpus_B-scale inputs (many args, long text).
+    """
+
+    def test_batched_pass2_many_arguments(self):
+        """With 10 arguments, batching should produce formulas via 4 LLM calls."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        long_text = " ".join(f"Argument {i}: sovereignty matters." for i in range(50))
+        state = UnifiedAnalysisState(long_text)
+        args = [f"Claim {i}: national interest requires vigilance" for i in range(10)]
+        ctx = {
+            "_state_object": state,
+            "source_metadata": {"opaque_id": "corpus_b_profile"},
+            "phase_extract_output": {"arguments": [{"text": a} for a in args]},
+        }
+
+        atoms = ["sovereignty", "vigilance", "national_interest", "cooperation"]
+
+        mock_pass1 = MagicMock()
+        mock_pass1.choices = [MagicMock()]
+        mock_pass1.choices[0].message.content = json.dumps({"propositions": atoms})
+
+        formula_resp = MagicMock()
+        formula_resp.choices = [MagicMock()]
+        formula_resp.choices[0].message.content = json.dumps({
+            "formulas": ["sovereignty => vigilance", "national_interest && !cooperation"]
+        })
+
+        mock_client = AsyncMock()
+        # Pass 1 + 4 batches (ceil(10/3)) + whole-text = 6 calls
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=[mock_pass1] + [formula_resp] * 5
+        )
+
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
+            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+                result = asyncio.get_event_loop().run_until_complete(
+                    _invoke_propositional_logic(long_text, ctx)
+                )
+
+        assert result is not None
+        assert "formulas" in result
+        assert len(result["formulas"]) > 0
+
+    def test_batched_pass2_few_arguments_single_batch(self):
+        """With 2 arguments, single batch = same behavior as before."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        state = UnifiedAnalysisState("Text with two arguments about policy.")
+        ctx = _make_context(state.raw_text, state)
+
+        atoms = ["policy_a", "policy_b"]
+
+        mock_pass1 = MagicMock()
+        mock_pass1.choices = [MagicMock()]
+        mock_pass1.choices[0].message.content = json.dumps({"propositions": atoms})
+
+        formula_resp = MagicMock()
+        formula_resp.choices = [MagicMock()]
+        formula_resp.choices[0].message.content = json.dumps({
+            "formulas": ["policy_a => policy_b"]
+        })
+
+        mock_client = AsyncMock()
+        # Pass 1 + 1 batch (2 args fit in one) + whole-text = 3 calls
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=[mock_pass1, formula_resp, formula_resp]
+        )
+
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
+            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+                result = asyncio.get_event_loop().run_until_complete(
+                    _invoke_propositional_logic(state.raw_text, ctx)
+                )
+
+        assert result is not None
+        assert "formulas" in result
+        assert len(result["formulas"]) >= 1
+
+    def test_batched_partial_failure_continues(self):
+        """If one batch fails, other batches should still produce formulas."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        long_text = " ".join(f"Argument {i}." for i in range(20))
+        state = UnifiedAnalysisState(long_text)
+        args = [f"Claim {i}" for i in range(10)]
+        ctx = {
+            "_state_object": state,
+            "source_metadata": {"opaque_id": "corpus_b_partial"},
+            "phase_extract_output": {"arguments": [{"text": a} for a in args]},
+        }
+
+        atoms = ["claim_a", "claim_b"]
+
+        mock_pass1 = MagicMock()
+        mock_pass1.choices = [MagicMock()]
+        mock_pass1.choices[0].message.content = json.dumps({"propositions": atoms})
+
+        good_resp = MagicMock()
+        good_resp.choices = [MagicMock()]
+        good_resp.choices[0].message.content = json.dumps({
+            "formulas": ["claim_a => claim_b"]
+        })
+
+        mock_client = AsyncMock()
+        # Pass 1 + batch0(fail) + batch1(good) + batch2(good) + batch3(good) + wt
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=[
+                mock_pass1,
+                Exception("timeout"),
+                good_resp,
+                good_resp,
+                good_resp,
+                good_resp,
+            ]
+        )
+
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
+            with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+                result = asyncio.get_event_loop().run_until_complete(
+                    _invoke_propositional_logic(long_text, ctx)
+                )
+
+        assert result is not None
+        assert "formulas" in result
+        assert len(result["formulas"]) >= 1

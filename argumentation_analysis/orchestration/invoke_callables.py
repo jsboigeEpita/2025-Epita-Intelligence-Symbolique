@@ -4269,21 +4269,32 @@ async def _invoke_propositional_logic(
                             )
                             state_obj.atomic_propositions[source_id] = shared_atoms
 
-                    # ── Pass 2: Per-argument formula generation with shared atoms ──
+                    # ── Pass 2: Batched per-argument formula generation (#729 Track XX) ──
                     if shared_atoms and args:
                         atoms_json = _json.dumps(
                             {"propositions": shared_atoms}, indent=2
                         )
-                        for arg_text in args[:10]:
+                        _pl_batch_size = 3
+                        _pl_targets = args[:10]
+                        for _bi in range(0, len(_pl_targets), _pl_batch_size):
+                            _batch = _pl_targets[_bi:_bi + _pl_batch_size]
+                            if len(_batch) == 1:
+                                _texts_block = f"Text:\n{_batch[0][:2000]}"
+                            else:
+                                _parts = []
+                                for _i, _a in enumerate(_batch):
+                                    _parts.append(f"Text {_i+1}:\n{_a[:1500]}")
+                                _texts_block = "\n\n".join(_parts)
                             pass2_prompt = (
-                                "You are an expert in propositional logic. Translate the text "
-                                "into logical formulas using ONLY the provided atomic propositions.\n\n"
+                                "You are an expert in propositional logic. Translate the "
+                                f"{'texts' if len(_batch) > 1 else 'text'} below into logical "
+                                "formulas using ONLY the provided atomic propositions.\n\n"
                                 "Rules:\n"
                                 "- Use ONLY the propositions from the list below. Do NOT invent new ones.\n"
                                 "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
                                 "- Output a JSON object with a single key 'formulas' mapping to a "
                                 "list of formula strings.\n\n"
-                                f"Text:\n{arg_text[:2000]}\n\n"
+                                f"{_texts_block}\n\n"
                                 f"Allowed propositions:\n{atoms_json}"
                             )
                             try:
@@ -4301,9 +4312,10 @@ async def _invoke_propositional_logic(
                                 for f in arg_formulas:
                                     if f and f not in formulas:
                                         formulas.append(f)
-                                        argument_mapping[f[:30]] = arg_text[:60]
+                                        _src = _batch[0][:60]
+                                        argument_mapping[f[:30]] = _src
                             except Exception as arg_err:
-                                logger.debug(f"Pass 2 failed for argument: {arg_err}")
+                                logger.debug(f"Pass 2 batch {_bi//_pl_batch_size} failed: {arg_err}")
 
                         if formulas:
                             pl_metrics["pass2_candidates"] = len(formulas)
@@ -4650,13 +4662,24 @@ async def _invoke_fol_reasoning(
                                 fol_metadata_shared
                             )
 
-                        # ── Pass 2: Per-argument FOL formula generation ──
+                        # ── Pass 2: Batched per-argument FOL formula generation (#729) ──
                         if args:
                             sig_json = json.dumps(sig_data, indent=2)
-                            for arg_text in args[:10]:
+                            _fol_batch_size = 3
+                            _fol_targets = args[:10]
+                            for _bi in range(0, len(_fol_targets), _fol_batch_size):
+                                _batch = _fol_targets[_bi:_bi + _fol_batch_size]
+                                if len(_batch) == 1:
+                                    _texts_block = f"Text:\n{_batch[0][:2000]}"
+                                else:
+                                    _parts = []
+                                    for _i, _a in enumerate(_batch):
+                                        _parts.append(f"Text {_i+1}:\n{_a[:1500]}")
+                                    _texts_block = "\n\n".join(_parts)
                                 pass2_prompt = (
-                                    "You are a formal logic expert. Translate the text "
-                                    "into first-order logic formulas using ONLY the "
+                                    "You are a formal logic expert. Translate the "
+                                    f"{'texts' if len(_batch) > 1 else 'text'} below into "
+                                    "first-order logic formulas using ONLY the "
                                     "provided signature.\n\n"
                                     "Rules:\n"
                                     "- Use ONLY the predicates and constants from the signature\n"
@@ -4664,7 +4687,7 @@ async def _invoke_fol_reasoning(
                                     "- Quantifiers: forall X: (...), exists X: (...)\n"
                                     "- Operators: ! (not), && (and), || (or), => (implies)\n"
                                     "- Output JSON with key 'formulas' (list of formula strings)\n\n"
-                                    f"Text:\n{arg_text[:2000]}\n\n"
+                                    f"{_texts_block}\n\n"
                                     f"Signature:\n{sig_json}"
                                 )
                                 try:
@@ -4687,7 +4710,7 @@ async def _invoke_fol_reasoning(
                                             formulas.append(f)
                                 except Exception as arg_err:
                                     logger.debug(
-                                        f"FOL Pass 2 failed for argument: {arg_err}"
+                                        f"FOL Pass 2 batch {_bi//_fol_batch_size} failed: {arg_err}"
                                     )
 
                             if formulas:
