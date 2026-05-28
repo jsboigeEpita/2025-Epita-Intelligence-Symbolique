@@ -147,9 +147,16 @@ class TestInvokeCounterArgumentNoCaps:
 
 
 class TestGenerateCounterArgumentsFromState:
-    """The conversational post-processor sweeps every identified argument."""
+    """The conversational post-processor sweeps every identified argument.
 
-    async def test_one_counter_per_argument_written_back(self):
+    YY #730 changed the caller default to ``k_per_target=2`` so the CONV path
+    beats the zero-shot baseline on counter-argument volume on the observed
+    corpora. With the per-target-line mock, the first call returns 1 CA/target
+    (mock contract), the helper's thin-batch retry returns another full batch,
+    so total CAs per state call = ``2 × len(targets)``.
+    """
+
+    async def test_k2_floor_two_counters_per_argument(self):
         state = MagicMock()
         state.identified_arguments = [{"text": "a1"}, {"text": "a2"}, {"text": "a3"}]
         state.add_counter_argument = MagicMock(return_value="ca_1")
@@ -158,8 +165,9 @@ class TestGenerateCounterArgumentsFromState:
             result = await mod._generate_counter_arguments_from_state(state)
 
         assert result["targets"] == 3
-        assert result["added"] == 3
-        assert state.add_counter_argument.call_count == 3
+        # YY #730: default k=2 ⇒ floor = 2 × targets = 6 (mock + thin-batch retry)
+        assert result["added"] == 6
+        assert state.add_counter_argument.call_count == 6
 
     async def test_no_args_is_noop(self):
         state = MagicMock()
@@ -184,7 +192,8 @@ class TestGenerateCounterArgumentsFromState:
         with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
             result = await mod._generate_counter_arguments_from_state(state)
         assert result["targets"] == 2
-        assert result["added"] == 2
+        # YY #730: 2 targets × k=2 = 4 CAs (initial + thin-batch retry).
+        assert result["added"] == 4
 
 
 class TestConversationalWiring:
@@ -306,3 +315,153 @@ class TestGGbisCoverageGuarantee:
         assert result["targets"] == 5
         assert result["added"] >= 5
         assert call_count["n"] >= 2  # first pass + retry
+
+
+class TestYYCounterArgumentFloor:
+    """Track YY #730: k_per_target floor in CONV CA generation.
+
+    On corpus_C, CONV produced 13 CAs vs 18 zero-shot (LOSS -5). Pattern across
+    A/B/C: CONV CA = args_count + 1 — too thin to beat 0-shot when baseline >
+    args_count. Fix: ``_generate_counters_for_targets`` accepts ``k_per_target``,
+    and ``_generate_counter_arguments_from_state`` defaults k=2 (calibrating
+    higher when state exposes ``zero_shot_reference``).
+    """
+
+    async def test_helper_k_param_emits_k_in_prompt(self):
+        """The helper passes k to the system prompt so the LLM emits k CAs."""
+        captured_prompts = []
+
+        async def capture(**kwargs):
+            captured_prompts.append(kwargs["messages"][0]["content"])
+            return _resp("[]")
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=capture)
+        await mod._generate_counters_for_targets(
+            client, "model", ["t1", "t2"], k_per_target=3
+        )
+        assert captured_prompts
+        prompt = captured_prompts[0]
+        assert "3 DISTINCT" in prompt or "3 distinct" in prompt.lower()
+        assert (
+            "DIFFERENT strategies" in prompt or "different strategies" in prompt.lower()
+        )
+
+    async def test_helper_k1_keeps_single_strategy_clause(self):
+        """k=1 preserves the original GG-style 'one per target' phrasing."""
+        captured = []
+
+        async def cap(**kwargs):
+            captured.append(kwargs["messages"][0]["content"])
+            return _resp("[]")
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=cap)
+        await mod._generate_counters_for_targets(
+            client, "model", ["t1"], k_per_target=1
+        )
+        assert "EXACTLY one" in captured[0] or "exactly one" in captured[0].lower()
+
+    async def test_zero_shot_reference_calibrates_k(self):
+        """When state exposes zero_shot_reference, k is bumped to clear it."""
+        state = MagicMock()
+        state.identified_arguments = [{"text": f"a{i}"} for i in range(4)]
+        # 4 targets vs 0-shot=18 → need ≥19 ⇒ k = ceil(19/4) = 5
+        state.zero_shot_reference = {"counter_arguments": 18}
+        state.add_counter_argument = MagicMock(return_value="ca")
+        captured_prompts: list[str] = []
+
+        async def cap(**kwargs):
+            captured_prompts.append(kwargs["messages"][0]["content"])
+            user_msg = kwargs["messages"][1]["content"]
+            n = len([ln for ln in user_msg.splitlines() if ln.strip()])
+            return _resp(
+                json.dumps(
+                    [
+                        {"counter_argument": f"c{i}", "target_argument": f"t{i}"}
+                        for i in range(n)
+                    ]
+                )
+            )
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=cap)
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
+            await mod._generate_counter_arguments_from_state(state)
+        assert captured_prompts
+        # k should have been bumped to 5 (ceil(19/4))
+        assert (
+            "5 DISTINCT" in captured_prompts[0]
+            or "5 distinct" in captured_prompts[0].lower()
+        )
+
+    async def test_missing_zero_shot_reference_defaults_to_k2(self):
+        """No zero_shot_reference on state ⇒ caller defaults to k=2 floor."""
+        state = MagicMock(spec=["identified_arguments", "add_counter_argument"])
+        state.identified_arguments = [{"text": f"a{i}"} for i in range(3)]
+        state.add_counter_argument = MagicMock(return_value="ca")
+        captured: list[str] = []
+
+        async def cap(**kwargs):
+            captured.append(kwargs["messages"][0]["content"])
+            user_msg = kwargs["messages"][1]["content"]
+            n = len([ln for ln in user_msg.splitlines() if ln.strip()])
+            return _resp(
+                json.dumps(
+                    [
+                        {"counter_argument": f"c{i}", "target_argument": f"t{i}"}
+                        for i in range(n)
+                    ]
+                )
+            )
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=cap)
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
+            await mod._generate_counter_arguments_from_state(state)
+        assert captured
+        # Default k=2 from caller
+        assert "2 DISTINCT" in captured[0] or "2 distinct" in captured[0].lower()
+
+    async def test_low_zero_shot_reference_does_not_lower_k_below_2(self):
+        """If 0-shot < 2 × args, k stays at the k=2 floor (never drops)."""
+        state = MagicMock()
+        state.identified_arguments = [{"text": f"a{i}"} for i in range(10)]
+        state.zero_shot_reference = {"counter_arguments": 5}  # 5 < 2×10 = 20
+        state.add_counter_argument = MagicMock(return_value="ca")
+        captured: list[str] = []
+
+        async def cap(**kwargs):
+            captured.append(kwargs["messages"][0]["content"])
+            user_msg = kwargs["messages"][1]["content"]
+            n = len([ln for ln in user_msg.splitlines() if ln.strip()])
+            return _resp(
+                json.dumps(
+                    [
+                        {"counter_argument": f"c{i}", "target_argument": f"t{i}"}
+                        for i in range(n)
+                    ]
+                )
+            )
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=cap)
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
+            await mod._generate_counter_arguments_from_state(state)
+        assert captured
+        assert "2 DISTINCT" in captured[0] or "2 distinct" in captured[0].lower()
+
+    async def test_yy_total_ca_beats_zero_shot_on_corpus_c_shape(self):
+        """End-to-end: 12 args + k=2 ⇒ 24 CA ≥ 19 (0-shot+1 on corpus_C)."""
+        state = MagicMock()
+        state.identified_arguments = [{"text": f"argC_{i}"} for i in range(12)]
+        state.add_counter_argument = MagicMock(return_value="ca")
+        client = _client_one_per_target()
+        with patch.object(mod, "_get_openai_client", return_value=(client, "model")):
+            result = await mod._generate_counter_arguments_from_state(state)
+        # With per-target mock + thin retry: 12 + 12 = 24 ≥ 19.
+        assert result["targets"] == 12
+        assert result["added"] >= 19, (
+            f"YY #730 floor: 24 expected, got {result['added']} (must be ≥19 to "
+            "beat 0-shot=18 on corpus_C)"
+        )
