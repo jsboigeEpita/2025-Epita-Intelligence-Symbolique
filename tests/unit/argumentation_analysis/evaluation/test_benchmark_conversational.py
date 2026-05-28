@@ -75,6 +75,14 @@ class TestRunUnifiedAnalysisConversational:
             "state_non_empty_fields": 0,
             "unified_state": None,
             "trace_report": {},
+            "workflow_name": "conversational",
+            "summary": {
+                "completed": 3,
+                "failed": 0,
+                "skipped": 0,
+                "total": 3,
+                "total_messages": 1,
+            },
         }
 
         with patch(
@@ -129,6 +137,13 @@ class TestRunUnifiedAnalysisConversational:
             "state_non_empty_fields": 1,
             "unified_state": MagicMock(),
             "trace_report": {"convergence": True},
+            "summary": {
+                "completed": 1,
+                "failed": 0,
+                "skipped": 0,
+                "total": 1,
+                "total_messages": 5,
+            },
         }
 
         with patch(
