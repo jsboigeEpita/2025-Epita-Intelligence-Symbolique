@@ -79,7 +79,7 @@ class TestDAGOrdering:
 
         wf = build_spectacular_workflow()
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
-        assert set(ds_phase.depends_on) == {"synthesis", "narrative_synthesis", "belief_revision"}
+        assert set(ds_phase.depends_on) == {"synthesis", "narrative_synthesis", "belief_revision", "stakes"}
 
     def test_deep_synthesis_is_after_synthesis(self):
         """deep_synthesis must come after synthesis in the phase list."""
