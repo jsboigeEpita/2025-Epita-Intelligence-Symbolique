@@ -446,6 +446,31 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "rhetorical_register": "",
             "discursive_arena": "",
         }
+        # Track UU #724: specialist commentary + analysis trace
+        self.analysis_trace: List[Dict[str, Any]] = []
+
+    def add_trace_entry(
+        self,
+        phase: str,
+        agent: str,
+        reacts_to: List[str],
+        summary: str,
+    ) -> None:
+        """Record a specialist commentary entry (Track UU #724)."""
+        summary = summary[:280]
+        import time as _time
+
+        entry = {
+            "phase": phase,
+            "agent": agent,
+            "reacts_to": reacts_to,
+            "summary": summary,
+            "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+        }
+        self.analysis_trace.append(entry)
+        state_logger.info(
+            f"Trace: [{agent}] ({phase}, reacts_to={reacts_to}) → {summary[:60]}..."
+        )
 
     def add_counter_argument(
         self,

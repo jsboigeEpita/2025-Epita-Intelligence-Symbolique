@@ -423,6 +423,17 @@ async def _invoke_quality_evaluator(
                 }
             if llm_enrichment:
                 output["llm_enrichment"] = llm_enrichment
+            # Trace entry for quality evaluation specialist
+            _state = context.get("_state_object")
+            if _state is not None and output.get("per_argument_scores"):
+                _n_eval = output.get("arguments_evaluated", 0)
+                _avg_q = output.get("aggregate_score", 0.0)
+                _state.add_trace_entry(
+                    phase="quality",
+                    agent="QualityScorer",
+                    reacts_to=["extract", "hierarchical_fallacy"],
+                    summary=f"Évaluation qualité de {_n_eval} arguments — score moyen: {_avg_q:.1f}/10. Détection par vertus rhétoriques.",
+                )
             return output
         # Fallback if no results
         return await asyncio.to_thread(evaluator.evaluate, input_text)
@@ -988,6 +999,19 @@ async def _invoke_counter_argument(
         # Keep first as llm_counter_argument for backward compat
         result["llm_counter_argument"] = llm_counters[0] if llm_counters else None
         result["llm_counter_arguments"] = llm_counters
+    # Trace entry for counter-argument specialist (Track UU #724)
+    _state = context.get("_state_object")
+    if _state is not None and llm_counters:
+        _n_ca = len(llm_counters)
+        _top_strat = ""
+        if _n_ca > 0 and isinstance(llm_counters[0], dict):
+            _top_strat = str(llm_counters[0].get("strategy_used", ""))
+        _state.add_trace_entry(
+            phase="counter",
+            agent="CounterArgumentAgent",
+            reacts_to=["extract", "quality"],
+            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.",
+        )
     return result
 
 
@@ -1218,6 +1242,20 @@ async def _invoke_debate_analysis(
     except Exception as e:
         logger.warning(f"LLM debate assessment failed: {e}")
 
+    # Trace entry for debate analysis specialist
+    _state = context.get("_state_object")
+    if _state is not None and base_scores:
+        _winner = base_scores.get("winner", "indéterminé")
+        _quality = base_scores.get("debate_quality", 0)
+        _completed = (
+            "oui" if base_scores.get("llm_debate_assessment") else "heuristique"
+        )
+        _state.add_trace_entry(
+            phase="debate",
+            agent="DebateAgent",
+            reacts_to=["counter", "quality", "jtms"],
+            summary=f"Débat complété ({_completed}) — vainqueur: {_winner}, qualité: {_quality}/5. Évaluation adversariale multi-agent.",
+        )
     return base_scores  # type: ignore[no-any-return]
 
 
@@ -1429,6 +1467,19 @@ async def _invoke_governance(
         result["llm_governance_assessment"] = llm_governance
         result["recommended_method"] = llm_governance.get("recommended_method")
         result["consensus_potential"] = llm_governance.get("consensus_potential")
+    # Trace entry for governance specialist
+    _state = context.get("_state_object")
+    if _state is not None and result.get("conflict_count", 0) > 0:
+        _n_conflicts = result.get("conflict_count", 0)
+        _vote = result.get("vote_result", {})
+        _consensus = result.get("consensus_potential", "N/A")
+        _method = result.get("recommended_method", "copeland")
+        _state.add_trace_entry(
+            phase="governance",
+            agent="GovernanceModule",
+            reacts_to=["quality", "hierarchical_fallacy", "jtms"],
+            summary=f"{_n_conflicts} conflits détectés — méthode: {_method}, consensus: {_consensus}. Vote social-choice appliqué.",
+        )
     return result
 
 
@@ -1718,7 +1769,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             entry["quality"] = quality_annotations[name]
         beliefs_output[name] = entry
 
-    return {
+    _jtms_result = {
         "beliefs": beliefs_output,
         "belief_count": len(session.extended_beliefs),
         "justified_count": sum(
@@ -1740,6 +1791,19 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         "consistency_checks": session.consistency_checks,
         "retraction_chain": session.jtms.get_retraction_chain(),
     }
+    # Trace entry for JTMS specialist
+    _state = context.get("_state_object")
+    _n_beliefs_raw = _jtms_result.get("belief_count", 0)
+    if _state is not None and isinstance(_n_beliefs_raw, int) and _n_beliefs_raw > 0:
+        _n_beliefs = _n_beliefs_raw
+        _n_retracted = _jtms_result.get("undermined_count", 0) if isinstance(_jtms_result.get("undermined_count"), int) else 0
+        _state.add_trace_entry(
+            phase="jtms",
+            agent="JTMSAgent",
+            reacts_to=["hierarchical_fallacy"],
+            summary=f"{_n_beliefs} croyances ajoutées — {_n_retracted} rétractées par sophismes. Réseau de dépendances JTMS propagé.",
+        )
+    return _jtms_result
 
 
 async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3562,6 +3626,21 @@ async def _invoke_hierarchical_fallacy(
                 enrich_err,
             )
 
+        # Trace entry for hierarchical fallacy specialist
+        _state = context.get("_state_object")
+        if _state is not None and result.get("fallacies"):
+            _fallacies = result.get("fallacies", [])
+            _top_family = ""
+            if _fallacies and isinstance(_fallacies[0], dict):
+                _top_family = str(
+                    _fallacies[0].get("fallacy_type", _fallacies[0].get("type", ""))
+                )
+            _state.add_trace_entry(
+                phase="hierarchical_fallacy",
+                agent="FallacyDetector",
+                reacts_to=["extract"],
+                summary=f"{len(_fallacies)} sophismes détectés — famille dominante: {_top_family or 'mixte'}. Analyse taxonomique hiérarchique avec enrichissement per-argument.",
+            )
         return result  # type: ignore[no-any-return]
 
     except (ImportError, RuntimeError, ValueError) as e:
@@ -3987,7 +4066,7 @@ async def _invoke_fact_extraction(
                 arguments = _normalize_items_with_quotes(raw_args)
                 claims = _normalize_items_with_quotes(raw_claims)
                 fallacies = _normalize_fallacies_with_quotes(raw_fallacies)
-                return {
+                _extract_result = {
                     "arguments": arguments,
                     "claims": claims,
                     "fallacies": fallacies,
@@ -3997,13 +4076,25 @@ async def _invoke_fact_extraction(
                     "source_length": len(input_text),
                     "extraction_method": "llm",
                 }
+                # Trace entry for fact extraction specialist
+                _state = context.get("_state_object")
+                if _state is not None:
+                    _n_args = _extract_result.get("argument_count", 0)
+                    _n_claims = _extract_result.get("claim_count", 0)
+                    _state.add_trace_entry(
+                        phase="extract",
+                        agent="FactExtractor",
+                        reacts_to=[],
+                        summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.",
+                    )
+                return _extract_result
     except Exception as e:
         logger.warning(f"LLM fact extraction failed, falling back to heuristic: {e}")
 
     # Heuristic fallback
     sentences = re.split(r"(?<=[.!?])\s+", input_text.strip())
     claims = [s.strip() for s in sentences if len(s.strip()) > 20]  # type: ignore[misc]
-    return {
+    _heuristic_result = {
         "arguments": [],
         "claims": claims,
         "fallacies": [],
@@ -4013,6 +4104,17 @@ async def _invoke_fact_extraction(
         "source_length": len(input_text),
         "extraction_method": "heuristic",
     }
+    # Trace entry for heuristic fact extraction
+    _state = context.get("_state_object")
+    if _state is not None and claims:
+        _n_claims = len(claims)
+        _state.add_trace_entry(
+            phase="extract",
+            agent="FactExtractor",
+            reacts_to=[],
+            summary=f"0 arguments, {_n_claims} claims — extraction heuristique (fallback). Pipeline initialisé sans LLM.",
+        )
+    return _heuristic_result
 
 
 def _parse_json_from_llm(raw: str) -> Dict[str, Any]:
@@ -4983,7 +5085,7 @@ async def _invoke_dung_extensions(
             "preferred", enriched_extensions.get("grounded", {})
         )
 
-        return {
+        _dung_result = {
             "semantics": "multi",
             "extensions": primary,
             "all_extensions": enriched_extensions,
@@ -4997,9 +5099,37 @@ async def _invoke_dung_extensions(
                 ),
             },
         }
+        # Trace entry for Dung extensions specialist
+        _state = context.get("_state_object")
+        _dung_args = _dung_result.get("arguments")
+        if _state is not None and _dung_args:
+            _n_args = len(_dung_args)
+            _stats = _dung_result.get("statistics")
+            _n_attacks = _stats.get("attacks_count", 0) if isinstance(_stats, dict) else 0
+            _ext_block = _dung_result.get("extensions")
+            _grounded = _ext_block.get("extensions", []) if isinstance(_ext_block, dict) else []
+            _g_size = len(_grounded[0]) if _grounded else 0
+            _state.add_trace_entry(
+                phase="dung",
+                agent="DungAnalyzer",
+                reacts_to=["extract", "counter"],
+                summary=f"Cadre Dung: {_n_args} arguments, {_n_attacks} attaques — extension fondée: {_g_size} arguments acceptés. 11 sémantiques calculées.",
+            )
+        return _dung_result
     except Exception as e:
         logger.info(f"Dung AFHandler unavailable ({e}), using Python fallback")
-        return _python_dung_fallback(arguments, attacks)
+        _fallback_result = _python_dung_fallback(arguments, attacks)
+        # Trace entry for Dung Python fallback
+        _state = context.get("_state_object")
+        if _state is not None and _fallback_result.get("arguments"):
+            _n_args = len(_fallback_result.get("arguments", []))
+            _state.add_trace_entry(
+                phase="dung",
+                agent="DungAnalyzer",
+                reacts_to=["extract", "counter"],
+                summary=f"Cadre Dung (fallback Python): {_n_args} arguments. Extension fondée calculée heuristiquement.",
+            )
+        return _fallback_result
 
 
 def _python_dung_fallback(
