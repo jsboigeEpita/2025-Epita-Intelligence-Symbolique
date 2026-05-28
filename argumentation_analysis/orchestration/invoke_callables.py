@@ -4316,23 +4316,21 @@ async def _invoke_propositional_logic(
                             )
                             state_obj.atomic_propositions[source_id] = shared_atoms
 
-                    # ── Pass 2: Batched per-argument formula generation (#729 Track XX) ──
+                    # ── Pass 2: Parallel batched formula generation (#729 Track XX) ──
                     if shared_atoms and args:
                         atoms_json = _json.dumps(
                             {"propositions": shared_atoms}, indent=2
                         )
                         _pl_batch_size = 3
                         _pl_targets = args[:10]
-                        for _bi in range(0, len(_pl_targets), _pl_batch_size):
-                            _batch = _pl_targets[_bi:_bi + _pl_batch_size]
+
+                        async def _pl_batch_coro(_batch: list) -> list:
                             if len(_batch) == 1:
                                 _texts_block = f"Text:\n{_batch[0][:2000]}"
                             else:
-                                _parts = []
-                                for _i, _a in enumerate(_batch):
-                                    _parts.append(f"Text {_i+1}:\n{_a[:1500]}")
+                                _parts = [f"Text {_i+1}:\n{_a[:1500]}" for _i, _a in enumerate(_batch)]
                                 _texts_block = "\n\n".join(_parts)
-                            pass2_prompt = (
+                            _prompt = (
                                 "You are an expert in propositional logic. Translate the "
                                 f"{'texts' if len(_batch) > 1 else 'text'} below into logical "
                                 "formulas using ONLY the provided atomic propositions.\n\n"
@@ -4344,25 +4342,28 @@ async def _invoke_propositional_logic(
                                 f"{_texts_block}\n\n"
                                 f"Allowed propositions:\n{atoms_json}"
                             )
-                            try:
-                                pass2_resp = await _guarded_chat_completion(
-                                    client,
-                                    model=model_id,
-                                    messages=[
-                                        {"role": "user", "content": pass2_prompt}
-                                    ],
-                                    **det_params,
-                                )
-                                pass2_raw = pass2_resp.choices[0].message.content or ""
-                                formulas_data = _parse_json_from_llm(pass2_raw)
-                                arg_formulas = formulas_data.get("formulas", [])
-                                for f in arg_formulas:
-                                    if f and f not in formulas:
-                                        formulas.append(f)
-                                        _src = _batch[0][:60]
-                                        argument_mapping[f[:30]] = _src
-                            except Exception as arg_err:
-                                logger.debug(f"Pass 2 batch {_bi//_pl_batch_size} failed: {arg_err}")
+                            _resp = await _guarded_chat_completion(
+                                client, model=model_id,
+                                messages=[{"role": "user", "content": _prompt}],
+                                **det_params,
+                            )
+                            _raw = _resp.choices[0].message.content or ""
+                            return _parse_json_from_llm(_raw).get("formulas", [])
+
+                        _pl_coros = [
+                            _pl_batch_coro(_pl_targets[_bi:_bi + _pl_batch_size])
+                            for _bi in range(0, len(_pl_targets), _pl_batch_size)
+                        ]
+                        _pl_results = await asyncio.gather(*_pl_coros, return_exceptions=True)
+                        for _idx, _res in enumerate(_pl_results):
+                            if isinstance(_res, Exception):
+                                logger.debug(f"PL Pass 2 batch {_idx} failed: {_res}")
+                                continue
+                            for f in _res:
+                                if f and f not in formulas:
+                                    formulas.append(f)
+                                    _src = _pl_targets[_idx * _pl_batch_size][:60]
+                                    argument_mapping[f[:30]] = _src
 
                         if formulas:
                             pl_metrics["pass2_candidates"] = len(formulas)
@@ -4709,21 +4710,19 @@ async def _invoke_fol_reasoning(
                                 fol_metadata_shared
                             )
 
-                        # ── Pass 2: Batched per-argument FOL formula generation (#729) ──
+                        # ── Pass 2: Parallel batched FOL formula generation (#729) ──
                         if args:
                             sig_json = json.dumps(sig_data, indent=2)
                             _fol_batch_size = 3
                             _fol_targets = args[:10]
-                            for _bi in range(0, len(_fol_targets), _fol_batch_size):
-                                _batch = _fol_targets[_bi:_bi + _fol_batch_size]
+
+                            async def _fol_batch_coro(_batch: list) -> list:
                                 if len(_batch) == 1:
                                     _texts_block = f"Text:\n{_batch[0][:2000]}"
                                 else:
-                                    _parts = []
-                                    for _i, _a in enumerate(_batch):
-                                        _parts.append(f"Text {_i+1}:\n{_a[:1500]}")
+                                    _parts = [f"Text {_i+1}:\n{_a[:1500]}" for _i, _a in enumerate(_batch)]
                                     _texts_block = "\n\n".join(_parts)
-                                pass2_prompt = (
+                                _prompt = (
                                     "You are a formal logic expert. Translate the "
                                     f"{'texts' if len(_batch) > 1 else 'text'} below into "
                                     "first-order logic formulas using ONLY the "
@@ -4737,28 +4736,27 @@ async def _invoke_fol_reasoning(
                                     f"{_texts_block}\n\n"
                                     f"Signature:\n{sig_json}"
                                 )
-                                try:
-                                    pass2_resp = await _guarded_chat_completion(
-                                        client,
-                                        model=model_id,
-                                        messages=[
-                                            {"role": "user", "content": pass2_prompt}
-                                        ],
-                                        **det_params,
-                                    )
-                                    pass2_raw = (
-                                        pass2_resp.choices[0].message.content or ""
-                                    )
-                                    formulas_data = _parse_json_from_llm(pass2_raw)
-                                    arg_formulas = formulas_data.get("formulas", [])
-                                    for f in arg_formulas:
-                                        f = f.strip()
-                                        if f and f not in formulas:
-                                            formulas.append(f)
-                                except Exception as arg_err:
-                                    logger.debug(
-                                        f"FOL Pass 2 batch {_bi//_fol_batch_size} failed: {arg_err}"
-                                    )
+                                _resp = await _guarded_chat_completion(
+                                    client, model=model_id,
+                                    messages=[{"role": "user", "content": _prompt}],
+                                    **det_params,
+                                )
+                                _raw = _resp.choices[0].message.content or ""
+                                return _parse_json_from_llm(_raw).get("formulas", [])
+
+                            _fol_coros = [
+                                _fol_batch_coro(_fol_targets[_bi:_bi + _fol_batch_size])
+                                for _bi in range(0, len(_fol_targets), _fol_batch_size)
+                            ]
+                            _fol_results = await asyncio.gather(*_fol_coros, return_exceptions=True)
+                            for _idx, _res in enumerate(_fol_results):
+                                if isinstance(_res, Exception):
+                                    logger.debug(f"FOL Pass 2 batch {_idx} failed: {_res}")
+                                    continue
+                                for f in _res:
+                                    f = f.strip() if isinstance(f, str) else str(f).strip()
+                                    if f and f not in formulas:
+                                        formulas.append(f)
 
                             if formulas:
                                 fol_metrics["pass2_candidates"] = len(formulas)
