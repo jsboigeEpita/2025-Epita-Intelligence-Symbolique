@@ -15,8 +15,8 @@ from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
 
 # Import du pipeline unifié et des utilitaires
-from argumentation_analysis.utils.unified_pipeline import UnifiedAnalysisPipeline
-from argumentation_analysis.utils.unified_pipeline import (
+from argumentation_analysis.utils.analysis_config import UnifiedAnalysisPipeline
+from argumentation_analysis.utils.analysis_config import (
     AnalysisConfig,
     AnalysisMode,
     SourceType,

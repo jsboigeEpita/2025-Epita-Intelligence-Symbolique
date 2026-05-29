@@ -1,5 +1,5 @@
 import pytest
-from argumentation_analysis.utils.unified_pipeline import (
+from argumentation_analysis.utils.analysis_config import (
     UnifiedAnalysisPipeline,
     AnalysisConfig,
     AnalysisMode,

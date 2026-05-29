@@ -155,7 +155,7 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
         bool: True si l'analyse a réussi
     """
     try:
-        from argumentation_analysis.utils.unified_pipeline import (
+        from argumentation_analysis.utils.analysis_config import (
             UnifiedAnalysisPipeline,
             AnalysisConfig,
             AnalysisMode,

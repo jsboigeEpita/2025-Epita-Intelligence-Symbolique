@@ -106,7 +106,7 @@ def test_generate_json_report_calls_save_json_report(
     """Teste que generate_json_report appelle save_json_report."""
     output_file = tmp_path / "generated_report.json"
     mock_save_json = mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_json_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_json_report",
         return_value=True,
     )
 
@@ -121,7 +121,7 @@ def test_generate_json_report_logs_error_on_save_failure(
     """Teste que generate_json_report logue une erreur si save_json_report échoue."""
     output_file = tmp_path / "gen_report_fail.json"
     mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_json_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_json_report",
         return_value=False,
     )
 
@@ -157,7 +157,7 @@ def test_generate_specific_rhetorical_markdown_report_success(
     """Teste la génération réussie d'un rapport Markdown rhétorique."""
     output_file = tmp_path / "rhetorical_report.md"
     mock_save_text = mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_text_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_text_report",
         return_value=True,
     )
 
@@ -185,7 +185,7 @@ def test_generate_specific_rhetorical_markdown_report_empty_analysis(tmp_path, m
     """Teste la génération avec des résultats d'analyse vides ou sans analyse."""
     output_file = tmp_path / "empty_rhetoric.md"
     mock_save_text = mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_text_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_text_report",
         return_value=True,
     )
     empty_results = [
@@ -214,7 +214,7 @@ def test_generate_specific_rhetorical_markdown_report_save_fails(
     """Teste le log d'erreur si la sauvegarde du rapport rhétorique échoue."""
     output_file = tmp_path / "rhetoric_save_fail.md"
     mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_text_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_text_report",
         return_value=False,
     )
     generate_specific_rhetorical_markdown_report(sample_analysis_results, output_file)
@@ -354,7 +354,7 @@ def test_generate_performance_comparison_markdown_report_runs(tmp_path, mocker):
     """Teste que la fonction de comparaison de performance s'exécute et appelle save_text_report."""
     output_file = tmp_path / "perf_compare_report.md"
     mock_save_text = mocker.patch(
-        "argumentation_analysis.utils.core_utils.reporting_utils.save_text_report",
+        "argumentation_analysis.core.utils.reporting_utils.save_text_report",
         return_value=True,
     )
 

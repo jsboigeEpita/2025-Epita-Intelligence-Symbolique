@@ -24,7 +24,7 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from argumentation_analysis.utils.unified_pipeline import (
+from argumentation_analysis.utils.analysis_config import (
     UnifiedAnalysisPipeline,
     AnalysisConfig,
     AnalysisResult,

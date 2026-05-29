@@ -18,8 +18,8 @@ from dotenv import load_dotenv
 
 # Import des systèmes de reporting existants
 from argumentation_analysis.reporting.real_time_trace_analyzer import RealToolCall
-from argumentation_analysis.utils.unified_pipeline import UnifiedAnalysisPipeline
-from argumentation_analysis.utils.unified_pipeline import (
+from argumentation_analysis.utils.analysis_config import UnifiedAnalysisPipeline
+from argumentation_analysis.utils.analysis_config import (
     AnalysisConfig,
     AnalysisMode,
     SourceType,
