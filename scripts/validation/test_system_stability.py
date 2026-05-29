@@ -13,18 +13,17 @@ def test_core_modules():
         from argumentation_analysis.agents.core.logic.fol_logic_agent import (
             FOLLogicAgent,
         )
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealLLMOrchestrator,
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
         )
 
         # Instantiation des modules core
         fol_agent = FOLLogicAgent()
-        llm_orch = RealLLMOrchestrator()
 
         return {
             "success": True,
             "fol_agent_type": str(type(fol_agent)),
-            "llm_orch_type": str(type(llm_orch)),
+            "unified_pipeline_available": callable(run_unified_analysis),
         }
     except Exception as e:
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}

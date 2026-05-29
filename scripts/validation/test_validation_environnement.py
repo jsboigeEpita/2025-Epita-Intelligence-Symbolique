@@ -41,7 +41,7 @@ for dir_path in required_dirs:
 critical_files = [
     "argumentation_analysis/__init__.py",
     "argumentation_analysis/agents/core/logic/fol_logic_agent.py",
-    "argumentation_analysis/orchestration/real_llm_orchestrator.py",
+    "argumentation_analysis/orchestration/unified_pipeline.py",
     "config/__init__.py",
     "setup.py",
     ".env",
@@ -64,8 +64,8 @@ modules_score = 0
 critical_modules = [
     ("FOLLogicAgent", "argumentation_analysis.agents.core.logic.fol_logic_agent"),
     (
-        "RealLLMOrchestrator",
-        "argumentation_analysis.orchestration.real_llm_orchestrator",
+        "run_unified_analysis",
+        "argumentation_analysis.orchestration.unified_pipeline",
     ),
 ]
 

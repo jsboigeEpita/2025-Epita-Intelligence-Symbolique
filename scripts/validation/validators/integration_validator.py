@@ -35,7 +35,7 @@ async def validate_integration(
         # Test handoff conversation -> LLM
         if available_components.get(
             "conversation_orchestrator", False
-        ) and available_components.get("real_llm_orchestrator", False):
+        ) and available_components.get("unified_pipeline", False):
             integration_results["handoff_tests"] = await _test_orchestrator_handoff(
                 test_texts
             )
@@ -74,11 +74,11 @@ async def _test_orchestrator_handoff(test_texts: list) -> Dict[str, Any]:
         from argumentation_analysis.orchestration.conversation_orchestrator import (
             ConversationOrchestrator,
         )
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealLLMOrchestrator,
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
         )
 
-        logger.info("  Test handoff ConversationOrchestrator -> RealLLMOrchestrator...")
+        logger.info("  Test handoff ConversationOrchestrator -> UnifiedPipeline...")
         conv_orch = ConversationOrchestrator(mode="demo")
         conv_result = conv_orch.run_orchestration(
             test_texts[0] if test_texts else "Test handoff input"
@@ -88,29 +88,27 @@ async def _test_orchestrator_handoff(test_texts: list) -> Dict[str, Any]:
             logger.info(
                 f"    ConversationOrchestrator output: {conv_result[:100]}..."
             )  # Log tronqué
-            llm_orch = RealLLMOrchestrator(mode="real")
-            # Assurez-vous que run_real_llm_orchestration est une coroutine si vous l'attendez
-            llm_result = await llm_orch.run_real_llm_orchestration(conv_result)
+            pipeline_result = await run_unified_analysis(conv_result, workflow_name="standard")
 
-            if isinstance(llm_result, dict):
+            if isinstance(pipeline_result, dict):
                 results["status"] = "success"
-                results["details"]["conv_to_llm"] = "OK"
-                logger.info("    ✓ Handoff Conversation vers LLM réussi.")
+                results["details"]["conv_to_pipeline"] = "OK"
+                logger.info("    ✓ Handoff Conversation vers UnifiedPipeline réussi.")
             else:
                 results["status"] = "failed"
                 results["details"][
-                    "conv_to_llm"
-                ] = f"Format LLM invalide: {type(llm_result)}"
+                    "conv_to_pipeline"
+                ] = f"Format pipeline invalide: {type(pipeline_result)}"
                 logger.error(
-                    f"    ✗ Handoff Conversation vers LLM échoué: Format LLM invalide ({type(llm_result)})"
+                    f"    ✗ Handoff Conversation vers UnifiedPipeline échoué: Format invalide ({type(pipeline_result)})"
                 )
         else:
             results["status"] = "failed"
             results["details"][
-                "conv_to_llm"
+                "conv_to_pipeline"
             ] = f"Format conversation invalide ou vide: {type(conv_result)}"
             logger.error(
-                f"    ✗ Handoff Conversation vers LLM échoué: Format conversation invalide ({type(conv_result)})"
+                f"    ✗ Handoff Conversation vers UnifiedPipeline échoué: Format conversation invalide ({type(conv_result)})"
             )
 
     except ImportError:

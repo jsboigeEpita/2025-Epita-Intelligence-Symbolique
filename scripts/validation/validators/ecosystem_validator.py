@@ -174,15 +174,15 @@ async def _validate_orchestration_modes(
         },
     }
 
-    if available_components.get("real_llm_orchestrator", False):
-        orchestration_tests["real_llm_import"] = {
+    if available_components.get("unified_pipeline", False):
+        orchestration_tests["unified_pipeline_import"] = {
             "status": "✅ OK",
-            "description": "Import RealLLMOrchestrator",
+            "description": "Import UnifiedPipeline (run_unified_analysis)",
         }
     else:
-        orchestration_tests["real_llm_import"] = {
+        orchestration_tests["unified_pipeline_import"] = {
             "status": "❌ Indisponible",
-            "description": "RealLLMOrchestrator non disponible",
+            "description": "UnifiedPipeline non disponible",
         }
 
     if available_components.get("conversation_orchestrator", False):

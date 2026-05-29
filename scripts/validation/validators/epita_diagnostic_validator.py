@@ -119,7 +119,7 @@ def diagnostiquer_problemes_dependances() -> Dict[str, Any]:
             "impact": "Empêche l'exécution du système unifié principal",
             "solution_recommandee": "pip install semantic-kernel[agents] ou mise à jour des imports",
             "composants_affectes": [
-                "RealLLMOrchestrator",
+                "UnifiedPipeline (run_unified_analysis)",
                 "ConversationOrchestrator",
                 "cluedo_extended_orchestrator",
             ],

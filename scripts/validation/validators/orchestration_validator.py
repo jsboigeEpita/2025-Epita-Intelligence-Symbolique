@@ -29,7 +29,7 @@ async def validate_orchestration(
 
     orchestration_results = {
         "conversation_orchestrator": {},
-        "real_llm_orchestrator": {},
+        "unified_pipeline": {},
         "integration_tests": {},  # Peut-être à déplacer dans integration_validator
         "performance_metrics": {},  # Peut-être à déplacer dans performance_validator
         "errors": [],
@@ -47,15 +47,15 @@ async def validate_orchestration(
                 "reason": "Module ConversationOrchestrator non disponible",
             }
 
-        # Test RealLLMOrchestrator
-        if available_components.get("real_llm_orchestrator", False):
-            orchestration_results["real_llm_orchestrator"] = (
-                await _test_real_llm_orchestrator(test_texts)
+        # Test UnifiedPipeline
+        if available_components.get("unified_pipeline", False):
+            orchestration_results["unified_pipeline"] = (
+                await _test_unified_pipeline(test_texts)
             )
         else:
-            orchestration_results["real_llm_orchestrator"] = {
+            orchestration_results["unified_pipeline"] = {
                 "status": "unavailable",
-                "reason": "Module RealLLMOrchestrator non disponible",
+                "reason": "Module unified_pipeline non disponible",
             }
 
     except Exception as e:
@@ -123,8 +123,8 @@ async def _test_conversation_orchestrator(test_texts: List[str]) -> Dict[str, An
     return results
 
 
-async def _test_real_llm_orchestrator(test_texts: List[str]) -> Dict[str, Any]:
-    """Tests the RealLLMOrchestrator."""
+async def _test_unified_pipeline(test_texts: List[str]) -> Dict[str, Any]:
+    """Tests the UnifiedPipeline (run_unified_analysis)."""
     results = {
         "status": "unknown",
         "initialization": False,
@@ -134,54 +134,43 @@ async def _test_real_llm_orchestrator(test_texts: List[str]) -> Dict[str, Any]:
     }
 
     try:
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealLLMOrchestrator,
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
         )
 
-        orchestrator = RealLLMOrchestrator(
-            mode="real"
-        )  # Mode est souvent 'real' ou similaire
-
-        logger.info("  Test RealLLMOrchestrator initialisation...")
+        logger.info("  Test UnifiedPipeline (run_unified_analysis)...")
         start_time = time.time()
 
-        if hasattr(orchestrator, "initialize"):
-            init_success = (
-                await orchestrator.initialize()
-            )  # Assurez-vous que c'est une coroutine si await est utilisé
-            results["initialization"] = init_success
-        else:
-            results["initialization"] = True  # Pas d'initialisation explicite requise
+        # Test d'import — l'initialisation est automatique dans run_unified_analysis
+        results["initialization"] = callable(run_unified_analysis)
 
         init_time = time.time() - start_time
         results["performance"]["initialization"] = init_time
 
         if results["initialization"]:
-            logger.info(f"    ✓ Initialisation: {init_time:.2f}s")
+            logger.info(f"    ✓ Import: {init_time:.2f}s")
 
-            logger.info("  Test RealLLMOrchestrator orchestration...")
+            logger.info("  Test UnifiedPipeline orchestration...")
             start_time = time.time()
 
             # Utilise le deuxième texte de test fourni, ou un texte par défaut
             test_input = (
                 test_texts[1]
                 if len(test_texts) > 1
-                else "Default test text for RealLLM"
+                else "Default test text for UnifiedPipeline"
             )
-            result = await orchestrator.run_real_llm_orchestration(test_input)
+            result = await run_unified_analysis(test_input, workflow_name="standard")
 
             orch_time = time.time() - start_time
             results["performance"]["orchestration"] = orch_time
 
-            if isinstance(result, dict) and (
-                "status" in result or "analysis" in result
-            ):
+            if isinstance(result, dict) and "summary" in result:
                 results["orchestration"] = True
                 logger.info(f"    ✓ Orchestration: {orch_time:.2f}s")
             else:
                 raise ValueError(f"Résultat d'orchestration invalide: {result}")
         else:
-            logger.error("    ✗ Échec initialisation RealLLMOrchestrator")
+            logger.error("    ✗ Échec import UnifiedPipeline")
 
         if results["initialization"] and results["orchestration"]:
             results["status"] = "success"
@@ -190,11 +179,11 @@ async def _test_real_llm_orchestrator(test_texts: List[str]) -> Dict[str, Any]:
 
     except ImportError:
         results["status"] = "failed"
-        results["errors"].append("Impossible d'importer RealLLMOrchestrator")
-        logger.error("✗ Erreur Import RealLLMOrchestrator")
+        results["errors"].append("Impossible d'importer run_unified_analysis")
+        logger.error("✗ Erreur Import UnifiedPipeline")
     except Exception as e:
         results["status"] = "failed"
-        results["errors"].append(f"Erreur générale RealLLMOrchestrator: {str(e)}")
-        logger.error(f"✗ Erreur générale RealLLMOrchestrator: {e}", exc_info=True)
+        results["errors"].append(f"Erreur générale UnifiedPipeline: {str(e)}")
+        logger.error(f"✗ Erreur générale UnifiedPipeline: {e}", exc_info=True)
 
     return results

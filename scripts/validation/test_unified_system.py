@@ -17,8 +17,8 @@ from argumentation_analysis.pipelines.unified_text_analysis import (
 from argumentation_analysis.orchestration.conversation_orchestrator import (
     ConversationOrchestrator,
 )
-from argumentation_analysis.orchestration.real_llm_orchestrator import (
-    RealLLMOrchestrator,
+from argumentation_analysis.orchestration.unified_pipeline import (
+    run_unified_analysis,
 )
 
 
@@ -84,27 +84,23 @@ def test_conversation_orchestrator():
         return False
 
 
-async def test_real_llm_orchestrator():
-    """Test de l'orchestrateur LLM réel."""
-    print("[TEST] Orchestrateur LLM réel...")
+async def test_unified_pipeline_analysis():
+    """Test de l'analyse via le pipeline unifié."""
+    print("[TEST] Analyse via pipeline unifié (run_unified_analysis)...")
 
     try:
-        orchestrator = RealLLMOrchestrator(mode="real")
-        await orchestrator.initialize()
-
         text = "La rhétorique aristotélicienne distingue ethos, pathos et logos."
-        result = await orchestrator.orchestrate_analysis(text)
+        result = await run_unified_analysis(text, workflow_name="standard")
 
-        print(f"[OK] Orchestrateur LLM réel - Analyse terminée")
-        print(f"     Temps: {result['processing_time_ms']:.1f}ms")
-        print(
-            f"     Messages: {len(result.get('conversation_log', {}).get('messages', []))}"
-        )
+        summary = result.get("summary", {})
+        print(f"[OK] Pipeline unifié - Analyse terminée")
+        print(f"     Phases complétées: {summary.get('completed', 0)}/{summary.get('total', 0)}")
+        print(f"     Capacités utilisées: {len(result.get('capabilities_used', []))}")
 
         return True
 
     except Exception as e:
-        print(f"[ERROR] Orchestrateur LLM réel: {e}")
+        print(f"[ERROR] Pipeline unifié: {e}")
         return False
 
 
@@ -128,8 +124,8 @@ async def main():
     results.append(test_conversation_orchestrator())
     print()
 
-    # Test 3: Orchestrateur LLM réel
-    results.append(await test_real_llm_orchestrator())
+    # Test 3: Analyse via pipeline unifié
+    results.append(await test_unified_pipeline_analysis())
     print()
 
     # Résumé
@@ -140,7 +136,7 @@ async def main():
     tests = [
         "Pipeline unifié",
         "Orchestrateur conversationnel",
-        "Orchestrateur LLM réel",
+        "Analyse pipeline unifié",
     ]
 
     passed = sum(results)

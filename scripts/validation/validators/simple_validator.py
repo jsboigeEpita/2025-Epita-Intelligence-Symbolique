@@ -72,15 +72,15 @@ async def validate_simple(
         # Test import orchestrateurs
         if available_components.get(
             "conversation_orchestrator", False
-        ) or available_components.get("real_llm_orchestrator", False):
+        ) or available_components.get("unified_pipeline", False):
             try:
                 if available_components.get("conversation_orchestrator", False):
                     from argumentation_analysis.orchestration.conversation_orchestrator import (
                         ConversationOrchestrator,
                     )
-                if available_components.get("real_llm_orchestrator", False):
-                    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                        RealLLMOrchestrator,
+                if available_components.get("unified_pipeline", False):
+                    from argumentation_analysis.orchestration.unified_pipeline import (
+                        run_unified_analysis,
                     )
                 basic_tests_results["import_orchestrators"]["status"] = "success"
                 logger.info("  ✓ Test import Orchestrators: Réussi")

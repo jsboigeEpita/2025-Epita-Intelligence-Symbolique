@@ -101,8 +101,8 @@ class OrchestrationValidator:
             from argumentation_analysis.orchestration.cluedo_orchestrator import (
                 CluedoOrchestrator,
             )
-            from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                RealLLMOrchestrator,
+            from argumentation_analysis.orchestration.unified_pipeline import (
+                run_unified_analysis,
             )
 
             self.log_test_result(
@@ -110,7 +110,7 @@ class OrchestrationValidator:
                 True,
                 {
                     "imported_modules": 6,
-                    "core_orchestrators": ["CluedoExtended", "CluedoBasic", "RealLLM"],
+                    "core_orchestrators": ["CluedoExtended", "CluedoBasic", "UnifiedPipeline"],
                     "strategies": ["CyclicSelection", "OracleTermination"],
                 },
             )

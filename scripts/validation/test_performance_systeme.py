@@ -20,8 +20,8 @@ try:
     # Import et initialisation des modules critiques
     start_import = time.time()
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
     )
 
     end_import = time.time()
@@ -29,7 +29,7 @@ try:
     # Initialisation
     start_init = time.time()
     fol_agent = FOLLogicAgent()
-    orchestrator = RealLLMOrchestrator()
+    orchestrator_available = callable(run_unified_analysis)
     end_init = time.time()
 
     # Mesure mémoire après

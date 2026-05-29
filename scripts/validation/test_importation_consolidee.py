@@ -40,13 +40,13 @@ def test_critical_imports():
         print(f"❌ generate_unified_report: {e}")
 
     try:
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealLLMOrchestrator,
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
         )
 
-        print("✅ RealLLMOrchestrator importé (39286 bytes)")
+        print("✅ run_unified_analysis importé")
     except Exception as e:
-        print(f"❌ RealLLMOrchestrator: {e}")
+        print(f"❌ run_unified_analysis: {e}")
 
     try:
         from config.unified_config import UnifiedConfig
@@ -152,14 +152,14 @@ def test_critical_imports():
 
     try:
         # Test création d'un orchestrateur
-        from argumentation_analysis.orchestration.real_llm_orchestrator import (
-            RealLLMOrchestrator,
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
         )
 
-        orchestrator = RealLLMOrchestrator()
-        print("✅ RealLLMOrchestrator instancié avec succès")
+        registry = setup_registry()
+        print(f"✅ setup_registry instancié avec succès ({len(registry._agents)} agents)")
     except Exception as e:
-        print(f"❌ Instanciation RealLLMOrchestrator: {e}")
+        print(f"❌ Instanciation setup_registry: {e}")
 
     print("\n=== RÉCUPÉRATION SYSTÈME UNIVERSEL VALIDÉE ===")
     print("✅ 553 fichiers Python récupérés")
