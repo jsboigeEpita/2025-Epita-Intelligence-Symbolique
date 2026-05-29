@@ -285,6 +285,14 @@ def llm_budget_scope(ceiling: Optional[int] = None) -> Iterator["_LLMBudget"]:
         _llm_budget.reset(token)
 
 
+# Defense-in-depth (#730-bis): hard per-call wall-clock cap so a single stalled
+# network round-trip cannot hang an entire analysis run. Observed live: the
+# conversational-spectacular path hung ~50 min on one unbounded call. Generous
+# default (300s) — far above a legitimate reasoning-model call (<2 min) but well
+# below a pathological hang. Set LLM_CALL_TIMEOUT_S=0 to disable.
+_LLM_CALL_TIMEOUT_S = float(os.environ.get("LLM_CALL_TIMEOUT_S", "300"))
+
+
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
     """Single funnel for every LLM chat-completion call (#708 runaway guard).
 
@@ -294,6 +302,11 @@ async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
     counter sweep) cannot run away into thousands of round-trips. Inert when no
     budget scope is active, so a direct unit-test call of a single callable is
     unaffected.
+
+    Each call is also bounded by ``_LLM_CALL_TIMEOUT_S`` (#730-bis): on a stalled
+    round-trip an ``asyncio.TimeoutError`` propagates and is handled by the
+    callers' existing ``except`` blocks (batch dropped / coverage retry) instead
+    of hanging the whole run.
     """
     budget = _llm_budget.get()
     if budget is not None:
@@ -304,6 +317,11 @@ async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
                 f"({budget.count} > {budget.ceiling}) in a single analysis run "
                 f"— runaway guard (issue #708)."
             )
+    if _LLM_CALL_TIMEOUT_S > 0:
+        return await asyncio.wait_for(
+            client.chat.completions.create(**kwargs),
+            timeout=_LLM_CALL_TIMEOUT_S,
+        )
     return await client.chat.completions.create(**kwargs)
 
 

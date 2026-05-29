@@ -240,3 +240,36 @@ class TestExecutorActivatesBudget:
 
         assert results["p"].status == PhaseStatus.FAILED
         assert "runaway" in (results["p"].error or "")
+
+
+class TestLLMCallTimeoutGuard:
+    """#730-bis: a stalled chat-completion call is bounded by _LLM_CALL_TIMEOUT_S.
+
+    Live-observed failure: the conversational-spectacular path hung ~50 min on a
+    single unbounded round-trip. The funnel now wraps the call in
+    asyncio.wait_for so one stalled call raises TimeoutError (handled by callers)
+    instead of hanging the whole run.
+    """
+
+    async def test_stalled_call_times_out(self):
+        async def slow_create(**kwargs):
+            await asyncio.sleep(5.0)
+            return MagicMock()
+
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=slow_create)
+        with patch.object(mod, "_LLM_CALL_TIMEOUT_S", 0.05):
+            with pytest.raises(asyncio.TimeoutError):
+                await _guarded_chat_completion(client, model="m", messages=[])
+
+    async def test_fast_call_returns_normally(self):
+        client = _counting_client()
+        with patch.object(mod, "_LLM_CALL_TIMEOUT_S", 5.0):
+            resp = await _guarded_chat_completion(client, model="m", messages=[])
+        assert resp.choices[0].message.content == "[]"
+
+    async def test_disabled_timeout_does_not_wrap(self):
+        client = _counting_client()
+        with patch.object(mod, "_LLM_CALL_TIMEOUT_S", 0):
+            resp = await _guarded_chat_completion(client, model="m", messages=[])
+        assert resp.choices[0].message.content == "[]"
