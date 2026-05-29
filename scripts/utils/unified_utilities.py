@@ -156,7 +156,7 @@ class UnifiedCorpusManager:
     def _load_crypto_utils(self):
         """Charge les utilitaires de chiffrement avec fallback."""
         try:
-            from argumentation_analysis.utils.core_utils.crypto_utils import (
+            from argumentation_analysis.core.utils.crypto_utils import (
                 load_encryption_key,
                 decrypt_data_with_fernet,
                 encrypt_data_with_fernet,

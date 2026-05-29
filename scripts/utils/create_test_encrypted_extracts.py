@@ -26,7 +26,7 @@ from typing import Dict, List, Any
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 try:
-    from argumentation_analysis.utils.core_utils.crypto_utils import (
+    from argumentation_analysis.core.utils.crypto_utils import (
         load_encryption_key,
         encrypt_data_with_fernet,
     )

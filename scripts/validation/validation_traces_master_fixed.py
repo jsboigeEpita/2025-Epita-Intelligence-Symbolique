@@ -61,7 +61,7 @@ from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
     WatsonLogicAssistant,
 )
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 
 class MasterTraceValidator:

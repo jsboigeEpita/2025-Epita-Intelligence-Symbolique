@@ -36,7 +36,7 @@ sys.path.insert(0, str(project_root))
 from argumentation_analysis.utils.dev_tools.repair_utils import (
     run_extract_repair_pipeline,
 )
-from argumentation_analysis.utils.core_utils.cli_utils import (
+from argumentation_analysis.core.utils.cli_utils import (
     parse_extract_repair_arguments,
 )
 

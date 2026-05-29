@@ -71,8 +71,8 @@ if str(project_root_path_comprehensive) not in sys.path:
     sys.path.insert(0, str(project_root_path_comprehensive))
 
 # Imports des utilitaires et du pipeline
-# from argumentation_analysis.utils.core_utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html # Utilisé par le pipeline
-# from argumentation_analysis.utils.core_utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown # Utilisé par le pipeline
+# from argumentation_analysis.core.utils.file_utils import load_json_file, load_text_file, load_csv_file, save_markdown_to_html # Utilisé par le pipeline
+# from argumentation_analysis.core.utils.reporting_utils import generate_markdown_report_for_corpus, generate_overall_summary_markdown # Utilisé par le pipeline
 from argumentation_analysis.utils.data_processing_utils import (
     group_results_by_corpus,
 )  # Utilisé par le pipeline

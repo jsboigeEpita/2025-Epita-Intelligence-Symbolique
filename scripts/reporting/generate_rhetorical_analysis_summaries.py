@@ -41,7 +41,7 @@ from datetime import (
 from argumentation_analysis.reporting.summary_generator import (
     run_summary_generation_pipeline,
 )
-from argumentation_analysis.utils.core_utils.cli_utils import (
+from argumentation_analysis.core.utils.cli_utils import (
     parse_summary_generation_arguments,
 )
 

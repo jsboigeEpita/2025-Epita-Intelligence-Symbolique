@@ -9,7 +9,7 @@ project_root = os.path.abspath(os.path.join(current_dir, "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key
+from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 
 
 def create_encrypted_config():

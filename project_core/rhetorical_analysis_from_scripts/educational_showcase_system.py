@@ -96,7 +96,7 @@ try:
     )
     from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from argumentation_analysis.utils.core_utils.crypto_utils import (
+    from argumentation_analysis.core.utils.crypto_utils import (
         load_encryption_key,
         decrypt_data_with_fernet,
     )

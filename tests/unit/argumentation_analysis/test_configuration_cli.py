@@ -25,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from argumentation_analysis.utils.core_utils.cli_utils import (
+    from argumentation_analysis.core.utils.cli_utils import (
         parse_extended_args,
         validate_cli_args,
         get_default_cli_config,
