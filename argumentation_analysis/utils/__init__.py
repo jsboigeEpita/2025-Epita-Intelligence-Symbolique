@@ -27,7 +27,11 @@ from . import system_utils
 from . import taxonomy_loader
 from . import text_processing
 from . import tweety_error_analyzer
-from . import unified_pipeline
+# `unified_pipeline` is an archived shim (deprecated 2026-03-24, #217). It is
+# still importable via its explicit path for back-compat, but auto-importing
+# it here fires DeprecationWarning on every `argumentation_analysis.utils`
+# import. Direct callers were migrated to `analysis_config` — see commit
+# f0b8e91d.
 from . import update_encrypted_config
 from . import version_validator
 from . import visualization_generator
@@ -63,7 +67,6 @@ __all__ = [
     "taxonomy_loader",
     "text_processing",
     "tweety_error_analyzer",
-    "unified_pipeline",
     "update_encrypted_config",
     "version_validator",
     "visualization_generator",
