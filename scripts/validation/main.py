@@ -322,7 +322,7 @@ class UnifiedValidationSystem:
     # _validate_configuration_coherence, _validate_ecosystem, _validate_source_management,
     # _validate_orchestration_modes, _validate_verbosity_levels, _validate_output_formats,
     # _validate_cli_interface, _validate_orchestration, _test_conversation_orchestrator,
-    # _test_real_llm_orchestrator, _validate_integration, _test_orchestrator_handoff,  # noqa: E501 — legacy comment, RealLLMOrchestrator retired
+    # _test_real_llm_orchestrator, _validate_integration, _test_orchestrator_handoff,  # noqa: E501 — legacy method retired (migrated to UnifiedPipeline)
     # _test_config_mapping, _validate_performance, _benchmark_orchestration,
     # _benchmark_throughput, et _validate_simple SONT SUPPRIMÉES ICI.
     # Leur logique est maintenant dans les modules validateurs séparés.

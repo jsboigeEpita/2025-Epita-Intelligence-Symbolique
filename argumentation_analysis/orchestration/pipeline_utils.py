@@ -8,7 +8,7 @@ Utility classes and functions to enhance UnifiedPipeline with:
 - Structured metrics collection
 - Batch analysis with concurrency control
 
-Issue #215: Feature parity with archived RealLLMOrchestrator
+Issue #215: Pipeline utilities for caching, metrics, and batch processing
 """
 
 import asyncio
@@ -48,7 +48,7 @@ class AnalysisCache:
     """
     TTL-based cache for analysis results.
 
-    Provides caching similar to the archived RealLLMOrchestrator's cache
+    Provides TTL-based caching for pipeline analysis results
     with configurable TTL and automatic cleanup.
 
     Usage:
@@ -195,8 +195,8 @@ class PipelineMetrics:
     """
     Structured metrics collector for pipeline analysis.
 
-    Replaces the basic metrics dict from archived RealLLMOrchestrator with
-    a more comprehensive tracking system.
+    Structured metrics collector for pipeline analysis with
+    comprehensive tracking and per-type breakdowns.
 
     Usage:
         metrics = PipelineMetrics()
@@ -417,7 +417,7 @@ async def run_batch_analysis(
     """
     Run multiple analyses concurrently with semaphore control.
 
-    Replicates the batch_analyze functionality from archived RealLLMOrchestrator.
+    Batch analysis with concurrency control, caching, and metrics tracking.
 
     Args:
         requests: List of analysis requests
