@@ -65,8 +65,10 @@ from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.paths import LIBS_DIR
 
 # Imports des orchestrateurs refactorisés
+from argumentation_analysis.orchestration.unified_pipeline import (
+    run_unified_analysis,
+)
 from argumentation_analysis.orchestration.real_llm_orchestrator import (
-    RealLLMOrchestrator,
     RealConversationLogger,
 )
 from argumentation_analysis.orchestration.conversation_orchestrator import (
@@ -213,12 +215,9 @@ class UnifiedTextAnalysisPipeline:
     async def _initialize_orchestrator(self):
         """Initialise l'orchestrateur selon le mode de configuration."""
         if self.config.orchestration_mode == "real" and self.llm_service:
-            logger.info("[ORCH] Initialisation orchestrateur LLM reel...")
-            self.orchestrator = RealLLMOrchestrator(
-                mode="real", llm_service=self.llm_service
-            )
-            await self.orchestrator.initialize()
-            logger.info("[ORCH] Orchestrateur LLM reel initialise")
+            logger.info("[ORCH] Mode real → utilisation de run_unified_analysis (no-instance)")
+            self.orchestrator = None  # run_unified_analysis is a function, not a class
+            logger.info("[ORCH] run_unified_analysis prêt (appel direct dans _perform_orchestration_analysis)")
 
         elif self.config.orchestration_mode == "conversation":
             logger.info("[ORCH] Initialisation orchestrateur conversationnel...")
@@ -547,14 +546,30 @@ class UnifiedTextAnalysisPipeline:
             "conversation_summary": {},
         }
 
-        if not self.orchestrator:
+        if not self.orchestrator and self.config.orchestration_mode != "real":
             orchestration_results["status"] = "Skipped"
             orchestration_results["reason"] = "Orchestrateur non disponible"
             return orchestration_results
 
         try:
-            if hasattr(self.orchestrator, "analyze_text_comprehensive"):
-                # Pour RealLLMOrchestrator
+            if self.config.orchestration_mode == "real":
+                # Mode real: use run_unified_analysis directly
+                orch_result = await run_unified_analysis(
+                    text, workflow_name="standard"
+                )
+
+                summary = orch_result.get("summary", {})
+                orchestration_results.update(
+                    {
+                        "status": "success",
+                        "agents_used": orch_result.get("capabilities_used", []),
+                        "conversation_summary": summary,
+                        "analysis_results": orch_result.get("state_snapshot", {}),
+                    }
+                )
+
+            elif hasattr(self.orchestrator, "analyze_text_comprehensive"):
+                # Legacy orchestrator path (kept for ConversationOrchestrator compat)
                 orch_result = await self.orchestrator.analyze_text_comprehensive(
                     text, context={"source": "unified_pipeline"}
                 )
