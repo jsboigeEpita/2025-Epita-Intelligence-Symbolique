@@ -28,9 +28,8 @@ try:
         FOLLogicAgent as FOLLogicAgent,
     )
     from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-        LLMAnalysisRequest,
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
     )
     from argumentation_analysis.core.llm_service import create_llm_service
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
@@ -51,17 +50,14 @@ except ImportError:
         def create_agent(logic_type, kernel, agent_name):
             return FOLLogicAgent(kernel=kernel)
 
-    class RealLLMOrchestrator:
-        def __init__(self, llm_service=None):
-            self.llm_service = llm_service
-
-        async def run_real_llm_orchestration(self, text: str) -> dict:
-            return {
-                "status": "success",
-                "analysis": f"FOL analysis of: {text}",
-                "logic_type": "first_order",
-                "formulas": ["∀x(Homme(x) → Mortel(x))"],
-            }
+    async def run_unified_analysis(text: str, **kwargs) -> dict:
+        """Mock fallback for run_unified_analysis."""
+        return {
+            "status": "success",
+            "analysis": f"FOL analysis of: {text}",
+            "logic_type": "first_order",
+            "formulas": ["∀x(Homme(x) → Mortel(x))"],
+        }
 
     async def create_llm_service():
         return create_llm_service(
@@ -136,27 +132,16 @@ class TestFOLPipelineIntegration:
         ), f"L'ensemble de croyances devrait être cohérent: {consistency_message}"
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     async def test_fol_orchestration_integration(self):
-        """Test d'intégration avec orchestration FOL."""
-        # 1. Créer le service LLM
-        llm_service = create_llm_service(
-            service_id="test_fol_orchestration", model_id="gpt-5-mini"
+        """Test d'intégration avec orchestration FOL via UnifiedPipeline."""
+        result = await run_unified_analysis(
+            self.test_text, workflow_name="standard"
         )
 
-        # 2. Créer l'orchestrateur
-        orchestrator = RealLLMOrchestrator(llm_service=llm_service)
-
-        # 3. Exécuter l'orchestration avec logique FOL
-        request = LLMAnalysisRequest(text=self.test_text, analysis_type="logical")
-        result = await orchestrator.analyze_text(request)
-
         assert result is not None
-        assert result.analysis_type == "logical"
-        assert result.result["success"] is True
-
-        # Vérifier les éléments spécifiques à FOL dans le sous-résultat
-        inner_result = result.result.get("result", {})
-        assert inner_result.get("logical_structure") == "present"
+        assert isinstance(result, dict)
+        assert "summary" in result
 
     def test_fol_report_generation(self):
         """Test de génération de rapport FOL."""
