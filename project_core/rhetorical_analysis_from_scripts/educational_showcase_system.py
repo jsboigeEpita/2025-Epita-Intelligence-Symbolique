@@ -80,8 +80,10 @@ try:
         UnifiedTextAnalysisPipeline,
         UnifiedAnalysisConfig,
     )
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
+    )
     from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
         RealConversationLogger,
     )
 
