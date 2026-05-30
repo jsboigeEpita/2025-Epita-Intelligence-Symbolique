@@ -59,43 +59,19 @@ class TestRealGPT4oMiniIntegration:
 
     @pytest.mark.integration
     @pytest.mark.requires_openai
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_real_gpt4o_mini_orchestration(self):
-        """Test d'orchestration avec GPT-4o-mini réel."""
-        try:
-            from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                RealLLMOrchestrator,
-            )
-            from argumentation_analysis.core.llm_service import create_llm_service
-            from semantic_kernel import Kernel
+        """Test d'orchestration avec GPT-4o-mini réel via UnifiedPipeline."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
 
-            # Créer service LLM réel
-            llm_service = create_llm_service(
-                service_id="orchestration_service", model_id="gpt-5-mini"
-            )
+        test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
 
-            # Créer un kernel et ajouter le service
-            kernel = Kernel()
-            kernel.add_service(llm_service)
+        result = asyncio.run(run_unified_analysis(test_text, workflow_name="standard"))
 
-            # Créer orchestrateur
-            orchestrator = RealLLMOrchestrator(kernel=kernel)
-
-            # Test avec texte réel
-            test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-
-            result = asyncio.run(orchestrator.orchestrate_analysis(test_text))
-
-            assert isinstance(result, dict)
-            assert "final_synthesis" in result
-            assert "analysis_results" in result
-
-            # Vérifier que l'analyse contient du contenu réel
-            analysis = result.get("analysis_results", {})
-            assert isinstance(analysis, dict)
-            assert len(analysis) > 0  # L'analyse doit contenir des résultats
-
-        except ImportError:
-            pytest.skip("Real LLM orchestrator not available")
+        assert isinstance(result, dict)
+        assert "summary" in result
 
 
 class TestRealTweetyIntegration:
@@ -302,9 +278,9 @@ class TestUnifiedAuthenticComponentsIntegration:
 
     @pytest.mark.integration
     @pytest.mark.llm_critical
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_full_authentic_pipeline(self):
-        """Test du pipeline complet avec tous composants authentiques."""
-        # Vérifier disponibilité des composants authentiques
+        """Test du pipeline complet avec tous composants authentiques via UnifiedPipeline."""
         if not os.getenv("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY required")
         try:
@@ -315,44 +291,18 @@ class TestUnifiedAuthenticComponentsIntegration:
         except ImportError:
             pytest.skip("jpype not available")
 
-        try:
-            from argumentation_analysis.orchestration.real_llm_orchestrator import (
-                RealLLMOrchestrator,
-            )
-            from argumentation_analysis.core.llm_service import create_llm_service
-            from argumentation_analysis.core.mock_elimination import TaxonomyManager
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
 
-            # 1. Service LLM authentique
-            llm_service = create_llm_service(
-                service_id="test_full_pipeline", model_id="gpt-5-mini"
-            )
-            kernel = Kernel()
-            kernel.add_service(llm_service)
+        test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
 
-            # 2. Taxonomie complète
-            taxonomy_manager = TaxonomyManager()
-            complete_taxonomy = taxonomy_manager.load_complete_taxonomy()
+        result = asyncio.run(run_unified_analysis(test_text, workflow_name="full"))
 
-            # 3. Orchestrateur avec composants authentiques
-            orchestrator = RealLLMOrchestrator(
-                kernel=kernel,
-                config={"use_real_tweety": True, "taxonomy": complete_taxonomy},
-            )
-
-            # 4. Analyse complète authentique
-            test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-
-            result = asyncio.run(orchestrator.run_real_llm_orchestration(test_text))
-
-            assert isinstance(result, dict)
-            assert result.get("status") == "success"
-
-            # Vérifier que l'analyse est substantielle (pas mock)
-            analysis = result.get("analysis", "")
-            assert len(analysis) > 500  # Analyse approfondie
-
-        except ImportError:
-            pytest.skip("Authentic components not available")
+        assert isinstance(result, dict)
+        assert "summary" in result
+        summary = result["summary"]
+        assert summary.get("completed", 0) > 0
 
     @pytest.mark.integration
     def test_mock_elimination_verification(self):

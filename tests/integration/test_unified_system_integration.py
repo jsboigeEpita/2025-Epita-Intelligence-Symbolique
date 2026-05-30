@@ -9,7 +9,7 @@ Tests d'intégration système pour orchestrations unifiées
 ======================================================
 
 Tests bout-en-bout pour valider l'intégration complète du système
-avec ConversationOrchestrator, RealLLMOrchestrator et pipeline unifié.
+avec ConversationOrchestrator et UnifiedPipeline.
 """
 
 import pytest
@@ -30,9 +30,8 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-        LLMAnalysisResult,
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
     )
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
     from config.unified_config import UnifiedConfig as RealUnifiedConfig
@@ -44,18 +43,6 @@ except ImportError as e:
     REAL_COMPONENTS_AVAILABLE = False
 
     # Mocks pour tests d'intégration
-    class LLMAnalysisResult:
-        """Mock LLMAnalysisResult matching the real dataclass API."""
-
-        def __init__(self, **kwargs):
-            self.request_id = kwargs.get("request_id", "mock")
-            self.analysis_type = kwargs.get("analysis_type", "unified_analysis")
-            self.result = kwargs.get("result", {})
-            self.confidence = kwargs.get("confidence", 0.8)
-            self.processing_time = kwargs.get("processing_time", 0.1)
-            self.timestamp = kwargs.get("timestamp", datetime.now())
-            self.metadata = kwargs.get("metadata", None)
-
     class ConversationOrchestrator:
         def __init__(self, mode="demo"):
             self.mode = mode
@@ -78,35 +65,12 @@ except ImportError as e:
                 "completed": True,
             }
 
-    class RealLLMOrchestrator:
-        def __init__(self, mode="real", kernel=None, config=None):
-            self.mode = mode
-            self.kernel = kernel
-            self.config = config or {}
-            self.agents = {}
-            self.is_initialized = False
-
-        async def initialize(self) -> bool:
-            self.is_initialized = True
-            return True
-
-        async def analyze_text(
-            self, request, analysis_type="unified_analysis"
-        ) -> "LLMAnalysisResult":
-            text = request if isinstance(request, str) else request.text
-            return LLMAnalysisResult(
-                request_id="mock_req_001",
-                analysis_type=analysis_type,
-                result={
-                    "success": True,
-                    "analysis": f"Integration LLM analysis: {text[:50]}...",
-                    "agents_used": ["IntegrationAgent1", "IntegrationAgent2"],
-                },
-                confidence=0.85,
-                processing_time=0.5,
-                timestamp=datetime.now(),
-                metadata={"mock": True},
-            )
+    async def run_unified_analysis(text: str, **kwargs) -> Dict[str, Any]:
+        """Mock fallback for run_unified_analysis."""
+        return {
+            "workflow_name": kwargs.get("workflow_name", "standard"),
+            "summary": {"completed": 1, "failed": 0, "skipped": 0},
+        }
 
     class TweetyErrorAnalyzer:
         def analyze_error(self, error_text: str) -> Any:
@@ -201,8 +165,9 @@ class TestUnifiedSystemIntegration:
         for result in conv_results:
             assert "orchestration" in result.lower() or "demo" in result.lower()
 
-    def test_conversation_to_real_llm_handoff(self):
-        """Test de handoff conversation vers LLM réel."""
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
+    def test_conversation_to_pipeline_handoff(self):
+        """Test de handoff conversation vers UnifiedPipeline."""
 
         async def _async_test():
             conv_orchestrator = ConversationOrchestrator(mode="demo")
@@ -211,15 +176,11 @@ class TestUnifiedSystemIntegration:
             assert isinstance(conv_result, str)
             assert isinstance(conv_state, dict)
 
-            real_orchestrator = RealLLMOrchestrator(mode="real")
-            await real_orchestrator.initialize()
-            real_result = await real_orchestrator.analyze_text(self.test_texts[0])
-
-            assert isinstance(real_result, LLMAnalysisResult)
-            assert hasattr(real_result, "result")
-            assert hasattr(real_result, "analysis_type")
-            assert isinstance(real_result.result, dict)
-            assert real_result.processing_time >= 0
+            pipeline_result = await run_unified_analysis(
+                self.test_texts[0], workflow_name="standard"
+            )
+            assert isinstance(pipeline_result, dict)
+            assert "summary" in pipeline_result
 
         asyncio.run(_async_test())
 
@@ -234,9 +195,6 @@ class TestUnifiedSystemIntegration:
             if config.orchestration_type in ["CONVERSATION", "UNIFIED"]:
                 conv_orch = ConversationOrchestrator()
                 assert conv_orch.config.logic_type == config.logic_type
-            if config.orchestration_type in ["REAL", "UNIFIED"]:
-                real_orch = RealLLMOrchestrator(config=config)
-                assert real_orch.config.logic_type == config.logic_type
 
     def test_agent_to_orchestrator_communication(self):
         """Test de communication agents vers orchestrateurs."""
@@ -248,6 +206,7 @@ class TestUnifiedSystemIntegration:
                 assert hasattr(agent, "agent_name") or hasattr(agent, "__class__")
         assert isinstance(result, str)
 
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_authentic_system_orchestration(self):
         """Test d'orchestration systeme authentique (sans mocks)."""
 
@@ -256,14 +215,11 @@ class TestUnifiedSystemIntegration:
             conv_result = conv_orchestrator.run_orchestration(self.test_texts[1])
             assert isinstance(conv_result, str)
 
-            real_orchestrator = RealLLMOrchestrator(mode="real")
-            await real_orchestrator.initialize()
-            real_result = await real_orchestrator.analyze_text(self.test_texts[1])
-
-            assert isinstance(real_result, LLMAnalysisResult)
-            assert hasattr(real_result, "result")
-            assert isinstance(real_result.result, dict)
-            assert hasattr(real_result, "analysis_type")
+            pipeline_result = await run_unified_analysis(
+                self.test_texts[1], workflow_name="standard"
+            )
+            assert isinstance(pipeline_result, dict)
+            assert "summary" in pipeline_result
 
         asyncio.run(_async_test())
 
@@ -304,18 +260,17 @@ class TestUnifiedErrorHandlingIntegration:
             assert len(feedback.corrections) > 0
             assert feedback.confidence > 0.0
 
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_error_recovery_workflow(self):
         """Test du workflow de recuperation d'erreur."""
 
         async def _async_test():
-            orchestrator = RealLLMOrchestrator()
-            await orchestrator.initialize()
             problematic_text = "Invalid logical formula: unknown_predicate(X)"
             try:
-                result = await orchestrator.analyze_text(problematic_text)
-                assert isinstance(result, LLMAnalysisResult)
-                assert hasattr(result, "result")
-                assert isinstance(result.result, dict)
+                result = await run_unified_analysis(
+                    problematic_text, workflow_name="light"
+                )
+                assert isinstance(result, dict)
             except Exception as e:
                 assert isinstance(e, (ValueError, RuntimeError, TypeError))
 
@@ -421,12 +376,11 @@ class TestUnifiedPerformanceIntegration:
             assert isinstance(result, str)
             assert len(result) > 0
 
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_async_orchestration_performance(self):
-        """Test de performance orchestration asynchrone."""
+        """Test de performance orchestration asynchrone via UnifiedPipeline."""
 
         async def _async_test():
-            orchestrator = RealLLMOrchestrator()
-            await orchestrator.initialize()
             texts = [
                 "Premier test async",
                 "Deuxieme test async",
@@ -435,15 +389,15 @@ class TestUnifiedPerformanceIntegration:
             start_time = time.time()
             results = []
             for text in texts:
-                result = await orchestrator.analyze_text(text)
+                result = await run_unified_analysis(
+                    text, workflow_name="light", create_state=False
+                )
                 results.append(result)
             total_time = time.time() - start_time
             assert total_time < 5.0
             assert len(results) == 3
             for result in results:
-                assert isinstance(result, LLMAnalysisResult)
-                assert hasattr(result, "result")
-                assert isinstance(result.result, dict)
+                assert isinstance(result, dict)
 
         asyncio.run(_async_test())
 
@@ -490,8 +444,9 @@ class TestAuthenticIntegrationSuite:
         assert feedback.confidence > 0.5
         assert len(feedback.bnf_rules) > 0
 
+    @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     def test_authentic_pipeline_end_to_end(self):
-        """Test pipeline authentique bout-en-bout."""
+        """Test pipeline authentique bout-en-bout via UnifiedPipeline."""
 
         async def _async_test():
             conv_orchestrator = ConversationOrchestrator()
@@ -500,14 +455,12 @@ class TestAuthenticIntegrationSuite:
             )
             assert isinstance(conv_result, str)
 
-            real_orchestrator = RealLLMOrchestrator(mode="real")
-            await real_orchestrator.initialize()
-            real_result = await real_orchestrator.analyze_text(
-                "Tous les philosophes reflechissent. Socrate est un philosophe."
+            pipeline_result = await run_unified_analysis(
+                "Tous les philosophes reflechissent. Socrate est un philosophe.",
+                workflow_name="standard",
             )
-            assert isinstance(real_result, LLMAnalysisResult)
-            assert hasattr(real_result, "result")
-            assert isinstance(real_result.result, dict)
+            assert isinstance(pipeline_result, dict)
+            assert "summary" in pipeline_result
 
         asyncio.run(_async_test())
 
