@@ -174,7 +174,7 @@ def generate_component_report(
     API simplifiée pour générer un rapport depuis n'importe quel composant refactorisé.
 
     Args:
-        component_name: Nom du composant (RealLLMOrchestrator, ConversationOrchestrator, etc.)
+        component_name: Nom du composant (UnifiedPipeline, ConversationOrchestrator, etc.)
         analysis_data: Données d'analyse à inclure
         analysis_type: Type d'analyse (orchestration, conversation, text_analysis, etc.)
         output_format: Format de sortie (markdown, json, html, console)

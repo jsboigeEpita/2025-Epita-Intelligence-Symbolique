@@ -2,7 +2,7 @@
 """
 Tests for pipeline utilities.
 
-Issue #215: Feature parity with archived RealLLMOrchestrator
+Issue #215: Tests for pipeline utilities (caching, metrics, batch)
 """
 
 import asyncio
