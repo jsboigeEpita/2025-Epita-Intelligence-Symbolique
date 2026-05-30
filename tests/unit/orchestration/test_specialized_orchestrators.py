@@ -8,7 +8,6 @@ Tests Unitaires pour les Orchestrateurs Spécialisés
 Tests pour valider le fonctionnement des orchestrateurs spécialisés :
 - CluedoOrchestrator (enquêtes et investigations)
 - ConversationOrchestrator (analyses conversationnelles)
-- RealLLMOrchestrator (orchestration LLM réelle)
 - LogiqueComplexeOrchestrator (logique complexe)
 
 Auteur: Intelligence Symbolique EPITA
@@ -53,9 +52,6 @@ try:
     )
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
-    )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
     )
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
         LogiqueComplexeOrchestrator,
@@ -165,59 +161,6 @@ class TestConversationOrchestrator:
         assert "TRACE ANALYTIQUE" in result["report"]
 
 
-class TestRealLLMOrchestrator:
-    """Tests pour l'orchestrateur LLM réel.
-
-    NOTE: RealLLMOrchestrator is deprecated (emits DeprecationWarning).
-    Use UnifiedPipeline or ConversationalOrchestrator instead.
-    These tests are marked xfail because the deprecated wrapper no longer
-    exposes the .kernel, .mode, .metrics attributes the tests expect.
-    See Issue #274.
-    """
-
-    @pytest.fixture
-    def real_llm_orchestrator(self, mock_kernel: Kernel):
-        """Instance de RealLLMOrchestrator pour les tests."""
-        return RealLLMOrchestrator(kernel=mock_kernel)
-
-    @pytest.mark.xfail(
-        reason="RealLLMOrchestrator deprecated — .kernel/.metrics attributes removed (#274)",
-        strict=True,
-    )
-    def test_real_llm_orchestrator_initialization(self, real_llm_orchestrator):
-        """Test de l'initialisation de l'orchestrateur LLM réel."""
-        assert real_llm_orchestrator.kernel is not None
-        assert real_llm_orchestrator.is_initialized is False
-        assert real_llm_orchestrator.metrics["total_requests"] == 0
-
-    @pytest.mark.xfail(
-        reason="RealLLMOrchestrator deprecated — .kernel/.metrics attributes removed (#274)",
-        strict=True,
-    )
-    @pytest.mark.asyncio
-    @patch(
-        "argumentation_analysis.orchestration.real_llm_orchestrator.RealLLMOrchestrator.initialize",
-        new_callable=AsyncMock,
-    )
-    async def test_analyze_text_mocked(self, mock_initialize, real_llm_orchestrator):
-        """Test de l'orchestration d'analyse avec _perform_analysis mocké."""
-        text = "Texte complexe nécessitant analyse."
-        expected_analysis = {"analysis": "mocked_result", "confidence": 0.95}
-        real_llm_orchestrator._perform_analysis = AsyncMock(
-            return_value=expected_analysis
-        )
-
-        result = await real_llm_orchestrator.analyze_text(
-            text, analysis_type="unified_analysis"
-        )
-
-        mock_initialize.assert_awaited_once()
-        real_llm_orchestrator._perform_analysis.assert_called_once()
-        assert result.result == expected_analysis
-        assert result.confidence == 0.95
-        assert result.analysis_type == "unified_analysis"
-
-
 class TestLogiqueComplexeOrchestrator:
     """Tests pour l'orchestrateur de logique complexe."""
 
@@ -258,9 +201,6 @@ class TestSpecializedOrchestratorsIntegration:
 
         convo = ConversationOrchestrator(mode="demo")
         assert isinstance(convo, ConversationOrchestrator)
-
-        real_llm = RealLLMOrchestrator(kernel=mock_kernel)
-        assert isinstance(real_llm, RealLLMOrchestrator)
 
         logic = LogiqueComplexeOrchestrator(kernel=mock_kernel)
         assert isinstance(logic, LogiqueComplexeOrchestrator)
