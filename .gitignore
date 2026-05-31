@@ -32,6 +32,10 @@ logs/
 _e2e_logs/
 project_logs/
 
+# === MCP local artifacts ===
+.playwright-mcp/
+.tmp_issue_bodies/
+
 # === Test/Debug Outputs ===
 test_*.txt
 test_*.json
