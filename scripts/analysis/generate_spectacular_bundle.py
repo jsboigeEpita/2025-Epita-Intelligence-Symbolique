@@ -230,6 +230,28 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
                 scrubbed_nl.append(entry)
         cleaned["nl_to_logic_translations"] = scrubbed_nl
 
+    # Twelfth pass: scrub nested structures containing argument descriptions
+    # (dung_frameworks, ranking_results, probabilistic_results, bipolar_results)
+    # These store List[str] under key "arguments" with raw NL descriptions
+    # that bypass the identified_arguments scrub (Pass 2).
+    for dim_key in ("dung_frameworks", "ranking_results", "probabilistic_results", "bipolar_results"):
+        dim = cleaned.get(dim_key)
+        if not isinstance(dim, dict):
+            continue
+        for item_id, item_val in dim.items():
+            if not isinstance(item_val, dict):
+                continue
+            args_list = item_val.get("arguments")
+            if isinstance(args_list, list):
+                item_val["arguments"] = [
+                    ("<scrubbed>" if isinstance(a, str) and len(a) > 10 else a)
+                    for a in args_list
+                ]
+            # Also scrub "name" field (often contains NL descriptions)
+            name = item_val.get("name")
+            if isinstance(name, str) and len(name) > 20:
+                item_val["name"] = "<scrubbed>"
+
     # Final pass: global regex scrub on ALL remaining strings (values AND keys)
     cleaned = _global_entity_scrub(cleaned)
 
