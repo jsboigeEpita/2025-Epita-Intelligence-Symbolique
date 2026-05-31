@@ -399,3 +399,114 @@ class TestVector4Integration:
         }
         result = _scrub_state_for_export(state)
         assert result["identified_arguments"]["arg_1"]["confidence"] == 0.5
+
+
+# ---------------------------------------------------------------------------
+# Vector 5 — DAG path: dung_frameworks / ranking / probabilistic arguments[]
+# ---------------------------------------------------------------------------
+
+class TestVector5DAGArgumentsDescription:
+    """Verify scrubbing of arguments[].description on DAG path structures.
+
+    Discovered in R276-R280: dung_frameworks[*].arguments is a List[str]
+    of raw NL descriptions that bypassed the identified_arguments scrub.
+    Same pattern in ranking_results, probabilistic_results, bipolar_results.
+    """
+
+    def _make_dag_state(self):
+        return {
+            "identified_arguments": {
+                "arg_1": {"premisses": "safe", "conclusion": "safe", "confidence": 0.8},
+            },
+            "dung_frameworks": {
+                "dung_1": {
+                    "name": "A framework about sanctions against Russia",
+                    "arguments": [
+                        "The speaker argues that economic sanctions against Russia are ineffective",
+                        "Counter-argument: sanctions have weakened the Russian economy",
+                        "short",
+                    ],
+                    "attacks": [["arg_1", "arg_2"]],
+                    "extensions": {"preferred": ["arg_1", "arg_3"]},
+                },
+            },
+            "ranking_results": {
+                "rank_1": {
+                    "method": "burden",
+                    "arguments": [
+                        "First argument about Ukraine sovereignty",
+                        "Second argument about NATO expansion",
+                    ],
+                    "comparisons": [],
+                },
+            },
+            "probabilistic_results": {
+                "prob_1": {
+                    "arguments": [
+                        "Trump claimed the election was stolen",
+                        "Biden won the popular vote",
+                    ],
+                    "acceptance_probabilities": {"arg_1": 0.7},
+                },
+            },
+            "bipolar_results": {
+                "bip_1": {
+                    "framework_type": "bipolar",
+                    "arguments": [
+                        "Netanyahu defended the military operation in Israel",
+                    ],
+                    "supports": [],
+                },
+            },
+        }
+
+    def test_dung_arguments_list_scrubbed(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        dung_args = result["dung_frameworks"]["dung_1"]["arguments"]
+        assert dung_args[0] == "<scrubbed>"
+        assert dung_args[1] == "<scrubbed>"
+        # Short string (< 10 chars) preserved
+        assert dung_args[2] == "short"
+
+    def test_dung_name_scrubbed_when_long(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        assert result["dung_frameworks"]["dung_1"]["name"] == "<scrubbed>"
+
+    def test_dung_non_string_fields_preserved(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        assert result["dung_frameworks"]["dung_1"]["attacks"] == [["arg_1", "arg_2"]]
+        assert result["dung_frameworks"]["dung_1"]["extensions"] == {"preferred": ["arg_1", "arg_3"]}
+
+    def test_ranking_results_arguments_scrubbed(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        rank_args = result["ranking_results"]["rank_1"]["arguments"]
+        assert rank_args[0] == "<scrubbed>"
+        assert rank_args[1] == "<scrubbed>"
+
+    def test_probabilistic_results_arguments_scrubbed(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        prob_args = result["probabilistic_results"]["prob_1"]["arguments"]
+        assert prob_args[0] == "<scrubbed>"
+        assert prob_args[1] == "<scrubbed>"
+
+    def test_bipolar_results_arguments_scrubbed(self):
+        result = _scrub_state_for_export(self._make_dag_state())
+        bip_args = result["bipolar_results"]["bip_1"]["arguments"]
+        assert bip_args[0] == "<scrubbed>"
+
+    def test_dag_entity_grep_zero_hits(self):
+        """Gold standard: no entity names in scrubbed DAG state."""
+        result = _scrub_state_for_export(self._make_dag_state())
+        serialized = json.dumps(result).lower()
+        entity_fragments = [
+            "trump", "biden", "putin", "poutine", "zelensky",
+            "macron", "netanyahu", "ukraine", "russia", "israel",
+            "nato", "crimea", "kremlin",
+        ]
+        for fragment in entity_fragments:
+            assert fragment not in serialized, f"Entity '{fragment}' leaked in DAG scrub"
+
+    def test_identified_arguments_unaffected(self):
+        """Pass 2 (identified_arguments) should still work alongside Pass 12."""
+        result = _scrub_state_for_export(self._make_dag_state())
+        assert result["identified_arguments"]["arg_1"]["confidence"] == 0.8
