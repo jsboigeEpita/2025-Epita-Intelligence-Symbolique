@@ -13,6 +13,8 @@ from argumentation_analysis.orchestration.hierarchical.operational.feedback_mech
     FeedbackManager,
 )
 
+pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
+
 # ============================================================
 # RhetoricalToolsFeedback
 # ============================================================
