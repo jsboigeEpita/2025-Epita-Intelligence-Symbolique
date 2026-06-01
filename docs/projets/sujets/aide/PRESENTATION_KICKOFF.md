@@ -41,9 +41,10 @@ L'Intelligence Symbolique combine les approches symboliques traditionnelles de l
 ```
 ┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
 │                     │     │                     │     │                     │
-│  Interface Web      │     │  API Web            │     │  Moteur d'analyse   │
-│  (React/Vue)        │◄───►│  (Flask)            │◄───►│  argumentative      │
-│                     │     │                     │     │                     │
+│  Interface Web      │     │  API Backend        │     │  Moteur d'analyse   │
+│  (React SPA)        │◄───►│  (FastAPI :8095)    │◄───►│  argumentative      │
+│  via Starlette      │     │                     │     │                     │
+│  proxy :5003        │     │                     │     │                     │
 └─────────────────────┘     └─────────────────────┘     └─────────────────────┘
                                                                ▲
                                                                │
@@ -71,13 +72,15 @@ L'Intelligence Symbolique combine les approches symboliques traditionnelles de l
    - Agents spécialisés pour différentes tâches
    - Intégration avec TweetyProject pour l'analyse formelle
 
-2. **API Web**
+2. **API Backend (FastAPI)**
    - Interface REST pour accéder aux fonctionnalités
    - Modèles de données standardisés
    - Services métier pour chaque type d'analyse
+   - Orchestration via CapabilityRegistry + UnifiedPipeline
 
-3. **Interface Web** (à développer)
-   - Application web moderne
+3. **Interface Web (Starlette + React)**
+   - Application React servie par Starlette (proxy frontend)
+   - Starlette proxie les requêtes `/api/*` vers FastAPI
    - Visualisations interactives
    - Expérience utilisateur intuitive
 
