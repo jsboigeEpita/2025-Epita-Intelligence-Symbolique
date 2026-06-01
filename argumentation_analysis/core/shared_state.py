@@ -448,6 +448,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         # Track UU #724: specialist commentary + analysis trace
         self.analysis_trace: List[Dict[str, Any]] = []
+        # AI Shield results — adversarial protection (#841)
+        self.ai_shield_results: List[Dict[str, Any]] = []
+        # Local LLM results — offline LLM analysis (#834)
+        self.local_llm_results: List[Dict[str, Any]] = []
 
     def add_trace_entry(
         self,
