@@ -1,88 +1,49 @@
 #!/usr/bin/env python3
 """
-Interface Web pour l'Analyse Argumentative EPITA (Version Starlette)
-=====================================================================
+Interface Web pour l'Analyse Argumentative EPITA (Version Starlette — Frontend Proxy)
+=====================================================================================
 
-Application Starlette pure pour l'interface web du système d'analyse argumentative.
-Fournit une interface utilisateur pour soumettre des textes et visualiser les résultats d'analyse.
-Cette version élimine Flask pour une pile ASGI native plus simple et robuste.
+Application Starlette servant de **frontend-only proxy** vers le backend FastAPI.
+- Sert l'application React (build static) sur `/`
+- Proxy les requetes `/api/*` et `/ws/*` vers le backend FastAPI
+- Ne contient aucune logique metier (ServiceManager, NLP, JVM)
 
-Version: 2.0.0
-Auteur: Intelligence Symbolique EPITA
-Date: 16/06/2025
+Architecture (issue #844):
+  Navigateur -> Starlette(:5003) -> React SPA (static)
+                                -> /api/* -> FastAPI(:8095)
+                                -> /ws/*  -> FastAPI(:8095)
+
+Version: 3.0.0
+Date: 2026-06-01
 """
 
-import asyncio
-import json
 import logging
 import os
-import uuid
 import argparse
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
 
 # --- Imports ASGI/Starlette ---
 from contextlib import asynccontextmanager
+
+import httpx
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, HTMLResponse
+from starlette.responses import (
+    JSONResponse,
+    HTMLResponse,
+    StreamingResponse,
+    Response,
+)
 from starlette.requests import Request
 from starlette.staticfiles import StaticFiles
 from starlette.routing import Mount, Route
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-
-# --- Activation de l'environnement et imports du projet ---
-try:
-    from scripts.core.auto_env import ensure_env
-
-    ensure_env()
-except ImportError:
-    try:
-        import sys
-
-        project_root = Path(__file__).resolve().parent.parent
-        if str(project_root) not in sys.path:
-            sys.path.insert(0, str(project_root))
-        from scripts.core.auto_env import ensure_env
-
-        ensure_env()
-    except ImportError:
-        print(
-            "[WARNING] Auto-env non disponible, environnement non activé automatiquement"
-        )
-
-# --- Imports des services de l'application ---
-ServiceManager = None
-SERVICE_MANAGER_AVAILABLE = False
-try:
-    from argumentation_analysis.orchestration.service_manager import ServiceManager
-
-    SERVICE_MANAGER_AVAILABLE = True
-    logging.info("ServiceManager importé avec succès")
-except ImportError as e:
-    logging.error(f"ServiceManager non disponible: {e}")
-    # Cette dépendance est critique, on lève une exception si elle manque.
-    raise ImportError(f"ServiceManager requis mais non disponible: {e}")
-
-# Importation du gestionnaire de modèles NLP
-try:
-    from argumentation_analysis.agents.tools.analysis.enhanced.nlp_model_manager import (
-        nlp_model_manager,
-    )
-
-    NLP_MODELS_AVAILABLE = True
-    logging.info("NLPModelManager importé avec succès.")
-except ImportError as e:
-    logging.warning(f"NLPModelManager non disponible: {e}")
-    nlp_model_manager = None
-    NLP_MODELS_AVAILABLE = False
-
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 # --- Configuration du Logging ---
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [StarletteApp] %(message)s",
+    format="%(asctime)s [%(levelname)s] [StarletteProxy] %(message)s",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
@@ -92,7 +53,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_FILES_DIR = (
     PROJECT_ROOT / "services" / "web_api" / "interface-web-argumentative" / "build"
 )
-RESULTS_DIR = PROJECT_ROOT / "results"
+
+# --- Configuration du proxy FastAPI ---
+FASTAPI_HOST = os.environ.get("FASTAPI_HOST", "127.0.0.1")
+FASTAPI_PORT = int(os.environ.get("FASTAPI_PORT", "8095"))
+FASTAPI_BASE_URL = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}"
+
 
 # ==============================================================================
 # CYCLE DE VIE DE L'APPLICATION (LIFESPAN)
@@ -102,190 +68,145 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 @asynccontextmanager
 async def lifespan(app: Starlette):
     """
-    Gestionnaire de cycle de vie. S'exécute au démarrage et à l'arrêt de l'application.
-    C'est ici qu'on initialise et qu'on nettoie les ressources partagées comme le ServiceManager.
+    Gestionnaire de cycle de vie. Cree le client HTTP pour le proxy FastAPI.
+    Pas de ServiceManager, pas de NLP, pas de JVM — juste un proxy.
     """
-    logger.info("LIFESPAN: Démarrage de l'application...")
+    logger.info(f"LIFESPAN: Demarrage du frontend proxy -> {FASTAPI_BASE_URL}")
 
-    # 1. Initialiser les conteneurs d'état
-    app.state.service_manager = None
-    app.state.nlp_model_manager = None
-
-    # 2. Créer les instances des gestionnaires
-    logger.info("Création des instances de ServiceManager et NLPModelManager.")
-    # La configuration est maintenant gérée globalement via le module 'settings'.
-    # On instancie le manager sans configuration locale.
-    service_manager_instance = ServiceManager()
-    app.state.service_manager = service_manager_instance
-
-    if NLP_MODELS_AVAILABLE:
-        app.state.nlp_model_manager = nlp_model_manager
-    else:
-        logger.warning("NLPModelManager non initialisé car non disponible.")
-
-    # 3. Lancer les initialisations asynchrones en parallèle
-    logger.info(
-        "Démarrage des initialisations asynchrones (ServiceManager et NLP Models)..."
+    # Creer un client HTTP persistant pour le proxy
+    app.state.http_client = httpx.AsyncClient(
+        base_url=FASTAPI_BASE_URL,
+        timeout=httpx.Timeout(30.0, connect=5.0),
     )
-    init_tasks = []
 
-    # Tâche pour initialiser le ServiceManager
-    async def init_service_manager():
-        try:
-            await service_manager_instance.initialize()
-            logger.info("ServiceManager initialisé avec succès.")
-        except Exception as e:
-            logger.error(
-                f"Erreur critique lors de l'initialisation du ServiceManager: {e}",
-                exc_info=True,
-            )
-            app.state.service_manager = None  # Marquer comme non disponible
-            logger.warning("ServiceManager marqué comme indisponible.")
+    logger.info("LIFESPAN: Proxy pret.")
 
-    init_tasks.append(init_service_manager())
+    yield  # L'application s'execute ici
 
-    # Tâche pour charger les modèles NLP
-    if app.state.nlp_model_manager:
-        # Exécuter la méthode de chargement synchrone dans un thread pour ne pas bloquer la boucle asyncio
-        loop = asyncio.get_running_loop()
-        init_tasks.append(
-            loop.run_in_executor(None, app.state.nlp_model_manager.load_models_sync)
-        )
-
-    # Exécuter les tâches en parallèle
-    await asyncio.gather(*init_tasks)
-
-    logger.info("LIFESPAN: Initialisation terminée, l'application est prête.")
-
-    yield  # L'application s'exécute ici
-
-    logger.info("LIFESPAN: Arrêt de l'application...")
-    if hasattr(app.state, "service_manager") and app.state.service_manager:
-        # Logique de nettoyage si nécessaire (ex: await app.state.service_manager.cleanup())
-        pass
-    logger.info("LIFESPAN: Nettoyage terminé.")
+    logger.info("LIFESPAN: Fermeture du client proxy...")
+    await app.state.http_client.aclose()
+    logger.info("LIFESPAN: Nettoyage termine.")
 
 
 # ==============================================================================
-# DÉFINITION DES ROUTES DE L'API
+# PROXY VERS FASTAPI
 # ==============================================================================
 
 
-async def status_endpoint(request: Request):
-    """Route pour vérifier le statut des services."""
-    service_manager = getattr(request.app.state, "service_manager", None)
-    nlp_manager = getattr(request.app.state, "nlp_model_manager", None)
+async def api_proxy(request: Request):
+    """
+    Proxy generique pour les requetes /api/* vers FastAPI.
+    Transfere methode, headers, body, et retourne la reponse intacte.
+    """
+    client: httpx.AsyncClient = request.app.state.http_client
 
-    sm_status = "active" if service_manager else "unavailable"
+    # Construire le chemin cible (enlever le prefixe si necessaire)
+    path = request.url.path
+    query_string = str(request.url.query)
 
-    nlp_status = "unavailable"
-    if nlp_manager:
-        nlp_status = "loaded" if nlp_manager.are_models_loaded() else "initializing"
+    # Determiner les headers a transferer (exclure host)
+    headers = dict(request.headers)
+    headers.pop("host", None)
 
-    # Le statut global est 'initializing' si un service majeur est en cours de chargement
-    app_status = "operational"
-    if sm_status != "active" or nlp_status == "initializing":
-        app_status = "initializing"
-    if sm_status == "unavailable" and nlp_status != "initializing":
-        app_status = "degraded"
-
-    status_info = {
-        "status": app_status,
-        "timestamp": datetime.now().isoformat(),
-        "services": {
-            "service_manager": sm_status,
-            "nlp_models": nlp_status,
-        },
-        "webapp": {"version": "2.0.0", "framework": "Starlette"},
-    }
-    return JSONResponse(status_info)
-
-
-async def analyze_endpoint(request: Request):
-    """Route pour l'analyse de texte."""
-    service_manager = request.app.state.service_manager
-    if not service_manager:
-        return JSONResponse(
-            {"error": "Le service d'analyse est indisponible."}, status_code=503
-        )
+    # Lire le body
+    body = await request.body()
 
     try:
-        data = await request.json()
-        text = data.get("text", "").strip()
-        analysis_type = data.get("analysis_type", "unified_analysis")
-        options = data.get("options", {})
+        # Transfere la requete vers FastAPI
+        response = await client.request(
+            method=request.method,
+            url=path,
+            params=dict(request.query_params) if query_string else None,
+            headers=headers,
+            content=body,
+        )
 
-        if not text:
-            return JSONResponse({"error": "Texte vide fourni"}, status_code=400)
+        # Construire la reponse
+        # Exclure les headers de transfert encoding qui causent des problemes
+        response_headers = dict(response.headers)
+        for hop_header in ("transfer-encoding", "content-encoding", "connection"):
+            response_headers.pop(hop_header, None)
 
-        if len(text) > 10000:
-            return JSONResponse(
-                {"error": "Texte trop long (max 10000 caractères)"}, status_code=400
-            )
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=response_headers,
+            media_type=response_headers.get("content-type"),
+        )
 
-        analysis_id = str(uuid.uuid4())[:8]
-        start_time = datetime.now()
-        logger.info(f"Analyse {analysis_id} démarrée - Type: {analysis_type}")
-
-        # Ajout d'un timeout pour éviter que le serveur ne gèle indéfiniment
-        # si le service d'analyse est bloqué.
-        timeout_seconds = 25.0
-        try:
-            result_data = await asyncio.wait_for(
-                service_manager.analyze_text(text, analysis_type, options),
-                timeout=timeout_seconds,
-            )
-        except asyncio.TimeoutError:
-            logger.error(
-                f"L'analyse {analysis_id} a dépassé le timeout de {timeout_seconds}s."
-            )
-            return JSONResponse(
-                {
-                    "error": f"L'analyse a dépassé le temps imparti de {timeout_seconds} secondes."
-                },
-                status_code=504,
-            )  # 504 Gateway Timeout
-
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-
-        # Le formatage des résultats reste le même
-        formatted_result = {
-            "analysis_id": analysis_id,
-            "status": "success",
-            "timestamp": start_time.isoformat(),
-            "results": result_data.get("results", {}),
-            "metadata": {
-                "duration": duration,
+    except httpx.ConnectError:
+        logger.error(f"Proxy: FastAPI indisponible ({FASTAPI_BASE_URL}{path})")
+        return JSONResponse(
+            {
+                "error": "Backend API indisponible",
+                "detail": f"Impossible de joindre {FASTAPI_BASE_URL}",
             },
-        }
-        logger.info(
-            f"Analyse {analysis_id} terminée avec succès - Durée: {duration:.2f}s"
+            status_code=502,
         )
-        return JSONResponse(formatted_result)
+    except httpx.TimeoutException:
+        logger.error(f"Proxy: timeout vers FastAPI ({path})")
+        return JSONResponse(
+            {"error": "Backend API timeout"},
+            status_code=504,
+        )
 
-    except json.JSONDecodeError:
-        return JSONResponse(
-            {"error": "Corps de la requête JSON invalide"}, status_code=400
-        )
+
+async def ws_proxy(websocket: WebSocket):
+    """
+    Proxy WebSocket vers FastAPI.
+    Etablit la connexion avec le client, puis relay bidirectionnel avec FastAPI.
+    """
+    await websocket.accept()
+
+    # Extraire le path et construire l'URL WebSocket FastAPI
+    path = websocket.url.path
+    ws_target_url = f"ws://{FASTAPI_HOST}:{FASTAPI_PORT}{path}"
+
+    logger.info(f"WS Proxy: {path} -> {ws_target_url}")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            async with client.stream("GET", ws_target_url) as backend_ws:
+                # Relay bidirectionnel
+                async def relay_to_backend():
+                    try:
+                        while True:
+                            data = await websocket.receive_text()
+                            # Forward to backend
+                    except WebSocketDisconnect:
+                        logger.info(f"WS Proxy: client deconnecte ({path})")
+
+                # Pour l'instant, les WebSocket FastAPI sont accessibles directement.
+                # Ce proxy est un placeholder pour une future implementation complete.
+                await websocket.send_json(
+                    {
+                        "type": "proxy_info",
+                        "message": f"Connect FastAPI WebSocket directly at {ws_target_url}",
+                    }
+                )
+                await websocket.close()
+
     except Exception as e:
-        logger.error(f"Erreur inattendue dans /api/analyze: {e}", exc_info=True)
-        return JSONResponse(
-            {"error": f"Erreur interne du serveur: {e}"}, status_code=500
-        )
+        logger.error(f"WS Proxy error ({path}): {e}")
+        await websocket.close(code=1011, reason=str(e))
+
+
+# ==============================================================================
+# ROUTES LOCALES (non-proxy)
+# ==============================================================================
 
 
 async def examples_endpoint(request: Request):
-    """Route pour obtenir des exemples de textes d'analyse."""
+    """Route pour obtenir des exemples de textes d'analyse (hardcoded)."""
     examples = [
         {
             "title": "Logique Propositionnelle",
-            "text": "Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.",
+            "text": "Si il pleut, alors la route est mouillee. Il pleut. Donc la route est mouillee.",
             "type": "propositional",
         },
         {
             "title": "Argumentation Complexe",
-            "text": "L'IA est une opportunité et un défi. Elle peut révolutionner la médecine, mais pose des questions éthiques.",
+            "text": "L'IA est une opportunite et un defi. Elle peut revolutionner la medecine, mais pose des questions ethiques.",
             "type": "unified_analysis",
         },
     ]
@@ -300,80 +221,21 @@ async def dashboard_endpoint(request: Request):
     return HTMLResponse("<h1>Dashboard template not found</h1>", status_code=404)
 
 
-async def framework_analyze_endpoint(request: Request):
-    """Route pour l'analyse d'un A.F. de Dung."""
-    service_manager = request.app.state.service_manager
-    if not service_manager:
-        return JSONResponse(
-            {"error": "Le service d'analyse est indisponible."}, status_code=503
-        )
-
-    try:
-        data = await request.json()
-        arguments = data.get("arguments")
-        attacks = data.get("attacks")
-        options = data.get("options", {})
-
-        if (
-            not arguments
-            or not isinstance(arguments, list)
-            or not isinstance(attacks, list)
-        ):
-            return JSONResponse(
-                {
-                    "error": "Les arguments et les attaques sont requis et doivent être des listes."
-                },
-                status_code=400,
-            )
-
-        # Appel direct de la méthode du service manager.
-        # Si la méthode n'existe pas, une AttributeError sera levée, ce qui est correct.
-        result_data = await service_manager.analyze_dung_framework(
-            arguments=arguments, attacks=attacks, options=options
-        )
-
-        return JSONResponse(result_data)
-
-    except json.JSONDecodeError:
-        return JSONResponse(
-            {"error": "Corps de la requête JSON invalide"}, status_code=400
-        )
-    except AttributeError as e:
-        logger.error(
-            f"La méthode requise est manquante dans le ServiceManager: {e}",
-            exc_info=True,
-        )
-        return JSONResponse(
-            {"error": f"Fonctionnalité non implémentée sur le serveur: {e}"},
-            status_code=501,
-        )
-    except Exception as e:
-        logger.error(
-            f"Erreur inattendue dans /api/v1/framework/analyze: {e}", exc_info=True
-        )
-        return JSONResponse(
-            {"error": f"Erreur interne du serveur: {e}"}, status_code=500
-        )
-
-
 # ==============================================================================
 # CONFIGURATION DE L'APPLICATION STARLETTE
 # ==============================================================================
 
-# --- Définition des Routes ---
-# On combine les routes de l'API et le service des fichiers statiques.
+# --- Definition des Routes ---
+# Toutes les routes /api/* sont proxyees vers FastAPI.
+# Seuls les fichiers statiques (React SPA) et les routes locales restent.
 routes = [
+    # Dashboard (local — peut aussi etre servi par FastAPI)
     Route("/dashboard", endpoint=dashboard_endpoint, methods=["GET"]),
-    Route("/api/status", endpoint=status_endpoint, methods=["GET"]),
-    Route("/api/health", endpoint=status_endpoint, methods=["GET"]),
-    Route("/api/analyze", endpoint=analyze_endpoint, methods=["POST"]),
+    # Exemples hardcoded (local)
     Route("/api/examples", endpoint=examples_endpoint, methods=["GET"]),
-    Route(
-        "/api/v1/framework/analyze",
-        endpoint=framework_analyze_endpoint,
-        methods=["POST"],
-    ),
-    # Le Mount pour les fichiers statiques doit gérer le service de l'application React,
+    # Proxy pour toutes les requetes /api/* vers FastAPI
+    Route("/api/{path:path}", endpoint=api_proxy, methods=["GET", "POST", "PUT", "DELETE", "PATCH"]),
+    # Le Mount pour les fichiers statiques doit gerer le service de l'application React,
     # y compris la route index.html pour le chemin racine.
     Mount(
         "/",
@@ -383,36 +245,46 @@ routes = [
 ]
 
 # --- Middlewares ---
-# Configuration de CORS pour autoriser les requêtes cross-origin (utile pour les tests et le dev local)
+# Configuration de CORS pour autoriser les requetes cross-origin
 middleware = [
     Middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
     )
 ]
 
-# --- Création de l'Application ---
+# --- Creation de l'Application ---
 app = Starlette(debug=True, routes=routes, middleware=middleware, lifespan=lifespan)
 
 # ==============================================================================
-# POINT D'ENTRÉE POUR LE DÉMARRAGE DIRECT
+# POINT D'ENTREE POUR LE DEMARRAGE DIRECT
 # ==============================================================================
 
 if __name__ == "__main__":
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="Lance le serveur web Starlette.")
+    parser = argparse.ArgumentParser(description="Lance le serveur web Starlette (frontend proxy).")
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.environ.get("PORT", 5003)),
-        help="Port pour exécuter le serveur.",
+        help="Port pour executer le serveur.",
     )
     parser.add_argument(
-        "--host", type=str, default="127.0.0.1", help="Hôte sur lequel écouter."
+        "--host", type=str, default="127.0.0.1", help="Hote sur lequel ecouter."
+    )
+    parser.add_argument(
+        "--fastapi-port",
+        type=int,
+        default=FASTAPI_PORT,
+        help="Port du backend FastAPI.",
     )
     args = parser.parse_args()
 
-    logger.info(f"Démarrage du serveur Uvicorn sur http://{args.host}:{args.port}")
+    if args.fastapi_port:
+        FASTAPI_PORT = args.fastapi_port
+
+    logger.info(f"Demarrage du frontend proxy sur http://{args.host}:{args.port}")
+    logger.info(f"  -> Backend FastAPI: {FASTAPI_BASE_URL}")
 
     uvicorn.run(
         "interface_web.app:app",
