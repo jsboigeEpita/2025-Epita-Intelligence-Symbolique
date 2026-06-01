@@ -7,6 +7,12 @@ ModificationHistory, BeliefMetadata, and ExtendedBeliefModel dataclasses.
 
 import pytest
 from datetime import datetime, timedelta
+
+# Orphan model — no pipeline consumer. Source kept for potential future use.
+# B-06 audit #810 — 76 dead tests archived.
+pytestmark = pytest.mark.skip(
+    "Orphan model extended_belief_model — no pipeline consumer (B-06 #810)"
+)
 from argumentation_analysis.models.extended_belief_model import (
     BeliefType,
     ConfidenceLevel,
