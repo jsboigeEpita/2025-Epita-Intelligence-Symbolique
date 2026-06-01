@@ -1,72 +1,158 @@
-# Audit A-16: Speech-to-Text
+# Audit A-16: Speech-to-Text Analyse Fallacieux
 
-**Issue**: N/A | **SUIVI**: Score 75% | **Date audit**: 2026-05-31
+**Issue**: #777 (A-16) | **Epic**: #742 | **Date audit**: 2026-06-01
+**Auditeur**: Claude Code @ myia-po-2023
 
-## Status: 🟡 Partial
+---
 
-The speech transcription service is registered and wired into the pipeline, but several advertised features are stubs or have been dropped from the original design.
+## 0. Synthese en 1 phrase
 
-## What was delivered (student source)
+Le projet etudiant `speech-to-text/` (~34 fichiers, Whisper + Gradio + Vue.js, SUIVI 75%) a ete integre de maniere **structurellement complete mais substantiellement vide** -- le cablage pipeline est complet (registry + invoke callable + state writer + workflow phase + router + 2 consumers avances), mais linvoke callable est un **stub mort** qui retourne `{"status": "ready"}` sans jamais appeler le `SpeechTranscriptionService`, le backend Gradio na pas ete migre (tier 2 perdu), la transcription YouTube est absente, et le chainage transcription-analyse fallacieuse nest pas implante.
 
-- Speech-to-text service with Whisper API integration
-- Original design: 2-tier transcription (Whisper API + Gradio local tier)
-- YouTube link transcription support
-- Integration with analysis pipeline
+**Verdict**: :yellow_circle: **INTEGRE structurellement (invoke stub mort)** -- le scaffolding pipeline est complet mais la substance est absente. Le repertoire racine est sanctuarise (reference pedagogique conservee).
 
-## What exists in `argumentation_analysis/`
+---
 
-| Layer | File | Detail |
-|---|---|---|
-| Service | `services/speech_transcription_service.py` | `SpeechTranscriptionService` + `TranscriptionSegment` + `TranscriptionResult` |
-| Registry | `orchestration/registry_setup.py:314-327` | `speech_transcription_service` with capabilities `speech_transcription`, `speech_to_text` |
-| Invoke callable | `orchestration/invoke_callables.py:2244` | `_invoke_speech_transcription` async function |
-| State writer | `orchestration/state_writers.py:1022` | `_write_speech_to_state` → `transcription_segments` |
-| Router | `orchestration/router.py:43,76,420` | `speech_transcription` capability with routing metadata |
-| Workflow | `orchestration/workflows.py:154` | `speech_transcription` capability included in workflow definitions |
-| Tests | `tests/unit/argumentation_analysis/services/test_speech_transcription_service.py` | 18 tests |
+## 1. Cadrage R281c -- 4 etapes
 
-## Preservation Assessment
+### 1.1 Localiser la version consolidee
 
-- Service class: **PRESENT** — `SpeechTranscriptionService` with `transcribe_file()`, `transcribe_bytes()`, `get_status_details()`
-- Data model: **PRESENT** — `TranscriptionSegment` and `TranscriptionResult` dataclasses with `to_dict()`
-- Registry integration: **PRESENT** — Registered with capability discovery
-- State chain: **PRESENT** — Results flow through `state_writers.py` to `transcription_segments`
-- Tests: **PRESENT** — 18 unit tests
+| Fichier consolide | LOC approx | Role | Origine |
+| --- | --- | --- | --- |
+| `services/speech_transcription_service.py` | ~150 | `SpeechTranscriptionService` + `TranscriptionSegment` + `TranscriptionResult` | Adapte de `speech-to-text/` |
+| `orchestration/registry_setup.py` | ~16 | SERVICE registration (2 capabilities) | Nouveau |
+| `orchestration/invoke_callables.py` | ~8 | `_invoke_speech_transcription` (STUB MORT) | Nouveau |
+| `orchestration/state_writers.py` | ~16 | `_write_speech_to_state` | Nouveau |
+| `core/shared_state.py` | ~25 | `transcription_segments` list + `add_transcription_segment()` | Nouveau |
+| `orchestration/router.py` | ~3 | `speech_transcription` capability metadata | Nouveau |
+| `orchestration/workflows.py` | ~5 | Phase `transcribe` dans full workflow | Nouveau |
 
-## Gap Analysis
+**Consommateurs cross-pipeline** : `workflows/democratech.py` (phase 1), `workflows/fact_check_pipeline.py` (phase 1).
 
-### Implementation Gaps
+### 1.2 Preservation fonctionnelle
 
-1. **Only 1-tier (Whisper API), not 2-tier** — The original design specified a Gradio local tier as fallback. Only the Whisper API tier is implemented. The Gradio tier was dropped during integration.
+| Fonctionnalite etudiante | Preservee ? | Ou | Notes |
+| --- | --- | --- | --- |
+| Transcription Whisper API | :white_check_mark: Identique | `speech_transcription_service.py` | POST vers endpoint Whisper |
+| `TranscriptionSegment` dataclass | :white_check_mark: Identique | Meme fichier | Memes champs |
+| `TranscriptionResult` dataclass | :white_check_mark: Identique | Meme fichier | + `to_dict()` |
+| `transcribe_file(file_path)` | :white_check_mark: Identique | Service | Synchronous `requests.post()` |
+| `transcribe_bytes(audio_data)` | :white_check_mark: Identique | Service | Synchronous `requests.post()` |
+| Gradio WebUI backend (tier 2) | :x: Non migre | Reste dans `speech-to-text/` | Fallback local perdu |
+| Transcription YouTube (yt-dlp) | :x: Non migre | Reste dans `speech-to-text/` | URL parsing perdu |
+| FallacyDetectionService (3-tier) | :x: Non migre | Reste dans `speech-to-text/` | Analyse post-transcription perdue |
+| Web API Flask (port 5001) | :x: Non migre | Reste dans `speech-to-text/` | Endpoint standalone perdu |
+| Frontend Vue.js + Gradio | :x: Non migre | Reste dans `speech-to-text/` | Frontend standalone |
+| Capability registry registration | :white_check_mark: Superieur | `registry_setup.py` | 2 capabilities |
+| State writer | :white_check_mark: Superieur | `state_writers.py` | Persiste dans `UnifiedAnalysisState` |
+| Workflow phase | :white_check_mark: Superieur | `workflows.py` | Phase `transcribe` (optional) |
+| Router auto-routing | :white_check_mark: Superieur | `router.py` | `speech_transcription` capability |
+| Invoke callable | :warning: STUB MORT | `invoke_callables.py:2244` | Retourne `{"status": "ready"}` sans appeler le service |
+| Cross-pipeline consumption | :white_check_mark: Superieur | democratech, fact_check | 2 workflows avances consomment |
 
-2. **Async is cosmetic** — The `_invoke_speech_transcription` callable is declared `async` but the actual `SpeechTranscriptionService.transcribe_file()` method is synchronous. The `async` keyword provides no concurrency benefit — it is a stub pattern.
+**Score de preservation**: 9/16 fonctionnalites preservees ou superieures (56%). Les 5 perdues sont specifiques au projet etudiant. Le gap critique est le stub mort.
 
-3. **Docstring claims `transcribe_and_analyze` but no such method exists** — The service docstring or comments reference a combined transcription + analysis method that was never implemented. Only `transcribe_file()` and `transcribe_bytes()` exist.
+### 1.3 Dilutions / Regressions
 
-4. **YouTube link transcription lost** — The original student project supported YouTube URL transcription. This capability is absent from the integrated service — no URL parsing, no `yt-dlp` integration, no audio download pipeline.
+#### Dilution 1: Invoke callable est un stub mort (CRITIQUE)
 
-5. **Invoke callable is a stub that never calls the service** — `_invoke_speech_transcription` in `invoke_callables.py` does not actually invoke `SpeechTranscriptionService.transcribe_file()`. The callable exists for registry compliance but does not perform real transcription.
+**Localisation**: `invoke_callables.py:2244-2251` -- `_invoke_speech_transcription` retourne `{"status": "ready"}` sans jamais appeler `SpeechTranscriptionService`.
+**Impact**: HIGH -- la phase `transcribe` dans les workflows passera sans rien faire. Le pipeline est cable mais **fonctionnellement inerte**.
+**Assessment**: Le scaffolding existe mais le coeur est un placeholder. Cas unique dintegration "vide".
+**Fix-intent**: `fix(a-16): implement _invoke_speech_transcription to call SpeechTranscriptionService`
 
-### Scoring Justification
+#### Dilution 2: Backend Gradio non migre (tier 2 perdu)
 
-The 75% score reflects that the service is structurally integrated (registry, state, router, workflow) but the implementation has significant holes. The wiring is complete; the substance is partial.
+**Localisation**: Le service etudiant avait un fallback Gradio WebUI pour la transcription locale.
+**Impact**: MEDIUM -- sans cle API Whisper, la transcription est indisponible.
+**Assessment**: Perte acceptable -- le fallback necessitait un serveur separe.
 
-## Recommended Action
+#### Dilution 3: Chainage transcription-fallacies non implante
 
-**Medium priority.** The integration scaffolding is solid but the implementation needs completion:
+**Localisation**: Le projet etudiant enchainait automatiquement : audio -> transcribe -> detect fallacies.
+**Impact**: MEDIUM -- lusage principal nest pas un workflow integre.
+**Assessment**: Les deux briques existent mais ne sont pas connectees.
 
-1. **Make async real** — Either make `transcribe_file()` truly async (e.g., `asyncio.to_thread`) or remove the misleading `async` decorator from the invoke callable
-2. **Implement the invoke callable** — Connect `_invoke_speech_transcription` to actually call `SpeechTranscriptionService.transcribe_file()`
-3. **Drop or document missing features** — Remove docstring references to `transcribe_and_analyze` and YouTube transcription, or implement them
-4. **Consider adding Gradio tier** — If local transcription is needed, add the Gradio fallback as originally designed
-5. **Add integration test** — Current 18 tests are unit-level. Add at least one test that exercises the full invoke callable path.
+### 1.4 Statut du repertoire racine `speech-to-text/`
 
-## Source Files
+**Verdict**: :green_circle: **Sanctuarise -- reference pedagogique conservee** (mandate R300)
 
-- `argumentation_analysis/services/speech_transcription_service.py`
-- `argumentation_analysis/orchestration/registry_setup.py` (lines 314-327)
-- `argumentation_analysis/orchestration/invoke_callables.py` (line 2244)
-- `argumentation_analysis/orchestration/state_writers.py` (line 1022)
-- `argumentation_analysis/orchestration/router.py` (lines 43, 76, 420)
-- `argumentation_analysis/orchestration/workflows.py` (line 154)
-- `tests/unit/argumentation_analysis/services/test_speech_transcription_service.py`
+- **0 import live Python** -- aucun `from speech_to_text` dans le codebase consolide
+- **Fichiers non-migres** : Gradio WebUI, YouTube transcription, FallacyDetectionService, Flask API, Vue.js frontend
+- **SUIVI** : 75% -- "Integre"
+
+---
+
+## 2. Matrice des capabilities
+
+| Capability | Module consolide | Statut |
+| --- | --- | --- |
+| Transcription Whisper API | `services/speech_transcription_service.py` | :white_check_mark: Identique |
+| Capability registry (2 caps) | `orchestration/registry_setup.py` | :white_check_mark: Superieur |
+| State writer | `orchestration/state_writers.py` | :white_check_mark: Superieur |
+| Workflow phase `transcribe` | `orchestration/workflows.py` | :white_check_mark: Superieur |
+| Router metadata | `orchestration/router.py` | :white_check_mark: Superieur |
+| Cross-pipeline consumption | democratech + fact_check | :white_check_mark: Superieur |
+| Invoke callable | `orchestration/invoke_callables.py` | :warning: STUB MORT |
+| Gradio fallback | AUCUN | :x: Non migre |
+| YouTube transcription | AUCUN | :x: Non migre |
+| Post-transcription fallacies | AUCUN | :x: Non cable |
+
+---
+
+## 3. Cartographie des connections
+
+``text
+speech-to-text/                            argumentation_analysis/
++-- services/whisper.py --------------> services/speech_transcription_service.py
+|   (Whisper API + Gradio)                 (Whisper API seul, Gradio dropped)
++-- services/fallacy_detector.py ------ (NON migre -- 3-tier fallacy)
++-- api/fallacy_api.py ---------------- (NON migre -- Flask API port 5001)
++-- frontend/ ------------------------- (NON migre -- Vue.js + Gradio)
+
+                                           CONSOLIDE (pipeline wiring complet):
+                                           +-- orchestration/registry_setup.py (2 caps)
+                                           +-- orchestration/invoke_callables.py :warning: STUB
+                                           +-- orchestration/state_writers.py
+                                           +-- orchestration/workflows.py (phase "transcribe")
+                                           +-- orchestration/router.py
+                                           +-- core/shared_state.py (transcription_segments)
+                                           +-- consumers: democratech.py + fact_check_pipeline.py
+``
+
+---
+
+## 4. Fix-intents
+
+| # | Issue proposee | Priorite | Action |
+| --- | --- | --- | --- |
+| F1 | `fix(a-16): implement _invoke_speech_transcription to call SpeechTranscriptionService` | **HIGH** | Remplacer le stub par un appel reel via `asyncio.to_thread()` |
+| F2 | `fix(a-16): add post-transcription fallacy analysis workflow chaining` | **MEDIUM** | Workflow `transcribe_then_analyze` |
+| F3 | `fix(a-16): add Gradio WebUI as fallback tier for offline transcription` | **LOW** | Fallback dans le service |
+
+---
+
+## 5. Conclusion
+
+Le projet Speech-to-Text est **structurellement integre mais substantiellement vide** -- le paradoxe de lintegration A-16. Le cablage pipeline est le plus complet de tous les audits :yellow_circle: : registry, invoke, state writer, workflow, router, shared state, 2 consumers. Mais linvoke callable est un **stub mort** -- le pipeline "passe" silencieusement.
+
+**Contraste** : A-10 (dormant, invoke reel), A-13 (pas cable), A-16 (cablage COMPLET mais stub mort -- pire car silencieux).
+
+**Le repertoire `speech-to-text/` est sanctuarise** (mandate R300).
+
+---
+
+## 6. Fichiers sources
+
+- `argumentation_analysis/services/speech_transcription_service.py` -- Service + dataclasses
+- `argumentation_analysis/orchestration/invoke_callables.py:2244-2251` -- STUB
+- `argumentation_analysis/orchestration/state_writers.py` -- State writer
+- `argumentation_analysis/orchestration/registry_setup.py` -- 2 caps
+- `argumentation_analysis/orchestration/workflows.py` -- Phase "transcribe"
+- `argumentation_analysis/workflows/democratech.py` -- Consumer
+- `argumentation_analysis/workflows/fact_check_pipeline.py` -- Consumer
+- `tests/unit/argumentation_analysis/services/test_speech_transcription_service.py` -- 18 tests
+
+## A valider par lutilisateur
+
+RAS -- stub mort identifie (HIGH). Decision : implementer ou documenter comme service opt-in non cable ?
