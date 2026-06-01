@@ -196,13 +196,13 @@ async def mobile_validate(request: TextRequest):
             formalization=ValidationFormalization(
                 type="toulmin",
                 premises=[
-                    d.content if hasattr(d, "content") else str(d)
+                    d.text if hasattr(d, "text") else str(d)
                     for d in (toulmin.data or [])
                 ],
-                conclusion=toulmin.claim or "",
-                rule=toulmin.warrant or "",
+                conclusion=toulmin.claim.text if toulmin.claim and hasattr(toulmin.claim, "text") else (str(toulmin.claim) if toulmin.claim else ""),
+                rule=toulmin.warrant.text if toulmin.warrant and hasattr(toulmin.warrant, "text") else (str(toulmin.warrant) if toulmin.warrant else ""),
             ),
-            explanation=toulmin.qualifier or "Analysis complete",
+            explanation=toulmin.qualifier.text if toulmin.qualifier and hasattr(toulmin.qualifier, "text") else (str(toulmin.qualifier) if toulmin.qualifier else "Analysis complete"),
             execution_time=time.time() - start,
         )
     except Exception as e:
@@ -222,7 +222,7 @@ async def mobile_chat(request: ChatRequest):
     try:
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        llm = create_llm_service()
+        llm = create_llm_service(service_id="mobile_chat")
         if llm and hasattr(llm, "generate"):
             response = await llm.generate(
                 f"You are an AI assistant specialized in analyzing arguments. "
