@@ -8,8 +8,27 @@ from .proposal_endpoints import proposal_router
 from .mobile_endpoints import mobile_router
 from .websocket_routes import ws_router
 from .agent_routes import agent_router
-from argumentation_analysis.api.jtms_endpoints import jtms_router, initialize_jtms_services
 from argumentation_analysis.core.bootstrap import initialize_project_environment
+
+# JTMS endpoints — optional, graceful degradation if import fails (#857).
+# The JTMS module depends on JPype/JVM; if unavailable, the API boots
+# without JTMS routes rather than crashing entirely.
+try:
+    from argumentation_analysis.api.jtms_endpoints import (
+        jtms_router,
+        initialize_jtms_services,
+    )
+
+    _JTMS_AVAILABLE = True
+except ImportError as exc:
+    logging.getLogger(__name__).warning(
+        "JTMS endpoints unavailable (import failed: %s). "
+        "API will start without JTMS routes.",
+        exc,
+    )
+    jtms_router = None  # type: ignore[assignment,misc]
+    initialize_jtms_services = None  # type: ignore[assignment]
+    _JTMS_AVAILABLE = False
 
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -37,8 +56,18 @@ async def startup_event():
     )
 
     # Initialize JTMS services (JTMSService + JTMSSessionManager + SK plugin)
-    await initialize_jtms_services()
-    logging.info("Services JTMS initialisés (router monté sur /api/v1/jtms).")
+    if _JTMS_AVAILABLE and initialize_jtms_services is not None:
+        try:
+            await initialize_jtms_services()
+            logging.info("Services JTMS initialisés (router monté sur /api/v1/jtms).")
+        except Exception as exc:
+            logging.warning(
+                "JTMS service initialization failed: %s. "
+                "JTMS endpoints will return 503.",
+                exc,
+            )
+    else:
+        logging.info("JTMS services skipped (module not available).")
 
 
 # --- Application FastAPI ---
@@ -58,7 +87,8 @@ app.include_router(proposal_router, prefix="/api")
 app.include_router(mobile_router, prefix="/api")
 app.include_router(ws_router)
 app.include_router(agent_router)
-app.include_router(jtms_router, prefix="/api/v1")
+if _JTMS_AVAILABLE and jtms_router is not None:
+    app.include_router(jtms_router, prefix="/api/v1")
 
 
 @app.get("/")
