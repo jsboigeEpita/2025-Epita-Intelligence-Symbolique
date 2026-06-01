@@ -91,6 +91,7 @@ __all__ = [
     "_invoke_external_modal_solver",
     "_invoke_deep_synthesis",
     "_invoke_stakes_extractor",
+    "_invoke_ai_shield",
 ]
 
 
@@ -6112,3 +6113,75 @@ async def _invoke_stakes_extractor(
             f"register={register}"
         ),
     }
+
+
+async def _invoke_ai_shield(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """AI Shield — adversarial input/output validation (#841).
+
+    Runs the AI Shield pipeline on the input text to detect injection,
+    jailbreak, bias, and output leaks. Optional phase that runs early
+    in the workflow to guard downstream LLM calls.
+
+    Writes results to state.ai_shield_results and adds a trace entry.
+    """
+    try:
+        from argumentation_analysis.services.ai_shield import load_preset
+    except ImportError as exc:
+        logger.debug(f"AI Shield not available (import failed: {exc})")
+        return {"shield_available": False, "blocked": False, "error": str(exc)}
+
+    # Configure from context or use default preset
+    shield_config = context.get("shield_config", {})
+    preset_name = shield_config.get("preset", "basic")
+    fail_open = shield_config.get("fail_open", True)
+
+    # LLM validator needs API key — pass through if available
+    api_key = os.environ.get("OPENAI_API_KEY")
+    try:
+        shield = load_preset(preset_name, api_key=api_key, fail_open=fail_open)
+    except Exception as exc:
+        logger.warning(f"AI Shield preset load failed: {exc}")
+        return {"shield_available": False, "blocked": False, "error": str(exc)}
+
+    # Validate input (runs all enabled layers)
+    result = shield.validate_input(input_text)
+
+    output = {
+        "shield_available": True,
+        "blocked": result.blocked,
+        "overall_score": result.overall_score,
+        "passed": result.passed,
+        "reason": result.reason,
+        "layer_results": [
+            {
+                "layer": lr.layer_name,
+                "score": lr.score,
+                "passed": lr.passed,
+                "reason": lr.reason,
+            }
+            for lr in result.layer_results
+        ],
+    }
+
+    # Write to shared state if available
+    _state = context.get("_state_object")
+    if _state is not None and hasattr(_state, "ai_shield_results"):
+        _state.ai_shield_results.append(output)
+        _state.add_trace_entry(
+            phase="shield",
+            agent="AIShield",
+            reacts_to=[],
+            summary=(
+                f"Shield: {'BLOCKED' if result.blocked else 'PASSED'} "
+                f"(score={result.overall_score:.2f}, {len(result.layer_results)} layers)"
+            ),
+        )
+
+    logger.info(
+        f"AI Shield: {'BLOCKED' if result.blocked else 'PASSED'} "
+        f"(score={result.overall_score:.2f}, reason={result.reason})"
+    )
+
+    return output

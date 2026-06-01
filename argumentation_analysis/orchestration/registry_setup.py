@@ -60,6 +60,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
     _invoke_deep_synthesis,
+    _invoke_ai_shield,
 )
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -655,6 +656,26 @@ def setup_registry(
         registered.append("stakes_extractor_service")
     except Exception as e:
         skipped.append(("stakes_extractor_service", str(e)))
+
+    # AI Shield service — adversarial input/output validation (#841)
+    try:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_ai_shield,
+        )
+
+        registry.register_service(
+            name="ai_shield_service",
+            service_class=type("AIShieldService", (), {}),
+            capabilities=["input_validation", "output_filtering", "adversarial_protection"],
+            metadata={
+                "description": "AI Shield — adversarial protection for LLM pipeline (injection, jailbreak, bias, leak detection)",
+                "presets": ["basic", "advanced", "output_only", "strict"],
+            },
+            invoke=_invoke_ai_shield,
+        )
+        registered.append("ai_shield_service")
+    except Exception as e:
+        skipped.append(("ai_shield_service", str(e)))
 
     return registry
 
