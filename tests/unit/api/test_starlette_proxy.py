@@ -1,4 +1,4 @@
-"""Tests for Starlette frontend proxy (issue #844).
+"""Tests for Starlette frontend proxy (issue #844, #858).
 
 Validates:
 - ServiceManager and NLP imports are removed
@@ -7,6 +7,9 @@ Validates:
 - Examples endpoint is local (hardcoded)
 - Dashboard is local
 - No backend coupling remains
+- WS proxy returns explicit error (not silent drop)
+- Accent in examples text is preserved
+- Environment variables documented
 """
 
 import pytest
@@ -21,7 +24,6 @@ class TestStarletteProxyStructure:
         """interface_web.app should NOT import ServiceManager."""
         import interface_web.app as app_module
 
-        # Check that ServiceManager is NOT in the module
         assert not hasattr(app_module, "ServiceManager"), (
             "ServiceManager should not be imported in proxy mode"
         )
@@ -92,3 +94,100 @@ class TestStarletteProxyConfig:
 
         assert "build" in str(app_module.STATIC_FILES_DIR)
         assert "interface-web-argumentative" in str(app_module.STATIC_FILES_DIR)
+
+
+class TestWSProxyLimitation:
+    """Verify WS proxy behavior documents limitation (#858)."""
+
+    def test_ws_proxy_function_exists(self):
+        """ws_proxy should be defined in module."""
+        import interface_web.app as app_module
+
+        assert hasattr(app_module, "ws_proxy"), (
+            "ws_proxy function should exist for WS connection handling"
+        )
+
+    def test_ws_proxy_sends_explicit_error(self):
+        """ws_proxy should send ws_relay_unavailable before closing."""
+        import interface_web.app as app_module
+        import inspect
+
+        source = inspect.getsource(app_module.ws_proxy)
+        # Verify the function sends explicit error JSON
+        assert "ws_relay_unavailable" in source, (
+            "ws_proxy should send 'ws_relay_unavailable' type"
+        )
+        assert "target_url" in source, (
+            "ws_proxy should include target_url for client redirect"
+        )
+        # Verify it does NOT contain dead code (relay_to_backend)
+        assert "relay_to_backend" not in source, (
+            "ws_proxy should not contain dead relay_to_backend function"
+        )
+
+    def test_ws_proxy_closes_with_1011(self):
+        """ws_proxy should close with code 1011 (internal error)."""
+        import interface_web.app as app_module
+        import inspect
+
+        source = inspect.getsource(app_module.ws_proxy)
+        assert "1011" in source, (
+            "ws_proxy should close with code 1011"
+        )
+
+
+class TestExamplesAccent:
+    """Verify accent is preserved in examples (#858)."""
+
+    def test_mouillee_has_accent(self):
+        """Example text should use 'mouillée' with accent."""
+        import interface_web.app as app_module
+
+        source = open(app_module.__file__, encoding="utf-8").read()
+        assert "mouillée" in source, (
+            "Examples should contain 'mouillée' with proper accent"
+        )
+        # Ensure the unaccented version is NOT present
+        assert "mouillee" not in source, (
+            "Found 'mouillee' without accent — should be 'mouillée'"
+        )
+
+
+class TestEnvDocumentation:
+    """Verify environment variables are documented in module docstring (#858)."""
+
+    def test_fastapi_host_documented(self):
+        """FASTAPI_HOST should appear in module docstring."""
+        import interface_web.app as app_module
+
+        docstring = app_module.__doc__
+        assert "FASTAPI_HOST" in docstring, (
+            "FASTAPI_HOST should be documented in module docstring"
+        )
+
+    def test_fastapi_port_documented(self):
+        """FASTAPI_PORT should appear in module docstring."""
+        import interface_web.app as app_module
+
+        docstring = app_module.__doc__
+        assert "FASTAPI_PORT" in docstring, (
+            "FASTAPI_PORT should be documented in module docstring"
+        )
+
+    def test_react_app_backend_url_documented(self):
+        """REACT_APP_BACKEND_URL should be documented."""
+        import interface_web.app as app_module
+
+        docstring = app_module.__doc__
+        assert "REACT_APP_BACKEND_URL" in docstring, (
+            "REACT_APP_BACKEND_URL should be documented for frontend build"
+        )
+
+    def test_ws_limitation_documented(self):
+        """WS relay limitation should be documented."""
+        import interface_web.app as app_module
+
+        docstring = app_module.__doc__
+        assert "WebSocket" in docstring or "WS" in docstring, (
+            "WebSocket limitation should be documented"
+        )
