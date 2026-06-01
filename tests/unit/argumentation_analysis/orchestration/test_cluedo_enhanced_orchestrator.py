@@ -151,10 +151,7 @@ class TestCluedoOrchestratorIntegration:
         # that the mocked agents are correctly assigned.
         pass
 
-    @pytest.mark.xfail(
-        reason="Test-ordering dependent: passes individually but fails in full suite due to singleton state pollution",
-        strict=False,
-    )
+    # xfail removed: test passes both in isolation and in full suite (verified 3x)
     @patch(
         "argumentation_analysis.orchestration.cluedo_extended_orchestrator.CyclicSelectionStrategy.next"
     )
