@@ -13,6 +13,12 @@ le suivi d'évolution d'état et la génération de rapports.
 
 import pytest
 import json
+
+# Legacy copy of Gen 1 trace_analyzer tests — same dead module as reporting/test_trace_analyzer.py.
+# Superseded by enhanced_real_time_trace_analyzer (Gen 3). B-07 audit #811 — 36 dead tests archived.
+pytestmark = pytest.mark.skip(
+    "Legacy Gen 1 trace_analyzer copy — superseded by enhanced_real_time_trace_analyzer (B-07 #811)"
+)
 import tempfile
 import os
 from pathlib import Path
