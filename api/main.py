@@ -7,6 +7,7 @@ from .proposal_endpoints import proposal_router
 from .mobile_endpoints import mobile_router
 from .websocket_routes import ws_router
 from .agent_routes import agent_router
+from argumentation_analysis.api.jtms_endpoints import jtms_router, initialize_jtms_services
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 from fastapi.responses import HTMLResponse
@@ -14,7 +15,7 @@ from fastapi.responses import HTMLResponse
 # --- Gestion du cycle de vie de la JVM et des services ---
 
 
-def startup_event():
+async def startup_event():
     """
     Configure et exécute les routines de démarrage de l'application.
 
@@ -34,6 +35,10 @@ def startup_event():
         "Environnement du projet initialisé et attaché à l'état de l'application."
     )
 
+    # Initialize JTMS services (JTMSService + JTMSSessionManager + SK plugin)
+    await initialize_jtms_services()
+    logging.info("Services JTMS initialisés (router monté sur /api/v1/jtms).")
+
 
 # --- Application FastAPI ---
 
@@ -52,6 +57,7 @@ app.include_router(proposal_router, prefix="/api")
 app.include_router(mobile_router, prefix="/api")
 app.include_router(ws_router)
 app.include_router(agent_router)
+app.include_router(jtms_router, prefix="/api/v1")
 
 
 @app.get("/")
