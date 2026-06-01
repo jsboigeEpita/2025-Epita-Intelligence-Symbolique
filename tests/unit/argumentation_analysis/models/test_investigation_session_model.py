@@ -5,6 +5,12 @@ import json
 import pytest
 from datetime import datetime, timedelta
 
+# Orphan model — no pipeline consumer. Source kept for potential future use.
+# B-06 audit #810 — 64 dead tests archived.
+pytestmark = pytest.mark.skip(
+    "Orphan model investigation_session_model — no pipeline consumer (B-06 #810)"
+)
+
 from argumentation_analysis.models.investigation_session_model import (
     SessionStatus,
     InvestigationType,
