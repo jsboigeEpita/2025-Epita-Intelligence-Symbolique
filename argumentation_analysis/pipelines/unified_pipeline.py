@@ -78,12 +78,7 @@ try:
     from argumentation_analysis.orchestrators.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestrators.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
-    from argumentation_analysis.orchestrators.logique_complexe_orchestrator import (
-        LogiqueComplexeOrchestrator,
-    )
+    # RealLLM and LogiqueComplexe removed (#885)
     from argumentation_analysis.services.llm_service import create_llm_service
 
     ORCHESTRATION_PIPELINE_AVAILABLE = True

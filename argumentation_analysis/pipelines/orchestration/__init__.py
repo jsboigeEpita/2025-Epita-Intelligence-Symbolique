@@ -40,8 +40,7 @@ from .orchestrators.specialized.cluedo_orchestrator import CluedoOrchestratorWra
 from .orchestrators.specialized.conversation_orchestrator import (
     ConversationOrchestratorWrapper,
 )
-from .orchestrators.specialized.logic_orchestrator import LogicOrchestratorWrapper
-from .orchestrators.specialized.real_llm_orchestrator import RealLLMOrchestratorWrapper
+# LogicOrchestratorWrapper and RealLLMOrchestratorWrapper removed (#885)
 
 __all__ = [
     # Config
@@ -61,6 +60,4 @@ __all__ = [
     # Specialized Orchestrators
     "CluedoOrchestratorWrapper",
     "ConversationOrchestratorWrapper",
-    "LogicOrchestratorWrapper",
-    "RealLLMOrchestratorWrapper",
 ]
