@@ -2209,12 +2209,79 @@ async def _invoke_camembert_fallacy(
 
 
 async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke local LLM service for text analysis."""
+    """Invoke local LLM service for text analysis (#834).
+
+    Enriched with state writing: persists results to state.local_llm_results
+    and adds a trace entry. Falls back gracefully when local LLM endpoint
+    is unavailable (returns status=skipped, not an error).
+    """
     from argumentation_analysis.services.local_llm_service import LocalLLMService
 
     service = LocalLLMService()
-    messages = [{"role": "user", "content": input_text}]
-    return await service.chat_completion(messages)
+
+    # Check availability first
+    try:
+        available = await service.is_available()
+    except Exception:
+        available = False
+    if not available:
+        logger.info("Local LLM endpoint unavailable — skipping")
+        result = {
+            "status": "skipped: endpoint_unavailable",
+            "model": service.model_id if hasattr(service, "model_id") else "unknown",
+        }
+        _state = context.get("_state_object")
+        if _state is not None and hasattr(_state, "local_llm_results"):
+            _state.local_llm_results.append(result)
+        return result
+
+    # Build prompt — optionally include upstream extract results for context
+    extract_output = context.get("phase_extract_output", {})
+    system_prompt = (
+        "You are an argument analysis assistant. "
+        "Analyze the text for arguments, fallacies, and logical structure."
+    )
+    user_content = input_text
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_content},
+    ]
+
+    try:
+        response = await service.chat_completion(messages)
+    except Exception as exc:
+        logger.warning(f"Local LLM call failed: {exc}")
+        result = {
+            "status": "error",
+            "error": str(exc),
+        }
+        _state = context.get("_state_object")
+        if _state is not None and hasattr(_state, "local_llm_results"):
+            _state.local_llm_results.append(result)
+        return result
+
+    result = {
+        "status": "completed",
+        "response": response if isinstance(response, str) else str(response),
+        "model": service.model_id if hasattr(service, "model_id") else "local",
+        "input_length": len(input_text),
+    }
+
+    # Write to shared state
+    _state = context.get("_state_object")
+    if _state is not None:
+        if hasattr(_state, "local_llm_results"):
+            _state.local_llm_results.append(result)
+        _state.add_trace_entry(
+            phase="local_llm",
+            agent="LocalLLM",
+            reacts_to=["extract"],
+            summary=f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars input)",
+        )
+
+    logger.info(f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars)")
+    return result
 
 
 async def _invoke_semantic_index(
