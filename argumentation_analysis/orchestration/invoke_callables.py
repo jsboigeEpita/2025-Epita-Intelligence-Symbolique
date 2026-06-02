@@ -1375,7 +1375,7 @@ async def _invoke_governance(
                 ballots.append(pref)
             vote_input = json.dumps(
                 {
-                    "method": "copeland",
+                    "method": context.get("vote_method", "copeland"),
                     "ballots": ballots,
                     "options": options,
                 }

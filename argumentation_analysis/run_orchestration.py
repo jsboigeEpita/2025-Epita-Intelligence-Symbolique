@@ -140,6 +140,8 @@ async def run_modern_analysis(
     rich_output: bool = False,
     fallacy_tier: str = "llm",
     shield_preset: str = "off",
+    vote_method: str = "copeland",
+    consensus_threshold: float = 0.7,
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
@@ -148,6 +150,8 @@ async def run_modern_analysis(
     :param output_file: Chemin optionnel pour sauvegarder les résultats en JSON.
     :param fallacy_tier: Fallacy detection depth (taxonomy/hybrid/llm/full).
     :param shield_preset: AI Shield preset (off/basic/advanced/output_only/strict).
+    :param vote_method: Social choice voting method for governance phase.
+    :param consensus_threshold: Consensus threshold (0.0-1.0) for deliberation.
     :return: Résultats de l'analyse.
     """
     from argumentation_analysis.orchestration.unified_pipeline import (
@@ -166,6 +170,10 @@ async def run_modern_analysis(
             "preset": shield_preset,
             "fail_open": shield_preset != "strict",
         }
+    if vote_method != "copeland":
+        context["vote_method"] = vote_method
+    if consensus_threshold != 0.7:
+        context["consensus_threshold"] = consensus_threshold
 
     results = await run_unified_analysis(
         text=text_content,
@@ -379,6 +387,25 @@ Exemples:
         "advanced (heuristic+LLM+output filter), "
         "output_only (post-LLM filtering only), "
         "strict (all layers, lowest thresholds, fail-closed)",
+    )
+    parser.add_argument(
+        "--vote-method",
+        type=str,
+        choices=["approval", "stv", "copeland", "kemeny_young", "schulze"],
+        default="copeland",
+        help="Social choice voting method for governance phase: "
+        "copeland (default, pairwise wins), "
+        "approval (threshold-based), "
+        "stv (single transferable vote), "
+        "kemeny_young (optimal ranking), "
+        "schulze (path-based, Condorcet-consistent)",
+    )
+    parser.add_argument(
+        "--consensus-threshold",
+        type=float,
+        default=0.7,
+        help="Consensus threshold (0.0-1.0) for governance deliberation (default: 0.7). "
+        "Higher values require stronger agreement.",
     )
 
     args = parser.parse_args()
@@ -614,6 +641,8 @@ Exemples:
             rich_output=args.rich_output,
             fallacy_tier=args.fallacy_tier,
             shield_preset=args.shield_preset,
+            vote_method=args.vote_method,
+            consensus_threshold=args.consensus_threshold,
         )
 
 
