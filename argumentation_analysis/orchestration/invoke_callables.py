@@ -2281,7 +2281,9 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
             summary=f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars input)",
         )
 
-    logger.info(f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars)")
+    logger.info(
+        f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars)"
+    )
     return result
 
 
@@ -3689,7 +3691,24 @@ async def _invoke_hierarchical_fallacy(
     After the wide-net pass, runs per-argument enrichment to lift recall on
     dense text. Results are merged and deduplicated by taxonomy_pk, keeping
     the highest-confidence entry for each unique fallacy.
+
+    The ``fallacy_tier`` context key selects the detection depth:
+      - ``taxonomy``: lexical-only via TaxonomySophismDetector (no LLM, CI-safe)
+      - ``hybrid``: FrenchFallacyAdapter with LLM disabled (neural+symbolic)
+      - ``llm``: full LLM iterative deepening (default, current behavior)
+      - ``full``: LLM pass + hybrid pass, merged
     """
+    # Tier dispatch — select detection depth via context parameter
+    tier = context.get("fallacy_tier", "llm")
+
+    if tier == "taxonomy":
+        return await _invoke_taxonomy_only_fallacy(input_text, context)
+    elif tier == "hybrid":
+        return await _invoke_hybrid_fallacy(input_text, context)
+    elif tier == "full":
+        return await _invoke_full_fallacy(input_text, context)
+    # else: "llm" (default) — continue with existing LLM-based detection below
+
     taxonomy_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
         "data",
@@ -3830,6 +3849,181 @@ def _merge_fallacy_results(
             seen[pk] = f
 
     return list(seen.values())
+
+
+# ---------------------------------------------------------------------------
+# Fallacy-tier invoke callables (taxonomy / hybrid / full)
+# ---------------------------------------------------------------------------
+
+
+async def _invoke_taxonomy_only_fallacy(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Taxonomy-only fallacy detection — no LLM, CI-safe.
+
+    Uses TaxonomySophismDetector for lexical matching against the 400-entry
+    CSV taxonomy. Zero API cost. Suitable for quick scans and CI pipelines.
+    """
+    taxonomy_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data",
+        "argumentum_fallacies_taxonomy.csv",
+    )
+    if not os.path.isfile(taxonomy_path):
+        return {
+            "fallacies": [],
+            "extraction_method": "skipped",
+            "reason": "taxonomy file not found",
+        }
+
+    try:
+        from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import (
+            get_global_detector,
+        )
+
+        detector = get_global_detector()
+        sophisms = detector.detect_sophisms_from_taxonomy(input_text)
+
+        fallacies = []
+        for s in sophisms:
+            fallacies.append(
+                {
+                    "fallacy_type": s.get("nom_vulgarise", s.get("type", "unknown")),
+                    "type": s.get("nom_vulgarise", s.get("type", "unknown")),
+                    "confidence": s.get("confidence", 0.0),
+                    "description": s.get("description", ""),
+                    "taxonomy_pk": s.get("key", s.get("nom_vulgarise", "")),
+                }
+            )
+
+        return {
+            "fallacies": fallacies,
+            "extraction_method": "taxonomy_lexical",
+            "tier": "taxonomy",
+        }
+
+    except Exception as e:
+        logger.warning("Taxonomy-only fallacy detection failed: %s", e)
+        return {
+            "fallacies": [],
+            "extraction_method": "unavailable",
+            "error": str(e),
+        }
+
+
+async def _invoke_hybrid_fallacy(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Hybrid fallacy detection — neural+symbolic, optional NLI, no OpenAI.
+
+    Uses FrenchFallacyAdapter with LLM layers disabled. Leverages symbolic
+    pattern matching (spaCy) and optionally the NLI zero-shot model.
+    """
+    try:
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            FrenchFallacyAdapter,
+        )
+
+        adapter = FrenchFallacyAdapter(
+            enable_symbolic=True,
+            enable_nli=False,  # NLI needs model download — keep off for CI
+            enable_llm=False,
+            enable_self_hosted_llm=False,
+            enable_camembert=False,
+        )
+        result = adapter.detect(input_text)
+
+        fallacies = []
+        if isinstance(result, dict):
+            for f in result.get("fallacies", result.get("detections", [])):
+                if isinstance(f, dict):
+                    fallacies.append(
+                        {
+                            "fallacy_type": f.get(
+                                "type", f.get("fallacy_type", "unknown")
+                            ),
+                            "type": f.get("type", f.get("fallacy_type", "unknown")),
+                            "confidence": f.get("confidence", 0.0),
+                            "description": f.get(
+                                "description", f.get("explanation", "")
+                            ),
+                            "source_tier": f.get("tier", "hybrid"),
+                        }
+                    )
+        elif isinstance(result, list):
+            for f in result:
+                if isinstance(f, dict):
+                    fallacies.append(
+                        {
+                            "fallacy_type": f.get(
+                                "type", f.get("fallacy_type", "unknown")
+                            ),
+                            "type": f.get("type", f.get("fallacy_type", "unknown")),
+                            "confidence": f.get("confidence", 0.0),
+                            "description": f.get(
+                                "description", f.get("explanation", "")
+                            ),
+                            "source_tier": f.get("tier", "hybrid"),
+                        }
+                    )
+
+        return {
+            "fallacies": fallacies,
+            "extraction_method": "hybrid_neural_symbolic",
+            "tier": "hybrid",
+        }
+
+    except ImportError as e:
+        logger.warning("FrenchFallacyAdapter unavailable: %s", e)
+        return {
+            "fallacies": [],
+            "extraction_method": "unavailable",
+            "error": str(e),
+        }
+    except Exception as e:
+        logger.warning("Hybrid fallacy detection failed: %s", e)
+        return {
+            "fallacies": [],
+            "extraction_method": "unavailable",
+            "error": str(e),
+        }
+
+
+async def _invoke_full_fallacy(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Full fallacy detection — all strategies merged, deduplicated.
+
+    Runs the LLM iterative deepening pass (default) + hybrid pass, then
+    merges results by taxonomy_pk, keeping highest confidence per unique
+    fallacy. Maximum recall at maximum cost.
+    """
+    # Run LLM pass (default tier)
+    llm_context = {**context, "fallacy_tier": "llm"}
+    llm_result = await _invoke_hierarchical_fallacy(input_text, llm_context)
+    llm_fallacies = llm_result.get("fallacies", [])
+
+    # Run hybrid pass
+    hybrid_result = await _invoke_hybrid_fallacy(input_text, context)
+    hybrid_fallacies = hybrid_result.get("fallacies", [])
+
+    # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence
+    merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies)
+
+    logger.info(
+        "Full fallacy merge: llm=%d, hybrid=%d, merged=%d",
+        len(llm_fallacies),
+        len(hybrid_fallacies),
+        len(merged),
+    )
+
+    return {
+        "fallacies": merged,
+        "extraction_method": "full_merged",
+        "tier": "full",
+        "llm_count": len(llm_fallacies),
+        "hybrid_count": len(hybrid_fallacies),
+    }
 
 
 async def _invoke_hierarchical_fallacy_per_argument(
@@ -4414,7 +4608,10 @@ async def _invoke_propositional_logic(
                             if len(_batch) == 1:
                                 _texts_block = f"Text:\n{_batch[0][:2000]}"
                             else:
-                                _parts = [f"Text {_i+1}:\n{_a[:1500]}" for _i, _a in enumerate(_batch)]
+                                _parts = [
+                                    f"Text {_i+1}:\n{_a[:1500]}"
+                                    for _i, _a in enumerate(_batch)
+                                ]
                                 _texts_block = "\n\n".join(_parts)
                             _prompt = (
                                 "You are an expert in propositional logic. Translate the "
@@ -4429,7 +4626,8 @@ async def _invoke_propositional_logic(
                                 f"Allowed propositions:\n{atoms_json}"
                             )
                             _resp = await _guarded_chat_completion(
-                                client, model=model_id,
+                                client,
+                                model=model_id,
                                 messages=[{"role": "user", "content": _prompt}],
                                 **det_params,
                             )
@@ -4440,10 +4638,12 @@ async def _invoke_propositional_logic(
                             return _pl_out
 
                         _pl_coros = [
-                            _pl_batch_coro(_pl_targets[_bi:_bi + _pl_batch_size])
+                            _pl_batch_coro(_pl_targets[_bi : _bi + _pl_batch_size])
                             for _bi in range(0, len(_pl_targets), _pl_batch_size)
                         ]
-                        _pl_results = await asyncio.gather(*_pl_coros, return_exceptions=True)
+                        _pl_results = await asyncio.gather(
+                            *_pl_coros, return_exceptions=True
+                        )
                         for _idx, _res in enumerate(_pl_results):
                             if isinstance(_res, BaseException):
                                 logger.debug(f"PL Pass 2 batch {_idx} failed: {_res}")
@@ -4809,7 +5009,10 @@ async def _invoke_fol_reasoning(
                                 if len(_batch) == 1:
                                     _texts_block = f"Text:\n{_batch[0][:2000]}"
                                 else:
-                                    _parts = [f"Text {_i+1}:\n{_a[:1500]}" for _i, _a in enumerate(_batch)]
+                                    _parts = [
+                                        f"Text {_i+1}:\n{_a[:1500]}"
+                                        for _i, _a in enumerate(_batch)
+                                    ]
                                     _texts_block = "\n\n".join(_parts)
                                 _prompt = (
                                     "You are a formal logic expert. Translate the "
@@ -4826,7 +5029,8 @@ async def _invoke_fol_reasoning(
                                     f"Signature:\n{sig_json}"
                                 )
                                 _resp = await _guarded_chat_completion(
-                                    client, model=model_id,
+                                    client,
+                                    model=model_id,
                                     messages=[{"role": "user", "content": _prompt}],
                                     **det_params,
                                 )
@@ -4837,16 +5041,26 @@ async def _invoke_fol_reasoning(
                                 return _fol_out
 
                             _fol_coros = [
-                                _fol_batch_coro(_fol_targets[_bi:_bi + _fol_batch_size])
+                                _fol_batch_coro(
+                                    _fol_targets[_bi : _bi + _fol_batch_size]
+                                )
                                 for _bi in range(0, len(_fol_targets), _fol_batch_size)
                             ]
-                            _fol_results = await asyncio.gather(*_fol_coros, return_exceptions=True)
+                            _fol_results = await asyncio.gather(
+                                *_fol_coros, return_exceptions=True
+                            )
                             for _idx, _res in enumerate(_fol_results):
                                 if isinstance(_res, BaseException):
-                                    logger.debug(f"FOL Pass 2 batch {_idx} failed: {_res}")
+                                    logger.debug(
+                                        f"FOL Pass 2 batch {_idx} failed: {_res}"
+                                    )
                                     continue
                                 for f in _res:
-                                    f = f.strip() if isinstance(f, str) else str(f).strip()
+                                    f = (
+                                        f.strip()
+                                        if isinstance(f, str)
+                                        else str(f).strip()
+                                    )
                                     if f and f not in formulas:
                                         formulas.append(f)
 
@@ -6115,9 +6329,7 @@ async def _invoke_stakes_extractor(
     }
 
 
-async def _invoke_ai_shield(
-    input_text: str, context: Dict[str, Any]
-) -> Dict[str, Any]:
+async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """AI Shield — adversarial input/output validation (#841).
 
     Runs the AI Shield pipeline on the input text to detect injection,
