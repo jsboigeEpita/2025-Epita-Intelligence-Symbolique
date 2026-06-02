@@ -112,7 +112,7 @@ class TestInvokeLocalLLMStateWriter:
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
         mock_service.chat_completion = AsyncMock(return_value="Response")
-        mock_service.model_id = "local"
+        mock_service.model = "local"
 
         with patch(
             "argumentation_analysis.services.local_llm_service.LocalLLMService",
@@ -131,7 +131,7 @@ class TestInvokeLocalLLMStateWriter:
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
         mock_service.chat_completion = AsyncMock(return_value="OK")
-        mock_service.model_id = "local"
+        mock_service.model = "local"
 
         with patch(
             "argumentation_analysis.services.local_llm_service.LocalLLMService",
@@ -156,3 +156,42 @@ class TestInvokeLocalLLMStateWriter:
             result = await _invoke_local_llm("Test", {})
 
         assert result["status"] == "skipped: endpoint_unavailable"
+
+    @pytest.mark.asyncio
+    async def test_model_name_surfaces_in_result(self):
+        """Configured model name should surface in result (residue #876 fix)."""
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+
+        mock_service = MagicMock()
+        mock_service.is_available = AsyncMock(return_value=True)
+        mock_service.chat_completion = AsyncMock(return_value="Analysis result")
+        mock_service.model = "llama3-8b"
+
+        with patch(
+            "argumentation_analysis.services.local_llm_service.LocalLLMService",
+            return_value=mock_service,
+        ):
+            result = await _invoke_local_llm("Test input", {})
+
+        assert result["model"] == "llama3-8b", (
+            f"Expected model='llama3-8b', got model='{result.get('model')}'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_model_name_surfaces_when_unavailable(self):
+        """Configured model name should surface even when endpoint unavailable."""
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+
+        mock_service = MagicMock()
+        mock_service.is_available = AsyncMock(return_value=False)
+        mock_service.model = "mistral-7b"
+
+        with patch(
+            "argumentation_analysis.services.local_llm_service.LocalLLMService",
+            return_value=mock_service,
+        ):
+            result = await _invoke_local_llm("Test input", {})
+
+        assert result["model"] == "mistral-7b", (
+            f"Expected model='mistral-7b', got model='{result.get('model')}'"
+        )

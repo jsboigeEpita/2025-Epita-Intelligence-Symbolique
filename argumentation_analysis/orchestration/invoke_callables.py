@@ -2229,7 +2229,7 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
         logger.info("Local LLM endpoint unavailable — skipping")
         result = {
             "status": "skipped: endpoint_unavailable",
-            "model": service.model_id if hasattr(service, "model_id") else "unknown",
+            "model": getattr(service, "model", "unknown"),
         }
         _state = context.get("_state_object")
         if _state is not None and hasattr(_state, "local_llm_results"):
@@ -2265,7 +2265,7 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     result = {
         "status": "completed",
         "response": response if isinstance(response, str) else str(response),
-        "model": service.model_id if hasattr(service, "model_id") else "local",
+        "model": getattr(service, "model", "local"),
         "input_length": len(input_text),
     }
 
