@@ -24,8 +24,6 @@ from argumentation_analysis.orchestration.hierarchical.templates.analysis_tool_t
     ANALYSIS_TOOL_CONFIG_EXAMPLE,
 )
 
-pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
-
 # ============================================================
 # BaseAgent (agent_template)
 # ============================================================
