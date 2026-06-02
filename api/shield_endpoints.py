@@ -5,17 +5,38 @@ for direct validation of text inputs.
 
 Routes:
     POST /api/shield/validate — Validate text against adversarial patterns
+
+Security:
+    If SHIELD_ENDPOINT_TOKEN is set in the environment, callers must provide
+    it via the X-Shield-Token header. If unset (dev mode), no auth required.
+    This prevents unauthorized credit-drain on the OPENAI_API_KEY used by the
+    shield's LLM-backed layers. See Hermes review concern on PR #874.
 """
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 shield_router = APIRouter(prefix="/shield", tags=["AI Shield"])
+
+# ──── Auth guard ────
+
+_SHIELD_TOKEN: Optional[str] = os.environ.get("SHIELD_ENDPOINT_TOKEN")
+# NOTE: os.environ.get("OPENAI_API_KEY") is called per-request below because
+# the key may rotate at runtime without restart. This is intentional.
+
+
+def _verify_token(x_shield_token: Optional[str]) -> None:
+    """Raise 401 if SHIELD_ENDPOINT_TOKEN is configured and token doesn't match."""
+    if _SHIELD_TOKEN is None:
+        return  # Dev mode — no auth required
+    if x_shield_token != _SHIELD_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Shield-Token header")
 
 
 # ──── Request/Response Models ────
@@ -48,8 +69,16 @@ class ShieldValidateResponse(BaseModel):
 
 
 @shield_router.post("/validate", response_model=ShieldValidateResponse)
-async def shield_validate(request: ShieldValidateRequest):
-    """Validate text against adversarial patterns using AI Shield."""
+async def shield_validate(
+    request: ShieldValidateRequest,
+    x_shield_token: Optional[str] = Header(None, alias="X-Shield-Token"),
+):
+    """Validate text against adversarial patterns using AI Shield.
+
+    Requires X-Shield-Token header when SHIELD_ENDPOINT_TOKEN env var is set.
+    """
+    _verify_token(x_shield_token)
+
     try:
         from argumentation_analysis.services.ai_shield import load_preset
     except ImportError as exc:
@@ -63,9 +92,7 @@ async def shield_validate(request: ShieldValidateRequest):
             )
         raise HTTPException(status_code=503, detail=f"AI Shield service unavailable: {exc}")
 
-    import os
-
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")  # Per-request: key may rotate at runtime
 
     try:
         shield = load_preset(request.preset, api_key=api_key, fail_open=request.fail_open)

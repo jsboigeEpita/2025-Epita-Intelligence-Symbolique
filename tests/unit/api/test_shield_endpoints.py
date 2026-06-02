@@ -5,6 +5,7 @@ Validates:
 - Invoke callable returns correct structure
 - REST endpoint POST /api/shield/validate works
 - State writing works when state object available
+- Auth guard via X-Shield-Token header (Hermes security concern, PR #874 rework)
 """
 
 import pytest
@@ -216,3 +217,78 @@ class TestShieldEndpoint:
             assert isinstance(lr["layer"], str)
             assert isinstance(lr["score"], (int, float))
             assert isinstance(lr["passed"], bool)
+
+
+# ──── Auth Guard (Hermes security concern, PR #874 rework) ────
+
+
+class TestShieldEndpointAuth:
+    """Verify X-Shield-Token auth guard on POST /api/shield/validate."""
+
+    def test_no_auth_required_when_token_unset(self, client):
+        """Dev mode: no SHIELD_ENDPOINT_TOKEN → no auth required."""
+        # By default in tests, SHIELD_ENDPOINT_TOKEN is not set
+        resp = client.post(
+            "/api/shield/validate",
+            json={"text": "Normal text"},
+        )
+        assert resp.status_code == 200
+
+    def test_auth_required_when_token_set(self):
+        """When SHIELD_ENDPOINT_TOKEN is set, requests without token get 401."""
+        import api.shield_endpoints as mod
+
+        # Simulate token configured
+        original = mod._SHIELD_TOKEN
+        mod._SHIELD_TOKEN = "test-secret-token"
+        try:
+            _app = FastAPI()
+            _app.include_router(shield_router, prefix="/api")
+            c = TestClient(_app, raise_server_exceptions=False)
+
+            # No token header → 401
+            resp = c.post("/api/shield/validate", json={"text": "Normal text"})
+            assert resp.status_code == 401
+            assert "X-Shield-Token" in resp.json()["detail"]
+        finally:
+            mod._SHIELD_TOKEN = original
+
+    def test_valid_token_accepted(self):
+        """Correct X-Shield-Token header should pass auth."""
+        import api.shield_endpoints as mod
+
+        original = mod._SHIELD_TOKEN
+        mod._SHIELD_TOKEN = "test-secret-token"
+        try:
+            _app = FastAPI()
+            _app.include_router(shield_router, prefix="/api")
+            c = TestClient(_app, raise_server_exceptions=False)
+
+            resp = c.post(
+                "/api/shield/validate",
+                json={"text": "Normal text"},
+                headers={"X-Shield-Token": "test-secret-token"},
+            )
+            assert resp.status_code == 200
+        finally:
+            mod._SHIELD_TOKEN = original
+
+    def test_invalid_token_rejected(self):
+        """Wrong X-Shield-Token header should get 401."""
+        import api.shield_endpoints as mod
+
+        original = mod._SHIELD_TOKEN
+        mod._SHIELD_TOKEN = "test-secret-token"
+        try:
+            _app = FastAPI()
+            _app.include_router(shield_router, prefix="/api")
+            c = TestClient(_app, raise_server_exceptions=False)
+
+            resp = c.post(
+                "/api/shield/validate",
+                json={"text": "Normal text"},
+                headers={"X-Shield-Token": "wrong-token"},
+            )
+            assert resp.status_code == 401
+        finally:
+            mod._SHIELD_TOKEN = original
