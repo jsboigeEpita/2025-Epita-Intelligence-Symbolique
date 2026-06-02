@@ -13,7 +13,7 @@ Routes:
 
 import asyncio
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
@@ -204,8 +204,18 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
             run_unified_analysis,
         )
 
+        # Build context from parametric selectors (#903)
+        context: Dict[str, Any] = {}
+        context["fallacy_tier"] = request.fallacy_tier
+        if request.shield_preset != "off":
+            context["shield_config"] = {"preset": request.shield_preset}
+        if request.dung_provider is not None:
+            context["dung_provider_hint"] = request.dung_provider
+
         result = await run_unified_analysis(
-            request.text, workflow_name=request.workflow
+            request.text,
+            workflow_name=request.workflow,
+            context=context or None,
         )
 
         if isinstance(result, dict):
