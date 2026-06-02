@@ -31,18 +31,22 @@ Le projet contient **80 capabilities, 22 workflows, 49 routes API** (vérifié R
 | Conversational | — | ✅ intégré | `--mode conversational` | — |
 | Cluedo (3-agent) | — | ✅ intégré | mode dédié | — |
 | Sherlock Modern | latéral | ✅ intégré | `--mode sherlock_modern` | — |
-| **Hiérarchique** | historique | 🔄 candidat | `--mode hierarchical` (ABSENT du CLI) | **L** |
+| **Hiérarchique** | historique | ✅ intégré | `--mode hierarchical` (livré #890) | — |
 
 ---
 
-## B. Orchestrateurs pré-Registry (axe cleanup)
+## B. Orchestrateurs pré-Registry (axe cleanup — décision user R313)
 
 | Morceau | Type | Statut | Note |
 |---------|------|--------|------|
-| RealLLMOrchestrator (125 LOC) | historique | ❌ obsolète | ARCHIVE — UnifiedPipeline le remplace |
-| ConversationOrchestrator (1045 LOC) | historique | ❌ obsolète | ARCHIVE — 8-agent SK le remplace |
-| CluedoOrchestrator base (489 LOC) | historique | ❌ obsolète | ARCHIVE — ExtendedOrchestrator le remplace |
-| LogiqueComplexeOrchestrator (109 LOC) | obsolète | ❌ obsolète | REMOVE — stub mock |
+| RealLLMOrchestrator (125 LOC) | obsolète | ❌ retiré (#887) | Shim `NotImplementedError` — UnifiedPipeline le remplace |
+| LogiqueComplexeOrchestrator (109 LOC) | obsolète | ❌ retiré (#887) | Stub mock hardcodé — FOL/Tweety via Registry |
+| ConversationOrchestrator (1045 LOC) | historique | 🔄 recyclé | **Baseline sélectionnable** — modes déterministes sans LLM (demo/trace/enhanced/micro) |
+| CluedoOrchestrator base (489 LOC) | historique | 🔄 recyclé | **Baseline sélectionnable** — comparaison 2-agent vs 3-agent (Extended) |
+
+> **Décision user (R313)** : seuls les 2 littéralement vides (real_llm shim + logique_complexe stub) sont retirés.
+> Les 2 non-vides (ConversationOrchestrator + CluedoOrchestrator base) sont **recyclés comme baselines comparables**.
+> Voir PR #890 (réactivation hiérarchique) et PR #891 (harness comparaison 8 modes).
 
 ---
 
@@ -97,7 +101,7 @@ Le projet contient **80 capabilities, 22 workflows, 49 routes API** (vérifié R
 | 5 | **Formal-solver selector** (`--fol-solver`) | Choix solveur externe | M | 4 solveurs, fallback hardcodé |
 | 6 | **Democratech params** (consensus_threshold) | Paramètres workflow flagship | M | Builder existe, pas CLI |
 | 7 | **abs_arg_dung + CaseAI** wiring | 2 latéraux isolés | M chacun | Élargit la surface |
-| 8 | **Mode hiérarchique** | 3e mode comparable | L | 302 tests, 5 casses (scoping R311) |
+| 8 | **Mode hiérarchique** | 3e mode comparable | ~~L~~ ✅ livré (#890) | 392 tests, bridge B4 |
 
 **Séquence recommandée** : tracks 1-3 (1 session) → tracks 4-6 (1-2 sessions) → track 8 (3 sessions, si GO confirmé).
 
@@ -105,6 +109,6 @@ Le projet contient **80 capabilities, 22 workflows, 49 routes API** (vérifié R
 
 ## À valider par l'utilisateur
 
-1. **Ordre de priorité** : les tracks 1-3 (effort S, valeur immédiate) sont-elles les premières à câbler ?
-2. **Critère obsolète** : `RealLLMOrchestrator`, `ConversationOrchestrator`, `CluedoOrchestrator` base, `LogiqueComplexeOrchestrator` sont classés obsolètes (B-09 #875). Confirmez-vous l'archivage/suppression ?
-3. **Bias candidat** : en cas de doute, le morceau est classé « candidat » (règle user). Ajuster ?
+1. **Ordre de priorité** : les tracks 1-3 (effort S, valeur immédiate) sont-elles les premières à câbler ? → **ACTÉ R316** : tracks 1+3 en design (#894 merged), impl en cours.
+2. **Critère obsolète** : décision user R313 — seuls les 2 vides sont retirés (#887 merged). Les 2 non-vides sont recyclés. **RÉSOLU.**
+3. **Bias candidat** : en cas de doute, le morceau est classé « candidat » (règle user). Ajuster ? → **TOUJOURS EN VIGUEUR.**
