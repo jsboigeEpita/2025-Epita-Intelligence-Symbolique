@@ -41,10 +41,13 @@ try:
 except ImportError:
     pass
 
-# Ajouter le répertoire parent au chemin de recherche des modules
+# Ajouter les répertoires au chemin de recherche des modules
 current_dir = Path(__file__).parent
+project_root = current_dir.parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
 
 
 def setup_logging(verbose: bool = False) -> None:
