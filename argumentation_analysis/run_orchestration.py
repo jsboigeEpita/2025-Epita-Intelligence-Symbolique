@@ -295,10 +295,17 @@ Exemples:
         "--mode",
         "-m",
         type=str,
-        choices=["pipeline", "conversational", "legacy", "sherlock_modern"],
+        choices=[
+            "pipeline",
+            "conversational",
+            "hierarchical",
+            "legacy",
+            "sherlock_modern",
+        ],
         default="pipeline",
         help="Mode d'orchestration: pipeline (séquentiel, défaut), "
         "conversational (agents dialoguent via AgentGroupChat), "
+        "hierarchical (strategic planning → Lego execution), "
         "legacy (ancien AnalysisRunner), "
         "sherlock_modern (investigation multi-agent, #357)",
     )
@@ -514,6 +521,44 @@ Exemples:
                 render_spectacular_result(render_result)
             except ImportError:
                 logging.warning("Module output_formatter non disponible")
+
+        # Sauvegarder si demandé
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2, default=str)
+            logging.info(f"Résultats sauvegardés dans {output_path}")
+    elif mode == "hierarchical":
+        from argumentation_analysis.orchestration.hierarchical.orchestrator import (
+            run_hierarchical_analysis,
+        )
+
+        logging.info("Mode HIÉRARCHIQUE : StrategicManager → Lego WorkflowExecutor")
+        results = await run_hierarchical_analysis(text=text_content)
+
+        # Afficher le résumé
+        summary = results.get("summary", {})
+        conclusion = results.get("conclusion", "")
+        objectives = results.get("objectives", [])
+
+        print(f"\n{'='*60}")
+        print(f" Mode hiérarchique — {summary.get('total', 0)} phases")
+        print(f"{'='*60}")
+        print(f"  Objectifs stratégiques : {len(objectives)}")
+        for obj in objectives:
+            print(
+                f"    - [{obj.get('priority', '?').upper()}] {obj.get('description', '?')}"
+            )
+        print(
+            f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}"
+        )
+        print(f"  Phases échouées   : {summary.get('failed', 0)}")
+        print(f"  Phases sautées    : {summary.get('skipped', 0)}")
+        print(f"  Durée : {results.get('duration_seconds', 0):.1f}s")
+        if conclusion:
+            print(f"\n  Conclusion : {conclusion}")
+        print(f"{'='*60}\n")
 
         # Sauvegarder si demandé
         if args.output:
