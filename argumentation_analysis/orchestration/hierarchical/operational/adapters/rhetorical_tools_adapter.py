@@ -70,7 +70,7 @@ class RhetoricalToolsAdapter(OperationalAgent):
             )
             # L'initialisation du plugin se fait maintenant en interne
             self.analysis_plugin = AnalysisToolsPlugin(
-                fallacy_detector=get_fallacy_detector()
+                fallacy_detector=project_context.get_fallacy_detector()
             )
             self.initialized = True
             self.logger.info("AnalysisToolsPlugin initialisé.")

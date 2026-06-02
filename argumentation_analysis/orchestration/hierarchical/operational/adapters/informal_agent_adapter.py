@@ -72,17 +72,14 @@ class InformalAgentAdapter(OperationalAgent):
         self.llm_service_id = llm_service_id
 
         try:
-            self.logger.info("Création/simulation de l'agent d'analyse informelle...")
-            # NOTE: Dans les tests, la méthode `process_task` de cet adaptateur est mockée.
-            # L'initialisation réelle de l'agent est complexe et échoue avec des mocks partiels.
-            # Pour débloquer les tests, on assigne simplement un MagicMock à l'agent.
-            # Le comportement réel de l'agent n'est pas testé ici.
-            from unittest.mock import MagicMock
-
-            self.agent = MagicMock(spec=Agent)
+            self.logger.info("Création de l'agent d'analyse informelle via AgentFactory...")
+            factory = AgentFactory(kernel=kernel, llm_service_id=llm_service_id)
+            self.agent = factory.create_informal_fallacy_agent(
+                config_name=self.config_name,
+            )
             self.initialized = True
             self.logger.info(
-                "Agent d'analyse informelle (mocké) initialisé avec succès pour les tests."
+                "Agent d'analyse informelle initialisé avec succès via AgentFactory."
             )
             return True
         except Exception as e:
