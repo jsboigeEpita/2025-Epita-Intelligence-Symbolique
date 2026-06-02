@@ -138,12 +138,16 @@ async def run_modern_analysis(
     workflow_name: str = "standard",
     output_file: Optional[str] = None,
     rich_output: bool = False,
+    fallacy_tier: str = "llm",
+    shield_preset: str = "off",
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
     :param text_content: Le contenu textuel à analyser.
     :param workflow_name: Nom du workflow à utiliser.
     :param output_file: Chemin optionnel pour sauvegarder les résultats en JSON.
+    :param fallacy_tier: Fallacy detection depth (taxonomy/hybrid/llm/full).
+    :param shield_preset: AI Shield preset (off/basic/advanced/output_only/strict).
     :return: Résultats de l'analyse.
     """
     from argumentation_analysis.orchestration.unified_pipeline import (
@@ -155,9 +159,18 @@ async def run_modern_analysis(
         f"sur un texte de {len(text_content)} caractères..."
     )
 
+    # Build context with parametric selectors
+    context: Dict[str, Any] = {"fallacy_tier": fallacy_tier}
+    if shield_preset != "off":
+        context["shield_config"] = {
+            "preset": shield_preset,
+            "fail_open": shield_preset != "strict",
+        }
+
     results = await run_unified_analysis(
         text=text_content,
         workflow_name=workflow_name,
+        context=context,
     )
 
     # Afficher le résumé
@@ -343,6 +356,29 @@ Exemples:
         type=int,
         default=5,
         help="Max turns for Re-Analysis phase if triggered (default: 5)",
+    )
+
+    # Parametric integration selectors (north-star R311)
+    parser.add_argument(
+        "--fallacy-tier",
+        type=str,
+        choices=["taxonomy", "hybrid", "llm", "full"],
+        default="llm",
+        help="Fallacy detection depth: taxonomy (lexical, no LLM), "
+        "hybrid (neural+symbolic, optional LLM), "
+        "llm (full LLM iterative, default), "
+        "full (all strategies merged)",
+    )
+    parser.add_argument(
+        "--shield-preset",
+        type=str,
+        choices=["off", "basic", "advanced", "output_only", "strict"],
+        default="off",
+        help="AI Shield preset: off (default, no shield), "
+        "basic (heuristic only, no LLM cost), "
+        "advanced (heuristic+LLM+output filter), "
+        "output_only (post-LLM filtering only), "
+        "strict (all layers, lowest thresholds, fail-closed)",
     )
 
     args = parser.parse_args()
@@ -576,6 +612,8 @@ Exemples:
             workflow_name=args.workflow,
             output_file=args.output,
             rich_output=args.rich_output,
+            fallacy_tier=args.fallacy_tier,
+            shield_preset=args.shield_preset,
         )
 
 
