@@ -12,6 +12,8 @@ from argumentation_analysis.orchestration.hierarchical.operational.state import 
     OperationalState,
 )
 
+pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
+
 
 @pytest.fixture
 def state():

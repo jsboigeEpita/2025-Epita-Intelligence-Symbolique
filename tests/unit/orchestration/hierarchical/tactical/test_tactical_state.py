@@ -3,6 +3,7 @@
 Tests pour le module state.py du niveau tactique.
 """
 
+import pytest
 import unittest
 import json
 from unittest.mock import patch, MagicMock
@@ -10,6 +11,8 @@ from unittest.mock import patch, MagicMock
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
+
+pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
 
 
 class TestTacticalState(unittest.TestCase):

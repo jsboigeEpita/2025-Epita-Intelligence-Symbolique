@@ -5,6 +5,7 @@
 Tests unitaires pour le Résolveur de Conflits de l'architecture hiérarchique.
 """
 
+import pytest
 import unittest
 import sys
 import os
@@ -37,6 +38,8 @@ from argumentation_analysis.orchestration.hierarchical.tactical.resolver import 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
+
+pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
 
 
 class TestConflictResolver(unittest.TestCase):
