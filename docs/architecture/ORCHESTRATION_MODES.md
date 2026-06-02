@@ -94,7 +94,7 @@ _write_X_to_state() → updates UnifiedAnalysisState
 - Produces convergence metrics and quality reports per round
 
 **Key files:**
-- `argumentation_analysis/orchestration/conversational_orchestrator.py` — Main orchestrator
+
 - `argumentation_analysis/orchestration/conversational_executor.py` — Turn execution
 - `argumentation_analysis/orchestration/trace_analyzer.py` — Trace capture and analysis
 
@@ -129,11 +129,14 @@ TraceAnalyzer captures snapshots per round
 **Use case:** Complex, goal-driven analyses where a strategic planner decomposes objectives into sub-tasks distributed across specialist agents.
 
 **Key files:**
+
 - `argumentation_analysis/orchestration/hierarchical/hierarchy_bridge.py`
 - `docs/architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md`
-- `examples/orchestration/run_hierarchical_orchestration.py`
+- `argumentation_analysis/orchestration/hierarchical/strategic/manager.py`
+- `argumentation_analysis/orchestration/hierarchical/tactical/coordinator.py`
+- `argumentation_analysis/orchestration/hierarchical/operational/manager.py`
 
-**Reactivation path:** Wire `HierarchicalOrchestrator` into `run_orchestration.py --mode hierarchical` and register operational adapters for all current agents.
+**Reactivation status (R311):** GO PARTIEL. 3/5 blockers fixed (B1-B3 adapters). B4 (HierarchicalOrchestrator class) and B5 (doc) remain. 302 tests dormant behind `pytestmark = pytest.mark.skip`. Estimated 1-2 more sessions.
 
 ---
 
@@ -161,8 +164,9 @@ TraceAnalyzer captures snapshots per round
 **Key difference:** Operates on the Cluedo dataset (suspects, weapons, rooms) rather than rhetorical text analysis. Uses its own state model, not `UnifiedAnalysisState`.
 
 **Key files:**
-- `argumentation_analysis/orchestration/cluedo_orchestrator.py` — 2-agent version
-- `argumentation_analysis/orchestration/cluedo_extended_orchestrator.py` — 3-agent + Oracle
+
+- `argumentation_analysis/orchestration/cluedo_extended_orchestrator.py` — 3-agent + Oracle (active)
+- `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` — 2-agent version (archived, superseded by Extended)
 
 ---
 
@@ -226,9 +230,12 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 ### Archived Components
 | Component | Archived To | Replacement | PR |
 |-----------|-------------|-------------|-----|
-| `RealLLMOrchestrator` (668 lines) | `docs/archives/orchestration_legacy/` | `UnifiedPipeline` / `ConversationalOrchestrator` | #246 |
+| `RealLLMOrchestrator` (668→124 LOC shim) | `docs/archives/orchestration_legacy/real_llm_orchestrator_shim.py` | `UnifiedPipeline` + `WorkflowDSL` | #246, #886 |
 | `RealLLMOrchestratorWrapper` (60 lines) | Deprecation shim in `pipelines/` | Same as above | #247 |
 | Dead code in `pipeline_utils.py` | Removed (EnhancedPipeline, singletons) | `AnalysisCache` + `PipelineMetrics` kept | #255 |
+| `ConversationOrchestrator` (1044 LOC) | `docs/archives/orchestration_legacy/conversation_orchestrator.py` | 8-agent SK system via `CapabilityRegistry` | #886 |
+| `CluedoOrchestrator` base 2-agent (488 LOC) | `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` | `CluedoExtendedOrchestrator` (3-agent + Oracle) | #886 |
+| `LogiqueComplexeOrchestrator` (108 LOC stub) | `docs/archives/orchestration_legacy/logique_complexe_orchestrator.py` | `FOLLogicAgent` + `TweetyLogicPlugin` | #886 |
 
 ### Consolidated Components
 | Component | New Location | Description | PR |
