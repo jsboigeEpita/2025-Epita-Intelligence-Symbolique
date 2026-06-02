@@ -137,6 +137,13 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["counter"],
             optional=True,
         )
+        # Local LLM offline analysis (#835 A-10) — skipped if endpoint absent
+        .add_phase(
+            "local_llm",
+            capability="local_llm",
+            depends_on=["extract"],
+            optional=True,
+        )
         .build()
     )
 
@@ -243,6 +250,13 @@ def build_full_workflow() -> WorkflowDefinition:
                 "jtms",
                 "dung_extensions",
             ],
+            optional=True,
+        )
+        # Local LLM offline analysis (#835 A-10) — skipped if endpoint absent
+        .add_phase(
+            "local_llm",
+            capability="local_llm",
+            depends_on=["extract"],
             optional=True,
         )
         .build()
