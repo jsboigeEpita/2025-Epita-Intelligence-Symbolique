@@ -5,16 +5,26 @@ Interface Web pour l'Analyse Argumentative EPITA (Version Starlette — Frontend
 
 Application Starlette servant de **frontend-only proxy** vers le backend FastAPI.
 - Sert l'application React (build static) sur `/`
-- Proxy les requetes `/api/*` et `/ws/*` vers le backend FastAPI
+- Proxy les requetes `/api/*` vers le backend FastAPI
 - Ne contient aucune logique metier (ServiceManager, NLP, JVM)
 
 Architecture (issue #844):
   Navigateur -> Starlette(:5003) -> React SPA (static)
                                 -> /api/* -> FastAPI(:8095)
-                                -> /ws/*  -> FastAPI(:8095)
 
-Version: 3.0.0
-Date: 2026-06-01
+Limitations:
+  - WebSocket relay NOT implemented. Clients must connect to FastAPI directly
+    for WS streaming (ws://FASTAPI_HOST:FASTAPI_PORT/ws/*).
+
+Environment Variables (two-server deployment model):
+  FASTAPI_HOST     — Backend FastAPI host (default: 127.0.0.1)
+  FASTAPI_PORT     — Backend FastAPI port (default: 8095)
+  PORT             — Starlette proxy port (default: 5003)
+  REACT_APP_BACKEND_URL — Frontend build-time API base URL for React SPA
+                     (set before `npm run build` in services/web_api/)
+
+Version: 3.1.0
+Date: 2026-06-02
 """
 
 import logging
@@ -153,42 +163,39 @@ async def api_proxy(request: Request):
 
 async def ws_proxy(websocket: WebSocket):
     """
-    Proxy WebSocket vers FastAPI.
-    Etablit la connexion avec le client, puis relay bidirectionnel avec FastAPI.
+    Proxy WebSocket vers FastAPI — limitation documentee (#858).
+
+    Le relais WS bidirectionnel n'est pas implemente car httpx ne supporte
+    pas les WebSocket de maniere stable. Les clients doivent se connecter
+    directement au backend FastAPI pour les flux WS.
+
+    Cette route existe pour:
+    1. Detecter les tentatives de connexion WS via le proxy
+    2. Retourner une erreur explicite avec l'URL du backend a utiliser
+    3. Eviter une connexion silencieusement droppee
     """
     await websocket.accept()
 
-    # Extraire le path et construire l'URL WebSocket FastAPI
     path = websocket.url.path
     ws_target_url = f"ws://{FASTAPI_HOST}:{FASTAPI_PORT}{path}"
 
-    logger.info(f"WS Proxy: {path} -> {ws_target_url}")
+    logger.warning(
+        f"WS Proxy: client attempted WS via proxy ({path}). "
+        f"WS relay not supported — redirecting to {ws_target_url}"
+    )
 
-    try:
-        async with httpx.AsyncClient() as client:
-            async with client.stream("GET", ws_target_url) as backend_ws:
-                # Relay bidirectionnel
-                async def relay_to_backend():
-                    try:
-                        while True:
-                            data = await websocket.receive_text()
-                            # Forward to backend
-                    except WebSocketDisconnect:
-                        logger.info(f"WS Proxy: client deconnecte ({path})")
-
-                # Pour l'instant, les WebSocket FastAPI sont accessibles directement.
-                # Ce proxy est un placeholder pour une future implementation complete.
-                await websocket.send_json(
-                    {
-                        "type": "proxy_info",
-                        "message": f"Connect FastAPI WebSocket directly at {ws_target_url}",
-                    }
-                )
-                await websocket.close()
-
-    except Exception as e:
-        logger.error(f"WS Proxy error ({path}): {e}")
-        await websocket.close(code=1011, reason=str(e))
+    await websocket.send_json(
+        {
+            "type": "ws_relay_unavailable",
+            "error": "WebSocket relay not implemented via proxy",
+            "detail": (
+                "This proxy does not relay WebSocket connections. "
+                "Connect directly to the FastAPI backend."
+            ),
+            "target_url": ws_target_url,
+        }
+    )
+    await websocket.close(code=1011, reason="WS relay not supported — use backend directly")
 
 
 # ==============================================================================
@@ -201,7 +208,7 @@ async def examples_endpoint(request: Request):
     examples = [
         {
             "title": "Logique Propositionnelle",
-            "text": "Si il pleut, alors la route est mouillee. Il pleut. Donc la route est mouillee.",
+            "text": "Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.",
             "type": "propositional",
         },
         {
