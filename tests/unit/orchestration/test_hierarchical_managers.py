@@ -46,7 +46,6 @@ try:
     HIERARCHICAL_AVAILABLE = True
 except ImportError as e:
     HIERARCHICAL_AVAILABLE = False
-    pytestmark = pytest.mark.skip(f"Gestionnaires hiérarchiques non disponibles: {e}")
 
 
 class TestStrategicManager:

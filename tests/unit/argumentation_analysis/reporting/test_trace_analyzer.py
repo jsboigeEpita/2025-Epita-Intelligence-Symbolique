@@ -17,13 +17,6 @@ from argumentation_analysis.reporting.trace_analyzer import (
     InformalExploration,
 )
 
-# Gen 1 trace_analyzer — superseded by enhanced_real_time_trace_analyzer (Gen 3).
-# No consumer outside tests. Pipeline uses analysis_runner_v2 + enhanced_pm_analysis_runner.
-# B-07 audit #811 — 54 dead tests archived.
-pytestmark = pytest.mark.skip(
-    "Gen 1 trace_analyzer superseded by enhanced_real_time_trace_analyzer (B-07 #811)"
-)
-
 # ── ExtractMetadata ──
 
 

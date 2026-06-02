@@ -39,8 +39,6 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
 
-pytestmark = pytest.mark.skip("Hierarchical mode dormant — not in active pipeline (B-09 #798)")
-
 
 class TestTacticalResolverAdvanced(unittest.TestCase):
     """Tests avancés pour le résolveur de conflits tactique."""
