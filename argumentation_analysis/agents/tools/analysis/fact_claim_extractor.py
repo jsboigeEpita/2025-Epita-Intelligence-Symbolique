@@ -11,7 +11,6 @@ import re
 from typing import Dict, List, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 from enum import Enum
-import spacy
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -97,14 +96,21 @@ class FactClaimExtractor:
         self.language = language
 
         # Tentative de chargement du modèle spaCy
+        # Lazy import: spacy triggers torch import chain which can fail with
+        # OSError (WinError 182, broken DLL) or ImportError on some envs.
+        # Importing here instead of module-level allows the module to be
+        # collected/imported without crashing (e.g. test collection, API boot).
         try:
+            import spacy  # noqa: E402 — lazy import for env resilience
+
             if language == "fr":
                 self.nlp = spacy.load("fr_core_news_sm")
             else:
                 self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
+        except (OSError, ImportError) as e:
             self.logger.warning(
-                f"Modèle spaCy {language} non trouvé, utilisation du modèle de base"
+                f"spaCy ou modèle {language} non disponible ({type(e).__name__}: {e}), "
+                f"utilisation du mode dégradé"
             )
             self.nlp = None
 
