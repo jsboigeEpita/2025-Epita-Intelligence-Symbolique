@@ -43,12 +43,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
-    from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
-        LogiqueComplexeOrchestrator,
-    )
+    # RealLLMOrchestrator and LogiqueComplexeOrchestrator removed (#885)
 except ImportError as e:
     logger.error(
         f"Failed to import specialized orchestrators: {e}. SpecializedDirect strategy will be limited."
@@ -56,8 +51,6 @@ except ImportError as e:
     CluedoExtendedOrchestrator = None
     run_cluedo_game = None
     ConversationOrchestrator = None
-    RealLLMOrchestrator = None
-    LogiqueComplexeOrchestrator = None
 
 
 if TYPE_CHECKING:
@@ -817,34 +810,7 @@ class MainOrchestrator:
                             "status": "error",
                             "message": "Méthode run_conversation non trouvée",
                         }
-                elif (
-                    orchestrator_name == "real_llm"
-                    and RealLLMOrchestrator
-                    and isinstance(orchestrator_instance, RealLLMOrchestrator)
-                ):
-                    if hasattr(orchestrator_instance, "analyze_text_comprehensive"):
-                        specialized_run_results = (
-                            await orchestrator_instance.analyze_text_comprehensive(
-                                text_input,
-                                context={"source": "specialized_direct_orchestration"},
-                            )
-                        )
-                    else:
-                        logger.warning(
-                            f"RealLLMOrchestrator '{orchestrator_name}' lacks 'analyze_text_comprehensive' method."
-                        )
-                        specialized_run_results = {
-                            "status": "error",
-                            "message": "Méthode analyze_text_comprehensive non trouvée",
-                        }
-                elif (
-                    orchestrator_name == "logic_complex"
-                    and LogiqueComplexeOrchestrator
-                    and isinstance(orchestrator_instance, LogiqueComplexeOrchestrator)
-                ):
-                    specialized_run_results = await self._run_logic_complex_analysis(
-                        text_input, orchestrator_instance
-                    )
+                # RealLLM and LogiqueComplexe branches removed (#885)
                 else:
                     logger.warning(
                         f"Orchestrateur spécialisé non géré ou type incorrect: {orchestrator_name} (instance type: {type(orchestrator_instance)})"
@@ -1009,43 +975,7 @@ class MainOrchestrator:
             logger.error(f"Erreur investigation Cluedo: {e}", exc_info=True)
             return {"status": "error", "error_message": str(e)}
 
-    async def _run_logic_complex_analysis(
-        self, text_input: str, orchestrator_instance: Any
-    ) -> Dict[str, Any]:
-        """Exécute une analyse logique complexe."""
-        if not LogiqueComplexeOrchestrator or not isinstance(
-            orchestrator_instance, LogiqueComplexeOrchestrator
-        ):
-            logger.warning(
-                "LogiqueComplexeOrchestrator not available or instance type mismatch."
-            )
-            return {
-                "status": "limited",
-                "message": "LogiqueComplexeOrchestrator non disponible ou type d'instance incorrect.",
-            }
-        try:
-            if hasattr(orchestrator_instance, "analyze_complex_logic"):
-                logger.info(
-                    f"Running complex logic analysis with orchestrator: {type(orchestrator_instance)}"
-                )
-                analysis_results = await orchestrator_instance.analyze_complex_logic(
-                    text_input
-                )
-                return {
-                    "status": "completed",
-                    "logic_analysis_results": analysis_results,
-                }
-            else:
-                logger.warning(
-                    "LogiqueComplexeOrchestrator does not have 'analyze_complex_logic' method."
-                )
-                return {
-                    "status": "limited",
-                    "message": "Méthode 'analyze_complex_logic' non trouvée.",
-                }
-        except Exception as e:
-            logger.error(f"Erreur analyse logique complexe: {e}", exc_info=True)
-            return {"status": "error", "error_message": str(e)}
+    # _run_logic_complex_analysis removed (#885) — LogiqueComplexeOrchestrator deleted
 
     async def _execute_hybrid(self, text_input: str) -> Dict[str, Any]:
         """Exécute la stratégie hybride."""
@@ -1230,27 +1160,7 @@ class MainOrchestrator:
                 "types": [AnalysisType.DEBATE_ANALYSIS] if AnalysisType else [],
             }
 
-        if RealLLMOrchestrator:
-            s_map["real_llm"] = {
-                "orchestrator": RealLLMOrchestrator(self.kernel),
-                "priority": 3,
-                "types": (
-                    [
-                        AnalysisType.COMPREHENSIVE,
-                        AnalysisType.RHETORICAL,
-                        AnalysisType.FALLACY_FOCUSED,
-                    ]
-                    if AnalysisType
-                    else []
-                ),
-            }
-
-        if LogiqueComplexeOrchestrator:
-            s_map["logic_complex"] = {
-                "orchestrator": LogiqueComplexeOrchestrator(self.kernel),
-                "priority": 4,
-                "types": [AnalysisType.LOGICAL] if AnalysisType else [],
-            }
+        # RealLLM and LogiqueComplexe entries removed (#885)
 
         logger.info(f"Specialized orchestrators initialized: {list(s_map.keys())}")
         return s_map

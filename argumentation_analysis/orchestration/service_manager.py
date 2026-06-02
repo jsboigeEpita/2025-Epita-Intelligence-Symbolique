@@ -84,9 +84,6 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
     from argumentation_analysis.orchestration.fact_checking_orchestrator import (
         FactCheckingOrchestrator,
     )
@@ -94,7 +91,6 @@ except ImportError as e:
     logging.warning(f"Certains orchestrateurs spécialisés ne sont pas disponibles: {e}")
     CluedoOrchestrator = None
     ConversationOrchestrator = None
-    RealLLMOrchestrator = None
     FactCheckingOrchestrator = None
 
 # Imports des systèmes de communication
@@ -212,7 +208,7 @@ class OrchestrationServiceManager:
         # Orchestrateurs spécialisés
         self.cluedo_orchestrator: Optional[CluedoOrchestrator] = None
         self.conversation_orchestrator: Optional[ConversationOrchestrator] = None
-        self.llm_orchestrator: Optional[RealLLMOrchestrator] = None
+        self.llm_orchestrator: Optional[Any] = None  # Removed RealLLMOrchestrator (#885)
         self.fact_checking_orchestrator: Optional[FactCheckingOrchestrator] = None
 
         # Middleware de communication
@@ -472,13 +468,7 @@ class OrchestrationServiceManager:
                 )
                 self.logger.info("ConversationOrchestrator initialisé")
 
-            if RealLLMOrchestrator:
-                # CORRECTION: On passe le kernel complet au RealLLMOrchestrator, pas seulement un service.
-                # L'orchestrateur a besoin du kernel pour instancier ses propres agents.
-                self.llm_orchestrator = RealLLMOrchestrator(kernel=self.kernel)
-                self.logger.info(
-                    f"RealLLMOrchestrator initialisé avec le kernel principal."
-                )
+            # RealLLMOrchestrator removed (#885) — superseded by UnifiedPipeline
 
             if FactCheckingOrchestrator:
                 # FactCheckingOrchestrator peut utiliser une configuration API
@@ -597,15 +587,10 @@ class OrchestrationServiceManager:
             "comprehensive": self.fact_checking_orchestrator,
             "fallacy_analysis": self.fact_checking_orchestrator,
             "rhetorical": self.fact_checking_orchestrator,
-            # Types d'analyse logique vers RealLLMOrchestrator
-            "modal": self.llm_orchestrator,
-            "propositional": self.llm_orchestrator,
-            "logical": self.llm_orchestrator,
         }
 
-        # Si aucun mapping spécifique, utilise RealLLMOrchestrator par défaut
         result = orchestrator_map.get(analysis_type.lower())
-        return result if result is not None else self.llm_orchestrator
+        return result
 
     async def _run_specialized_analysis(
         self,
@@ -642,30 +627,9 @@ class OrchestrationServiceManager:
                     "timestamp": result.analysis_timestamp.isoformat(),
                     "orchestrator": orchestrator.__class__.__name__,
                 }
-            # Interface spécialisée pour RealLLMOrchestrator
-            elif hasattr(orchestrator, "analyze_text"):
-                from .real_llm_orchestrator import LLMAnalysisRequest
-
-                request = LLMAnalysisRequest(
-                    text=text,
-                    # Correction: Utilise le analysis_type propagé
-                    analysis_type=analysis_type,
-                    context=options.get("context") if options else None,
-                    parameters=options or {},
-                )
-                result = await orchestrator.analyze_text(request)
-                return {
-                    "method": "real_llm",
-                    "request_id": result.request_id,
-                    "analysis_type": result.analysis_type,
-                    "result": result.result,
-                    "confidence": result.confidence,
-                    "processing_time": result.processing_time,
-                    "timestamp": result.timestamp.isoformat(),
-                    "orchestrator": orchestrator.__class__.__name__,
-                }
+            # RealLLMOrchestrator branch removed (#885) — superseded by UnifiedPipeline
             # Interface générique pour autres orchestrateurs
-            elif hasattr(orchestrator, "analyze"):
+            if hasattr(orchestrator, "analyze"):
                 return await orchestrator.analyze(text, options)
             elif hasattr(orchestrator, "process"):
                 return await orchestrator.process(text, options)
@@ -1208,7 +1172,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
             await safe_shutdown(
                 self.conversation_orchestrator, "ConversationOrchestrator"
             )
-            await safe_shutdown(self.llm_orchestrator, "RealLLMOrchestrator")
+            await safe_shutdown(self.llm_orchestrator, "LLMOrchestrator")
             await safe_shutdown(self.strategic_manager, "StrategicManager")
             await safe_shutdown(self.tactical_manager, "TacticalManager")
             await safe_shutdown(self.operational_manager, "OperationalManager")

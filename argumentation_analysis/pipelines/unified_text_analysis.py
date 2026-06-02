@@ -68,11 +68,9 @@ from argumentation_analysis.paths import LIBS_DIR
 from argumentation_analysis.orchestration.unified_pipeline import (
     run_unified_analysis,
 )
-from argumentation_analysis.orchestration.real_llm_orchestrator import (
-    RealConversationLogger,
-)
 from argumentation_analysis.orchestration.conversation_orchestrator import (
     ConversationOrchestrator,
+    ConversationLogger as RealConversationLogger,
 )
 
 # Imports du pipeline existant

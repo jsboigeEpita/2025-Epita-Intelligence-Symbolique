@@ -9,19 +9,13 @@ DEPRECATION NOTICE (#215):
 
 from .cluedo_extended_orchestrator import CluedoExtendedOrchestrator
 from .conversation_orchestrator import ConversationOrchestrator
-# `RealLLMOrchestrator` is an archived shim (deprecated 2026-03-24, #215). It
-# is still importable via its explicit path
-# `argumentation_analysis.orchestration.real_llm_orchestrator` for back-compat
-# (all current callers use that direct path — see commit history). Auto-importing
-# it here would fire DeprecationWarning on every `argumentation_analysis.orchestration`
-# import. Use `UnifiedPipeline` or `ConversationOrchestrator` instead.
-from .logique_complexe_orchestrator import LogiqueComplexeOrchestrator
 from .strategies import CyclicSelectionStrategy, OracleTerminationStrategy
+# LogiqueComplexeOrchestrator removed (#885) — stub, superseded by FOL/Tweety via Registry
+# RealLLMOrchestrator removed (#885) — shim, superseded by UnifiedPipeline
 
 __all__ = [
     "CluedoExtendedOrchestrator",
     "ConversationOrchestrator",
-    "LogiqueComplexeOrchestrator",
     "CyclicSelectionStrategy",
     "OracleTerminationStrategy",
 ]
