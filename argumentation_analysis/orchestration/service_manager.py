@@ -81,21 +81,20 @@ try:
     from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
         CluedoExtendedOrchestrator as CluedoOrchestrator,
     )
-    from argumentation_analysis.orchestration.conversation_orchestrator import (
-        ConversationOrchestrator,
-    )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
+
+    # ConversationOrchestrator and RealLLMOrchestrator have been archived (obsolete shims).
+    # They remain set to None below so that the `if <Orchestrator>:` guards skip them gracefully.
     from argumentation_analysis.orchestration.fact_checking_orchestrator import (
         FactCheckingOrchestrator,
     )
 except ImportError as e:
     logging.warning(f"Certains orchestrateurs spécialisés ne sont pas disponibles: {e}")
     CluedoOrchestrator = None
-    ConversationOrchestrator = None
-    RealLLMOrchestrator = None
     FactCheckingOrchestrator = None
+
+# Archived orchestrators: kept as None so existing `if <Orchestrator>:` guards skip them.
+ConversationOrchestrator = None
+RealLLMOrchestrator = None
 
 # Imports des systèmes de communication
 try:
@@ -211,8 +210,10 @@ class OrchestrationServiceManager:
 
         # Orchestrateurs spécialisés
         self.cluedo_orchestrator: Optional[CluedoOrchestrator] = None
-        self.conversation_orchestrator: Optional[ConversationOrchestrator] = None
-        self.llm_orchestrator: Optional[RealLLMOrchestrator] = None
+        # Archived orchestrators (ConversationOrchestrator / RealLLMOrchestrator) are now None;
+        # annotate as Optional[Any] since the classes are no longer importable.
+        self.conversation_orchestrator: Optional[Any] = None
+        self.llm_orchestrator: Optional[Any] = None
         self.fact_checking_orchestrator: Optional[FactCheckingOrchestrator] = None
 
         # Middleware de communication
@@ -642,11 +643,14 @@ class OrchestrationServiceManager:
                     "timestamp": result.analysis_timestamp.isoformat(),
                     "orchestrator": orchestrator.__class__.__name__,
                 }
-            # Interface spécialisée pour RealLLMOrchestrator
+            # Interface spécialisée pour les orchestrateurs exposant analyze_text.
+            # NOTE: RealLLMOrchestrator (et son dataclass LLMAnalysisRequest) a été archivé.
+            # On construit la requête comme un objet léger (SimpleNamespace) pour rester
+            # compatible avec d'éventuels orchestrateurs résiduels exposant analyze_text.
             elif hasattr(orchestrator, "analyze_text"):
-                from .real_llm_orchestrator import LLMAnalysisRequest
+                from types import SimpleNamespace
 
-                request = LLMAnalysisRequest(
+                request = SimpleNamespace(
                     text=text,
                     # Correction: Utilise le analysis_type propagé
                     analysis_type=analysis_type,

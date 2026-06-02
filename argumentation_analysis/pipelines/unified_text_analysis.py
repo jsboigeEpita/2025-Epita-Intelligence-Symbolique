@@ -68,12 +68,21 @@ from argumentation_analysis.paths import LIBS_DIR
 from argumentation_analysis.orchestration.unified_pipeline import (
     run_unified_analysis,
 )
-from argumentation_analysis.orchestration.real_llm_orchestrator import (
-    RealConversationLogger,
-)
-from argumentation_analysis.orchestration.conversation_orchestrator import (
-    ConversationOrchestrator,
-)
+
+# Archived orchestrators (B-09 #875) — graceful fallback
+try:
+    from argumentation_analysis.orchestration.real_llm_orchestrator import (
+        RealConversationLogger,
+    )
+except ImportError:
+    RealConversationLogger = None
+
+try:
+    from argumentation_analysis.orchestration.conversation_orchestrator import (
+        ConversationOrchestrator,
+    )
+except ImportError:
+    ConversationOrchestrator = None
 
 # Imports du pipeline existant
 from argumentation_analysis.pipelines.analysis_pipeline import (
@@ -155,9 +164,16 @@ class UnifiedTextAnalysisPipeline:
         self.start_time = time.time()
 
         # Configuration du logger conversationnel
-        if self.config.enable_conversation_logging:
+        if (
+            self.config.enable_conversation_logging
+            and RealConversationLogger is not None
+        ):
             self.conversation_logger = RealConversationLogger()
             logger.info("[INIT] Logger conversationnel active")
+        elif self.config.enable_conversation_logging:
+            logger.warning(
+                "[INIT] RealConversationLogger unavailable (archived B-09 #875)"
+            )
 
         # 1. Initialisation JVM si nécessaire
         if (
@@ -215,15 +231,24 @@ class UnifiedTextAnalysisPipeline:
     async def _initialize_orchestrator(self):
         """Initialise l'orchestrateur selon le mode de configuration."""
         if self.config.orchestration_mode == "real" and self.llm_service:
-            logger.info("[ORCH] Mode real → utilisation de run_unified_analysis (no-instance)")
+            logger.info(
+                "[ORCH] Mode real → utilisation de run_unified_analysis (no-instance)"
+            )
             self.orchestrator = None  # run_unified_analysis is a function, not a class
-            logger.info("[ORCH] run_unified_analysis prêt (appel direct dans _perform_orchestration_analysis)")
+            logger.info(
+                "[ORCH] run_unified_analysis prêt (appel direct dans _perform_orchestration_analysis)"
+            )
 
         elif self.config.orchestration_mode == "conversation":
-            logger.info("[ORCH] Initialisation orchestrateur conversationnel...")
-            self.orchestrator = ConversationOrchestrator(mode="demo")
-            # Note: ConversationOrchestrator n'a pas de méthode initialize()
-            logger.info("[ORCH] Orchestrateur conversationnel initialise")
+            if ConversationOrchestrator is not None:
+                logger.info("[ORCH] Initialisation orchestrateur conversationnel...")
+                self.orchestrator = ConversationOrchestrator(mode="demo")
+                logger.info("[ORCH] Orchestrateur conversationnel initialise")
+            else:
+                logger.warning(
+                    "[ORCH] ConversationOrchestrator unavailable (archived B-09 #875), falling back to pipeline"
+                )
+                self.orchestrator = None
 
         else:
             logger.info("[ORCH] Mode orchestration standard (pipeline classique)")
@@ -554,9 +579,7 @@ class UnifiedTextAnalysisPipeline:
         try:
             if self.config.orchestration_mode == "real":
                 # Mode real: use run_unified_analysis directly
-                orch_result = await run_unified_analysis(
-                    text, workflow_name="standard"
-                )
+                orch_result = await run_unified_analysis(text, workflow_name="standard")
 
                 summary = orch_result.get("summary", {})
                 orchestration_results.update(

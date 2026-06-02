@@ -40,23 +40,39 @@ try:
     )
 
     run_cluedo_game = run_cluedo_oracle_game
+except ImportError as e:
+    logger.error(
+        f"Failed to import CluedoExtendedOrchestrator: {e}. Cluedo investigation strategy will be unavailable."
+    )
+    CluedoExtendedOrchestrator = None
+    run_cluedo_game = None
+
+# Les orchestrateurs ci-dessous ont été archivés (ConversationOrchestrator,
+# RealLLMOrchestrator, LogiqueComplexeOrchestrator). Leurs imports échoueront
+# désormais : c'est ATTENDU. Chaque garde les met à None individuellement afin
+# que l'échec de l'un n'affecte pas les autres orchestrateurs encore présents.
+try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
+except ImportError as e:
+    logger.warning(f"ConversationOrchestrator unavailable (archived): {e}.")
+    ConversationOrchestrator = None
+
+try:
     from argumentation_analysis.orchestration.real_llm_orchestrator import (
         RealLLMOrchestrator,
     )
+except ImportError as e:
+    logger.warning(f"RealLLMOrchestrator unavailable (archived): {e}.")
+    RealLLMOrchestrator = None
+
+try:
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
         LogiqueComplexeOrchestrator,
     )
 except ImportError as e:
-    logger.error(
-        f"Failed to import specialized orchestrators: {e}. SpecializedDirect strategy will be limited."
-    )
-    CluedoExtendedOrchestrator = None
-    run_cluedo_game = None
-    ConversationOrchestrator = None
-    RealLLMOrchestrator = None
+    logger.warning(f"LogiqueComplexeOrchestrator unavailable (archived): {e}.")
     LogiqueComplexeOrchestrator = None
 
 

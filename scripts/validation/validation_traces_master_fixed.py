@@ -51,9 +51,13 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     run_cluedo_oracle_game,
 )
-from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
-    LogiqueComplexeOrchestrator,
-)
+
+try:
+    from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
+        LogiqueComplexeOrchestrator,
+    )
+except ImportError:
+    LogiqueComplexeOrchestrator = None  # Archived B-09 #875
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
     SherlockTools,
