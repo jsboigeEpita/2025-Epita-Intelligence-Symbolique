@@ -169,38 +169,63 @@ class PLAgentAdapter(OperationalAgent):
             if not text_to_analyze:
                 raise ValueError("Aucun contenu textuel trouvé dans `text_extracts`.")
 
-            for technique in task.get("techniques", []):
-                technique_name = technique.get("name")
-                params = technique.get("parameters", {})
+            # Pass 1: Formalize text to belief set
+            self.logger.info("PL formalization (text → belief set)...")
+            bs_result = await self.agent.text_to_belief_set(text_to_analyze)
+            # text_to_belief_set returns (belief_set, dict) or similar
+            if isinstance(bs_result, tuple):
+                belief_set, bs_dict = bs_result
+            else:
+                belief_set = bs_result
+                bs_dict = {}
+            if belief_set is None:
+                issues.append(
+                    {
+                        "type": "formalization_error",
+                        "description": "L'agent n'a pas pu formaliser le texte en belief set PL.",
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "type": "formal_analyses",
+                        "belief_set": str(belief_set),
+                        "metadata": bs_dict,
+                    }
+                )
 
-                # Traduction de la technique en appel de méthode
-                if technique_name == "propositional_logic_formalization":
-                    res = await self.agent.formalize_to_pl(
-                        text=text_to_analyze, parameters=params
-                    )
-                    if res:
-                        results.append({"type": "formal_analyses", "belief_set": res})
-                    else:
-                        issues.append(
+                # Generate queries from belief set
+                queries = await self.agent.generate_queries(belief_set)
+                if queries:
+                    # Pass 2: Execute queries and interpret results
+                    for query in queries:
+                        query_result = self.agent.execute_query(belief_set, query)
+                        results.append(
                             {
-                                "type": "formalization_error",
-                                "description": "L'agent n'a pas pu formaliser le texte.",
+                                "type": "query_result",
+                                "query": str(query),
+                                "result": str(query_result),
                             }
                         )
-                elif technique_name == "validity_checking":
-                    res = await self.agent.check_pl_validity(
-                        text=text_to_analyze, parameters=params
+
+                    # Interpretation
+                    interpretation = await self.agent.interpret_results(
+                        belief_set, queries
                     )
-                    results.append({"type": "validity_analysis", **res})
-                elif technique_name == "consistency_checking":
-                    res = await self.agent.check_pl_consistency(
-                        text=text_to_analyze, parameters=params
-                    )
-                    results.append({"type": "consistency_analysis", **res})
-                else:
-                    issues.append(
-                        {"type": "unsupported_technique", "name": technique_name}
-                    )
+                    if interpretation:
+                        results.append(
+                            {"type": "interpretation", "content": str(interpretation)}
+                        )
+
+                # Consistency check
+                is_consistent, reason = self.agent.is_consistent(belief_set)
+                results.append(
+                    {
+                        "type": "consistency_analysis",
+                        "is_consistent": is_consistent,
+                        "reason": reason,
+                    }
+                )
 
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"

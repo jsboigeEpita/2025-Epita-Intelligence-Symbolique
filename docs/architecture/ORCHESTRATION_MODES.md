@@ -4,13 +4,13 @@
 
 ## Overview
 
-The system supports **4 orchestration modes**, each suited to different analysis scenarios. Two are actively wired into the CLI/API; two have full infrastructure but are dormant (awaiting reactivation).
+The system supports **4 orchestration modes**, each suited to different analysis scenarios. Three are actively wired into the CLI; one is active but dedicated to investigation scenarios.
 
 | Mode | Status | Key Class | Use Case |
 |------|--------|-----------|----------|
 | **Sequential (Pipeline)** | ACTIVE | `WorkflowExecutor` | Production analysis, benchmarks, API |
 | **Conversational** | ACTIVE | `ConversationalOrchestrator` | Rich multi-agent dialogue with cross-KB synergies |
-| **Hierarchical** | DORMANT | `HierarchicalTurnStrategy` | Strategic → Tactical → Operational delegation |
+| **Hierarchical** | ACTIVE | `HierarchicalOrchestrator` | Strategic planning → Lego execution (bridge) |
 | **Cluedo** | ACTIVE | `CluedoExtendedOrchestrator` | Sherlock-Watson investigation game |
 
 ---
@@ -94,7 +94,7 @@ _write_X_to_state() → updates UnifiedAnalysisState
 - Produces convergence metrics and quality reports per round
 
 **Key files:**
-- `argumentation_analysis/orchestration/conversational_orchestrator.py` — Main orchestrator
+
 - `argumentation_analysis/orchestration/conversational_executor.py` — Turn execution
 - `argumentation_analysis/orchestration/trace_analyzer.py` — Trace capture and analysis
 
@@ -115,25 +115,53 @@ TraceAnalyzer captures snapshots per round
 
 ---
 
-## 3. Hierarchical Mode (Dormant)
+## 3. Hierarchical Mode
 
-**Status:** Infrastructure exists but not wired into `run_orchestration.py` or API.
+**Entry points:**
 
-**How it works:**
-- 3-level hierarchy: **Strategic** (goals) → **Tactical** (plans) → **Operational** (agents)
-- `StrategicTacticalInterface` translates high-level objectives into tactical directives
-- `TacticalOperationalInterface` translates tasks into specific agent invocations
-- Each level has its own communication channel
-- Operational adapters wrap each agent type (InformalAgentAdapter, ExtractAgentAdapter, etc.)
+- CLI: `python run_orchestration.py --text "..." --mode hierarchical`
+- API: (planned — not yet wired)
+
+**How it works (bridge approach, R311-B4):**
+
+- Uses `StrategicManager` for high-level objective planning
+- Translates objectives into a `WorkflowDefinition` via `objectives_to_workflow()`
+- Executes via `WorkflowExecutor` (backed by `CapabilityRegistry`)
+- `StrategicManager.evaluate_final_results()` produces the final conclusion
+- This "bridge" approach reuses the Lego Architecture rather than the dormant 3-tier delegation chain
+
+**Flow:**
+
+```text
+HierarchicalOrchestrator
+     ↓
+StrategicManager.initialize_analysis(text) → objectives + plan
+     ↓
+objectives_to_workflow(objectives, registry) → WorkflowDefinition
+     ↓
+WorkflowExecutor.execute(workflow, text) → phase results
+     ↓
+StrategicManager.evaluate_final_results(results) → conclusion
+```
 
 **Use case:** Complex, goal-driven analyses where a strategic planner decomposes objectives into sub-tasks distributed across specialist agents.
 
 **Key files:**
-- `argumentation_analysis/orchestration/hierarchical/hierarchy_bridge.py`
-- `docs/architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md`
-- `examples/orchestration/run_hierarchical_orchestration.py`
 
-**Reactivation path:** Wire `HierarchicalOrchestrator` into `run_orchestration.py --mode hierarchical` and register operational adapters for all current agents.
+- `argumentation_analysis/orchestration/hierarchical/orchestrator.py` — `HierarchicalOrchestrator` + `run_hierarchical_analysis()`
+- `argumentation_analysis/orchestration/hierarchical/hierarchy_bridge.py` — `objectives_to_workflow()`, `RegistryBackedOperationalRegistry`
+- `argumentation_analysis/orchestration/hierarchical/strategic/manager.py` — `StrategicManager`
+- `docs/architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md` — 3-tier architecture reference
+
+**Reactivation status (R311):** COMPLETE. All 5 blockers fixed:
+
+- B1: `rhetorical_tools_adapter` import fix
+- B2: `PLAgentAdapter` rewritten against real API
+- B3: `informal_agent_adapter` de-stubbed (AgentFactory wiring)
+- B4: `HierarchicalOrchestrator` bridge class + CLI `--mode hierarchical`
+- B5: Documentation updated
+
+Legacy 3-tier chain (Strategic→Tactical→Operational) remains dormant with 302 tests behind `pytestmark = pytest.mark.skip`. The bridge approach bypasses this chain entirely.
 
 ---
 
@@ -161,8 +189,9 @@ TraceAnalyzer captures snapshots per round
 **Key difference:** Operates on the Cluedo dataset (suspects, weapons, rooms) rather than rhetorical text analysis. Uses its own state model, not `UnifiedAnalysisState`.
 
 **Key files:**
-- `argumentation_analysis/orchestration/cluedo_orchestrator.py` — 2-agent version
-- `argumentation_analysis/orchestration/cluedo_extended_orchestrator.py` — 3-agent + Oracle
+
+- `argumentation_analysis/orchestration/cluedo_extended_orchestrator.py` — 3-agent + Oracle (active)
+- `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` — 2-agent version (archived, superseded by Extended)
 
 ---
 
@@ -178,6 +207,9 @@ python run_orchestration.py --file text.txt --workflow collaborative
 
 # Conversational mode
 python run_orchestration.py --text "Your argument text" --mode conversational
+
+# Hierarchical mode (strategic planning → Lego execution)
+python run_orchestration.py --text "Your argument text" --mode hierarchical
 
 # List available workflows
 python run_orchestration.py --list-workflows
@@ -211,12 +243,12 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 
 | Aspect | Sequential | Conversational | Hierarchical | Cluedo |
 |--------|-----------|---------------|-------------|--------|
-| Agent interaction | None (isolated phases) | Rich dialogue via GroupChat | Delegation chain | Cyclic turns |
-| State model | UnifiedAnalysisState | Shared via StateManagerPlugin | Per-level state | EnqueteCluedoState |
-| Plugin routing | All-to-all | Per-agent specialty | Via adapters | Domain-specific |
-| LLM calls | 1 per phase | Multiple per round | Per level | Per agent turn |
-| Cross-KB enrichment | Via context dict | Via state reads + prompts | Via interfaces | N/A |
-| Convergence | Phase completion | PM designation + trace | Level completion | Oracle termination |
+| Agent interaction | None (isolated phases) | Rich dialogue via GroupChat | Strategic → Lego bridge | Cyclic turns |
+| State model | UnifiedAnalysisState | Shared via StateManagerPlugin | StrategicState + WorkflowResults | EnqueteCluedoState |
+| Plugin routing | All-to-all | Per-agent specialty | Via CapabilityRegistry | Domain-specific |
+| LLM calls | 1 per phase | Multiple per round | 1 per phase (via WorkflowExecutor) | Per agent turn |
+| Cross-KB enrichment | Via context dict | Via state reads + prompts | Via objectives → capabilities map | N/A |
+| Convergence | Phase completion | PM designation + trace | Objective success rate | Oracle termination |
 | Best for | Batch analysis, API | Deep interactive analysis | Goal decomposition | Investigation game |
 
 ---
@@ -226,9 +258,12 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 ### Archived Components
 | Component | Archived To | Replacement | PR |
 |-----------|-------------|-------------|-----|
-| `RealLLMOrchestrator` (668 lines) | `docs/archives/orchestration_legacy/` | `UnifiedPipeline` / `ConversationalOrchestrator` | #246 |
+| `RealLLMOrchestrator` (668→124 LOC shim) | `docs/archives/orchestration_legacy/real_llm_orchestrator_shim.py` | `UnifiedPipeline` + `WorkflowDSL` | #246, #886 |
 | `RealLLMOrchestratorWrapper` (60 lines) | Deprecation shim in `pipelines/` | Same as above | #247 |
 | Dead code in `pipeline_utils.py` | Removed (EnhancedPipeline, singletons) | `AnalysisCache` + `PipelineMetrics` kept | #255 |
+| `ConversationOrchestrator` (1044 LOC) | `docs/archives/orchestration_legacy/conversation_orchestrator.py` | 8-agent SK system via `CapabilityRegistry` | #886 |
+| `CluedoOrchestrator` base 2-agent (488 LOC) | `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` | `CluedoExtendedOrchestrator` (3-agent + Oracle) | #886 |
+| `LogiqueComplexeOrchestrator` (108 LOC stub) | `docs/archives/orchestration_legacy/logique_complexe_orchestrator.py` | `FOLLogicAgent` + `TweetyLogicPlugin` | #886 |
 
 ### Consolidated Components
 | Component | New Location | Description | PR |
