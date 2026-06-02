@@ -174,6 +174,31 @@ async def run_unified_analysis(
             logger.warning(f"JPype warmup failed (will retry in-phase): {e}")
 
     executor = WorkflowExecutor(registry)
+
+    # Inject shield phase if shield_config present in context (#896)
+    # This adds a pre-extraction "shield" phase that validates input before
+    # any LLM call. The phase is optional and fails gracefully.
+    if context and context.get("shield_config"):
+        try:
+            builder = WorkflowBuilder("shielded_" + workflow.name)
+            builder.add_phase(
+                name="shield",
+                capability="input_validation",
+                optional=True,
+            )
+            # Copy all original phases after shield
+            for phase in workflow.phases:
+                builder._phases.append(phase)
+            workflow = builder.build()
+            logger.info(
+                "Shield phase injected (preset=%s)",
+                context["shield_config"].get("preset"),
+            )
+        except Exception as e:
+            logger.warning(
+                "Shield phase injection failed, using original workflow: %s", e
+            )
+
     phase_results = await executor.execute(
         workflow,
         input_data=text,
