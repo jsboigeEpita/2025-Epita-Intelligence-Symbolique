@@ -51,9 +51,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     run_cluedo_oracle_game,
 )
-from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
-    LogiqueComplexeOrchestrator,
-)
+# LogiqueComplexeOrchestrator removed (#885) — superseded by FOL/Tweety via Registry
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
     SherlockTools,
@@ -334,8 +332,16 @@ class MasterTraceValidator:
             # Capture du timestamp de début
             start_time = datetime.datetime.now()
 
-            # Création de l'orchestrateur logique complexe
-            orchestrateur = LogiqueComplexeOrchestrator(kernel)
+            # LogiqueComplexeOrchestrator removed (#885) — skip Einstein orchestration
+            self.logger.warning(
+                "LogiqueComplexeOrchestrator removed (#885). "
+                "Use FOL/Tweety via CapabilityRegistry instead."
+            )
+            return {
+                "case_name": case_name,
+                "status": "skipped",
+                "reason": "LogiqueComplexeOrchestrator removed (#885)",
+            }
 
             # Création des agents spécialisés avec outils
             sherlock_tools = SherlockTools(kernel)
