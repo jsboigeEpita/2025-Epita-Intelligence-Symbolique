@@ -292,12 +292,9 @@ async def _run_orchestration_pipeline(
     elif orchestration_mode == "conversation" or ":" in text:
         orchestrator = ConversationOrchestrator(llm_service, config)
         analysis_method = orchestrator.orchestrate_dialogue_analysis
-    elif orchestration_mode == "logique" or "tous les hommes" in text.lower():
-        orchestrator = LogiqueComplexeOrchestrator(llm_service, config)
-        analysis_method = orchestrator.orchestrate_complex_logical_analysis
-    else:  # Fallback sur l'orchestrateur LLM générique
-        orchestrator = RealLLMOrchestrator(llm_service, config)
-        analysis_method = orchestrator.orchestrate_multi_llm_analysis
+    else:  # Fallback sur l'orchestrateur conversationnel générique
+        orchestrator = ConversationOrchestrator(llm_service, config)
+        analysis_method = orchestrator.orchestrate_dialogue_analysis
 
     logger.info(f"Orchestrateur sélectionné: {orchestrator.__class__.__name__}")
 

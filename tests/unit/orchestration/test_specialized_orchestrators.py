@@ -53,9 +53,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
-        LogiqueComplexeOrchestrator,
-    )
+    # LogiqueComplexeOrchestrator removed (#885) — superseded by FOL/Tweety via Registry
     from argumentation_analysis.config.settings import AppSettings
 
     SPECIALIZED_AVAILABLE = True
@@ -161,35 +159,6 @@ class TestConversationOrchestrator:
         assert "TRACE ANALYTIQUE" in result["report"]
 
 
-class TestLogiqueComplexeOrchestrator:
-    """Tests pour l'orchestrateur de logique complexe."""
-
-    @pytest.fixture
-    def logic_orchestrator(self, mock_kernel: Kernel):
-        """Instance de LogiqueComplexeOrchestrator pour les tests."""
-        return LogiqueComplexeOrchestrator(kernel=mock_kernel)
-
-    def test_logic_orchestrator_initialization(self, logic_orchestrator):
-        """Test de l'initialisation de l'orchestrateur de logique complexe."""
-        # La classe a une définition minimale maintenant.
-        assert logic_orchestrator.kernel is not None
-        assert hasattr(logic_orchestrator, "_logger")
-
-    @pytest.mark.asyncio
-    async def test_run_einstein_puzzle_simulation(self, logic_orchestrator):
-        """Test de la seule méthode disponible (simulation)."""
-        puzzle_data = {"test": "data"}
-        # Mock de la méthode pour la prévisibilité
-        logic_orchestrator.run_einstein_puzzle = AsyncMock(
-            return_value={"solution": "mocked", "success": True}
-        )
-
-        result = await logic_orchestrator.run_einstein_puzzle(puzzle_data)
-
-        logic_orchestrator.run_einstein_puzzle.assert_called_once_with(puzzle_data)
-        assert result["success"] is True
-        assert result["solution"] == "mocked"
-
 
 class TestSpecializedOrchestratorsIntegration:
     """Tests d'intégration entre orchestrateurs spécialisés."""
@@ -202,8 +171,7 @@ class TestSpecializedOrchestratorsIntegration:
         convo = ConversationOrchestrator(mode="demo")
         assert isinstance(convo, ConversationOrchestrator)
 
-        logic = LogiqueComplexeOrchestrator(kernel=mock_kernel)
-        assert isinstance(logic, LogiqueComplexeOrchestrator)
+        # LogiqueComplexeOrchestrator removed (#885) — only cluedo+conversation tested
 
     @pytest.mark.asyncio
     @patch(
@@ -214,13 +182,8 @@ class TestSpecializedOrchestratorsIntegration:
         "argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator.run_demo_conversation",
         new_callable=AsyncMock,
     )
-    @patch(
-        "argumentation_analysis.orchestration.logique_complexe_orchestrator.LogiqueComplexeOrchestrator.run_einstein_puzzle",
-        new_callable=AsyncMock,
-    )
     async def test_orchestrator_collaboration_mocked(
         self,
-        mock_logic_run,
         mock_convo_run,
         mock_cluedo_run,
         mock_kernel: Kernel,
@@ -229,7 +192,6 @@ class TestSpecializedOrchestratorsIntegration:
         """Test de collaboration simulée entre les orchestrateurs."""
         mock_cluedo_run.return_value = {"workflow_info": {"status": "completed"}}
         mock_convo_run.return_value = {"status": "success", "report": "report"}
-        mock_logic_run.return_value = {"solution": "mocked", "success": True}
 
         complex_text = "Un texte complexe pour tester tout le monde."
 
@@ -241,21 +203,17 @@ class TestSpecializedOrchestratorsIntegration:
         await cluedo_orchestrator.setup_workflow()
 
         conversation_orchestrator = ConversationOrchestrator(mode="demo")
-        logic_orchestrator = LogiqueComplexeOrchestrator(kernel=mock_kernel)
 
         investigation_result = await cluedo_orchestrator.execute_workflow(complex_text)
         dialogue_result = await conversation_orchestrator.run_demo_conversation(
             complex_text
         )
-        logic_result = await logic_orchestrator.run_einstein_puzzle({})
 
         mock_cluedo_run.assert_called_once_with(complex_text)
         mock_convo_run.assert_called_once_with(complex_text)
-        mock_logic_run.assert_called_once_with({})
 
         assert "workflow_info" in investigation_result
         assert "report" in dialogue_result
-        assert "success" in logic_result
 
 
 if __name__ == "__main__":

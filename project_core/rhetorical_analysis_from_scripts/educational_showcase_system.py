@@ -83,13 +83,10 @@ try:
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealConversationLogger,
-    )
-
-    # NOTE: L'import de source_management a été déplacé à l'extérieur du bloc try
+    # RealConversationLogger removed (#885) — use ConversationLogger directly
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
+        ConversationLogger as RealConversationLogger,
     )
     from argumentation_analysis.core.report_generation import (
         UnifiedReportGenerator,

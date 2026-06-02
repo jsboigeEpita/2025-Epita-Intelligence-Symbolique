@@ -61,17 +61,8 @@ def einstein_riddle_state():
 
 @pytest.fixture
 def logique_complexe_orchestrator():
-    """Fixture pour l'orchestrateur de logique complexe."""
-    try:
-        from argumentation_analysis.orchestration.logique_complexe_orchestrator import (
-            LogiqueComplexeOrchestrator,
-        )
-        from semantic_kernel import Kernel
-
-        kernel = Kernel()
-        return LogiqueComplexeOrchestrator(kernel=kernel)
-    except ImportError:
-        pytest.skip("LogiqueComplexeOrchestrator non disponible")
+    """Fixture removed — LogiqueComplexeOrchestrator deleted (#885)."""
+    pytest.skip("LogiqueComplexeOrchestrator removed (#885)")
 
 
 @pytest.fixture

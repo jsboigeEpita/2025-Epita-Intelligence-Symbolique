@@ -31,9 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
-    from argumentation_analysis.orchestration.real_llm_orchestrator import (
-        RealLLMOrchestrator,
-    )
+    # RealLLMOrchestrator removed (#885) — superseded by UnifiedPipeline
     from argumentation_analysis.utils.tweety_error_analyzer import (
         TweetyErrorAnalyzer,
         TweetyErrorFeedback,
@@ -126,21 +124,7 @@ class TestUnifiedOrchestrations:
         assert isinstance(conv_state, dict)
         assert conv_state["mode"] == "demo"
 
-    @pytest.mark.xfail(
-        reason="RealLLMOrchestrator deprecated — .mode/.config attributes removed (#274)",
-        strict=True,
-    )
-    def test_real_llm_orchestrator_configuration(self):
-        """Test de configuration du RealLLMOrchestrator."""
-        orchestrator = RealLLMOrchestrator(mode="real")
-
-        assert orchestrator.mode == "real"
-        assert hasattr(orchestrator, "config")
-        assert isinstance(orchestrator.config, dict)
-
-        # Test default config values
-        assert orchestrator.config.get("retry_attempts") == 3
-        assert orchestrator.config.get("cache_enabled") is True
+    # RealLLMOrchestrator removed (#885) — test deleted
 
     def test_multi_agent_coordination(self):
         """Test de coordination multi-agents."""
@@ -248,108 +232,6 @@ class TestUnifiedOrchestrations:
                 orch.cleanup()
 
 
-class TestRealLLMOrchestrationAdvanced:
-    """Tests avancés pour RealLLMOrchestrator."""
-
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        # Assurez-vous que la méthode get_kernel_with_gpt4o_mini existe et est correcte
-        if hasattr(config, "get_kernel_with_gpt4o_mini"):
-            return asyncio.run(config.get_kernel_with_gpt4o_mini())
-        # Fallback ou erreur si la méthode n'existe pas
-        raise AttributeError(
-            "UnifiedConfig n'a pas de méthode 'get_kernel_with_gpt4o_mini'"
-        )
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = self._create_authentic_gpt4o_mini_instance()
-            result = asyncio.run(kernel.invoke("chat", input=prompt))
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
-    def setup_method(self):
-        """Configuration initiale pour chaque test."""
-        self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
-        self.mock_llm_service = MagicMock()
-        self.mock_llm_service.invoke = AsyncMock(return_value="Mock LLM response")
-
-    @pytest.mark.xfail(
-        reason="RealLLMOrchestrator deprecated — .kernel/.is_initialized attributes removed (#274)",
-        strict=True,
-    )
-    def test_real_llm_orchestrator_initialization(self):
-        """Test d'initialisation complète du RealLLMOrchestrator."""
-        orchestrator = RealLLMOrchestrator(mode="real", kernel=self.mock_llm_service)
-
-        # Before initialization
-        assert not orchestrator.is_initialized
-        assert hasattr(orchestrator, "kernel")
-        assert orchestrator.kernel is self.mock_llm_service
-
-        # Check status API
-        status = orchestrator.get_status()
-        assert isinstance(status, dict)
-        assert status["is_initialized"] is False
-
-    def test_bnf_feedback_integration(self):
-        """Test d'intégration avec TweetyErrorAnalyzer pour feedback BNF."""
-        orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
-
-        # Simuler une erreur Tweety
-        error_text = "Predicate 'invalid_pred' has not been declared"
-
-        analyzer = TweetyErrorAnalyzer()
-        feedback = analyzer.analyze_error(error_text)
-
-        assert hasattr(feedback, "error_type")
-        assert hasattr(feedback, "corrections")
-        assert hasattr(feedback, "bnf_rules")
-
-    @patch("config.unified_config.UnifiedConfig.get_kernel_with_gpt4o_mini")
-    def test_intelligent_retry_mechanism(self, mock_get_kernel):
-        """Test du mécanisme de retry intelligent avec un kernel mocké."""
-        # Configurer le mock pour simuler un LLM qui échoue puis réussit
-        mock_kernel_instance = MagicMock(spec=Kernel)
-        mock_kernel_instance.invoke = AsyncMock(
-            side_effect=[Exception("First attempt fails"), "Success on retry"]
-        )
-        mock_get_kernel.return_value = mock_kernel_instance
-
-        # L'orchestrateur va maintenant utiliser le kernel mocké via la config
-        orchestrator = RealLLMOrchestrator(kernel=mock_kernel_instance)
-
-        # Le test original peut continuer, en supposant que l'orchestrateur est
-        # conçu pour gérer une exception et potentiellement réessayer.
-        try:
-            result = orchestrator.run_real_llm_orchestration(self.test_text)
-            # Le test attend un succès au deuxième essai
-            assert isinstance(result, dict)
-            # On pourrait même vérifier que le service a été appelé deux fois
-            # assert mock_kernel_instance.invoke.call_count == 2
-        except Exception:
-            # Si un retry n'est pas implémenté, le test échouera ici, ce qui est attendu.
-            pass
-
-    def test_semantic_kernel_integration(self):
-        """Test d'intégration avec Semantic Kernel."""
-        orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
-
-        # Test d'initialisation du kernel
-        if hasattr(orchestrator, "initialize"):
-            orchestrator.initialize()
-
-        # Vérifier que le kernel est configuré
-        if hasattr(orchestrator, "kernel"):
-            assert (
-                orchestrator.kernel is not None or orchestrator.kernel is None
-            )  # Selon implémentation
-
-
 class TestUnifiedSystemCoordination:
     """Tests de coordination système unifiée."""
 
@@ -368,11 +250,7 @@ class TestUnifiedSystemCoordination:
 
         assert conv_orchestrator is not None
 
-        # Test avec configuration LLM réel
-        real_config = UnifiedConfig(orchestration_type="REAL")
-        real_orchestrator = RealLLMOrchestrator(config=real_config)
-
-        assert real_orchestrator is not None
+        # RealLLMOrchestrator removed (#885) — only conversation mapping tested
 
     def test_agent_to_orchestrator_communication(self):
         """Test de communication agent vers orchestrateur."""
@@ -385,36 +263,7 @@ class TestUnifiedSystemCoordination:
                 if hasattr(agent, "orchestrator"):
                     assert agent.orchestrator is not None
 
-    @pytest.mark.xfail(
-        reason="RealLLMOrchestrator deprecated — .get_status()/.get_metrics() removed (#274)",
-        strict=True,
-    )
-    def test_conversation_to_real_llm_handoff(self):
-        """Test de handoff entre orchestrateurs."""
-        # Phase 1: Orchestration conversationnelle
-        conv_orchestrator = ConversationOrchestrator(mode="demo")
-        conv_result = conv_orchestrator.run_orchestration(self.test_text)
-
-        assert isinstance(conv_result, str)
-
-        # Get conversation state for handoff
-        conv_state = conv_orchestrator.get_conversation_state()
-        assert isinstance(conv_state, dict)
-        assert "mode" in conv_state
-
-        # Phase 2: Create real LLM orchestrator
-        mock_llm = MagicMock()
-        real_orchestrator = RealLLMOrchestrator(kernel=mock_llm)
-
-        # Verify status before initialization
-        status = real_orchestrator.get_status()
-        assert isinstance(status, dict)
-        assert not status["is_initialized"]
-
-        # Verify metrics API
-        metrics = real_orchestrator.get_metrics()
-        assert isinstance(metrics, dict)
-        assert metrics["total_requests"] == 0
+    # test_conversation_to_real_llm_handoff removed (#885) — RealLLMOrchestrator deleted
 
     def test_authentic_mode_validation(self):
         """Test de validation du mode authentique."""
