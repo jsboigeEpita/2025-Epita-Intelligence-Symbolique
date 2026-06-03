@@ -142,6 +142,7 @@ async def run_modern_analysis(
     shield_preset: str = "off",
     vote_method: str = "copeland",
     consensus_threshold: float = 0.7,
+    fol_solver: str = "tweety",
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
@@ -152,6 +153,7 @@ async def run_modern_analysis(
     :param shield_preset: AI Shield preset (off/basic/advanced/output_only/strict).
     :param vote_method: Social choice voting method for governance phase.
     :param consensus_threshold: Consensus threshold (0.0-1.0) for deliberation.
+    :param fol_solver: FOL solver backend (tweety/prover9/eprover).
     :return: Résultats de l'analyse.
     """
     from argumentation_analysis.orchestration.unified_pipeline import (
@@ -174,6 +176,8 @@ async def run_modern_analysis(
         context["vote_method"] = vote_method
     if consensus_threshold != 0.7:
         context["consensus_threshold"] = consensus_threshold
+    if fol_solver != "tweety":
+        context["fol_solver"] = fol_solver
 
     results = await run_unified_analysis(
         text=text_content,
@@ -406,6 +410,15 @@ Exemples:
         default=0.7,
         help="Consensus threshold (0.0-1.0) for governance deliberation (default: 0.7). "
         "Higher values require stronger agreement.",
+    )
+    parser.add_argument(
+        "--fol-solver",
+        type=str,
+        choices=["tweety", "prover9", "eprover"],
+        default="tweety",
+        help="FOL solver backend: tweety (default, Java/TweetyProject), "
+        "prover9 (external Prover9 binary, skip if absent), "
+        "eprover (external E Prover binary, skip if absent)",
     )
 
     args = parser.parse_args()
@@ -643,6 +656,7 @@ Exemples:
             shield_preset=args.shield_preset,
             vote_method=args.vote_method,
             consensus_threshold=args.consensus_threshold,
+            fol_solver=args.fol_solver,
         )
 
 
