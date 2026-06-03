@@ -5467,8 +5467,11 @@ async def _invoke_dung_extensions(
                 DungStudentProvider,
             )
 
-            student_provider = DungStudentProvider()
-            result = await student_provider.compute_extensions(arguments, attacks)
+            student_provider = DungStudentProvider()  # type: ignore[no-untyped-call]
+            # attacks is List[List[str]] from _generate_attacks_from_args;
+            # compute_extensions expects List[Tuple[str, str]] — convert
+            _typed_attacks = [(a[0], a[1]) for a in attacks if len(a) >= 2]
+            result = await student_provider.compute_extensions(arguments, _typed_attacks)
             if result.get("status") == "unavailable":
                 logger.warning(
                     "DungStudentProvider unavailable, falling back to native AFHandler"
