@@ -6,7 +6,7 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Set
 
 from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowBuilder,
@@ -70,7 +70,7 @@ _EXTENSION_CAPABILITIES: Dict[str, str] = {
 }
 
 # Core formal phases (always present unless --formal-extension=none)
-_CORE_CAPABILITIES: set = {
+_CORE_CAPABILITIES: Set[str] = {
     "propositional_logic",
     "fol_reasoning",
     "modal_logic",
@@ -78,7 +78,7 @@ _CORE_CAPABILITIES: set = {
 }
 
 # All extension capability strings (values of _EXTENSION_CAPABILITIES)
-_ALL_EXTENSION_CAPS: set = set(_EXTENSION_CAPABILITIES.values())
+_ALL_EXTENSION_CAPS: Set[str] = set(_EXTENSION_CAPABILITIES.values())
 
 
 def filter_formal_extensions(
