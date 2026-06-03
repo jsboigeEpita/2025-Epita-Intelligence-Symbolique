@@ -114,7 +114,7 @@ class GovernancePlugin:
         name="social_choice_vote",
         description=(
             "Run a formal social choice voting method on preference ballots. "
-            "Input: JSON with 'method' (approval/stv/copeland/schulze), "
+            "Input: JSON with 'method' (approval/stv/copeland/kemeny_young/schulze), "
             "'ballots' (list of ranked preference lists), 'options' (list of candidates). "
             "Returns JSON result with winner and method-specific details."
         ),
@@ -140,6 +140,14 @@ class GovernancePlugin:
         elif method_name == "schulze":
             winner, paths = schulze(ballots, options)
             return json.dumps({"winner": winner, "strongest_paths": paths})
+        elif method_name == "kemeny_young":
+            from argumentation_analysis.agents.core.governance.social_choice import (
+                kemeny_young,
+            )
+
+            ranking, score = kemeny_young(ballots, options)
+            return json.dumps({"winner": ranking[0] if ranking else None,
+                               "ranking": ranking, "kemeny_score": score})
         else:
             return json.dumps({"error": f"Unknown method: {method_name}"})
 

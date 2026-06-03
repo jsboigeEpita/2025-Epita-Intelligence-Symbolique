@@ -1375,7 +1375,7 @@ async def _invoke_governance(
                 ballots.append(pref)
             vote_input = json.dumps(
                 {
-                    "method": "copeland",
+                    "method": context.get("vote_method", "copeland"),
                     "ballots": ballots,
                     "options": options,
                 }
@@ -1525,6 +1525,20 @@ async def _invoke_governance(
     }
     if vote_result:
         result["vote_result"] = vote_result
+    # Consensus threshold check (parametric selector --consensus-threshold, #899)
+    consensus_threshold = context.get("consensus_threshold", 0.7)
+    if positions and vote_result:
+        try:
+            metrics_json = plugin.compute_consensus_metrics(
+                json.dumps(vote_result)
+            )
+            consensus_metrics = json.loads(metrics_json)
+            consensus_rate = consensus_metrics.get("consensus_rate", 0.0)
+            result["consensus_metrics"] = consensus_metrics
+            result["consensus_met"] = consensus_rate >= consensus_threshold
+            result["consensus_threshold_used"] = consensus_threshold
+        except Exception as e:
+            logger.debug(f"Consensus metrics computation skipped: {e}")
     if llm_governance:
         result["llm_governance_assessment"] = llm_governance
         result["recommended_method"] = llm_governance.get("recommended_method")
