@@ -571,3 +571,166 @@ class TestOrchestrationModeDispatch:
                 # CRITICAL: sherlock orchestrator called, pipeline NOT
                 MockClass.return_value.investigate.assert_called_once()
                 mock_pipeline.assert_not_called()
+
+
+# ──── Context forwarding tests (#920) ────
+
+
+class TestContextForwardingToModes:
+    """Test that selector context is forwarded to non-pipeline orchestrators.
+
+    R321 anti-inerte: selectors must COMPOSE across modes, not be silently
+    ignored when orchestration_mode != pipeline.
+    """
+
+    @pytest.mark.asyncio
+    async def test_hierarchical_receives_fallacy_tier(self):
+        """CONSUMPTION TEST: hierarchical mode receives fallacy_tier via kwargs.
+
+        Consumer: hierarchical/orchestrator.py:144 merges **kwargs into context
+        → WorkflowExecutor → invoke_callables reads fallacy_tier.
+        """
+        from unittest.mock import call
+
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "summary": {"completed": 1, "failed": 0, "skipped": 0, "total": 1},
+            "conclusion": "Test",
+            "objectives": [],
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.hierarchical.orchestrator.run_hierarchical_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_hier:
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/workflow/custom",
+                json={
+                    "text": "Test argument",
+                    "workflow": "full",
+                    "orchestration_mode": "hierarchical",
+                    "fallacy_tier": "taxonomy",
+                },
+            )
+            assert response.status_code == 200
+            # Verify kwargs contain fallacy_tier (forwarded via **context)
+            mock_hier.assert_called_once()
+            call_kwargs = mock_hier.call_args
+            assert call_kwargs.kwargs.get("fallacy_tier") == "taxonomy"
+
+    @pytest.mark.asyncio
+    async def test_hierarchical_receives_vote_method(self):
+        """CONSUMPTION TEST: hierarchical mode receives vote_method via kwargs."""
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "summary": {"completed": 1, "failed": 0, "skipped": 0, "total": 1},
+            "conclusion": "Test",
+            "objectives": [],
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.hierarchical.orchestrator.run_hierarchical_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_hier:
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/workflow/custom",
+                json={
+                    "text": "Test argument",
+                    "workflow": "full",
+                    "orchestration_mode": "hierarchical",
+                    "vote_method": "schulze",
+                    "consensus_threshold": 0.5,
+                },
+            )
+            assert response.status_code == 200
+            call_kwargs = mock_hier.call_args
+            assert call_kwargs.kwargs.get("vote_method") == "schulze"
+            assert call_kwargs.kwargs.get("consensus_threshold") == 0.5
+
+    @pytest.mark.asyncio
+    async def test_conversational_receives_selector_context(self):
+        """CONSUMPTION TEST: conversational mode receives selector_context param.
+
+        Consumer: _run_parent_harness_fallback merges selector_context into
+        the internal context dict → _invoke_hierarchical_fallacy reads fallacy_tier.
+        """
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "workflow_name": "conversational",
+            "total_messages": 5,
+            "phases": [],
+            "state_non_empty_fields": 0,
+            "duration_seconds": 1.0,
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator.run_conversational_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_conv:
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/workflow/custom",
+                json={
+                    "text": "Test argument",
+                    "workflow": "full",
+                    "orchestration_mode": "conversational",
+                    "fallacy_tier": "taxonomy",
+                    "shield_preset": "advanced",
+                },
+            )
+            assert response.status_code == 200
+            # Verify selector_context was passed
+            call_kwargs = mock_conv.call_args
+            selector_ctx = call_kwargs.kwargs.get("selector_context")
+            assert selector_ctx is not None
+            assert selector_ctx.get("fallacy_tier") == "taxonomy"
+            assert selector_ctx.get("shield_config") == {"preset": "advanced"}
+
+    @pytest.mark.asyncio
+    async def test_sherlock_receives_context(self):
+        """CONSUMPTION TEST: sherlock_modern receives context (N/A documented).
+
+        Sherlock is investigation mode — selector keys are N/A but context
+        is forwarded for completeness. No false consumption claim.
+        """
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = MagicMock()
+        mock_result.trace = ["step1"]
+        mock_result.solution = "Test solution"
+        mock_result.agents_used = ["sherlock"]
+        mock_result.hypotheses = []
+
+        with patch(
+            "argumentation_analysis.orchestration.sherlock_modern_orchestrator.SherlockModernOrchestrator",
+        ) as MockClass:
+            MockClass.return_value.investigate = AsyncMock(return_value=mock_result)
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/workflow/custom",
+                json={
+                    "text": "Test argument",
+                    "workflow": "full",
+                    "orchestration_mode": "sherlock_modern",
+                    "fallacy_tier": "full",
+                },
+            )
+            assert response.status_code == 200
+            # Verify context was passed to investigate()
+            call_kwargs = MockClass.return_value.investigate.call_args
+            context = call_kwargs.kwargs.get("context")
+            assert context is not None
+            assert context.get("fallacy_tier") == "full"

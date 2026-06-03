@@ -461,6 +461,7 @@ async def run_conversational_analysis(
     enable_tool_gating: bool = False,
     enable_reprompt_tracing: bool = False,
     source_metadata: Optional[Dict[str, str]] = None,
+    selector_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -686,7 +687,9 @@ async def run_conversational_analysis(
 
         # Parent harness (#578 tier 3): always fire on dense texts after Detection
         if "etection" in phase_name and len(text) > 5000:
-            harness_log = await _run_parent_harness_fallback(text, state)
+            harness_log = await _run_parent_harness_fallback(
+                text, state, selector_context=selector_context,
+            )
             if harness_log:
                 conversation_log.append(harness_log)
 
@@ -1562,7 +1565,7 @@ def _extract_fallacy_type(fallacy_dict: Dict[str, Any]) -> str:
 
 
 async def _run_parent_harness_fallback(
-    text: str, state: Any
+    text: str, state: Any, selector_context: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Invoke tier-3 parent harness on dense texts after Detection phase (#578, #600).
 
@@ -1580,6 +1583,9 @@ async def _run_parent_harness_fallback(
         )
 
         context = {"_state_object": state}
+        # Merge selector context from API (#920)
+        if selector_context:
+            context.update(selector_context)
 
         # --- Per-argument pass (existing) ---
         per_arg_result = await _invoke_hierarchical_fallacy_per_argument(text, context)
