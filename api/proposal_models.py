@@ -54,6 +54,17 @@ class CustomWorkflowRequest(BaseModel):
         ..., description="Workflow name (light, standard, full, auto)"
     )
     options: Dict = Field(default_factory=dict)
+    # Parametric selectors (north-star R311, #903)
+    fallacy_tier: Literal["taxonomy", "hybrid", "llm", "full"] = Field(
+        "llm",
+        description="Fallacy detection tier: taxonomy (lexical), hybrid (neural+symbolic), "
+        "llm (default, LLM-based), full (all merged)",
+    )
+    shield_preset: Literal["off", "basic", "advanced", "output_only", "strict"] = Field(
+        "off",
+        description="AI Shield preset: off (default), basic, advanced, output_only, strict",
+    )
+    # dung_provider deferred to #908 — needs real consumption wiring
 
 
 # ──── Response Models ────
