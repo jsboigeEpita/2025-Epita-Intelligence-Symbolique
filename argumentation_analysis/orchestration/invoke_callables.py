@@ -5448,12 +5448,51 @@ async def _invoke_dung_extensions(
     stable, complete, admissible, conflict_free, semi_stable, stage, cf2,
     ideal, naive.
     Falls back to pure-Python computation when JVM is unavailable.
+
+    #908: If ``context["dung_provider_hint"]`` is set to
+    ``"abs_arg_dung_student"``, delegates to the student Dung provider
+    instead of the native AFHandler.
     """
     # 1. Extract arguments from upstream phases
     arguments = _extract_arguments_from_context(input_text, context)
 
     # 2. Build attack relations from fallacies and counter-arguments
     attacks = _generate_attacks_from_args(arguments, context)
+
+    # #908: Provider selection — delegate to student provider if hinted
+    provider_hint = context.get("dung_provider_hint")
+    if provider_hint == "abs_arg_dung_student":
+        try:
+            from argumentation_analysis.adapters.dung_student_provider import (
+                DungStudentProvider,
+            )
+
+            student_provider = DungStudentProvider()  # type: ignore[no-untyped-call]
+            # attacks is List[List[str]] from _generate_attacks_from_args;
+            # compute_extensions expects List[Tuple[str, str]] — convert
+            _typed_attacks = [(a[0], a[1]) for a in attacks if len(a) >= 2]
+            result = await student_provider.compute_extensions(arguments, _typed_attacks)
+            if result.get("status") == "unavailable":
+                logger.warning(
+                    "DungStudentProvider unavailable, falling back to native AFHandler"
+                )
+            else:
+                # Add trace entry for student provider
+                _state = context.get("_state_object")
+                if _state is not None and result.get("arguments"):
+                    _n_args = len(result.get("arguments", []))
+                    _stats = result.get("statistics", {})
+                    _n_sem = _stats.get("semantics_computed", 0) if isinstance(_stats, dict) else 0
+                    _state.add_trace_entry(
+                        phase="dung",
+                        agent="DungStudentProvider",
+                        reacts_to=["extract", "counter"],
+                        summary=f"Cadre Dung (student provider): {_n_args} arguments. {_n_sem} sémantiques calculées.",
+                    )
+                logger.info("Dung extensions computed via abs_arg_dung_student provider")
+                return result
+        except Exception as e:
+            logger.warning(f"DungStudentProvider failed ({e}), falling back to native")
 
     # 3. Compute extensions via Tweety (or Python fallback)
     try:
@@ -6375,7 +6414,7 @@ async def _invoke_stakes_extractor(
 
 
 async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """AI Shield — adversarial input/output validation (#841).
+    """AI Shield - adversarial input/output validation (#841).
 
     Runs the AI Shield pipeline on the input text to detect injection,
     jailbreak, bias, and output leaks. Optional phase that runs early
