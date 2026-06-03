@@ -1,12 +1,13 @@
-"""Tests for parametric selector exposure in the FastAPI API (#903, #910).
+"""Tests for parametric selector exposure in the FastAPI API (#903, #910, #917).
 
 Validates that CustomWorkflowRequest accepts parametric fields
-(fallacy_tier, shield_preset, vote_method, consensus_threshold)
+(fallacy_tier, shield_preset, vote_method, consensus_threshold, orchestration_mode)
 and that they propagate correctly to the pipeline context with the
-EXACT keys consumed by invoke_callables.py.
+EXACT keys consumed by invoke_callables.py, or dispatch to the correct
+orchestrator based on orchestration_mode.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,6 +26,7 @@ class TestCustomWorkflowRequestModel:
         assert req.shield_preset == "off"
         assert req.vote_method == "copeland"
         assert req.consensus_threshold == 0.7
+        assert req.orchestration_mode == "pipeline"
 
     def test_explicit_values(self):
         from api.proposal_models import CustomWorkflowRequest
@@ -36,11 +38,13 @@ class TestCustomWorkflowRequestModel:
             shield_preset="strict",
             vote_method="schulze",
             consensus_threshold=0.5,
+            orchestration_mode="conversational",
         )
         assert req.fallacy_tier == "taxonomy"
         assert req.shield_preset == "strict"
         assert req.vote_method == "schulze"
         assert req.consensus_threshold == 0.5
+        assert req.orchestration_mode == "conversational"
 
     def test_all_fallacy_tiers(self):
         from api.proposal_models import CustomWorkflowRequest
@@ -391,3 +395,179 @@ class TestWorkflowEndpoint:
             assert context["shield_config"] == {"preset": "advanced"}
             assert context["vote_method"] == "kemeny_young"
             assert context["consensus_threshold"] == 0.3
+
+
+# ──── Orchestration mode dispatch tests (#917) ────
+
+
+class TestOrchestrationModeModel:
+    """Test orchestration_mode field validation."""
+
+    def test_all_orchestration_modes(self):
+        from api.proposal_models import CustomWorkflowRequest
+
+        for mode in ("pipeline", "conversational", "hierarchical", "sherlock_modern"):
+            req = CustomWorkflowRequest(
+                text="test text", workflow="light", orchestration_mode=mode
+            )
+            assert req.orchestration_mode == mode
+
+    def test_invalid_orchestration_mode_rejected(self):
+        from api.proposal_models import CustomWorkflowRequest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            CustomWorkflowRequest(
+                text="test text", workflow="light", orchestration_mode="cluedo"
+            )
+
+    def test_default_is_pipeline(self):
+        from api.proposal_models import CustomWorkflowRequest
+
+        req = CustomWorkflowRequest(text="test", workflow="light")
+        assert req.orchestration_mode == "pipeline"
+
+
+class TestOrchestrationModeDispatch:
+    """Test POST /api/workflow/custom dispatches to correct orchestrator by mode.
+
+    R321 anti-inerte contract: each mode MUST call its REAL orchestrator,
+    NOT silently fall back to run_unified_analysis.
+    """
+
+    @pytest.mark.asyncio
+    async def test_default_dispatches_to_pipeline(self):
+        """Default orchestration_mode=pipeline calls run_unified_analysis."""
+        from unittest.mock import MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "workflow_name": "light",
+            "summary": {"completed": 0, "failed": 0, "skipped": 0, "total": 0},
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_pipeline:
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post(
+                "/api/workflow/custom",
+                json={"text": "Test argument", "workflow": "light"},
+            )
+            assert response.status_code == 200
+            mock_pipeline.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_conversational_dispatches_to_conversational(self):
+        """orchestration_mode=conversational calls run_conversational_analysis,
+        NOT run_unified_analysis."""
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "workflow_name": "conversational",
+            "total_messages": 5,
+            "phases": [],
+            "state_non_empty_fields": 0,
+            "duration_seconds": 1.0,
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator.run_conversational_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_conv:
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+                new=AsyncMock(return_value={}),
+            ) as mock_pipeline:
+                client = TestClient(app, raise_server_exceptions=False)
+                response = client.post(
+                    "/api/workflow/custom",
+                    json={
+                        "text": "Test argument",
+                        "workflow": "full",
+                        "orchestration_mode": "conversational",
+                    },
+                )
+                assert response.status_code == 200
+                # CRITICAL: conversational orchestrator called, pipeline NOT
+                mock_conv.assert_called_once()
+                mock_pipeline.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_hierarchical_dispatches_to_hierarchical(self):
+        """orchestration_mode=hierarchical calls run_hierarchical_analysis,
+        NOT run_unified_analysis."""
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        mock_result = {
+            "summary": {"completed": 1, "failed": 0, "skipped": 0, "total": 1},
+            "conclusion": "Test conclusion",
+            "objectives": [],
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.hierarchical.orchestrator.run_hierarchical_analysis",
+            new=AsyncMock(return_value=mock_result),
+        ) as mock_hier:
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+                new=AsyncMock(return_value={}),
+            ) as mock_pipeline:
+                client = TestClient(app, raise_server_exceptions=False)
+                response = client.post(
+                    "/api/workflow/custom",
+                    json={
+                        "text": "Test argument",
+                        "workflow": "full",
+                        "orchestration_mode": "hierarchical",
+                    },
+                )
+                assert response.status_code == 200
+                # CRITICAL: hierarchical orchestrator called, pipeline NOT
+                mock_hier.assert_called_once()
+                mock_pipeline.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sherlock_modern_dispatches_to_sherlock(self):
+        """orchestration_mode=sherlock_modern calls SherlockModernOrchestrator,
+        NOT run_unified_analysis."""
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        # Create a mock InvestigationResult
+        mock_result = MagicMock()
+        mock_result.trace = ["step1"]
+        mock_result.solution = "Test solution"
+        mock_result.agents_used = ["sherlock"]
+        mock_result.hypotheses = []
+
+        with patch(
+            "argumentation_analysis.orchestration.sherlock_modern_orchestrator.SherlockModernOrchestrator",
+        ) as MockClass:
+            MockClass.return_value.investigate = AsyncMock(return_value=mock_result)
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+                new=AsyncMock(return_value={}),
+            ) as mock_pipeline:
+                client = TestClient(app, raise_server_exceptions=False)
+                response = client.post(
+                    "/api/workflow/custom",
+                    json={
+                        "text": "Test argument",
+                        "workflow": "full",
+                        "orchestration_mode": "sherlock_modern",
+                    },
+                )
+                assert response.status_code == 200
+                # CRITICAL: sherlock orchestrator called, pipeline NOT
+                MockClass.return_value.investigate.assert_called_once()
+                mock_pipeline.assert_not_called()

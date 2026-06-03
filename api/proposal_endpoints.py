@@ -198,12 +198,15 @@ async def list_capabilities():
 
 @proposal_router.post("/workflow/custom", response_model=WorkflowResult)
 async def run_custom_workflow(request: CustomWorkflowRequest):
-    """Run a custom analysis workflow on arbitrary text."""
-    try:
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            run_unified_analysis,
-        )
+    """Run a custom analysis workflow on arbitrary text.
 
+    Dispatches to the correct orchestrator based on orchestration_mode:
+    - pipeline (default): run_unified_analysis (sequential DAG)
+    - conversational: run_conversational_analysis (multi-agent dialogue)
+    - hierarchical: run_hierarchical_analysis (strategic planning → Lego)
+    - sherlock_modern: SherlockModernOrchestrator (investigation)
+    """
+    try:
         # Build context from parametric selectors (#903, #910)
         context: Dict[str, Any] = {}
         context["fallacy_tier"] = request.fallacy_tier
@@ -214,11 +217,45 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
         if request.consensus_threshold != 0.7:
             context["consensus_threshold"] = request.consensus_threshold
 
-        result = await run_unified_analysis(
-            request.text,
-            workflow_name=request.workflow,
-            context=context or None,
-        )
+        # Dispatch by orchestration mode (#917)
+        if request.orchestration_mode == "conversational":
+            from argumentation_analysis.orchestration.conversational_orchestrator import (
+                run_conversational_analysis,
+            )
+
+            result = await run_conversational_analysis(
+                text=request.text,
+            )
+        elif request.orchestration_mode == "hierarchical":
+            from argumentation_analysis.orchestration.hierarchical.orchestrator import (
+                run_hierarchical_analysis,
+            )
+
+            result = await run_hierarchical_analysis(text=request.text)
+        elif request.orchestration_mode == "sherlock_modern":
+            from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
+                SherlockModernOrchestrator,
+            )
+
+            orchestrator = SherlockModernOrchestrator()
+            inv_result = await orchestrator.investigate(request.text)
+            result = {
+                "trace": inv_result.trace,
+                "solution": inv_result.solution,
+                "agents_used": inv_result.agents_used,
+                "hypotheses": inv_result.hypotheses,
+            }
+        else:
+            # Default: pipeline (sequential DAG)
+            from argumentation_analysis.orchestration.unified_pipeline import (
+                run_unified_analysis,
+            )
+
+            result = await run_unified_analysis(
+                request.text,
+                workflow_name=request.workflow,
+                context=context or None,
+            )
 
         if isinstance(result, dict):
             return WorkflowResult(
