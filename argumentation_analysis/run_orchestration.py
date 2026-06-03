@@ -144,6 +144,7 @@ async def run_modern_analysis(
     consensus_threshold: float = 0.7,
     fol_solver: str = "tweety",
     counter_strategy: str = "auto",
+    formal_extension: str = "all",
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
@@ -156,6 +157,7 @@ async def run_modern_analysis(
     :param consensus_threshold: Consensus threshold (0.0-1.0) for deliberation.
     :param fol_solver: FOL solver backend (tweety/prover9/eprover).
     :param counter_strategy: Counter-argument rhetorical strategy (auto/socratic/reductio/analogy/authority/statistical).
+    :param formal_extension: Formal extension filter (all/core/none/csv list of 17 handlers).
     :return: Résultats de l'analyse.
     """
     from argumentation_analysis.orchestration.unified_pipeline import (
@@ -182,6 +184,8 @@ async def run_modern_analysis(
         context["fol_solver"] = fol_solver
     if counter_strategy != "auto":
         context["counter_strategy"] = counter_strategy
+    if formal_extension != "all":
+        context["formal_extension_filter"] = formal_extension
 
     results = await run_unified_analysis(
         text=text_content,
@@ -434,6 +438,14 @@ Exemples:
         "analogy (analogical counter), authority (authority appeal), "
         "statistical (statistical evidence)",
     )
+    parser.add_argument(
+        "--formal-extension",
+        type=str,
+        default="all",
+        help="Formal extension filter: all (default, run all 17 Tweety handlers), "
+        "core (base 4 only: pl/fol/modal/dung), none (skip all formal), "
+        "or comma-separated list (e.g. ranking,bipolar,aspic)",
+    )
 
     args = parser.parse_args()
 
@@ -672,6 +684,7 @@ Exemples:
             consensus_threshold=args.consensus_threshold,
             fol_solver=args.fol_solver,
             counter_strategy=args.counter_strategy,
+            formal_extension=args.formal_extension,
         )
 
 
