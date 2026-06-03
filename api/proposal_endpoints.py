@@ -205,6 +205,14 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
     - conversational: run_conversational_analysis (multi-agent dialogue)
     - hierarchical: run_hierarchical_analysis (strategic planning → Lego)
     - sherlock_modern: SherlockModernOrchestrator (investigation)
+
+    Selector context forwarding per mode (#920):
+    - pipeline: all selectors consumed (fallacy_tier, shield_preset,
+      vote_method, consensus_threshold)
+    - hierarchical: all selectors consumed via WorkflowExecutor
+    - conversational: only fallacy_tier consumed (via parent harness
+      on texts >5000 chars); shield/vote/consensus forwarded but N/A
+    - sherlock_modern: all selectors N/A (investigation ≠ rhetoric)
     """
     try:
         # Build context from parametric selectors (#903, #910)
@@ -217,7 +225,7 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
         if request.consensus_threshold != 0.7:
             context["consensus_threshold"] = request.consensus_threshold
 
-        # Dispatch by orchestration mode (#917)
+        # Dispatch by orchestration mode (#917), forward context to all (#920)
         if request.orchestration_mode == "conversational":
             from argumentation_analysis.orchestration.conversational_orchestrator import (
                 run_conversational_analysis,
@@ -225,20 +233,30 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
 
             result = await run_conversational_analysis(
                 text=request.text,
+                selector_context=context or None,
             )
         elif request.orchestration_mode == "hierarchical":
             from argumentation_analysis.orchestration.hierarchical.orchestrator import (
                 run_hierarchical_analysis,
             )
 
-            result = await run_hierarchical_analysis(text=request.text)
+            # hierarchical accepts **kwargs → merged into context at orchestrator.py:144
+            result = await run_hierarchical_analysis(
+                text=request.text, **(context or {}),
+            )
         elif request.orchestration_mode == "sherlock_modern":
             from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
                 SherlockModernOrchestrator,
             )
 
             orchestrator = SherlockModernOrchestrator()
-            inv_result = await orchestrator.investigate(request.text)
+            # sherlock accepts context= for completeness, but selector keys
+            # (fallacy_tier, shield_preset, vote_method, consensus_threshold)
+            # are N/A in investigation mode — they control rhetorical analysis,
+            # not criminal investigation.
+            inv_result = await orchestrator.investigate(
+                request.text, context=context or None,
+            )
             result = {
                 "trace": inv_result.trace,
                 "solution": inv_result.solution,
