@@ -205,6 +205,14 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
     - conversational: run_conversational_analysis (multi-agent dialogue)
     - hierarchical: run_hierarchical_analysis (strategic planning → Lego)
     - sherlock_modern: SherlockModernOrchestrator (investigation)
+
+    Selector context forwarding per mode (#920):
+    - pipeline: all selectors consumed (fallacy_tier, shield_preset,
+      vote_method, consensus_threshold)
+    - hierarchical: all selectors consumed via WorkflowExecutor
+    - conversational: only fallacy_tier consumed (via parent harness
+      on texts >5000 chars); shield/vote/consensus forwarded but N/A
+    - sherlock_modern: all selectors N/A (investigation ≠ rhetoric)
     """
     try:
         # Build context from parametric selectors (#903, #910)

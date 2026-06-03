@@ -734,3 +734,82 @@ class TestContextForwardingToModes:
             context = call_kwargs.kwargs.get("context")
             assert context is not None
             assert context.get("fallacy_tier") == "full"
+
+
+# ──── Direct consumer test for conversational context merge (#920, R327) ────
+
+
+class TestConversationalContextMerge:
+    """Test that selector_context reaches the real consumer via merge.
+
+    R321(b): the test must exercise the ACTUAL merge code path in
+    _run_parent_harness_fallback, NOT just mock run_conversational_analysis.
+    """
+
+    @pytest.mark.asyncio
+    async def test_fallacy_tier_merges_into_harness_context(self):
+        """Call _run_parent_harness_fallback with selector_context containing
+        fallacy_tier, mock the invoke_callables consumers, and assert the merged
+        context reaches them.
+
+        Consumer: _invoke_hierarchical_fallacy_per_argument reads
+        context.get("fallacy_tier") via invoke_callables.py:3732.
+        """
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _run_parent_harness_fallback,
+        )
+
+        mock_state = MagicMock()
+
+        per_arg_result = {"fallacies": []}
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._invoke_hierarchical_fallacy_per_argument",
+            new=AsyncMock(return_value=per_arg_result),
+        ) as mock_per_arg:
+            with patch(
+                "argumentation_analysis.orchestration.invoke_callables._invoke_hierarchical_fallacy",
+                new=AsyncMock(return_value={"fallacies": []}),
+            ):
+                # Call the real function with selector_context
+                result = await _run_parent_harness_fallback(
+                    text="A" * 6000,  # > 5000 to trigger whole-text pass
+                    state=mock_state,
+                    selector_context={"fallacy_tier": "taxonomy"},
+                )
+
+                # Verify the per-arg consumer received the merged context
+                mock_per_arg.assert_called_once()
+                call_kwargs = mock_per_arg.call_args
+                context = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("context")
+                assert context is not None
+                assert context.get("fallacy_tier") == "taxonomy", (
+                    "selector_context must be merged into the harness context dict"
+                )
+
+    @pytest.mark.asyncio
+    async def test_no_selector_context_preserves_base_context(self):
+        """Without selector_context, base context has only _state_object."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _run_parent_harness_fallback,
+        )
+
+        mock_state = MagicMock()
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._invoke_hierarchical_fallacy_per_argument",
+            new=AsyncMock(return_value={"fallacies": []}),
+        ) as mock_per_arg:
+            with patch(
+                "argumentation_analysis.orchestration.invoke_callables._invoke_hierarchical_fallacy",
+                new=AsyncMock(return_value={"fallacies": []}),
+            ):
+                await _run_parent_harness_fallback(
+                    text="Short text",
+                    state=mock_state,
+                    selector_context=None,
+                )
+
+                context = mock_per_arg.call_args.args[1]
+                assert "fallacy_tier" not in context
+                assert "_state_object" in context
