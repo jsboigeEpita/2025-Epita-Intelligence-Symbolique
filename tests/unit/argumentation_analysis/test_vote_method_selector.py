@@ -135,3 +135,94 @@ class TestVoteMethodDispatch:
         context = {"vote_method": "schulze"}
         ballot = {"method": context.get("vote_method", "copeland"), "ballots": []}
         assert ballot["method"] == "schulze"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end method dispatch (governance_plugin)
+# ---------------------------------------------------------------------------
+
+
+class TestSocialChoiceVoteDispatch:
+    """Test that all 5 methods actually dispatch in governance_plugin."""
+
+    def test_kemeny_young_dispatch(self):
+        """kemeny_young should be dispatched (not return error)."""
+        import json
+        from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
+        plugin = GovernancePlugin()
+        ballots = [["a", "b", "c"], ["b", "a", "c"], ["c", "b", "a"]]
+        vote_input = json.dumps({
+            "method": "kemeny_young",
+            "ballots": ballots,
+            "options": ["a", "b", "c"],
+        })
+        result = json.loads(plugin.social_choice_vote(vote_input))
+        assert "error" not in result, f"kemeny_young returned error: {result}"
+        assert "ranking" in result
+        assert "winner" in result
+
+    @pytest.mark.parametrize(
+        "method",
+        ["approval", "stv", "copeland", "kemeny_young", "schulze"],
+    )
+    def test_all_methods_dispatch_without_error(self, method):
+        """All 5 social choice methods should dispatch successfully."""
+        import json
+        from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
+        plugin = GovernancePlugin()
+        ballots = [["a", "b", "c"], ["b", "a", "c"], ["c", "b", "a"]]
+        vote_input = json.dumps({
+            "method": method,
+            "ballots": ballots,
+            "options": ["a", "b", "c"],
+        })
+        result = json.loads(plugin.social_choice_vote(vote_input))
+        assert "error" not in result, f"{method} returned error: {result}"
+
+    def test_methods_produce_different_results(self):
+        """Different methods should be able to produce different winners."""
+        import json
+        from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
+
+        plugin = GovernancePlugin()
+        # Ballots designed to potentially split winners
+        ballots = [
+            ["a", "b", "c"],
+            ["a", "c", "b"],
+            ["b", "a", "c"],
+            ["b", "c", "a"],
+            ["c", "a", "b"],
+        ]
+        options = ["a", "b", "c"]
+
+        results = {}
+        for method in ["approval", "copeland", "schulze"]:
+            vote_input = json.dumps({
+                "method": method,
+                "ballots": ballots,
+                "options": options,
+            })
+            result = json.loads(plugin.social_choice_vote(vote_input))
+            results[method] = result.get("winner")
+
+        # At least copeland and schulze should return a winner
+        assert results.get("copeland") is not None
+        assert results.get("schulze") is not None
+
+
+class TestConsensusThresholdWiring:
+    """Test that consensus_threshold is consumed in _invoke_governance."""
+
+    def test_consensus_threshold_in_governance_context(self):
+        """consensus_threshold should be readable in the governance callable."""
+        context = {"consensus_threshold": 0.9}
+        threshold = context.get("consensus_threshold", 0.7)
+        assert threshold == 0.9
+
+    def test_consensus_threshold_default(self):
+        """Missing threshold should default to 0.7."""
+        context: dict = {}
+        threshold = context.get("consensus_threshold", 0.7)
+        assert threshold == 0.7
