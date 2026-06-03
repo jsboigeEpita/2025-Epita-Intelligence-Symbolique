@@ -6,7 +6,7 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Set
 
 from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowBuilder,
@@ -41,7 +41,107 @@ __all__ = [
     "WORKFLOW_CATALOG",
     "get_workflow_catalog",
     "reset_workflow_catalog",
+    "filter_formal_extensions",
 ]
+
+# ---------------------------------------------------------------------------
+# Formal extension filter — #905 parametric selector
+# ---------------------------------------------------------------------------
+
+# CLI short names → capability strings (all 17 Tweety extension handlers)
+_EXTENSION_CAPABILITIES: Dict[str, str] = {
+    "ranking": "ranking_semantics",
+    "bipolar": "bipolar_argumentation",
+    "aba": "aba_reasoning",
+    "adf": "adf_reasoning",
+    "aspic": "aspic_plus_reasoning",
+    "belief_revision": "belief_revision",
+    "probabilistic": "probabilistic_argumentation",
+    "dialogue": "dialogue_protocols",
+    "dl": "description_logic",
+    "cl": "conditional_logic",
+    "setaf": "setaf_reasoning",
+    "weighted": "weighted_argumentation",
+    "social": "social_argumentation",
+    "eaf": "epistemic_argumentation",
+    "delp": "defeasible_logic",
+    "qbf": "qbf_reasoning",
+    "asp": "asp_reasoning",
+}
+
+# Core formal phases (always present unless --formal-extension=none)
+_CORE_CAPABILITIES: Set[str] = {
+    "propositional_logic",
+    "fol_reasoning",
+    "modal_logic",
+    "dung_extensions",
+}
+
+# All extension capability strings (values of _EXTENSION_CAPABILITIES)
+_ALL_EXTENSION_CAPS: Set[str] = set(_EXTENSION_CAPABILITIES.values())
+
+
+def filter_formal_extensions(
+    workflow: WorkflowDefinition, filter_spec: str
+) -> WorkflowDefinition:
+    """Remove formal extension phases from *workflow* based on *filter_spec*.
+
+    Filter is applied at workflow construction time (anti-pendule: no
+    per-callable guards). Phases whose capability is filtered out are
+    removed from the DAG; downstream phases that depended on them still
+    work because the executor treats missing deps as SKIPPED for
+    optional phases.
+
+    :param workflow: The workflow definition to filter (mutated in-place).
+    :param filter_spec: One of "all", "core", "none", or a comma-separated
+        list of CLI short names (e.g. "ranking,bipolar,aspic").
+    :return: The same workflow (mutated), for chaining.
+    :raises ValueError: If a comma-separated list contains unknown names.
+    """
+    if filter_spec == "all":
+        return workflow  # no-op, backward-compat
+
+    if filter_spec == "none":
+        # Remove ALL formal phases (extensions + core 4)
+        remove_caps = _ALL_EXTENSION_CAPS | _CORE_CAPABILITIES
+        workflow.phases = [
+            p for p in workflow.phases if p.capability not in remove_caps
+        ]
+        logger.info(f"formal_extension=none: removed {len(remove_caps)} capabilities")
+        return workflow
+
+    if filter_spec == "core":
+        # Keep core 4, remove the 17 extensions
+        workflow.phases = [
+            p for p in workflow.phases if p.capability not in _ALL_EXTENSION_CAPS
+        ]
+        logger.info("formal_extension=core: kept core 4, removed extensions")
+        return workflow
+
+    # Comma-separated list: validate and build allowed set
+    requested = [s.strip() for s in filter_spec.split(",") if s.strip()]
+    unknown = set(requested) - set(_EXTENSION_CAPABILITIES.keys())
+    if unknown:
+        raise ValueError(
+            f"Unknown formal extensions: {sorted(unknown)}. "
+            f"Known: {sorted(_EXTENSION_CAPABILITIES.keys())}"
+        )
+
+    # Allowed = core 4 + specifically requested extensions
+    allowed_caps = _CORE_CAPABILITIES | {
+        _EXTENSION_CAPABILITIES[name] for name in requested
+    }
+    remove_caps = _ALL_EXTENSION_CAPS - {
+        _EXTENSION_CAPABILITIES[name] for name in requested
+    }
+    workflow.phases = [
+        p
+        for p in workflow.phases
+        if p.capability not in _ALL_EXTENSION_CAPS
+        or p.capability in allowed_caps
+    ]
+    logger.info(f"formal_extension={filter_spec}: keeping {sorted(requested)}")
+    return workflow
 
 # --- Pre-built workflow definitions ---
 

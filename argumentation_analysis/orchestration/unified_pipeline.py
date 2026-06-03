@@ -143,6 +143,13 @@ async def run_unified_analysis(
             )
         workflow = catalog[workflow_name]
 
+    # #905: Apply formal extension filter before execution
+    formal_filter = context.get("formal_extension_filter", "all") if context else "all"
+    if formal_filter != "all":
+        from argumentation_analysis.orchestration.workflows import filter_formal_extensions
+
+        workflow = filter_formal_extensions(workflow, formal_filter)
+
     # JPype warmup: eagerly initialise JVM + Tweety classes before DAG
     # execution to eliminate the race condition where multiple parallel
     # phases call asyncio.to_thread() → TweetyInitializer concurrently
