@@ -143,6 +143,7 @@ async def run_modern_analysis(
     vote_method: str = "copeland",
     consensus_threshold: float = 0.7,
     fol_solver: str = "tweety",
+    counter_strategy: str = "auto",
 ) -> Dict[str, Any]:
     """Exécute l'analyse via UnifiedPipeline (mode moderne).
 
@@ -154,6 +155,7 @@ async def run_modern_analysis(
     :param vote_method: Social choice voting method for governance phase.
     :param consensus_threshold: Consensus threshold (0.0-1.0) for deliberation.
     :param fol_solver: FOL solver backend (tweety/prover9/eprover).
+    :param counter_strategy: Counter-argument rhetorical strategy (auto/socratic/reductio/analogy/authority/statistical).
     :return: Résultats de l'analyse.
     """
     from argumentation_analysis.orchestration.unified_pipeline import (
@@ -178,6 +180,8 @@ async def run_modern_analysis(
         context["consensus_threshold"] = consensus_threshold
     if fol_solver != "tweety":
         context["fol_solver"] = fol_solver
+    if counter_strategy != "auto":
+        context["counter_strategy"] = counter_strategy
 
     results = await run_unified_analysis(
         text=text_content,
@@ -420,6 +424,16 @@ Exemples:
         "prover9 (external Prover9 binary, skip if absent), "
         "eprover (external E Prover binary, skip if absent)",
     )
+    parser.add_argument(
+        "--counter-strategy",
+        type=str,
+        choices=["auto", "socratic", "reductio", "analogy", "authority", "statistical"],
+        default="auto",
+        help="Counter-argument rhetorical strategy: auto (default, heuristic selection), "
+        "socratic (questioning), reductio (reductio ad absurdum), "
+        "analogy (analogical counter), authority (authority appeal), "
+        "statistical (statistical evidence)",
+    )
 
     args = parser.parse_args()
 
@@ -657,6 +671,7 @@ Exemples:
             vote_method=args.vote_method,
             consensus_threshold=args.consensus_threshold,
             fol_solver=args.fol_solver,
+            counter_strategy=args.counter_strategy,
         )
 
 

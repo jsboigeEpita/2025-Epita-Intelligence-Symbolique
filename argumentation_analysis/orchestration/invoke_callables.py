@@ -990,6 +990,22 @@ async def _invoke_counter_argument(
     parsed = json.loads(parsed_json)
     strategy = json.loads(strategy_json)
 
+    # #904: Override strategy when forced via --counter-strategy parametric selector
+    # CLI uses short aliases (socratic, reductio, …); internal state uses RhetoricalStrategy
+    # enum values (socratic_questioning, reductio_ad_absurdum, …) for comparability.
+    _COUNTER_STRATEGY_ALIASES = {
+        "socratic": "socratic_questioning",
+        "reductio": "reductio_ad_absurdum",
+        "analogy": "analogical_counter",
+        "authority": "authority_appeal",
+        "statistical": "statistical_evidence",
+    }
+    forced_strategy = context.get("counter_strategy", "auto")
+    if forced_strategy != "auto":
+        enum_value = _COUNTER_STRATEGY_ALIASES.get(forced_strategy, forced_strategy)
+        strategy = {"strategy": enum_value}
+        logger.info(f"Counter-argument strategy forced: {forced_strategy} → {enum_value} (parametric selector)")
+
     # Enrich with LLM-generated counter-arguments for fallacious/weak arguments
     llm_counters = []
     try:
