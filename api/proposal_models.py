@@ -64,11 +64,7 @@ class CustomWorkflowRequest(BaseModel):
         "off",
         description="AI Shield preset: off (default), basic, advanced, output_only, strict",
     )
-    dung_provider: Optional[str] = Field(
-        None,
-        description="Dung framework provider hint (e.g. 'abs_arg_dung_student'). "
-        "None = default native provider",
-    )
+    # dung_provider deferred to #908 — needs real consumption wiring
 
 
 # ──── Response Models ────

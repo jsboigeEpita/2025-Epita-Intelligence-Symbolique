@@ -1,10 +1,9 @@
 """Tests for parametric selector exposure in the FastAPI API (#903).
 
-Validates that CustomWorkflowRequest accepts fallacy_tier, shield_preset,
-dung_provider fields and that they propagate correctly to the pipeline context.
+Validates that CustomWorkflowRequest accepts fallacy_tier and shield_preset
+fields and that they propagate correctly to the pipeline context.
 """
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -14,7 +13,7 @@ import pytest
 
 
 class TestCustomWorkflowRequestModel:
-    """Test Pydantic model accepts new parametric fields."""
+    """Test Pydantic model accepts parametric fields."""
 
     def test_default_values(self):
         from api.proposal_models import CustomWorkflowRequest
@@ -22,7 +21,6 @@ class TestCustomWorkflowRequestModel:
         req = CustomWorkflowRequest(text="Some argument text", workflow="standard")
         assert req.fallacy_tier == "llm"
         assert req.shield_preset == "off"
-        assert req.dung_provider is None
 
     def test_explicit_values(self):
         from api.proposal_models import CustomWorkflowRequest
@@ -32,11 +30,9 @@ class TestCustomWorkflowRequestModel:
             workflow="full",
             fallacy_tier="taxonomy",
             shield_preset="strict",
-            dung_provider="abs_arg_dung_student",
         )
         assert req.fallacy_tier == "taxonomy"
         assert req.shield_preset == "strict"
-        assert req.dung_provider == "abs_arg_dung_student"
 
     def test_all_fallacy_tiers(self):
         from api.proposal_models import CustomWorkflowRequest
@@ -90,8 +86,6 @@ class TestContextPropagation:
         context["fallacy_tier"] = req.fallacy_tier
         if req.shield_preset != "off":
             context["shield_config"] = {"preset": req.shield_preset}
-        if req.dung_provider is not None:
-            context["dung_provider_hint"] = req.dung_provider
 
         assert context == {"fallacy_tier": "llm"}
 
@@ -106,30 +100,12 @@ class TestContextPropagation:
         context["fallacy_tier"] = req.fallacy_tier
         if req.shield_preset != "off":
             context["shield_config"] = {"preset": req.shield_preset}
-        if req.dung_provider is not None:
-            context["dung_provider_hint"] = req.dung_provider
 
         assert context["fallacy_tier"] == "llm"
         assert context["shield_config"] == {"preset": "advanced"}
 
-    def test_dung_provider_hint(self):
-        """When dung_provider set, dung_provider_hint in context."""
-        from api.proposal_models import CustomWorkflowRequest
-
-        req = CustomWorkflowRequest(
-            text="test", workflow="full", dung_provider="abs_arg_dung_student"
-        )
-        context = {}
-        context["fallacy_tier"] = req.fallacy_tier
-        if req.shield_preset != "off":
-            context["shield_config"] = {"preset": req.shield_preset}
-        if req.dung_provider is not None:
-            context["dung_provider_hint"] = req.dung_provider
-
-        assert context["dung_provider_hint"] == "abs_arg_dung_student"
-
-    def test_all_three_params(self):
-        """All three params propagated together."""
+    def test_both_params_propagated(self):
+        """Both fallacy_tier and shield_preset propagated together."""
         from api.proposal_models import CustomWorkflowRequest
 
         req = CustomWorkflowRequest(
@@ -137,18 +113,14 @@ class TestContextPropagation:
             workflow="full",
             fallacy_tier="full",
             shield_preset="strict",
-            dung_provider="abs_arg_dung_student",
         )
         context = {}
         context["fallacy_tier"] = req.fallacy_tier
         if req.shield_preset != "off":
             context["shield_config"] = {"preset": req.shield_preset}
-        if req.dung_provider is not None:
-            context["dung_provider_hint"] = req.dung_provider
 
         assert context["fallacy_tier"] == "full"
         assert context["shield_config"] == {"preset": "strict"}
-        assert context["dung_provider_hint"] == "abs_arg_dung_student"
 
 
 # ──── API endpoint test (mocked pipeline) ────
@@ -214,7 +186,6 @@ class TestWorkflowEndpoint:
                     "workflow": "full",
                     "fallacy_tier": "taxonomy",
                     "shield_preset": "basic",
-                    "dung_provider": "abs_arg_dung_student",
                 },
             )
             assert response.status_code == 200
@@ -225,4 +196,3 @@ class TestWorkflowEndpoint:
             if context is not None:
                 assert context.get("fallacy_tier") == "taxonomy"
                 assert context.get("shield_config") == {"preset": "basic"}
-                assert context.get("dung_provider_hint") == "abs_arg_dung_student"
