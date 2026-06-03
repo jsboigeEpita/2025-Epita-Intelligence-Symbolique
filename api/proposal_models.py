@@ -75,6 +75,13 @@ class CustomWorkflowRequest(BaseModel):
         le=1.0,
         description="Consensus threshold (0.0–1.0) for governance metrics",
     )
+    # Orchestration mode selector (north-star R311, #917)
+    orchestration_mode: Literal["pipeline", "conversational", "hierarchical", "sherlock_modern"] = Field(
+        "pipeline",
+        description="Orchestration mode: pipeline (sequential DAG, default), "
+        "conversational (multi-agent dialogue), hierarchical (strategic planning), "
+        "sherlock_modern (investigation multi-agent)",
+    )
     # dung_provider deferred to #908 — needs real consumption wiring
 
 
