@@ -4897,6 +4897,11 @@ async def _invoke_fol_reasoning(
     ]
     formulas: Optional[List[str]] = None
     fol_metadata_shared: Dict[str, Any] = {}
+    # #900: Record the FOL solver choice from parametric selector
+    fol_solver_choice = context.get("fol_solver", "tweety")
+    fol_metadata_shared["fol_solver"] = fol_solver_choice
+    if fol_solver_choice != "tweety":
+        logger.info(f"FOL solver override: {fol_solver_choice} (parametric selector --fol-solver)")
 
     # Retrieve state object for fol_shared_signature storage
     state_obj = context.get("_state_object")
@@ -4995,6 +5000,7 @@ async def _invoke_fol_reasoning(
                             "sorts": sorts,
                             "predicates": predicates,
                             "constants_raw": constants_raw,
+                            "fol_solver": fol_solver_choice,
                         }
                         logger.info(
                             f"FOL 2-pass Pass 1: {len(sorts)} sorts, "
@@ -6016,9 +6022,17 @@ async def _invoke_external_fol_solver(
 
     fol_signature = fol_output.get("fol_signature", [])
 
+    # Resolve solver choice: context override > settings > default (#900)
+    fol_solver = context.get("fol_solver", None)
+    if fol_solver is None:
+        try:
+            from argumentation_analysis.core.config import settings
+            fol_solver = str(settings.solver)  # SolverChoice enum → str
+        except Exception:
+            fol_solver = "tweety"
+
     # Try EProver via Tweety EFOLReasoner
     try:
-        from argumentation_analysis.core.config import settings
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
         )
@@ -6027,7 +6041,7 @@ async def _invoke_external_fol_solver(
         )
 
         # Check if EProver is configured
-        if getattr(settings, "fol_solver", None) == "eprover":
+        if fol_solver == "eprover":
             bridge = TweetyBridge()
             meta = FOLLogicAgent.extract_fol_metadata(formulas)
             sig = meta.get("signature_lines", fol_signature)
@@ -6045,25 +6059,26 @@ async def _invoke_external_fol_solver(
     except Exception as e:
         logger.info(f"EProver unavailable ({e}), trying Prover9")
 
-    # Try Prover9 subprocess
-    try:
-        from argumentation_analysis.core.prover9_runner import run_prover9
+    # Try Prover9 subprocess (only if requested)
+    if fol_solver == "prover9":
+        try:
+            from argumentation_analysis.core.prover9_runner import run_prover9
 
-        belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
-        prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
-        result = await asyncio.to_thread(run_prover9, prover9_input)
-        proved = "THEOREM PROVED" in result or "Proof found" in result
-        return {
-            "formulas": formulas,
-            "consistent": proved,
-            "solver": "prover9",
-            "raw_output": result[:500],
-            "logic_type": "first_order",
-        }
-    except FileNotFoundError:
-        logger.info("Prover9 binary not found, falling back to TweetyBridge")
-    except Exception as e:
-        logger.info(f"Prover9 failed ({e}), falling back to TweetyBridge")
+            belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
+            prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
+            result = await asyncio.to_thread(run_prover9, prover9_input)
+            proved = "THEOREM PROVED" in result or "Proof found" in result
+            return {
+                "formulas": formulas,
+                "consistent": proved,
+                "solver": "prover9",
+                "raw_output": result[:500],
+                "logic_type": "first_order",
+            }
+        except FileNotFoundError:
+            logger.info("Prover9 binary not found, falling back to TweetyBridge")
+        except Exception as e:
+            logger.info(f"Prover9 failed ({e}), falling back to TweetyBridge")
 
     # Fallback: TweetyBridge (default path)
     try:
