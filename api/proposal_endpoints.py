@@ -204,11 +204,15 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
             run_unified_analysis,
         )
 
-        # Build context from parametric selectors (#903)
+        # Build context from parametric selectors (#903, #910)
         context: Dict[str, Any] = {}
         context["fallacy_tier"] = request.fallacy_tier
         if request.shield_preset != "off":
             context["shield_config"] = {"preset": request.shield_preset}
+        if request.vote_method != "copeland":
+            context["vote_method"] = request.vote_method
+        if request.consensus_threshold != 0.7:
+            context["consensus_threshold"] = request.consensus_threshold
 
         result = await run_unified_analysis(
             request.text,

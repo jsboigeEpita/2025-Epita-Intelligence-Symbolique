@@ -64,6 +64,17 @@ class CustomWorkflowRequest(BaseModel):
         "off",
         description="AI Shield preset: off (default), basic, advanced, output_only, strict",
     )
+    # Parametric selectors — democratech track (north-star R311, #910)
+    vote_method: Literal["copeland", "approval", "stv", "schulze", "kemeny_young"] = Field(
+        "copeland",
+        description="Social choice voting method for governance analysis",
+    )
+    consensus_threshold: float = Field(
+        0.7,
+        ge=0.0,
+        le=1.0,
+        description="Consensus threshold (0.0–1.0) for governance metrics",
+    )
     # dung_provider deferred to #908 — needs real consumption wiring
 
 
