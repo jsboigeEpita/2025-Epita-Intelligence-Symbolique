@@ -4,14 +4,18 @@
 
 ## Overview
 
-The system supports **4 orchestration modes**, each suited to different analysis scenarios. Three are actively wired into the CLI; one is active but dedicated to investigation scenarios.
+The system supports **6 orchestration modes**, each suited to different analysis scenarios. Five are wired into the CLI (`--mode`); one is active but dedicated to investigation scenarios via scripts.
 
-| Mode | Status | Key Class | Use Case |
-|------|--------|-----------|----------|
-| **Sequential (Pipeline)** | ACTIVE | `WorkflowExecutor` | Production analysis, benchmarks, API |
-| **Conversational** | ACTIVE | `ConversationalOrchestrator` | Rich multi-agent dialogue with cross-KB synergies |
-| **Hierarchical** | ACTIVE | `HierarchicalOrchestrator` | Strategic planning → Lego execution (bridge) |
-| **Cluedo** | ACTIVE | `CluedoExtendedOrchestrator` | Sherlock-Watson investigation game |
+| Mode | CLI-selectable | Status | Key Class | Use Case |
+|------|---------------|--------|-----------|----------|
+| **Sequential (Pipeline)** | ✅ `--mode pipeline` (default) | ACTIVE | `WorkflowExecutor` | Production analysis, benchmarks, API |
+| **Conversational** | ✅ `--mode conversational` | ACTIVE | `ConversationalOrchestrator` | Rich multi-agent dialogue with cross-KB synergies |
+| **Hierarchical** | ✅ `--mode hierarchical` | ACTIVE | `HierarchicalOrchestrator` | Strategic planning → Lego execution (bridge) |
+| **Sherlock Modern** | ✅ `--mode sherlock_modern` | ACTIVE | `SherlockModernOrchestrator` | Investigation multi-agent (#357) |
+| **Legacy** | ⚠️ `--mode legacy` (deprecated) | INERT | — | Hardcoded error message (AnalysisRunner removed) |
+| **Cluedo** | ❌ script-only | ACTIVE | `CluedoExtendedOrchestrator` | Sherlock-Watson investigation game |
+
+> **Note (scoping #912):** Cluedo is not reachable via `--mode` — it uses dedicated scripts and `__main__` entry points. Making it CLI-selectable requires an implementation issue (lane argparse, po-2025).
 
 ---
 
