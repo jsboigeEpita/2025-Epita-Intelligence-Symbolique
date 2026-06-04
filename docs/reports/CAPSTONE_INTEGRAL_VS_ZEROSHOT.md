@@ -90,6 +90,30 @@ Each insight is scored on a **3-point scale**:
 
 ---
 
+## Insight Category Grounding (verified against codebase)
+
+Every insight category maps to a concrete state field, state writer, invoke callable,
+and spectacular workflow phase. **Zero fictive categories.**
+
+| # | Category | State Field(s) | Writer (`state_writers.py`) | Invoke (`invoke_callables.py`) | Spectacular Phase (`workflows.py`) |
+|---|----------|----------------|-----------------------------|-------------------------------|-------------------------------------|
+| 1 | Argument extraction | `identified_arguments`, `extracts` | `_write_fact_extraction_to_state:567` | `_invoke_fact_extraction:4347` | `"extract":697` |
+| 2 | Fallacy detection (8-family) | `identified_fallacies` | `_write_hierarchical_fallacy_to_state:367` | `_invoke_hierarchical_fallacy:3712` | `"hierarchical_fallacy":712` |
+| 3 | Formal reasoning (FOL/Modal/PL) | `fol_analysis_results`, `modal_analysis_results`, `propositional_analysis_results` | `_write_fol_to_state:624`, `_write_modal_to_state:650`, `_write_propositional_to_state:610` | `_invoke_fol_reasoning:4896`, `_invoke_modal_logic:5354`, `_invoke_propositional_logic:4495` | `"pl":719`, `"fol":730`, `"modal":740` |
+| 4 | Dung argumentation (11 sem.) | `dung_frameworks` | `_write_dung_extensions_to_state:683` | `_invoke_dung_extensions:5441` | `"dung_extensions":764` |
+| 5 | ASPIC+ analysis | `aspic_results` | `_write_aspic_to_state:466` | `_invoke_aspic:2828` | `"aspic_analysis":796` |
+| 6 | Counter-arguments (5 strat.) | `counter_arguments` | `_write_counter_argument_to_state:138` | `_invoke_counter_argument:979` | `"counter":808` |
+| 7 | Quality scoring (9 virtues) | `argument_quality_scores` | `_write_quality_to_state:58` | `_invoke_quality_evaluator:333` | `"quality":699` |
+| 8 | JTMS beliefs (justification) | `jtms_beliefs`, `jtms_retraction_chain` | `_write_jtms_to_state:198` | `_invoke_jtms:1578` | `"jtms":823` |
+| 9 | Governance (7 vote methods) | `governance_decisions` | `_write_governance_to_state:291` | `_invoke_governance:1340` | `"governance":843` |
+| 10 | Debate (adversarial) | `debate_transcripts` | `_write_debate_to_state:264` | `_invoke_debate_analysis:1177` | `"debate":829` |
+| 11 | Narrative synthesis | `narrative_synthesis` | `_write_narrative_synthesis_to_state:868` | `_invoke_narrative_synthesis:5702` | `"narrative_synthesis":855` |
+
+**Categories needing pipeline support or drop:** NONE — all 11 are fully wired in the
+spectacular DAG with state fields, writers, invoke callables, and phase definitions.
+
+---
+
 ## Results
 
 > **TODO: Fill after C1 runs complete.**
