@@ -70,7 +70,7 @@ from argumentation_analysis.orchestration.unified_pipeline import (
 )
 from argumentation_analysis.orchestration.conversation_orchestrator import (
     ConversationOrchestrator,
-    ConversationLogger as RealConversationLogger,
+    ConversationLogger,
 )
 
 # Imports du pipeline existant
@@ -154,7 +154,7 @@ class UnifiedTextAnalysisPipeline:
 
         # Configuration du logger conversationnel
         if self.config.enable_conversation_logging:
-            self.conversation_logger = RealConversationLogger()
+            self.conversation_logger = ConversationLogger()
             logger.info("[INIT] Logger conversationnel active")
 
         # 1. Initialisation JVM si nécessaire

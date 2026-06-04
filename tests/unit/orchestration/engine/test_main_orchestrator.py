@@ -37,12 +37,6 @@ def orchestrator(mock_config, mock_kernel):
         "argumentation_analysis.orchestration.engine.main_orchestrator.ConversationOrchestrator",
         new=MagicMock(),
     ), patch(
-        "argumentation_analysis.orchestration.engine.main_orchestrator.RealLLMOrchestrator",
-        new=MagicMock(),
-    ), patch(
-        "argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator",
-        new=MagicMock(),
-    ), patch(
         "argumentation_analysis.orchestration.operational.direct_executor.DirectOperationalExecutor",
         new=MagicMock(),
     ):
