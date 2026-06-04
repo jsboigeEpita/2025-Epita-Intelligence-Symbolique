@@ -5,11 +5,13 @@
 Script pour lancer l'orchestration des agents d'analyse argumentative.
 
 Ce script permet de lancer l'analyse argumentative depuis la racine du projet.
-Il offre deux modes :
+Il offre plusieurs modes d'orchestration :
 
-  - **Moderne (défaut)** : utilise UnifiedPipeline avec 17 workflows pré-construits
+  - **Pipeline (défaut)** : utilise UnifiedPipeline avec 17 workflows pré-construits
     (CapabilityRegistry + WorkflowDSL + state tracking).
-  - **Legacy** : utilise l'ancien AnalysisRunner (--legacy flag).
+  - **Conversational** : agents dialoguent via AgentGroupChat.
+  - **Hierarchical** : StrategicManager → Lego WorkflowExecutor.
+  - **Sherlock Modern** : investigation multi-agent.
 
 Exemples :
     # Workflow standard (défaut) sur un fichier
@@ -21,8 +23,8 @@ Exemples :
     # Lister les workflows disponibles
     python argumentation_analysis/run_orchestration.py --list-workflows
 
-    # Mode legacy (ancien pipeline)
-    python argumentation_analysis/run_orchestration.py --file texte.txt --legacy
+    # Mode conversationnel
+    python argumentation_analysis/run_orchestration.py --text "Mon argument" --mode conversational
 """
 
 import sys
@@ -251,22 +253,6 @@ async def run_modern_analysis(
     return results
 
 
-async def run_legacy_analysis(
-    text_content: str,
-    llm_service: Any,
-) -> None:
-    """Exécute l'analyse via l'ancien AnalysisRunner (mode legacy).
-
-    :param text_content: Le contenu textuel à analyser.
-    :param llm_service: L'instance du service LLM initialisée.
-    """
-    logging.error(
-        "Le mode legacy (AnalysisRunner) a été supprimé. "
-        "Utilisez --mode pipeline (défaut) ou --mode conversational. "
-        "Voir docs/architecture/ORCHESTRATION_MODES.md pour les détails."
-    )
-    raise SystemExit(1)
-
 
 async def main():
     """Fonction principale du script."""
@@ -281,7 +267,6 @@ Exemples:
   %(prog)s --file texte.txt --workflow formal_extended  # Full formal chain
   %(prog)s --list-workflows                    # Lister les workflows
   %(prog)s --file texte.txt --output results.json  # Sauvegarder résultats
-  %(prog)s --file texte.txt --legacy           # Mode legacy (AnalysisRunner)
   %(prog)s --text "Mon argument" --mode conversational  # Mode conversationnel (agents dialoguent)
         """,
     )
@@ -335,20 +320,13 @@ Exemples:
             "pipeline",
             "conversational",
             "hierarchical",
-            "legacy",
             "sherlock_modern",
         ],
         default="pipeline",
         help="Mode d'orchestration: pipeline (séquentiel, défaut), "
         "conversational (agents dialoguent via AgentGroupChat), "
         "hierarchical (strategic planning → Lego execution), "
-        "legacy (ancien AnalysisRunner), "
         "sherlock_modern (investigation multi-agent, #357)",
-    )
-    parser.add_argument(
-        "--legacy",
-        action="store_true",
-        help="Raccourci pour --mode legacy",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
@@ -466,9 +444,6 @@ Exemples:
 
     # Initialisation de l'environnement
     llm_service = await setup_environment()
-    if not llm_service and args.legacy:
-        logging.error("Service LLM requis pour le mode legacy.")
-        return
 
     # Récupération du texte selon la source choisie
     text_content = None
@@ -519,13 +494,9 @@ Exemples:
 
     # Déterminer le mode d'orchestration
     mode = args.mode
-    if args.legacy:
-        mode = "legacy"
 
     # Exécution de l'analyse
-    if mode == "legacy":
-        await run_legacy_analysis(text_content, llm_service)
-    elif mode == "sherlock_modern":
+    if mode == "sherlock_modern":
         from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
             SherlockModernOrchestrator,
         )
