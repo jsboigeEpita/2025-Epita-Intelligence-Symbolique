@@ -157,9 +157,14 @@ async def test_brick_hierarchical_fallacy() -> BrickResult:
                     reader = csv.DictReader(f)
                     matches = []
                     for row in reader:
-                        term = row.get("nom_vulgarise", "").lower()
-                        if term and term in CORPUS_A.lower():
-                            matches.append(row.get("nom_vulgarise", ""))
+                        # Search in text_fr (primary name column) and Famille
+                        for col in ("text_fr", "Famille", "Sous-Famille"):
+                            term = row.get(col, "").strip().lower()
+                            if term and term in CORPUS_A.lower():
+                                matches.append(row.get("text_fr", "").strip())
+                                break
+                # Deduplicate
+                matches = list(dict.fromkeys(matches))
                 fallacies = matches
                 method = f"csv_fallback_{len(matches)}_matches"
         except Exception:
