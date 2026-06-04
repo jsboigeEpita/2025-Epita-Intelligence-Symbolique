@@ -4,7 +4,7 @@
 
 ## Overview
 
-The system supports **6 orchestration modes**, each suited to different analysis scenarios. Five are wired into the CLI (`--mode`); one is active but dedicated to investigation scenarios via scripts.
+The system supports **5 orchestration modes**, each suited to different analysis scenarios. Four are wired into the CLI (`--mode`); one is active but dedicated to investigation scenarios via scripts.
 
 | Mode | CLI-selectable | Status | Key Class | Use Case |
 |------|---------------|--------|-----------|----------|
@@ -12,7 +12,6 @@ The system supports **6 orchestration modes**, each suited to different analysis
 | **Conversational** | ✅ `--mode conversational` | ACTIVE | `ConversationalOrchestrator` | Rich multi-agent dialogue with cross-KB synergies |
 | **Hierarchical** | ✅ `--mode hierarchical` | ACTIVE | `HierarchicalOrchestrator` | Strategic planning → Lego execution (bridge) |
 | **Sherlock Modern** | ✅ `--mode sherlock_modern` | ACTIVE | `SherlockModernOrchestrator` | Investigation multi-agent (#357) |
-| **Legacy** | ⚠️ `--mode legacy` (deprecated) | INERT | — | Hardcoded error message (AnalysisRunner removed) |
 | **Cluedo** | ❌ script-only | ACTIVE | `CluedoExtendedOrchestrator` | Sherlock-Watson investigation game |
 
 > **Note (scoping #912):** Cluedo is not reachable via `--mode` — it uses dedicated scripts and `__main__` entry points. Making it CLI-selectable requires an implementation issue (lane argparse, po-2025).
@@ -217,9 +216,6 @@ python run_orchestration.py --text "Your argument text" --mode hierarchical
 
 # List available workflows
 python run_orchestration.py --list-workflows
-
-# Legacy mode (AnalysisRunner)
-python run_orchestration.py --file text.txt --mode legacy
 ```
 
 ## API Quick Reference
