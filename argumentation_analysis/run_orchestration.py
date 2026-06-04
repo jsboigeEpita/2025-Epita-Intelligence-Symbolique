@@ -144,7 +144,7 @@ async def run_modern_analysis(
     shield_preset: str = "off",
     vote_method: str = "copeland",
     consensus_threshold: float = 0.7,
-    fol_solver: str = "tweety",
+    fol_solver: str = "eprover",
     counter_strategy: str = "auto",
     formal_extension: str = "all",
 ) -> Dict[str, Any]:
@@ -182,7 +182,7 @@ async def run_modern_analysis(
         context["vote_method"] = vote_method
     if consensus_threshold != 0.7:
         context["consensus_threshold"] = consensus_threshold
-    if fol_solver != "tweety":
+    if fol_solver != "eprover":
         context["fol_solver"] = fol_solver
     if counter_strategy != "auto":
         context["counter_strategy"] = counter_strategy
@@ -403,10 +403,10 @@ Exemples:
         "--fol-solver",
         type=str,
         choices=["tweety", "prover9", "eprover"],
-        default="tweety",
-        help="FOL solver backend: tweety (default, Java/TweetyProject), "
+        default="eprover",
+        help="FOL solver backend: eprover (default, robust external solver), "
         "prover9 (external Prover9 binary, skip if absent), "
-        "eprover (external E Prover binary, skip if absent)",
+        "tweety (Java/TweetyProject, fallback of last resort)",
     )
     parser.add_argument(
         "--counter-strategy",

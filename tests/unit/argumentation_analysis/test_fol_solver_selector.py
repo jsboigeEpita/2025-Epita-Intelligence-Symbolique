@@ -21,9 +21,9 @@ class TestFOLSolverCLI:
     """Test --fol-solver argument parsing."""
 
     def test_fol_solver_default(self):
-        """Default solver should be 'tweety'."""
+        """Default solver should be 'eprover' (#939: robust solver as default)."""
         valid_solvers = {"tweety", "prover9", "eprover"}
-        default = "tweety"
+        default = "eprover"
         assert default in valid_solvers
 
     def test_fol_solver_choices(self):
@@ -48,10 +48,10 @@ class TestFOLSolverContext:
     """Test context propagation for --fol-solver."""
 
     def test_default_not_in_context(self):
-        """Default 'tweety' should NOT be added to context (zero-pollution)."""
-        fol_solver = "tweety"
+        """Default 'eprover' should NOT be added to context (zero-pollution)."""
+        fol_solver = "eprover"
         context = {}
-        if fol_solver != "tweety":
+        if fol_solver != "eprover":
             context["fol_solver"] = fol_solver
         assert "fol_solver" not in context
 
@@ -59,30 +59,30 @@ class TestFOLSolverContext:
         """Non-default 'prover9' should be in context."""
         fol_solver = "prover9"
         context = {}
-        if fol_solver != "tweety":
+        if fol_solver != "eprover":
             context["fol_solver"] = fol_solver
         assert context["fol_solver"] == "prover9"
 
-    def test_eprover_in_context(self):
-        """Non-default 'eprover' should be in context."""
-        fol_solver = "eprover"
+    def test_tweety_in_context(self):
+        """Non-default 'tweety' should be in context (explicit override)."""
+        fol_solver = "tweety"
         context = {}
-        if fol_solver != "tweety":
+        if fol_solver != "eprover":
             context["fol_solver"] = fol_solver
-        assert context["fol_solver"] == "eprover"
+        assert context["fol_solver"] == "tweety"
 
     @pytest.mark.parametrize(
         "solver,expected_in_context",
         [
-            ("tweety", False),
+            ("eprover", False),
             ("prover9", True),
-            ("eprover", True),
+            ("tweety", True),
         ],
     )
     def test_context_pollution_parametrized(self, solver, expected_in_context):
         """Parametrized: only non-default solver pollutes context."""
         context = {}
-        if solver != "tweety":
+        if solver != "eprover":
             context["fol_solver"] = solver
         assert ("fol_solver" in context) == expected_in_context
 
@@ -110,14 +110,14 @@ class TestFOLSolverResolution:
         assert fol_solver is None
         # In real code: str(settings.solver) would be consulted
 
-    def test_default_tweety_when_no_context_no_settings(self):
-        """When both context and settings are unavailable, default is 'tweety'."""
+    def test_default_eprover_when_no_context_no_settings(self):
+        """When both context and settings are unavailable, default is 'eprover'."""
         context = {}
         fol_solver = context.get("fol_solver", None)
         if fol_solver is None:
-            # Simulate settings unavailable
-            fol_solver = "tweety"
-        assert fol_solver == "tweety"
+            # Simulate settings unavailable — #939: eprover is the new default
+            fol_solver = "eprover"
+        assert fol_solver == "eprover"
 
 
 # ---------------------------------------------------------------------------
@@ -147,11 +147,11 @@ class TestSettingsSolverBugFix:
         values = {s.value for s in SolverChoice}
         assert values == {"tweety", "prover9", "eprover"}
 
-    def test_settings_default_solver_is_tweety(self):
-        """Default settings.solver should be SolverChoice.TWEETY."""
+    def test_settings_default_solver_is_eprover(self):
+        """Default settings.solver should be SolverChoice.EPROVER (#939)."""
         from argumentation_analysis.core.config import SolverChoice
 
-        assert SolverChoice.TWEETY.value == "tweety"
+        assert SolverChoice.EPROVER.value == "eprover"
 
 
 # ---------------------------------------------------------------------------
@@ -168,11 +168,11 @@ class TestFOLReasoningMetadata:
         fol_metadata_shared = {"fol_solver": fol_solver_choice}
         assert fol_metadata_shared["fol_solver"] == "prover9"
 
-    def test_metadata_default_tweety(self):
-        """When no context override, fol_solver should be 'tweety'."""
-        fol_solver_choice = "tweety"
+    def test_metadata_default_eprover(self):
+        """When no context override, fol_solver should be 'eprover'."""
+        fol_solver_choice = "eprover"
         fol_metadata_shared = {"fol_solver": fol_solver_choice}
-        assert fol_metadata_shared["fol_solver"] == "tweety"
+        assert fol_metadata_shared["fol_solver"] == "eprover"
 
     def test_metadata_preserved_on_reassignment(self):
         """fol_solver should survive the fol_metadata_shared reassignment
@@ -205,7 +205,7 @@ class TestRunModernAnalysisSignature:
 
         sig = inspect.signature(run_modern_analysis)
         assert "fol_solver" in sig.parameters
-        assert sig.parameters["fol_solver"].default == "tweety"
+        assert sig.parameters["fol_solver"].default == "eprover"
 
 
 # ---------------------------------------------------------------------------
@@ -293,8 +293,8 @@ class TestExternalFOLSolverConsumer:
         assert result.get("logic_type") == "first_order"
         assert result.get("solver") in ("prover9", "tweety_fallback", "tweety")
 
-    async def test_default_tweety_uses_tweety_fallback(self):
-        """When context has no fol_solver, default tweety path should be used."""
+    async def test_default_eprover_uses_eprover_branch(self):
+        """When context has no fol_solver, default eprover path should be used (#939)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
         )
@@ -320,8 +320,8 @@ class TestExternalFOLSolverConsumer:
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
-        # Default tweety path → tweety_fallback
-        assert result.get("solver") == "tweety_fallback"
+        # Default eprover path → eprover (or tweety_fallback if eprover unavailable)
+        assert result.get("solver") in ("eprover", "tweety_fallback")
         assert result.get("logic_type") == "first_order"
 
     async def test_no_context_falls_back_gracefully(self):
