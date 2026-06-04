@@ -266,14 +266,22 @@ async def run_zeroshot_baseline(corpus_label: str, text: str) -> Dict[str, Any]:
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_completion_tokens=4096,
     )
 
     elapsed = time.time() - t0
     print(f"[C1] 0-shot baseline for {corpus_label} completed in {elapsed:.1f}s")
 
     # Parse the 0-shot response for structured metrics
-    response_text = response.choices[0].message.content or ""
+    choice = response.choices[0]
+    response_text = ""
+    if choice.message and choice.message.content:
+        response_text = choice.message.content
+    elif hasattr(choice, 'text') and choice.text:
+        response_text = choice.text
+    else:
+        # Log the raw response for debugging
+        print(f"[C1] WARNING: Empty response for {corpus_label}. Finish reason: {choice.finish_reason}")
+        response_text = f"[EMPTY_RESPONSE] finish_reason={choice.finish_reason}"
     output = {
         "corpus": CORPUS_LABELS[corpus_label],
         "method": "zeroshot_baseline",
