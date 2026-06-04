@@ -645,48 +645,9 @@ class TestRunOrchestrationPipeline:
                 {"pipeline_results": {}},
             )
 
-    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
-    async def test_selects_logique_for_keyword(self):
-        import argumentation_analysis.pipelines.unified_pipeline as mod
-
-        mi = MagicMock()
-        mi.__class__.__name__ = "LogiqueComplexeOrchestrator"
-        mi.orchestrate_complex_logical_analysis = AsyncMock(return_value={"r": 1})
-        with patch.object(
-            mod, "create_llm_service", return_value=MagicMock(), create=True
-        ), patch.object(
-            mod, "LogiqueComplexeOrchestrator", MagicMock(return_value=mi), create=True
-        ):
-            await mod._run_orchestration_pipeline(
-                "tous les hommes sont mortels",
-                "c",
-                "auto_select",
-                False,
-                None,
-                {"pipeline_results": {}},
-            )
-
-    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
-    async def test_selects_real_llm_fallback(self):
-        import argumentation_analysis.pipelines.unified_pipeline as mod
-
-        mi = MagicMock()
-        mi.__class__.__name__ = "RealLLMOrchestrator"
-        mi.orchestrate_multi_llm_analysis = AsyncMock(return_value={"r": 1})
-        with patch.object(
-            mod, "create_llm_service", return_value=MagicMock(), create=True
-        ), patch.object(
-            mod, "RealLLMOrchestrator", MagicMock(return_value=mi), create=True
-        ):
-            r = await mod._run_orchestration_pipeline(
-                "Generic text",
-                "c",
-                "auto_select",
-                False,
-                None,
-                {"pipeline_results": {}},
-            )
-            assert "specialized_orchestration" in r
+    # LogiqueComplexeOrchestrator + RealLLMOrchestrator tests removed (#885) —
+    # those orchestrators no longer exist; _run_orchestration_pipeline no longer
+    # dispatches to them.
 
 
 class TestRunOriginalPipeline:

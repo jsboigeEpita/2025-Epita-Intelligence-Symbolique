@@ -83,10 +83,9 @@ try:
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
-    # RealConversationLogger removed (#885) — use ConversationLogger directly
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
-        ConversationLogger as RealConversationLogger,
+        ConversationLogger,
     )
     from argumentation_analysis.core.report_generation import (
         UnifiedReportGenerator,

@@ -573,33 +573,9 @@ class TestExecuteSpecializedDirect:
             assert result["status"] == "error"
 
 
-# ── _run_logic_complex_analysis ─────────────────────────────────────────
-
-
-class TestRunLogicComplexAnalysis:
-    """Tests for _run_logic_complex_analysis()."""
-
-    async def test_no_method(self, orchestrator):
-        mock_orch = MagicMock(spec=[])
-        # LogiqueComplexeOrchestrator might not be available
-        with patch(
-            "argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator",
-            None,
-        ):
-            result = await orchestrator._run_logic_complex_analysis("text", mock_orch)
-            assert result["status"] == "limited"
-
-    async def test_exception(self, orchestrator):
-        mock_orch = MagicMock()
-        mock_orch.analyze_complex_logic = AsyncMock(
-            side_effect=Exception("logic error")
-        )
-        with patch(
-            "argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator",
-            type(mock_orch),
-        ):
-            result = await orchestrator._run_logic_complex_analysis("text", mock_orch)
-            assert result["status"] == "error"
+# ── _run_logic_complex_analysis removed (#885) ──────────────────────────
+# LogiqueComplexeOrchestrator deleted; method no longer exists on
+# MainOrchestrator. Tests removed.
 
 
 # ── Integration scenarios ───────────────────────────────────────────────

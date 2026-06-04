@@ -135,7 +135,7 @@ config = ExtendedOrchestrationConfig(
 ```python
 # AVANT - Imports multiples et configuration manuelle
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
+from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
 # ... 15+ imports
 
 # APRÈS - Import unique et délégation

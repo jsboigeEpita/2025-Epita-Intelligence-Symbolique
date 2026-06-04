@@ -632,7 +632,7 @@ class TestInitializeSpecializedOrchestrators:
 
         with patch(f"{SM_MODULE}.CluedoOrchestrator", mock_cluedo), patch(
             f"{SM_MODULE}.ConversationOrchestrator", mock_conversation
-        ), patch(f"{SM_MODULE}.RealLLMOrchestrator", None), patch(
+        ), patch(
             f"{SM_MODULE}.FactCheckingOrchestrator", None
         ):
             await manager._initialize_specialized_orchestrators()
@@ -647,7 +647,7 @@ class TestInitializeSpecializedOrchestrators:
     async def test_all_none_when_classes_none(self, manager):
         with patch(f"{SM_MODULE}.CluedoOrchestrator", None), patch(
             f"{SM_MODULE}.ConversationOrchestrator", None
-        ), patch(f"{SM_MODULE}.RealLLMOrchestrator", None), patch(
+        ), patch(
             f"{SM_MODULE}.FactCheckingOrchestrator", None
         ):
             await manager._initialize_specialized_orchestrators()
@@ -932,9 +932,9 @@ class TestRunSpecializedAnalysis:
             assert result["request_id"] == "req-123"
 
     async def test_analyze_text_interface(self, manager):
-        """Orchestrator with analyze_text method (RealLLMOrchestrator)."""
+        """Orchestrator with analyze_text method (legacy LLM interface)."""
         mock_orch = MagicMock()
-        mock_orch.__class__.__name__ = "RealLLMOrchestrator"
+        mock_orch.__class__.__name__ = "LLMOrchestrator"
         # No analyze_with_fact_checking
         del mock_orch.analyze_with_fact_checking
 
