@@ -320,12 +320,14 @@ Exemples:
             "pipeline",
             "conversational",
             "hierarchical",
+            "cluedo",
             "sherlock_modern",
         ],
         default="pipeline",
         help="Mode d'orchestration: pipeline (séquentiel, défaut), "
         "conversational (agents dialoguent via AgentGroupChat), "
         "hierarchical (strategic planning → Lego execution), "
+        "cluedo (investigation Sherlock-Watson-Oracle, #914), "
         "sherlock_modern (investigation multi-agent, #357)",
     )
     parser.add_argument(
@@ -643,6 +645,60 @@ Exemples:
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, ensure_ascii=False, indent=2, default=str)
             logging.info(f"Résultats sauvegardés dans {output_path}")
+    elif mode == "cluedo":
+        from semantic_kernel import Kernel
+
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+            run_cluedo_oracle_game,
+        )
+
+        logging.info("Mode CLUEDO : investigation Sherlock-Watson-Oracle")
+
+        # Build SK kernel with LLM service
+        kernel = Kernel()
+        if llm_service and hasattr(llm_service, "service_id"):
+            from argumentation_analysis.core.llm_service import create_llm_service
+
+            svc = create_llm_service(service_id="cluedo_mode")
+            if svc and hasattr(svc, "add_to_kernel"):
+                svc.add_to_kernel(kernel)
+            else:
+                kernel.add_service(svc)
+
+        # Use text as initial question context if provided
+        initial_question = (
+            f"Analyse le texte suivant pour y trouver des indices : {text_content[:500]}"
+            if text_content
+            else "L'enquête commence. Sherlock, menez l'investigation !"
+        )
+
+        results = await run_cluedo_oracle_game(
+            kernel=kernel,
+            initial_question=initial_question,
+        )
+
+        # Display cluedo results
+        investigation = results.get("investigation", {})
+        solution = results.get("solution", {})
+        trace = results.get("trace", [])
+
+        print(f"\n{'='*60}")
+        print(f" Cluedo Investigation Results")
+        print(f"{'='*60}")
+        print(f"  Trace steps     : {len(trace) if isinstance(trace, list) else 'N/A'}")
+        if investigation:
+            print(f"  Investigation   : {json.dumps(investigation, ensure_ascii=False, default=str)[:300]}")
+        if solution:
+            print(f"  Solution        : {json.dumps(solution, ensure_ascii=False, default=str)[:300]}")
+        print(f"{'='*60}\n")
+
+        # Save if requested
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2, default=str)
+            logging.info(f"Results saved to {output_path}")
     else:
         await run_modern_analysis(
             text_content,
