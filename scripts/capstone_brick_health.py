@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """scripts/capstone_brick_health.py
 
-Brick-health harness for Capstone #928.
-Tests each of the 11 pipeline invoke callables in isolation on corpus_A,
-asserting they produce non-trivial output without a live LLM or JVM.
+Brick-health harness for Capstone #928, hardened by #944.
+Tests each of the 13 pipeline invoke callables in isolation on corpus_A,
+asserting they produce non-trivial output (not just structural presence)
+without a live LLM or JVM.
+
+Value-gate semantics (#944):
+- PASS: brick produces non-trivial content (verified formulas, non-zero scores,
+  resolved extensions, etc.)
+- XFAIL: brick produces structure but not verified content due to a known gap
+  (tracked issue reference). Not counted as failure.
+- FAIL: brick produces nothing or clearly broken output.
 
 Usage:
     conda run -n projet-is-roo-new --no-capture-output python scripts/capstone_brick_health.py [--json] [--verbose]
 
-Exit code 0 if all bricks pass, 1 if any brick fails.
-Part of #923.
+Exit code 0 if all non-xfail bricks pass, 1 if any real failure.
+Part of #923, hardened by #944.
 """
 import asyncio
 import json
@@ -51,6 +59,8 @@ class BrickResult:
     duration_s: float
     assertion_detail: str = ""
     error: Optional[str] = None
+    xfail: bool = False          # Expected failure (known gap, tracked in issue)
+    xfail_reason: str = ""       # Issue reference for the xfail
 
 
 # ── Mock context builders (simulate upstream phase outputs) ──
@@ -176,7 +186,11 @@ async def test_brick_hierarchical_fallacy() -> BrickResult:
 
 
 async def test_brick_quality_evaluator() -> BrickResult:
-    """Brick 3: quality_evaluator (9-virtue scorer, pure Python)."""
+    """Brick 3: quality_evaluator (9-virtue scorer, pure Python).
+
+    Value-gate (#944): at least one argument must have overall > 0.
+    Presence-only (len >= 2) allowed the harness to pass with all-0.0 scores.
+    """
     from argumentation_analysis.orchestration.invoke_callables import _invoke_quality_evaluator
 
     ctx = {"phase_extract_output": _make_extract_output()}
@@ -185,9 +199,15 @@ async def test_brick_quality_evaluator() -> BrickResult:
     dt = time.time() - t0
 
     scores = result.get("per_argument_scores", {})
-    passed = len(scores) >= 2
+    has_nontrivial = False
+    for _arg_id, arg_scores in scores.items():
+        overall = arg_scores.get("overall", arg_scores.get("note_finale", 0))
+        if isinstance(overall, (int, float)) and overall > 0:
+            has_nontrivial = True
+            break
+    passed = len(scores) >= 2 and has_nontrivial
     return BrickResult("quality_evaluator", passed, dt,
-                       f"scored_args={len(scores)}")
+                       f"scored_args={len(scores)}, has_nontrivial_overall={has_nontrivial}")
 
 
 async def test_brick_counter_argument() -> BrickResult:
@@ -302,7 +322,12 @@ async def test_brick_aspic() -> BrickResult:
 
 
 async def test_brick_propositional_logic() -> BrickResult:
-    """Brick 9: propositional logic (template fallback)."""
+    """Brick 9: propositional logic (template fallback).
+
+    Value-gate (#944): if result includes satisfiability info, at least one
+    formula must be verified (satisfiable/consistent). Presence-only masked
+    unverified template output as "working".
+    """
     from argumentation_analysis.orchestration.invoke_callables import _invoke_propositional_logic
 
     ctx = {"phase_extract_output": _make_extract_output()}
@@ -312,13 +337,33 @@ async def test_brick_propositional_logic() -> BrickResult:
         dt = time.time() - t0
 
     formulas = result.get("formulas", [])
-    passed = len(formulas) >= 1
+    # Check for satisfiable/consistent verification if available
+    sat_key = result.get("satisfiable")
+    verified_count = 0
+    if isinstance(sat_key, bool):
+        # Single satisfiability result
+        verified_count = 1 if sat_key else 0
+    for f in formulas:
+        if isinstance(f, dict):
+            if f.get("satisfiable") or f.get("consistent") or f.get("verified"):
+                verified_count += 1
+
+    # Pass if formulas produced AND (no verification data available OR some verified)
+    has_formulas = len(formulas) >= 1
+    verification_available = sat_key is not None or verified_count > 0
+    passed = has_formulas and (not verification_available or verified_count >= 1)
     return BrickResult("propositional_logic", passed, dt,
-                       f"formulas={len(formulas)}")
+                       f"formulas={len(formulas)}, verified={verified_count}, "
+                       f"satisfiable={sat_key}")
 
 
 async def test_brick_fol_reasoning() -> BrickResult:
-    """Brick 10: FOL reasoning (template fallback)."""
+    """Brick 10: FOL reasoning (template fallback).
+
+    Value-gate (#944): if result includes consistency info, at least one
+    formula must be verified. FOL template fallback without JVM may not
+    verify — xfail with reference to #941 if verification is absent.
+    """
     from argumentation_analysis.orchestration.invoke_callables import _invoke_fol_reasoning
 
     ctx = {"phase_extract_output": _make_extract_output()}
@@ -328,13 +373,39 @@ async def test_brick_fol_reasoning() -> BrickResult:
         dt = time.time() - t0
 
     formulas = result.get("formulas", [])
-    passed = len(formulas) >= 1
+    # Check for consistent/satisfiable verification
+    consistent_key = result.get("consistent", result.get("satisfiable"))
+    verified_count = 0
+    if isinstance(consistent_key, bool):
+        verified_count = 1 if consistent_key else 0
+    for f in formulas:
+        if isinstance(f, dict):
+            if f.get("consistent") or f.get("satisfiable") or f.get("verified"):
+                verified_count += 1
+
+    has_formulas = len(formulas) >= 1
+    verification_available = consistent_key is not None or verified_count > 0
+
+    if has_formulas and not verification_available:
+        # Formulas generated but no verification — xfail (pending #941 solver fix)
+        return BrickResult("fol_reasoning", False, dt,
+                           f"formulas={len(formulas)}, verified=0 (no solver output)",
+                           xfail=True, xfail_reason="#941 FOL solver fallback produces templates but no verification")
+    elif has_formulas and verification_available and verified_count >= 1:
+        passed = True
+    else:
+        passed = False
     return BrickResult("fol_reasoning", passed, dt,
-                       f"formulas={len(formulas)}")
+                       f"formulas={len(formulas)}, verified={verified_count}, "
+                       f"consistent={consistent_key}")
 
 
 async def test_brick_modal_logic() -> BrickResult:
-    """Brick 11: modal logic (heuristic fallback)."""
+    """Brick 11: modal logic (heuristic fallback).
+
+    Value-gate (#944): if valid/satisfiable is present, it must be non-None.
+    Template fallback without JVM may not verify — xfail if verification absent.
+    """
     from argumentation_analysis.orchestration.invoke_callables import _invoke_modal_logic
 
     ctx = {"phase_extract_output": _make_extract_output()}
@@ -345,13 +416,38 @@ async def test_brick_modal_logic() -> BrickResult:
 
     formulas = result.get("formulas", [])
     valid = result.get("valid")
-    passed = len(formulas) >= 1 or valid is not None
+    satisfiable = result.get("satisfiable")
+    verified_count = 0
+    for f in formulas:
+        if isinstance(f, dict):
+            if f.get("valid") is not None or f.get("satisfiable") is not None:
+                verified_count += 1
+
+    has_formulas = len(formulas) >= 1
+    has_verification = valid is not None or satisfiable is not None or verified_count > 0
+
+    if has_formulas and not has_verification:
+        # Formulas generated but no verification — xfail (pending #941 solver fix)
+        return BrickResult("modal_logic", False, dt,
+                           f"formulas={len(formulas)}, verified=0 (no solver output)",
+                           xfail=True, xfail_reason="#941 Modal solver fallback produces templates but no verification")
+    elif has_formulas and has_verification:
+        passed = True
+    elif has_formulas:
+        passed = True  # formulas present, no verification data available at all
+    else:
+        passed = False
     return BrickResult("modal_logic", passed, dt,
-                       f"formulas={len(formulas)}, valid={valid}")
+                       f"formulas={len(formulas)}, valid={valid}, satisfiable={satisfiable}")
 
 
 async def test_brick_dung_extensions() -> BrickResult:
-    """Brick 12: Dung extensions (Python fallback, 11 semantics native)."""
+    """Brick 12: Dung extensions (Python fallback, 11 semantics native).
+
+    Value-gate (#944): assert args_count >= 2 AND ext_count >= 1 (not OR).
+    The OR gate let ext_count=0 pass undetected. If extensions are 0
+    (degenerate fallback without real solver), xfail pending #941.
+    """
     from argumentation_analysis.orchestration.invoke_callables import _invoke_dung_extensions
 
     ctx = {
@@ -365,7 +461,16 @@ async def test_brick_dung_extensions() -> BrickResult:
     stats = result.get("statistics", {})
     ext_count = stats.get("extensions_count", 0)
     args_count = stats.get("arguments_count", 0)
-    passed = args_count >= 2 or ext_count >= 1
+
+    if args_count >= 2 and ext_count >= 1:
+        passed = True
+    elif args_count >= 2 and ext_count == 0:
+        # Args detected but no extensions resolved — degenerate fallback
+        return BrickResult("dung_extensions", False, dt,
+                           f"args={args_count}, extensions=0 (degenerate, pending #941)",
+                           xfail=True, xfail_reason="#941 Dung Python fallback produces args but no extensions")
+    else:
+        passed = False
     return BrickResult("dung_extensions", passed, dt,
                        f"args={args_count}, extensions={ext_count}")
 
@@ -445,23 +550,34 @@ def main():
 
     # Print report
     passed_count = sum(1 for r in results if r.passed)
+    xfail_count = sum(1 for r in results if r.xfail)
+    failed_count = sum(1 for r in results if not r.passed and not r.xfail)
     total = len(results)
     total_time = sum(r.duration_s for r in results)
 
     for r in results:
-        status = "PASS" if r.passed else "FAIL"
+        if r.passed:
+            status = "PASS"
+        elif r.xfail:
+            status = "XFAIL"
+        else:
+            status = "FAIL"
         line = f"  [{status}] {r.name} ({r.duration_s:.2f}s) {r.assertion_detail}"
+        if r.xfail and r.xfail_reason:
+            line += f"  [{r.xfail_reason}]"
         if r.error:
             line += f"  ERROR: {r.error[:120]}"
         print(line)
 
-    print(f"\n{passed_count}/{total} bricks healthy ({total_time:.1f}s total)")
+    print(f"\n{passed_count}/{total} bricks healthy, {xfail_count} xfail, {failed_count} fail ({total_time:.1f}s total)")
 
     if args.json:
         payload = [
             {
                 "name": r.name,
                 "passed": r.passed,
+                "xfail": r.xfail,
+                "xfail_reason": r.xfail_reason if r.xfail else None,
                 "duration_s": round(r.duration_s, 3),
                 "detail": r.assertion_detail,
                 "error": r.error,
@@ -479,11 +595,15 @@ def main():
     report_payload = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "passed": passed_count,
+        "xfail": xfail_count,
+        "failed": failed_count,
         "total": total,
         "results": [
             {
                 "name": r.name,
                 "passed": r.passed,
+                "xfail": r.xfail,
+                "xfail_reason": r.xfail_reason if r.xfail else None,
                 "duration_s": round(r.duration_s, 3),
                 "detail": r.assertion_detail,
                 "error": r.error,
@@ -495,7 +615,10 @@ def main():
         json.dump(report_payload, f, indent=2)
     print(f"\nReport saved to {report_path}")
 
-    sys.exit(0 if passed_count == total else 1)
+    # Exit 0 if all non-xfail bricks pass; 1 if any real failure.
+    # xfail bricks are known gaps (tracked issues) and don't fail the harness.
+    real_failures = sum(1 for r in results if not r.passed and not r.xfail)
+    sys.exit(0 if real_failures == 0 else 1)
 
 
 if __name__ == "__main__":
