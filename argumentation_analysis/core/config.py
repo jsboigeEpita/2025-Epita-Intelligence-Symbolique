@@ -33,18 +33,18 @@ class ArgAnalysisSettings(BaseSettings):
 
     #
     # Le choix du solveur à utiliser pour les opérations de logique FOL.
-    # 'tweety' (défaut) utilise le pont JPype vers TweetyProject (SimpleFolReasoner).
+    # 'eprover' (défaut) utilise EProver via Tweety's EFOLReasoner — robust (#939).
     # 'prover9' utilise un appel à un processus externe Prover9.
-    # 'eprover' utilise EProver via Tweety's EFOLReasoner (requires eprover binary).
+    # 'tweety' fallback — SimpleFolReasoner via JPype, last resort only.
     #
-    solver: SolverChoice = SolverChoice.TWEETY
+    solver: SolverChoice = SolverChoice.EPROVER
 
     #
     # Le choix du solveur pour la logique modale.
-    # 'tweety' (défaut) utilise SimpleMlReasoner.
-    # 'spass' utilise SPASSMlReasoner (requires SPASS binary).
+    # 'spass' (défaut) utilise SPASSMlReasoner — robust (#939).
+    # 'tweety' fallback — SimpleMlReasoner, last resort only.
     #
-    modal_solver: ModalSolverChoice = ModalSolverChoice.TWEETY
+    modal_solver: ModalSolverChoice = ModalSolverChoice.SPASS
 
     #
     # Le choix du solveur pour la logique propositionnelle.

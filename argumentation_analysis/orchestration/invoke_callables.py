@@ -4913,10 +4913,10 @@ async def _invoke_fol_reasoning(
     ]
     formulas: Optional[List[str]] = None
     fol_metadata_shared: Dict[str, Any] = {}
-    # #900: Record the FOL solver choice from parametric selector
-    fol_solver_choice = context.get("fol_solver", "tweety")
+    # #900/#939: Default to eprover (robust), tweety is fallback of last resort
+    fol_solver_choice = context.get("fol_solver", "eprover")
     fol_metadata_shared["fol_solver"] = fol_solver_choice
-    if fol_solver_choice != "tweety":
+    if fol_solver_choice != "eprover":
         logger.info(f"FOL solver override: {fol_solver_choice} (parametric selector --fol-solver)")
 
     # Retrieve state object for fol_shared_signature storage
@@ -5371,7 +5371,7 @@ async def _invoke_modal_logic(
             modalities.append("possibility")
     modalities = list(set(modalities)) or ["none_detected"]
 
-    modal_solver = context.get("modal_solver", "tweety")  # tweety, spass
+    modal_solver = context.get("modal_solver", "spass")  # #939: spass default, tweety is last resort
 
     # SPASS routing (#479): set settings.modal_solver for this request
     if modal_solver == "spass":
@@ -6084,7 +6084,7 @@ async def _invoke_external_fol_solver(
             from argumentation_analysis.core.config import settings
             fol_solver = str(settings.solver)  # SolverChoice enum → str
         except Exception:
-            fol_solver = "tweety"
+            fol_solver = "eprover"  # #939: eprover default, not tweety
 
     # Try EProver via Tweety EFOLReasoner
     try:
