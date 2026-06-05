@@ -253,9 +253,17 @@ class RhetoricalStrategies:
         )
 
     def _generate_statistical_counter(self, argument: Argument) -> str:
+        """Generate a statistical counter-argument template (no fabricated data).
+
+        Returns a schematic placeholder that frames the statistical challenge
+        without inventing specific numbers — actual data would be needed to
+        substantiate the objection.
+        """
         return (
-            "in only 15% of studied cases was this cause-effect relationship observed, "
-            "far from a general rule"
+            "[template/placeholder] a statistical counter would challenge the "
+            "claimed cause-effect relationship as holding in only a limited "
+            "fraction of cases — the strength of this objection depends on "
+            "actual data"
         )
 
     def _fallback_counter_argument(
