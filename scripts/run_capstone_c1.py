@@ -176,31 +176,41 @@ def _extract_phase_metrics(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             1 for _ in pl_results.get("formulas", [])
         ) if pl_results.get("satisfiable") is not None else 0
 
-    # FOL formulas
+    # FOL formulas — state uses "consistent" (not "satisfiable" which is PL-only)
     fol_results = snapshot.get("fol_analysis_results", [])
     if isinstance(fol_results, list):
         fol_formulas = sum(len(r.get("formulas", [])) for r in fol_results if isinstance(r, dict))
         fol_verified = sum(
-            1 for r in fol_results if isinstance(r, dict) and r.get("satisfiable") is not None
+            1 for r in fol_results if isinstance(r, dict) and r.get("consistent") is not None
             for _ in r.get("formulas", [])
         )
         metrics["fol_formulas"] = fol_formulas
         metrics["fol_verified"] = fol_verified
     elif isinstance(fol_results, dict):
         metrics["fol_formulas"] = len(fol_results.get("formulas", []))
-        metrics["fol_verified"] = len(fol_results.get("formulas", [])) if fol_results.get("satisfiable") is not None else 0
+        metrics["fol_verified"] = len(fol_results.get("formulas", [])) if fol_results.get("consistent") is not None else 0
 
-    # Dung extensions — field is dung_frameworks (dict)
+    # Dung extensions — state shape is {df_id: {name, arguments, attacks, extensions: {sem: [members]}}}
     dung = snapshot.get("dung_frameworks", snapshot.get("dung_extensions", {}))
     if isinstance(dung, dict):
-        all_ext = dung.get("all_extensions", dung)
-        if isinstance(all_ext, dict):
-            metrics["dung_semantics_count"] = len(all_ext)
-            metrics["dung_extensions"] = {
-                k: {"count": v.get("count", 0) if isinstance(v, dict) else 0}
-                for k, v in all_ext.items()
-                if k not in ("arguments", "attacks", "provider", "semantics")
-            }
+        total_ext_count = 0
+        dung_ext_detail = {}
+        for df_id, fw in dung.items():
+            if not isinstance(fw, dict):
+                continue
+            extensions = fw.get("extensions", {})
+            if isinstance(extensions, dict):
+                fw_ext_count = sum(len(members) for members in extensions.values() if isinstance(members, list))
+                total_ext_count += fw_ext_count
+                if fw_ext_count > 0:
+                    dung_ext_detail[df_id] = {
+                        "name": fw.get("name", df_id),
+                        "semantics": {sem: len(members) for sem, members in extensions.items() if isinstance(members, list)},
+                        "count": fw_ext_count,
+                    }
+        metrics["dung_framework_count"] = len(dung)
+        metrics["dung_total_extensions"] = total_ext_count
+        metrics["dung_extensions"] = dung_ext_detail
 
     # Counter-arguments
     counter_args = snapshot.get("counter_arguments", [])
@@ -365,7 +375,7 @@ async def run_capstone_c1(corpus_list: List[str]) -> None:
                 "pl_formulas": integral.get("phases", {}).get("pl_formulas"),
                 "fol_formulas": integral.get("phases", {}).get("fol_formulas"),
                 "counter_arguments": integral.get("phases", {}).get("counter_arguments_count"),
-                "dung_semantics": integral.get("phases", {}).get("dung_semantics_count"),
+                "dung_semantics": integral.get("phases", {}).get("dung_total_extensions"),
             },
             "baseline": {
                 "elapsed": baseline_scrubbed.get("elapsed_seconds"),
