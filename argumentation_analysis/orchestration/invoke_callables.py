@@ -5427,14 +5427,20 @@ async def _invoke_modal_logic(
     except Exception as e:
         logger.debug(f"Modal TweetyBridge unavailable ({e}), using heuristic")
 
-    # Pure heuristic fallback
+    # Pure heuristic fallback — modal analysis unavailable
+    # (#961): do NOT return vacuous valid:True. Report honest unavailability.
+    logger.warning(
+        "Modal analysis unavailable: no solver (SPASS/Tweety) could be loaded. "
+        "Reporting unverified status."
+    )
     return {
         "formulas": formulas,
-        "valid": True,
+        "valid": None,
         "modalities": modalities,
         "logic_type": "modal",
-        "solver": "heuristic",
+        "solver": "unavailable",
         "fallback": "python",
+        "message": "Modal analysis unavailable: no solver could be loaded.",
     }
 
 

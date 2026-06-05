@@ -142,9 +142,10 @@ class ModalHandler:
         except jpype.JException as e:
             if "no method found" in str(e).lower():
                 logger.warning(
-                    "The 'isConsistent' method might not be available on the ModalReasoner. Returning default."
+                    "The 'isConsistent' method is not available on the ModalReasoner. "
+                    "Reporting unverified status instead of assuming consistent (#961)."
                 )
-                return True, "Consistency check method not found, assuming consistent."
+                return None, "Consistency check unavailable: method not found on reasoner."
 
             error_msg = f"Error checking modal KB consistency: {e.getMessage()}"
             logger.error(error_msg, exc_info=True)
