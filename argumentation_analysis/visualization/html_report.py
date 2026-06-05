@@ -98,14 +98,16 @@ tr:hover { background: rgba(88,166,255,0.05); }
   {% for arg_id, arg_text in arguments.items() %}
     {% set qs = quality_scores.get(arg_id, {}) %}
     {% set overall = qs.get('overall', '-') %}
+    {# Scores are stored under qs["scores"] with French keys (#942) #}
+    {% set scores = qs.get('scores', {}) %}
     <tr>
       <td><code>{{ arg_id }}</code></td>
       <td>{{ arg_text|truncate(80, true) }}</td>
       <td>{{ _score_badge(overall) }}</td>
-      <td>{{ _score_cell(qs.get('clarity', '-')) }}</td>
-      <td>{{ _score_cell(qs.get('coherence', '-')) }}</td>
-      <td>{{ _score_cell(qs.get('relevance', '-')) }}</td>
-      <td>{{ _score_cell(qs.get('completeness', '-')) }}</td>
+      <td>{{ _score_cell(scores.get('clarte', '-')) }}</td>
+      <td>{{ _score_cell(scores.get('structure_logique', '-')) }}</td>
+      <td>{{ _score_cell(scores.get('pertinence', '-')) }}</td>
+      <td>{{ _score_cell(scores.get('exhaustivite', '-')) }}</td>
     </tr>
   {% endfor %}
   </tbody>
