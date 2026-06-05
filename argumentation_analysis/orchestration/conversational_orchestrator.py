@@ -492,6 +492,54 @@ async def run_conversational_analysis(
     """
     start_time = time.time()
 
+    # 0a. Activate per-run LLM-call circuit breaker (#950).
+    # Mirrors workflow_dsl.py:334 — every LLM call from every phase counts
+    # against one ceiling, so a degenerate counter-arg sweep cannot run away
+    # into thousands of round-trips (issue #708 origin).  Re-entrant: if a
+    # budget scope is already active (e.g. from a parent orchestrator), it is
+    # reused without resetting the count.
+    from argumentation_analysis.orchestration.invoke_callables import (
+        llm_budget_scope,
+    )
+
+    with llm_budget_scope():
+        return await _run_conversational_analysis_inner(
+            text=text,
+            max_turns_per_phase=max_turns_per_phase,
+            agent_names=agent_names,
+            spectacular=spectacular,
+            extraction_max_turns=extraction_max_turns,
+            formal_max_turns=formal_max_turns,
+            synthesis_max_turns=synthesis_max_turns,
+            reanalysis_max_turns=reanalysis_max_turns,
+            enable_growth_validation=enable_growth_validation,
+            growth_re_prompt_limit=growth_re_prompt_limit,
+            enable_tool_gating=enable_tool_gating,
+            enable_reprompt_tracing=enable_reprompt_tracing,
+            source_metadata=source_metadata,
+            selector_context=selector_context,
+        )
+
+
+async def _run_conversational_analysis_inner(
+    text: str,
+    max_turns_per_phase: int = 5,
+    agent_names: Optional[List[str]] = None,
+    spectacular: bool = True,
+    extraction_max_turns: int = 7,
+    formal_max_turns: int = 5,
+    synthesis_max_turns: int = 10,
+    reanalysis_max_turns: int = 5,
+    enable_growth_validation: bool = True,
+    growth_re_prompt_limit: int = 2,
+    enable_tool_gating: bool = False,
+    enable_reprompt_tracing: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
+    selector_context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
+    start_time = time.time()
+
     # 0b. Env var override for growth validation (#597)
     _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
     if _env_growth in ("0", "false", "no"):
