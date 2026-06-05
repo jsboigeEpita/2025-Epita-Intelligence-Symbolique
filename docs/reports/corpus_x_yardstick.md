@@ -55,7 +55,7 @@ This yardstick captures the analytical dimensions identified by the external spe
 
 ### D3: Populist Rhetoric from Elite Position
 
-**Analyst's claim**: The text adopts anti-elite populist language while coming from a position of extreme elite status. This is identified as a specific rhetorical strategy, not accidental hypocrisy. The analyst references Müller's populism framework: both committing to a social order while prescribing solutions that actively work against it. The text "derides [Silicon Valley] in order to gain authority."
+**Analyst's claim**: The text adopts anti-elite populist language while coming from a position of extreme elite status. This is identified as a specific rhetorical strategy, not accidental hypocrisy. The analyst invokes an established populism-theory framework: committing to a social order while prescribing solutions that actively work against it. The text "derides [the elite milieu] in order to gain authority."
 
 **Opaque references**: `strategy_B` (elite populism), `claim_6` (anti-elite stance from elite position)
 
@@ -85,7 +85,7 @@ This yardstick captures the analytical dimensions identified by the external spe
 
 ### D5: Historical Parallel (reactionary speech analogy)
 
-**Analyst's claim**: The text's structure mirrors a specific historical reactionary speech (`ref_speech_A`, delivered in 1998). Both share: criticizing spectacle while making a spectacle, critiquing moral grandstanding while deploying it, performing the act being diagnosed. The analyst identifies this as a structural parallel, not just thematic similarity.
+**Analyst's claim**: The text's structure mirrors a specific historical reactionary speech (`ref_speech_A`). Both share: criticizing spectacle while making a spectacle, critiquing moral grandstanding while deploying it, performing the act being diagnosed. The analyst identifies this as a structural parallel, not just thematic similarity.
 
 **Opaque references**: `strategy_D` (historical parallel structure), `claim_10` (structural analogy)
 
