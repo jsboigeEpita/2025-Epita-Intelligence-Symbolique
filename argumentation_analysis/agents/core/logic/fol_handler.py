@@ -257,16 +257,52 @@ class FOLHandler:
     async def fol_check_consistency(self, belief_set):
         """
         Checks if an FOL knowledge base is consistent using the configured solver.
+
+        When the configured external solver (eprover/prover9) is unavailable
+        (binary absent, RuntimeError), falls back to the in-JVM Tweety FOL
+        reasoner — mirroring the modal pattern (modal_handler.py:36-48).
+        Returns a ``solver_fallback`` flag in the result so callers can track
+        degradation.
         """
         self.logger.debug(
             f"Performing FOL consistency check with solver: {settings.solver.value}"
         )
         if settings.solver == SolverChoice.PROVER9:
-            return await self._fol_check_consistency_with_prover9(belief_set)
+            try:
+                return await self._fol_check_consistency_with_prover9(belief_set)
+            except RuntimeError as e:
+                self.logger.warning(
+                    f"Prover9 unavailable ({e}), falling back to Tweety FOL reasoner"
+                )
+                return await self._fol_check_consistency_with_tweety_fallback(belief_set)
         elif settings.solver == SolverChoice.EPROVER:
-            return await self._fol_check_consistency_with_eprover(belief_set)
+            try:
+                return await self._fol_check_consistency_with_eprover(belief_set)
+            except RuntimeError as e:
+                self.logger.warning(
+                    f"EProver unavailable ({e}), falling back to Tweety FOL reasoner"
+                )
+                return await self._fol_check_consistency_with_tweety_fallback(belief_set)
         else:
             return await self._fol_check_consistency_with_tweety(belief_set)
+
+    async def _fol_check_consistency_with_tweety_fallback(self, belief_set):
+        """Attempt Tweety FOL consistency check; returns solver_fallback=True on success."""
+        try:
+            result = await self._fol_check_consistency_with_tweety(belief_set)
+            # result is (bool, str) — inject fallback flag
+            is_consistent, msg = result
+            return is_consistent, msg, True  # solver_fallback=True
+        except Exception as tweety_err:
+            self.logger.error(
+                f"Tweety FOL fallback also failed: {tweety_err}",
+                exc_info=True,
+            )
+            # Both solvers failed — propagate original issue
+            raise RuntimeError(
+                f"FOL consistency check failed: external solver absent and "
+                f"Tweety fallback failed ({tweety_err})"
+            ) from tweety_err
 
     async def _fol_check_consistency_with_prover9(self, belief_set):
         logger.debug(
@@ -358,18 +394,35 @@ class FOLHandler:
             )
             raise RuntimeError(f"EProver consistency check failed: {e}") from e
 
-    def fol_query(self, belief_set, query_formula_str: str) -> bool:
+    def fol_query(self, belief_set, query_formula_str: str):
         """
         Checks if a query is entailed by a belief base using the configured solver.
+
+        When the external solver is unavailable (binary absent, RuntimeError),
+        falls back to the in-JVM Tweety reasoner.  Returns a tuple
+        ``(entailed: bool, solver_fallback: bool)`` so callers can track
+        degradation.
         """
         logger.debug(f"Performing FOL query with solver: {settings.solver.value}")
 
         if settings.solver == SolverChoice.PROVER9:
-            return self._fol_query_with_prover9(belief_set, query_formula_str)
+            try:
+                return self._fol_query_with_prover9(belief_set, query_formula_str), False
+            except RuntimeError as e:
+                logger.warning(
+                    f"Prover9 unavailable ({e}), falling back to Tweety FOL query"
+                )
+                return self._fol_query_with_tweety(belief_set, query_formula_str), True
         elif settings.solver == SolverChoice.EPROVER:
-            return self._fol_query_with_eprover(belief_set, query_formula_str)
+            try:
+                return self._fol_query_with_eprover(belief_set, query_formula_str), False
+            except RuntimeError as e:
+                logger.warning(
+                    f"EProver unavailable ({e}), falling back to Tweety FOL query"
+                )
+                return self._fol_query_with_tweety(belief_set, query_formula_str), True
         else:
-            return self._fol_query_with_tweety(belief_set, query_formula_str)
+            return self._fol_query_with_tweety(belief_set, query_formula_str), False
 
     def _fol_query_with_prover9(self, belief_set, query_formula_str: str) -> bool:
         """
