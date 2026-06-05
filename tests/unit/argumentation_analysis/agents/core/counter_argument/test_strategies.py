@@ -404,10 +404,15 @@ class TestHelperGenerators:
         result = strategies._generate_analogy(arg)
         assert "path" in result.lower() or "detour" in result.lower()
 
-    def test_statistical_counter(self, strategies):
+    def test_statistical_counter_no_fabricated_stat(self, strategies):
+        """_generate_statistical_counter must not emit fabricated precise percentages."""
         arg = _make_argument()
         result = strategies._generate_statistical_counter(arg)
-        assert "15%" in result
+        # The template must describe the challenge schematically without inventing data
+        assert "statistical" in result.lower() or "counter" in result.lower()
+        # MUST NOT contain fabricated precise percentages (#960)
+        assert "15%" not in result
+        assert "template/placeholder" in result
 
     def test_fallback_counter(self, strategies):
         arg = _make_argument()

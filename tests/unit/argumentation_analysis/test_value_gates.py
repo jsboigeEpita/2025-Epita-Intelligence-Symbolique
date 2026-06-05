@@ -446,3 +446,108 @@ class TestFactExtractionValueGate:
                 f"Non-factual text produced high-confidence claim ({claim.confidence}): "
                 f"{claim.claim_text}"
             )
+
+
+# =====================================================================
+# 6. Counter-argument — no fabricated statistics (#960)
+# =====================================================================
+
+
+class TestCounterArgValueGate:
+    """Assert the statistical-counter strategy does not emit fabricated data.
+
+    The template fallback for statistical evidence must not invent specific
+    percentages and present them as findings. A regression that re-introduces
+    fabricated numbers must fail CI (#960, decision-B rule).
+    """
+
+    def test_statistical_counter_no_fabricated_percentage(self):
+        """_generate_statistical_counter must not contain invented percentages."""
+        from argumentation_analysis.agents.core.counter_argument.strategies import (
+            RhetoricalStrategies,
+        )
+        from argumentation_analysis.agents.core.counter_argument.definitions import (
+            Argument,
+            CounterArgumentType,
+            RhetoricalStrategy,
+        )
+
+        strategies = RhetoricalStrategies()
+        arg = Argument(
+            content="This policy always works.",
+            premises=["The data shows consistent results"],
+            conclusion="This policy always works",
+            argument_type="inductive",
+            confidence=0.8,
+        )
+
+        # Test via the full apply path (DIRECT_REFUTATION)
+        result = strategies.apply_strategy(
+            RhetoricalStrategy.STATISTICAL_EVIDENCE,
+            arg,
+            CounterArgumentType.DIRECT_REFUTATION,
+        )
+        assert isinstance(result, str)
+        assert len(result) > 0, "Statistical evidence strategy returned empty string"
+        # MUST NOT contain fabricated precise percentages
+        assert "15%" not in result, (
+            "Statistical counter still contains fabricated '15%' statistic (#960)"
+        )
+
+    def test_statistical_counter_tagged_as_template(self):
+        """Template-fallback output must be tagged as placeholder."""
+        from argumentation_analysis.agents.core.counter_argument.strategies import (
+            RhetoricalStrategies,
+        )
+        from argumentation_analysis.agents.core.counter_argument.definitions import (
+            Argument,
+        )
+
+        strategies = RhetoricalStrategies()
+        arg = Argument(
+            content="Test argument",
+            premises=["Test premise"],
+            conclusion="Test conclusion",
+            argument_type="deductive",
+            confidence=0.5,
+        )
+
+        result = strategies._generate_statistical_counter(arg)
+        assert "template/placeholder" in result, (
+            "Statistical template output must be tagged [template/placeholder] "
+            "so downstream consumers know it is not evidenced data (#960)"
+        )
+
+    def test_other_four_strategies_unchanged(self):
+        """The 4 non-statistical strategies must still produce non-empty output."""
+        from argumentation_analysis.agents.core.counter_argument.strategies import (
+            RhetoricalStrategies,
+        )
+        from argumentation_analysis.agents.core.counter_argument.definitions import (
+            Argument,
+            CounterArgumentType,
+            RhetoricalStrategy,
+        )
+
+        strategies = RhetoricalStrategies()
+        arg = Argument(
+            content="Tous les chats sont noirs.",
+            premises=["Tous les chats observés sont noirs"],
+            conclusion="Tous les chats sont noirs",
+            argument_type="deductive",
+            confidence=0.7,
+        )
+
+        non_stat_strategies = [
+            RhetoricalStrategy.SOCRATIC_QUESTIONING,
+            RhetoricalStrategy.REDUCTIO_AD_ABSURDUM,
+            RhetoricalStrategy.ANALOGICAL_COUNTER,
+            RhetoricalStrategy.AUTHORITY_APPEAL,
+        ]
+        for strat in non_stat_strategies:
+            result = strategies.apply_strategy(
+                strat, arg, CounterArgumentType.DIRECT_REFUTATION
+            )
+            assert isinstance(result, str) and len(result) > 0, (
+                f"Strategy {strat.name} returned empty output after #960 fix"
+            )
