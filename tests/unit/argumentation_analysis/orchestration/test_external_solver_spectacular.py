@@ -41,9 +41,9 @@ class TestExternalSolverSpectacular:
 
         wf = build_spectacular_workflow()
         # Canary: bump this when build_spectacular_workflow gains/loses a phase
-        # (catches an accidental dropped/duplicated phase). 28 incl. the L5
-        # external fol_solver + modal_solver phases.
-        assert len(wf.phases) == 28
+        # (catches an accidental dropped/duplicated phase). 29 incl. the L5
+        # external fol_solver + modal_solver phases + narrative_synthesis.
+        assert len(wf.phases) == 29
 
     def test_external_fol_solver_service_registered(self):
         from argumentation_analysis.orchestration.registry_setup import setup_registry
@@ -78,11 +78,13 @@ class TestExternalSolverSpectacular:
             "formulas": ["P(a)", "Q(b)"],
             "consistent": True,
             "solver": "eprover",
+            "degraded": False,
         }
         _write_external_fol_solver_to_state(output, state, {})
         assert state.fol_analysis_results == {
             "external_solver": "eprover",
             "external_consistent": True,
+            "external_degraded": False,
         }
 
     def test_external_modal_solver_state_writer(self):
@@ -96,11 +98,13 @@ class TestExternalSolverSpectacular:
             "formulas": ["[]p", "<>q"],
             "valid": True,
             "solver": "spass",
+            "degraded": False,
         }
         _write_external_modal_solver_to_state(output, state, {})
         assert state.modal_analysis_results == {
             "external_solver": "spass",
             "external_valid": True,
+            "external_degraded": False,
         }
 
     def test_invoke_external_fol_solver_fallback(self):

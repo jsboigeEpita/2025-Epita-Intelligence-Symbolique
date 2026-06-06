@@ -971,15 +971,17 @@ def _write_analysis_synthesis_to_state(
 def _write_external_fol_solver_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write external FOL solver results to UnifiedAnalysisState (#504)."""
+    """Write external FOL solver results to UnifiedAnalysisState (#504, #982)."""
     if not output or not isinstance(output, dict):
         return
     solver = output.get("solver", "none")
     consistent = output.get("consistent")
+    degraded = output.get("degraded", False)
     if isinstance(state, dict):
         state["external_fol_solver"] = {
             "solver": solver,
             "consistent": consistent,
+            "degraded": degraded,
         }
     else:
         if hasattr(state, "fol_analysis_results") and isinstance(
@@ -987,20 +989,23 @@ def _write_external_fol_solver_to_state(
         ):
             state.fol_analysis_results["external_solver"] = solver
             state.fol_analysis_results["external_consistent"] = consistent
+            state.fol_analysis_results["external_degraded"] = degraded
 
 
 def _write_external_modal_solver_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write external modal solver results to UnifiedAnalysisState (#504)."""
+    """Write external modal solver results to UnifiedAnalysisState (#504, #982)."""
     if not output or not isinstance(output, dict):
         return
     solver = output.get("solver", "none")
     valid = output.get("valid")
+    degraded = output.get("degraded", False)
     if isinstance(state, dict):
         state["external_modal_solver"] = {
             "solver": solver,
             "valid": valid,
+            "degraded": degraded,
         }
     else:
         if hasattr(state, "modal_analysis_results") and isinstance(
@@ -1008,6 +1013,7 @@ def _write_external_modal_solver_to_state(
         ):
             state.modal_analysis_results["external_solver"] = solver
             state.modal_analysis_results["external_valid"] = valid
+            state.modal_analysis_results["external_degraded"] = degraded
 
 
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
