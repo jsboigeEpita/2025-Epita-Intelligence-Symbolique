@@ -175,15 +175,15 @@ Verdict calibration:
 | Subsystem | Verdict | Value-Gate | Key Risk |
 |-----------|---------|-----------|----------|
 | Informal Fallacy | PARTIAL | ❌ | Taxonomy keyword-only, mock adapter fallback |
-| Dung/ASPIC | PARTIAL | ❌ | Python fallback = grounded only (10/11 semantics missing) |
+| Dung/ASPIC | PARTIAL | ✅ (4/4 PASS) | Python fallback = grounded only (10/11 semantics missing) |
 | FOL | PARTIAL | ❌ | Solver-dependent non-determinism |
 | PL | PARTIAL | ❌ | Heavy LLM dependency, JVM-only |
 | Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
 | Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
 | Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
 | Debate | PARTIAL | ✅ (2/2 PASS) | English-only scoring, dead protocol code |
-| Governance | PARTIAL | ❌ | Hardcoded conflict resolution, Kemeny O(n!) |
-| JTMS | PARTIAL | ❌ | networkx silent dependency, exponential ATMS |
+| Governance | PARTIAL | ✅ (3/3 PASS) | Hardcoded conflict resolution, Kemeny O(n!) |
+| JTMS | PARTIAL | ✅ (3/3 PASS) | networkx silent dependency, exponential ATMS |
 | Narrative Synthesis | **TRUSTWORTHY** | ✅ (3/3 PASS) | Template-only by design |
 | Fact Extraction | PARTIAL | ✅ (3/3 PASS) | LLM marker hallucination |
 
@@ -242,3 +242,4 @@ Verdict calibration:
 |------|--------|--------|
 | 2026-06-05 | myia-po-2023 | Initial verdict — all 24 subsystems audited |
 | 2026-06-06 | myia-po-2023 | Update: Modal UNTRUSTED→PARTIAL (#963), Counter-arg fix (#962), Satellites UNTRUSTED→PARTIAL (#964). 0 UNTRUSTED remaining. |
+| 2026-06-06 | myia-po-2023 | Value-gate coverage raised: Dung ✅, Governance ✅, JTMS ✅ (#965). Coverage: 9/12 core with value-gate tests. |
