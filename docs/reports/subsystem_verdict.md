@@ -72,10 +72,10 @@ Verdict calibration:
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `agents/core/logic/modal_handler.py`, `invoke_callables.py:5354-5438` |
-| **Produces** | Formula validation + query acceptance + KB consistency via Tweety SimpleMlReasoner. Heuristic fallback returns `valid: True` for ALL formulas. |
-| **Value-gate tests** | **YES** — `TestModalLogicValueGate` (2 tests, **both `@pytest.mark.xfail`** because heuristic fallback is vacuous, issue #941). |
-| **Blind spots** | (1) Heuristic fallback returns `valid: True` unconditionally — acknowledged as vacuous. (2) `is_modal_kb_consistent()` catches "no method found" JPype errors and returns `True` (assumes consistent) — silent correctness bug. (3) No pure-Python fallback for modal reasoning. |
-| **Verdict** | **UNTRUSTED** — JVM path works, but heuristic fallback is vacuous. xfail value-gate tests document the gap. KB consistency has silent false-negative bug. |
+| **Produces** | Formula validation + query acceptance + KB consistency via Tweety SimpleMlReasoner. Heuristic fallback reports `valid: None, solver: "unavailable"` — honest unavailability. |
+| **Value-gate tests** | **YES** — `TestModalLogicValueGate` (2 tests, **PASS** after #963). Asserts `valid is None` and `solver == "unavailable"`. |
+| **Blind spots** | (1) No pure-Python fallback for modal reasoning — only JVM path works. (2) `is_modal_kb_consistent()` returns `None` on "no method found" (honest, not vacuous True). |
+| **Verdict** | **PARTIAL** — JVM path works. Heuristic fallback is now honest unavailable (#963). KB consistency is honest unverified. |
 
 ### 6. Quality Evaluation (9 Virtues)
 
@@ -93,9 +93,9 @@ Verdict calibration:
 |--------|---------|
 | **Files** | `agents/core/counter_argument/counter_agent.py`, `strategies.py`, `evaluator.py`, `parser.py` |
 | **Produces** | `CounterArgument` dataclass with 5-criteria evaluation (relevance, logical_strength, persuasiveness, originality, clarity). 5 rhetorical strategies (reductio ad absurdum, counter-example, distinction, reformulation, concession). |
-| **Value-gate tests** | **NONE** in `test_value_gates.py`. |
-| **Blind spots** | (1) Strategy templates are hardcoded — `_generate_statistical_counter()` returns fabricated "15% of studied cases..." statistic. (2) LLM failure silently falls back to template. (3) `ArgumentParser` splits by `[.!?]+` regex — cannot handle abbreviations, decimal numbers. (4) `VulnerabilityAnalyzer._check_coherence()` checks keyword overlap only — trivially satisfied. |
-| **Verdict** | **PARTIAL** — Structure is complete (5 strategies + 5-criteria evaluator). But template fallback produces fabricated statistics. LLM path works when available. |
+| **Value-gate tests** | **YES** — `TestCounterArgValueGate` (3 tests, PASS). Asserts no fabricated "15%", template tag present, other 4 strategies unchanged. |
+| **Blind spots** | (1) LLM failure silently falls back to template. (2) `ArgumentParser` splits by `[.!?]+` regex — cannot handle abbreviations, decimal numbers. (3) `VulnerabilityAnalyzer._check_coherence()` checks keyword overlap only — trivially satisfied. |
+| **Verdict** | **PARTIAL** — Structure is complete (5 strategies + 5-criteria evaluator). Statistical template now marked as `[template/placeholder]` (#962). LLM path works when available. |
 
 ### 8. Debate Agent
 
@@ -154,14 +154,14 @@ Verdict calibration:
 | # | Brick | Handler | Real Logic | Tests | Fallback Quality | Verdict |
 |---|-------|---------|-----------|-------|-----------------|---------|
 | 1 | **SAT** | `sat_handler.py` | PySAT + Z3-MARCO | Dedicated (514 lines) | NONE (raises `RuntimeError` without PySAT) | **PARTIAL** |
-| 2 | **SetAF** | `setaf_handler.py` | Tweety JVM, 10 semantics | None | Degenerate: `args[:2]` | **UNTRUSTED** |
-| 3 | **Weighted** | `weighted_handler.py` | Tweety JVM, 6 semantics | None | Degenerate: `1.0/(i+1)` scoring | **UNTRUSTED** |
+| 2 | **SetAF** | `setaf_handler.py` | Tweety JVM, 10 semantics | Value-gate (#964) | Honest unavailable (#964) | **PARTIAL** |
+| 3 | **Weighted** | `weighted_handler.py` | Tweety JVM, 6 semantics | Value-gate (#964) | Honest unavailable (#964) | **PARTIAL** |
 | 4 | **EAF** | `eaf_handler.py` | Tweety JVM, 5 semantics | Integration only | Reasonable: subgraph enumeration with probability | **PARTIAL** |
-| 5 | **DeLP** | `delp_handler.py` | Tweety JVM, dialectical trees | None | Degenerate: all "undecided" | **UNTRUSTED** |
+| 5 | **DeLP** | `delp_handler.py` | Tweety JVM, dialectical trees | Value-gate (#964) | Honest unavailable (#964) | **PARTIAL** |
 | 6 | **QBF** | `qbf_handler.py` + `qbf_native.py` | JVM + native Python | Dedicated native + integration | Good: native fallback chain | **TRUSTWORTHY** |
 | 7 | **ABA** | `aba_handler.py` | Tweety JVM, 6 semantics | Mock (Track A) | Degenerate: empty extensions | **PARTIAL** |
 | 8 | **ADF** | `adf_handler.py` | Tweety JVM, 7 semantics | Mock (Track A) | Degenerate: empty interpretations | **PARTIAL** |
-| 9 | **Bipolar** | `bipolar_handler.py` | JVM metadata only (no reasoning) | Mock (Track A) | Degenerate: empty extensions | **UNTRUSTED** |
+| 9 | **Bipolar** | `bipolar_handler.py` | JVM metadata only (no reasoning) | Value-gate (#964) | Honest unavailable (#964) | **PARTIAL** |
 | 10 | **Probabilistic** | `probabilistic_handler.py` | Tweety JVM, subgraph enumeration | Mock (Track A) | Degenerate: all `0.5` | **PARTIAL** |
 | 11 | **Dialogue** | `dialogue_handler.py` | JVM grounded extension + simulated trace | Mock (Track A) + integration | Reasonable: simulated rounds | **PARTIAL** |
 | 12 | **Belief Revision** | `belief_revision_handler.py` | Tweety JVM, AGM (Dalal + Levi) | Extensive (Track A + spectacular + conversational + ATMS) | Degenerate: simple union (no contraction) | **PARTIAL** |
@@ -178,9 +178,9 @@ Verdict calibration:
 | Dung/ASPIC | PARTIAL | ❌ | Python fallback = grounded only (10/11 semantics missing) |
 | FOL | PARTIAL | ❌ | Solver-dependent non-determinism |
 | PL | PARTIAL | ❌ | Heavy LLM dependency, JVM-only |
-| Modal Logic | **UNTRUSTED** | ⚠️ (xfail) | Heuristic fallback vacuous, KB consistency false-negative |
+| Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
 | Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
-| Counter-Argument | PARTIAL | ❌ | Fabricated statistics in template fallback |
+| Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
 | Debate | PARTIAL | ✅ (2/2 PASS) | English-only scoring, dead protocol code |
 | Governance | PARTIAL | ❌ | Hardcoded conflict resolution, Kemeny O(n!) |
 | JTMS | PARTIAL | ❌ | networkx silent dependency, exponential ATMS |
@@ -192,14 +192,14 @@ Verdict calibration:
 | Brick | Verdict | Key Risk |
 |-------|---------|----------|
 | SAT | PARTIAL | RuntimeError without PySAT |
-| SetAF | **UNTRUSTED** | No test, degenerate fallback |
-| Weighted | **UNTRUSTED** | No test, degenerate fallback |
+| SetAF | PARTIAL | Honest unavailable (#964), JVM-dependent |
+| Weighted | PARTIAL | Honest unavailable (#964), JVM-dependent |
 | EAF | PARTIAL | Reasonable fallback, no unit test |
-| DeLP | **UNTRUSTED** | No test, all-undecided fallback |
+| DeLP | PARTIAL | Honest unavailable (#964), JVM-dependent |
 | QBF | **TRUSTWORTHY** | Native fallback chain works |
 | ABA | PARTIAL | Mock tests only, empty fallback |
 | ADF | PARTIAL | Mock tests only, empty fallback |
-| Bipolar | **UNTRUSTED** | JVM returns metadata only, no reasoning |
+| Bipolar | PARTIAL | Honest unavailable (#964), JVM-dependent |
 | Probabilistic | PARTIAL | All-0.5 fallback |
 | Dialogue | PARTIAL | Simulated trace, reasonable fallback |
 | Belief Revision | PARTIAL | Degenerate union fallback, extensive tests |
@@ -209,8 +209,8 @@ Verdict calibration:
 | Verdict | Core | Satellite | Total |
 |---------|------|-----------|-------|
 | **TRUSTWORTHY** | 2 (Quality, Narrative) | 1 (QBF) | **3** |
-| **PARTIAL** | 8 | 8 | **16** |
-| **UNTRUSTED** | 1 (Modal) | 3 (SetAF, Weighted, DeLP, Bipolar) | **4** |
+| **PARTIAL** | 10 | 12 | **22** |
+| **UNTRUSTED** | 0 | 0 | **0** |
 
 ---
 
@@ -218,9 +218,9 @@ Verdict calibration:
 
 ### Must-fix before spectacular reports
 
-1. **Modal heuristic** — The vacuous `valid: True` fallback must be flagged in any Phase 4 output. If JVM unavailable, report "Modal analysis unavailable" rather than vacuous confirmation.
-2. **Satellite UNTRUSTED bricks** (SetAF, Weighted, DeLP, Bipolar) — Either flag in output as "JVM-dependent, no fallback" or remove from pipeline when JVM unavailable.
-3. **Counter-argument fabricated statistics** — `_generate_statistical_counter()` invents "15%" — this must be clearly marked as template/placeholder output.
+1. ~~**Modal heuristic**~~ — ✅ Fixed (#963). Reports honest `valid: None, solver: "unavailable"`.
+2. ~~**Satellite UNTRUSTED bricks**~~ — ✅ Fixed (#964). All 4 report honest unavailable status with value-gate tests.
+3. ~~**Counter-argument fabricated statistics**~~ — ✅ Fixed (#962). Statistical template tagged `[template/placeholder]`, no invented percentages.
 
 ### Should-fix for credibility
 
@@ -241,3 +241,4 @@ Verdict calibration:
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-05 | myia-po-2023 | Initial verdict — all 24 subsystems audited |
+| 2026-06-06 | myia-po-2023 | Update: Modal UNTRUSTED→PARTIAL (#963), Counter-arg fix (#962), Satellites UNTRUSTED→PARTIAL (#964). 0 UNTRUSTED remaining. |

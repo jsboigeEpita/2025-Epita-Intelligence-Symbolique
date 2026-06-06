@@ -2657,14 +2657,19 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             handler.analyze_bipolar_framework, args, attacks, supports, fw_type
         )
     except Exception as e:
-        logger.info(f"Bipolar handler unavailable ({e}), using Python fallback")
+        logger.warning(
+            "Bipolar analysis unavailable: no JVM/Tweety handler could be loaded. "
+            "Reporting unverified status. (%s)", e,
+        )
         return {
             "framework_type": fw_type,
             "arguments": args,
             "attacks": attacks,
             "supports": supports,
-            "extensions": [args[:2]] if len(args) >= 2 else [args],
+            "extensions": None,
+            "solver": "unavailable",
             "fallback": "python",
+            "message": "Bipolar analysis unavailable: no solver could be loaded.",
         }
 
 
@@ -3233,13 +3238,18 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         handler = SetAFHandler(initializer)
         return await asyncio.to_thread(handler.analyze_setaf, args, attacks, semantics)
     except Exception as e:
-        logger.info(f"SetAF handler unavailable ({e}), using Python fallback")
+        logger.warning(
+            "SetAF analysis unavailable: no JVM/Tweety handler could be loaded. "
+            "Reporting unverified status. (%s)", e,
+        )
         return {
             "arguments": args,
             "set_attacks": attacks,
             "semantics": semantics,
-            "extensions": [args[:2]] if len(args) >= 2 else [args],
+            "extensions": None,
+            "solver": "unavailable",
             "fallback": "python",
+            "message": "SetAF analysis unavailable: no solver could be loaded.",
         }
 
 
@@ -3265,15 +3275,19 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             handler.analyze_weighted_framework, args, attacks, semantics
         )
     except Exception as e:
-        logger.info(f"Weighted handler unavailable ({e}), using Python fallback")
-        scores = {a: round(1.0 / (i + 1), 4) for i, a in enumerate(args)}
+        logger.warning(
+            "Weighted AF analysis unavailable: no JVM/Tweety handler could be loaded. "
+            "Reporting unverified status. (%s)", e,
+        )
         return {
             "arguments": args,
             "weighted_attacks": attacks,
             "semantics": semantics,
-            "scores": scores,
-            "extensions": [args[:2]] if len(args) >= 2 else [args],
+            "scores": None,
+            "extensions": None,
+            "solver": "unavailable",
             "fallback": "python",
+            "message": "Weighted AF analysis unavailable: no solver could be loaded.",
         }
 
 
@@ -3541,13 +3555,18 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             handler.analyze_delp, program_text, queries, criterion
         )
     except Exception as e:
-        logger.info(f"DeLP handler unavailable ({e}), using Python fallback")
+        logger.warning(
+            "DeLP analysis unavailable: no JVM/Tweety handler could be loaded. "
+            "Reporting unverified status. (%s)", e,
+        )
         return {
             "program": program_text[:200],
             "queries": queries,
             "criterion": criterion,
-            "results": {q: "undecided" for q in queries} if queries else {},
+            "results": None,
+            "solver": "unavailable",
             "fallback": "python",
+            "message": "DeLP analysis unavailable: no solver could be loaded.",
         }
 
 
