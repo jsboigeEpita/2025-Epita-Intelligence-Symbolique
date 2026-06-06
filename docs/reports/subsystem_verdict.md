@@ -44,7 +44,7 @@ Verdict calibration:
 | **Files** | `agents/core/logic/dung_native.py`, `af_handler.py`, `aspic_handler.py`, `invoke_callables.py:5441-5645` |
 | **Produces** | Dung: up to 11 semantics (grounded/preferred/stable/complete/admissible/etc.) via Tweety JVM. Pure-Python fallback computes grounded extension via iterative fixpoint. ASPIC: structured argumentation with rule-based inference. |
 | **Value-gate tests** | **NONE** in `test_value_gates.py`. |
-| **Blind spots** | (1) Python fallback (`_python_dung_fallback`) only computes grounded — 10 other semantics unavailable without JVM. (2) `dung_native.py` framework_properties() DFS cycle detection has variable shadowing bug (`_` used in loop then unpack). (3) Exponential subset enumeration for preferred/stable — no size guard. (4) ASPIC requires JVM, no pure-Python fallback. |
+| **Blind spots** | (1) Python fallback (`_python_dung_fallback`) only computes grounded — 10 other semantics unavailable without JVM. (2) ~~`dung_native.py` framework_properties() DFS cycle detection has variable shadowing bug~~ — **FIXED (#970)**: rewritten to use `attacked_by()` adjacency. (3) ~~Exponential subset enumeration for preferred/stable — no size guard~~ — **FIXED (#970)**: `RuntimeError` raised above `_MAX_ENUM_ARGS=15`, grounded still works. (4) ASPIC requires JVM, no pure-Python fallback. |
 | **Verdict** | **PARTIAL** — Pure-Python grounded is real fixpoint. JVM path produces 11 semantics. Missing: value-gate tests, size guard, ASPIC fallback. |
 
 ### 3. FOL (First-Order Logic)
@@ -175,7 +175,7 @@ Verdict calibration:
 | Subsystem | Verdict | Value-Gate | Key Risk |
 |-----------|---------|-----------|----------|
 | Informal Fallacy | PARTIAL | ❌ | Taxonomy keyword-only, mock adapter fallback |
-| Dung/ASPIC | PARTIAL | ✅ (4/4 PASS) | Python fallback = grounded only (10/11 semantics missing) |
+| Dung/ASPIC | PARTIAL | ✅ (9/9 PASS) | ~~DFS shadowing + no size guard~~ FIXED (#970), Python fallback = grounded only |
 | FOL | PARTIAL | ❌ | Solver-dependent non-determinism |
 | PL | PARTIAL | ❌ | Heavy LLM dependency, JVM-only |
 | Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
@@ -244,3 +244,4 @@ Verdict calibration:
 | 2026-06-06 | myia-po-2023 | Update: Modal UNTRUSTED→PARTIAL (#963), Counter-arg fix (#962), Satellites UNTRUSTED→PARTIAL (#964). 0 UNTRUSTED remaining. |
 | 2026-06-06 | myia-po-2023 | Value-gate coverage raised: Dung ✅, Governance ✅, JTMS ✅ (#965). Coverage: 9/12 core with value-gate tests. |
 | 2026-06-06 | myia-po-2023 | Debate scoring i18n: EN+FR connectors bilingue (#967). Value-gate: 5/5 PASS. |
+| 2026-06-06 | myia-po-2023 | Dung DFS shadowing fixed + exponential guard (#970). Value-gate: 9/9 PASS. |
