@@ -33,9 +33,9 @@ Verdict calibration:
 |--------|---------|
 | **Files** | `agents/core/informal/informal_agent.py`, `taxonomy_sophism_detector.py`, `informal_agent_adapter.py` |
 | **Produces** | `List[Dict]` with `nom`, `justification`, `confidence`. Three tiers: (1) LLM semantic analysis via SK, (2) lexical taxonomy matching (keyword→fallacy name), (3) adapter mock fallback |
-| **Value-gate tests** | **NONE** in `test_value_gates.py`. Brick-health (#944) checks presence only. |
-| **Blind spots** | (1) Taxonomy detector uses naive substring matching — cannot detect a genuine *ad hominem* unless "ad hominem" literally appears in text. (2) Adapter fallback (`informal_agent_adapter.py:111-126`) uses mock objects — returns test doubles, not analysis. (3) `analyze_rhetoric()` and `analyze_context()` are commented out (never implemented in BaseAgent version). |
-| **Verdict** | **PARTIAL** — Tier 1 (LLM) works when SK kernel available; Tier 2 (taxonomy) is keyword-only; Tier 3 (adapter) is mock. No value-gate test. |
+| **Value-gate tests** | **YES** — `TestInformalTaxonomyValueGate` (3 tests, PASS). Asserts detector fires on literal `nom_vulgarisé`, returns empty on paraphrase, and confidence ≥0.7 on match. |
+| **Blind spots** | (1) Taxonomy detector uses naive substring matching — fires only when `nom_vulgarisé` or `Name` literally appears in text. Entries with `nan` nom_vulgarisé (e.g. "Ad hominem" PK=1360) only get 0.1 per description keyword — below the 0.3 threshold. Value-gate test **pins this**: fires on "trouver des excuses" (has nom_vulgarisé), empty on paraphrase. (2) Adapter fallback (`informal_agent_adapter.py:111-126`) uses mock objects — returns test doubles, not analysis. (3) `analyze_rhetoric()` and `analyze_context()` are commented out (never implemented in BaseAgent version). |
+| **Verdict** | **PARTIAL** — Tier 1 (LLM) works when SK kernel available; Tier 2 (taxonomy) is substring-literal, now honestly characterised by value-gate tests (#973); Tier 3 (adapter) is mock. Coverage: 10/12 core subsystems. |
 
 ### 2. Dung/ASPIC Abstract Argumentation
 
@@ -174,7 +174,7 @@ Verdict calibration:
 
 | Subsystem | Verdict | Value-Gate | Key Risk |
 |-----------|---------|-----------|----------|
-| Informal Fallacy | PARTIAL | ❌ | Taxonomy keyword-only, mock adapter fallback |
+| Informal Fallacy | PARTIAL | ✅ (3/3 PASS) | Taxonomy substring-literal honestly characterised (#973), mock adapter fallback |
 | Dung/ASPIC | PARTIAL | ✅ (9/9 PASS) | ~~DFS shadowing + no size guard~~ FIXED (#970), Python fallback = grounded only |
 | FOL | PARTIAL | ❌ | Solver-dependent non-determinism |
 | PL | PARTIAL | ❌ | Heavy LLM dependency, JVM-only |
@@ -246,3 +246,4 @@ Verdict calibration:
 | 2026-06-06 | myia-po-2023 | Debate scoring i18n: EN+FR connectors bilingue (#967). Value-gate: 5/5 PASS. |
 | 2026-06-06 | myia-po-2023 | Dung DFS shadowing fixed + exponential guard (#970). Value-gate: 9/9 PASS. |
 | 2026-06-06 | myia-po-2023 | Governance fabricated probs → None (#971), Kemeny-Young Copeland fallback (#971). Value-gate: 9/9 PASS. |
+| 2026-06-06 | myia-po-2023 | Informal taxonomy value-gate: 3/3 PASS (#973). Coverage 10/12 core. Substring limitation honestly pinned. |

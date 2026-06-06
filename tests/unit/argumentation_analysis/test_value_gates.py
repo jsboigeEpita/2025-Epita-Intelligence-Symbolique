@@ -14,6 +14,8 @@ Philosophy (from #944 harness):
 Privacy: synthetic argument text only, opaque IDs, no raw_text/full_text.
 """
 
+import logging
+
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
@@ -1281,3 +1283,89 @@ class TestKemenyYoungSafeFallback:
 
         with pytest.raises(ValueError, match="impractical"):
             kemeny_young(ballots, options)
+
+
+# ============================================================
+# #973 (FB-16) — Informal Fallacy: substrate-literal taxonomy value-gate
+# ============================================================
+
+
+class TestInformalTaxonomyValueGate:
+    """Value-gate: taxonomy detector fires on literal fallacy names, empty on paraphrase.
+
+    The TaxonomySophismDetector uses substring matching (nom_vulgarisé/text_fr
+    in text_lower). It genuinely detects fallacies when their canonical name
+    appears literally, but returns near-empty on paraphrased descriptions.
+    Both behaviours are REAL and must be pinned by tests — not hidden (#973).
+    """
+
+    @pytest.fixture(autouse=True)
+    def _init_detector(self):
+        """Create a TaxonomySophismDetector with a mock kernel."""
+        from unittest.mock import MagicMock
+
+        from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import (
+            TaxonomySophismDetector,
+        )
+        from argumentation_analysis.agents.core.informal.informal_definitions import (
+            InformalAnalysisPlugin,
+        )
+
+        kernel = MagicMock()
+        plugin = InformalAnalysisPlugin(kernel=kernel)
+        self.detector = TaxonomySophismDetector.__new__(TaxonomySophismDetector)
+        self.detector.plugin = plugin
+        self.detector._taxonomy_cache = None
+        self.detector.logger = logging.getLogger("TestInformal")
+
+    def test_fires_on_literal_fallacy_name(self):
+        """Detector MUST find a fallacy when its nom_vulgarisé appears literally.
+
+        Uses 'trouver des excuses' (PK=62, nom_vulgarisé='Trouver des excuses')
+        which has a non-empty nom_vulgarisé — the substring match fires.
+        """
+        text = (
+            "Il ne fait que trouver des excuses pour ne pas admettre "
+            "qu'il avait tort depuis le début."
+        )
+        results = self.detector.detect_sophisms_from_taxonomy(text)
+        assert len(results) >= 1, (
+            f"Detector should find ≥1 fallacy when 'trouver des excuses' appears "
+            f"literally, got {len(results)} results (#973)."
+        )
+        # Verify the detection method is taxonomy lexical
+        assert any(r.get("detection_method") == "taxonomy_lexical" for r in results), (
+            f"Expected 'taxonomy_lexical' detection method, got "
+            f"{[r.get('detection_method') for r in results]} (#973)."
+        )
+
+    def test_empty_on_paraphrased_description(self):
+        """Detector MUST return empty when fallacy is described without its name.
+
+        A paraphrased excuse-making (without 'trouver des excuses') should not
+        match. This pins the substring limitation — not a bug, just the
+        detector's scope.
+        """
+        text = (
+            "Au lieu de reconnaître son erreur, il a préféré tourner "
+            "autour du pot et éviter le sujet."
+        )
+        results = self.detector.detect_sophisms_from_taxonomy(text)
+        assert len(results) == 0, (
+            f"Detector should return 0 on paraphrased text (no literal fallacy name), "
+            f"got {len(results)}: {[r.get('nom_vulgarise','') for r in results]}. "
+            f"This characterises the substring limitation (#973)."
+        )
+
+    def test_nom_vulgarise_match_confidence(self):
+        """nom_vulgarisé match contributes ≥0.7 confidence (crosses 0.3 threshold)."""
+        text = "C'est de l'inertie mentale pure."
+        results = self.detector.detect_sophisms_from_taxonomy(text)
+        assert len(results) >= 1, (
+            f"Detector should find 'inertie mentale' (nom_vulgarisé match), "
+            f"got {len(results)} results (#973)."
+        )
+        assert any(r.get("confidence", 0) >= 0.7 for r in results), (
+            f"nom_vulgarisé match should contribute ≥0.7 confidence, "
+            f"got {[r.get('confidence') for r in results]} (#973)."
+        )
