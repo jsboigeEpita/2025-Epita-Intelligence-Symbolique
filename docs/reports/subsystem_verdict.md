@@ -51,21 +51,21 @@ Verdict calibration:
 
 | Aspect | Finding |
 |--------|---------|
-| **Files** | `agents/core/logic/fol_handler.py`, `invoke_callables.py:4896-5350` |
-| **Produces** | Consistency check + query entailment via 3-solver chain: Prover9 → EProver → Tweety SimpleFolReasoner. Per-formula isolation (PR #954 fix). Fallback flag `solver_fallback` (PR #955). |
-| **Value-gate tests** | **NONE** in `test_value_gates.py`. |
-| **Blind spots** | (1) Solver fallback chain: same call silently produces different results depending on which binary is installed. (2) Tweety SimpleFolReasoner is incomplete — cannot decide all FOL consequences. (3) `create_belief_set_from_string()` blocks event loop (synchronous). (4) No FOL agent wrapper — raw service, not integrated into agent architecture. |
-| **Verdict** | **PARTIAL** — Per-formula isolation fixed (#954). Solver fallback wired (#955). But solver-dependent non-determinism and incomplete prover remain. |
+| **Files** | `agents/core/logic/fol_handler.py`, `invoke_callables.py:4915-5324` |
+| **Produces** | Consistency check + query entailment via 3-solver chain: Prover9 → EProver → Tweety SimpleFolReasoner. Per-formula isolation (PR #954 fix). Fallback flag `solver_fallback` (PR #955). Python fallback returns `fallback: "python"` with template `Asserted(argN)` predicates or NL-to-logic translations. |
+| **Value-gate tests** | **YES** — `TestFOLValueGate` (3 tests, **PASS** after #976). Asserts: (1) fallback='python' and consistent=False when Fallacious predicates present, (2) formulas are predicate-shaped (not zero/degenerate), (3) consistent is real bool when Tweety available. |
+| **Blind spots** | (1) Solver fallback chain: same call silently produces different results depending on which binary is installed. (2) Tweety SimpleFolReasoner is incomplete — cannot decide all FOL consequences. (3) NL-to-logic fallback produces structured formulas even without Tweety — fallback is honest but not verified. (4) `consistent` field in Python fallback may be `not has_fallacious` — a weak heuristic. |
+| **Verdict** | **PARTIAL** — Per-formula isolation fixed (#954). Solver fallback wired (#955). Value-gate regression guard added (#976). Solver-dependent non-determinism and incomplete prover remain. |
 
 ### 4. PL (Propositional Logic)
 
 | Aspect | Finding |
 |--------|---------|
-| **Files** | `agents/core/logic/propositional_logic_agent.py` |
-| **Produces** | `PropositionalBeliefSet` with declared propositions + formula strings, validated by Tweety. Query execution returns entailment via Tweety PL reasoner. |
-| **Value-gate tests** | **NONE** in `test_value_gates.py`. |
+| **Files** | `agents/core/logic/propositional_logic_agent.py`, `invoke_callables.py:4514-4912` |
+| **Produces** | `PropositionalBeliefSet` with declared propositions + formula strings, validated by Tweety. 2-pass coordinated pipeline: Pass 1 extracts shared atom inventory, Pass 2 generates per-argument formulas. Python fallback returns `fallback: "python"` with template pN variables or NL-to-logic translations. |
+| **Value-gate tests** | **YES** — `TestPLValueGate` (3 tests, **PASS** after #977). Asserts: (1) fallback='python' and satisfiable is bool when Tweety unavailable, (2) formulas contain PL operators or template vars (not zero/degenerate), (3) satisfiable is real bool when Tweety available. |
 | **Blind spots** | (1) Heavy LLM dependency — 2 LLM calls (propositions + formulas) with JSON parsing, 3 retries on failure. (2) `_filter_formulas()` silently drops LLM-invented propositional symbols without notification. (3) Only Tweety backend — no multi-solver chain like FOL. (4) Requires JVM. |
-| **Verdict** | **PARTIAL** — Produces real PL analysis when JVM+LLM available. LLM dependency is fragile. No value-gate test. |
+| **Verdict** | **PARTIAL** — Produces real PL analysis when JVM+LLM available. Value-gate regression guard added (#977). LLM dependency is fragile but honest. |
 
 ### 5. Modal Logic
 
@@ -176,8 +176,8 @@ Verdict calibration:
 |-----------|---------|-----------|----------|
 | Informal Fallacy | PARTIAL | ✅ (3/3 PASS) | Taxonomy substring-literal honestly characterised (#973), mock adapter fallback |
 | Dung/ASPIC | PARTIAL | ✅ (9/9 PASS) | ~~DFS shadowing + no size guard~~ FIXED (#970), Python fallback = grounded only |
-| FOL | PARTIAL | ❌ | Solver-dependent non-determinism |
-| PL | PARTIAL | ❌ | Heavy LLM dependency, JVM-only |
+| FOL | PARTIAL | ✅ (3/3 PASS) | Solver-dependent non-determinism, value-gate added (#976) |
+| PL | PARTIAL | ✅ (3/3 PASS) | Heavy LLM dependency, JVM-only, value-gate added (#977) |
 | Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
 | Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
 | Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
@@ -247,3 +247,4 @@ Verdict calibration:
 | 2026-06-06 | myia-po-2023 | Dung DFS shadowing fixed + exponential guard (#970). Value-gate: 9/9 PASS. |
 | 2026-06-06 | myia-po-2023 | Governance fabricated probs → None (#971), Kemeny-Young Copeland fallback (#971). Value-gate: 9/9 PASS. |
 | 2026-06-06 | myia-po-2023 | Informal taxonomy value-gate: 3/3 PASS (#973). Coverage 10/12 core. Substring limitation honestly pinned. |
+| 2026-06-06 | myia-po-2023 | FOL + PL value-gate regression guards (#976 #977). Coverage: 12/12 core with value-gate tests. |
