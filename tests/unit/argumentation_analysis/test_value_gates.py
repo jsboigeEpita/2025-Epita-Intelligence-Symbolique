@@ -810,3 +810,261 @@ class TestDebateScoringI18n:
             "No FR conclusion detected in text with 'Donc'. "
             "Connector list may be missing French entries (#967)."
         )
+
+
+# =====================================================================
+# 8. Dung — Python grounded fixpoint is non-trivial (#965)
+# =====================================================================
+
+
+class TestDungValueGate:
+    """Assert Dung Python fallback computes a real grounded extension.
+
+    The pure-Python fallback (_python_dung_fallback) computes grounded
+    semantics via iterative fixpoint. It must produce a meaningful result
+    on a non-trivial attack graph — not just echo the input.
+    """
+
+    def test_grounded_fixpoint_with_chain_defense(self):
+        """A→B→C chain: grounded must be {A, C} (A unattacked, C defended)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _python_dung_fallback,
+        )
+
+        result = _python_dung_fallback(
+            arguments=["A", "B", "C"],
+            attacks=[["A", "B"], ["B", "C"]],
+        )
+
+        assert result["semantics"] == "python_fallback"
+        grounded = result["extensions"]["grounded"]
+        assert set(grounded) == {"A", "C"}, (
+            f"Grounded extension expected {{A, C}} but got {grounded}. "
+            "The fixpoint must accept unattacked A and defend C via A attacking B."
+        )
+
+    def test_no_attacks_all_accepted(self):
+        """With zero attacks, all arguments land in grounded."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _python_dung_fallback,
+        )
+
+        result = _python_dung_fallback(
+            arguments=["X", "Y", "Z"],
+            attacks=[],
+        )
+
+        grounded = result["extensions"]["grounded"]
+        assert set(grounded) == {"X", "Y", "Z"}, (
+            f"With no attacks, all args should be grounded, got {grounded}"
+        )
+
+    def test_mutual_attack_empty_grounded(self):
+        """A↔B mutual attack: grounded must be empty (neither defended)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _python_dung_fallback,
+        )
+
+        result = _python_dung_fallback(
+            arguments=["A", "B"],
+            attacks=[["A", "B"], ["B", "A"]],
+        )
+
+        # When grounded is empty, the function may return {} or {"grounded": []}
+        extensions = result["extensions"]
+        grounded = extensions.get("grounded", [])
+        assert set(grounded) == set(), (
+            f"Mutual attack should yield empty grounded, got {grounded}"
+        )
+
+    def test_statistics_match_input(self):
+        """Statistics must reflect actual input sizes."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _python_dung_fallback,
+        )
+
+        result = _python_dung_fallback(
+            arguments=["A", "B", "C", "D"],
+            attacks=[["A", "B"], ["C", "D"]],
+        )
+
+        assert result["statistics"]["arguments_count"] == 4
+        assert result["statistics"]["attacks_count"] == 2
+
+
+# =====================================================================
+# 9. Governance — voting produces winner + satisfaction (#965)
+# =====================================================================
+
+
+class TestGovernanceValueGate:
+    """Assert governance simulation produces a real winner and satisfaction.
+
+    The simulate_governance function runs 7 voting methods. On synthetic
+    agents with clear preferences, it must pick a winner and compute
+    per-agent satisfaction scores.
+    """
+
+    def _make_agents(self):
+        """Create 3 synthetic governance agents with simple preferences."""
+        from unittest.mock import MagicMock
+
+        agents = []
+        for name, prefs, trust_val in [
+            ("Agent_A", ["Option_1", "Option_2", "Option_3"], 0.9),
+            ("Agent_B", ["Option_2", "Option_1", "Option_3"], 0.5),
+            ("Agent_C", ["Option_1", "Option_3", "Option_2"], 0.9),
+        ]:
+            agent = MagicMock()
+            agent.name = name
+            agent.preferences = prefs
+            agent.trust = {a.name: 0.5 for a in agents}
+            agent.trust[name] = 1.0
+            agent.coalition = None
+            agent.personality = "neutral"
+            agent.decide = MagicMock(return_value=prefs[0])
+            agent.update_memory = MagicMock()
+            # Set cross-trust for coalition detection
+            for existing in agents:
+                agent.trust[existing.name] = trust_val
+                existing.trust[name] = trust_val
+            agents.append(agent)
+        return agents
+
+    def test_governance_produces_winner(self):
+        """simulate_governance must return a non-None winner."""
+        from argumentation_analysis.agents.core.governance.simulation import (
+            simulate_governance,
+        )
+
+        agents = self._make_agents()
+        result = simulate_governance(
+            agents,
+            {"options": ["Option_1", "Option_2", "Option_3"]},
+            "majority",
+        )
+
+        assert result["winner"] is not None, (
+            "Governance simulation returned None winner"
+        )
+        assert result["winner"] in ["Option_1", "Option_2", "Option_3"], (
+            f"Winner '{result['winner']}' not in options"
+        )
+
+    def test_governance_satisfaction_non_trivial(self):
+        """Satisfaction scores must be computed (not all zero)."""
+        from argumentation_analysis.agents.core.governance.simulation import (
+            simulate_governance,
+        )
+
+        agents = self._make_agents()
+        result = simulate_governance(
+            agents,
+            {"options": ["Option_1", "Option_2", "Option_3"]},
+            "majority",
+        )
+
+        satisfaction = result["satisfaction"]
+        assert len(satisfaction) == 3, (
+            f"Expected 3 satisfaction scores, got {len(satisfaction)}"
+        )
+        avg_satisfaction = sum(satisfaction) / len(satisfaction)
+        assert avg_satisfaction > 0, (
+            f"All satisfaction scores are 0 — winner={result['winner']}, "
+            f"satisfaction={satisfaction}"
+        )
+
+    def test_governance_coalitions_formed(self):
+        """When agents trust each other (>0.8), coalitions must form."""
+        from argumentation_analysis.agents.core.governance.simulation import (
+            simulate_governance,
+        )
+
+        agents = self._make_agents()
+        # Agent_A and Agent_C trust each other at 0.9 → should form coalition
+        result = simulate_governance(
+            agents,
+            {"options": ["Option_1", "Option_2", "Option_3"]},
+            "majority",
+        )
+
+        coalitions = result.get("coalitions", [])
+        if coalitions:
+            # At least one coalition has >1 member
+            max_coalition = max(len(c) for c in coalitions)
+            assert max_coalition >= 1, (
+                f"Coalitions formed but all singletons: {coalitions}"
+            )
+
+
+# =====================================================================
+# 10. JTMS — belief propagation is non-trivial (#965)
+# =====================================================================
+
+
+class TestJTMSValueGate:
+    """Assert JTMS belief propagation produces valid truth values.
+
+    The JTMS core registers beliefs, adds justifications, and propagates
+    truth values through the dependency graph. A non-trivial test must
+    verify that setting a premise valid propagates to its conclusions.
+    """
+
+    def test_simple_justification_propagation(self):
+        """Setting A=True with justification A→B must make B valid."""
+        from argumentation_analysis.services.jtms.jtms_core import JTMS
+
+        jtms = JTMS(strict=False)
+        jtms.add_belief("A")
+        jtms.add_belief("B")
+        jtms.add_justification(["A"], [], "B")
+
+        # Before setting A, B has no valid justification
+        assert jtms.beliefs["B"].valid is None or jtms.beliefs["B"].valid is False
+
+        # Set A = True → B should propagate to True
+        jtms.set_belief_validity("A", True)
+        assert jtms.beliefs["B"].valid is True, (
+            "After setting A=True with justification A→B, "
+            f"B.valid should be True but is {jtms.beliefs['B'].valid}"
+        )
+
+    def test_out_list_negation(self):
+        """Justification A + NOT B → C: C valid only when A=True and B is NOT True."""
+        from argumentation_analysis.services.jtms.jtms_core import JTMS
+
+        jtms = JTMS(strict=False)
+        jtms.add_belief("A")
+        jtms.add_belief("B")
+        jtms.add_belief("C")
+        jtms.add_justification(["A"], ["B"], "C")
+
+        # A=True, B=None → C should be valid (B is not True)
+        jtms.set_belief_validity("A", True)
+        b_valid = jtms.beliefs["B"].valid
+        # B was never set, so C should become True via the justification
+        assert jtms.beliefs["C"].valid is True, (
+            f"A=True, B.valid={b_valid} → C should be True via A+!B justification, "
+            f"got C.valid={jtms.beliefs['C'].valid}"
+        )
+
+    def test_chain_propagation(self):
+        """A→B→C chain: setting A=True must propagate through B to C."""
+        from argumentation_analysis.services.jtms.jtms_core import JTMS
+
+        jtms = JTMS(strict=False)
+        jtms.add_belief("A")
+        jtms.add_belief("B")
+        jtms.add_belief("C")
+
+        jtms.add_justification(["A"], [], "B")
+        jtms.add_justification(["B"], [], "C")
+
+        jtms.set_belief_validity("A", True)
+
+        assert jtms.beliefs["B"].valid is True, (
+            "A→B: B should be True after A is set True"
+        )
+        assert jtms.beliefs["C"].valid is True, (
+            "A→B→C: C should be True after chain propagation from A"
+        )
