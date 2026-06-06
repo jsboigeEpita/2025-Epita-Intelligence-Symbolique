@@ -20,6 +20,11 @@ from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 
 logger = logging.getLogger("DungNative")
 
+# Maximum argument count for exponential enumeration semantics.
+# Beyond this threshold, only grounded (polynomial) is computed;
+# other semantics report honest unavailability (#970).
+_MAX_ENUM_ARGS = 15
+
 
 class DungFramework:
     """Pure-Python implementation of Dung's argumentation framework.
@@ -104,7 +109,16 @@ class DungFramework:
         """Compute all admissible sets.
 
         A set S is admissible iff it is conflict-free and defends all its members.
+
+        Raises RuntimeError if the framework has more than _MAX_ENUM_ARGS arguments
+        (exponential enumeration would be too costly).
         """
+        if len(self.arguments) > _MAX_ENUM_ARGS:
+            raise RuntimeError(
+                f"Framework has {len(self.arguments)} arguments, exceeding "
+                f"enumeration limit ({_MAX_ENUM_ARGS}). Admissible sets "
+                f"computation is unavailable — use grounded_extension() instead. (#970)"
+            )
         result = [frozenset()]  # empty set is always admissible
         args_list = sorted(self.arguments)
 
@@ -144,7 +158,15 @@ class DungFramework:
 
         A set S is stable iff it is conflict-free and attacks every argument
         not in S.
+
+        Raises RuntimeError if the framework has more than _MAX_ENUM_ARGS arguments.
         """
+        if len(self.arguments) > _MAX_ENUM_ARGS:
+            raise RuntimeError(
+                f"Framework has {len(self.arguments)} arguments, exceeding "
+                f"enumeration limit ({_MAX_ENUM_ARGS}). Stable extensions "
+                f"computation is unavailable. (#970)"
+            )
         result = []
         args_list = sorted(self.arguments)
 
@@ -192,7 +214,7 @@ class DungFramework:
 
     def framework_properties(self) -> Dict:
         """Compute framework properties (pure Python, no JVM)."""
-        # Detect cycles using DFS
+        # Detect cycles using DFS — iterate adjacency, not all attacks (#970)
         has_cycle = False
         visited = set()
         rec_stack = set()
@@ -200,13 +222,13 @@ class DungFramework:
         def _dfs(node: str) -> bool:
             visited.add(node)
             rec_stack.add(node)
-            for _, tgt in self.attacks:
-                if _ == node:
-                    if tgt in rec_stack:
+            # Build adjacency: targets attacked by node (outgoing edges)
+            for tgt in self.attacked_by(node):
+                if tgt in rec_stack:
+                    return True
+                if tgt not in visited:
+                    if _dfs(tgt):
                         return True
-                    if tgt not in visited:
-                        if _dfs(tgt):
-                            return True
             rec_stack.discard(node)
             return False
 

@@ -1068,3 +1068,99 @@ class TestJTMSValueGate:
         assert jtms.beliefs["C"].valid is True, (
             "A→B→C: C should be True after chain propagation from A"
         )
+
+
+# ============================================================
+# #970 (FB-14) — Dung DFS shadowing + exponential guard
+# ============================================================
+
+
+class TestDungDFSCycleDetection:
+    """Value-gate: framework_properties() must correctly detect cycles.
+
+    The old DFS iterated ALL attacks and used `_` as loop variable then
+    compared `_ == node` — this was shadowing the convention and also
+    iterating the entire attack set per node. After #970, it uses
+    attacked_by() for proper adjacency.
+    """
+
+    def test_triangle_cycle_detected(self):
+        """3-cycle (a→b→c→a) must report has_cycles=True."""
+        from argumentation_analysis.agents.core.logic.dung_native import DungFramework
+
+        fw = DungFramework.triangle()
+        props = fw.framework_properties()
+        assert props["has_cycles"] is True, (
+            f"Triangle framework should have cycles, got {props['has_cycles']} (#970)."
+        )
+
+    def test_acyclic_no_false_cycle(self):
+        """Reinstatement (a→b→c, no back-edge) must report has_cycles=False."""
+        from argumentation_analysis.agents.core.logic.dung_native import DungFramework
+
+        fw = DungFramework.reinstatement()
+        props = fw.framework_properties()
+        assert props["has_cycles"] is False, (
+            f"Reinstatement framework should NOT have cycles, got {props['has_cycles']} (#970)."
+        )
+
+
+class TestDungExponentialGuard:
+    """Value-gate: exponential enumeration must raise above threshold.
+
+    Beyond _MAX_ENUM_ARGS, admissible/stable must raise RuntimeError
+    with an honest message — not silently blow up or return fake data.
+    """
+
+    def test_admissible_raises_above_threshold(self):
+        """Admissible sets must raise RuntimeError for large frameworks."""
+        from argumentation_analysis.agents.core.logic.dung_native import (
+            DungFramework,
+            _MAX_ENUM_ARGS,
+        )
+
+        fw = DungFramework()
+        for i in range(_MAX_ENUM_ARGS + 5):
+            fw.add_argument(f"arg_{i}")
+            if i > 0:
+                fw.add_attack(f"arg_{i-1}", f"arg_{i}")
+
+        with pytest.raises(RuntimeError, match="enumeration limit"):
+            fw.admissible_sets()
+
+    def test_stable_raises_above_threshold(self):
+        """Stable extensions must raise RuntimeError for large frameworks."""
+        from argumentation_analysis.agents.core.logic.dung_native import (
+            DungFramework,
+            _MAX_ENUM_ARGS,
+        )
+
+        fw = DungFramework()
+        for i in range(_MAX_ENUM_ARGS + 5):
+            fw.add_argument(f"arg_{i}")
+
+        with pytest.raises(RuntimeError, match="enumeration limit"):
+            fw.stable_extensions()
+
+    def test_grounded_works_above_threshold(self):
+        """Grounded (polynomial) must still work above the exponential limit."""
+        from argumentation_analysis.agents.core.logic.dung_native import (
+            DungFramework,
+            _MAX_ENUM_ARGS,
+        )
+
+        fw = DungFramework()
+        for i in range(_MAX_ENUM_ARGS + 5):
+            fw.add_argument(f"arg_{i}")
+            if i > 0:
+                fw.add_attack(f"arg_{i-1}", f"arg_{i}")
+
+        # Grounded is polynomial — must NOT raise
+        ext = fw.grounded_extension()
+        assert isinstance(ext, frozenset), (
+            f"Grounded extension should be frozenset, got {type(ext)} (#970)."
+        )
+        # In a chain a0→a1→a2→...→aN, grounded = {a0}
+        assert "arg_0" in ext, (
+            f"arg_0 should be in grounded extension of chain, got {ext} (#970)."
+        )
