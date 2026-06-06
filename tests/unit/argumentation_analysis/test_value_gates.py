@@ -1369,3 +1369,290 @@ class TestInformalTaxonomyValueGate:
             f"nom_vulgarisé match should contribute ≥0.7 confidence, "
             f"got {[r.get('confidence') for r in results]} (#973)."
         )
+
+
+# ============================================================
+# #976 (FB-17) — FOL: regression guard against #941 false-zero
+# ============================================================
+
+
+class TestFOLValueGate:
+    """Value-gate: FOL must not silently regress to the #941 false-zero.
+
+    The post-#941 capstone reports FOL 41/41 verified. Without a value-gate,
+    a regression that zeroes FOL output (solver change, C1 extractor break)
+    would pass CI in silence. These tests assert:
+      1. When JVM/Tweety is unavailable: honest 'fallback: python', not
+         fabricated consistent=True on template formulas with fallacies.
+      2. Template formulas are honestly template-shaped (Asserted(argN)),
+         not pretending to be LLM-generated.
+      3. When Tweety is available: consistent is a real bool, formulas > 0.
+    """
+
+    async def test_fol_fallback_reports_python_not_fabricated(self):
+        """FOL fallback must report 'fallback: python', not fabricated consistency.
+
+        When TweetyBridge fails and per-formula isolation saves nothing,
+        the Python fallback uses template formulas. It must NOT claim
+        consistent=True when formulas contain 'Fallacious' predicates
+        (which indicate undermined arguments -- consistent should be False).
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fol_reasoning,
+        )
+
+        text = "Les renouvelables sont chères. Cependant, le solaire coûte moins."
+        context = {
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {"type": "hasty_generalization", "fallacy_type": "hasty"},
+                ],
+            },
+        }
+
+        # Force TweetyBridge to fail AND no LLM -> pure Python fallback.
+        # TweetyBridge is imported locally inside the function, so we patch
+        # at the source module.
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=RuntimeError("No JVM for test"),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ):
+            result = await _invoke_fol_reasoning(text, context)
+
+        assert result.get("fallback") == "python", (
+            f"FOL fallback should be 'python', got fallback={result.get('fallback')} (#976)."
+        )
+        # Template formulas contain Fallacious -> consistent should be False
+        formulas = result.get("formulas", [])
+        has_fallacious = any("Fallacious" in f for f in formulas)
+        if has_fallacious:
+            assert result.get("consistent") is False, (
+                f"FOL fallback with Fallacious predicates claims consistent=True. "
+                f"Honest Python fallback must report consistent=False when formulas "
+                f"undermine arguments (#976). formulas={formulas}"
+            )
+
+    async def test_fol_template_formulas_are_honest(self):
+        """FOL fallback formulas must be non-empty and honestly typed.
+
+        When no Tweety is available, FOL falls back to either NL-to-logic
+        translations or Asserted(argN) templates. Both are honest — they
+        must produce non-empty formulas and report fallback='python'.
+        A regression to zero formulas would be the #941 false-zero.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fol_reasoning,
+        )
+
+        text = "Premise one. Premise two. Therefore conclusion."
+        context = {}
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=RuntimeError("No JVM for test"),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ):
+            result = await _invoke_fol_reasoning(text, context)
+
+        assert result.get("fallback") == "python", (
+            "Expected Python fallback when JVM unavailable (#976)."
+        )
+        formulas = result.get("formulas", [])
+        assert len(formulas) > 0, (
+            "FOL must produce >=1 formula even in fallback mode, "
+            "not zero formulas that would look like a false-zero (#976)."
+        )
+        # Formulas must be predicate-shaped (Pred(arg) or Asserted(arg))
+        # NOT bare text fragments — distinguishes structured fallback
+        # from degenerate empty output.
+        has_pred_form = any("(" in f and ")" in f for f in formulas)
+        assert has_pred_form, (
+            f"FOL fallback formulas should be predicate-shaped (contain parens), "
+            f"got {formulas}. Structured predicates distinguish fallback from "
+            f"degenerate plain-text output (#976)."
+        )
+
+    async def test_fol_consistent_is_bool_when_tweety_available(self):
+        """When Tweety path succeeds, 'consistent' must be a real bool.
+
+        If the Tweety path works (no fallback), the result must have
+        consistent as a proper boolean (not None, not missing), and
+        formulas must be non-empty -- this is the regression guard
+        against silently losing all verified formulas.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fol_reasoning,
+        )
+
+        text = "Socrates is mortal. All humans are mortal."
+        context = {}
+
+        # Simulate TweetyBridge returning a successful consistency check
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (True, "Consistent")
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            return_value=(True, "Consistent"),
+        ):
+            result = await _invoke_fol_reasoning(text, context)
+
+        # When Tweety succeeds, consistent must be a bool
+        assert isinstance(result.get("consistent"), bool), (
+            f"FOL 'consistent' should be bool when Tweety succeeds, "
+            f"got {type(result.get('consistent'))}: {result.get('consistent')} (#976)."
+        )
+        # Formulas must be present (the regression guard)
+        formulas = result.get("formulas", [])
+        assert len(formulas) > 0, (
+            "FOL produced 0 formulas even in Tweety-success path. "
+            "A regression to zero would silently pass CI (#976)."
+        )
+
+
+# ============================================================
+# #977 (FB-18) — PL: regression guard on the 50/50 showcase metric
+# ============================================================
+
+
+class TestPLValueGate:
+    """Value-gate: PL must not silently regress to zero formulas.
+
+    The capstone reports PL 50/50 verified. Without a value-gate, a
+    regression that drops PL to 0 formulas would pass CI. These tests
+    mirror the FOL value-gate pattern:
+      1. Fallback reports 'fallback: python', not fabricated satisfiable.
+      2. Template formulas are honestly template-shaped (p1, p2, ...).
+      3. When Tweety is available: satisfiable is a real bool, formulas > 0.
+    """
+
+    async def test_pl_fallback_reports_python_not_fabricated(self):
+        """PL fallback must report 'fallback: python', not claim satisfiable=True
+        on empty formulas or fabricated model.
+
+        When TweetyBridge fails and per-formula isolation saves nothing,
+        the Python fallback must be honest about using templates.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        text = "The data shows X. Therefore Y follows."
+        context = {}
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=RuntimeError("No JVM for test"),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ):
+            result = await _invoke_propositional_logic(text, context)
+
+        assert result.get("fallback") == "python", (
+            f"PL fallback should be 'python', got fallback={result.get('fallback')} (#977)."
+        )
+        # satisfiable must be a bool (not None, not missing)
+        assert isinstance(result.get("satisfiable"), bool), (
+            f"PL 'satisfiable' should be bool in fallback, "
+            f"got {type(result.get('satisfiable'))} (#977)."
+        )
+
+    async def test_pl_template_formulas_are_honest(self):
+        """PL fallback formulas must be non-empty and honestly typed.
+
+        When no Tweety is available, PL falls back to either NL-to-logic
+        translations or pN template variables. Both are honest — they
+        must produce non-empty formulas and report fallback='python'.
+        A regression to zero formulas would be the false-zero.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        text = "First claim. Second claim. Third claim follows."
+        context = {}
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            side_effect=RuntimeError("No JVM for test"),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ):
+            result = await _invoke_propositional_logic(text, context)
+
+        assert result.get("fallback") == "python", (
+            "Expected Python fallback when JVM unavailable (#977)."
+        )
+        formulas = result.get("formulas", [])
+        assert len(formulas) > 0, (
+            "PL must produce >=1 formula even in fallback mode, "
+            "not zero formulas that would look like a false-zero (#977)."
+        )
+        # Formulas must contain PL operators or be atomic propositions.
+        # Honest fallback produces either pN variables or sanitized NL-derived
+        # formulas — both are structured, not degenerate plain text.
+        has_structure = any(
+            any(op in f for op in ["=>", "||", "&&", "!", "<=>", "("])
+            or (f.startswith("p") and f[1:].isdigit())
+            for f in formulas
+        )
+        assert has_structure, (
+            f"PL fallback formulas should contain PL operators or template vars, "
+            f"got {formulas}. Structured formulas distinguish fallback from "
+            f"degenerate plain-text output (#977)."
+        )
+
+    async def test_pl_satisfiable_is_bool_when_tweety_available(self):
+        """When Tweety path succeeds, 'satisfiable' must be a real bool.
+
+        If the Tweety path works, the result must have satisfiable as
+        a proper boolean and formulas must be non-empty -- regression guard
+        against silently losing all verified formulas.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        text = "If it rains then the ground is wet. It is raining."
+        context = {}
+
+        # Simulate TweetyBridge returning a successful consistency check
+        mock_bridge = MagicMock()
+        mock_bridge.check_consistency.return_value = (True, "Satisfiable")
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=mock_bridge,
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, None),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            return_value=(True, "Satisfiable"),
+        ):
+            result = await _invoke_propositional_logic(text, context)
+
+        # When Tweety succeeds, satisfiable must be a bool
+        assert isinstance(result.get("satisfiable"), bool), (
+            f"PL 'satisfiable' should be bool when Tweety succeeds, "
+            f"got {type(result.get('satisfiable'))}: {result.get('satisfiable')} (#977)."
+        )
+        # Formulas must be present (the regression guard)
+        formulas = result.get("formulas", [])
+        assert len(formulas) > 0, (
+            "PL produced 0 formulas even in Tweety-success path. "
+            "A regression to zero would silently pass CI (#977)."
+        )
