@@ -113,9 +113,9 @@ Verdict calibration:
 |--------|---------|
 | **Files** | `agents/core/governance/governance_methods.py`, `simulation.py`, `social_choice.py`, `conflict_resolution.py`, `metrics.py` |
 | **Produces** | 7 voting methods (majority, plurality, Borda, Condorcet, quadratic, byzantine, raft). `simulate_governance()` returns winner, satisfaction, coalitions, conflict history. |
-| **Value-gate tests** | **NONE** in `test_value_gates.py`. |
-| **Blind spots** | (1) `conflict_resolution.py` returns hardcoded success probabilities (0.8/0.5/0.7) — no actual mediation logic. (2) Kemeny-Young is O(n!), raises `ValueError` for >8 candidates, no fallback. (3) `byzantine_consensus` uses `np.random.choice` for faulty agents — not reproducible. (4) Requires agents with `.decide()` + `.preferences` interface — silently fails otherwise. |
-| **Verdict** | **PARTIAL** — Voting methods are real implementations. Conflict resolution is hardcoded. Kemeny-Young has size limit without fallback. |
+| **Value-gate tests** | **YES** — `TestGovernanceValueGate` (3 tests, PASS) + `TestConflictResolutionHonestProb` (3 tests, PASS) + `TestKemenyYoungSafeFallback` (3 tests, PASS). |
+| **Blind spots** | (1) ~~`conflict_resolution.py` returns hardcoded success probabilities (0.8/0.5/0.7)~~ — **FIXED (#971)**: returns `None` (honest placeholder). (2) ~~Kemeny-Young is O(n!), raises `ValueError` for >8 candidates, no fallback~~ — **FIXED (#971)**: `kemeny_young_safe()` falls back to Copeland (O(n²)) with `approximate=True` flag. (3) `byzantine_consensus` uses `np.random.choice` for faulty agents — not reproducible. (4) Requires agents with `.decide()` + `.preferences` interface — silently fails otherwise. |
+| **Verdict** | **PARTIAL** — Voting methods are real implementations. ~~Conflict resolution is hardcoded.~~ Fabricated probabilities fixed (#971). Kemeny-Young has Copeland fallback (#971). Byzantine randomness remains. |
 
 ### 10. JTMS (Justification-based Truth Maintenance)
 
@@ -182,7 +182,7 @@ Verdict calibration:
 | Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
 | Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
 | Debate | PARTIAL | ✅ (5/5 PASS) | ~~English-only scoring~~ fixed (#967), dead protocol code |
-| Governance | PARTIAL | ✅ (3/3 PASS) | Hardcoded conflict resolution, Kemeny O(n!) |
+| Governance | PARTIAL | ✅ (9/9 PASS) | ~~Hardcoded conflict resolution~~ fixed (#971), ~~Kemeny O(n!)~~ Copeland fallback (#971) |
 | JTMS | PARTIAL | ✅ (3/3 PASS) | networkx silent dependency, exponential ATMS |
 | Narrative Synthesis | **TRUSTWORTHY** | ✅ (3/3 PASS) | Template-only by design |
 | Fact Extraction | PARTIAL | ✅ (3/3 PASS) | LLM marker hallucination |
@@ -245,3 +245,4 @@ Verdict calibration:
 | 2026-06-06 | myia-po-2023 | Value-gate coverage raised: Dung ✅, Governance ✅, JTMS ✅ (#965). Coverage: 9/12 core with value-gate tests. |
 | 2026-06-06 | myia-po-2023 | Debate scoring i18n: EN+FR connectors bilingue (#967). Value-gate: 5/5 PASS. |
 | 2026-06-06 | myia-po-2023 | Dung DFS shadowing fixed + exponential guard (#970). Value-gate: 9/9 PASS. |
+| 2026-06-06 | myia-po-2023 | Governance fabricated probs → None (#971), Kemeny-Young Copeland fallback (#971). Value-gate: 9/9 PASS. |

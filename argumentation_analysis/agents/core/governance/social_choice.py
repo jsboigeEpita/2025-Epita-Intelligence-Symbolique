@@ -141,24 +141,33 @@ def copeland(
     return winner, scores
 
 
+# Maximum candidate count for exact Kemeny-Young (O(n!) enumeration).
+# Beyond this threshold, the safe wrapper falls back to Copeland (#971).
+_MAX_KEMENY_CANDIDATES = 8
+
+
 def kemeny_young(
     ballots: List[List[str]],
     options: List[str],
 ) -> Tuple[List[str], int]:
     """Kemeny-Young method: find the ranking minimizing total disagreement.
 
-    Warning: O(n!) complexity — only practical for ≤8 candidates.
+    Warning: O(n!) complexity — only practical for ≤_MAX_KEMENY_CANDIDATES candidates.
+    Raises ValueError above that threshold.  Use kemeny_young_safe() for automatic
+    Copeland fallback (#971).
 
     Args:
         ballots: List of ranked preference lists.
         options: All candidate options.
 
     Returns:
-        (optimal_ranking, min_distance)
+        (optimal_ranking, kemeny_score)
     """
-    if len(options) > 8:
+    if len(options) > _MAX_KEMENY_CANDIDATES:
         raise ValueError(
-            f"Kemeny-Young is impractical for {len(options)} candidates (max 8)"
+            f"Kemeny-Young is impractical for {len(options)} candidates "
+            f"(max {_MAX_KEMENY_CANDIDATES}). "
+            f"Use kemeny_young_safe() for Copeland fallback. (#971)"
         )
 
     # Build pairwise preference matrix
@@ -190,6 +199,35 @@ def kemeny_young(
             best_ranking = list(perm)
 
     return best_ranking, best_score
+
+
+def kemeny_young_safe(
+    ballots: List[List[str]],
+    options: List[str],
+) -> Tuple[List[str], int, bool]:
+    """Kemeny-Young with Copeland fallback for large candidate sets (#971).
+
+    When the number of candidates is within the enumeration limit, delegates
+    to kemeny_young() for the exact result.  When it exceeds the limit,
+    falls back to a Copeland-score-based ranking (O(n²) instead of O(n!)).
+
+    Args:
+        ballots: List of ranked preference lists.
+        options: All candidate options.
+
+    Returns:
+        (ranking, score, approximate) where approximate=True means the
+        ranking is a Copeland approximation, not an exact Kemeny-Young result.
+    """
+    if len(options) <= _MAX_KEMENY_CANDIDATES:
+        ranking, score = kemeny_young(ballots, options)
+        return ranking, score, False
+    # Copeland fallback — O(n²) polynomial approximation
+    _, copeland_scores = copeland(ballots, options)
+    ranking = sorted(
+        options, key=lambda o: copeland_scores.get(o, 0), reverse=True
+    )
+    return ranking, -1, True
 
 
 def schulze(
