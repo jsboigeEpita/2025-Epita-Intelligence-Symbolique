@@ -537,3 +537,195 @@ class TestCounterArgValueGate:
             assert isinstance(result, str) and len(result) > 0, (
                 f"Strategy {strat.name} returned empty output after #960 fix"
             )
+
+
+# =====================================================================
+# 7. Satellite handlers — honest unavailable, not fabricated data (#964)
+# =====================================================================
+
+
+class TestSetAFValueGate:
+    """Assert SetAF fallback does not return fabricated args[:2] extensions.
+
+    The fallback used to return ``[args[:2]]`` as a fake extension — it could
+    not compute real set-argumentation semantics. After #964, it reports
+    honest unavailability (extensions=None, solver='unavailable').
+    """
+
+    async def test_setaf_fallback_reports_unavailable(self):
+        """SetAF fallback must report unavailability, not fabricated extensions."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_setaf,
+        )
+
+        # Force the fallback by patching asyncio.to_thread in the invoke module
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_setaf("test", {"arguments": ["a", "b", "c"]})
+
+        assert result.get("extensions") is None, (
+            f"SetAF fallback returned extensions={result.get('extensions')} "
+            "instead of None. Must report unavailability (#964)."
+        )
+        assert result.get("solver") == "unavailable", (
+            f"SetAF fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
+        )
+
+    async def test_setaf_fallback_no_args_slice(self):
+        """The fallback must not contain the old args[:2] fabrication."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_setaf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_setaf("test", {"arguments": ["a", "b", "c"]})
+
+        ext = result.get("extensions")
+        assert ext is None or ext != [["a", "b"]], (
+            "SetAF fallback still returns fabricated args[:2] extension (#964)."
+        )
+
+
+class TestWeightedValueGate:
+    """Assert Weighted AF fallback does not fabricate positional scores.
+
+    The fallback used to assign ``1.0/(i+1)`` scores to arguments in
+    definition order — pure fabrication. After #964, it reports honest
+    unavailability (scores=None, extensions=None, solver='unavailable').
+    """
+
+    async def test_weighted_fallback_reports_unavailable(self):
+        """Weighted fallback must report unavailability, not fabricated scores."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_weighted("test", {"arguments": ["a", "b", "c"]})
+
+        assert result.get("scores") is None, (
+            f"Weighted fallback returned scores={result.get('scores')} "
+            "instead of None. Must report unavailability (#964)."
+        )
+        assert result.get("extensions") is None, (
+            f"Weighted fallback returned extensions={result.get('extensions')} "
+            "instead of None (#964)."
+        )
+
+    async def test_weighted_fallback_no_positional_scoring(self):
+        """The fallback must not contain the old 1.0/(i+1) fabrication."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_weighted("test", {"arguments": ["x", "y"]})
+
+        scores = result.get("scores")
+        assert scores is None or scores != {"x": 1.0, "y": 0.5}, (
+            "Weighted fallback still returns fabricated positional scores (#964)."
+        )
+
+
+class TestDeLPValueGate:
+    """Assert DeLP fallback does not return blanket all-undecided.
+
+    The fallback used to return ``{q: "undecided" for q in queries}`` — a
+    fabricated result that pretends every query was dialectically analyzed.
+    After #964, it reports honest unavailability (results=None,
+    solver='unavailable').
+    """
+
+    async def test_delp_fallback_reports_unavailable(self):
+        """DeLP fallback must report unavailability, not all-undecided."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_delp,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_delp("test prog", {"queries": ["p", "q"]})
+
+        assert result.get("results") is None, (
+            f"DeLP fallback returned results={result.get('results')} "
+            "instead of None. Must report unavailability (#964)."
+        )
+        assert result.get("solver") == "unavailable", (
+            f"DeLP fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
+        )
+
+    async def test_delp_fallback_no_undecided_dict(self):
+        """The fallback must not contain the old all-undecided fabrication."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_delp,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_delp("test", {"queries": ["p"]})
+
+        results = result.get("results")
+        assert results is None or results != {"p": "undecided"}, (
+            "DeLP fallback still returns fabricated all-undecided dict (#964)."
+        )
+
+
+class TestBipolarValueGate:
+    """Assert Bipolar fallback does not return fabricated args[:2] extensions.
+
+    The fallback used to return ``[args[:2]]`` as a fake extension — it could
+    not compute real bipolar argumentation semantics. After #964, it reports
+    honest unavailability (extensions=None, solver='unavailable').
+    """
+
+    async def test_bipolar_fallback_reports_unavailable(self):
+        """Bipolar fallback must report unavailability, not fabricated extensions."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_bipolar,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
+
+        assert result.get("extensions") is None, (
+            f"Bipolar fallback returned extensions={result.get('extensions')} "
+            "instead of None. Must report unavailability (#964)."
+        )
+        assert result.get("solver") == "unavailable", (
+            f"Bipolar fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
+        )
+
+    async def test_bipolar_fallback_no_args_slice(self):
+        """The fallback must not contain the old args[:2] fabrication."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_bipolar,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
+
+        ext = result.get("extensions")
+        assert ext is None or ext != [["a", "b"]], (
+            "Bipolar fallback still returns fabricated args[:2] extension (#964)."
+        )
