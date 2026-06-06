@@ -237,6 +237,20 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["counter"],
             optional=True,
         )
+        # Narrative synthesis (#981): produce a structured narrative from all
+        # analysis results. Depends on phases that populate convergence signals.
+        .add_phase(
+            "narrative_synthesis",
+            capability="narrative_synthesis",
+            depends_on=[
+                "quality",
+                "hierarchical_fallacy",
+                "counter",
+                "jtms",
+                "dung_extensions",
+            ],
+            optional=True,
+        )
         # Local LLM offline analysis (#835 A-10) — skipped if endpoint absent
         .add_phase(
             "local_llm",
