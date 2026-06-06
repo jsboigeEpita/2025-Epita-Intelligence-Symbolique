@@ -23,6 +23,7 @@ class ArgumentAnalyzer:
 
     def __init__(self):
         self.logical_indicators = [
+            # English connectors
             "therefore",
             "because",
             "since",
@@ -33,6 +34,17 @@ class ArgumentAnalyzer:
             "it follows that",
             "given that",
             "due to",
+            # French connectors (#967)
+            "donc",
+            "parce que",
+            "car",
+            "ainsi",
+            "par conséquent",
+            "puisque",
+            "c'est pourquoi",
+            "en effet",
+            "cependant",
+            "néanmoins",
         ]
         self.evidence_indicators = [
             "studies show",
@@ -85,8 +97,14 @@ class ArgumentAnalyzer:
         score += min(logical_count * 0.1, 0.3)
         if "first" in content.lower() and "second" in content.lower():
             score += 0.1
+        if "premièrement" in content.lower() and "deuxièmement" in content.lower():
+            score += 0.1
         if any(
-            word in content.lower() for word in ["premise", "conclusion", "assumption"]
+            word in content.lower()
+            for word in [
+                "premise", "conclusion", "assumption",
+                "prémisse", "conclusion", "hypothèse",  # FR structural (#967)
+            ]
         ):
             score += 0.1
         return min(score, 1.0)

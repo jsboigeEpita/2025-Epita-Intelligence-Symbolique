@@ -147,11 +147,17 @@ class DebatePlugin:
             sentence = sentence.strip()
             if not sentence:
                 continue
-            if any(c in sentence.lower() for c in ["therefore", "thus", "hence"]):
+            if any(c in sentence.lower() for c in [
+                "therefore", "thus", "hence",
+                "donc", "par conséquent", "c'est pourquoi",  # FR conclusion connectors (#967)
+            ]):
                 structure["conclusion"] = sentence
             elif any(
                 e in sentence.lower()
-                for e in ["study", "research", "data", "according"]
+                for e in [
+                    "study", "research", "data", "according",
+                    "étude", "recherche", "données", "selon",  # FR evidence indicators (#967)
+                ]
             ):
                 structure["evidence_statements"].append(sentence)
             else:
@@ -522,11 +528,17 @@ class DebateAgent(BaseAgent):
             sentence = sentence.strip()
             if not sentence:
                 continue
-            if any(c in sentence.lower() for c in ["therefore", "thus", "hence"]):
+            if any(c in sentence.lower() for c in [
+                "therefore", "thus", "hence",
+                "donc", "par conséquent", "c'est pourquoi",  # FR conclusion connectors (#967)
+            ]):
                 structure["conclusion"] = sentence
             elif any(
                 e in sentence.lower()
-                for e in ["study", "research", "data", "according"]
+                for e in [
+                    "study", "research", "data", "according",
+                    "étude", "recherche", "données", "selon",  # FR evidence indicators (#967)
+                ]
             ):
                 structure["evidence_statements"].append(sentence)
             else:

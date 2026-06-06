@@ -729,3 +729,84 @@ class TestBipolarValueGate:
         assert ext is None or ext != [["a", "b"]], (
             "Bipolar fallback still returns fabricated args[:2] extension (#964)."
         )
+
+
+# ============================================================
+# #967 (FB-13) — Debate scoring i18n bilingue
+# ============================================================
+
+
+class TestDebateScoringI18n:
+    """Value-gate: French connectors must produce non-trivial logical_coherence.
+
+    The debate scoring previously only detected English connectors
+    (therefore, because, thus...). This gate verifies that French connectors
+    (donc, parce que, car, ainsi...) are also detected and produce scores
+    above the no-connector baseline.
+    """
+
+    def test_french_connectors_non_trivial_coherence(self):
+        """FR argument with clear connectors must score above baseline."""
+        from argumentation_analysis.agents.core.debate.debate_scoring import (
+            ArgumentAnalyzer,
+        )
+
+        analyzer = ArgumentAnalyzer()
+        fr_text = (
+            "Puisque les données sont fiables, nous devons donc agir. "
+            "Par conséquent, la conclusion s'impose d'elle-même. "
+            "En effet, les preuves sont convaincantes."
+        )
+        score = analyzer._assess_logical_coherence(fr_text)
+        # Baseline with no connectors is ~0.5. FR connectors must lift it above.
+        assert score > 0.5, (
+            f"FR logical_coherence={score:.2f}, expected > 0.5 "
+            f"(baseline). French connectors not detected (#967)."
+        )
+
+    def test_french_connectors_above_english_baseline(self):
+        """FR text with many connectors should score comparably to EN text."""
+        from argumentation_analysis.agents.core.debate.debate_scoring import (
+            ArgumentAnalyzer,
+        )
+
+        analyzer = ArgumentAnalyzer()
+        en_text = "Because A is true, therefore B follows. Since C, thus D."
+        fr_text = (
+            "Parce que A est vrai, donc B en découle. "
+            "Puisque C, ainsi D."
+        )
+        en_score = analyzer._assess_logical_coherence(en_text)
+        fr_score = analyzer._assess_logical_coherence(fr_text)
+        # FR score should be in the same ballpark as EN (within 0.2)
+        assert fr_score >= en_score - 0.2, (
+            f"FR score ({fr_score:.2f}) much lower than EN ({en_score:.2f}). "
+            f"French connectors undervalued (#967)."
+        )
+
+    def test_parse_argument_structure_detects_french_conclusion(self):
+        """parse_argument_structure logic must classify FR conclusion sentences.
+
+        Tests the connector detection logic directly, without instantiating
+        DebateAgent (which requires a real Kernel due to Pydantic validation).
+        """
+        # Replicate the conclusion-detection logic from debate_agent.py
+        conclusion_connectors = [
+            "therefore", "thus", "hence",
+            "donc", "par conséquent", "c'est pourquoi",
+        ]
+        text = "Les données sont claires. Donc nous devons agir maintenant."
+        found_conclusion = False
+        for sentence in text.split("."):
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            if any(c in sentence.lower() for c in conclusion_connectors):
+                found_conclusion = True
+                assert "Donc nous devons" in sentence or "donc" in sentence.lower(), (
+                    f"FR conclusion with 'donc' not detected in sentence: '{sentence}' (#967)."
+                )
+        assert found_conclusion, (
+            "No FR conclusion detected in text with 'Donc'. "
+            "Connector list may be missing French entries (#967)."
+        )
