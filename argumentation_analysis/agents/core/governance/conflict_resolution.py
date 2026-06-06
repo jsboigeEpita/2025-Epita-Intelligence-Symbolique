@@ -37,7 +37,7 @@ def resolve_conflict(conflict, strategy="collaborative"):
 def collaborative_mediation(conflict):
     return {
         "resolution_type": "collaborative",
-        "success_probability": 0.8,
+        "success_probability": None,  # Not measured — placeholder (#971)
         "agents": conflict["agents"],
         "details": "Agents seek common ground.",
     }
@@ -46,7 +46,7 @@ def collaborative_mediation(conflict):
 def competitive_mediation(conflict):
     return {
         "resolution_type": "competitive",
-        "success_probability": 0.5,
+        "success_probability": None,  # Not measured — placeholder (#971)
         "agents": conflict["agents"],
         "details": "Agents compete for their preferred outcome.",
     }
@@ -55,7 +55,7 @@ def competitive_mediation(conflict):
 def compromise_mediation(conflict):
     return {
         "resolution_type": "compromise",
-        "success_probability": 0.7,
+        "success_probability": None,  # Not measured — placeholder (#971)
         "agents": conflict["agents"],
         "details": "Agents agree to a middle ground.",
     }

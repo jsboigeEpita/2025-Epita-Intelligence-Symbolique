@@ -142,12 +142,22 @@ class GovernancePlugin:
             return json.dumps({"winner": winner, "strongest_paths": paths})
         elif method_name == "kemeny_young":
             from argumentation_analysis.agents.core.governance.social_choice import (
-                kemeny_young,
+                kemeny_young_safe,
             )
 
-            ranking, score = kemeny_young(ballots, options)
-            return json.dumps({"winner": ranking[0] if ranking else None,
-                               "ranking": ranking, "kemeny_score": score})
+            ranking, score, approximate = kemeny_young_safe(ballots, options)
+            result = {
+                "winner": ranking[0] if ranking else None,
+                "ranking": ranking,
+                "kemeny_score": score,
+                "approximate": approximate,
+            }
+            if approximate:
+                result["fallback"] = (
+                    "Copeland approximation — Kemeny-Young unavailable "
+                    f"for {len(options)} candidates (#971)"
+                )
+            return json.dumps(result)
         else:
             return json.dumps({"error": f"Unknown method: {method_name}"})
 

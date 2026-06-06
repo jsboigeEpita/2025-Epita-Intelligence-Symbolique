@@ -1164,3 +1164,120 @@ class TestDungExponentialGuard:
         assert "arg_0" in ext, (
             f"arg_0 should be in grounded extension of chain, got {ext} (#970)."
         )
+
+
+# ============================================================
+# #971 (FB-15) — Governance fabricated probs + Kemeny fallback
+# ============================================================
+
+
+class TestConflictResolutionHonestProb:
+    """Value-gate: conflict resolution must not return fabricated probabilities.
+
+    After #971, all three mediation strategies return success_probability=None
+    (honest placeholder) instead of fabricated floats (0.8/0.5/0.7).
+    """
+
+    def test_collaborative_no_fabricated_prob(self):
+        """Collaborative mediation must return None probability, not 0.8."""
+        from argumentation_analysis.agents.core.governance.conflict_resolution import (
+            collaborative_mediation,
+        )
+
+        conflict = {"agents": ["A", "B"], "conflict_level": 1.0}
+        result = collaborative_mediation(conflict)
+        assert result["success_probability"] is None, (
+            f"Collaborative success_probability should be None (not measured), "
+            f"got {result['success_probability']} (#971)."
+        )
+        assert result["resolution_type"] == "collaborative"
+
+    def test_competitive_no_fabricated_prob(self):
+        """Competitive mediation must return None probability, not 0.5."""
+        from argumentation_analysis.agents.core.governance.conflict_resolution import (
+            competitive_mediation,
+        )
+
+        conflict = {"agents": ["A", "B"], "conflict_level": 1.0}
+        result = competitive_mediation(conflict)
+        assert result["success_probability"] is None, (
+            f"Competitive success_probability should be None (not measured), "
+            f"got {result['success_probability']} (#971)."
+        )
+
+    def test_compromise_no_fabricated_prob(self):
+        """Compromise mediation must return None probability, not 0.7."""
+        from argumentation_analysis.agents.core.governance.conflict_resolution import (
+            compromise_mediation,
+        )
+
+        conflict = {"agents": ["A", "B"], "conflict_level": 1.0}
+        result = compromise_mediation(conflict)
+        assert result["success_probability"] is None, (
+            f"Compromise success_probability should be None (not measured), "
+            f"got {result['success_probability']} (#971)."
+        )
+
+
+class TestKemenyYoungSafeFallback:
+    """Value-gate: kemeny_young_safe falls back to Copeland for large sets.
+
+    For ≤8 candidates, exact Kemeny-Young is used (approximate=False).
+    For >8 candidates, Copeland approximation is returned (approximate=True).
+    """
+
+    def test_exact_for_small_sets(self):
+        """3 candidates → exact Kemeny-Young, approximate=False."""
+        from argumentation_analysis.agents.core.governance.social_choice import (
+            kemeny_young_safe,
+        )
+
+        ballots = [
+            ["A", "B", "C"],
+            ["A", "C", "B"],
+            ["B", "A", "C"],
+        ]
+        ranking, score, approximate = kemeny_young_safe(ballots, ["A", "B", "C"])
+        assert approximate is False, (
+            f"3 candidates should use exact Kemeny, got approximate={approximate} (#971)."
+        )
+        assert ranking[0] == "A", (
+            f"A should win with 2 first-preference ballots, got {ranking} (#971)."
+        )
+        assert score > 0
+
+    def test_fallback_for_large_sets(self):
+        """10 candidates → Copeland fallback, approximate=True."""
+        from argumentation_analysis.agents.core.governance.social_choice import (
+            kemeny_young_safe,
+            _MAX_KEMENY_CANDIDATES,
+        )
+
+        options = [f"C{i}" for i in range(_MAX_KEMENY_CANDIDATES + 2)]
+        # Everyone agrees: C0 > C1 > C2 > ... > C9
+        ballots = [options] * 5
+
+        ranking, score, approximate = kemeny_young_safe(ballots, options)
+        assert approximate is True, (
+            f"{len(options)} candidates should trigger Copeland fallback, "
+            f"got approximate={approximate} (#971)."
+        )
+        assert ranking[0] == "C0", (
+            f"C0 should win with unanimous preferences, got {ranking} (#971)."
+        )
+        assert score == -1, (
+            f"Fallback score should be -1 (sentinel), got {score} (#971)."
+        )
+
+    def test_exact_kemeny_raises_for_large_sets(self):
+        """Direct kemeny_young() must still raise ValueError for >8."""
+        from argumentation_analysis.agents.core.governance.social_choice import (
+            kemeny_young,
+            _MAX_KEMENY_CANDIDATES,
+        )
+
+        options = [f"C{i}" for i in range(_MAX_KEMENY_CANDIDATES + 2)]
+        ballots = [options] * 3
+
+        with pytest.raises(ValueError, match="impractical"):
+            kemeny_young(ballots, options)
