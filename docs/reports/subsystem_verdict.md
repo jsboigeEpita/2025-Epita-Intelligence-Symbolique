@@ -104,8 +104,8 @@ Verdict calibration:
 | **Files** | `agents/core/debate/debate_agent.py`, `debate_scoring.py`, `knowledge_base.py`, `protocols.py` |
 | **Produces** | `EnhancedArgument` with 8 metrics (logical_coherence, evidence_quality, relevance, emotional_appeal, readability, fact_check, novelty, persuasiveness). `DebateState` with winner, audience_votes, performance_metrics. |
 | **Value-gate tests** | **YES** — `TestDebateValueGate` (2 tests, PASS). Asserts winner is agent name, arguments have content. |
-| **Blind spots** | (1) Fallback `_create_fallback_argument()` produces generic text with `persuasiveness=0.3`. (2) `_assess_logical_coherence()` counts English connectors ("therefore", "because") — artificially low on French text. (3) `protocols.py` (6 Walton-Krabbe types) and `KnowledgeBase` are dead code — never called. (4) `_identify_weakness()` returns arbitrary "lowest" from flat defaults. |
-| **Verdict** | **PARTIAL** — Value-gate tests pass (via fallback). English-only connector scoring is a known i18n bug. Protocols/KB are dead code. |
+| **Blind spots** | (1) Fallback `_create_fallback_argument()` produces generic text with `persuasiveness=0.3`. (2) ~~`_assess_logical_coherence()` counts English connectors~~ — **FIXED (#967)**: now bilingual (EN+FR connectors). (3) `protocols.py` (6 Walton-Krabbe types) and `KnowledgeBase` are dead code — never called. (4) `_identify_weakness()` returns arbitrary "lowest" from flat defaults. |
+| **Verdict** | **PARTIAL** — Value-gate tests pass (via fallback). ~~English-only connector scoring~~ fixed (#967). Protocols/KB are dead code. |
 
 ### 9. Governance (7 Votes)
 
@@ -181,7 +181,7 @@ Verdict calibration:
 | Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
 | Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
 | Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
-| Debate | PARTIAL | ✅ (2/2 PASS) | English-only scoring, dead protocol code |
+| Debate | PARTIAL | ✅ (5/5 PASS) | ~~English-only scoring~~ fixed (#967), dead protocol code |
 | Governance | PARTIAL | ✅ (3/3 PASS) | Hardcoded conflict resolution, Kemeny O(n!) |
 | JTMS | PARTIAL | ✅ (3/3 PASS) | networkx silent dependency, exponential ATMS |
 | Narrative Synthesis | **TRUSTWORTHY** | ✅ (3/3 PASS) | Template-only by design |
@@ -243,3 +243,4 @@ Verdict calibration:
 | 2026-06-05 | myia-po-2023 | Initial verdict — all 24 subsystems audited |
 | 2026-06-06 | myia-po-2023 | Update: Modal UNTRUSTED→PARTIAL (#963), Counter-arg fix (#962), Satellites UNTRUSTED→PARTIAL (#964). 0 UNTRUSTED remaining. |
 | 2026-06-06 | myia-po-2023 | Value-gate coverage raised: Dung ✅, Governance ✅, JTMS ✅ (#965). Coverage: 9/12 core with value-gate tests. |
+| 2026-06-06 | myia-po-2023 | Debate scoring i18n: EN+FR connectors bilingue (#967). Value-gate: 5/5 PASS. |
