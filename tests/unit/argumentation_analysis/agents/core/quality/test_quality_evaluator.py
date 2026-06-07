@@ -245,3 +245,53 @@ class TestFullEvaluation:
         result = evaluator.evaluate("Selon l'OMS, la santé est un droit fondamental.")
         assert isinstance(result, dict)
         assert "note_finale" in result
+
+
+class TestDllFailureFallback:
+    """Test graceful degradation when torch/spacy DLL fails (#993)."""
+
+    def test_dll_failure_returns_nonzero_scores(self):
+        """When spacy import raises OSError (WinError 182), scores are non-zero."""
+        import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
+
+        # Reset global state to force re-import attempt
+        qmod._DEPS_ATTEMPTED = False
+        qmod._DEPS_AVAILABLE = False
+
+        with patch("argumentation_analysis.agents.core.quality.quality_evaluator.spacy", create=True) as mock_sp:
+            # Simulate OSError on import (WinError 182)
+            mock_sp.side_effect = OSError("WinError 182 DLL load failure")
+            with patch.dict("sys.modules", {"spacy": mock_sp}):
+                # Force re-evaluation
+                qmod._DEPS_ATTEMPTED = False
+                qmod._DEPS_AVAILABLE = False
+
+                evaluator = qmod.ArgumentQualityEvaluator()
+                result = evaluator.evaluate(
+                    "This is a test argument with some content about defense."
+                )
+
+        # Scores should be non-zero (heuristic fallback)
+        assert result["note_finale"] > 0, f"Expected non-zero score, got {result}"
+        assert result["scores_par_vertu"]["clarte"] > 0
+        assert result["scores_par_vertu"]["redondance_faible"] > 0
+
+    def test_dll_failure_sets_degraded_flag(self):
+        """Degraded flag is set when deps fail to load (#993)."""
+        import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
+
+        qmod._DEPS_ATTEMPTED = False
+        qmod._DEPS_AVAILABLE = False
+
+        with patch("argumentation_analysis.agents.core.quality.quality_evaluator.spacy", create=True) as mock_sp:
+            mock_sp.side_effect = OSError("WinError 182 DLL load failure")
+            with patch.dict("sys.modules", {"spacy": mock_sp}):
+                qmod._DEPS_ATTEMPTED = False
+                qmod._DEPS_AVAILABLE = False
+
+                evaluator = qmod.ArgumentQualityEvaluator()
+                result = evaluator.evaluate("Test argument text.")
+
+        assert result.get("degraded") is True
+        assert "degraded_reason" in result
+        assert "heuristic" in result["degraded_reason"]
