@@ -1397,9 +1397,9 @@ class TestFOLValueGate:
         consistent=True when formulas contain 'Fallacious' predicates
         (which indicate undermined arguments -- consistent should be False).
 
-        #986: Assertions are UNCONDITIONAL — the test must fail loudly if
-        the fallback produces formulas without any 'Fallacious' marker (which
-        would make the original conditional assertion silently pass at-vacuous).
+        #986: Type + non-empty assertions are UNCONDITIONAL.
+        #996: Semantic invariant (Fallacious→consistent=False) is restored
+        behind the non-vacuous precondition guaranteed by #986.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
@@ -1445,6 +1445,15 @@ class TestFOLValueGate:
         assert len(formulas) > 0, (
             f"FOL fallback produced zero formulas — test is vacuous (#986)."
         )
+
+        # #996: Semantic invariant — only meaningful when Fallacious is present.
+        # The unconditional guards above ensure the test is never vacuous,
+        # so this conditional check cannot silently pass at-zero.
+        if any("Fallacious" in f for f in formulas):
+            assert result["consistent"] is False, (
+                f"FOL fallback with Fallacious predicates must report "
+                f"consistent=False (#976/#996). formulas={formulas}"
+            )
 
     async def test_fol_template_formulas_are_honest(self):
         """FOL fallback formulas must be non-empty and honestly typed.
