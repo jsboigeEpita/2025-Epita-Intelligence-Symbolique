@@ -275,6 +275,92 @@ class TestInvokeDungExtensions:
         assert result["semantics"] == "python_fallback"
         assert len(result["arguments"]) == 2
 
+    @pytest.mark.asyncio
+    async def test_timeout_triggers_degraded_fallback(self):
+        """Dung function falls back to grounded-only on timeout (#992).
+
+        When analyze_multi_semantics hangs (e.g. preferred/stable on large
+        graphs), asyncio.wait_for raises TimeoutError.  The callable should
+        catch it, compute a grounded extension via pure-Python fallback, and
+        set degraded=True.
+        """
+        import time
+
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+        import argumentation_analysis.orchestration.invoke_callables as ic_mod
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "arg_a"},
+                    {"text": "arg_b"},
+                    {"text": "arg_c"},
+                ]
+            },
+        }
+
+        def _hanging_analyze(*args, **kwargs):
+            """Simulates a Tweety call that never returns."""
+            time.sleep(600)  # will be cut short by the timeout
+
+        original_timeout = ic_mod._DUNG_TIMEOUT_S
+        try:
+            # Use a very short timeout so the test runs fast
+            ic_mod._DUNG_TIMEOUT_S = 0.3
+
+            with patch(
+                "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
+            ) as mock_af:
+                mock_handler = MagicMock()
+                mock_handler.analyze_multi_semantics.side_effect = _hanging_analyze
+                mock_af.return_value = mock_handler
+
+                with patch(
+                    "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
+                ) as mock_init:
+                    mock_init.return_value = MagicMock()
+                    result = await _invoke_dung_extensions("test text", context)
+
+            # Must be a degraded fallback
+            assert result["semantics"] == "python_fallback"
+            assert result.get("degraded") is True
+            assert "timeout" in result.get("degraded_reason", "")
+            # Grounded extension should be non-empty (3 args, heuristic attacks
+            # may exclude some, but at least the un-attacked ones must appear)
+            grounded = result.get("extensions", {}).get("grounded", [])
+            assert len(grounded) >= 1, f"Expected ≥1 grounded args, got {grounded}"
+        finally:
+            ic_mod._DUNG_TIMEOUT_S = original_timeout
+
+    @pytest.mark.asyncio
+    async def test_exception_fallback_has_degraded_flag(self):
+        """Dung function sets degraded=True when falling back on exception (#992)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_dung_extensions,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "arg1"}, {"text": "arg2"}]
+            }
+        }
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.af_handler.AFHandler",
+            side_effect=RuntimeError("JVM crashed"),
+        ):
+            with patch(
+                "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
+            ) as mock_init:
+                mock_init.return_value = MagicMock()
+                result = await _invoke_dung_extensions("test text", context)
+
+        assert result["semantics"] == "python_fallback"
+        assert result.get("degraded") is True
+        assert "AFHandler error" in result.get("degraded_reason", "")
+
 
 # ============================================================
 # Test: Python Dung fallback

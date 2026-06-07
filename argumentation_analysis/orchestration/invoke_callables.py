@@ -294,6 +294,12 @@ def llm_budget_scope(ceiling: Optional[int] = None) -> Iterator["_LLMBudget"]:
 # below a pathological hang. Set LLM_CALL_TIMEOUT_S=0 to disable.
 _LLM_CALL_TIMEOUT_S = float(os.environ.get("LLM_CALL_TIMEOUT_S", "300"))
 
+# Dung extension computation timeout (seconds). Preferred/stable semantics on
+# large attack graphs can hang indefinitely.  On timeout, falls back to
+# pure-Python grounded-only computation with degraded=True.  Set
+# DUNG_TIMEOUT_S=0 to disable timeout (not recommended).
+_DUNG_TIMEOUT_S = float(os.environ.get("DUNG_TIMEOUT_S", "60"))
+
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
     """Single funnel for every LLM chat-completion call (#708 runaway guard).
@@ -5533,11 +5539,47 @@ async def _invoke_dung_extensions(
         initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = AFHandler(initializer)
 
-        # Compute all 11 semantics in one pass (framework built once)
+        # Compute all 11 semantics in one pass (framework built once).
+        # Timeout protection (#992): preferred/stable on large graphs can hang
+        # indefinitely — fall back to grounded-only Python on timeout.
         all_semantics = list(SEMANTICS_REASONERS.keys())
-        result = await asyncio.to_thread(
-            handler.analyze_multi_semantics, arguments, attacks, all_semantics
-        )
+        try:
+            if _DUNG_TIMEOUT_S > 0:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        handler.analyze_multi_semantics,
+                        arguments,
+                        attacks,
+                        all_semantics,
+                    ),
+                    timeout=_DUNG_TIMEOUT_S,
+                )
+            else:
+                result = await asyncio.to_thread(
+                    handler.analyze_multi_semantics, arguments, attacks, all_semantics
+                )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Dung computation timed out after {_DUNG_TIMEOUT_S}s "
+                f"({len(arguments)} args, {len(attacks)} attacks) — "
+                f"falling back to grounded-only Python (#992)"
+            )
+            _fallback_result = _python_dung_fallback(arguments, attacks)
+            _fallback_result["degraded"] = True
+            _fallback_result["degraded_reason"] = (
+                f"timeout after {_DUNG_TIMEOUT_S}s"
+            )
+            # Trace entry for degraded Dung fallback
+            _state = context.get("_state_object")
+            if _state is not None and _fallback_result.get("arguments"):
+                _n_args = len(_fallback_result.get("arguments", []))
+                _state.add_trace_entry(
+                    phase="dung",
+                    agent="DungAnalyzer",
+                    reacts_to=["extract", "counter"],
+                    summary=f"Cadre Dung (DEGRADED — timeout): {_n_args} arguments. Extension fondée calculée heuristiquement.",
+                )
+            return _fallback_result
 
         raw_extensions = result.get("extensions", {})
 
@@ -5598,6 +5640,8 @@ async def _invoke_dung_extensions(
     except Exception as e:
         logger.info(f"Dung AFHandler unavailable ({e}), using Python fallback")
         _fallback_result = _python_dung_fallback(arguments, attacks)
+        _fallback_result["degraded"] = True
+        _fallback_result["degraded_reason"] = f"AFHandler error: {e}"
         # Trace entry for Dung Python fallback
         _state = context.get("_state_object")
         if _state is not None and _fallback_result.get("arguments"):
