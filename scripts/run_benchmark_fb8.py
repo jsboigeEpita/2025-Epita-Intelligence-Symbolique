@@ -322,12 +322,9 @@ def _normalize_fallacy_type(raw: str) -> str:
     Lowercases, strips, and applies the FR→EN alias map if applicable.
     """
     key = raw.lower().strip()
-    # Direct alias hit
+    # Direct alias hit; otherwise return key verbatim (already lowercase).
     if key in FALLACY_FR_EN_ALIASES:
         return FALLACY_FR_EN_ALIASES[key]
-    # Also try underscored form (pipeline sometimes uses snake_case EN)
-    if "_" in key:
-        return key
     return key
 
 

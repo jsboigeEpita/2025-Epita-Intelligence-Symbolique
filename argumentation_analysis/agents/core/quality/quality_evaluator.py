@@ -25,9 +25,6 @@ logger = logging.getLogger("ArgumentQualityEvaluator")
 _nlp = None
 _flesch_reading_ease = None
 _DEPS_AVAILABLE = False
-
-
-_DEPS_AVAILABLE = False
 _DEPS_ATTEMPTED = False
 
 

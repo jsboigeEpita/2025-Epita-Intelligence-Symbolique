@@ -292,13 +292,21 @@ def llm_budget_scope(ceiling: Optional[int] = None) -> Iterator["_LLMBudget"]:
 # conversational-spectacular path hung ~50 min on one unbounded call. Generous
 # default (300s) — far above a legitimate reasoning-model call (<2 min) but well
 # below a pathological hang. Set LLM_CALL_TIMEOUT_S=0 to disable.
-_LLM_CALL_TIMEOUT_S = float(os.environ.get("LLM_CALL_TIMEOUT_S", "300"))
+def _safe_float_env(key: str, default: float) -> float:
+    """Read a float from an env var, falling back to *default* on bad input."""
+    try:
+        return float(os.environ.get(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
+_LLM_CALL_TIMEOUT_S = _safe_float_env("LLM_CALL_TIMEOUT_S", 300.0)
 
 # Dung extension computation timeout (seconds). Preferred/stable semantics on
 # large attack graphs can hang indefinitely.  On timeout, falls back to
 # pure-Python grounded-only computation with degraded=True.  Set
 # DUNG_TIMEOUT_S=0 to disable timeout (not recommended).
-_DUNG_TIMEOUT_S = float(os.environ.get("DUNG_TIMEOUT_S", "60"))
+_DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 60.0)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
