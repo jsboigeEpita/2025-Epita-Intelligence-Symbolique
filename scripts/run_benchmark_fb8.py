@@ -151,12 +151,29 @@ YARDSTICK_DIMENSIONS = [
 # Corpus loading
 # ---------------------------------------------------------------------------
 
-def load_corpus_text(idx: int, max_chars: int = 60000) -> str:
-    """Load corpus text from encrypted dataset by index."""
-    key = derive_encryption_key(os.environ["TEXT_CONFIG_PASSPHRASE"])
-    defs = load_extract_definitions(DATASET_PATH, key)
-    text = defs[idx].get("full_text", "")
-    return text[:max_chars] if len(text) > max_chars else text
+def load_corpus_text(idx: Optional[int] = None, path: Optional[str] = None, max_chars: int = 60000) -> str:
+    """Load corpus text from encrypted dataset by index OR from a local file path.
+
+    Args:
+        idx: Index in extract_sources.json.gz.enc (encrypted dataset).
+        path: Path to a local text file (e.g., gitignored fixture).
+        max_chars: Maximum characters to load.
+    """
+    if path is not None:
+        p = Path(path)
+        if not p.exists():
+            raise FileNotFoundError(f"Corpus file not found: {path}")
+        text = p.read_text(encoding="utf-8")
+        print(f"[FB-8] Loaded corpus from file: {path} ({len(text)} chars)")
+        return text[:max_chars] if len(text) > max_chars else text
+
+    if idx is not None:
+        key = derive_encryption_key(os.environ["TEXT_CONFIG_PASSPHRASE"])
+        defs = load_extract_definitions(DATASET_PATH, key)
+        text = defs[idx].get("full_text", "")
+        return text[:max_chars] if len(text) > max_chars else text
+
+    raise ValueError("Either idx or path must be provided")
 
 
 # ---------------------------------------------------------------------------
@@ -546,11 +563,13 @@ def _score_dimension(
 # Main runner
 # ---------------------------------------------------------------------------
 
-async def run_benchmark(corpus_idx: Optional[int] = None, dry_run: bool = False) -> Dict[str, Any]:
+async def run_benchmark(corpus_idx: Optional[int] = None, corpus_path: Optional[str] = None,
+                       dry_run: bool = False) -> Dict[str, Any]:
     """Run FB-8 benchmark: pipeline vs yardstick.
 
     Args:
-        corpus_idx: Index of corpus_X in encrypted dataset (required for real run).
+        corpus_idx: Index of corpus_X in encrypted dataset.
+        corpus_path: Path to local text file (gitignored fixture).
         dry_run: If True, use synthetic placeholder output to validate plumbing.
     """
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -563,11 +582,12 @@ async def run_benchmark(corpus_idx: Optional[int] = None, dry_run: bool = False)
         print("[FB-8] *** DRY-RUN MODE — synthetic placeholder output ***")
         pipeline_output = _synthetic_placeholder_output()
     else:
-        if corpus_idx is None:
-            raise ValueError("--corpus-idx required for real run (use --dry-run for plumbing test)")
+        if corpus_idx is None and corpus_path is None:
+            raise ValueError("--corpus-idx or --corpus-path required for real run (use --dry-run for plumbing test)")
         # 1. Load corpus_X text
-        print(f"[FB-8] Loading corpus_X (index {corpus_idx})...")
-        text = load_corpus_text(corpus_idx)
+        source_desc = f"index {corpus_idx}" if corpus_idx is not None else f"file {corpus_path}"
+        print(f"[FB-8] Loading corpus_X ({source_desc})...")
+        text = load_corpus_text(idx=corpus_idx, path=corpus_path)
         print(f"[FB-8] corpus_X: {len(text)} chars loaded")
 
         # 2. Run integral pipeline
@@ -737,14 +757,17 @@ def main():
     parser = argparse.ArgumentParser(description="Capstone FB-8 — Pipeline vs Yardstick Benchmark")
     parser.add_argument("--corpus-idx", type=int, default=None,
                         help="Index of corpus_X in extract_sources.json.gz.enc")
+    parser.add_argument("--corpus-path", type=str, default=None,
+                        help="Path to local corpus_X text file (gitignored fixture)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Run with synthetic placeholder output (validates plumbing)")
     args = parser.parse_args()
 
-    if not args.dry_run and args.corpus_idx is None:
-        parser.error("Either --corpus-idx or --dry-run is required")
+    if not args.dry_run and args.corpus_idx is None and args.corpus_path is None:
+        parser.error("Either --corpus-idx, --corpus-path, or --dry-run is required")
 
-    asyncio.run(run_benchmark(corpus_idx=args.corpus_idx, dry_run=args.dry_run))
+    asyncio.run(run_benchmark(corpus_idx=args.corpus_idx, corpus_path=args.corpus_path,
+                              dry_run=args.dry_run))
 
 
 if __name__ == "__main__":
