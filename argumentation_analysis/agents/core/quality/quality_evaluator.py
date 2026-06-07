@@ -27,11 +27,16 @@ _flesch_reading_ease = None
 _DEPS_AVAILABLE = False
 
 
+_DEPS_AVAILABLE = False
+_DEPS_ATTEMPTED = False
+
+
 def _load_deps():
     """Load optional dependencies (spacy, textstat) once."""
-    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE
-    if _DEPS_AVAILABLE:
-        return True
+    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED
+    if _DEPS_ATTEMPTED:
+        return _DEPS_AVAILABLE
+    _DEPS_ATTEMPTED = True
     try:
         import spacy
         from textstat import flesch_reading_ease
@@ -47,9 +52,12 @@ def _load_deps():
             _nlp = None
         _DEPS_AVAILABLE = True
         return True
-    except ImportError:
+    except (ImportError, OSError, RuntimeError):
+        # ImportError: spacy/textstat not installed
+        # OSError: WinError 182 — torch DLL load failure propagates through spacy (#993)
+        # RuntimeError: other DLL incompatibilities
         logger.warning(
-            "spacy or textstat not installed. "
+            "spacy or textstat not available (import error or DLL failure). "
             "Quality evaluation will use fallback heuristics."
         )
         return False
@@ -322,12 +330,17 @@ class ArgumentQualityEvaluator:
                 details[vertu] = f"Erreur: {e}"
 
         note_finale = sum(scores.values())
-        return {
+        result = {
             "note_finale": note_finale,
             "note_moyenne": note_finale / len(scores) if scores else 0.0,
             "scores_par_vertu": scores,
             "rapport_detaille": details,
         }
+        # Flag degraded mode when deps failed (#993)
+        if not _DEPS_AVAILABLE and _DEPS_ATTEMPTED:
+            result["degraded"] = True
+            result["degraded_reason"] = "spacy/textstat unavailable — using heuristic fallback"
+        return result
 
 
 def evaluer_argument(text: str) -> Dict[str, Any]:
