@@ -5733,6 +5733,10 @@ async def _invoke_narrative_synthesis(
     Reads state from context (populated by prior phases) and calls
     build_narrative to generate 1-2 paragraphs weaving together quality,
     fallacies, JTMS, ATMS, Dung, and formal logic results.
+
+    #994: Falls back to reading phase outputs directly from context when
+    the state-based narrative is empty/fallback, ensuring non-empty output
+    even when some upstream phases are degraded or missing.
     """
     from argumentation_analysis.plugins.narrative_synthesis_plugin import (
         build_narrative,
@@ -5740,6 +5744,11 @@ async def _invoke_narrative_synthesis(
     from argumentation_analysis.core.shared_state import UnifiedAnalysisState
     from argumentation_analysis.orchestration.state_writers import (
         CAPABILITY_STATE_WRITERS,
+    )
+
+    _FALLBACK_SENTINEL = (
+        "L'analyse n'a pas produit suffisamment de donnees pour generer "
+        "une synthese narrative"
     )
 
     # Reconstruct state from context if possible
@@ -5762,13 +5771,137 @@ async def _invoke_narrative_synthesis(
                         )
 
     narrative = build_narrative(state)
+    degraded = False
+
+    # #994: If state-based narrative is the fallback message, try reading
+    # phase outputs directly from context to produce a non-empty synthesis.
+    if not narrative or _FALLBACK_SENTINEL in narrative:
+        parts: list[str] = []
+
+        # Arguments
+        extract_out = context.get("phase_extract_output", {})
+        raw_args = (
+            extract_out.get("arguments", []) if isinstance(extract_out, dict) else []
+        )
+        if raw_args:
+            parts.append(
+                f"L'analyse a extrait {len(raw_args)} argument(s) du texte."
+            )
+
+        # Fallacies
+        fallacy_out = context.get("phase_hierarchical_fallacy_output", {})
+        fallacies_raw = (
+            fallacy_out.get("fallacies", []) if isinstance(fallacy_out, dict) else []
+        )
+        if fallacies_raw:
+            types = set()
+            for f in fallacies_raw:
+                if isinstance(f, dict):
+                    t = f.get("type", "")
+                    if t:
+                        types.add(t)
+            types_str = ", ".join(sorted(types)) if types else f"{len(fallacies_raw)} sophisme(s)"
+            parts.append(
+                f"L'analyse a detecte {len(fallacies_raw)} sophisme(s) "
+                f"({types_str}), ce qui fragilise la structure argumentative."
+            )
+
+        # Counter-arguments
+        ca_out = context.get("phase_counter_output", {})
+        ca_list = (
+            ca_out.get("llm_counter_arguments", [])
+            if isinstance(ca_out, dict)
+            else []
+        )
+        if ca_list:
+            parts.append(
+                f"Des contre-arguments ont ete generes ({len(ca_list)}), "
+                f"identifiant des points de contestation."
+            )
+
+        # Formal logic
+        pl_out = context.get("phase_pl_output", {})
+        fol_out = context.get("phase_fol_output", {})
+        pl_formulas = (
+            len(pl_out.get("formulas", [])) if isinstance(pl_out, dict) else 0
+        )
+        fol_formulas = (
+            len(fol_out.get("formulas", [])) if isinstance(fol_out, dict) else 0
+        )
+        formal_total = pl_formulas + fol_formulas
+        if formal_total > 0:
+            parts.append(
+                f"L'analyse formelle a produit {formal_total} formule(s) "
+                f"({pl_formulas} PL, {fol_formulas} FOL)."
+            )
+
+        # Dung extensions
+        dung_out = context.get("phase_dung_extensions_output", {})
+        if isinstance(dung_out, dict):
+            dung_args = dung_out.get("arguments", [])
+            degraded_flag = dung_out.get("degraded", False)
+            if dung_args:
+                desc = (
+                    f"L'argumentation abstraite (Dung) a analyse {len(dung_args)} argument(s)"
+                )
+                if degraded_flag:
+                    desc += " en mode degrade (extension fondee uniquement)"
+                parts.append(desc + ".")
+
+        # JTMS beliefs
+        jtms_out = context.get("phase_jtms_output", {})
+        if isinstance(jtms_out, dict):
+            beliefs = jtms_out.get("beliefs", [])
+            if beliefs:
+                parts.append(
+                    f"Le systeme JTMS maintient {len(beliefs)} croyance(s)."
+                )
+
+        # Quality scores
+        quality_out = context.get("phase_argument_quality_output", {})
+        if isinstance(quality_out, dict):
+            per_arg = quality_out.get("per_argument_scores", {})
+            if per_arg:
+                scores = [
+                    v.get("note_finale", 0)
+                    for v in per_arg.values()
+                    if isinstance(v, dict)
+                ]
+                avg = sum(scores) / len(scores) if scores else 0
+                degraded_flag = any(
+                    v.get("degraded", False)
+                    for v in per_arg.values()
+                    if isinstance(v, dict)
+                )
+                q_desc = (
+                    f"L'evaluation de la qualite argumentative couvre "
+                    f"{len(per_arg)} argument(s), avec une note moyenne de "
+                    f"{avg:.1f}/9."
+                )
+                if degraded_flag:
+                    q_desc += " (mode degrade - heuristiques)"
+                parts.append(q_desc)
+
+        if parts:
+            narrative = " ".join(parts)
+            degraded = True
+            logger.info(
+                "Narrative synthesis rebuilt from context phase outputs "
+                "(state was empty/fallback). %d parts assembled.",
+                len(parts),
+            )
+
     paragraph_count = (narrative.count("\n\n") + 1) if narrative else 0
 
-    return {
+    result = {
         "narrative": narrative,
         "paragraph_count": paragraph_count,
         "referenced_fields": _count_referenced_fields(state),
     }
+    if degraded:
+        result["degraded"] = True
+        result["degraded_reason"] = "rebuilt from context (state-based narrative was empty)"
+    return result
 
 
 def _count_referenced_fields(state: Any) -> int:

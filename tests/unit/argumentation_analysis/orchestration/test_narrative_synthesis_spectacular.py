@@ -5,6 +5,7 @@ but was missing the service registration in registry_setup.py — causing the
 phase to be skipped in pipeline mode.
 """
 
+import pytest
 from unittest.mock import MagicMock
 
 
@@ -98,3 +99,59 @@ class TestNarrativeSynthesisRegistration:
         ):
             assert signal_phase in deps, f"{signal_phase} missing from deps"
         assert phase["narrative_synthesis"].optional is True
+
+
+class TestNarrativeSynthesisGracefulDegradation:
+    """Test narrative synthesis produces non-empty output from context (#994)."""
+
+    @pytest.mark.asyncio
+    async def test_narrative_from_context_when_state_empty(self):
+        """When state is empty, narrative rebuilds from context phase outputs."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_narrative_synthesis,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "Argument about national defense"},
+                    {"text": "Another argument about technology"},
+                ]
+            },
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {"type": "Appel a l'autorite", "target_text": "Argument about defense"},
+                ]
+            },
+            "phase_counter_output": {
+                "llm_counter_arguments": [
+                    {"target_argument": "Argument about national defense", "counter_argument": "Counter 1"}
+                ]
+            },
+        }
+
+        result = await _invoke_narrative_synthesis("test text", context)
+
+        # Must be non-empty
+        assert result["narrative"], f"Expected non-empty narrative, got: {result}"
+        # Should mention extracted args count
+        assert "2 argument(s)" in result["narrative"]
+        # Should mention fallacy
+        assert "1 sophisme(s)" in result["narrative"]
+        # Should mention counter-arguments
+        assert "contre-arguments" in result["narrative"].lower()
+        # Degraded flag
+        assert result.get("degraded") is True
+
+    @pytest.mark.asyncio
+    async def test_narrative_empty_context_still_returns(self):
+        """Even with completely empty context, narrative callable does not crash."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_narrative_synthesis,
+        )
+
+        result = await _invoke_narrative_synthesis("test text", {})
+
+        assert isinstance(result, dict)
+        assert "narrative" in result
+        # May be the fallback message, but should never raise
