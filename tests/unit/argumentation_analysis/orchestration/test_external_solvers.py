@@ -248,3 +248,30 @@ class TestRegistryASPService:
         reg = registry._registrations.get("modal_logic_service")
         assert reg is not None
         assert "modal_logic" in reg.capabilities
+
+
+class TestSafeFloatEnv:
+    """Test _safe_float_env guards against non-numeric env vars (#1003)."""
+
+    def test_valid_numeric_string(self):
+        """Numeric string is parsed correctly."""
+        import argumentation_analysis.orchestration.invoke_callables as mod
+
+        with patch.dict("os.environ", {"_TEST_FLOAT": "42.5"}):
+            assert mod._safe_float_env("_TEST_FLOAT", 10.0) == 42.5
+
+    def test_non_numeric_falls_back_to_default(self):
+        """Non-numeric env var falls back to default without crash."""
+        import argumentation_analysis.orchestration.invoke_callables as mod
+
+        with patch.dict("os.environ", {"_TEST_FLOAT": "not_a_number"}):
+            assert mod._safe_float_env("_TEST_FLOAT", 10.0) == 10.0
+
+    def test_missing_key_falls_back_to_default(self):
+        """Missing env var falls back to default."""
+        import argumentation_analysis.orchestration.invoke_callables as mod
+
+        env = {"_TEST_FLOAT": "irrelevant"}
+        env.pop("_TEST_FLOAT_MISSING", None)
+        with patch.dict("os.environ", env, clear=False):
+            assert mod._safe_float_env("_TEST_FLOAT_MISSING", 99.0) == 99.0

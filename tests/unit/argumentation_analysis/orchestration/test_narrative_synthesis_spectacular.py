@@ -144,6 +144,58 @@ class TestNarrativeSynthesisGracefulDegradation:
         assert result.get("degraded") is True
 
     @pytest.mark.asyncio
+    async def test_sentinel_triggers_context_rebuild(self):
+        """When build_narrative returns the fallback sentinel, context rebuild activates (#994)."""
+        from unittest.mock import patch, MagicMock
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_narrative_synthesis,
+        )
+
+        sentinel = (
+            "L'analyse n'a pas produit suffisamment de donnees pour generer "
+            "une synthese narrative"
+        )
+        mock_state = MagicMock()
+        context = {
+            "_state_object": mock_state,
+            "phase_extract_output": {
+                "arguments": [{"text": "Arg1"}, {"text": "Arg2"}]
+            },
+        }
+        with patch(
+            "argumentation_analysis.plugins.narrative_synthesis_plugin.build_narrative",
+            return_value=sentinel,
+        ):
+            result = await _invoke_narrative_synthesis("test text", context)
+
+        # Should have rebuilt from context
+        assert result["narrative"], f"Expected rebuilt narrative, got: {result}"
+        assert "2 argument(s)" in result["narrative"]
+        assert result.get("degraded") is True
+
+    @pytest.mark.asyncio
+    async def test_non_degraded_path_no_rebuild(self):
+        """When build_narrative returns valid prose, no degraded flag is set (#994)."""
+        from unittest.mock import patch, MagicMock
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_narrative_synthesis,
+        )
+
+        valid_narrative = "L'argument principal repose sur une analogie solide."
+        mock_state = MagicMock()
+        context = {"_state_object": mock_state}
+
+        with patch(
+            "argumentation_analysis.plugins.narrative_synthesis_plugin.build_narrative",
+            return_value=valid_narrative,
+        ):
+            result = await _invoke_narrative_synthesis("test text", context)
+
+        assert result["narrative"] == valid_narrative
+        assert result.get("degraded") is not True
+        assert "degraded_reason" not in result
+
+    @pytest.mark.asyncio
     async def test_narrative_empty_context_still_returns(self):
         """Even with completely empty context, narrative callable does not crash."""
         from argumentation_analysis.orchestration.unified_pipeline import (
