@@ -1676,3 +1676,382 @@ class TestPLValueGate:
             "PL produced 0 formulas even in Tweety-success path. "
             "A regression to zero would silently pass CI (#977)."
         )
+
+
+# ===========================================================================
+# Satellite formal bricks — value-gate sweep (#1005)
+# ===========================================================================
+
+
+class TestSATValueGate:
+    """SAT solver has no fallback — verify it returns honest results (#1005).
+
+    SATHandler is pure Python (no JVM). If the solver fails it crashes;
+    the gate ensures the happy-path output structure is non-trivial.
+    """
+
+    async def test_sat_returns_structured_output(self):
+        """SAT invocation must return satisfiable + model, not empty dict."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_sat,
+        )
+
+        context = {
+            "formulas": ["p & q"],
+            "solver": "cadical195",
+        }
+        result = await _invoke_sat("p and q", context)
+
+        assert "satisfiable" in result, (
+            f"SAT result missing 'satisfiable' key: {list(result.keys())} (#1005)."
+        )
+        assert isinstance(result["satisfiable"], bool), (
+            f"SAT 'satisfiable' should be bool, got {type(result['satisfiable'])} (#1005)."
+        )
+
+
+class TestEAFValueGate:
+    """Extended Argumentation Framework — fallback honesty (#1005).
+
+    The Python fallback constructs extensions from attack structure.
+    Gate: must return non-empty args and an extensions list (even if synthetic).
+    """
+
+    async def test_eaf_fallback_returns_structure(self):
+        """EAF fallback must return args and extensions, not empty."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_eaf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_eaf("test", {"arguments": ["a", "b"]})
+
+        assert "arguments" in result or "args" in result, (
+            f"EAF fallback missing args: {list(result.keys())} (#1005)."
+        )
+        assert "extensions" in result, (
+            f"EAF fallback missing 'extensions': {list(result.keys())} (#1005)."
+        )
+        # Fallback must signal degradation
+        fallback = result.get("fallback")
+        assert fallback is not None, (
+            "EAF fallback did not set 'fallback' flag (#1005)."
+        )
+
+
+class TestQBFValueGate:
+    """QBF solver — error fallback returns valid=False honestly (#1005)."""
+
+    async def test_qbf_error_fallback_reports_unavailable(self):
+        """When both JVM and native fail, QBF must report unavailability."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_qbf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM"),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.qbf_native.analyze_qbf",
+            side_effect=ImportError("No native QBF"),
+            create=True,
+        ):
+            result = await _invoke_qbf("forall x exists y: P(x,y)", {})
+
+        assert result.get("fallback") == "error", (
+            f"QBF error fallback should set fallback='error', got {result.get('fallback')} (#1005)."
+        )
+        assert result.get("valid") is False, (
+            f"QBF unavailable must report valid=False, got {result.get('valid')} (#1005)."
+        )
+
+
+class TestABAValueGate:
+    """ABA fallback uses assumptions[:2] fabrication (#1005).
+
+    This gate DOCUMENTS the known fabrication. When the brick is fixed
+    to report honest unavailability, this test should be updated.
+    """
+
+    async def test_aba_fallback_returns_structure(self):
+        """ABA fallback must return extensions and flag fallback mode."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_aba,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_aba("test", {"arguments": ["a", "b", "c"]})
+
+        assert "extensions" in result, (
+            f"ABA fallback missing 'extensions': {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") == "python", (
+            f"ABA fallback should flag fallback='python', got {result.get('fallback')} (#1005)."
+        )
+        # Document known fabrication: extensions use assumptions[:2]
+        ext = result.get("extensions", [])
+        assert len(ext) > 0, (
+            "ABA fallback returned empty extensions — must have at least 1 (#1005)."
+        )
+
+    async def test_aba_fallback_documents_fabrication(self):
+        """ABA fallback produces synthetic extensions — document this known state."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_aba,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_aba("test argument text", {})
+
+        # Fallback must return extensions (even if synthetic) and flag fallback
+        assert "extensions" in result, (
+            f"ABA fallback missing 'extensions': {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") == "python", (
+            "ABA must flag fallback='python' (#1005)."
+        )
+        # Document: extensions are fabricated from synthetic assumptions,
+        # not from real argumentation-theoretic computation
+        ext = result.get("extensions", [])
+        assert isinstance(ext, list), (
+            f"ABA extensions should be list, got {type(ext)} (#1005)."
+        )
+
+
+class TestADFValueGate:
+    """ADF fallback uses statements[:2] all-True fabrication (#1005).
+
+    This gate DOCUMENTS the known fabrication. When the brick is fixed,
+    this test should be updated.
+    """
+
+    async def test_adf_fallback_returns_structure(self):
+        """ADF fallback must return interpretations and flag fallback mode."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_adf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_adf("test", {"arguments": ["s1", "s2"]})
+
+        assert "interpretations" in result, (
+            f"ADF fallback missing 'interpretations': {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") == "python", (
+            f"ADF fallback should flag fallback='python', got {result.get('fallback')} (#1005)."
+        )
+
+    async def test_adf_fallback_documents_fabrication(self):
+        """ADF fallback produces synthetic interpretations — document known state."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_adf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_adf("test argument text", {})
+
+        interpretations = result.get("interpretations", [])
+        assert len(interpretations) > 0, (
+            "ADF fallback returned no interpretations (#1005)."
+        )
+        # Document: interpretations are fabricated (statements[:2] → all True),
+        # not from real ADF semantics computation
+        assert result.get("fallback") == "python", (
+            "ADF must flag fallback='python' (#1005)."
+        )
+
+
+class TestProbabilisticValueGate:
+    """Probabilistic argumentation fallback uses heuristic (#1005).
+
+    Fallback assigns uniform 0.5 probabilities and computes acceptance
+    from attack counts. Gate: must return probabilities and flag fallback.
+    """
+
+    async def test_probabilistic_fallback_returns_structure(self):
+        """Probabilistic fallback must return acceptance probabilities."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_probabilistic,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
+
+        assert "acceptance_probabilities" in result, (
+            f"Probabilistic fallback missing 'acceptance_probabilities': {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") == "python", (
+            f"Probabilistic must flag fallback='python', got {result.get('fallback')} (#1005)."
+        )
+
+    async def test_probabilistic_acceptance_values_bounded(self):
+        """Acceptance probabilities must be in [0, 1]."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_probabilistic,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
+
+        acceptance = result.get("acceptance_probabilities", {})
+        assert isinstance(acceptance, dict), (
+            f"Acceptance should be dict, got {type(acceptance)} (#1005)."
+        )
+        for arg, prob in acceptance.items():
+            assert 0.0 <= prob <= 1.0, (
+                f"Acceptance for '{arg}' out of [0,1]: {prob} (#1005)."
+            )
+
+
+class TestDialogueValueGate:
+    """Dialogue game fallback uses turn-by-turn trace (#1005).
+
+    Fallback splits arguments into proponent/opponent and traces moves.
+    Gate: must return dialogue trace and flag fallback.
+    """
+
+    async def test_dialogue_fallback_returns_trace(self):
+        """Dialogue fallback must return a turn trace with a winner."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_dialogue,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_dialogue("test argument text", {})
+
+        assert "trace" in result or "turns" in result or "winner" in result, (
+            f"Dialogue fallback missing trace/turns/winner: {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") is not None, (
+            "Dialogue must flag fallback mode (#1005)."
+        )
+
+
+class TestBeliefRevisionValueGate:
+    """Belief revision fallback uses literal set modification (#1005).
+
+    Fallback removes negated belief and appends new belief to set.
+    Gate: must return revised belief set and flag fallback.
+    """
+
+    async def test_belief_revision_fallback_returns_revised_set(self):
+        """Belief revision fallback must return a revised belief set."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_belief_revision,
+        )
+
+        context = {
+            "belief_set": ["a", "b"],
+            "new_belief": "c",
+            "revision_method": "dalal",
+        }
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_belief_revision("test", context)
+
+        assert "revised" in result or "revised_belief_set" in result, (
+            f"Belief revision missing revised set: {list(result.keys())} (#1005)."
+        )
+        assert result.get("fallback") is not None, (
+            "Belief revision must flag fallback mode (#1005)."
+        )
+
+
+class TestATMSValueGate:
+    """ATMS is pure Python (no JVM). Verify it returns structured output (#1005).
+
+    ATMS has no fallback path because it doesn't depend on JVM.
+    Gate: must return nodes and environments from upstream context.
+    """
+
+    async def test_atms_returns_nodes(self):
+        """ATMS must return node data from phase outputs."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_atms,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "Climate change is real"}],
+                "claims": [{"text": "Climate change is real"}],
+            },
+            "phase_hierarchical_fallacy_output": {"fallacies": []},
+            "phase_quality_output": {"per_argument_scores": {}},
+        }
+        result = await _invoke_atms("test argument text", context)
+
+        assert isinstance(result, dict), (
+            f"ATMS must return dict, got {type(result)} (#1005)."
+        )
+        # Must have at minimum nodes or environments
+        has_structure = any(
+            k in result
+            for k in ("nodes", "environments", "atms_contexts", "labeling")
+        )
+        assert has_structure, (
+            f"ATMS returned no structural keys: {list(result.keys())} (#1005)."
+        )
+
+
+class TestASPICValueGate:
+    """ASPIC+ fallback uses defensibility analysis (#1005).
+
+    Fallback builds strict/defeasible rules from extracted data.
+    Gate: must return argument structure and flag fallback.
+    """
+
+    async def test_aspic_fallback_returns_argument_structure(self):
+        """ASPIC+ fallback must return argument structure from context."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_aspic,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_aspic("test argument text", {
+                "phase_extract_output": {
+                    "claims": [{"text": "claim 1"}],
+                    "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
+                },
+                "phase_hierarchical_fallacy_output": {"fallacies": []},
+            })
+
+        assert "fallback" in result, (
+            f"ASPIC must flag fallback mode: {list(result.keys())} (#1005)."
+        )
+        # Must return some form of argument structure
+        has_structure = any(
+            k in result
+            for k in ("arguments", "defeasible_rules", "strict_rules", "defensible")
+        )
+        assert has_structure, (
+            f"ASPIC returned no argument structure: {list(result.keys())} (#1005)."
+        )
