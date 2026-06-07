@@ -268,6 +268,70 @@ def _extract_full_state(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# FR↔EN Fallacy alias map (#995)
+# ---------------------------------------------------------------------------
+
+# Derived from taxonomy_full.csv (text_fr → text_en canonical).
+# Covers the 8 families + all yardstick markers (D1-D10).
+# Each key is a normalised (lowercased) FR label produced by the pipeline;
+# each value is the EN canonical marker expected by the yardstick scorer.
+FALLACY_FR_EN_ALIASES: Dict[str, str] = {
+    # Insufficiency family
+    "généralisation hâtive": "hasty_generalization",
+    "rationalisation": "rationalization",
+    "appel à l'ignorance": "appeal_to_ignorance",
+    "argument d'omniscience": "argument_from_omniscience",
+    # Influence family
+    "appel à l'émotion": "appeal_to_emotion",
+    "appel à la peur": "appeal_to_fear",
+    "appel à la pitié": "appeal_to_pity",
+    "appel à la flatterie": "appeal_to_flattery",
+    "appel au ridicule": "appeal_to_ridicule",
+    # Faulty logics family
+    "raisonnement circulaire": "circular_reasoning",
+    "argument circulaire": "circular_reasoning",
+    "définition circulaire": "circular_reasoning",
+    "pente glissante": "slippery_slope",
+    "faux dilemme": "false_dilemma",
+    "fausse dichotomie": "false_dilemma",
+    "pétition de principe": "begging_question",
+    "non-séquitur": "non_sequitur",
+    # Cheating family
+    "homme de paille": "straw_man",
+    "appel à l'identité": "appeal_to_identity",
+    "effet de mode": "bandwagon_effect",
+    "fausse équivalence": "false_equivalence",
+    # Obstruction family
+    "ad populum": "ad_populum",
+    "raison de la majorité": "ad_populum",
+    "appel à la bande": "bandwagon_fallacy",
+    "atteinte personnelle": "ad_hominem",
+    # Misleading language family
+    "équivoque": "equivocation",
+    "ambiguïté": "ambiguity",
+    # Additional yardstick-specific markers
+    "appel à l'autorité": "appeal_to_authority",
+    "tromperie implicite": "implicit_deception",
+    "sophisme naturel": "naturalistic_fallacy",
+}
+
+
+def _normalize_fallacy_type(raw: str) -> str:
+    """Normalize a fallacy type string for matching.
+
+    Lowercases, strips, and applies the FR→EN alias map if applicable.
+    """
+    key = raw.lower().strip()
+    # Direct alias hit
+    if key in FALLACY_FR_EN_ALIASES:
+        return FALLACY_FR_EN_ALIASES[key]
+    # Also try underscored form (pipeline sometimes uses snake_case EN)
+    if "_" in key:
+        return key
+    return key
+
+
+# ---------------------------------------------------------------------------
 # Scoring engine
 # ---------------------------------------------------------------------------
 
@@ -284,8 +348,11 @@ def score_against_yardstick(pipeline_output: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(fallacies, dict):
         for _fid, fdata in fallacies.items():
             if isinstance(fdata, dict):
-                ft = fdata.get("family", fdata.get("fallacy_type", "")).lower()
-                fallacy_types.add(ft)
+                # Collect both family and fallacy_type, normalize each
+                for field in ("family", "fallacy_type"):
+                    raw = fdata.get(field, "")
+                    if raw:
+                        fallacy_types.add(_normalize_fallacy_type(raw))
                 # Also check for specific markers in description
                 desc = fdata.get("description", "").lower()
                 if "circul" in desc or "begging" in desc or "question" in desc:
