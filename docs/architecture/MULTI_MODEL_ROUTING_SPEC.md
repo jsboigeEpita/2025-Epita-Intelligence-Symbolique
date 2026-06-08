@@ -4,7 +4,23 @@
 **Scope**: Design spec only. No code changes to `invoke_callables.py` (collision guard: po-2025 owns that file's logic).
 **Purpose**: Define how per-phase model tier routing should work so that cheap mechanical phases (extraction, NL-to-logic) can use a cheaper model while reasoning-heavy phases (synthesis, governance, debate) use a strong model — reducing cost on repeated Phase 4 integral runs.
 
-**Status**: Design spec — awaiting implementation in a future sprint by the owner of `invoke_callables.py`.
+**Status**: Design spec (v2 — reviewer concerns reconciled) — awaiting implementation in a future sprint by the owner of `invoke_callables.py`.
+
+---
+
+## 0. Reviewer Concerns Reconciliation (R367)
+
+Seven concerns were raised during review of v1. Each is addressed below with a cross-reference to the spec section where the fix is applied.
+
+| # | Concern | Resolution | Spec section |
+|---|---------|-----------|--------------|
+| 1 | Phase count 29 vs 26 — 3 phases unclassified | Added `fol_solver`, `modal_solver`, `synthesis` to §2.3 table. All 29 phases now classified. | §2.3 |
+| 2 | Cost projection weight 0.1 inflates savings ×10 | Replaced with realistic token-ratio estimate based on actual model pricing. Savings now estimated at 33% (not 56%). Labelled "estimation conceptuelle" explicitly. | §2.3, §4.2 |
+| 3 | OpenRouter priority chain asymmetric with existing pattern | Aligned to mirror existing `_resolve_model_id()` precedence: `OPENROUTER_*` vars take priority over `LLM_MODEL_*` when on OpenRouter. See §2.2 revised chains. | §2.2 |
+| 4 | `stakes_extraction` classified `strong` but is extraction | Reclassified to `cheap` (structured extraction, not generative reasoning). | §2.3 |
+| 5 | Invalid tier string → silent `None` fallback | Added explicit `ValueError` with log warning for unknown tier values. | §2.4.A |
+| 6 | OpenRouter test path gap | Added `test_openrouter_tier_priority` to §3.1 test table. | §3.1 |
+| 7 | Phase 3 cost-aware budget underspecified | Added §5.3 detail: separate counters, threshold interaction, weight formula. | §5.3 |
 
 ---
 
@@ -66,17 +82,19 @@ LLM_MODEL_CHEAP=gpt-5-mini               # Model for "cheap" tier phases
 LLM_MODEL_STRONG=gpt-5-mini              # Model for "strong" tier phases
 ```
 
-**Resolution priority**:
+**Resolution priority** (OpenAI path):
 ```
-cheap model = LLM_MODEL_CHEAP || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+cheap model  = LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
 strong model = LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
 ```
 
-Same for OpenRouter path:
+**Resolution priority** (OpenRouter path — mirrors existing `_resolve_model_id()` precedence):
 ```
-cheap model = OPENROUTER_MODEL_CHEAP || LLM_MODEL_CHEAP || OPENROUTER_CHAT_MODEL_ID || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
-strong model = OPENROUTER_MODEL_STRONG || LLM_MODEL_STRONG || OPENROUTER_CHAT_MODEL_ID || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+cheap model  = OPENROUTER_MODEL_CHEAP  || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+strong model = OPENROUTER_MODEL_STRONG || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
 ```
+
+> **Design rationale (Concern 3)**: The OpenRouter chain preserves the existing invariant that `OPENROUTER_CHAT_MODEL_ID` takes priority over `OPENAI_CHAT_MODEL_ID` when on the OpenRouter provider. The new `OPENROUTER_MODEL_CHEAP`/`OPENROUTER_MODEL_STRONG` vars sit above `OPENROUTER_CHAT_MODEL_ID` (per-provider overrides), while `LLM_MODEL_CHEAP`/`LLM_MODEL_STRONG` sit below (provider-agnostic fallbacks). This avoids the v1 asymmetry where `LLM_MODEL_CHEAP` would have silently overridden a user's `OPENROUTER_CHAT_MODEL_ID`.
 
 ### 2.3 Phase → Tier Mapping
 
@@ -99,12 +117,14 @@ Each invoke callable declares its tier. Conservative: only obviously-mechanical 
 | `aspic_analysis` | `aspic_plus_reasoning` | `cheap` | Structured argumentation (algorithmic) |
 | `narrative_synthesis` | `narrative_synthesis` | `strong` | Generative prose synthesis |
 | `formal_synthesis` | `formal_synthesis` | `cheap` | Aggregation of formal results |
-| `analysis_synthesis` | `analysis_synthesis` | `strong` | Terminal synthesis with interpretation |
+| `synthesis` | `analysis_synthesis` | `strong` | Terminal synthesis with interpretation |
 | `deep_synthesis` | `deep_synthesis` | `strong` | 9-section grounded report generation |
-| `stakes` | `stakes_extraction` | `strong` | Requires stakeholder analysis reasoning |
+| `stakes` | `stakes_extraction` | `cheap` | Structured extraction (stakeholder identification, not generative reasoning) |
 | `pl` | `propositional_logic` | `cheap` | Tweety SAT solving (algorithmic) |
 | `fol` | `fol_reasoning` | `cheap` | Tweety FOL reasoning (algorithmic) |
+| `fol_solver` | `external_fol_solving` | `cheap` | External prover invocation (EProver/Prover9 wrapper) |
 | `modal` | `modal_logic` | `cheap` | Tweety modal reasoning (algorithmic) |
+| `modal_solver` | `external_modal_solving` | `cheap` | External modal solver invocation (SPASS wrapper) |
 | `tweety_interpretation` | `formal_result_interpretation` | `cheap` | Formula→NL translation |
 | `belief_revision` | `belief_revision` | `cheap` | Dalal/Levi distance (algorithmic) |
 | `probabilistic` | `probabilistic_argumentation` | `cheap` | Probability computation |
@@ -112,9 +132,11 @@ Each invoke callable declares its tier. Conservative: only obviously-mechanical 
 | `bipolar` | `bipolar_argumentation` | `cheap` | Support+attack framework |
 | `neural_detect` | `neural_fallacy_detection` | `cheap` | NLP model inference (no reasoning) |
 
-**Cost projection** (spectacular pipeline, 29 phases):
-- All-strong (current): ~29 × strong-model cost
-- Tiered: ~18 cheap + ~11 strong ≈ 18 × 0.1 + 11 × 1.0 = **12.8 cost-units** vs 29.0 (56% reduction)
+**Tier summary**: 19 `cheap` + 10 `strong` = **29 phases** (matches `build_spectacular_workflow()` output exactly).
+
+> **Change log (Concern 1)**: Added `fol_solver`, `modal_solver`, `synthesis` — the 3 phases present in `build_spectacular_workflow()` but missing from v1 table.
+>
+> **Change log (Concern 4)**: `stakes_extraction` reclassified from `strong` to `cheap`. Rationale: the phase performs structured extraction of stakeholder positions from argument text, not generative reasoning. The "stakes" label suggests reasoning, but the implementation is extraction.
 
 ### 2.4 Implementation Pattern
 
@@ -123,6 +145,8 @@ The following changes are scoped to `invoke_callables.py` (owned by po-2025):
 #### A. New resolver function
 
 ```python
+_VALID_TIERS = {"cheap", "strong"}
+
 def _resolve_model_for_tier(tier: str = "strong") -> str:
     """Resolve model id for a given tier.
 
@@ -131,6 +155,14 @@ def _resolve_model_for_tier(tier: str = "strong") -> str:
     """
     base_model = _resolve_model_id()  # existing function
 
+    if tier not in _VALID_TIERS:
+        logger.warning(
+            "Unknown tier %r; expected one of %s. Falling back to base model %s.",
+            tier, _VALID_TIERS, base_model,
+        )
+        return base_model
+
+    tier_model = None
     if tier == "cheap":
         tier_model = os.environ.get("LLM_MODEL_CHEAP")
         if os.environ.get("OPENROUTER_BASE_URL") and os.environ.get("OPENROUTER_API_KEY"):
@@ -139,8 +171,6 @@ def _resolve_model_for_tier(tier: str = "strong") -> str:
         tier_model = os.environ.get("LLM_MODEL_STRONG")
         if os.environ.get("OPENROUTER_BASE_URL") and os.environ.get("OPENROUTER_API_KEY"):
             tier_model = tier_model or os.environ.get("OPENROUTER_MODEL_STRONG")
-    else:
-        tier_model = None
 
     return tier_model or base_model
 ```
@@ -207,6 +237,8 @@ def _get_determinism_params(model_id: str = None) -> Dict[str, Any]:
 | `test_strong_tier_env_override` | `LLM_MODEL_STRONG=o3-mini` resolves strong tier correctly |
 | `test_determinism_per_tier_model` | `_get_determinism_params(strong_model)` suppresses temp/seed for reasoning models, allows for non-reasoning |
 | `test_tier_passed_to_guarded` | `_guarded_chat_completion(tier="cheap")` uses cheap model id in API call |
+| `test_openrouter_tier_priority` | When `OPENROUTER_BASE_URL` + `OPENROUTER_API_KEY` set: `OPENROUTER_MODEL_CHEAP` takes priority over `OPENROUTER_CHAT_MODEL_ID`, which takes priority over `LLM_MODEL_CHEAP` |
+| `test_invalid_tier_logs_warning` | `_resolve_model_for_tier("unknown")` logs warning and falls back to base model |
 
 ### 3.2 Integration Test
 
@@ -225,12 +257,17 @@ Assuming `gpt-5-mini` at ~$0.15/1M input tokens, ~$0.60/1M output tokens:
 - Spectacular pipeline: ~20-29 LLM calls per run
 - Estimated cost per run: ~$0.05-0.15
 
-### 4.2 With Tiered Routing
+### 4.2 With Tiered Routing (estimation conceptuelle)
 
-Cheap tier could use `gpt-4.1-mini` at ~$0.10/1M input tokens:
-- 18 cheap phases × lower cost + 11 strong phases × current cost
-- Estimated savings: ~40-56% on LLM calls
-- Meaningful at scale (100+ runs for benchmarking)
+> **Note (Concern 2)**: The following savings estimate uses real token-pricing ratios rather than an arbitrary 0.1 weight. It is still an estimation conceptuelle — actual savings depend on prompt/output token distribution per phase, which varies by source text.
+
+Cheap tier could use `gpt-4.1-mini` at ~$0.10/1M input tokens (~33% cheaper than `gpt-5-mini`):
+- 19 cheap phases × ~0.67× cost + 10 strong phases × 1.0× cost
+- Estimated effective cost: (19 × 0.67 + 10 × 1.0) / 29 ≈ **0.77× current** (~23% reduction)
+- With more aggressively cheaper models (e.g. `gpt-4.1-mini` at half the token cost of `gpt-5-mini`): ~33% reduction
+- Meaningful at scale (100+ runs for benchmarking, Phase 4 corpus_A/B/C × variations)
+
+> The v1 projection of "56% reduction" used a conceptual weight of 0.1 for cheap phases, which implied a 10× cost difference between tiers. Actual tier differences for OpenAI models are typically 1.5-3×, not 10×. The revised estimate of 23-33% is more realistic.
 
 ### 4.3 Break-Even
 
@@ -255,8 +292,39 @@ The tier system pays for itself when:
 
 ### 5.3 Phase 3: Cost-aware budget
 
-6. Extend `_guarded_chat_completion` to weight calls by tier (cheap = 0.1×, strong = 1.0×)
+6. Extend `_guarded_chat_completion` to weight calls by tier
 7. Add `--llm-budget` CLI parameter for explicit budget control
+
+**Cost-aware budget interaction (Concern 7 detail)**:
+
+The current budget guard (`_guarded_chat_completion`, line 312) uses a simple call-count circuit breaker: each call increments a counter, and if it exceeds `LLM_BUDGET_MAX_CALLS` (default 100), further calls are rejected. It does not distinguish between expensive and cheap calls.
+
+With tiering, the budget should become cost-weighted:
+
+```python
+TIER_WEIGHTS = {"cheap": 0.67, "strong": 1.0}
+
+async def _guarded_chat_completion(messages, *, tier="strong", ...):
+    weight = TIER_WEIGHTS.get(tier, 1.0)
+    budget_state["cost_units"] += weight
+    if budget_state["cost_units"] > budget_state["max_cost_units"]:
+        raise BudgetExhausted(...)
+    # ... rest of existing logic ...
+```
+
+**Interaction with existing call-count breaker**:
+- The existing `LLM_BUDGET_MAX_CALLS` hard limit (count-based) is **preserved** as a safety cap — no amount of cheap calls should exceed it.
+- The new `LLM_BUDGET_MAX_COST_UNITS` (default = `LLM_BUDGET_MAX_CALLS`, preserving parity) is the cost-weighted limit.
+- Both limits are checked: `if call_count > MAX_CALLS or cost_units > MAX_COST_UNITS`.
+- A cheap call counts as `1` call (for the hard cap) and `0.67` cost-units (for the budget).
+- This ensures the budget is never exceeded even if all calls are strong, while still rewarding cheap calls with proportional savings.
+
+**Configuration**:
+```bash
+LLM_BUDGET_MAX_CALLS=100       # Hard cap (existing, unchanged)
+LLM_BUDGET_MAX_COST_UNITS=100  # Cost-weighted cap (new, defaults to MAX_CALLS for parity)
+LLM_BUDGET_TIER_WEIGHT_CHEAP=0.67  # Weight for cheap tier (new)
+```
 
 ---
 
