@@ -216,7 +216,7 @@ This table maps each report section to the pipeline capability (snake_case) that
 ### Verification Rule
 
 For each section, the generator MUST:
-1. Look up the capability by **snake_case name** via `registry.find_for_capability(name)`.
+1. Look up the capability by **snake_case name** via the appropriate `CapabilityRegistry` method: `find_agents_for_capability(name)`, `find_plugins_for_capability(name)`, or `find_services_for_capability(name)`.
 2. Read the corresponding **shared-state key** from `UnifiedAnalysisState`.
 3. If the key is empty/`None`, insert the **degraded fallback wording** (Section 1.2).
 4. If the key contains data flagged `degraded=True`, append the honest degradation note.

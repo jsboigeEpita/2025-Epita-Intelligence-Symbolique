@@ -1761,6 +1761,36 @@ class TestEAFValueGate:
             "EAF fallback did not set 'fallback' flag (#1005)."
         )
 
+    async def test_eaf_extensions_non_empty_when_args_provided(self):
+        """EAF fallback must compute non-empty extensions from args (#1013)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_eaf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_eaf("test", {
+                "arguments": ["alpha", "beta", "gamma"],
+            })
+
+        extensions = result.get("extensions", [])
+        assert len(extensions) > 0, (
+            f"EAF produced 0 extensions from 3 args — vacuous gate (#1013). "
+            f"Keys: {list(result.keys())}"
+        )
+        believed = result.get("believed_arguments", [])
+        assert len(believed) > 0, (
+            f"EAF believed_arguments empty from 3 args — vacuous gate (#1013). "
+            f"Keys: {list(result.keys())}"
+        )
+        # Epistemic summary must reflect arg count
+        summary = result.get("epistemic_summary", {})
+        assert summary.get("total", 0) > 0, (
+            "EAF epistemic_summary.total must be > 0 (#1013)."
+        )
+
 
 class TestQBFValueGate:
     """QBF solver — error fallback returns valid=False honestly (#1005)."""
@@ -1895,6 +1925,34 @@ class TestADFValueGate:
             "ADF must flag fallback='python' (#1005)."
         )
 
+    async def test_adf_interpretations_have_statement_content(self):
+        """ADF fallback interpretations must map statements to truth values (#1013)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_adf,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_adf("test argument text", {
+                "arguments": ["claim_alpha", "claim_beta"],
+            })
+
+        interpretations = result.get("interpretations", [])
+        assert len(interpretations) > 0, (
+            f"ADF produced 0 interpretations from 2 statements — vacuous gate (#1013)."
+        )
+        # Each interpretation dict must map statement names to truth values
+        first_interp = interpretations[0]
+        assert isinstance(first_interp, dict) and len(first_interp) > 0, (
+            f"ADF interpretation is empty dict — vacuous gate (#1013). "
+            f"Got: {first_interp}"
+        )
+        assert result.get("fallback") == "python", (
+            "ADF must flag fallback='python' (#1013)."
+        )
+
 
 class TestProbabilisticValueGate:
     """Probabilistic argumentation fallback uses heuristic (#1005/#1009).
@@ -1945,12 +2003,12 @@ class TestProbabilisticValueGate:
                 f"Acceptance for '{arg}' out of [0,1]: {prob} (#1005)."
             )
 
-    async def test_probabilistic_uniform_flagged_as_fallback(self):
-        """Nit B (#1009): uniform probs on no-attacks must flag fallback honestly.
+    async def test_probabilistic_fallback_honestly_flagged(self):
+        """Probabilistic fallback must flag honestly + acceptance values bounded (#1009/#1013).
 
         Anti-pendule: uniform 0.5 is LEGITIMATE when no attacks are present
         (acceptance = initial_probability / (1 + attack_count) = 0.5 / 1 = 0.5).
-        The gate asserts the honest degraded flag, not fabricated variance.
+        The gate asserts the honest degraded flag AND that values are ~uniform.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_probabilistic,
@@ -1967,6 +2025,18 @@ class TestProbabilisticValueGate:
             "Probabilistic fallback must flag fallback='python' for honest "
             f"degraded reporting, got {result.get('fallback')} (#1009)."
         )
+        # Acceptance values must be approximately uniform when no attacks
+        acceptance = result.get("acceptance_probabilities", {})
+        assert len(acceptance) > 0, (
+            "Probabilistic fallback must produce non-empty acceptance_probabilities (#1013)."
+        )
+        values = list(acceptance.values())
+        if len(values) >= 2:
+            spread = max(values) - min(values)
+            assert spread < 0.1, (
+                f"Probabilistic fallback: expected ~uniform values with no attacks, "
+                f"but spread={spread:.4f}. Values: {acceptance} (#1013)."
+            )
 
 
 class TestDialogueValueGate:
@@ -1993,6 +2063,37 @@ class TestDialogueValueGate:
         )
         assert result.get("fallback") is not None, (
             "Dialogue must flag fallback mode (#1005)."
+        )
+
+    async def test_dialogue_trace_has_substantive_content(self):
+        """Dialogue fallback must produce a trace with turns and outcome (#1013)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_dialogue,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_dialogue("test argument text", {
+                "arguments": ["pro-arg-1", "pro-arg-2"],
+            })
+
+        # dialogue_trace must be non-empty with actual turn content
+        trace = result.get("dialogue_trace", [])
+        assert len(trace) > 0, (
+            f"Dialogue produced empty dialogue_trace — vacuous gate (#1013). "
+            f"Keys: {list(result.keys())}"
+        )
+        # Each trace entry must have substantive fields
+        first_turn = trace[0]
+        assert "speaker" in first_turn or "turn" in first_turn, (
+            f"Dialogue trace entry missing speaker/turn: {first_turn} (#1013)."
+        )
+        # Outcome must be a valid winner string
+        outcome = result.get("outcome", "")
+        assert outcome in ("proponent", "opponent", "draw"), (
+            f"Dialogue outcome invalid: {outcome!r} (#1013)."
         )
 
 
@@ -2025,6 +2126,36 @@ class TestBeliefRevisionValueGate:
         )
         assert result.get("fallback") is not None, (
             "Belief revision must flag fallback mode (#1005)."
+        )
+
+    async def test_belief_revision_revised_differs_from_original(self):
+        """Belief revision fallback: revised set must differ from original (#1013)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_belief_revision,
+        )
+
+        context = {
+            "belief_set": ["a", "b"],
+            "new_belief": "c",
+            "revision_method": "dalal",
+        }
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_belief_revision("test", context)
+
+        revised = result.get("revised", [])
+        original = result.get("original", [])
+        assert revised != original, (
+            f"Belief revision: revised set identical to original — no revision "
+            f"occurred. original={original}, revised={revised} (#1013)."
+        )
+        assert "c" in revised, (
+            f"Belief revision: new_belief 'c' not in revised set: {revised} (#1013)."
+        )
+        assert result.get("fallback") == "python", (
+            "Belief revision must flag fallback='python' (#1013)."
         )
 
 
