@@ -51,8 +51,8 @@ DATASET_PATH = Path("argumentation_analysis/data/extract_sources.json.gz.enc")
 YARDSTICK_PATH = Path("docs/reports/corpus_x_yardstick.md")
 
 # corpus_X index in extract_sources.json.gz.enc
-# Default: None (must be specified via --corpus-idx or configured after dataset update)
-CORPUS_X_IDX = None
+# Added via #1018 — public manifesto fixture, 6742 chars
+CORPUS_X_IDX = 17
 
 
 # ---------------------------------------------------------------------------
