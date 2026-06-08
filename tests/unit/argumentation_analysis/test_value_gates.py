@@ -1684,10 +1684,11 @@ class TestPLValueGate:
 
 
 class TestSATValueGate:
-    """SAT solver has no fallback — verify it returns honest results (#1005).
+    """SAT solver has no fallback — verify it returns honest results (#1005/#1009).
 
     SATHandler is pure Python (no JVM). If the solver fails it crashes;
     the gate ensures the happy-path output structure is non-trivial.
+    Nit A (#1009): tighten to assert model is non-empty when satisfiable=True.
     """
 
     async def test_sat_returns_structured_output(self):
@@ -1708,6 +1709,25 @@ class TestSATValueGate:
         assert isinstance(result["satisfiable"], bool), (
             f"SAT 'satisfiable' should be bool, got {type(result['satisfiable'])} (#1005)."
         )
+
+    async def test_sat_model_non_empty_when_satisfiable(self):
+        """Nit A (#1009): when SAT=True, model must be non-empty (not vacuous)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_sat,
+        )
+
+        result = await _invoke_sat("p and q", {"formulas": ["p & q"]})
+
+        if result.get("satisfiable"):
+            model = result.get("model")
+            assert model is not None, (
+                f"SAT satisfiable=True but model is None — vacuous gate (#1009)."
+            )
+            # model may be dict (Z3-style) or list — assert non-empty
+            if isinstance(model, (dict, list)):
+                assert len(model) > 0, (
+                    f"SAT satisfiable=True but model is empty — vacuous gate (#1009)."
+                )
 
 
 class TestEAFValueGate:
@@ -1877,10 +1897,12 @@ class TestADFValueGate:
 
 
 class TestProbabilisticValueGate:
-    """Probabilistic argumentation fallback uses heuristic (#1005).
+    """Probabilistic argumentation fallback uses heuristic (#1005/#1009).
 
-    Fallback assigns uniform 0.5 probabilities and computes acceptance
-    from attack counts. Gate: must return probabilities and flag fallback.
+    Fallback assigns probabilities and computes acceptance from attack counts.
+    Gate: must return probabilities and flag fallback.
+    Nit B (#1009): when acceptance is uniform (no attacks), assert fallback flag
+    is honestly set rather than asserting non-uniform values (anti-pendule).
     """
 
     async def test_probabilistic_fallback_returns_structure(self):
@@ -1922,6 +1944,29 @@ class TestProbabilisticValueGate:
             assert 0.0 <= prob <= 1.0, (
                 f"Acceptance for '{arg}' out of [0,1]: {prob} (#1005)."
             )
+
+    async def test_probabilistic_uniform_flagged_as_fallback(self):
+        """Nit B (#1009): uniform probs on no-attacks must flag fallback honestly.
+
+        Anti-pendule: uniform 0.5 is LEGITIMATE when no attacks are present
+        (acceptance = initial_probability / (1 + attack_count) = 0.5 / 1 = 0.5).
+        The gate asserts the honest degraded flag, not fabricated variance.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_probabilistic,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
+
+        # The fallback flag MUST be present — this is the honest signal
+        assert result.get("fallback") == "python", (
+            "Probabilistic fallback must flag fallback='python' for honest "
+            f"degraded reporting, got {result.get('fallback')} (#1009)."
+        )
 
 
 class TestDialogueValueGate:
@@ -1984,10 +2029,11 @@ class TestBeliefRevisionValueGate:
 
 
 class TestATMSValueGate:
-    """ATMS is pure Python (no JVM). Verify it returns structured output (#1005).
+    """ATMS is pure Python (no JVM). Verify it returns structured output (#1005/#1009).
 
     ATMS has no fallback path because it doesn't depend on JVM.
     Gate: must return nodes and environments from upstream context.
+    Audit (#1009): tighten to assert non-zero node count (value gate, not presence-only).
     """
 
     async def test_atms_returns_nodes(self):
@@ -2018,12 +2064,37 @@ class TestATMSValueGate:
             f"ATMS returned no structural keys: {list(result.keys())} (#1005)."
         )
 
+    async def test_atms_value_non_trivial(self):
+        """Audit (#1009): ATMS must produce non-zero node count from input args."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_atms,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "Climate change is real"}],
+                "claims": [{"text": "Climate change is real"}],
+            },
+            "phase_hierarchical_fallacy_output": {"fallacies": []},
+            "phase_quality_output": {"per_argument_scores": {}},
+        }
+        result = await _invoke_atms("test argument text", context)
+
+        assert result.get("assumption_count", 0) > 0, (
+            f"ATMS produced 0 assumptions from 1 argument — vacuous gate (#1009). "
+            f"Keys: {list(result.keys())}"
+        )
+        assert result.get("node_count", 0) > 0, (
+            f"ATMS produced 0 nodes from 1 arg + 1 claim — vacuous gate (#1009)."
+        )
+
 
 class TestASPICValueGate:
-    """ASPIC+ fallback uses defensibility analysis (#1005).
+    """ASPIC+ fallback uses defensibility analysis (#1005/#1009).
 
     Fallback builds strict/defeasible rules from extracted data.
     Gate: must return argument structure and flag fallback.
+    Audit (#1009): tighten to assert rules are non-empty (value gate).
     """
 
     async def test_aspic_fallback_returns_argument_structure(self):
@@ -2055,3 +2126,33 @@ class TestASPICValueGate:
         assert has_structure, (
             f"ASPIC returned no argument structure: {list(result.keys())} (#1005)."
         )
+
+    async def test_aspic_rules_non_empty(self):
+        """Audit (#1009): ASPIC fallback rules must be non-empty (value gate)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_aspic,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            result = await _invoke_aspic("test argument text", {
+                "phase_extract_output": {
+                    "claims": [{"text": "claim 1"}],
+                    "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
+                },
+                "phase_hierarchical_fallacy_output": {"fallacies": []},
+            })
+
+        # At least one of the rule lists must be non-empty when args provided
+        rules = (
+            result.get("defeasible_rules", [])
+            or result.get("strict_rules", [])
+            or result.get("arguments", [])
+        )
+        if isinstance(rules, (list, dict)):
+            assert len(rules) > 0, (
+                f"ASPIC fallback produced 0 rules from 2 args — vacuous gate (#1009). "
+                f"Keys: {list(result.keys())}"
+            )
