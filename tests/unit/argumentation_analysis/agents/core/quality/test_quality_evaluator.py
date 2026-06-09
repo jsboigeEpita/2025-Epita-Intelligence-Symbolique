@@ -45,14 +45,18 @@ def _safe_load_deps(request):
     saved = qmod._load_deps
 
     def _mock_load_deps():
-        """Set fallback globals without importing spacy."""
-        global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED
-        # These refs are in qmod namespace
+        """Mark deps as "available" (per-detector heuristics still work)
+        without actually importing spacy.
+
+        _DEPS_AVAILABLE=True so the early gate in evaluate() passes.
+        _nlp=None / _flesch_reading_ease=None so individual detectors
+        use their built-in heuristics (word length, sentence counting, etc.)
+        """
         qmod._nlp = None
         qmod._flesch_reading_ease = None
-        qmod._DEPS_AVAILABLE = False
+        qmod._DEPS_AVAILABLE = True
         qmod._DEPS_ATTEMPTED = True
-        return False
+        return True
 
     qmod._load_deps = _mock_load_deps
     try:
@@ -307,9 +311,8 @@ class TestDllFailureFailLoud:
     def test_dll_failure_raises_runtime_error(self):
         """When spacy import raises OSError (WinError 182), RuntimeError is raised.
 
-        _load_deps() is called by individual detectors. When it raises RuntimeError,
-        the evaluate() method catches it per-detector (scores 0.0) but the
-        root-cause failure is logged. We test _load_deps directly.
+        _load_deps() raises RuntimeError directly when spacy/textstat cannot
+        be imported (e.g. torch DLL conflict on Windows).
         """
         import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
 
@@ -331,6 +334,51 @@ class TestDllFailureFailLoud:
         # Reset for other tests
         qmod._DEPS_ATTEMPTED = False
         qmod._DEPS_AVAILABLE = False
+
+    def test_evaluate_raises_runtime_error_when_deps_unavailable(self):
+        """evaluate() raises RuntimeError early when deps are unavailable (NanoClaw #1026).
+
+        Previously, evaluate() caught RuntimeError per-detector → score 0.0,
+        functionally identical to the silent fallback #1019 forbids. Now it
+        raises before entering the detector loop.
+        """
+        import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
+        from argumentation_analysis.agents.core.quality import (
+            ArgumentQualityEvaluator,
+        )
+
+        saved_attempted = qmod._DEPS_ATTEMPTED
+        saved_available = qmod._DEPS_AVAILABLE
+
+        try:
+            # Simulate: deps were attempted and failed
+            qmod._DEPS_ATTEMPTED = True
+            qmod._DEPS_AVAILABLE = False
+
+            evaluator = ArgumentQualityEvaluator()
+            with pytest.raises(RuntimeError, match="spacy/textstat"):
+                evaluator.evaluate("Un texte quelconque.")
+        finally:
+            qmod._DEPS_ATTEMPTED = saved_attempted
+            qmod._DEPS_AVAILABLE = saved_available
+
+    def test_evaluer_argument_raises_runtime_error_when_deps_unavailable(self):
+        """evaluer_argument() propagates RuntimeError from evaluate()."""
+        import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
+        from argumentation_analysis.agents.core.quality import evaluer_argument
+
+        saved_attempted = qmod._DEPS_ATTEMPTED
+        saved_available = qmod._DEPS_AVAILABLE
+
+        try:
+            qmod._DEPS_ATTEMPTED = True
+            qmod._DEPS_AVAILABLE = False
+
+            with pytest.raises(RuntimeError, match="spacy/textstat"):
+                evaluer_argument("Un texte quelconque.")
+        finally:
+            qmod._DEPS_ATTEMPTED = saved_attempted
+            qmod._DEPS_AVAILABLE = saved_available
 
     def test_no_degraded_flag_in_normal_result(self):
         """Normal evaluation result does not contain degraded flag (#1019)."""

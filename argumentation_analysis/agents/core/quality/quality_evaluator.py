@@ -334,7 +334,26 @@ class ArgumentQualityEvaluator:
         self.detectors = detectors or DETECTORS
 
     def evaluate(self, text: str) -> Dict[str, Any]:
-        """Evaluate argument quality and return structured report."""
+        """Evaluate argument quality and return structured report.
+
+        Raises RuntimeError if required dependencies (spacy/textstat) are
+        unavailable.  This is the fail-loud contract from #1019: producing
+        a dict full of zeros is functionally identical to the old silent
+        fallback.  Callers must handle the exception or ensure the
+        environment is correctly configured.
+        """
+        # Fail-loud gate (#1019 / NanoClaw review): if deps already failed,
+        # raise immediately rather than looping through 9 detectors that
+        # will each catch the RuntimeError and produce score 0.0 — which
+        # is the exact "degraded theatre" the mandate forbids.
+        if _DEPS_ATTEMPTED and not _DEPS_AVAILABLE:
+            raise RuntimeError(
+                "Cannot evaluate quality: spacy/textstat are not available. "
+                "Ensure dll_guard is imported before jpype and the conda "
+                "environment is activated. "
+                "See docs/architecture/TORCH_DLL_REPAIR_RECIPE.md."
+            )
+
         scores = {}
         details = {}
         for vertu, detector in self.detectors.items():
@@ -358,6 +377,10 @@ class ArgumentQualityEvaluator:
 
 
 def evaluer_argument(text: str) -> Dict[str, Any]:
-    """Convenience function — evaluate a single argument text."""
+    """Convenience function — evaluate a single argument text.
+
+    Raises RuntimeError if required dependencies are unavailable (see
+    ArgumentQualityEvaluator.evaluate).
+    """
     evaluator = ArgumentQualityEvaluator()
     return evaluator.evaluate(text)
