@@ -587,6 +587,10 @@ class OrchestrationServiceManager:
             "comprehensive": self.fact_checking_orchestrator,
             "fallacy_analysis": self.fact_checking_orchestrator,
             "rhetorical": self.fact_checking_orchestrator,
+            # Formal analysis types — routed via fact_checking since #885
+            "logical": self.fact_checking_orchestrator,
+            "modal": self.fact_checking_orchestrator,
+            "propositional": self.fact_checking_orchestrator,
         }
 
         result = orchestrator_map.get(analysis_type.lower())
