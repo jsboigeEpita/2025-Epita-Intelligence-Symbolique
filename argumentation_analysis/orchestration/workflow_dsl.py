@@ -386,6 +386,7 @@ class WorkflowExecutor:
 
         if state is not None:
             ctx["unified_state"] = state
+            ctx["_state_object"] = state
 
         # Structured logging with correlation_id
         correlation_id = (
