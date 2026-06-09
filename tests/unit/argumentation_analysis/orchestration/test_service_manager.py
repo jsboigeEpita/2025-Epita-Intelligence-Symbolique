@@ -858,25 +858,34 @@ class TestSelectOrchestrator:
         )
 
     def test_logical_type(self, manager):
-        assert manager._select_orchestrator("logical") is manager.llm_orchestrator
+        # Routed to fact_checking since RealLLMOrchestrator removal (#885)
+        assert (
+            manager._select_orchestrator("logical")
+            is manager.fact_checking_orchestrator
+        )
 
     def test_modal_type(self, manager):
-        assert manager._select_orchestrator("modal") is manager.llm_orchestrator
+        assert (
+            manager._select_orchestrator("modal")
+            is manager.fact_checking_orchestrator
+        )
 
     def test_propositional_type(self, manager):
-        assert manager._select_orchestrator("propositional") is manager.llm_orchestrator
+        assert (
+            manager._select_orchestrator("propositional")
+            is manager.fact_checking_orchestrator
+        )
 
-    def test_unknown_type_defaults_to_llm(self, manager):
-        assert manager._select_orchestrator("unknown_xyz") is manager.llm_orchestrator
+    def test_unknown_type_returns_none(self, manager):
+        # Unknown types return None (no fallback to removed RealLLMOrchestrator)
+        assert manager._select_orchestrator("unknown_xyz") is None
 
     def test_case_insensitive(self, manager):
         assert manager._select_orchestrator("CLUEDO") is manager.cluedo_orchestrator
 
-    def test_unified_analysis_defaults_to_llm(self, manager):
-        # "unified_analysis" is not in the map, so defaults to llm_orchestrator
-        assert (
-            manager._select_orchestrator("unified_analysis") is manager.llm_orchestrator
-        )
+    def test_unified_analysis_returns_none(self, manager):
+        # "unified_analysis" is not in the map, returns None (no fallback)
+        assert manager._select_orchestrator("unified_analysis") is None
 
 
 # ========================================================================
