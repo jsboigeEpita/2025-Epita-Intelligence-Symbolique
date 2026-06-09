@@ -18,6 +18,27 @@ from typing import Dict, Any, Iterator, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
+# #1019: Preflight solver availability check (module-level, runs once)
+_SOLVER_PREFLIGHT_CHECKED = False
+def _preflight_solver_check() -> None:
+    """Log a one-time WARNING if external theorem provers are absent."""
+    global _SOLVER_PREFLIGHT_CHECKED
+    if _SOLVER_PREFLIGHT_CHECKED:
+        return
+    _SOLVER_PREFLIGHT_CHECKED = True
+    missing = []
+    if shutil.which("eprover") is None:
+        missing.append("eprover (FOL)")
+    if shutil.which("SPASS") is None:
+        missing.append("SPASS (modal)")
+    if missing:
+        logger.warning(
+            "External solvers not found on PATH: %s. "
+            "Pipeline will use TweetyBridge (JVM) for FOL/modal reasoning. "
+            "Install solvers for optimal performance.",
+            ", ".join(missing),
+        )
+
 # Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
 try:
     from dotenv import load_dotenv
@@ -5315,8 +5336,9 @@ async def _invoke_fol_reasoning(
                 "fol_metrics": fol_metrics,
             }
 
-        # All formulas failed — use Python fallback
-        has_fallacious = any("Fallacious" in f for f in formulas)
+        # All formulas failed — no heuristic fallback (#1019)
+        # Tweety is the solver; if it cannot parse the formulas, report
+        # honest failure rather than fabricating a consistency result.
         fol_signature = []
         fol_metrics["post_tweety"] = 0
         fol_metrics["isolation_survivors"] = 0
@@ -5325,15 +5347,20 @@ async def _invoke_fol_reasoning(
             fol_signature = meta.get("signature_lines", [])
         except Exception:
             pass
+        logger.warning(
+            "FOL reasoning: all formulas failed Tweety parsing (%s). "
+            "Reporting unverified status (no heuristic fallback).",
+            tweety_err,
+        )
         return {
             "formulas": formulas,
             "fol_signature": fol_signature,
-            "consistent": not has_fallacious,
+            "consistent": None,
             "inferences": inferences,
-            "confidence": 0.6 if not has_fallacious else 0.3,
+            "confidence": 0.0,
             "logic_type": "first_order",
             "argument_count": len(args),
-            "fallback": "python",
+            "solver": "none",
             "diagnostic": str(tweety_err),
             "fol_metrics": fol_metrics,
         }
@@ -5461,11 +5488,10 @@ async def _invoke_modal_logic(
     except Exception as e:
         logger.debug(f"Modal TweetyBridge unavailable ({e}), using heuristic")
 
-    # Pure heuristic fallback — modal analysis unavailable
-    # (#961): do NOT return vacuous valid:True. Report honest unavailability.
+    # No solver available — report honest failure (#1019)
     logger.warning(
         "Modal analysis unavailable: no solver (SPASS/Tweety) could be loaded. "
-        "Reporting unverified status."
+        "Reporting unverified status (no heuristic fallback)."
     )
     return {
         "formulas": formulas,
@@ -5473,7 +5499,6 @@ async def _invoke_modal_logic(
         "modalities": modalities,
         "logic_type": "modal",
         "solver": "unavailable",
-        "fallback": "python",
         "message": "Modal analysis unavailable: no solver could be loaded.",
     }
 
@@ -6263,9 +6288,11 @@ async def _invoke_external_fol_solver(
     EFOLReasoner first, then Prover9 subprocess. Falls back to TweetyBridge
     (the default FOL path) when neither external solver is available.
 
-    #982: probes shutil.which before claiming external solver; stamps
-    degraded=True on fallback paths so the state writer can persist it.
+    #1019: No degraded flag. TweetyBridge is a genuine FOL reasoner.
+    External solvers are optional performance enhancers, not prerequisites.
     """
+    _preflight_solver_check()
+
     fol_output = context.get("phase_fol_output", {})
     if not isinstance(fol_output, dict):
         fol_output = {}
@@ -6350,7 +6377,7 @@ async def _invoke_external_fol_solver(
         else:
             logger.info("Prover9 binary not bundled, falling back to TweetyBridge")
 
-    # Fallback: TweetyBridge (default path) — degraded since no external solver
+    # Fallback: TweetyBridge (default path) — genuine FOL reasoning via JVM
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
@@ -6369,8 +6396,7 @@ async def _invoke_external_fol_solver(
         return {
             "formulas": formulas,
             "consistent": bool(is_consistent),
-            "solver": "tweety_fallback",
-            "degraded": True,
+            "solver": "tweety",
             "message": msg,
             "logic_type": "first_order",
         }
@@ -6379,7 +6405,6 @@ async def _invoke_external_fol_solver(
             "formulas": formulas,
             "consistent": None,
             "solver": "none",
-            "degraded": True,
             "error": str(e),
             "logic_type": "first_order",
         }
@@ -6394,9 +6419,10 @@ async def _invoke_external_modal_solver(
     SPASSMlReasoner first. Falls back to TweetyBridge when SPASS is
     not available.
 
-    #982: probes shutil.which before claiming SPASS; stamps degraded=True
-    on fallback paths so the state writer can persist it.
+    #1019: No degraded flag. TweetyBridge is a genuine modal reasoner.
+    External solvers are optional performance enhancers, not prerequisites.
     """
+    _preflight_solver_check()
     modal_output = context.get("phase_modal_output", {})
     if not isinstance(modal_output, dict):
         modal_output = {}
@@ -6442,7 +6468,7 @@ async def _invoke_external_modal_solver(
     else:
         logger.info("SPASS binary not found on PATH (shutil.which), using TweetyBridge fallback")
 
-    # Fallback: TweetyBridge — degraded since no external solver
+    # Fallback: TweetyBridge — genuine modal reasoning via JVM
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
@@ -6461,8 +6487,7 @@ async def _invoke_external_modal_solver(
             "formulas": formulas,
             "valid": accepted,
             "modalities": modalities,
-            "solver": "tweety_fallback",
-            "degraded": True,
+            "solver": "tweety",
             "message": msg,
             "logic_type": "modal",
         }
@@ -6472,7 +6497,6 @@ async def _invoke_external_modal_solver(
             "valid": None,
             "modalities": modalities,
             "solver": "none",
-            "degraded": True,
             "error": str(e),
             "logic_type": "modal",
         }
