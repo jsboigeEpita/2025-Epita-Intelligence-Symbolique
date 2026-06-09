@@ -27,6 +27,8 @@ Exemples :
     python argumentation_analysis/run_orchestration.py --text "Mon argument" --mode conversational
 """
 
+import argumentation_analysis.core.dll_guard  # noqa: F401 — must load before jpype (#1019)
+
 import sys
 import json
 import asyncio

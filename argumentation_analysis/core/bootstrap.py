@@ -1,4 +1,6 @@
 # argumentation_analysis/core/bootstrap.py
+import argumentation_analysis.core.dll_guard  # noqa: F401 — must load before jpype (#1019)
+
 import os
 import sys
 from pathlib import Path
