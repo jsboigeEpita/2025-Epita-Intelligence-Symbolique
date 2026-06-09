@@ -163,7 +163,7 @@ class ContextualFallacyDetector:
                 },
             },
             "appel_inapproprié_émotion": {
-                "description": "Appel aux émotions inapproprié dans le contexte",
+                "description": "Appel aux émotions inapproprié dans le contexte, y compris les schémas affectifs drive→relief",
                 "markers": [
                     "peur",
                     "crainte",
@@ -171,6 +171,17 @@ class ContextualFallacyDetector:
                     "terreur",
                     "anxiété",
                     "horreur",
+                    "crise",
+                    "urgence",
+                    "menace",
+                    "angoisse",
+                    "soulagement",
+                    "reconfort",
+                    "salut",
+                    "solution",
+                    "réassurance",
+                    "apaisement",
+                    "espoir",
                 ],
                 "contextual_rules": {
                     "domain": {
@@ -219,7 +230,7 @@ class ContextualFallacyDetector:
                 },
             },
             "appel_inapproprié_popularité": {
-                "description": "Appel à la popularité inapproprié dans le contexte",
+                "description": "Appel à la popularité inapproprié dans le contexte, y compris les variantes élitistes",
                 "markers": [
                     "populaire",
                     "tout le monde",
@@ -227,13 +238,49 @@ class ContextualFallacyDetector:
                     "beaucoup",
                     "nombreux",
                     "la plupart",
+                    "éclairé",
+                    "compétent",
+                    "initié",
+                    "ceux qui savent",
+                    "personnes averties",
+                    "lucide",
+                    "vrai",
+                    "seuls ceux",
                 ],
                 "contextual_rules": {
                     "domain": {
                         "scientifique": {"severity": 0.9},
                         "médical": {"severity": 0.8},
                         "juridique": {"severity": 0.7},
+                        "politique": {"severity": 0.8},
+                        "idéologique": {"severity": 0.9},
                         "commercial": {"severity": 0.4},
+                    }
+                },
+            },
+            "disqualification_circulaire": {
+                "description": "Raisonnement circulaire où la thèse se justifie en disqualifiant toute objection comme preuve de la thèse",
+                "markers": [
+                    "aveuglé",
+                    "sous l'emprise",
+                    "endoctriné",
+                    "manipulé",
+                    "conditionné",
+                    "si vous n'êtes pas",
+                    "forcément",
+                    "par définition",
+                    "inévitablement",
+                    "ne peut qu'être",
+                    "ne voit pas",
+                    "refuse de voir",
+                    "pas lucide",
+                ],
+                "contextual_rules": {
+                    "domain": {
+                        "politique": {"severity": 0.9},
+                        "idéologique": {"severity": 0.9},
+                        "scientifique": {"severity": 0.8},
+                        "philosophique": {"severity": 0.7},
                     }
                 },
             },
@@ -389,6 +436,11 @@ class ContextualFallacyDetector:
             or "recherche" in context_description.lower()
         ):
             contextual_factors["domain"] = "scientifique"
+        elif (
+            "idéologique" in context_description.lower()
+            or "doctrin" in context_description.lower()
+        ):
+            contextual_factors["domain"] = "idéologique"
         elif (
             "politique" in context_description.lower()
             or "gouvernement" in context_description.lower()
