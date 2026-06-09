@@ -23,6 +23,8 @@ Verdict calibration:
 - **PARTIAL** — produces useful output under ideal conditions, but has known gaps (missing tests, degenerate fallback, silent correctness bug)
 - **UNTRUSTED** — output is vacuous, fallback returns hardcoded data, or critical correctness bug confirmed
 
+**Post-#1019 anti-theater mandate**: All subsystems must fail explicit rather than silently producing fabricated results. Subsystems previously returning `degraded: True` or heuristic placeholders now return honest `None`/`RuntimeError`/sentinel values. Downstream state writers preserve None/True/False tri-state (#1028).
+
 ---
 
 ## Core Subsystems (12)
@@ -42,20 +44,20 @@ Verdict calibration:
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `agents/core/logic/dung_native.py`, `af_handler.py`, `aspic_handler.py`, `invoke_callables.py:5441-5645` |
-| **Produces** | Dung: up to 11 semantics (grounded/preferred/stable/complete/admissible/etc.) via Tweety JVM. Pure-Python fallback computes grounded extension via iterative fixpoint. ASPIC: structured argumentation with rule-based inference. |
+| **Produces** | Dung: up to 11 semantics (grounded/preferred/stable/complete/admissible/etc.) via Tweety JVM. Pure-Python fallback computes **4 semantics** (grounded/complete/preferred/stable) via exact combinatorial enumeration (#1019/#1025). ASPIC: structured argumentation with rule-based inference. |
 | **Value-gate tests** | **NONE** in `test_value_gates.py`. |
-| **Blind spots** | (1) Python fallback (`_python_dung_fallback`) only computes grounded — 10 other semantics unavailable without JVM. (2) ~~`dung_native.py` framework_properties() DFS cycle detection has variable shadowing bug~~ — **FIXED (#970)**: rewritten to use `attacked_by()` adjacency. (3) ~~Exponential subset enumeration for preferred/stable — no size guard~~ — **FIXED (#970)**: `RuntimeError` raised above `_MAX_ENUM_ARGS=15`, grounded still works. (4) ASPIC requires JVM, no pure-Python fallback. |
-| **Verdict** | **PARTIAL** — Pure-Python grounded is real fixpoint. JVM path produces 11 semantics. Missing: value-gate tests, size guard, ASPIC fallback. |
+| **Blind spots** | (1) Python fallback computes 4 semantics up to ≤25 arguments; beyond that cap, only grounded is computed (#1019/#1028). (2) ~~`dung_native.py` framework_properties() DFS cycle detection has variable shadowing bug~~ — **FIXED (#970)**: rewritten to use `attacked_by()` adjacency. (3) ~~Exponential subset enumeration for preferred/stable — no size guard~~ — **FIXED (#970)**: `RuntimeError` raised above `_MAX_ENUM_ARGS=15`, grounded still works. (4) ASPIC requires JVM, no pure-Python fallback. |
+| **Verdict** | **PARTIAL** — Pure-Python computes grounded+complete+preferred+stable (#1019). JVM path produces 11 semantics. Missing: value-gate tests, ASPIC fallback, >25 args only grounded. |
 
 ### 3. FOL (First-Order Logic)
 
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `agents/core/logic/fol_handler.py`, `invoke_callables.py:4915-5324` |
-| **Produces** | Consistency check + query entailment via 3-solver chain: Prover9 → EProver → Tweety SimpleFolReasoner. Per-formula isolation (PR #954 fix). Fallback flag `solver_fallback` (PR #955). Python fallback returns `fallback: "python"` with template `Asserted(argN)` predicates or NL-to-logic translations. |
+| **Produces** | Consistency check + query entailment via 3-solver chain: Prover9 → EProver → Tweety SimpleFolReasoner. Per-formula isolation (PR #954 fix). ~~Fallback flag `solver_fallback` (PR #955)~~ — **REMOVED (#1019/#1025)**: no heuristic fallback; when all formulas fail Tweety parsing, returns `consistent: None, solver: "none"` (honest failure). TweetyBridge path no longer stamped `degraded`. Preflight solver check logs WARNING if eprover/SPASS binaries missing. |
 | **Value-gate tests** | **YES** — `TestFOLValueGate` (3 tests, **PASS** after #976). Asserts: (1) fallback='python' and consistent=False when Fallacious predicates present, (2) formulas are predicate-shaped (not zero/degenerate), (3) consistent is real bool when Tweety available. |
-| **Blind spots** | (1) Solver fallback chain: same call silently produces different results depending on which binary is installed. (2) Tweety SimpleFolReasoner is incomplete — cannot decide all FOL consequences. (3) NL-to-logic fallback produces structured formulas even without Tweety — fallback is honest but not verified. (4) `consistent` field in Python fallback may be `not has_fallacious` — a weak heuristic. |
-| **Verdict** | **PARTIAL** — Per-formula isolation fixed (#954). Solver fallback wired (#955). Value-gate regression guard added (#976). Solver-dependent non-determinism and incomplete prover remain. |
+| **Blind spots** | (1) Solver fallback chain: same call silently produces different results depending on which binary is installed. (2) Tweety SimpleFolReasoner is incomplete — cannot decide all FOL consequences. (3) NL-to-logic fallback produces structured formulas even without Tweety — fallback is honest but not verified. (4) ~~`consistent` field in Python fallback may be `not has_fallacious` — a weak heuristic~~ — **REMOVED (#1019)**: now returns `consistent: None` (honest unverified). |
+| **Verdict** | **PARTIAL** — Per-formula isolation fixed (#954). Heuristic fallback eliminated (#1019). Value-gate regression guard added (#976). Solver-dependent non-determinism and incomplete prover remain. |
 
 ### 4. PL (Propositional Logic)
 
@@ -72,20 +74,20 @@ Verdict calibration:
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `agents/core/logic/modal_handler.py`, `invoke_callables.py:5354-5438` |
-| **Produces** | Formula validation + query acceptance + KB consistency via Tweety SimpleMlReasoner. Heuristic fallback reports `valid: None, solver: "unavailable"` — honest unavailability. |
+| **Produces** | Formula validation + query acceptance + KB consistency via Tweety SimpleMlReasoner. Heuristic fallback eliminated (#1019): returns `valid: None, solver: "none"` — honest failure. TweetyBridge path no longer stamped `degraded`. Preflight solver check on first invocation. |
 | **Value-gate tests** | **YES** — `TestModalLogicValueGate` (2 tests, **PASS** after #963). Asserts `valid is None` and `solver == "unavailable"`. |
 | **Blind spots** | (1) No pure-Python fallback for modal reasoning — only JVM path works. (2) `is_modal_kb_consistent()` returns `None` on "no method found" (honest, not vacuous True). |
-| **Verdict** | **PARTIAL** — JVM path works. Heuristic fallback is now honest unavailable (#963). KB consistency is honest unverified. |
+| **Verdict** | **PARTIAL** — JVM path works. Heuristic fallback eliminated (#1019). KB consistency is honest unverified. |
 
 ### 6. Quality Evaluation (9 Virtues)
 
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `agents/core/quality/quality_evaluator.py`, `invoke_callables.py:333-370` |
-| **Produces** | `note_finale` (0-9), `note_moyenne` (0-1), `scores_par_vertu` (9 virtue scores 0-1), `rapport_detaille` (per-virtue explanation). Deterministic, keyword/regex heuristics — no LLM needed. |
-| **Value-gate tests** | **YES** — `TestQualityValueGate` (3 tests, all PASS). Asserts `note_moyenne > 0`, at least one virtue > 0, state integration. |
+| **Produces** | `note_finale` (0-9), `note_moyenne` (0-1), `scores_par_vertu` (9 virtue scores 0-1), `rapport_detaille` (per-virtue explanation). Deterministic, keyword/regex heuristics — no LLM needed. ~~Silent regex fallback when spacy unavailable~~ — **ELIMINATED (#1019/#1026)**: `_load_deps()` now raises `RuntimeError` if spacy/textstat cannot import. DLL load-order guard (`dll_guard.py`) added to all entry points. |
+| **Value-gate tests** | **YES** — `TestQualityValueGate` (3 tests, all PASS) + `TestDllFailureFailLoud` (verifies RuntimeError on missing deps). |
 | **Blind spots** | (1) Keyword-based — well-structured argument without exact keyword matches will score poorly. (2) `detect_clarte()` uses Flesch reading ease (English formula on French text). (3) `detect_analogie_pertinente()` only checks for analogy phrases — cannot evaluate pertinence. |
-| **Verdict** | **TRUSTWORTHY** — Deterministic, no LLM, value-gate tests pass. Keyword limitation is known and acceptable for Phase 4 scoring. |
+| **Verdict** | **TRUSTWORTHY** — Deterministic, no LLM, value-gate tests pass, fail-loud instead of silent degradation (#1019). Keyword limitation is known and acceptable for Phase 4 scoring. |
 
 ### 7. Counter-Argument Generation
 
@@ -132,10 +134,10 @@ Verdict calibration:
 | Aspect | Finding |
 |--------|---------|
 | **Files** | `plugins/narrative_synthesis_plugin.py`, `invoke_callables.py:5702+` |
-| **Produces** | 1-2 paragraphs of French prose from `UnifiedAnalysisState`. Template-based concatenation of state fields (quality, fallacies, counter-args, Dung, FOL, PL, modal, JTMS, ATMS). Convergence synthesis counts cross-method flags. |
+| **Produces** | 1-2 paragraphs of French prose from `UnifiedAnalysisState`. Template-based concatenation of state fields (quality, fallacies, counter-args, Dung, FOL, PL, modal, JTMS, ATMS). Convergence synthesis counts cross-method flags. **Fail-explicit (#1019)**: no template-rebuild fallback — if state is empty, returns sentinel and logs diagnostic (available phase outputs, populated state fields). Root cause must be fixed upstream. |
 | **Value-gate tests** | **YES** — `TestNarrativeSynthesisValueGate` (3 tests, PASS). Asserts ≥2 field keywords, non-boilerplate content, ≥3 referenced fields. |
 | **Blind spots** | (1) Purely template-based — no LLM narrative weaving. (2) `getattr(state, "field", default)` pattern — mismatched attribute names silently missed. (3) `_dung_rejected_args()` uses string prefix matching to map free-text to canonical IDs. |
-| **Verdict** | **TRUSTWORTHY** — Deterministic, value-gate tests pass. Template limitation is by-design (anti-LLM-dependency). |
+| **Verdict** | **TRUSTWORTHY** — Deterministic, value-gate tests pass, fail-explicit (#1019). Template limitation is by-design (anti-LLM-dependency). |
 
 ### 12. Fact Extraction
 
@@ -175,16 +177,16 @@ Verdict calibration:
 | Subsystem | Verdict | Value-Gate | Key Risk |
 |-----------|---------|-----------|----------|
 | Informal Fallacy | PARTIAL | ✅ (3/3 PASS) | Taxonomy substring-literal honestly characterised (#973), mock adapter fallback |
-| Dung/ASPIC | PARTIAL | ✅ (9/9 PASS) | ~~DFS shadowing + no size guard~~ FIXED (#970), Python fallback = grounded only |
-| FOL | PARTIAL | ✅ (3/3 PASS) | Solver-dependent non-determinism, value-gate added (#976) |
+| Dung/ASPIC | PARTIAL | ✅ (9/9 PASS) | ~~DFS shadowing + no size guard~~ FIXED (#970), ~~Python grounded-only~~ 4-semantics (#1019), >25 args = grounded only |
+| FOL | PARTIAL | ✅ (3/3 PASS) | Heuristic fallback eliminated (#1019), preflight check, solver non-determinism |
 | PL | PARTIAL | ✅ (3/3 PASS) | Heavy LLM dependency, JVM-only, value-gate added (#977) |
-| Modal Logic | PARTIAL | ✅ (2/2 PASS) | Honest unavailable (#963), no pure-Python fallback |
-| Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Keyword limitation acceptable |
+| Modal Logic | PARTIAL | ✅ (2/2 PASS) | Heuristic fallback eliminated (#1019), no pure-Python fallback |
+| Quality (9 virtues) | **TRUSTWORTHY** | ✅ (3/3 PASS) | Fail-loud (#1019), keyword limitation acceptable |
 | Counter-Argument | PARTIAL | ✅ (3/3 PASS) | Fabricated statistics removed (#962), template placeholder tagged |
 | Debate | PARTIAL | ✅ (5/5 PASS) | ~~English-only scoring~~ fixed (#967), dead protocol code |
 | Governance | PARTIAL | ✅ (9/9 PASS) | ~~Hardcoded conflict resolution~~ fixed (#971), ~~Kemeny O(n!)~~ Copeland fallback (#971) |
 | JTMS | PARTIAL | ✅ (3/3 PASS) | networkx silent dependency, exponential ATMS |
-| Narrative Synthesis | **TRUSTWORTHY** | ✅ (3/3 PASS) | Template-only by design |
+| Narrative Synthesis | **TRUSTWORTHY** | ✅ (3/3 PASS) | Fail-explicit (#1019), template-only by design |
 | Fact Extraction | PARTIAL | ✅ (3/3 PASS) | LLM marker hallucination |
 
 ### Satellite Bricks
@@ -224,7 +226,7 @@ Verdict calibration:
 
 ### Should-fix for credibility
 
-4. **Dung Python fallback** — Only grounded is computed. If JVM unavailable, report "Grounded extension only" rather than implying full multi-semantics analysis.
+4. ~~**Dung Python fallback**~~ — ✅ Fixed (#1019/#1025). Python fallback now computes grounded+complete+preferred+stable (4 semantics). Cap at 25 args; beyond that, only grounded (logged WARNING).
 5. **Quality keyword dependency** — Well-structured arguments without the exact French keywords score poorly. Document the keyword list in output.
 6. **JTMS networkx dependency** — Silently degrades to monotonic-only. Log a warning when networkx is unavailable.
 
@@ -232,7 +234,7 @@ Verdict calibration:
 
 7. **Formal brick value-gate tests** — SetAF, Weighted, DeLP have zero test coverage. Even degenerate-fallback-aware tests would catch regressions.
 8. **Debate protocol activation** — Protocols.py has 6 Walton-Krabbe types defined but never used. Either activate or document as future work.
-9. **Governance conflict resolution** — Replace hardcoded probabilities with actual mediation logic.
+9. ~~**Governance conflict resolution**~~ — ✅ Fixed (#971). Hardcoded probabilities replaced with `None` (honest placeholder). Kemeny-Young has Copeland fallback.
 
 ---
 
@@ -248,3 +250,4 @@ Verdict calibration:
 | 2026-06-06 | myia-po-2023 | Governance fabricated probs → None (#971), Kemeny-Young Copeland fallback (#971). Value-gate: 9/9 PASS. |
 | 2026-06-06 | myia-po-2023 | Informal taxonomy value-gate: 3/3 PASS (#973). Coverage 10/12 core. Substring limitation honestly pinned. |
 | 2026-06-06 | myia-po-2023 | FOL + PL value-gate regression guards (#976 #977). Coverage: 12/12 core with value-gate tests. |
+| 2026-06-09 | myia-po-2023 | Post-#1019 refresh: Dung 4-sem Python fallback (#1025), FOL/Modal heuristic fallbacks eliminated (#1025), Quality fail-loud (#1026), Narrative fail-explicit (#1025), spectacular tri-state None/True/False preserved (#1028). Recommendations #4 and #9 marked fixed. |
