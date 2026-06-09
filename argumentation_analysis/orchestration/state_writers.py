@@ -626,7 +626,7 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     if not output or not isinstance(output, dict):
         return
     formulas = output.get("formulas", [])
-    consistent = output.get("consistent", False)
+    consistent = output.get("consistent")  # None = unverified, True/False = verified
     inferences = output.get("inferences", [])
     confidence = output.get("confidence", 0.0)
     if not isinstance(formulas, list):
@@ -635,8 +635,10 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         inferences = []
     if not isinstance(confidence, (int, float)):
         confidence = 0.0
+    # Preserve None (unverified) vs True (consistent) vs False (inconsistent).
+    # bool(None) == False would silently conflate "unknown" with "inconsistent" (#1019).
     state.add_fol_analysis_result(
-        formulas, bool(consistent), inferences, float(confidence)
+        formulas, consistent if consistent is not None else None, inferences, float(confidence)
     )
     # Store FOL signature metadata (#348)
     fol_signature = output.get("fol_signature", [])
@@ -658,7 +660,9 @@ def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         formulas = []
     if not isinstance(modalities, list):
         modalities = []
-    state.add_modal_analysis_result(formulas, bool(valid), modalities)
+    state.add_modal_analysis_result(
+        formulas, valid if valid is not None else None, modalities
+    )
 
 
 def _write_nl_to_logic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -730,13 +734,18 @@ def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Description Logic results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
-    consistent = output.get("consistent", False)
+    consistent = output.get("consistent")  # None = unverified (#1019)
     message = str(output.get("message", ""))
+    # Preserve None (unverified) vs True (consistent) vs False (inconsistent).
+    if consistent is None:
+        confidence = 0.0
+    else:
+        confidence = 1.0 if consistent else 0.0
     state.add_fol_analysis_result(
         formulas=[f"DL: {message}"],
-        consistent=bool(consistent),
+        consistent=consistent,
         inferences=[],
-        confidence=1.0 if consistent else 0.0,
+        confidence=confidence,
     )
 
 

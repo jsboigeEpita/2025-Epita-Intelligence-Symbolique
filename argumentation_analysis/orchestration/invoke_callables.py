@@ -930,7 +930,7 @@ async def _run_formal_logic_from_state(
             if formulas:
                 state.add_fol_analysis_result(
                     formulas,
-                    bool(fol_out.get("consistent", False)),
+                    fol_out.get("consistent"),  # None=unverified, True/False=verified (#1019)
                     fol_out.get("inferences", []) or [],
                     float(fol_out.get("confidence", 0.0) or 0.0),
                 )
@@ -5778,9 +5778,16 @@ def _python_dung_fallback(
     extensions["grounded"] = [sorted(grounded)]
 
     # ── Enumerate complete, preferred, stable via power set ──
-    # For n ≤ 50 arguments, this is feasible. For larger graphs,
-    # only grounded is computed.
-    if len(arg_set) <= 50:
+    # Cap at 25 arguments: power-set enumeration is O(2^n); at n=40 this is
+    # ~10^12 operations (infeasible).  Grounded is always computed (polynomial).
+    _DUNG_ENUM_CAP = 25
+    if len(arg_set) > _DUNG_ENUM_CAP:
+        logger.warning(
+            "Dung power-set enumeration skipped: %d arguments > cap %d. "
+            "Only grounded extension computed.",
+            len(arg_set), _DUNG_ENUM_CAP,
+        )
+    if len(arg_set) <= _DUNG_ENUM_CAP:
         complete_exts: List[List[str]] = []
         preferred_exts: List[List[str]] = []
         stable_exts: List[List[str]] = []
@@ -5840,11 +5847,25 @@ async def _invoke_formal_synthesis(
             phase_name = key[len("phase_") : -len("_output")]
             phase_results[phase_name] = val
             if "consistent" in val:
-                overall_scores.append(1.0 if val["consistent"] else 0.0)
+                v = val["consistent"]
+                if v is True:
+                    overall_scores.append(1.0)
+                elif v is False:
+                    overall_scores.append(0.0)
+                # None (unverified) — excluded from scoring (#1019)
             if "satisfiable" in val:
-                overall_scores.append(1.0 if val["satisfiable"] else 0.0)
+                v = val["satisfiable"]
+                if v is True:
+                    overall_scores.append(1.0)
+                elif v is False:
+                    overall_scores.append(0.0)
             if "valid" in val:
-                overall_scores.append(1.0 if val["valid"] else 0.0)
+                v = val["valid"]
+                if v is True:
+                    overall_scores.append(1.0)
+                elif v is False:
+                    overall_scores.append(0.0)
+                # None (unverified) — excluded from scoring (#1019)
 
     overall_validity = (
         sum(overall_scores) / len(overall_scores) if overall_scores else 0.5
