@@ -35,6 +35,26 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowExecutor,
 )
 
+
+def _bump_sk_budget_exec(n: int = 1) -> None:
+    """Increment the LLM budget counter for SK-native agent calls (#1029)."""
+    from argumentation_analysis.orchestration.invoke_callables import _llm_budget
+
+    budget = _llm_budget.get()
+    if budget is not None:
+        budget.count += n
+        if budget.count > budget.ceiling:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                LLMBudgetExceeded,
+            )
+
+            raise LLMBudgetExceeded(
+                f"Global LLM-call budget exceeded "
+                f"({budget.count} > {budget.ceiling}) in conversational pipeline "
+                f"— runaway guard (issue #708)."
+            )
+
+
 logger = logging.getLogger("ConversationalExecutor")
 
 
@@ -420,6 +440,7 @@ class GroupChatTurnStrategy(TurnStrategy):
             # Collect messages from the async generator
             collected: List[ChatMessageContent] = []
             async for msg in chat.invoke():
+                _bump_sk_budget_exec()
                 collected.append(msg)
 
             logger.info(

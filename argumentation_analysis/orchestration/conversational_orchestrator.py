@@ -28,6 +28,34 @@ from typing import Any, Dict, List, Optional
 
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
+
+
+def _bump_sk_budget(n: int = 1) -> None:
+    """Increment the LLM budget counter for SK-native agent calls.
+
+    SK's ``AgentGroupChat.invoke()`` and ``ChatCompletionAgent.invoke()``
+    call the OpenAI API directly, bypassing ``_guarded_chat_completion``.
+    This helper closes that gap by manually incrementing the shared
+    ``_LLMBudget`` counter (stored in a ``ContextVar``), so that the
+    ceiling check fires even for SK-native calls.
+
+    No-op when no budget scope is active (e.g. unit tests, standalone calls).
+    """
+    from argumentation_analysis.orchestration.invoke_callables import _llm_budget
+
+    budget = _llm_budget.get()
+    if budget is not None:
+        budget.count += n
+        if budget.count > budget.ceiling:
+            from argumentation_analysis.orchestration.invoke_callables import (
+                LLMBudgetExceeded,
+            )
+
+            raise LLMBudgetExceeded(
+                f"Global LLM-call budget exceeded "
+                f"({budget.count} > {budget.ceiling}) in conversational phase "
+                f"— runaway guard (issue #708)."
+            )
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
@@ -1367,6 +1395,7 @@ async def _run_phase(
         )
         turn = 0
         async for response in chat.invoke():
+            _bump_sk_budget()
             turn += 1
             fp_before = _get_growth_fingerprint(state)
             msg_entry = {
@@ -1394,6 +1423,7 @@ async def _run_phase(
                         )
                         await chat.add_chat_message(_RE_PROMPT_FEEDBACK)
                         async for rp_response in chat.invoke():
+                            _bump_sk_budget()
                             msg_entry = {
                                 "phase": phase_name,
                                 "turn": turn,
@@ -1466,6 +1496,7 @@ async def _run_phase(
             content = ""
             # SK 1.40: invoke() is an async generator, iterate to collect messages
             async for response in agent.invoke(chat_history):
+                _bump_sk_budget()
                 chunk = ""
                 if hasattr(response, "content"):
                     chunk = str(response.content)
@@ -1503,6 +1534,7 @@ async def _run_phase(
                         chat_history.add_user_message(_RE_PROMPT_FEEDBACK)
                         rp_content = ""
                         async for response in agent.invoke(chat_history):
+                            _bump_sk_budget()
                             chunk = ""
                             if hasattr(response, "content"):
                                 chunk = str(response.content)
