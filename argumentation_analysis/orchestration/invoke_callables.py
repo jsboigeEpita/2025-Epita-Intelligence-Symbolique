@@ -18,6 +18,27 @@ from typing import Dict, Any, Iterator, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
+# #1019: Preflight solver availability check (module-level, runs once)
+_SOLVER_PREFLIGHT_CHECKED = False
+def _preflight_solver_check() -> None:
+    """Log a one-time WARNING if external theorem provers are absent."""
+    global _SOLVER_PREFLIGHT_CHECKED
+    if _SOLVER_PREFLIGHT_CHECKED:
+        return
+    _SOLVER_PREFLIGHT_CHECKED = True
+    missing = []
+    if shutil.which("eprover") is None:
+        missing.append("eprover (FOL)")
+    if shutil.which("SPASS") is None:
+        missing.append("SPASS (modal)")
+    if missing:
+        logger.warning(
+            "External solvers not found on PATH: %s. "
+            "Pipeline will use TweetyBridge (JVM) for FOL/modal reasoning. "
+            "Install solvers for optimal performance.",
+            ", ".join(missing),
+        )
+
 # Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
 try:
     from dotenv import load_dotenv
@@ -306,7 +327,7 @@ _LLM_CALL_TIMEOUT_S = _safe_float_env("LLM_CALL_TIMEOUT_S", 300.0)
 # large attack graphs can hang indefinitely.  On timeout, falls back to
 # pure-Python grounded-only computation with degraded=True.  Set
 # DUNG_TIMEOUT_S=0 to disable timeout (not recommended).
-_DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 60.0)
+_DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 180.0)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
@@ -5315,8 +5336,9 @@ async def _invoke_fol_reasoning(
                 "fol_metrics": fol_metrics,
             }
 
-        # All formulas failed — use Python fallback
-        has_fallacious = any("Fallacious" in f for f in formulas)
+        # All formulas failed — no heuristic fallback (#1019)
+        # Tweety is the solver; if it cannot parse the formulas, report
+        # honest failure rather than fabricating a consistency result.
         fol_signature = []
         fol_metrics["post_tweety"] = 0
         fol_metrics["isolation_survivors"] = 0
@@ -5325,15 +5347,20 @@ async def _invoke_fol_reasoning(
             fol_signature = meta.get("signature_lines", [])
         except Exception:
             pass
+        logger.warning(
+            "FOL reasoning: all formulas failed Tweety parsing (%s). "
+            "Reporting unverified status (no heuristic fallback).",
+            tweety_err,
+        )
         return {
             "formulas": formulas,
             "fol_signature": fol_signature,
-            "consistent": not has_fallacious,
+            "consistent": None,
             "inferences": inferences,
-            "confidence": 0.6 if not has_fallacious else 0.3,
+            "confidence": 0.0,
             "logic_type": "first_order",
             "argument_count": len(args),
-            "fallback": "python",
+            "solver": "none",
             "diagnostic": str(tweety_err),
             "fol_metrics": fol_metrics,
         }
@@ -5461,11 +5488,10 @@ async def _invoke_modal_logic(
     except Exception as e:
         logger.debug(f"Modal TweetyBridge unavailable ({e}), using heuristic")
 
-    # Pure heuristic fallback — modal analysis unavailable
-    # (#961): do NOT return vacuous valid:True. Report honest unavailability.
+    # No solver available — report honest failure (#1019)
     logger.warning(
         "Modal analysis unavailable: no solver (SPASS/Tweety) could be loaded. "
-        "Reporting unverified status."
+        "Reporting unverified status (no heuristic fallback)."
     )
     return {
         "formulas": formulas,
@@ -5473,7 +5499,6 @@ async def _invoke_modal_logic(
         "modalities": modalities,
         "logic_type": "modal",
         "solver": "unavailable",
-        "fallback": "python",
         "message": "Modal analysis unavailable: no solver could be loaded.",
     }
 
@@ -5568,26 +5593,23 @@ async def _invoke_dung_extensions(
                 )
         except asyncio.TimeoutError:
             logger.warning(
-                f"Dung computation timed out after {_DUNG_TIMEOUT_S}s "
+                f"Dung Tweety computation timed out after {_DUNG_TIMEOUT_S}s "
                 f"({len(arguments)} args, {len(attacks)} attacks) — "
-                f"falling back to grounded-only Python (#992)"
+                f"using pure-Python 4-semantics computation (#1019)"
             )
-            _fallback_result = _python_dung_fallback(arguments, attacks)
-            _fallback_result["degraded"] = True
-            _fallback_result["degraded_reason"] = (
-                f"timeout after {_DUNG_TIMEOUT_S}s"
-            )
-            # Trace entry for degraded Dung fallback
+            _python_result = _python_dung_fallback(arguments, attacks)
+            # Trace entry for Python Dung compute
             _state = context.get("_state_object")
-            if _state is not None and _fallback_result.get("arguments"):
-                _n_args = len(_fallback_result.get("arguments", []))
+            if _state is not None and _python_result.get("arguments"):
+                _n_args = len(_python_result.get("arguments", []))
+                _sem_count = _python_result.get("statistics", {}).get("semantics_computed", 0)
                 _state.add_trace_entry(
                     phase="dung",
                     agent="DungAnalyzer",
                     reacts_to=["extract", "counter"],
-                    summary=f"Cadre Dung (DEGRADED — timeout): {_n_args} arguments. Extension fondée calculée heuristiquement.",
+                    summary=f"Cadre Dung (Python, Tweety timeout): {_n_args} arguments. {_sem_count} sémantiques calculées.",
                 )
-            return _fallback_result
+            return _python_result
 
         raw_extensions = result.get("extensions", {})
 
@@ -5646,50 +5668,97 @@ async def _invoke_dung_extensions(
             )
         return _dung_result
     except Exception as e:
-        logger.info(f"Dung AFHandler unavailable ({e}), using Python fallback")
-        _fallback_result = _python_dung_fallback(arguments, attacks)
-        _fallback_result["degraded"] = True
-        _fallback_result["degraded_reason"] = f"AFHandler error: {e}"
-        # Trace entry for Dung Python fallback
+        logger.info(f"Dung AFHandler unavailable ({e}), using Python 4-semantics compute")
+        _python_result = _python_dung_fallback(arguments, attacks)
+        # Trace entry for Python Dung compute
         _state = context.get("_state_object")
-        if _state is not None and _fallback_result.get("arguments"):
-            _n_args = len(_fallback_result.get("arguments", []))
+        if _state is not None and _python_result.get("arguments"):
+            _n_args = len(_python_result.get("arguments", []))
+            _sem_count = _python_result.get("statistics", {}).get("semantics_computed", 0)
             _state.add_trace_entry(
                 phase="dung",
                 agent="DungAnalyzer",
                 reacts_to=["extract", "counter"],
-                summary=f"Cadre Dung (fallback Python): {_n_args} arguments. Extension fondée calculée heuristiquement.",
+                summary=f"Cadre Dung (Python, AFHandler unavailable): {_n_args} arguments. {_sem_count} sémantiques calculées.",
             )
-        return _fallback_result
+        return _python_result
 
 
 def _python_dung_fallback(
     arguments: List[str], attacks: List[List[str]]
 ) -> Dict[str, Any]:
-    """Pure-Python Dung extension computation when JVM/Tweety is unavailable.
+    """Pure-Python Dung extension computation when JVM/Tweety is unavailable (#1019).
 
-    Computes grounded extension using iterative fixpoint: start from empty set,
-    repeatedly add arguments that are defended against all attacks.
+    Computes grounded, complete, preferred, and stable extensions using
+    exact combinatorial enumeration. Suitable for argument graphs with ≤50
+    arguments (exponential in worst case, but practical for this project's
+    input sizes).
+
+    Each extension is a conflict-free set:
+    - Grounded:    the ⊆-minimal complete extension (iterative fixpoint)
+    - Complete:    all conflict-free sets that defend every member
+    - Preferred:   ⊆-maximal complete extensions
+    - Stable:      conflict-free sets that attack every non-member
     """
     if not arguments:
         return {
-            "semantics": "python_fallback",
+            "semantics": "python",
             "extensions": {},
             "arguments": [],
             "attacks": [],
             "statistics": {"arguments_count": 0, "attacks_count": 0},
         }
 
-    # Build attack maps
     arg_set = set(arguments)
-    attack_map: Dict[str, list[str]] = {a: [] for a in arg_set}  # attacker -> targets
-    attacked_by: Dict[str, list[str]] = {a: [] for a in arg_set}  # target -> attackers
+    # Build attack maps
+    attack_map: Dict[str, set[str]] = {a: set() for a in arg_set}
     for attacker, target in attacks:
         if attacker in arg_set and target in arg_set:
-            attack_map[attacker].append(target)
-            attacked_by[target].append(attacker)
+            attack_map[attacker].add(target)
 
-    # Grounded extension: iterative fixpoint
+    def _attacks(attacker: str, target: str) -> bool:
+        return target in attack_map.get(attacker, set())
+
+    def _is_conflict_free(s: frozenset[str]) -> bool:
+        for a in s:
+            for b in s:
+                if _attacks(a, b):
+                    return False
+        return True
+
+    def _defends(s: frozenset[str], arg: str) -> bool:
+        """s defends arg iff for every attacker b of arg, some c in s attacks b."""
+        for b in arg_set:
+            if _attacks(b, arg):
+                if not any(_attacks(c, b) for c in s):
+                    return False
+        return True
+
+    def _is_admissible(s: frozenset[str]) -> bool:
+        if not _is_conflict_free(s):
+            return False
+        return all(_defends(s, a) for a in s)
+
+    def _is_complete(s: frozenset[str]) -> bool:
+        """Complete = admissible + every defended argument is in s."""
+        if not _is_admissible(s):
+            return False
+        for arg in arg_set - s:
+            if _defends(s, arg):
+                return False
+        return True
+
+    def _is_stable(s: frozenset[str]) -> bool:
+        """Stable = conflict-free + attacks every argument outside s."""
+        if not _is_conflict_free(s):
+            return False
+        outside = arg_set - s
+        for b in outside:
+            if not any(_attacks(a, b) for a in s):
+                return False
+        return True
+
+    # ── Grounded extension: iterative fixpoint (polynomial) ──
     grounded: set[str] = set()
     changed = True
     while changed:
@@ -5697,28 +5766,60 @@ def _python_dung_fallback(
         for arg in arg_set:
             if arg in grounded:
                 continue
-            # arg is defended if all its attackers are attacked by grounded
             defended = all(
-                any(att in attack_map.get(g, []) for g in grounded)
-                for att in attacked_by[arg]
+                any(att in attack_map.get(g, set()) for g in grounded)
+                for att in arg_set if _attacks(att, arg)
             )
-            if defended and all(att not in grounded for att in attack_map.get(arg, [])):
-                # Also check: arg doesn't attack itself (conflict-free)
+            if defended and not any(_attacks(arg, ga) for ga in grounded):
                 grounded.add(arg)
                 changed = True
 
-    extensions = {}
-    if grounded:
-        extensions["grounded"] = list(grounded)
+    extensions: Dict[str, Any] = {}
+    extensions["grounded"] = [sorted(grounded)]
+
+    # ── Enumerate complete, preferred, stable via power set ──
+    # For n ≤ 50 arguments, this is feasible. For larger graphs,
+    # only grounded is computed.
+    if len(arg_set) <= 50:
+        complete_exts: List[List[str]] = []
+        preferred_exts: List[List[str]] = []
+        stable_exts: List[List[str]] = []
+
+        from itertools import combinations
+
+        for size in range(len(arg_set), -1, -1):
+            for subset in combinations(sorted(arg_set), size):
+                s = frozenset(subset)
+                if _is_complete(s):
+                    ext_sorted = sorted(s)
+                    if ext_sorted not in complete_exts:
+                        complete_exts.append(ext_sorted)
+
+        # Preferred = ⊆-maximal complete extensions
+        complete_sets = [frozenset(e) for e in complete_exts]
+        for e in complete_sets:
+            is_maximal = not any(e < other for other in complete_sets if other != e)
+            if is_maximal:
+                preferred_exts.append(sorted(e))
+
+        # Stable = conflict-free + attacks everything outside
+        for e in complete_sets:
+            if _is_stable(e):
+                stable_exts.append(sorted(e))
+
+        extensions["complete"] = complete_exts
+        extensions["preferred"] = preferred_exts
+        extensions["stable"] = stable_exts
 
     return {
-        "semantics": "python_fallback",
+        "semantics": "python",
         "extensions": extensions,
         "arguments": arguments,
         "attacks": attacks,
         "statistics": {
             "arguments_count": len(arguments),
             "attacks_count": len(attacks),
+            "semantics_computed": len(extensions),
         },
     }
 
@@ -5786,9 +5887,9 @@ async def _invoke_narrative_synthesis(
     build_narrative to generate 1-2 paragraphs weaving together quality,
     fallacies, JTMS, ATMS, Dung, and formal logic results.
 
-    #994: Falls back to reading phase outputs directly from context when
-    the state-based narrative is empty/fallback, ensuring non-empty output
-    even when some upstream phases are degraded or missing.
+    #1019: No template-rebuild fallback.  If the state is empty, the
+    narrative phase returns the sentinel as-is — the root cause (missing
+    state, phase failures) must be fixed upstream, not papered over.
     """
     from argumentation_analysis.plugins.narrative_synthesis_plugin import (
         build_narrative,
@@ -5803,11 +5904,16 @@ async def _invoke_narrative_synthesis(
         "une synthese narrative"
     )
 
-    # Reconstruct state from context if possible
-    state = context.get("_state_object")
+    # Resolve state: prefer _state_object (set by WorkflowExecutor since
+    # workflow_dsl.py writes both unified_state and _state_object), then
+    # fall back to unified_state for backward compatibility.
+    state = context.get("_state_object") or context.get("unified_state")
+
     if not isinstance(state, UnifiedAnalysisState):
+        # No state was passed — reconstruct from context phase outputs
+        # so that build_narrative() has something to work with.
         state = UnifiedAnalysisState(input_text[:200])
-        # Populate from context outputs
+        populated = 0
         for key, value in context.items():
             if key.startswith("phase_") and key.endswith("_output"):
                 cap = key[len("phase_") : -len("_output")]
@@ -5815,145 +5921,48 @@ async def _invoke_narrative_synthesis(
                 if writer and isinstance(value, dict):
                     try:
                         writer(value, state, context)
+                        populated += 1
                     except Exception:
                         logger.warning(
                             "State writer for '%s' failed during narrative reconstruction",
                             cap,
                             exc_info=True,
                         )
+        logger.info(
+            "Narrative: no UnifiedAnalysisState in context, reconstructed "
+            "from %d phase outputs", populated,
+        )
 
     narrative = build_narrative(state)
-    degraded = False
 
-    # #994: If state-based narrative is the fallback message, try reading
-    # phase outputs directly from context to produce a non-empty synthesis.
     if not narrative or _FALLBACK_SENTINEL in narrative:
-        parts: list[str] = []
-
-        # Arguments
-        extract_out = context.get("phase_extract_output", {})
-        raw_args = (
-            extract_out.get("arguments", []) if isinstance(extract_out, dict) else []
-        )
-        if raw_args:
-            parts.append(
-                f"L'analyse a extrait {len(raw_args)} argument(s) du texte."
+        # #1019: Fail explicit — no template rebuild.
+        # Log diagnostic info so the root cause can be identified.
+        phase_keys = [k for k in context if k.startswith("phase_") and k.endswith("_output")]
+        state_fields = [
+            attr for attr in (
+                "argument_quality_scores", "identified_fallacies",
+                "counter_arguments", "jtms_beliefs", "dung_frameworks",
+                "fol_analysis_results", "propositional_analysis_results",
+                "modal_analysis_results", "atms_contexts",
             )
-
-        # Fallacies
-        fallacy_out = context.get("phase_hierarchical_fallacy_output", {})
-        fallacies_raw = (
-            fallacy_out.get("fallacies", []) if isinstance(fallacy_out, dict) else []
+            if getattr(state, attr, None)
+        ]
+        logger.warning(
+            "Narrative synthesis produced empty/fallback result. "
+            "Available phase outputs: %s. Populated state fields: %s. "
+            "Root cause: upstream phases did not produce enough data "
+            "for narrative synthesis.",
+            phase_keys, state_fields,
         )
-        if fallacies_raw:
-            types = set()
-            for f in fallacies_raw:
-                if isinstance(f, dict):
-                    t = f.get("type", "")
-                    if t:
-                        types.add(t)
-            types_str = ", ".join(sorted(types)) if types else f"{len(fallacies_raw)} sophisme(s)"
-            parts.append(
-                f"L'analyse a detecte {len(fallacies_raw)} sophisme(s) "
-                f"({types_str}), ce qui fragilise la structure argumentative."
-            )
-
-        # Counter-arguments
-        ca_out = context.get("phase_counter_output", {})
-        ca_list = (
-            ca_out.get("llm_counter_arguments", [])
-            if isinstance(ca_out, dict)
-            else []
-        )
-        if ca_list:
-            parts.append(
-                f"Des contre-arguments ont ete generes ({len(ca_list)}), "
-                f"identifiant des points de contestation."
-            )
-
-        # Formal logic
-        pl_out = context.get("phase_pl_output", {})
-        fol_out = context.get("phase_fol_output", {})
-        pl_formulas = (
-            len(pl_out.get("formulas", [])) if isinstance(pl_out, dict) else 0
-        )
-        fol_formulas = (
-            len(fol_out.get("formulas", [])) if isinstance(fol_out, dict) else 0
-        )
-        formal_total = pl_formulas + fol_formulas
-        if formal_total > 0:
-            parts.append(
-                f"L'analyse formelle a produit {formal_total} formule(s) "
-                f"({pl_formulas} PL, {fol_formulas} FOL)."
-            )
-
-        # Dung extensions
-        dung_out = context.get("phase_dung_extensions_output", {})
-        if isinstance(dung_out, dict):
-            dung_args = dung_out.get("arguments", [])
-            degraded_flag = dung_out.get("degraded", False)
-            if dung_args:
-                desc = (
-                    f"L'argumentation abstraite (Dung) a analyse {len(dung_args)} argument(s)"
-                )
-                if degraded_flag:
-                    desc += " en mode degrade (extension fondee uniquement)"
-                parts.append(desc + ".")
-
-        # JTMS beliefs
-        jtms_out = context.get("phase_jtms_output", {})
-        if isinstance(jtms_out, dict):
-            beliefs = jtms_out.get("beliefs", [])
-            if beliefs:
-                parts.append(
-                    f"Le systeme JTMS maintient {len(beliefs)} croyance(s)."
-                )
-
-        # Quality scores
-        quality_out = context.get("phase_argument_quality_output", {})
-        if isinstance(quality_out, dict):
-            per_arg = quality_out.get("per_argument_scores", {})
-            if per_arg:
-                scores = [
-                    v.get("note_finale", 0)
-                    for v in per_arg.values()
-                    if isinstance(v, dict)
-                ]
-                avg = sum(scores) / len(scores) if scores else 0
-                degraded_flag = any(
-                    v.get("degraded", False)
-                    for v in per_arg.values()
-                    if isinstance(v, dict)
-                )
-                q_desc = (
-                    f"L'evaluation de la qualite argumentative couvre "
-                    f"{len(per_arg)} argument(s), avec une note moyenne de "
-                    f"{avg:.1f}/9."
-                )
-                if degraded_flag:
-                    q_desc += " (mode degrade - heuristiques)"
-                parts.append(q_desc)
-
-        if parts:
-            narrative = " ".join(parts)
-            degraded = True
-            logger.info(
-                "Narrative synthesis rebuilt from context phase outputs "
-                "(state was empty/fallback). %d parts assembled.",
-                len(parts),
-            )
 
     paragraph_count = (narrative.count("\n\n") + 1) if narrative else 0
 
-    result = {
+    return {
         "narrative": narrative,
         "paragraph_count": paragraph_count,
         "referenced_fields": _count_referenced_fields(state),
     }
-    if degraded:
-        result["degraded"] = True
-        result["degraded_reason"] = "rebuilt from context (state-based narrative was empty)"
-    return result
 
 
 def _count_referenced_fields(state: Any) -> int:
@@ -6279,9 +6288,11 @@ async def _invoke_external_fol_solver(
     EFOLReasoner first, then Prover9 subprocess. Falls back to TweetyBridge
     (the default FOL path) when neither external solver is available.
 
-    #982: probes shutil.which before claiming external solver; stamps
-    degraded=True on fallback paths so the state writer can persist it.
+    #1019: No degraded flag. TweetyBridge is a genuine FOL reasoner.
+    External solvers are optional performance enhancers, not prerequisites.
     """
+    _preflight_solver_check()
+
     fol_output = context.get("phase_fol_output", {})
     if not isinstance(fol_output, dict):
         fol_output = {}
@@ -6366,7 +6377,7 @@ async def _invoke_external_fol_solver(
         else:
             logger.info("Prover9 binary not bundled, falling back to TweetyBridge")
 
-    # Fallback: TweetyBridge (default path) — degraded since no external solver
+    # Fallback: TweetyBridge (default path) — genuine FOL reasoning via JVM
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
@@ -6385,8 +6396,7 @@ async def _invoke_external_fol_solver(
         return {
             "formulas": formulas,
             "consistent": bool(is_consistent),
-            "solver": "tweety_fallback",
-            "degraded": True,
+            "solver": "tweety",
             "message": msg,
             "logic_type": "first_order",
         }
@@ -6395,7 +6405,6 @@ async def _invoke_external_fol_solver(
             "formulas": formulas,
             "consistent": None,
             "solver": "none",
-            "degraded": True,
             "error": str(e),
             "logic_type": "first_order",
         }
@@ -6410,9 +6419,10 @@ async def _invoke_external_modal_solver(
     SPASSMlReasoner first. Falls back to TweetyBridge when SPASS is
     not available.
 
-    #982: probes shutil.which before claiming SPASS; stamps degraded=True
-    on fallback paths so the state writer can persist it.
+    #1019: No degraded flag. TweetyBridge is a genuine modal reasoner.
+    External solvers are optional performance enhancers, not prerequisites.
     """
+    _preflight_solver_check()
     modal_output = context.get("phase_modal_output", {})
     if not isinstance(modal_output, dict):
         modal_output = {}
@@ -6458,7 +6468,7 @@ async def _invoke_external_modal_solver(
     else:
         logger.info("SPASS binary not found on PATH (shutil.which), using TweetyBridge fallback")
 
-    # Fallback: TweetyBridge — degraded since no external solver
+    # Fallback: TweetyBridge — genuine modal reasoning via JVM
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
@@ -6477,8 +6487,7 @@ async def _invoke_external_modal_solver(
             "formulas": formulas,
             "valid": accepted,
             "modalities": modalities,
-            "solver": "tweety_fallback",
-            "degraded": True,
+            "solver": "tweety",
             "message": msg,
             "logic_type": "modal",
         }
@@ -6488,7 +6497,6 @@ async def _invoke_external_modal_solver(
             "valid": None,
             "modalities": modalities,
             "solver": "none",
-            "degraded": True,
             "error": str(e),
             "logic_type": "modal",
         }

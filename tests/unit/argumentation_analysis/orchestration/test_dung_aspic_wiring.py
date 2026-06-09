@@ -272,17 +272,16 @@ class TestInvokeDungExtensions:
             ):
                 result = await _invoke_dung_extensions("test text", context)
 
-        assert result["semantics"] == "python_fallback"
+        assert result["semantics"] == "python"
         assert len(result["arguments"]) == 2
 
     @pytest.mark.asyncio
-    async def test_timeout_triggers_degraded_fallback(self):
-        """Dung function falls back to grounded-only on timeout (#992).
+    async def test_timeout_triggers_python_4semantics(self):
+        """Dung function falls back to 4-semantics Python compute on timeout (#1019).
 
-        When analyze_multi_semantics hangs (e.g. preferred/stable on large
-        graphs), asyncio.wait_for raises TimeoutError.  The callable should
-        catch it, compute a grounded extension via pure-Python fallback, and
-        set degraded=True.
+        When analyze_multi_semantics hangs, asyncio.wait_for raises TimeoutError.
+        The callable should compute grounded+complete+preferred+stable extensions
+        via pure-Python, with no degraded flag.
         """
         import time
 
@@ -323,20 +322,24 @@ class TestInvokeDungExtensions:
                     mock_init.return_value = MagicMock()
                     result = await _invoke_dung_extensions("test text", context)
 
-            # Must be a degraded fallback
-            assert result["semantics"] == "python_fallback"
-            assert result.get("degraded") is True
-            assert "timeout" in result.get("degraded_reason", "")
-            # Grounded extension should be non-empty (3 args, heuristic attacks
-            # may exclude some, but at least the un-attacked ones must appear)
-            grounded = result.get("extensions", {}).get("grounded", [])
+            # Must be Python 4-semantics compute (no degraded flag)
+            assert result["semantics"] == "python"
+            assert result.get("degraded") is not True
+            # All 4 critical extensions must be computed
+            exts = result.get("extensions", {})
+            assert "grounded" in exts
+            assert "complete" in exts
+            assert "preferred" in exts
+            assert "stable" in exts
+            # Grounded extension should be non-empty (at least un-attacked args)
+            grounded = exts.get("grounded", [])
             assert len(grounded) >= 1, f"Expected ≥1 grounded args, got {grounded}"
         finally:
             ic_mod._DUNG_TIMEOUT_S = original_timeout
 
     @pytest.mark.asyncio
-    async def test_exception_fallback_has_degraded_flag(self):
-        """Dung function sets degraded=True when falling back on exception (#992)."""
+    async def test_exception_triggers_python_4semantics(self):
+        """Dung function uses Python 4-semantics compute when AFHandler fails (#1019)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
@@ -357,9 +360,14 @@ class TestInvokeDungExtensions:
                 mock_init.return_value = MagicMock()
                 result = await _invoke_dung_extensions("test text", context)
 
-        assert result["semantics"] == "python_fallback"
-        assert result.get("degraded") is True
-        assert "AFHandler error" in result.get("degraded_reason", "")
+        assert result["semantics"] == "python"
+        assert result.get("degraded") is not True
+        # All 4 critical extensions must be present
+        exts = result.get("extensions", {})
+        assert "grounded" in exts
+        assert "complete" in exts
+        assert "preferred" in exts
+        assert "stable" in exts
 
 
 # ============================================================
@@ -389,13 +397,16 @@ class TestPythonDungFallback:
         attacks = [["a", "b"]]  # a attacks b
         result = _python_dung_fallback(args, attacks)
 
-        assert result["semantics"] == "python_fallback"
+        assert result["semantics"] == "python"
         assert len(result["arguments"]) == 3
         assert len(result["attacks"]) == 1
         # 'a' has no attacker, so it should be in grounded
         # 'b' is attacked by 'a' (which is defended), so b not in grounded
         # 'c' has no attacker, so it should be in grounded
-        grounded = result.get("extensions", {}).get("grounded", [])
+        # grounded is a list of extensions: [[args_in_ext1], ...]
+        grounded_exts = result.get("extensions", {}).get("grounded", [])
+        assert len(grounded_exts) >= 1
+        grounded = set(grounded_exts[0]) if grounded_exts else set()
         assert "a" in grounded
         assert "c" in grounded
         assert "b" not in grounded
@@ -411,7 +422,8 @@ class TestPythonDungFallback:
         result = _python_dung_fallback(args, attacks)
 
         # a is self-attacking, should not be in grounded
-        grounded = result.get("extensions", {}).get("grounded", [])
+        grounded_exts = result.get("extensions", {}).get("grounded", [])
+        grounded = set(grounded_exts[0]) if grounded_exts else set()
         assert "a" not in grounded
 
     def test_no_attacks(self):
@@ -423,8 +435,49 @@ class TestPythonDungFallback:
         args = ["a", "b", "c"]
         result = _python_dung_fallback(args, [])
 
-        grounded = result.get("extensions", {}).get("grounded", [])
-        assert set(grounded) == {"a", "b", "c"}
+        grounded_exts = result.get("extensions", {}).get("grounded", [])
+        grounded = set(grounded_exts[0]) if grounded_exts else set()
+        assert grounded == {"a", "b", "c"}
+
+    def test_4_semantics_computed(self):
+        """Python fallback computes grounded+complete+preferred+stable (#1019)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _python_dung_fallback,
+        )
+
+        args = ["a", "b", "c"]
+        attacks = [["a", "b"], ["b", "c"]]
+        result = _python_dung_fallback(args, attacks)
+
+        assert result["semantics"] == "python"
+        exts = result.get("extensions", {})
+        # All 4 critical extensions must be present
+        assert "grounded" in exts
+        assert "complete" in exts
+        assert "preferred" in exts
+        assert "stable" in exts
+        # Grounded is always unique (list of 1 extension)
+        assert len(exts["grounded"]) == 1
+        # Statistics must report semantics_computed
+        stats = result.get("statistics", {})
+        assert stats.get("semantics_computed") == 4
+
+    def test_preferred_subsumes_grounded(self):
+        """Preferred extensions are supersets of grounded (#1019)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _python_dung_fallback,
+        )
+
+        args = ["a", "b", "c"]
+        attacks = [["a", "b"]]
+        result = _python_dung_fallback(args, attacks)
+
+        exts = result.get("extensions", {})
+        grounded_set = set(exts["grounded"][0]) if exts["grounded"] else set()
+        # Every preferred extension should contain the grounded extension
+        for pref in exts.get("preferred", []):
+            assert grounded_set.issubset(set(pref)), \
+                f"Grounded {grounded_set} not subset of preferred {set(pref)}"
 
 
 # ============================================================
