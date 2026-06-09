@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 
 # ---------------------------------------------------------------------------
-# 1. _bump_sk_budget — unit tests on the counter mechanism
+# 1. _bump_sk_budget — unit tests on the shared counter mechanism
 # ---------------------------------------------------------------------------
 
 
@@ -21,7 +21,7 @@ class TestBumpSKBudget:
 
     def test_noop_without_active_budget(self):
         """When no budget scope is active, _bump_sk_budget is a no-op."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
+        from argumentation_analysis.orchestration.invoke_callables import (
             _bump_sk_budget,
         )
 
@@ -30,10 +30,8 @@ class TestBumpSKBudget:
 
     def test_increments_counter(self):
         """When budget scope is active, counter increments."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _bump_sk_budget,
-        )
         from argumentation_analysis.orchestration.invoke_callables import (
+            _bump_sk_budget,
             llm_budget_scope,
         )
 
@@ -46,11 +44,9 @@ class TestBumpSKBudget:
 
     def test_raises_on_ceiling_exceeded(self):
         """When budget ceiling is exceeded, LLMBudgetExceeded is raised."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _bump_sk_budget,
-        )
         from argumentation_analysis.orchestration.invoke_callables import (
             LLMBudgetExceeded,
+            _bump_sk_budget,
             llm_budget_scope,
         )
 
@@ -64,10 +60,8 @@ class TestBumpSKBudget:
 
     def test_budget_shared_with_guarded_completion(self):
         """SK budget bumps and _guarded_chat_completion share the same counter."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _bump_sk_budget,
-        )
         from argumentation_analysis.orchestration.invoke_callables import (
+            _bump_sk_budget,
             _llm_budget,
             llm_budget_scope,
         )
@@ -78,53 +72,38 @@ class TestBumpSKBudget:
             active = _llm_budget.get()
             assert active.count == 10
 
+    def test_importable_from_conversational_orchestrator(self):
+        """_bump_sk_budget is re-exported via conversational_orchestrator."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _bump_sk_budget,
+        )
 
-# ---------------------------------------------------------------------------
-# 2. Conversational executor _bump_sk_budget_exec
-# ---------------------------------------------------------------------------
+        assert callable(_bump_sk_budget)
 
-
-class TestBumpSKBudgetExecutor:
-    """Same tests for the conversational_executor variant."""
-
-    def test_increments_counter(self):
+    def test_importable_from_conversational_executor(self):
+        """_bump_sk_budget is re-exported via conversational_executor."""
         from argumentation_analysis.orchestration.conversational_executor import (
-            _bump_sk_budget_exec,
-        )
-        from argumentation_analysis.orchestration.invoke_callables import (
-            llm_budget_scope,
+            _bump_sk_budget,
         )
 
-        with llm_budget_scope(ceiling=50) as budget:
-            _bump_sk_budget_exec()
-            assert budget.count == 1
-
-    def test_raises_on_ceiling(self):
-        from argumentation_analysis.orchestration.conversational_executor import (
-            _bump_sk_budget_exec,
-        )
-        from argumentation_analysis.orchestration.invoke_callables import (
-            LLMBudgetExceeded,
-            llm_budget_scope,
-        )
-
-        with llm_budget_scope(ceiling=1) as budget:
-            _bump_sk_budget_exec()
-            with pytest.raises(LLMBudgetExceeded):
-                _bump_sk_budget_exec()
+        assert callable(_bump_sk_budget)
 
 
 # ---------------------------------------------------------------------------
-# 3. _run_phase integration — budget bumps on each SK turn
+# 2. _run_phase integration — budget bumps once per agent turn (per-call)
 # ---------------------------------------------------------------------------
 
 
 class TestRunPhaseBudgetIntegration:
-    """Verify _run_phase bumps budget for each agent turn."""
+    """Verify _run_phase bumps budget once per agent turn, not per streaming chunk."""
 
     @pytest.mark.asyncio
-    async def test_round_robin_path_bumps_budget(self):
-        """Each agent.invoke() response in round-robin path bumps the budget."""
+    async def test_round_robin_path_bumps_per_call(self):
+        """Each agent.invoke() call bumps budget exactly once, regardless of chunks.
+
+        The bump is placed BEFORE the async-for loop (NanoClaw concern #1):
+        one LLM API call = one budget tick, not one per streaming chunk.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_phase,
         )
@@ -132,13 +111,13 @@ class TestRunPhaseBudgetIntegration:
             llm_budget_scope,
         )
 
-        # Create mock agent that returns one response per invoke
+        # Create mock agent that yields 5 chunks per invoke (simulates streaming)
         mock_agent = MagicMock()
         mock_agent.name = "TestAgent"
 
-        # Simulate an async generator returning one response
         async def _mock_invoke(history):
-            yield MagicMock(content="test response", name="TestAgent")
+            for i in range(5):
+                yield MagicMock(content=f"chunk {i}", name="TestAgent")
 
         mock_agent.invoke = _mock_invoke
 
@@ -158,34 +137,33 @@ class TestRunPhaseBudgetIntegration:
                     enable_growth_validation=False,
                 )
 
-                # Budget should have been bumped once per turn (3 turns)
-                assert budget.count >= 3, (
-                    f"Expected budget >= 3 turns, got {budget.count}"
+                # Budget should be bumped exactly 3 times (1 per turn, not 5 per chunk)
+                assert budget.count == 3, (
+                    f"Expected budget=3 (per-call), got {budget.count}. "
+                    f"Per-chunk bumping would give 15 (3×5)."
                 )
 
     @pytest.mark.asyncio
-    async def test_budget_cap_fires_on_runaway(self):
-        """Budget exception is raised when ceiling exceeded, even though _run_phase catches it.
+    async def test_budget_cap_stops_phase(self):
+        """LLMBudgetExceeded propagates out of _run_phase (anti-theater #1019).
 
-        _run_phase catches per-turn exceptions (including LLMBudgetExceeded) and continues
-        the round-robin loop. This is existing behavior. The key assertion is that the
-        budget counter increments past the ceiling and the exception IS raised (logged),
-        proving the guard is wired correctly.
+        The per-turn try/except re-raises LLMBudgetExceeded so the budget
+        guard stops the pipeline instead of just logging.
         """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_phase,
         )
         from argumentation_analysis.orchestration.invoke_callables import (
+            LLMBudgetExceeded,
             llm_budget_scope,
         )
 
         mock_agent = MagicMock()
         mock_agent.name = "RunawayAgent"
 
-        # Each invoke yields 100 chunks → 100 bumps per turn
+        # Each invoke yields 1 chunk — bump is per-call
         async def _mock_invoke(history):
-            for i in range(100):
-                yield MagicMock(content=f"response {i}", name="RunawayAgent")
+            yield MagicMock(content="response", name="RunawayAgent")
 
         mock_agent.invoke = _mock_invoke
 
@@ -194,25 +172,25 @@ class TestRunPhaseBudgetIntegration:
             side_effect=ImportError("SK not available"),
             create=True,
         ):
-            with llm_budget_scope(ceiling=5) as budget:
-                messages = await _run_phase(
-                    agents=[mock_agent],
-                    initial_prompt="test",
-                    max_turns=3,  # Only 3 turns, each with 100 chunks
-                    phase_name="runaway_test",
-                    state=MagicMock(),
-                    enable_growth_validation=False,
-                )
+            with llm_budget_scope(ceiling=2) as budget:
+                with pytest.raises(LLMBudgetExceeded, match="budget exceeded"):
+                    await _run_phase(
+                        agents=[mock_agent],
+                        initial_prompt="test",
+                        max_turns=10,
+                        phase_name="runaway_test",
+                        state=MagicMock(),
+                        enable_growth_validation=False,
+                    )
 
-                # Budget was bumped past the ceiling (3 turns × 100 chunks = 300 bumps)
+                # Counter should be at ceiling + 1 (the bump that triggered)
                 assert budget.count > budget.ceiling, (
-                    f"Budget counter ({budget.count}) should exceed ceiling ({budget.ceiling}). "
-                    f"This proves _bump_sk_budget is wired into the round-robin path."
+                    f"Budget counter ({budget.count}) should exceed ceiling ({budget.ceiling})."
                 )
 
 
 # ---------------------------------------------------------------------------
-# 4. Non-regression — budget scope is entered on conversational path
+# 3. Non-regression — budget scope is entered on conversational path
 # ---------------------------------------------------------------------------
 
 

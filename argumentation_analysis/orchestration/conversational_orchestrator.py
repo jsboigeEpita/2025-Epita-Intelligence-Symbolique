@@ -29,33 +29,10 @@ from typing import Any, Dict, List, Optional
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
 
-
-def _bump_sk_budget(n: int = 1) -> None:
-    """Increment the LLM budget counter for SK-native agent calls.
-
-    SK's ``AgentGroupChat.invoke()`` and ``ChatCompletionAgent.invoke()``
-    call the OpenAI API directly, bypassing ``_guarded_chat_completion``.
-    This helper closes that gap by manually incrementing the shared
-    ``_LLMBudget`` counter (stored in a ``ContextVar``), so that the
-    ceiling check fires even for SK-native calls.
-
-    No-op when no budget scope is active (e.g. unit tests, standalone calls).
-    """
-    from argumentation_analysis.orchestration.invoke_callables import _llm_budget
-
-    budget = _llm_budget.get()
-    if budget is not None:
-        budget.count += n
-        if budget.count > budget.ceiling:
-            from argumentation_analysis.orchestration.invoke_callables import (
-                LLMBudgetExceeded,
-            )
-
-            raise LLMBudgetExceeded(
-                f"Global LLM-call budget exceeded "
-                f"({budget.count} > {budget.ceiling}) in conversational phase "
-                f"— runaway guard (issue #708)."
-            )
+from argumentation_analysis.orchestration.invoke_callables import (
+    LLMBudgetExceeded,
+    _bump_sk_budget,
+)
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
@@ -1495,8 +1472,11 @@ async def _run_phase(
             fp_before = _get_growth_fingerprint(state)
             content = ""
             # SK 1.40: invoke() is an async generator, iterate to collect messages
+            # Bump budget BEFORE the loop: ChatCompletionAgent.invoke() may yield
+            # multiple streaming chunks per call — we count 1 LLM call = 1 bump,
+            # regardless of chunk count (NanoClaw concern #1).
+            _bump_sk_budget()
             async for response in agent.invoke(chat_history):
-                _bump_sk_budget()
                 chunk = ""
                 if hasattr(response, "content"):
                     chunk = str(response.content)
@@ -1533,8 +1513,9 @@ async def _run_phase(
                         )
                         chat_history.add_user_message(_RE_PROMPT_FEEDBACK)
                         rp_content = ""
+                        # Bump budget BEFORE the loop (per-call, not per-chunk).
+                        _bump_sk_budget()
                         async for response in agent.invoke(chat_history):
-                            _bump_sk_budget()
                             chunk = ""
                             if hasattr(response, "content"):
                                 chunk = str(response.content)
@@ -1582,6 +1563,12 @@ async def _run_phase(
                             )
                         if _validate_state_growth(fp_before, fp_after, phase_name):
                             break
+
+        except LLMBudgetExceeded:
+            # Anti-theater (#1019): budget guard must STOP the phase, not just
+            # log.  Re-raise so the caller (workflow executor) handles it as a
+            # hard cap violation — same semantics as the pipeline path.
+            raise
 
         except Exception as exc:
             logger.error(f"  [{phase_name}] Turn {turn}: {agent.name} failed: {exc}")
