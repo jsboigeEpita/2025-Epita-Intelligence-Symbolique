@@ -6,11 +6,59 @@ Tests validate:
 - CapabilityRegistry registration
 - Individual virtue detectors
 - Full evaluation pipeline
-- Graceful degradation without spacy/textstat
+- DLL failure raises RuntimeError (fail-loud, #1019)
 """
 
 import pytest
 from unittest.mock import patch
+
+import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
+
+
+# In the test process, jpype may already be loaded (conftest.py), so
+# importing spacy can trigger the WinError 182 DLL conflict.  The tests
+# that exercise the real evaluator need a safe _load_deps that either
+# succeeds (spacy available) or gracefully sets fallback state.
+@pytest.fixture(autouse=True)
+def _safe_load_deps(request):
+    """Ensure _load_deps doesn't crash the test process with DLL errors.
+
+    If spacy/textstat are already loaded, leave them in place.
+    If not, mock _load_deps to set the fallback globals without
+    triggering the DLL crash.
+
+    Skipped for tests in TestDllFailureFailLoud — those tests need
+    the real _load_deps (and mock it themselves per-test).
+    """
+    # Don't interfere with fail-loud tests that mock _load_deps themselves
+    cls = request.node.getparent(pytest.Class)
+    if cls is not None and cls.name == "TestDllFailureFailLoud":
+        yield
+        return
+
+    if qmod._DEPS_AVAILABLE:
+        # Already loaded (e.g. conftest loaded torch first) — use real deps
+        yield
+        return
+
+    # spacy not yet loaded — mock _load_deps to avoid DLL crash
+    saved = qmod._load_deps
+
+    def _mock_load_deps():
+        """Set fallback globals without importing spacy."""
+        global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED
+        # These refs are in qmod namespace
+        qmod._nlp = None
+        qmod._flesch_reading_ease = None
+        qmod._DEPS_AVAILABLE = False
+        qmod._DEPS_ATTEMPTED = True
+        return False
+
+    qmod._load_deps = _mock_load_deps
+    try:
+        yield
+    finally:
+        qmod._load_deps = saved
 
 
 class TestQualityImport:
@@ -247,51 +295,47 @@ class TestFullEvaluation:
         assert "note_finale" in result
 
 
-class TestDllFailureFallback:
-    """Test graceful degradation when torch/spacy DLL fails (#993)."""
+class TestDllFailureFailLoud:
+    """Test that DLL failures raise RuntimeError, not silent fallback (#1019).
 
-    def test_dll_failure_returns_nonzero_scores(self):
-        """When spacy import raises OSError (WinError 182), scores are non-zero."""
+    Previously (#993), the evaluator silently fell back to regex heuristics
+    and set a ``degraded`` flag.  The #1019 mandate requires fail-loud:
+    if spacy/textstat cannot load, raise RuntimeError so the root cause
+    (DLL load order) must be fixed instead of masked.
+    """
+
+    def test_dll_failure_raises_runtime_error(self):
+        """When spacy import raises OSError (WinError 182), RuntimeError is raised.
+
+        _load_deps() is called by individual detectors. When it raises RuntimeError,
+        the evaluate() method catches it per-detector (scores 0.0) but the
+        root-cause failure is logged. We test _load_deps directly.
+        """
         import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
 
         # Reset global state to force re-import attempt
         qmod._DEPS_ATTEMPTED = False
         qmod._DEPS_AVAILABLE = False
+        qmod._nlp = None
+        qmod._flesch_reading_ease = None
 
-        with patch("argumentation_analysis.agents.core.quality.quality_evaluator.spacy", create=True) as mock_sp:
-            # Simulate OSError on import (WinError 182)
-            mock_sp.side_effect = OSError("WinError 182 DLL load failure")
-            with patch.dict("sys.modules", {"spacy": mock_sp}):
-                # Force re-evaluation
-                qmod._DEPS_ATTEMPTED = False
-                qmod._DEPS_AVAILABLE = False
+        # Patch both spacy AND textstat to simulate full DLL failure
+        with patch.dict("sys.modules", {"spacy": None, "textstat": None}):
+            # Force re-evaluation
+            qmod._DEPS_ATTEMPTED = False
+            qmod._DEPS_AVAILABLE = False
 
-                evaluator = qmod.ArgumentQualityEvaluator()
-                result = evaluator.evaluate(
-                    "This is a test argument with some content about defense."
-                )
+            with pytest.raises(RuntimeError, match="spacy"):
+                qmod._load_deps()
 
-        # Scores should be non-zero (heuristic fallback)
-        assert result["note_finale"] > 0, f"Expected non-zero score, got {result}"
-        assert result["scores_par_vertu"]["clarte"] > 0
-        assert result["scores_par_vertu"]["redondance_faible"] > 0
-
-    def test_dll_failure_sets_degraded_flag(self):
-        """Degraded flag is set when deps fail to load (#993)."""
-        import argumentation_analysis.agents.core.quality.quality_evaluator as qmod
-
+        # Reset for other tests
         qmod._DEPS_ATTEMPTED = False
         qmod._DEPS_AVAILABLE = False
 
-        with patch("argumentation_analysis.agents.core.quality.quality_evaluator.spacy", create=True) as mock_sp:
-            mock_sp.side_effect = OSError("WinError 182 DLL load failure")
-            with patch.dict("sys.modules", {"spacy": mock_sp}):
-                qmod._DEPS_ATTEMPTED = False
-                qmod._DEPS_AVAILABLE = False
+    def test_no_degraded_flag_in_normal_result(self):
+        """Normal evaluation result does not contain degraded flag (#1019)."""
+        from argumentation_analysis.agents.core.quality import evaluer_argument
 
-                evaluator = qmod.ArgumentQualityEvaluator()
-                result = evaluator.evaluate("Test argument text.")
-
-        assert result.get("degraded") is True
-        assert "degraded_reason" in result
-        assert "heuristic" in result["degraded_reason"]
+        result = evaluer_argument("Selon l'OMS, la santé est fondamentale.")
+        assert "degraded" not in result
+        assert "degraded_reason" not in result

@@ -6,10 +6,16 @@ Evaluates text against 9 quality dimensions ("vertus argumentatives")
 and returns per-virtue scores + aggregated quality score.
 
 Dependencies:
-    - spacy (fr_core_news_sm model)
-    - textstat (Flesch readability)
-    Both optional — graceful degradation if missing.
+    - spacy (fr_core_news_sm model) — REQUIRED
+    - textstat (Flesch readability) — REQUIRED
+
+If spacy/textstat cannot load (e.g. torch DLL conflict on Windows),
+the evaluator raises RuntimeError instead of silently producing
+heuristic scores.  Callers must handle the exception or ensure the
+environment is correctly configured (see dll_guard).
 """
+
+import argumentation_analysis.core.dll_guard  # noqa: F401 — defense in depth (#1019)
 
 import json
 import logging
@@ -29,10 +35,24 @@ _DEPS_ATTEMPTED = False
 
 
 def _load_deps():
-    """Load optional dependencies (spacy, textstat) once."""
+    """Load required dependencies (spacy, textstat).
+
+    Raises RuntimeError if spacy or textstat cannot be imported.
+    This is the root-cause fix for #1019 subsystem 1: the previous
+    code silently fell back to regex heuristics when torch/spacy
+    failed due to DLL load order (WinError 182).  Now we fail loud
+    so the problem is visible and the root cause (dll_guard not
+    imported at entry point) must be fixed instead.
+    """
     global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED
     if _DEPS_ATTEMPTED:
-        return _DEPS_AVAILABLE
+        if not _DEPS_AVAILABLE:
+            raise RuntimeError(
+                "spacy/textstat are not available. Ensure the conda environment "
+                "is activated and dll_guard is imported before jpype. "
+                "(Previous attempt failed — see logs above.)"
+            )
+        return True
     _DEPS_ATTEMPTED = True
     try:
         import spacy
@@ -43,21 +63,22 @@ def _load_deps():
             _nlp = spacy.load("fr_core_news_sm")
         except OSError:
             logger.warning(
-                "spacy model 'fr_core_news_sm' not found. "
-                "Quality evaluation will use fallback heuristics."
+                "spacy model 'fr_core_news_sm' not found — "
+                "some detectors will use simplified tokenisation."
             )
             _nlp = None
         _DEPS_AVAILABLE = True
         return True
-    except (ImportError, OSError, RuntimeError):
+    except (ImportError, OSError, RuntimeError) as exc:
         # ImportError: spacy/textstat not installed
         # OSError: WinError 182 — torch DLL load failure propagates through spacy (#993)
         # RuntimeError: other DLL incompatibilities
-        logger.warning(
-            "spacy or textstat not available (import error or DLL failure). "
-            "Quality evaluation will use fallback heuristics."
-        )
-        return False
+        raise RuntimeError(
+            f"Quality evaluation requires spacy and textstat, but import failed: {exc}. "
+            "On Windows, this is typically the torch DLL conflict (WinError 182). "
+            "Fix: ensure dll_guard is imported at the entry point BEFORE jpype. "
+            "See docs/architecture/TORCH_DLL_REPAIR_RECIPE.md for the full recipe."
+        ) from exc
 
 
 # --- Linguistic resources ---
@@ -333,10 +354,6 @@ class ArgumentQualityEvaluator:
             "scores_par_vertu": scores,
             "rapport_detaille": details,
         }
-        # Flag degraded mode when deps failed (#993)
-        if not _DEPS_AVAILABLE and _DEPS_ATTEMPTED:
-            result["degraded"] = True
-            result["degraded_reason"] = "spacy/textstat unavailable — using heuristic fallback"
         return result
 
 
