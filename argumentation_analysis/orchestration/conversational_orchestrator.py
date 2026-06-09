@@ -28,6 +28,11 @@ from typing import Any, Dict, List, Optional
 
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
+
+from argumentation_analysis.orchestration.invoke_callables import (
+    LLMBudgetExceeded,
+    _bump_sk_budget,
+)
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
@@ -1367,6 +1372,7 @@ async def _run_phase(
         )
         turn = 0
         async for response in chat.invoke():
+            _bump_sk_budget()
             turn += 1
             fp_before = _get_growth_fingerprint(state)
             msg_entry = {
@@ -1394,6 +1400,7 @@ async def _run_phase(
                         )
                         await chat.add_chat_message(_RE_PROMPT_FEEDBACK)
                         async for rp_response in chat.invoke():
+                            _bump_sk_budget()
                             msg_entry = {
                                 "phase": phase_name,
                                 "turn": turn,
@@ -1465,6 +1472,10 @@ async def _run_phase(
             fp_before = _get_growth_fingerprint(state)
             content = ""
             # SK 1.40: invoke() is an async generator, iterate to collect messages
+            # Bump budget BEFORE the loop: ChatCompletionAgent.invoke() may yield
+            # multiple streaming chunks per call — we count 1 LLM call = 1 bump,
+            # regardless of chunk count (NanoClaw concern #1).
+            _bump_sk_budget()
             async for response in agent.invoke(chat_history):
                 chunk = ""
                 if hasattr(response, "content"):
@@ -1502,6 +1513,8 @@ async def _run_phase(
                         )
                         chat_history.add_user_message(_RE_PROMPT_FEEDBACK)
                         rp_content = ""
+                        # Bump budget BEFORE the loop (per-call, not per-chunk).
+                        _bump_sk_budget()
                         async for response in agent.invoke(chat_history):
                             chunk = ""
                             if hasattr(response, "content"):
@@ -1550,6 +1563,12 @@ async def _run_phase(
                             )
                         if _validate_state_growth(fp_before, fp_after, phase_name):
                             break
+
+        except LLMBudgetExceeded:
+            # Anti-theater (#1019): budget guard must STOP the phase, not just
+            # log.  Re-raise so the caller (workflow executor) handles it as a
+            # hard cap violation — same semantics as the pipeline path.
+            raise
 
         except Exception as exc:
             logger.error(f"  [{phase_name}] Turn {turn}: {agent.name} failed: {exc}")

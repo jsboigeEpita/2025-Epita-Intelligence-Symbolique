@@ -35,6 +35,10 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowExecutor,
 )
 
+
+from argumentation_analysis.orchestration.invoke_callables import _bump_sk_budget
+
+
 logger = logging.getLogger("ConversationalExecutor")
 
 
@@ -420,6 +424,7 @@ class GroupChatTurnStrategy(TurnStrategy):
             # Collect messages from the async generator
             collected: List[ChatMessageContent] = []
             async for msg in chat.invoke():
+                _bump_sk_budget()
                 collected.append(msg)
 
             logger.info(

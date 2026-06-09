@@ -308,6 +308,28 @@ def llm_budget_scope(ceiling: Optional[int] = None) -> Iterator["_LLMBudget"]:
         _llm_budget.reset(token)
 
 
+def _bump_sk_budget(n: int = 1) -> None:
+    """Increment the LLM budget counter for SK-native agent calls (#1029).
+
+    SK's ``AgentGroupChat.invoke()`` and ``ChatCompletionAgent.invoke()``
+    call the OpenAI API directly, bypassing ``_guarded_chat_completion``.
+    This helper closes that gap by manually incrementing the shared
+    ``_LLMBudget`` counter (stored in a ``ContextVar``), so that the
+    ceiling check fires even for SK-native calls.
+
+    No-op when no budget scope is active (e.g. unit tests, standalone calls).
+    """
+    budget = _llm_budget.get()
+    if budget is not None:
+        budget.count += n
+        if budget.count > budget.ceiling:
+            raise LLMBudgetExceeded(
+                f"Global LLM-call budget exceeded "
+                f"({budget.count} > {budget.ceiling}) "
+                f"— runaway guard (issue #708)."
+            )
+
+
 # Defense-in-depth (#730-bis): hard per-call wall-clock cap so a single stalled
 # network round-trip cannot hang an entire analysis run. Observed live: the
 # conversational-spectacular path hung ~50 min on one unbounded call. Generous
