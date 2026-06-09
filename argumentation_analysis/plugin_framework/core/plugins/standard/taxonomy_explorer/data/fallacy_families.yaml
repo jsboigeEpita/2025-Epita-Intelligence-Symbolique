@@ -1,8 +1,8 @@
 - family: "authority_popularity"
   name_fr: "Sophismes d'appel à l'autorité et à la popularité"
   name_en: "Authority and Popularity Fallacies"
-  description: "Sophismes basés sur l'invocation d'autorités non qualifiées ou sur la popularité."
-  keywords: ["autorité", "expert", "tout le monde", "popularité", "tradition", "nouveauté"]
+  description: "Sophismes basés sur l'invocation d'autorités non qualifiées ou sur la popularité, y compris les variantes élitistes et populistes."
+  keywords: ["autorité", "expert", "tout le monde", "popularité", "tradition", "nouveauté", "élite", "éclairé", "compétent", "initié", "ceux qui savent", "vrais", "seuls", "persons averties", "intelligents", "lucides"]
   severity_weight: 0.7
   common_contexts: ["politique", "publicité", "débat public"]
   patterns:
@@ -10,16 +10,19 @@
     - "appel à l'autorité"
     - "ad populum"
     - "appel à la popularité"
+    - "ad populum élitiste"
     - "argumentum ad antiquitatem"
     - "tradition"
     - "argumentum ad novitatem"
     - "nouveauté"
+    - "élitisme intellectuel"
+    - "seuls les X savent/comprennent"
 
 - family: "emotional_appeals"
   name_fr: "Sophismes d'appel aux émotions"
   name_en: "Emotional Appeal Fallacies"
-  description: "Sophismes utilisant les émotions pour persuader plutôt que la logique."
-  keywords: ["peur", "pitié", "honte", "colère", "espoir", "flatterie"]
+  description: "Sophismes utilisant les émotions pour persuader plutôt que la logique, y compris les schémas affectifs drive→relief."
+  keywords: ["peur", "pitié", "honte", "colère", "espoir", "flatterie", "soulagement", "crise", "angoisse", "reconfort", "salut", "menace", "urgence", "apaisement", "solution", "réassurance"]
   severity_weight: 0.8
   common_contexts: ["politique", "marketing", "plaidoyer"]
   patterns:
@@ -32,6 +35,9 @@
     - "ad pudorem"
     - "honte"
     - "appel aux émotions"
+    - "drive-relief"
+    - "tension-soulagement"
+    - "crise-salut"
 
 - family: "generalization_causality"
   name_fr: "Sophismes de généralisation et de causalité"
@@ -69,8 +75,8 @@
 - family: "false_dilemma_simplification"
   name_fr: "Sophismes de faux dilemme et de simplification"
   name_en: "False Dilemma and Simplification Fallacies"
-  description: "Présentation de choix artificiellement limités ou simplifications excessives."
-  keywords: ["soit", "ou bien", "seulement deux", "simple", "complexe"]
+  description: "Présentation de choix artificiellement limités ou simplifications excessives, y compris les circularités théoriques."
+  keywords: ["soit", "ou bien", "seulement deux", "simple", "complexe", "inévitablement", "forcément", "nécessairement", "par définition", "si vous n'êtes pas", "preuve par", "sous l'emprise", "aveuglé"]
   severity_weight: 0.7
   common_contexts: ["politique", "éthique", "choix stratégiques"]
   patterns:
@@ -82,6 +88,8 @@
     - "appel à l'ignorance"
     - "petitio principii"
     - "circulaire"
+    - "circularité théorique"
+    - "disqualification circulaire"
 
 - family: "language_ambiguity"
   name_fr: "Sophismes de langage et d'ambiguïté"
