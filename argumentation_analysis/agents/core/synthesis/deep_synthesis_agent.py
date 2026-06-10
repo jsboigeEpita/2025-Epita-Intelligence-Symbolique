@@ -96,6 +96,78 @@ class DeepSynthesisAgent(BaseAgent):
         "(Speaker_A, Authority_X, era_A) — never real names."
     )
 
+    # FB-18 Mode A (#1039) — grounded transversal synthesis prompt. The LLM
+    # receives an intelligence briefing of verified artifacts (never raw
+    # text) and must anchor every insight in [artifact:...] citations.
+    GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
+        "You are an intelligence analyst writing the grounded transversal "
+        "synthesis of a rhetorical-analysis run. You receive an ARTIFACT "
+        "BRIEFING: a list of verified analysis artifacts, each prefixed by a "
+        "citation key of the form [artifact:<field>.<key>]. You never see "
+        "the raw discourse — only the verified artifacts.\n"
+        "\n"
+        "Produce exactly 4 markdown sections, each heading on its own line:\n"
+        "\n"
+        "## Transversal Patterns\n"
+        "Patterns that span multiple artifact types (e.g. a fallacy family "
+        "recurring across arguments that also fail formal verification, or "
+        "counter-arguments converging on the same structural weak point).\n"
+        "\n"
+        "## Rhetorical Strategy Assessment\n"
+        "What the artifact constellation reveals about the speaker's "
+        "strategy: which devices carry the discourse, what they achieve.\n"
+        "\n"
+        "## Structural Vulnerabilities\n"
+        "Where the argumentation is weakest: arguments outside the grounded "
+        "extension, high-scoring counter-arguments, retracted beliefs, "
+        "formal inconsistencies.\n"
+        "\n"
+        "## Interpretive Synthesis\n"
+        "The closing interpretive thesis: what this discourse does and how "
+        "robust it is under multi-method scrutiny.\n"
+        "\n"
+        "HARD RULES:\n"
+        "1. EVERY insight (each sentence making an analytical claim) MUST "
+        "cite at least one artifact, using the citation key VERBATIM as "
+        "given in the briefing, e.g. [artifact:identified_fallacies.f1].\n"
+        "2. At least one insight MUST combine citations from two or more "
+        "DIFFERENT artifact fields in the same sentence or paragraph "
+        "(cross-artifact insight).\n"
+        "3. NEVER invent citation keys absent from the briefing.\n"
+        "4. Do NOT narrate the pipeline or list counts; interpret.\n"
+        "5. Opaque IDs only (Speaker_A, arg_1) — never real names.\n"
+        "6. 6-10 paragraphs total, analytical register, no hedging."
+    )
+
+    # FB-18 — canonical list of state artifact fields. Used both for the
+    # state-empty guard (VG-2) and the metadata field count; keep in sync
+    # with UnifiedAnalysisState.
+    ARTIFACT_FIELDS: ClassVar[List[str]] = [
+        "identified_arguments",
+        "identified_fallacies",
+        "belief_sets",
+        "query_log",
+        "counter_arguments",
+        "argument_quality_scores",
+        "jtms_beliefs",
+        "jtms_retraction_chain",
+        "dung_frameworks",
+        "propositional_analysis_results",
+        "fol_analysis_results",
+        "modal_analysis_results",
+        "formal_synthesis_reports",
+        "aspic_results",
+        "belief_revision_results",
+        "ranking_results",
+        "debate_transcripts",
+        "narrative_synthesis",
+    ]
+
+    # FB-18 — citation pattern: [artifact:<field>] or [artifact:<field>.<key>...]
+    CITATION_RE: ClassVar[re.Pattern] = re.compile(
+        r"\[artifact:([A-Za-z0-9_]+)((?:\.[A-Za-z0-9_\-]+)*)\]"
+    )
+
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
 
     def __init__(
@@ -219,6 +291,24 @@ class DeepSynthesisAgent(BaseAgent):
             report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
                 state, report, transcript
             )
+
+        # FB-18 Mode A (#1039) — grounded transversal synthesis + value-gates.
+        # No template fallback here: when the LLM is unavailable the status
+        # says so explicitly instead of dressing up boilerplate as grounded.
+        report.populated_artifact_fields = self.count_populated_artifact_fields(state)
+        try:
+            grounded = await self.grounded_transversal_synthesis(state, report)
+            if grounded:
+                report.grounded_synthesis = grounded
+                report.grounded_synthesis_status = "llm"
+            else:
+                report.grounded_synthesis_status = "unavailable"
+        except Exception as e:
+            logger.warning(f"Grounded transversal synthesis errored: {e}")
+            report.grounded_synthesis_status = "failed"
+        report.value_gates = self.validate_value_gates(
+            report.grounded_synthesis, report.populated_artifact_fields
+        )
 
         # Metadata
         report.total_state_fields = self._count_state_fields(state)
@@ -877,6 +967,32 @@ class DeepSynthesisAgent(BaseAgent):
         else:
             sections.append("_No fallacy families to adjudicate._\n")
 
+        # FB-18 Mode A (#1039) — grounded transversal synthesis. Rendered
+        # before the final synthesis; when unavailable, say so explicitly.
+        sections.append("## Grounded Transversal Synthesis (FB-18)\n")
+        if report.grounded_synthesis:
+            sections.append(report.grounded_synthesis)
+            sections.append("")
+        else:
+            status = report.grounded_synthesis_status or "not attempted"
+            sections.append(
+                f"_Grounded transversal synthesis {status} — no LLM-grounded "
+                f"cross-artifact synthesis was produced for this run._\n"
+            )
+        if report.value_gates:
+            vg = report.value_gates
+            sections.append("**Value gates:**")
+            for gate in (
+                "vg1_citation_density",
+                "vg2_state_guard",
+                "vg3_no_boilerplate",
+                "vg4_transversal_insight",
+            ):
+                verdict = vg.get(gate, {})
+                icon = "✅" if verdict.get("pass") else "❌"
+                sections.append(f"- {icon} `{gate}`")
+            sections.append("")
+
         # S9 — Final synthesis
         sections.append(
             report.final_synthesis
@@ -1020,30 +1136,26 @@ class DeepSynthesisAgent(BaseAgent):
     @staticmethod
     def _count_state_fields(state: Any) -> int:
         count = 0
-        for attr in [
-            "identified_arguments",
-            "identified_fallacies",
-            "belief_sets",
-            "query_log",
-            "counter_arguments",
-            "argument_quality_scores",
-            "jtms_beliefs",
-            "jtms_retraction_chain",
-            "dung_frameworks",
-            "propositional_analysis_results",
-            "fol_analysis_results",
-            "modal_analysis_results",
-            "formal_synthesis_reports",
-            "aspic_results",
-            "belief_revision_results",
-            "ranking_results",
-            "debate_transcripts",
-            "narrative_synthesis",
-        ]:
+        for attr in DeepSynthesisAgent.ARTIFACT_FIELDS:
             val = getattr(state, attr, None)
             if val:
                 count += len(val)
         return count
+
+    @staticmethod
+    def count_populated_artifact_fields(state: Any) -> int:
+        """FB-18 VG-2 — number of distinct non-empty artifact fields in state.
+
+        Counts FIELDS (not entries): a state with 50 arguments but nothing
+        else still scores 1. The deep-synthesis phase requires >= 3 populated
+        fields to produce a grounded synthesis; below that, the callable
+        fails explicitly instead of emitting boilerplate (#1019 fail-loud).
+        """
+        return sum(
+            1
+            for attr in DeepSynthesisAgent.ARTIFACT_FIELDS
+            if getattr(state, attr, None)
+        )
 
     @staticmethod
     def _count_populated_sections(report: DeepSynthesisReport) -> int:
@@ -1117,6 +1229,239 @@ class DeepSynthesisAgent(BaseAgent):
                     {"family": family, "status": "claimed", "evidence": evidence}
                 )
         return rows
+
+    # ------------------------------------------------------------------
+    # FB-18 Mode A (#1039) — grounded transversal synthesis
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def build_artifact_briefing(
+        state: Any,
+        report: Optional[DeepSynthesisReport] = None,
+        max_items_per_field: int = 15,
+        max_chars_per_item: int = 220,
+    ) -> str:
+        """Build the FB-18 'intelligence briefing' of verified artifacts.
+
+        Every line is prefixed with its citation key ``[artifact:field.key]``
+        so the LLM can cite it verbatim. Raw discourse text is NEVER included
+        — only verified artifacts (privacy + grounding discipline).
+        """
+        lines: List[str] = ["ARTIFACT BRIEFING (cite keys verbatim):"]
+
+        def _add(field_name: str, key: Any, summary: str) -> None:
+            summary = " ".join(str(summary).split())[:max_chars_per_item]
+            lines.append(f"[artifact:{field_name}.{key}] {summary}")
+
+        args = getattr(state, "identified_arguments", {}) or {}
+        for arg_id, desc in list(args.items())[:max_items_per_field]:
+            _add("identified_arguments", arg_id, desc)
+
+        fallacies = getattr(state, "identified_fallacies", {}) or {}
+        for fid, fdata in list(fallacies.items())[:max_items_per_field]:
+            ftype = fdata.get("type", "unknown")
+            family = fdata.get("family") or DeepSynthesisAgent._fallacy_family(ftype)
+            target = fdata.get("target_argument_id", "")
+            _add(
+                "identified_fallacies",
+                fid,
+                f"type={ftype} family={family} target={target or 'n/a'} "
+                f"— {fdata.get('justification', '')}",
+            )
+
+        for i, r in enumerate(
+            (getattr(state, "propositional_analysis_results", []) or [])[
+                :max_items_per_field
+            ]
+        ):
+            _add(
+                "propositional_analysis_results",
+                i,
+                f"axioms={len(r.get('axioms', []))} "
+                f"queries={len(r.get('queries', []))} "
+                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+            )
+
+        for i, r in enumerate(
+            (getattr(state, "fol_analysis_results", []) or [])[:max_items_per_field]
+        ):
+            _add(
+                "fol_analysis_results",
+                i,
+                f"axioms={len(r.get('axioms', []))} "
+                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+            )
+
+        for i, r in enumerate(
+            (getattr(state, "modal_analysis_results", []) or [])[:max_items_per_field]
+        ):
+            _add(
+                "modal_analysis_results",
+                i,
+                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+            )
+
+        dung = getattr(state, "dung_frameworks", {}) or {}
+        for df_id, df in list(dung.items())[:max_items_per_field]:
+            grounded = df.get("extensions", {}).get("grounded", [])
+            _add(
+                "dung_frameworks",
+                df_id,
+                f"name={df.get('name', df_id)} "
+                f"args={len(df.get('arguments', []))} "
+                f"attacks={len(df.get('attacks', []))} "
+                f"grounded_extension={grounded}",
+            )
+
+        for ca in (getattr(state, "counter_arguments", []) or [])[:max_items_per_field]:
+            ca_id = ca.get("id", "ca")
+            _add(
+                "counter_arguments",
+                ca_id,
+                f"strategy={ca.get('strategy', '?')} "
+                f"score={ca.get('score', 0.0)} "
+                f"— {ca.get('counter_content', '')}",
+            )
+
+        quality = getattr(state, "argument_quality_scores", {}) or {}
+        for arg_id, scores in list(quality.items())[:max_items_per_field]:
+            overall = scores.get("overall", "?") if isinstance(scores, dict) else scores
+            _add("argument_quality_scores", arg_id, f"overall={overall}")
+
+        for i, entry in enumerate(
+            (getattr(state, "jtms_retraction_chain", []) or [])[:max_items_per_field]
+        ):
+            _add(
+                "jtms_retraction_chain",
+                i,
+                f"belief={entry.get('belief_name', '?')} "
+                f"trigger={entry.get('trigger', '?')}",
+            )
+
+        for i, br in enumerate(
+            (getattr(state, "belief_revision_results", []) or [])[:max_items_per_field]
+        ):
+            contracted = sorted(
+                set(br.get("original", [])) - set(br.get("revised", []))
+            )
+            _add(
+                "belief_revision_results",
+                i,
+                f"method={br.get('method', '?')} contracted={contracted}",
+            )
+
+        if report is not None:
+            for v in report.convergent_verdicts[:max_items_per_field]:
+                _add(
+                    "convergent_verdicts",
+                    v.arg_id,
+                    f"score={v.score} methods={', '.join(v.methods)}",
+                )
+
+        return "\n".join(lines)
+
+    async def grounded_transversal_synthesis(
+        self, state: Any, report: DeepSynthesisReport
+    ) -> str:
+        """FB-18 Mode A — LLM grounded synthesis over the artifact briefing.
+
+        Returns "" when no LLM service is configured or the briefing has no
+        citable artifacts. The caller records an explicit 'unavailable'
+        status — there is NO template fallback masquerading as grounded
+        output (#1019 fail-loud).
+        """
+        if not self._llm_service_id:
+            return ""
+        briefing = self.build_artifact_briefing(state, report)
+        # Header line only → nothing citable, refuse to synthesize.
+        if briefing.count("\n") < 1:
+            return ""
+        try:
+            prompt = (
+                f"{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
+                "Write the 4-section grounded transversal synthesis now."
+            )
+            settings = self.kernel.get_prompt_execution_settings_from_service_id(
+                self._llm_service_id
+            )
+            result = await self.kernel.invoke_prompt(
+                function_name="deep_synthesis_grounded_transversal",
+                plugin_name="deep_synthesis",
+                prompt=prompt,
+                settings=settings,
+            )
+            return str(result).strip() if result else ""
+        except Exception as e:
+            logger.warning(f"Grounded transversal synthesis failed: {e}")
+            return ""
+
+    REQUIRED_GROUNDED_SECTIONS: ClassVar[List[str]] = [
+        "## Transversal Patterns",
+        "## Rhetorical Strategy Assessment",
+        "## Structural Vulnerabilities",
+        "## Interpretive Synthesis",
+    ]
+
+    @staticmethod
+    def validate_value_gates(
+        synthesis_md: str, populated_artifact_fields: int
+    ) -> Dict[str, Any]:
+        """FB-18 value-gates VG-1..VG-4 over a grounded synthesis.
+
+        - VG-1 citation density: >= 1 [artifact:...] citation per 200 words,
+          plus the count of DISTINCT artifact fields cited (the more robust
+          proxy suggested in the #1041 review).
+        - VG-2 state guard: >= 3 populated artifact fields in state.
+        - VG-3 no boilerplate: the 4 required section headings are present
+          and the text carries at least one citation (a template thesis has
+          neither).
+        - VG-4 transversality: at least one paragraph cites >= 2 DISTINCT
+          artifact fields (cross-artifact insight).
+        """
+        citations = DeepSynthesisAgent.CITATION_RE.findall(synthesis_md or "")
+        n_citations = len(citations)
+        distinct_fields = sorted({field_name for field_name, _ in citations})
+        words = len((synthesis_md or "").split())
+        required_citations = max(1, words // 200)
+
+        vg1_pass = bool(synthesis_md) and n_citations >= required_citations
+        vg2_pass = populated_artifact_fields >= 3
+        vg3_pass = (
+            bool(synthesis_md)
+            and n_citations >= 1
+            and all(
+                heading in synthesis_md
+                for heading in DeepSynthesisAgent.REQUIRED_GROUNDED_SECTIONS
+            )
+        )
+
+        vg4_pass = False
+        for paragraph in (synthesis_md or "").split("\n\n"):
+            para_fields = {
+                field_name
+                for field_name, _ in DeepSynthesisAgent.CITATION_RE.findall(paragraph)
+            }
+            if len(para_fields) >= 2:
+                vg4_pass = True
+                break
+
+        return {
+            "vg1_citation_density": {
+                "pass": vg1_pass,
+                "citations": n_citations,
+                "words": words,
+                "required_citations": required_citations,
+                "distinct_fields_cited": distinct_fields,
+            },
+            "vg2_state_guard": {
+                "pass": vg2_pass,
+                "populated_artifact_fields": populated_artifact_fields,
+                "required": 3,
+            },
+            "vg3_no_boilerplate": {"pass": vg3_pass},
+            "vg4_transversal_insight": {"pass": vg4_pass},
+            "all_pass": vg1_pass and vg2_pass and vg3_pass and vg4_pass,
+        }
 
     async def _llm_convergence_prose(self, state: Any) -> str:
         """Track GG #644 — LLM prose for the convergence section.
