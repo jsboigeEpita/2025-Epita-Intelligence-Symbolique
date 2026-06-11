@@ -14,8 +14,9 @@ import asyncio
 import csv
 import json
 import logging
+import time
 from pathlib import Path
-from typing import Annotated, Dict, List, Optional, Tuple
+from typing import Annotated, Dict, List, Optional, Set, Tuple
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
@@ -71,6 +72,56 @@ class FallacyWorkflowPlugin:
     BEAM_WIDTH = 3  # Top-k branches kept per level during beam descent
     BEAM_MAX_LLM_CALLS = 15  # Circuit breaker for beam descent
     BEAM_MIN_DEPTH = 5  # Value-gate: beam must reach ≥1 node at this depth
+
+    class _BranchSupersessionTracker:
+        """Track confirmed fallacies for branch supersession during parallel exploration.
+
+        When a branch confirms a fallacy at depth D with confidence C, sibling
+        branches exploring ancestor nodes at depth < D can abandon early — the
+        confirmed match is strictly more specific.  This saves LLM calls by
+        cutting exploration of branches that are superseded.
+
+        Thread-safety: all mutation is done from the asyncio event loop, so
+        no explicit locking is needed (single-threaded concurrency model).
+        """
+
+        def __init__(self, navigator: TaxonomyNavigator):
+            self._navigator = navigator
+            # (pk, taxonomy_path, depth, confidence)
+            self._confirmed: List[Tuple[str, str, int, float]] = []
+            self.superseded_count = 0
+
+        def register(self, pk: str, depth: int, confidence: float) -> None:
+            """Register a confirmed fallacy."""
+            node = self._navigator.get_node(pk)
+            path = node.get("path", "") if node else ""
+            self._confirmed.append((pk, path, depth, confidence))
+
+        def check_superseded(
+            self, current_pk: str, current_depth: int
+        ) -> Optional[str]:
+            """Return the superseding PK if *current_pk* is an ancestor of a
+            confirmed node that is strictly deeper.  ``None`` otherwise.
+            """
+            current_node = self._navigator.get_node(current_pk)
+            if not current_node:
+                return None
+            current_path = current_node.get("path", "")
+            if not current_path:
+                return None
+
+            for conf_pk, conf_path, conf_depth, conf_conf in self._confirmed:
+                # Only supersede when confirmed node is strictly deeper
+                if conf_depth <= current_depth:
+                    continue
+                # Same lineage: confirmed path descends from current path
+                if conf_path.startswith(current_path + "."):
+                    return conf_pk
+            return None
+
+        @property
+        def confirmation_count(self) -> int:
+            return len(self._confirmed)
 
     def __init__(
         self,
@@ -677,6 +728,7 @@ class FallacyWorkflowPlugin:
         slave_kernel: Kernel,
         slave_settings: OpenAIPromptExecutionSettings,
         reasoning_history: Optional[List[str]] = None,
+        supersession_tracker: Optional["_BranchSupersessionTracker"] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -692,12 +744,31 @@ class FallacyWorkflowPlugin:
 
         The LLM calls confirm_fallacy to stop, explore_branch to go deeper,
         or conclude_no_fallacy to abandon the branch.
+
+        Args:
+            supersession_tracker: Optional shared tracker. When a parallel
+                branch confirms a deeper, more specific fallacy, this branch
+                can abandon early if it is exploring an ancestor node.
         """
         current_pk = start_pk
         navigation_trace = [start_pk]
         reasoning_history = reasoning_history or []
 
         for iteration in range(self.MAX_DEPTH_PER_BRANCH):
+            # --- Supersession check (RA-3 #1048) ---
+            if supersession_tracker is not None:
+                current_node = self.taxonomy_navigator.get_node(current_pk)
+                current_depth = int(current_node.get("depth", 0)) if current_node else 0
+                superseding_pk = supersession_tracker.check_superseded(
+                    current_pk, current_depth
+                )
+                if superseding_pk:
+                    supersession_tracker.superseded_count += 1
+                    self.logger.info(
+                        f"  Branch SUPERSeded at {current_pk} (depth {current_depth}) "
+                        f"by confirmed {superseding_pk}"
+                    )
+                    return None
             current_node = self.taxonomy_navigator.get_node(current_pk)
             if not current_node:
                 break
@@ -790,6 +861,14 @@ class FallacyWorkflowPlugin:
                     if lr.get("function_name") == "confirm_fallacy" and lr.get(
                         "confirmed"
                     ):
+                        # Register leaf confirmation for supersession (RA-3 #1048)
+                        if supersession_tracker is not None:
+                            leaf_depth = int(current_node.get("depth", 0))
+                            supersession_tracker.register(
+                                current_pk,
+                                leaf_depth,
+                                lr.get("confidence", 0.7),
+                            )
                         return IdentifiedFallacy(
                             fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
                             taxonomy_pk=current_pk,
@@ -958,6 +1037,14 @@ class FallacyWorkflowPlugin:
                             f" | Reasoning path: {'; '.join(reasoning_history)}"
                         )
 
+                    # Register confirmation for branch supersession (RA-3 #1048)
+                    if supersession_tracker is not None:
+                        supersession_tracker.register(
+                            confirmed_pk,
+                            confirmed_depth,
+                            result.get("confidence", 0.7),
+                        )
+
                     return IdentifiedFallacy(
                         fallacy_type=result.get(
                             "name", result.get("name_fr", result.get("pk", ""))
@@ -1058,6 +1145,8 @@ class FallacyWorkflowPlugin:
 
             # Phase 2: Parallel iterative deepening on ALL candidates
             slave_kernel, slave_settings = self._create_slave_kernel()
+            # Branch supersession tracker (RA-3 #1048) — shared across branches
+            tracker = self._BranchSupersessionTracker(self.taxonomy_navigator)
             exploration_tasks = [
                 self._explore_single_branch(
                     argument_text,
@@ -1065,6 +1154,7 @@ class FallacyWorkflowPlugin:
                     slave_kernel,
                     slave_settings,
                     reasoning_history=None,
+                    supersession_tracker=tracker,
                 )
                 for pk in candidate_pks
             ]
@@ -1076,6 +1166,11 @@ class FallacyWorkflowPlugin:
             identified = []
             seen_pks = {}
             total_iterations = 0
+            if tracker.confirmation_count > 0 or tracker.superseded_count > 0:
+                self.logger.info(
+                    f"Branch supersession: {tracker.confirmation_count} confirmed, "
+                    f"{tracker.superseded_count} branches superseded"
+                )
             for result in branch_results:
                 if isinstance(result, Exception):
                     self.logger.warning(f"Branch exploration error: {result}")
