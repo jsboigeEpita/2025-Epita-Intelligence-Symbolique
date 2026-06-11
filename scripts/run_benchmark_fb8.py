@@ -304,6 +304,7 @@ FALLACY_FR_EN_ALIASES: Dict[str, str] = {
     # Obstruction family
     "ad populum": "ad_populum",
     "raison de la majorité": "ad_populum",
+    "appel au nombre": "ad_populum",
     "appel à la bande": "bandwagon_fallacy",
     "atteinte personnelle": "ad_hominem",
     # Misleading language family
@@ -345,8 +346,9 @@ def score_against_yardstick(pipeline_output: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(fallacies, dict):
         for _fid, fdata in fallacies.items():
             if isinstance(fdata, dict):
-                # Collect both family and fallacy_type, normalize each
-                for field in ("family", "fallacy_type"):
+                # Collect family, fallacy_type, and type fields, normalize each
+                # Note: pipeline stores fallacies with "type" field (not "family"/"fallacy_type")
+                for field in ("family", "fallacy_type", "type"):
                     raw = fdata.get(field, "")
                     if raw:
                         fallacy_types.add(_normalize_fallacy_type(raw))
@@ -363,7 +365,7 @@ def score_against_yardstick(pipeline_output: Dict[str, Any]) -> Dict[str, Any]:
     elif isinstance(fallacies, list):
         for f in fallacies:
             if isinstance(f, dict):
-                ft = f.get("family", f.get("fallacy_type", "")).lower()
+                ft = f.get("type", f.get("family", f.get("fallacy_type", ""))).lower()
                 fallacy_types.add(ft)
 
     args = phases.get("arguments", {})
