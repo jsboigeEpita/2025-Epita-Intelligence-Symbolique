@@ -20,6 +20,8 @@ logger = logging.getLogger("UnifiedPipeline")
 
 # #1019: Preflight solver availability check (module-level, runs once)
 _SOLVER_PREFLIGHT_CHECKED = False
+
+
 def _preflight_solver_check() -> None:
     """Log a one-time WARNING if external theorem provers are absent."""
     global _SOLVER_PREFLIGHT_CHECKED
@@ -38,6 +40,7 @@ def _preflight_solver_check() -> None:
             "Install solvers for optimal performance.",
             ", ".join(missing),
         )
+
 
 # Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
 try:
@@ -952,7 +955,9 @@ async def _run_formal_logic_from_state(
             if formulas:
                 state.add_fol_analysis_result(
                     formulas,
-                    fol_out.get("consistent"),  # None=unverified, True/False=verified (#1019)
+                    fol_out.get(
+                        "consistent"
+                    ),  # None=unverified, True/False=verified (#1019)
                     fol_out.get("inferences", []) or [],
                     float(fol_out.get("confidence", 0.0) or 0.0),
                 )
@@ -1062,7 +1067,9 @@ async def _invoke_counter_argument(
     if forced_strategy != "auto":
         enum_value = _COUNTER_STRATEGY_ALIASES.get(forced_strategy, forced_strategy)
         strategy = {"strategy": enum_value}
-        logger.info(f"Counter-argument strategy forced: {forced_strategy} → {enum_value} (parametric selector)")
+        logger.info(
+            f"Counter-argument strategy forced: {forced_strategy} → {enum_value} (parametric selector)"
+        )
 
     # Enrich with LLM-generated counter-arguments for fallacious/weak arguments
     llm_counters = []
@@ -1603,9 +1610,7 @@ async def _invoke_governance(
     consensus_threshold = context.get("consensus_threshold", 0.7)
     if positions and vote_result:
         try:
-            metrics_json = plugin.compute_consensus_metrics(
-                json.dumps(vote_result)
-            )
+            metrics_json = plugin.compute_consensus_metrics(json.dumps(vote_result))
             consensus_metrics = json.loads(metrics_json)
             consensus_rate = consensus_metrics.get("consensus_rate", 0.0)
             result["consensus_metrics"] = consensus_metrics
@@ -2717,7 +2722,8 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     except Exception as e:
         logger.warning(
             "Bipolar analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)", e,
+            "Reporting unverified status. (%s)",
+            e,
         )
         return {
             "framework_type": fw_type,
@@ -3298,7 +3304,8 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     except Exception as e:
         logger.warning(
             "SetAF analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)", e,
+            "Reporting unverified status. (%s)",
+            e,
         )
         return {
             "arguments": args,
@@ -3335,7 +3342,8 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     except Exception as e:
         logger.warning(
             "Weighted AF analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)", e,
+            "Reporting unverified status. (%s)",
+            e,
         )
         return {
             "arguments": args,
@@ -3615,7 +3623,8 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     except Exception as e:
         logger.warning(
             "DeLP analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)", e,
+            "Reporting unverified status. (%s)",
+            e,
         )
         return {
             "program": program_text[:200],
@@ -3903,14 +3912,18 @@ async def _invoke_hierarchical_fallacy(
         return result  # type: ignore[no-any-return]
 
     except (ImportError, RuntimeError, ValueError) as e:
-        # Expected failures: missing dependencies or API key — return empty gracefully
-        logger.warning("Hierarchical fallacy detection unavailable: %s", e)
-        return {
-            "fallacies": [],
-            "exploration_method": "unavailable",
-            "error": str(e),
-            "extraction_method": "unavailable",
-        }
+        # Anti-theater mandate (#1019 / RA-1 #1046): fail loud, do NOT silently
+        # return empty results that look like "no fallacies found". Callers must
+        # handle the absence explicitly (skip the phase, mark degraded, etc.)
+        # rather than treating an empty list as a legitimate analysis outcome.
+        logger.error(
+            "Hierarchical fallacy detection unavailable (tier=%s): %s — FAILING LOUD per #1019/#1046",
+            context.get("fallacy_tier", "llm"),
+            e,
+        )
+        raise RuntimeError(
+            f"FALLACY_DETECTION_UNAVAILABLE: tier={context.get('fallacy_tier', 'llm')}, reason={e}"
+        ) from e
     except Exception as e:
         # Unexpected failures: log full traceback and re-raise so the executor
         # marks this phase as FAILED instead of silently returning empty results.
@@ -4105,10 +4118,16 @@ async def _invoke_full_fallacy(
     merges results by taxonomy_pk, keeping highest confidence per unique
     fallacy. Maximum recall at maximum cost.
     """
-    # Run LLM pass (default tier)
+    # Run LLM pass (default tier) — may raise RuntimeError if unavailable
     llm_context = {**context, "fallacy_tier": "llm"}
-    llm_result = await _invoke_hierarchical_fallacy(input_text, llm_context)
-    llm_fallacies = llm_result.get("fallacies", [])
+    try:
+        llm_result = await _invoke_hierarchical_fallacy(input_text, llm_context)
+        llm_fallacies = llm_result.get("fallacies", [])
+    except RuntimeError:
+        logger.warning(
+            "LLM tier unavailable in full merge — proceeding with hybrid only"
+        )
+        llm_fallacies = []
 
     # Run hybrid pass
     hybrid_result = await _invoke_hybrid_fallacy(input_text, context)
@@ -4321,13 +4340,16 @@ async def _invoke_hierarchical_fallacy_per_argument(
         }
 
     except (ImportError, RuntimeError, ValueError) as e:
-        logger.warning("Per-argument hierarchical fallacy detection unavailable: %s", e)
-        return {
-            "fallacies": [],
-            "exploration_method": "unavailable",
-            "error": str(e),
-            "extraction_method": "unavailable",
-        }
+        # Anti-theater (#1019/#1046): fail loud. The caller (wide-net merge)
+        # handles this gracefully — do not return empty that looks like "found nothing".
+        logger.error(
+            "Per-argument hierarchical fallacy unavailable (tier=%s): %s — FAILING LOUD",
+            context.get("fallacy_tier", "llm"),
+            e,
+        )
+        raise RuntimeError(
+            f"PER_ARG_FALLACY_UNAVAILABLE: tier={context.get('fallacy_tier', 'llm')}, reason={e}"
+        ) from e
     except Exception as e:
         import traceback
 
@@ -4994,7 +5016,9 @@ async def _invoke_fol_reasoning(
     fol_solver_choice = context.get("fol_solver", "eprover")
     fol_metadata_shared["fol_solver"] = fol_solver_choice
     if fol_solver_choice != "eprover":
-        logger.info(f"FOL solver override: {fol_solver_choice} (parametric selector --fol-solver)")
+        logger.info(
+            f"FOL solver override: {fol_solver_choice} (parametric selector --fol-solver)"
+        )
 
     # Retrieve state object for fol_shared_signature storage
     state_obj = context.get("_state_object")
@@ -5454,7 +5478,9 @@ async def _invoke_modal_logic(
             modalities.append("possibility")
     modalities = list(set(modalities)) or ["none_detected"]
 
-    modal_solver = context.get("modal_solver", "spass")  # #939: spass default, tweety is last resort
+    modal_solver = context.get(
+        "modal_solver", "spass"
+    )  # #939: spass default, tweety is last resort
 
     # SPASS routing (#479): set settings.modal_solver for this request
     if modal_solver == "spass":
@@ -5558,7 +5584,9 @@ async def _invoke_dung_extensions(
             # attacks is List[List[str]] from _generate_attacks_from_args;
             # compute_extensions expects List[Tuple[str, str]] — convert
             _typed_attacks = [(a[0], a[1]) for a in attacks if len(a) >= 2]
-            result = await student_provider.compute_extensions(arguments, _typed_attacks)
+            result = await student_provider.compute_extensions(
+                arguments, _typed_attacks
+            )
             if result.get("status") == "unavailable":
                 logger.warning(
                     "DungStudentProvider unavailable, falling back to native AFHandler"
@@ -5569,14 +5597,20 @@ async def _invoke_dung_extensions(
                 if _state is not None and result.get("arguments"):
                     _n_args = len(result.get("arguments", []))
                     _stats = result.get("statistics", {})
-                    _n_sem = _stats.get("semantics_computed", 0) if isinstance(_stats, dict) else 0
+                    _n_sem = (
+                        _stats.get("semantics_computed", 0)
+                        if isinstance(_stats, dict)
+                        else 0
+                    )
                     _state.add_trace_entry(
                         phase="dung",
                         agent="DungStudentProvider",
                         reacts_to=["extract", "counter"],
                         summary=f"Cadre Dung (student provider): {_n_args} arguments. {_n_sem} sémantiques calculées.",
                     )
-                logger.info("Dung extensions computed via abs_arg_dung_student provider")
+                logger.info(
+                    "Dung extensions computed via abs_arg_dung_student provider"
+                )
                 return result
         except Exception as e:
             logger.warning(f"DungStudentProvider failed ({e}), falling back to native")
@@ -5624,7 +5658,9 @@ async def _invoke_dung_extensions(
             _state = context.get("_state_object")
             if _state is not None and _python_result.get("arguments"):
                 _n_args = len(_python_result.get("arguments", []))
-                _sem_count = _python_result.get("statistics", {}).get("semantics_computed", 0)
+                _sem_count = _python_result.get("statistics", {}).get(
+                    "semantics_computed", 0
+                )
                 _state.add_trace_entry(
                     phase="dung",
                     agent="DungAnalyzer",
@@ -5690,13 +5726,17 @@ async def _invoke_dung_extensions(
             )
         return _dung_result
     except Exception as e:
-        logger.info(f"Dung AFHandler unavailable ({e}), using Python 4-semantics compute")
+        logger.info(
+            f"Dung AFHandler unavailable ({e}), using Python 4-semantics compute"
+        )
         _python_result = _python_dung_fallback(arguments, attacks)
         # Trace entry for Python Dung compute
         _state = context.get("_state_object")
         if _state is not None and _python_result.get("arguments"):
             _n_args = len(_python_result.get("arguments", []))
-            _sem_count = _python_result.get("statistics", {}).get("semantics_computed", 0)
+            _sem_count = _python_result.get("statistics", {}).get(
+                "semantics_computed", 0
+            )
             _state.add_trace_entry(
                 phase="dung",
                 agent="DungAnalyzer",
@@ -5790,7 +5830,8 @@ def _python_dung_fallback(
                 continue
             defended = all(
                 any(att in attack_map.get(g, set()) for g in grounded)
-                for att in arg_set if _attacks(att, arg)
+                for att in arg_set
+                if _attacks(att, arg)
             )
             if defended and not any(_attacks(arg, ga) for ga in grounded):
                 grounded.add(arg)
@@ -5807,7 +5848,8 @@ def _python_dung_fallback(
         logger.warning(
             "Dung power-set enumeration skipped: %d arguments > cap %d. "
             "Only grounded extension computed.",
-            len(arg_set), _DUNG_ENUM_CAP,
+            len(arg_set),
+            _DUNG_ENUM_CAP,
         )
     if len(arg_set) <= _DUNG_ENUM_CAP:
         complete_exts: List[List[str]] = []
@@ -5973,7 +6015,8 @@ async def _invoke_narrative_synthesis(
                         )
         logger.info(
             "Narrative: no UnifiedAnalysisState in context, reconstructed "
-            "from %d phase outputs", populated,
+            "from %d phase outputs",
+            populated,
         )
 
     narrative = build_narrative(state)
@@ -5981,13 +6024,21 @@ async def _invoke_narrative_synthesis(
     if not narrative or _FALLBACK_SENTINEL in narrative:
         # #1019: Fail explicit — no template rebuild.
         # Log diagnostic info so the root cause can be identified.
-        phase_keys = [k for k in context if k.startswith("phase_") and k.endswith("_output")]
+        phase_keys = [
+            k for k in context if k.startswith("phase_") and k.endswith("_output")
+        ]
         state_fields = [
-            attr for attr in (
-                "argument_quality_scores", "identified_fallacies",
-                "counter_arguments", "jtms_beliefs", "dung_frameworks",
-                "fol_analysis_results", "propositional_analysis_results",
-                "modal_analysis_results", "atms_contexts",
+            attr
+            for attr in (
+                "argument_quality_scores",
+                "identified_fallacies",
+                "counter_arguments",
+                "jtms_beliefs",
+                "dung_frameworks",
+                "fol_analysis_results",
+                "propositional_analysis_results",
+                "modal_analysis_results",
+                "atms_contexts",
             )
             if getattr(state, attr, None)
         ]
@@ -5996,7 +6047,8 @@ async def _invoke_narrative_synthesis(
             "Available phase outputs: %s. Populated state fields: %s. "
             "Root cause: upstream phases did not produce enough data "
             "for narrative synthesis.",
-            phase_keys, state_fields,
+            phase_keys,
+            state_fields,
         )
 
     paragraph_count = (narrative.count("\n\n") + 1) if narrative else 0
@@ -6350,6 +6402,7 @@ async def _invoke_external_fol_solver(
     if fol_solver is None:
         try:
             from argumentation_analysis.core.config import settings
+
             fol_solver = str(settings.solver)  # SolverChoice enum → str
         except Exception:
             fol_solver = "eprover"  # #939: eprover default, not tweety
@@ -6401,7 +6454,9 @@ async def _invoke_external_fol_solver(
             try:
                 from argumentation_analysis.core.prover9_runner import run_prover9
 
-                belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
+                belief_set_str = "\n".join(
+                    str(f) for f in fol_signature + [""] + formulas
+                )
                 prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
                 result = await asyncio.to_thread(run_prover9, prover9_input)
                 proved = "THEOREM PROVED" in result or "Proof found" in result
@@ -6509,7 +6564,9 @@ async def _invoke_external_modal_solver(
         except Exception as e:
             logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
     else:
-        logger.info("SPASS binary not found on PATH (shutil.which), using TweetyBridge fallback")
+        logger.info(
+            "SPASS binary not found on PATH (shutil.which), using TweetyBridge fallback"
+        )
 
     # Fallback: TweetyBridge — genuine modal reasoning via JVM
     try:
