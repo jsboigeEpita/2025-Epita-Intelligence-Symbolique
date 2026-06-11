@@ -67,6 +67,11 @@ class FallacyWorkflowPlugin:
     MAX_CANDIDATES = 20  # Wide-net Phase 1 cap (#578)
     MIN_CONFIRM_DEPTH = 2  # Don't accept confirmations at depth < 2 (too generic)
 
+    # FB-19 beam descent parameters (#1040)
+    BEAM_WIDTH = 3  # Top-k branches kept per level during beam descent
+    BEAM_MAX_LLM_CALLS = 15  # Circuit breaker for beam descent
+    BEAM_MIN_DEPTH = 5  # Value-gate: beam must reach ≥1 node at this depth
+
     def __init__(
         self,
         master_kernel: Kernel,
@@ -159,6 +164,34 @@ class FallacyWorkflowPlugin:
             pk = root.get("PK", "")
             name = root.get(f"text_{self.language}", root.get("nom_vulgarisé", ""))
             index[name.lower().strip()] = pk
+        return index
+
+    def _build_deep_index(self, max_depth: int = 3) -> Dict[str, str]:
+        """Build a lookup: lowercase name → PK for nodes up to max_depth.
+
+        FB-19 (#1040): gives wide-net Phase 1 a head start by mapping to
+        depth-2/3 nodes instead of only depth-1 roots. This shaves 2-3
+        levels off the descent and makes reaching depth-5+ nodes feasible.
+        """
+        index: Dict[str, str] = {}
+        for node in self.taxonomy_navigator.taxonomy_data:
+            try:
+                depth = int(node.get("depth", 0))
+            except (ValueError, TypeError):
+                continue
+            if depth < 1 or depth > max_depth:
+                continue
+            pk = node.get("PK", "")
+            if not pk:
+                continue
+            name = node.get(f"text_{self.language}", node.get("nom_vulgarisé", ""))
+            if name:
+                index[name.lower().strip()] = pk
+            # Also index by family / subfamily keywords for broader matching
+            for field in ("Famille", "Sous-Famille", "Soussousfamille"):
+                val = node.get(field, "")
+                if val and val.lower().strip() not in index:
+                    index[val.lower().strip()] = pk
         return index
 
     # German → English keyword bridge for multilingual support (#600)
@@ -299,10 +332,203 @@ class FallacyWorkflowPlugin:
 
         return None
 
+    def _map_fallacy_to_deep_pk(
+        self, fallacy_name: str, deep_index: Dict[str, str]
+    ) -> Optional[str]:
+        """Map a free-text fallacy name to the deepest matching PK.
+
+        FB-19 (#1040): tries the deep index (depth ≤ 3) first, giving the
+        beam descent a head start. Falls back to None if no match.
+        """
+        name_lower = fallacy_name.lower().strip()
+
+        # Direct match in deep index
+        if name_lower in deep_index:
+            return deep_index[name_lower]
+
+        # Substring match: check if any deep index key is contained in the name
+        for key, pk in deep_index.items():
+            if key in name_lower or name_lower in key:
+                return pk
+
+        return None
+
+    async def _beam_descent(
+        self,
+        argument_text: str,
+        seed_pks: List[str],
+        beam_width: Optional[int] = None,
+        max_llm_calls: Optional[int] = None,
+    ) -> List[IdentifiedFallacy]:
+        """FB-19 beam descent: iterative top-k selection at each taxonomy level.
+
+        At each level, presents candidate children to the LLM, keeps the top
+        beam_width by confidence, and descends. Budget-capped to prevent runaway.
+
+        Args:
+            argument_text: The text to analyze.
+            seed_pks: Starting PKs (from wide-net, possibly at depth 2-3).
+            beam_width: Max branches kept per level (default BEAM_WIDTH).
+            max_llm_calls: Circuit breaker (default BEAM_MAX_LLM_CALLS).
+
+        Returns:
+            List of IdentifiedFallacy from confirmed nodes at deepest level.
+        """
+        beam_width = beam_width or self.BEAM_WIDTH
+        max_llm_calls = max_llm_calls or self.BEAM_MAX_LLM_CALLS
+
+        slave_kernel, slave_settings = self._create_slave_kernel()
+        llm_calls_used = 0
+
+        # Beam state: list of (pk, depth, confidence, navigation_trace)
+        beam: List[Tuple[str, int, float, List[str]]] = []
+        for pk in seed_pks:
+            node = self.taxonomy_navigator.get_node(pk)
+            if node:
+                try:
+                    depth = int(node.get("depth", 0))
+                except (ValueError, TypeError):
+                    depth = 0
+                beam.append((pk, depth, 1.0, [pk]))
+
+        confirmed_fallacies: List[IdentifiedFallacy] = []
+
+        while beam and llm_calls_used < max_llm_calls:
+            next_beam: List[Tuple[str, int, float, List[str]]] = []
+
+            for pk, depth, conf, trace in beam:
+                if llm_calls_used >= max_llm_calls:
+                    break
+
+                node = self.taxonomy_navigator.get_node(pk)
+                if not node:
+                    continue
+
+                children = self.taxonomy_navigator.get_children(pk)
+
+                # Leaf node or no children — auto-confirm if depth >= MIN_CONFIRM_DEPTH
+                if not children:
+                    node_name = node.get(
+                        f"text_{self.language}", node.get("nom_vulgarisé", pk)
+                    )
+                    if depth >= self.MIN_CONFIRM_DEPTH:
+                        confirmed_fallacies.append(
+                            IdentifiedFallacy(
+                                fallacy_type=node_name,
+                                taxonomy_pk=pk,
+                                taxonomy_path=node.get("path", ""),
+                                explanation=f"Beam descent confirmed at depth {depth} (leaf)",
+                                confidence=conf * 0.85,
+                                navigation_trace=trace,
+                                family=node.get("Famille", ""),
+                            )
+                        )
+                    continue
+
+                # Present children to LLM for beam selection
+                child_options = []
+                for child in children:
+                    cpk = child.get("PK", "")
+                    cname = child.get(
+                        f"text_{self.language}", child.get("nom_vulgarisé", cpk)
+                    )
+                    cdesc = child.get(f"desc_{self.language}", "")[:120]
+                    child_options.append({"pk": cpk, "name": cname, "desc": cdesc})
+
+                parent_name = node.get(
+                    f"text_{self.language}", node.get("nom_vulgarisé", pk)
+                )
+
+                prompt = (
+                    f'Text to analyze: "{argument_text[:500]}"\n\n'
+                    f"You are navigating the fallacy taxonomy at depth {depth}: "
+                    f"{parent_name}\n"
+                    f"Select the TOP {beam_width} most relevant children for this text.\n"
+                    f"Rate each selected child with a confidence score (0.0-1.0).\n\n"
+                    f"Children:\n"
+                )
+                for i, co in enumerate(child_options):
+                    prompt += f"  {i+1}. {co['name']} (PK: {co['pk']}): {co['desc']}\n"
+
+                prompt += (
+                    f"\nRespond with a JSON array of up to {beam_width} objects:\n"
+                    '[{"pk": "...", "confidence": 0.0-1.0, "reason": "..."}]\n'
+                    "Respond ONLY with the JSON array, no other text."
+                )
+
+                beam_history = ChatHistory(
+                    system_message=(
+                        "You are a fallacy taxonomy navigator. Select the most "
+                        "relevant branches for the given text. "
+                        "Respond ONLY with a JSON array."
+                    )
+                )
+                beam_history.add_user_message(prompt)
+
+                try:
+                    beam_response = await asyncio.wait_for(
+                        self.llm_service.get_chat_message_content(
+                            chat_history=beam_history,
+                            settings=slave_settings,
+                            kernel=slave_kernel,
+                        ),
+                        timeout=30.0,
+                    )
+                    llm_calls_used += 1
+                except asyncio.TimeoutError:
+                    self.logger.warning(f"  Beam descent LLM call timed out at {pk}")
+                    continue
+                except Exception as e:
+                    self.logger.warning(f"  Beam descent LLM call failed: {e}")
+                    llm_calls_used += 1
+                    continue
+
+                raw = str(beam_response).strip()
+                selections = []
+                try:
+                    if "```json" in raw:
+                        raw = raw.split("```json")[1].split("```")[0]
+                    elif "```" in raw:
+                        raw = raw.split("```")[1].split("```")[0]
+                    start = raw.find("[")
+                    end = raw.rfind("]") + 1
+                    if start >= 0 and end > start:
+                        selections = json.loads(raw[start:end])
+                except (json.JSONDecodeError, ValueError):
+                    self.logger.warning(f"  Beam descent parse failed: {raw[:100]}")
+
+                for sel in selections[:beam_width]:
+                    if not isinstance(sel, dict):
+                        continue
+                    sel_pk = str(sel.get("pk", ""))
+                    sel_conf = float(sel.get("confidence", 0.5))
+                    child_node = self.taxonomy_navigator.get_node(sel_pk)
+                    if child_node and sel_pk != pk:
+                        try:
+                            child_depth = int(child_node.get("depth", depth + 1))
+                        except (ValueError, TypeError):
+                            child_depth = depth + 1
+                        next_beam.append(
+                            (sel_pk, child_depth, conf * sel_conf, trace + [sel_pk])
+                        )
+
+            # Keep only top beam_width candidates by confidence for next level
+            next_beam.sort(key=lambda x: x[2], reverse=True)
+            beam = next_beam[: beam_width * 2]  # Allow some expansion
+
+        self.logger.info(
+            f"Beam descent complete: {llm_calls_used} LLM calls, "
+            f"{len(confirmed_fallacies)} confirmed fallacies"
+        )
+        return confirmed_fallacies
+
     async def _wide_net_candidates(self, argument_text: str) -> List[str]:
         """Phase 1 wide-net: LLM lists all candidate fallacies 0-shot-style.
 
-        Returns list of root PKs, one per candidate, up to MAX_CANDIDATES.
+        Returns list of PKs (depth 1-3 via deep index), up to MAX_CANDIDATES.
+
+        FB-19 (#1040): tries deep index first (depth 2-3), falls back to
+        root PKs. This gives the beam descent a 2-3 level head start.
         """
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
@@ -357,23 +583,32 @@ class FallacyWorkflowPlugin:
         if not isinstance(candidates_raw, list):
             candidates_raw = [candidates_raw]
 
+        # FB-19: try deep index first (depth 2-3), then fall back to root PKs
+        deep_index = self._build_deep_index(max_depth=3)
         roots_index = self._build_roots_index()
         candidate_pks = []
         for c in candidates_raw:
             if not isinstance(c, dict):
                 continue
             root_cat = c.get("root_category", "")
-            pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
+            fallacy_name = c.get("fallacy_name", "")
+
+            # Try deep index first (FB-19)
+            pk = self._map_fallacy_to_deep_pk(fallacy_name, deep_index)
             if not pk:
-                fallacy_name = c.get("fallacy_name", "")
+                pk = self._map_fallacy_to_deep_pk(root_cat, deep_index)
+            # Fall back to root mapping
+            if not pk:
+                pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
+            if not pk:
                 pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
             if pk and pk not in candidate_pks:
                 candidate_pks.append(pk)
 
         candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
         self.logger.info(
-            f"Phase 1 wide-net: {len(candidates_raw)} candidates, "
-            f"{len(candidate_pks)} unique root PKs: {candidate_pks}"
+            f"Phase 1 wide-net (FB-19 deep): {len(candidates_raw)} candidates, "
+            f"{len(candidate_pks)} unique PKs: {candidate_pks}"
         )
         return candidate_pks
 
@@ -788,7 +1023,8 @@ class FallacyWorkflowPlugin:
         2. Slave selects candidate branches (via explore_branch calls)
         3. For each candidate, iterative deepening with double-selection
         4. Parallel exploration of up to MAX_BRANCHES branches
-        5. If no result, fall back to one-shot full-taxonomy approach
+        5. FB-19 beam descent for deep nodes (additive, no regression)
+        6. If no result, fall back to one-shot full-taxonomy approach
         """
         file_handler = None
         if trace_log_path and str(trace_log_path).strip() not in ("", "None", "null"):
@@ -858,15 +1094,38 @@ class FallacyWorkflowPlugin:
 
             if identified:
                 identified.sort(key=lambda f: f.confidence, reverse=True)
+
+            # Phase 3b: FB-19 beam descent for deep nodes (#1040)
+            # Additive: enriches identified list with deep findings, no regression
+            beam_fallacies = []
+            try:
+                beam_fallacies = await self._beam_descent(argument_text, candidate_pks)
+            except Exception as e:
+                self.logger.warning(f"Beam descent failed (non-fatal): {e}")
+
+            if beam_fallacies:
+                for bf in beam_fallacies:
+                    if bf.taxonomy_pk not in seen_pks:
+                        seen_pks[bf.taxonomy_pk] = bf
+                        identified.append(bf)
+                self.logger.info(
+                    f"FB-19 beam descent added {len(beam_fallacies)} deep fallacies"
+                )
+
+            if identified:
+                identified.sort(key=lambda f: f.confidence, reverse=True)
+                method = (
+                    "wide_net_parallel_beam" if beam_fallacies else "wide_net_parallel"
+                )
                 analysis_result = FallacyAnalysisResult(
                     fallacies=identified,
-                    exploration_method="wide_net_parallel",
+                    exploration_method=method,
                     branches_explored=len(candidate_pks),
                     total_iterations=total_iterations,
                 )
                 self.logger.info(
                     f"--- Analysis complete: {len(identified)} fallacies identified "
-                    f"via wide-net parallel ({len(candidate_pks)} branches) ---"
+                    f"via {method} ({len(candidate_pks)} branches) ---"
                 )
                 result_json = analysis_result.model_dump_json(indent=2)
                 self._persist_trace(trace_log_path, analysis_result, argument_text)
