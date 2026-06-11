@@ -97,6 +97,42 @@ class TestFallacyTierDispatch:
         tier = context.get("fallacy_tier", "llm")
         assert tier == "llm"
 
+    async def test_llm_tier_fail_loud_on_missing_api_key(self):
+        """RA-1 (#1046): LLM tier must raise RuntimeError, NOT silently
+        return empty results, when the LLM service is unavailable (#1019)."""
+        from unittest.mock import patch
+
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_hierarchical_fallacy,
+        )
+
+        # create_llm_service is imported locally inside the function body,
+        # so patch at the source module.
+        with patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            side_effect=ValueError("No API key configured"),
+        ):
+            with pytest.raises(RuntimeError, match="FALLACY_DETECTION_UNAVAILABLE"):
+                await _invoke_hierarchical_fallacy("Some text", {"fallacy_tier": "llm"})
+
+    async def test_perarg_tier_fail_loud_on_missing_api_key(self):
+        """RA-1 (#1046): Per-argument tier must raise RuntimeError when
+        the LLM service is unavailable (#1019)."""
+        from unittest.mock import patch
+
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_hierarchical_fallacy_per_argument,
+        )
+
+        with patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            side_effect=ValueError("No API key configured"),
+        ):
+            with pytest.raises(RuntimeError, match="PER_ARG_FALLACY_UNAVAILABLE"):
+                await _invoke_hierarchical_fallacy_per_argument(
+                    "Some text", {"fallacy_tier": "llm"}
+                )
+
 
 # ---------------------------------------------------------------------------
 # Shield preset context
