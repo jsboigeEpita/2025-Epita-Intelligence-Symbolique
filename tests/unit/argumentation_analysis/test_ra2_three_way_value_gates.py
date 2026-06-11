@@ -8,9 +8,9 @@ can reach. The reference cases come from the EPITA validation demo
 
 Reference cases (depth 4-5):
 - PK 179 "Question piège" (depth 5)
-- PK 987 "Pente savonneuse" (depth 4)
+- PK 677 "Pente glissante" (depth 5)
 - PK 61 "Argument par le scénario" (depth 4)
-- PK 944 "Homme de paille" (depth 5)
+- PK 168 "Homme de paille" (depth 5)
 
 Gates:
 - VG-RA2-1: Guided workflow reaches depth >= 4 on reference cases
@@ -38,10 +38,10 @@ REFERENCE_CASES = [
         "min_depth": 4,
     },
     {
-        "test_name": "Pente Savonneuse",
+        "test_name": "Pente Glissante",
         "dialogue": "Si on autorise les trottinettes, demain ce sera les motos.",
-        "expected_pk": 987,
-        "expected_name": "Pente savonneuse",
+        "expected_pk": 677,
+        "expected_name": "Pente glissante",
         "min_depth": 4,
     },
     {
@@ -54,7 +54,7 @@ REFERENCE_CASES = [
     {
         "test_name": "Homme de Paille",
         "dialogue": "Les écolos veulent nous faire revenir à l'âge de pierre.",
-        "expected_pk": 944,
+        "expected_pk": 168,
         "expected_name": "Homme de paille",
         "min_depth": 4,
     },
@@ -174,11 +174,15 @@ class TestExploreHierarchyPrimitive:
             pytest.skip("InformalFallacyDefinitions not importable")
 
         definitions = InformalFallacyDefinitions()
+        df = definitions.taxonomy_df  # cached DataFrame, required by _internal_explore_hierarchy
+        if df is None or df.empty:
+            pytest.skip("taxonomy_full.csv could not be loaded")
+
         current_pk = 0  # root
         max_depth_reached = 0
 
         for _ in range(10):  # max 10 levels of descent
-            result = definitions._internal_explore_hierarchy(current_pk)
+            result = definitions._internal_explore_hierarchy(current_pk, df)
             if result.get("error"):
                 break
 
@@ -218,16 +222,16 @@ class TestGuidedDescentDepthGate:
     """
 
     @pytest.fixture
-    def fallacy_definitions(self):
+    def fallacy_workflow(self):
         try:
-            from argumentation_analysis.agents.core.informal.informal_definitions import (
-                InformalFallacyDefinitions,
+            from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+                FallacyWorkflowPlugin,
             )
         except ImportError:
-            pytest.skip("InformalFallacyDefinitions not importable")
-        return InformalFallacyDefinitions()
+            pytest.skip("FallacyWorkflowPlugin not importable")
+        return FallacyWorkflowPlugin()
 
-    def test_smoke_single_reference_case(self, fallacy_definitions):
+    def test_smoke_single_reference_case(self, fallacy_workflow):
         """
         Smoke test: verify guided analysis can be invoked on a reference case.
         This is a lightweight gate — it just checks the workflow runs,
@@ -235,9 +239,8 @@ class TestGuidedDescentDepthGate:
         """
         case = REFERENCE_CASES[0]  # Question Piège
         try:
-            result = fallacy_definitions.run_guided_analysis(
-                text=case["dialogue"],
-                initial_families=None,
+            result = fallacy_workflow.run_guided_analysis(
+                argument_text=case["dialogue"],
             )
         except Exception as e:
             # If LLM unavailable, this is expected — not a regression
@@ -248,7 +251,7 @@ class TestGuidedDescentDepthGate:
         # The result should be a non-empty structure
         assert result is not None, "run_guided_analysis returned None"
 
-    def test_guided_reaches_deeper_than_flat(self, fallacy_definitions):
+    def test_guided_reaches_deeper_than_flat(self, fallacy_workflow):
         """
         VG-RA2-1: On reference text, guided analysis should reach
         taxonomy depth >= 4 (deeper than flat depth-1 families).
@@ -257,9 +260,8 @@ class TestGuidedDescentDepthGate:
         """
         case = REFERENCE_CASES[0]  # Question Piège
         try:
-            result = fallacy_definitions.run_guided_analysis(
-                text=case["dialogue"],
-                initial_families=None,
+            result = fallacy_workflow.run_guided_analysis(
+                argument_text=case["dialogue"],
             )
         except Exception as e:
             if "api" in str(e).lower() or "key" in str(e).lower():
@@ -299,7 +301,7 @@ class TestCompareDetectionModes:
         from pathlib import Path
 
         script_path = (
-            Path(__file__).parent.parent.parent.parent.parent
+            Path(__file__).parent.parent.parent.parent
             / "scripts"
             / "compare_fallacy_detection_modes.py"
         )
@@ -312,7 +314,7 @@ class TestCompareDetectionModes:
         from pathlib import Path
 
         script_path = (
-            Path(__file__).parent.parent.parent.parent.parent
+            Path(__file__).parent.parent.parent.parent
             / "scripts"
             / "compare_fallacy_detection_modes.py"
         )
