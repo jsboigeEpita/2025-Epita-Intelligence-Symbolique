@@ -6610,6 +6610,10 @@ async def _invoke_deep_synthesis(
     Reads the full UnifiedAnalysisState from context, runs the 9-section
     template-driven synthesis, and returns both the report object and the
     rendered markdown.
+
+    FB-18 Mode A (#1039): fails explicitly when fewer than 3 artifact fields
+    are populated (VG-2 state guard), and attaches the grounded transversal
+    synthesis plus its value-gate verdicts to the result.
     """
     state = context.get("_state_object")
     if state is None:
@@ -6621,6 +6625,21 @@ async def _invoke_deep_synthesis(
     from argumentation_analysis.agents.core.synthesis.deep_synthesis_models import (
         DeepSynthesisReport,
     )
+
+    # FB-18 VG-2 — state-empty guard: a near-empty state can only yield
+    # boilerplate, so fail explicitly instead (#1019 fail-loud).
+    populated = DeepSynthesisAgent.count_populated_artifact_fields(state)
+    if populated < 3:
+        return {
+            "error": (
+                f"Insufficient artifacts for grounded deep synthesis: only "
+                f"{populated}/3 required artifact fields are populated — "
+                f"upstream analysis phases produced too little verified "
+                f"material (FB-18 VG-2 state guard)"
+            ),
+            "fail_explicit": True,
+            "populated_artifact_fields": populated,
+        }
 
     try:
         # Try full agent instantiation (with LLM for section 9)
@@ -6667,6 +6686,11 @@ async def _invoke_deep_synthesis(
             report.sections_populated = DeepSynthesisAgent._count_populated_sections(
                 report
             )
+            # FB-18: no LLM in the static-builder path — record that honestly
+            # rather than passing template output off as grounded synthesis.
+            report.populated_artifact_fields = populated
+            report.grounded_synthesis_status = "unavailable"
+            report.value_gates = DeepSynthesisAgent.validate_value_gates("", populated)
 
         markdown = DeepSynthesisAgent.render_markdown(report)
 
@@ -6684,9 +6708,15 @@ async def _invoke_deep_synthesis(
             "markdown": markdown,
             "sections_populated": report.sections_populated,
             "total_state_fields": report.total_state_fields,
+            "grounded_synthesis": report.grounded_synthesis,
+            "grounded_synthesis_status": report.grounded_synthesis_status,
+            "value_gates": report.value_gates,
+            "populated_artifact_fields": report.populated_artifact_fields,
             "summary": (
                 f"Deep synthesis: {report.sections_populated}/9 sections, "
-                f"{report.total_state_fields} state fields consumed"
+                f"{report.total_state_fields} state fields consumed, "
+                f"grounded synthesis: "
+                f"{report.grounded_synthesis_status or 'not attempted'}"
             ),
         }
     except Exception as e:

@@ -144,6 +144,15 @@ class DeepSynthesisReport:
     # Adjudication table (Track NN #659) — grounded vs claimed fallacy families.
     # Each entry: {"family": str, "status": "grounded"|"claimed", "evidence": str}
     adjudication_table: List[Dict[str, str]] = field(default_factory=list)
+    # FB-18 Mode A (#1039) — grounded transversal synthesis: 4-section LLM
+    # synthesis where every insight carries [artifact:...] citations anchored
+    # in the verified state artifacts. Empty when no LLM is available; the
+    # status field then says so explicitly (fail-loud, no template imposture).
+    grounded_synthesis: str = ""
+    grounded_synthesis_status: str = ""  # "llm" | "unavailable" | "failed"
+    # FB-18 value-gates VG-1..VG-4 verdicts, computed on grounded_synthesis.
+    value_gates: Dict[str, Any] = field(default_factory=dict)
+    populated_artifact_fields: int = 0
     # Metadata
     report_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     total_state_fields: int = 0
@@ -165,6 +174,10 @@ class DeepSynthesisReport:
             "convergence_conclusion": self.convergence_conclusion,
             "convergence_prose": self.convergence_prose,
             "adjudication_table": self.adjudication_table,
+            "grounded_synthesis": self.grounded_synthesis,
+            "grounded_synthesis_status": self.grounded_synthesis_status,
+            "value_gates": self.value_gates,
+            "populated_artifact_fields": self.populated_artifact_fields,
             "report_timestamp": self.report_timestamp,
             "total_state_fields": self.total_state_fields,
             "sections_populated": self.sections_populated,

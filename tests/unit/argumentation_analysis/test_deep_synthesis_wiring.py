@@ -35,8 +35,12 @@ def _make_fixture_state() -> UnifiedAnalysisState:
     state.add_argument("Foreign powers threaten our independence")
     state.add_argument("Cooperation yields better outcomes")
     state.add_argument("We must defend our borders against external interference")
-    state.add_fallacy("ad hominem", "Attacks foreign powers instead of argument", "arg_1")
-    state.add_fallacy("slippery slope", "Suggests sovereignty loss without evidence", "arg_2")
+    state.add_fallacy(
+        "ad hominem", "Attacks foreign powers instead of argument", "arg_1"
+    )
+    state.add_fallacy(
+        "slippery slope", "Suggests sovereignty loss without evidence", "arg_2"
+    )
     state.add_dung_framework(
         name="main_framework",
         arguments=["arg_1", "arg_2", "arg_3", "arg_4"],
@@ -65,25 +69,36 @@ class TestDAGOrdering:
 
     def test_deep_synthesis_phase_exists_in_spectacular(self):
         """deep_synthesis phase should be present in the spectacular workflow."""
-        from argumentation_analysis.orchestration.workflows import build_spectacular_workflow
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
 
         wf = build_spectacular_workflow()
         phase_names = [p.name for p in wf.phases]
-        assert "deep_synthesis" in phase_names, (
-            f"deep_synthesis not in spectacular phases: {phase_names}"
-        )
+        assert (
+            "deep_synthesis" in phase_names
+        ), f"deep_synthesis not in spectacular phases: {phase_names}"
 
     def test_deep_synthesis_depends_on_correct_phases(self):
         """deep_synthesis should depend on synthesis, narrative_synthesis, belief_revision."""
-        from argumentation_analysis.orchestration.workflows import build_spectacular_workflow
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
 
         wf = build_spectacular_workflow()
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
-        assert set(ds_phase.depends_on) == {"synthesis", "narrative_synthesis", "belief_revision", "stakes"}
+        assert set(ds_phase.depends_on) == {
+            "synthesis",
+            "narrative_synthesis",
+            "belief_revision",
+            "stakes",
+        }
 
     def test_deep_synthesis_is_after_synthesis(self):
         """deep_synthesis must come after synthesis in the phase list."""
-        from argumentation_analysis.orchestration.workflows import build_spectacular_workflow
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
 
         wf = build_spectacular_workflow()
         phase_names = [p.name for p in wf.phases]
@@ -93,7 +108,9 @@ class TestDAGOrdering:
 
     def test_deep_synthesis_not_optional_in_spectacular(self):
         """deep_synthesis should be non-optional in the spectacular workflow."""
-        from argumentation_analysis.orchestration.workflows import build_spectacular_workflow
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
 
         wf = build_spectacular_workflow()
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
@@ -101,7 +118,9 @@ class TestDAGOrdering:
 
     def test_deep_synthesis_has_timeout(self):
         """deep_synthesis should have a timeout_seconds set."""
-        from argumentation_analysis.orchestration.workflows import build_spectacular_workflow
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
 
         wf = build_spectacular_workflow()
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
@@ -126,7 +145,9 @@ class TestFileOutput:
 
     def test_invoke_produces_markdown_file(self, tmp_path):
         """Invoke callable should write markdown to the specified output path."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_deep_synthesis
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_deep_synthesis,
+        )
 
         state = _make_fixture_state()
         output_file = tmp_path / "test_report.md"
@@ -153,7 +174,9 @@ class TestFileOutput:
 
     def test_markdown_has_required_sections(self, tmp_path):
         """Output markdown should have non-empty sections 1, 2, 3 minimum."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_deep_synthesis
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_deep_synthesis,
+        )
 
         state = _make_fixture_state()
         output_file = tmp_path / "sections_report.md"
@@ -181,7 +204,9 @@ class TestFileOutput:
 
     def test_invoke_without_output_path(self):
         """Invoke callable should work without deep_synthesis_output_path."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_deep_synthesis
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_deep_synthesis,
+        )
 
         state = _make_fixture_state()
         ctx = {
@@ -213,22 +238,30 @@ class TestCLIRunner:
     def test_cli_imports(self):
         """CLI runner module should import without errors."""
         import importlib
+
         mod = importlib.import_module("scripts.run_deep_synthesis")
         assert hasattr(mod, "run_on_text")
         assert hasattr(mod, "run_from_source")
         assert hasattr(mod, "main")
 
-    def test_cli_run_on_text(self):
-        """run_on_text should produce a valid result dict without full pipeline."""
+    def test_cli_run_on_text_fails_loud_on_empty_state(self):
+        """FB-18 VG-2: with the pipeline unavailable the state stays empty,
+        so the CLI must exit(1) instead of emitting a boilerplate report."""
         from scripts.run_deep_synthesis import run_on_text
 
-        # Patch pipeline imports to avoid actual LLM calls
-        with patch.dict("sys.modules", {
-            "argumentation_analysis.orchestration.unified_pipeline": None,
-            "argumentation_analysis.orchestration.conversational_orchestrator": None,
-        }):
-            meta = {"opaque_id": "cli_test", "era": "", "language": "en", "discourse_type": "other"}
-            result = asyncio.run(run_on_text("Test argument text.", meta, "spectacular"))
-
-        assert "markdown" in result
-        assert result["sections_populated"] >= 1
+        # Patch pipeline imports to avoid actual LLM calls → empty state
+        with patch.dict(
+            "sys.modules",
+            {
+                "argumentation_analysis.orchestration.unified_pipeline": None,
+                "argumentation_analysis.orchestration.conversational_orchestrator": None,
+            },
+        ):
+            meta = {
+                "opaque_id": "cli_test",
+                "era": "",
+                "language": "en",
+                "discourse_type": "other",
+            }
+            with pytest.raises(SystemExit):
+                asyncio.run(run_on_text("Test argument text.", meta, "spectacular"))
