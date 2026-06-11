@@ -151,6 +151,12 @@ def _detect_language(text: str) -> str:
 # See ARCHEOLOGIE_ORCHESTRATION.md section 3 for rationale.
 # ---------------------------------------------------------------------------
 
+# NOTE (RA-6 #1051): The inline "ProjectManager" ChatCompletionAgent defined below
+# is the CANONICAL PM for the conversational path. It uses StateManagerPlugin's
+# designate_next_agent() kernel function, which writes to state._next_agent_designated.
+# DelegatingSelectionStrategy (wired in _run_phase) reads that field to honour PM
+# designation. The separate ProjectManagerAgent in agents/core/pm/pm_agent.py serves
+# a different entry point (enhanced_pm_analysis_runner.py) and is NOT used here.
 AGENT_CONFIG = {
     "ProjectManager": {
         "speciality": "project_manager",
@@ -1365,7 +1371,29 @@ async def _run_phase(
             AgentGroupChat,
         )
 
-        chat = AgentGroupChat(agents=agents)
+        # RA-6 #1051: Wire DelegatingSelectionStrategy so PM designation
+        # (state._next_agent_designated set via designate_next_agent) is actually
+        # consumed by the SK-native AgentGroupChat. Without this, the PM "directs
+        # into the void" — designation is written but never read on this path.
+        selection = None
+        if state is not None and hasattr(state, "consume_next_agent_designation"):
+            try:
+                from argumentation_analysis.core.strategies import (
+                    DelegatingSelectionStrategy,
+                )
+
+                selection = DelegatingSelectionStrategy(
+                    agents=agents, state=state
+                )
+            except (ImportError, TypeError, ValueError):
+                logger.warning(
+                    "DelegatingSelectionStrategy unavailable, using SK default selection"
+                )
+
+        chat = AgentGroupChat(
+            agents=agents,
+            selection_strategy=selection,
+        )
         # Add initial prompt to the group chat
         await chat.add_chat_message(
             chat_history.messages[-1] if chat_history.messages else initial_prompt
