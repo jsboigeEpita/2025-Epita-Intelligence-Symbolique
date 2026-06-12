@@ -101,7 +101,7 @@
 
 | # | Finding | Pattern | SHA Lost | Restore? |
 |---|---------|---------|----------|----------|
-| CM-1 | **Deleted `test_middleware.py`** (474 lines → 0 in main, 314 reduced in tests/unit). Lost: MockChannel, routing assertions (COMMAND/INFORMATION/REQUEST→COLLABORATION), statistics test, async request test. | 2 | `b350e539` | **Restore (partial)** — the reduced version lacks routing assertions and async tests |
+| CM-1 | **Deleted `test_middleware.py`** (474 lines → 0 in main, reduced in tests/unit). ~~Lost: routing assertions, statistics test, async request test.~~ **Re-examined (CM-1 fix)**: routing + statistics were already present and *richer* in the pytest version (13 `determine_channel` cases vs the old 3) — the register was partly stale. Genuine residual loss = `receive_message`, `get_pending_messages`, protocol delegation (`send_request`/`publish`/`subscribe`), and the two async paths (`receive_message_async`/`send_request_async`). | 2 | `b350e539` | **Restored** — 13 additive tests (4 classes) appended to the pytest suite (51 total, all pass); the old unittest file is NOT reinstated (anti-pendule #1019 — would regress the richer routing coverage) |
 | CM-2 | `ChannelType.NEGOTIATION`, `FEEDBACK`, `SYSTEM`: declared in routing table but no channel implementations exist. `determine_channel()` routes to them but `get_channel()` returns None. | 3 | Present since initial | **Won't restore** — forward-declared, never implemented |
 | CM-3 | `CommandMessage`, `InformationMessage`, `RequestMessage`, `EventMessage`: defined, tested, never used in production. All production code uses `Message()` directly. | 4 | Present since initial | **Won't restore** — convenience wrappers never adopted |
 | CM-4 | `InformationMessage` uses `DATA_DIR` (Path object) as dict key instead of string `"data"`. Latent portability bug (dormant, never called). | 4 | Present since initial | **Won't restore as-is** — fix if re-activated |
@@ -123,7 +123,7 @@
 | Governance | ✅ Clean | 0 | None |
 | Quality | ✅ Clean | 0 | None |
 | **Orchestration** | ⚠️ Dormant | 6 (2 significant) | **ORC-1 strategic objectives** (feeds RA-4), ORC-2 hierarchical delegation |
-| Communication | ✅ Mostly | 7 (1 test loss, 6 dormant) | CM-1 test coverage (MEDIUM) |
+| Communication | ✅ Restored | 7 (1 test loss **restored**, 6 dormant) | ~~CM-1 test coverage~~ ✅ done |
 
 ### High-Impact Restoration Candidates (feed new RA-* sub-issues)
 

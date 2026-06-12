@@ -2,7 +2,7 @@
 """Tests for MessageMiddleware — channel routing, handlers, and statistics."""
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
 
 from argumentation_analysis.core.communication.middleware import MessageMiddleware
@@ -312,3 +312,168 @@ class TestShutdown:
 
     def test_shutdown_without_protocols(self, middleware):
         middleware.shutdown()  # Should not raise
+
+
+# ── receive_message (CM-1 restore: DRIFT_REGISTER) ──
+#
+# The pre-reduction suite (b350e539^) covered receive/pending/protocol/async
+# paths via a heavyweight in-memory ``MockChannel``. These restore that
+# coverage in the current pytest idiom — a ``MagicMock`` channel is the
+# unit-equivalent: it isolates the *middleware's* delegation + stats + handler
+# logic from any concrete channel implementation.
+
+
+class TestReceiveMessage:
+    def test_receive_from_channel(self, middleware):
+        channel = MagicMock()
+        channel.type = ChannelType.HIERARCHICAL
+        msg = _make_msg(msg_type=MessageType.COMMAND, recipient="agent_2")
+        channel.receive_message.return_value = msg
+        middleware.register_channel(channel)
+
+        received = middleware.receive_message("agent_2", ChannelType.HIERARCHICAL)
+        assert received is msg
+        assert middleware.stats["messages_received"] == 1
+        assert middleware.stats["by_channel"]["hierarchical"]["received"] == 1
+
+    def test_receive_channel_not_found(self, middleware):
+        # channel_type requested but never registered → None, no crash
+        assert middleware.receive_message("agent_2", ChannelType.DATA) is None
+
+    def test_receive_returns_none_when_channel_empty(self, middleware):
+        channel = MagicMock()
+        channel.type = ChannelType.HIERARCHICAL
+        channel.receive_message.return_value = None
+        middleware.register_channel(channel)
+
+        received = middleware.receive_message("agent_2", ChannelType.HIERARCHICAL)
+        assert received is None
+        assert middleware.stats["messages_received"] == 0
+
+    def test_receive_invokes_handlers(self, middleware):
+        channel = MagicMock()
+        channel.type = ChannelType.HIERARCHICAL
+        msg = _make_msg(msg_type=MessageType.COMMAND, recipient="agent_2")
+        channel.receive_message.return_value = msg
+        middleware.register_channel(channel)
+
+        handler = MagicMock()
+        middleware.register_message_handler(MessageType.COMMAND, handler)
+        middleware.receive_message("agent_2", ChannelType.HIERARCHICAL)
+        handler.assert_called_once_with(msg)
+
+
+# ── get_pending_messages (CM-1 restore) ──
+
+
+class TestGetPendingMessages:
+    def test_pending_from_specific_channel(self, middleware):
+        channel = MagicMock()
+        channel.type = ChannelType.HIERARCHICAL
+        pending = [_make_msg(), _make_msg()]
+        channel.get_pending_messages.return_value = pending
+        middleware.register_channel(channel)
+
+        result = middleware.get_pending_messages("agent_2", ChannelType.HIERARCHICAL)
+        assert result == pending
+        channel.get_pending_messages.assert_called_once_with("agent_2", None)
+
+    def test_pending_channel_not_found(self, middleware):
+        assert middleware.get_pending_messages("agent_2", ChannelType.DATA) == []
+
+    def test_pending_aggregates_across_channels(self, middleware):
+        ch1 = MagicMock()
+        ch1.type = ChannelType.HIERARCHICAL
+        ch1.get_pending_messages.return_value = [_make_msg()]
+        ch2 = MagicMock()
+        ch2.type = ChannelType.DATA
+        ch2.get_pending_messages.return_value = [_make_msg()]
+        middleware.register_channel(ch1)
+        middleware.register_channel(ch2)
+
+        result = middleware.get_pending_messages("agent_2")
+        assert len(result) == 2
+
+
+# ── protocol delegation: send_request / publish / subscribe (CM-1 restore) ──
+
+
+class TestProtocolDelegation:
+    def test_send_request_delegates(self, middleware):
+        middleware.request_response = MagicMock()
+        middleware.request_response.send_request.return_value = {"status": "ok"}
+
+        result = middleware.send_request(
+            sender="agent_1",
+            sender_level=AgentLevel.STRATEGIC,
+            request_type="get_analysis",
+            recipient="agent_2",
+        )
+        middleware.request_response.send_request.assert_called_once()
+        assert result == {"status": "ok"}
+
+    def test_send_request_lazy_initializes_protocols(self, middleware):
+        # request_response is None → send_request must trigger initialize_protocols
+        assert middleware.request_response is None
+
+        def _set_protocol():
+            middleware.request_response = MagicMock()
+
+        with patch.object(
+            middleware, "initialize_protocols", side_effect=_set_protocol
+        ) as mock_init:
+            middleware.send_request(sender="a", sender_level=AgentLevel.STRATEGIC)
+            mock_init.assert_called_once()
+
+    def test_publish_delegates(self, middleware):
+        middleware.publish_subscribe = MagicMock()
+        middleware.publish(
+            sender="agent_1",
+            sender_level=AgentLevel.STRATEGIC,
+            topic="analysis_results",
+            data={},
+        )
+        middleware.publish_subscribe.publish.assert_called_once()
+
+    def test_subscribe_delegates(self, middleware):
+        middleware.publish_subscribe = MagicMock()
+        middleware.subscribe(
+            subscriber_id="agent_1",
+            topic="analysis_results",
+            callback=MagicMock(),
+        )
+        middleware.publish_subscribe.subscribe.assert_called_once()
+
+
+# ── async methods: receive_message_async / send_request_async (CM-1 restore) ──
+#
+# asyncio_mode=auto (pyproject) — plain ``async def`` tests run without a marker.
+
+
+class TestAsyncMethods:
+    async def test_receive_message_async_delegates(self, middleware):
+        channel = MagicMock()
+        channel.type = ChannelType.HIERARCHICAL
+        msg = _make_msg(msg_type=MessageType.COMMAND, recipient="agent_2")
+        channel.receive_message.return_value = msg
+        middleware.register_channel(channel)
+
+        received = await middleware.receive_message_async(
+            "agent_2", ChannelType.HIERARCHICAL
+        )
+        assert received is msg
+
+    async def test_send_request_async_delegates(self, middleware):
+        middleware.request_response = MagicMock()
+        middleware.request_response.send_request_async = AsyncMock(
+            return_value={"status": "success"}
+        )
+
+        result = await middleware.send_request_async(
+            sender="agent_1",
+            sender_level=AgentLevel.STRATEGIC,
+            request_type="get_analysis",
+            recipient="agent_2",
+        )
+        middleware.request_response.send_request_async.assert_awaited_once()
+        assert result == {"status": "success"}
