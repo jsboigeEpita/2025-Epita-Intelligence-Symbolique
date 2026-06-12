@@ -4,9 +4,15 @@ Définit le Gestionnaire Stratégique, le "cerveau" de l'orchestration.
 Ce module contient la classe `StrategicManager`, qui est le point d'entrée
 et le coordinateur principal de la couche stratégique. Il est responsable
 de la prise de décision de haut niveau.
+
+RA-4 #1049: Extended with LLM-driven objective generation and
+UnifiedAnalysisState bridge for strategic NL journaling.
 """
 
 from typing import Dict, List, Any, Optional
+import asyncio
+import copy
+import json
 import logging
 from datetime import datetime
 import uuid
@@ -57,6 +63,9 @@ class StrategicManager:
         self,
         strategic_state: Optional[StrategicState] = None,
         middleware: Optional[MessageMiddleware] = None,
+        kernel: Any = None,
+        llm_service_id: str = "chat_completion",
+        unified_state: Any = None,
     ):
         """
         Initialise le `StrategicManager`.
@@ -66,6 +75,12 @@ class StrategicManager:
                 un nouvel état est créé.
             middleware: Le middleware de communication. Si None, un
                 nouveau middleware est créé.
+            kernel: Optional Semantic Kernel instance. If provided,
+                _define_initial_objectives() will use LLM-driven generation.
+                If None (backward compat), falls back to hardcoded objectives.
+            llm_service_id: The SK service ID for LLM calls.
+            unified_state: Optional UnifiedAnalysisState instance. If provided,
+                objectives and decisions are bridged to it after each operation.
         """
         self.state = strategic_state or StrategicState()
         self.logger = logging.getLogger(__name__)
@@ -73,6 +88,10 @@ class StrategicManager:
         self.adapter = StrategicAdapter(
             agent_id="strategic_manager", middleware=self.middleware
         )
+        # RA-4 #1049: LLM-driven objectives + state bridge
+        self._kernel = kernel
+        self._llm_service_id = llm_service_id
+        self._unified_state = unified_state
 
     def initialize_analysis(self, text: str) -> Dict[str, Any]:
         """
@@ -100,6 +119,9 @@ class StrategicManager:
             "Initialisation de l'analyse",
             "Analyse préliminaire et définition des objectifs initiaux",
         )
+
+        # RA-4 #1049: Bridge objectives + decisions to UnifiedAnalysisState
+        self._sync_to_unified_state()
 
         # Délègue le plan initial à la couche tactique
         self.adapter.issue_directive(
@@ -151,6 +173,9 @@ class StrategicManager:
             )
             # Communique les ajustements à la couche tactique
             self._send_strategic_adjustments(adjustments)
+
+        # RA-4 #1049: Bridge updated state to UnifiedAnalysisState
+        self._sync_to_unified_state()
 
         return {
             "strategic_adjustments": adjustments,
@@ -221,7 +246,36 @@ class StrategicManager:
 
     # ... Les méthodes privées restent inchangées comme détails d'implémentation ...
     def _define_initial_objectives(self) -> None:
-        objectives = [
+        """Define strategic objectives — LLM-driven if kernel available, else fallback."""
+        if self._kernel is not None:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Already in async context — schedule coroutine
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        objectives = loop.run_in_executor(
+                            pool, lambda: asyncio.run(self._generate_llm_objectives())
+                        )
+                        # For sync callers, we can't await. Use fallback.
+                        # Async callers should use initialize_analysis_async().
+                        objectives = self._fallback_objectives()
+                else:
+                    objectives = loop.run_until_complete(self._generate_llm_objectives())
+            except Exception as e:
+                self.logger.warning(
+                    "LLM objective generation failed, using fallback: %s", e
+                )
+                objectives = self._fallback_objectives()
+        else:
+            objectives = self._fallback_objectives()
+
+        for objective in objectives:
+            self.state.add_global_objective(objective)
+
+    def _fallback_objectives(self) -> List[Dict[str, Any]]:
+        """Return the original 4 hardcoded objectives (backward-compat fallback)."""
+        return [
             {
                 "id": "obj-1",
                 "description": "Identifier les arguments principaux",
@@ -243,8 +297,139 @@ class StrategicManager:
                 "priority": "medium",
             },
         ]
-        for objective in objectives:
-            self.state.add_global_objective(objective)
+
+    async def _generate_llm_objectives(self) -> List[Dict[str, Any]]:
+        """Use LLM to generate context-aware strategic objectives.
+
+        Reads the raw text (first 2000 chars) and produces 3-6 NL objectives
+        describing argument STRUCTURE, not nominative content (privacy guard).
+
+        On any failure, returns fallback objectives.
+        """
+        text = getattr(self.state, "raw_text", None)
+        if not text:
+            self.logger.info("No raw_text available for LLM objectives, using fallback")
+            return self._fallback_objectives()
+
+        text_preview = text[:2000]
+
+        prompt = (
+            "Tu es un analyste rhétorique stratégique. À partir du texte ci-dessous, "
+            "génère 3 à 6 objectifs d'analyse stratégique.\n\n"
+            "RÈGLES IMPÉRATIVES :\n"
+            "- Décris la STRUCTURE argumentative, jamais le nom de l'auteur ou des citations directes\n"
+            "- Utilise des identifiants opaques (ex: 'Source_A', 'Argument_principal_1')\n"
+            "- Chaque objectif doit être un JSON object avec clés: id, description, priority\n"
+            "- id au format 'obj-N', priority parmi 'high', 'medium', 'low'\n"
+            "- Retourne UNIQUEMENT un tableau JSON valide, sans markdown\n\n"
+            f"TEXTE (extrait) :\n{text_preview}\n\n"
+            "OBJECTIFS JSON :"
+        )
+
+        try:
+            from semantic_kernel.functions import KernelArguments
+            from semantic_kernel.prompt_template import PromptTemplateConfig, InputVariable
+
+            # Use a simple invoke on the kernel with a direct prompt
+            result = await self._kernel.invoke_prompt(
+                function_name="generate_objectives",
+                plugin_name="StrategicObjectiveGenerator",
+                prompt=prompt,
+                settings=self._kernel.get_service(self._llm_service_id).get_prompt_execution_settings()
+                if hasattr(self._kernel, "get_service")
+                else None,
+            )
+
+            response_text = str(result).strip()
+
+            # Parse JSON array from response
+            # Handle potential markdown code blocks
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                lines = [l for l in lines if not l.strip().startswith("```")]
+                response_text = "\n".join(lines).strip()
+
+            objectives = json.loads(response_text)
+            if not isinstance(objectives, list) or len(objectives) == 0:
+                raise ValueError("LLM did not return a non-empty list")
+
+            # Validate each objective has required keys
+            for obj in objectives:
+                if not all(k in obj for k in ("id", "description", "priority")):
+                    raise ValueError(f"Objective missing required keys: {obj}")
+
+            self.logger.info("LLM generated %d strategic objectives", len(objectives))
+            return objectives
+
+        except Exception as e:
+            self.logger.warning(
+                "LLM objective generation failed (%s), using fallback", e
+            )
+            return self._fallback_objectives()
+
+    async def initialize_analysis_async(self, text: str) -> Dict[str, Any]:
+        """Async variant of initialize_analysis for callers already in async context.
+
+        Uses LLM objective generation if kernel is available.
+        """
+        self.logger.info("Initialisation async d'une nouvelle analyse rhétorique")
+        self.state.set_raw_text(text)
+
+        # LLM-driven objectives (async-native)
+        if self._kernel is not None:
+            try:
+                objectives = await self._generate_llm_objectives()
+                for obj in objectives:
+                    self.state.add_global_objective(obj)
+            except Exception as e:
+                self.logger.warning("LLM objectives failed in async path: %s", e)
+                for obj in self._fallback_objectives():
+                    self.state.add_global_objective(obj)
+        else:
+            self._define_initial_objectives()
+
+        self._create_initial_strategic_plan()
+        self._allocate_initial_resources()
+
+        self._log_decision(
+            "Initialisation de l'analyse (async)",
+            "Analyse préliminaire et définition des objectifs initiaux",
+        )
+
+        # RA-4 #1049: Bridge objectives + decisions to UnifiedAnalysisState
+        self._sync_to_unified_state()
+
+        # Délègue le plan initial à la couche tactique
+        self.adapter.issue_directive(
+            directive_type="new_strategic_plan",
+            parameters={
+                "plan": self.state.strategic_plan,
+                "objectives": self.state.global_objectives,
+            },
+            recipient_id="tactical_coordinator",
+            priority=MessagePriority.HIGH,
+        )
+
+        return {
+            "objectives": self.state.global_objectives,
+            "strategic_plan": self.state.strategic_plan,
+        }
+
+    def _sync_to_unified_state(self) -> None:
+        """Bridge StrategicState objectives and decisions to UnifiedAnalysisState.
+
+        No-op if _unified_state is None (backward compat).
+        """
+        if self._unified_state is None:
+            return
+        try:
+            from argumentation_analysis.core.strategic_bridge import sync_strategic_to_unified
+            count = sync_strategic_to_unified(self.state, self._unified_state)
+            self.logger.info(
+                "Bridged %d objectives to UnifiedAnalysisState", count
+            )
+        except Exception as e:
+            self.logger.warning("Failed to bridge to UnifiedAnalysisState: %s", e)
 
     def _create_initial_strategic_plan(self) -> None:
         plan_update = {
