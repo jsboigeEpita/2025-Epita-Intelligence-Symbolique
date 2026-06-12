@@ -511,6 +511,9 @@ class FallacyWorkflowPlugin:
                     system_message=(
                         "You are a fallacy taxonomy navigator. Select the most "
                         "relevant branches for the given text. "
+                        "Watch for indirect forms: circular reasoning via paraphrase "
+                        "(not just literal repetition), and emotional appeals where "
+                        "emotion drives persuasion rather than merely illustrating. "
                         "Respond ONLY with a JSON array."
                     )
                 )
@@ -817,7 +820,11 @@ class FallacyWorkflowPlugin:
                 leaf_history = ChatHistory(
                     system_message=(
                         "You are a fallacy classifier. You MUST call exactly one function. "
-                        "Do NOT respond with text."
+                        "Do NOT respond with text.\n"
+                        "When evaluating circular reasoning: accept paraphrased/implicit forms "
+                        "where the premise presupposes the conclusion.\n"
+                        "When evaluating appeal to emotion: confirm only if emotion is the "
+                        "primary persuasive operator, not merely illustrative."
                     )
                 )
                 leaf_history.add_user_message(leaf_prompt)
@@ -960,7 +967,21 @@ class FallacyWorkflowPlugin:
                     "   there is no match at ANY descendant.\n\n"
                     "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
                     "genuinely fallacious. Legitimate uses of authority, emotion, "
-                    "tradition are NOT fallacies."
+                    "tradition are NOT fallacies.\n\n"
+                    "DETECTION GUIDANCE — INDIRECT FORMS:\n"
+                    "Circular reasoning (petitio principii): The conclusion may be "
+                    "re-injected as a premise through PARAPHRASE, not literal repetition. "
+                    "Watch for: restating the claim in different words as if it were new "
+                    "evidence; using a synonym or reworded assertion as justification. "
+                    "This includes implicit circularity where the premise presupposes "
+                    "the conclusion without stating it outright.\n"
+                    "Appeal to emotion: Distinguish between (a) an argument where emotion "
+                    "is the PRIMARY OPERATOR — fear, indignation, pride, pity, loyalty "
+                    "DRIVE the persuasion instead of reasons — and (b) an argument that "
+                    "merely ILLUSTRATES with emotional language but provides substantive "
+                    "reasoning. Only (a) is fallacious. Look for: arguments that would "
+                    "collapse if the emotional charge were removed; moral-duty framing "
+                    "that replaces logical justification; urgency appeals that bypass evidence."
                 )
             )
             history.add_user_message(prompt)
