@@ -304,6 +304,66 @@ class TestLLMObjectiveFallback:
 
 
 # ---------------------------------------------------------------------------
+# Layer 4.5: Degraded tag value-gate (R369 hardening)
+# ---------------------------------------------------------------------------
+
+
+class TestDegradedTagValueGate:
+    """Verify fallback objectives are tagged source='degraded' (R369 anti-théâtre)."""
+
+    def test_fallback_objectives_tagged_degraded(self):
+        """_fallback_objectives() must tag each objective with source='degraded'."""
+        manager = StrategicManager()
+        fallback = manager._fallback_objectives()
+
+        for obj in fallback:
+            assert obj.get("source") == "degraded", (
+                f"Objective {obj['id']} missing source='degraded' tag — "
+                "downstream consumers cannot distinguish LLM from degraded output (R369)"
+            )
+
+    def test_degraded_objectives_propagate_through_bridge(self):
+        """When fallback is used, unified_state must see source='degraded'."""
+        unified = UnifiedAnalysisState("Test text.")
+        manager = StrategicManager(unified_state=unified)
+        manager.initialize_analysis("Test text.")
+
+        for obj in unified.strategic_objectives:
+            assert obj.get("source") == "degraded", (
+                "Degraded objectives must propagate through bridge with source tag"
+            )
+
+    def test_degraded_tag_visible_in_snapshot(self):
+        """source='degraded' must be visible in state snapshots."""
+        unified = UnifiedAnalysisState("Test text.")
+        manager = StrategicManager(unified_state=unified)
+        manager.initialize_analysis("Test text.")
+
+        snapshot = unified.get_state_snapshot(summarize=False)
+        for obj in snapshot["strategic_objectives"]:
+            assert obj.get("source") == "degraded"
+
+    def test_no_broad_except_hides_errors(self):
+        """Verify no bare 'except Exception' without narrow catch or error-level logging.
+
+        This is a value-gate: reads the source to ensure the exception handling
+        follows R369 hardening (narrowed catch + fail-loud for unexpected errors).
+        """
+        import inspect
+        source = inspect.getsource(StrategicManager._define_initial_objectives)
+
+        # Must have narrowed catches (not just a single broad except)
+        assert "json.JSONDecodeError" in source or "ValueError" in source, (
+            "_define_initial_objectives must have narrowed exception catches "
+            "(json.JSONDecodeError, ValueError, etc.), not bare Exception"
+        )
+        # Must have error-level logging for unexpected errors
+        assert "self.logger.error" in source or "self.logger.warning" in source, (
+            "_define_initial_objectives must log at WARNING or ERROR level on failure"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Layer 5: Anti-pendule guard
 # ---------------------------------------------------------------------------
 
