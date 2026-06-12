@@ -51,26 +51,71 @@ These dominate the parallel wall-clock once Phase 2 is overlapped. The fan-out
 already extracts essentially all the available parallel benefit from Phase 2;
 the residual cost is the serial Phase 1 + Phase 3b.
 
-## Item 2 decision — fan-out recursive question
+## Item 2 decision — should recursive descent fan out further?
 
-**Keep the existing Phase 2 parallelization; do NOT parallelize the beam now.**
+Item 2 asked whether descent should fan out *beyond* the existing Phase 2
+top-level `asyncio.gather`. There are two distinct further-fan-out levers; the
+benchmark + a code read resolve them in opposite directions.
 
-- The Phase 2 `asyncio.gather` fan-out is **validated**: it delivers the ≥2x
-  target at realistic branch counts (2.43x at 8 branches) with the wall-clock
-  staying flat as breadth grows. This is the right design and pays for itself.
-- The remaining serial cost is the **beam descent (Phase 3b)**, which is the
-  Amdahl floor. Parallelizing it *would* lift the ceiling — but the beam is
-  **deliberately token-capped** (`BEAM_MAX_LLM_CALLS=15`) precisely to bound
-  cost. Fanning it out multiplies concurrent token spend against a cap that
-  exists to prevent exactly that. Poor ROI given the floor (~4.5 s) is
-  acceptable for the analysis quality the beam buys.
-- **Lever, if ever needed**: should sub-7 s end-to-end at high branch counts
-  become a hard requirement, parallelize the beam in *bounded batches* (e.g.
-  `BEAM_WIDTH` concurrent expansions per depth) so the token cap is preserved
-  while the depth-serial chain is shortened. Documented here so item 2 is a
-  conscious, measured choice rather than a default.
+### The gate, read honestly
 
-**Anti-pendule**: this is neither "parallelize everything" nor "the existing
-parallelism is wrong" — the data says fan-out is correct where it is (Phase 2),
-and the one remaining serial stretch is an intentional token guardrail, not an
-oversight.
+The ≥2x speedup is **not** met at every width: 1.27x (2 br) and **1.77x (4 br)
+are below 2x**; only 2.43x (8 br) clears it. The crossover is ~6–7 branches. So
+"≥2x" is *not* a property of the fan-out at small widths — it depends on the
+operating point. The decisive fact is **where the engine actually operates**:
+Phase 2 fans out over `candidate_pks[:MAX_CANDIDATES]` — **up to 20**, not
+`MAX_BRANCHES=4`. At realistic wide-net widths the engine sits *past* the
+crossover, so the parallel-flat regime (≥2x) is the normal case, not the
+exception. The gate is met at the operating point; it is *not* met universally,
+and this doc does not claim otherwise.
+
+### Lever #3 — per-fork sub-branch fan-out — **IMPLEMENTED**
+
+A code read surfaced a **prompt-vs-code mismatch**: the fork prompt's system
+message explicitly instructs the LLM to *"PREFER exploring MULTIPLE children
+(call explore_branch multiple times)"* — but `_explore_single_branch` kept a
+**single** child and silently dropped the rest at every fork. The model was
+being asked to surface several promising branches; the engine threw all but one
+away. That is a recall leak, not a design choice.
+
+Fixed in `fallacy_workflow_plugin.py`: at a fork the **top child stays the
+primary path** (behaviour unchanged for that path) and the next few promising
+children are explored as **bounded concurrent recursive sub-branches** whose
+confirmed leaves merge back via the same dedup-by-leaf rule. Because this fan-out
+rides the same `gather`-overlap mechanism the benchmark measured at the
+operating point, the extra branches overlap in wall-clock rather than adding
+latency.
+
+The bound is the whole point (anti-pendule #1019 — *not* "parallelize
+everything"):
+
+- `SUBBRANCH_FANOUT_WIDTH = 2` — at most 2 extra children spawned per fork.
+- `SUBBRANCH_FANOUT_BUDGET = 12` — a shared per-analysis ceiling on total
+  sub-branches, consumed via `_BranchSupersessionTracker.try_consume_fanout()`.
+- **Supersession pruning** — a sub-branch exploring an ancestor of an
+  already-confirmed deeper node abandons early (existing #1048 mechanism).
+- **Additive / reversible** — `ENABLE_SUBBRANCH_FANOUT=False`, a zero budget, or
+  a `None` results-sink each restore the exact legacy single-path descent. The
+  primary path is never regressed; fan-out only *adds* recall.
+
+Tests: `tests/unit/argumentation_analysis/test_subbranch_fanout_1048.py`
+(5 tests, $0 mocked LLM) prove a 2-way fork explores both children, the budget
+decrements and stops at zero, and a zero budget / no-sink reproduces the legacy
+single path.
+
+### Lever #2 — parallelize the beam (Phase 3b) — **NOT NOW**
+
+The remaining serial cost is the **beam descent (Phase 3b)**, the Amdahl floor
+(~4.5 s at `BEAM_MAX_LLM_CALLS=15`). Parallelizing it *would* lift the ceiling —
+but the beam is **deliberately token-capped** precisely to bound cost. Fanning
+it out multiplies concurrent token spend against a cap that exists to prevent
+exactly that. Poor ROI. **Lever, if ever needed**: parallelize the beam in
+*bounded batches* (e.g. `BEAM_WIDTH` concurrent expansions per depth) so the
+token cap is preserved while the depth-serial chain is shortened.
+
+### Anti-pendule
+
+Neither "parallelize everything" nor "the existing parallelism is wrong." The
+data + code say: fan out at the fork where the prompt already asked for it and
+the operating point makes it free (lever #3, bounded + pruned), and leave the
+one intentional token guardrail (the beam, lever #2) alone. RA-3 closes here.
