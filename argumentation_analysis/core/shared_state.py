@@ -452,6 +452,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.ai_shield_results: List[Dict[str, Any]] = []
         # Local LLM results — offline LLM analysis (#834)
         self.local_llm_results: List[Dict[str, Any]] = []
+        # RA-4 #1049: Strategic NL journaling bridge
+        self.strategic_objectives: List[Dict[str, Any]] = []
+        self.strategic_decisions_log: List[Dict[str, Any]] = []
 
     def add_trace_entry(
         self,
@@ -1074,6 +1077,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "fol_shared_signature_sources": list(
                         self.fol_shared_signature.keys()
                     ),
+                    "strategic_objective_count": len(self.strategic_objectives),
+                    "strategic_decision_count": len(self.strategic_decisions_log),
                 }
             )
         else:
@@ -1101,6 +1106,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "workflow_results": self.workflow_results,
                     "atomic_propositions": self.atomic_propositions,
                     "fol_shared_signature": self.fol_shared_signature,
+                    "strategic_objectives": self.strategic_objectives,
+                    "strategic_decisions_log": self.strategic_decisions_log,
                 }
             )
         return base
