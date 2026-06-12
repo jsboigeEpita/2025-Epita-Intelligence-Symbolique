@@ -73,6 +73,21 @@ class FallacyWorkflowPlugin:
     BEAM_MAX_LLM_CALLS = 15  # Circuit breaker for beam descent
     BEAM_MIN_DEPTH = 5  # Value-gate: beam must reach ≥1 node at this depth
 
+    # RA-3 #1048 item 2: bounded recursive sub-branch fan-out.
+    # At a fork the LLM may flag several promising children; the engine used to
+    # keep one and silently drop the rest (recall loss — the fork prompt even
+    # invites multi-child exploration the single-path loop ignored). When
+    # enabled, the top child stays the primary path AND the next few are
+    # explored as concurrent recursive sub-branches. The wall-clock bench
+    # (PR #1067) shows Phase-2-style gather fan-out is ≥2x at realistic
+    # wide-net widths, so the work overlaps rather than adding latency.
+    # Bounded by a per-fork width + a shared global budget
+    # (_BranchSupersessionTracker.try_consume_fanout) and pruned by
+    # supersession — anti-pendule #1019, never "parallelize everything".
+    ENABLE_SUBBRANCH_FANOUT = True
+    SUBBRANCH_FANOUT_WIDTH = 2  # max extra children spawned per fork
+    SUBBRANCH_FANOUT_BUDGET = 12  # max sub-branches spawned per analysis
+
     class _BranchSupersessionTracker:
         """Track confirmed fallacies for branch supersession during parallel exploration.
 
@@ -85,11 +100,17 @@ class FallacyWorkflowPlugin:
         no explicit locking is needed (single-threaded concurrency model).
         """
 
-        def __init__(self, navigator: TaxonomyNavigator):
+        def __init__(self, navigator: TaxonomyNavigator, fanout_budget: int = 0):
             self._navigator = navigator
             # (pk, taxonomy_path, depth, confidence)
             self._confirmed: List[Tuple[str, str, int, float]] = []
             self.superseded_count = 0
+            # RA-3 #1048 item 2: shared budget bounding recursive sub-branch
+            # fan-out across ALL branches of one analysis. Mirrors the beam's
+            # BEAM_MAX_LLM_CALLS guardrail — fan-out is capped, never unbounded
+            # (anti-pendule #1019). 0 ⇒ fan-out disabled.
+            self._fanout_budget = fanout_budget
+            self.fanout_spawned = 0
 
         def register(self, pk: str, depth: int, confidence: float) -> None:
             """Register a confirmed fallacy."""
@@ -122,6 +143,20 @@ class FallacyWorkflowPlugin:
         @property
         def confirmation_count(self) -> int:
             return len(self._confirmed)
+
+        def try_consume_fanout(self) -> bool:
+            """Consume one unit of the shared sub-branch fan-out budget.
+
+            Returns True while budget remains (a sub-branch may be spawned),
+            False once exhausted. Bounds total recursive fan-out across all
+            branches of one analysis so concurrent token spend stays capped
+            (anti-pendule #1019: bounded fan-out, never "explore everything").
+            """
+            if self._fanout_budget <= 0:
+                return False
+            self._fanout_budget -= 1
+            self.fanout_spawned += 1
+            return True
 
     def __init__(
         self,
@@ -732,6 +767,7 @@ class FallacyWorkflowPlugin:
         slave_settings: OpenAIPromptExecutionSettings,
         reasoning_history: Optional[List[str]] = None,
         supersession_tracker: Optional["_BranchSupersessionTracker"] = None,
+        results_sink: Optional[List[IdentifiedFallacy]] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -1021,94 +1057,185 @@ class FallacyWorkflowPlugin:
                 tool_calls, slave_kernel, history
             )
 
+            # Classify the LLM's tool calls. Original behaviour: the first
+            # confirm/conclude decides the branch; explore_branch advances the
+            # path. RA-3 #1048 item 2: capture *all* explore targets so extra
+            # promising children can be fanned out as bounded concurrent
+            # sub-branches instead of being silently dropped.
+            confirm_result = None
+            conclude_result = None
+            explore_targets: List[Tuple[str, dict]] = []  # (next_pk, node_info)
             for result in tool_results:
                 func_name = result.get("function_name", "")
-
                 if func_name == "confirm_fallacy" and result.get("confirmed"):
-                    confirmed_pk = result.get("pk", "")
-                    confirmed_node = self.taxonomy_navigator.get_node(confirmed_pk)
-                    confirmed_depth = (
-                        int(confirmed_node.get("depth", 0)) if confirmed_node else 0
-                    )
-                    justification = result.get("justification", "")
-
-                    # Capture reasoning for memory
-                    reasoning_summary = (
-                        f"Confirmed {current_node.get(f'text_{self.language}', current_pk)} "
-                        f"at depth {confirmed_depth}: {justification}"
-                    )
-                    reasoning_history.append(reasoning_summary)
-
-                    # Reject too-shallow confirmations — force deeper exploration
-                    if confirmed_depth < self.MIN_CONFIRM_DEPTH and children:
-                        self.logger.info(
-                            f"  Confirmation at depth {confirmed_depth} rejected "
-                            f"(min={self.MIN_CONFIRM_DEPTH}), forcing deeper exploration"
-                        )
-                        # Pick the first child as default deeper path
-                        first_child = children[0]
-                        current_pk = first_child.get("PK", "")
-                        navigation_trace.append(current_pk)
-                        break  # continue outer loop with new current_pk
-
-                    # Build full explanation with reasoning history
-                    full_explanation = justification
-                    if reasoning_history:
-                        full_explanation += (
-                            f" | Reasoning path: {'; '.join(reasoning_history)}"
-                        )
-
-                    # Register confirmation for branch supersession (RA-3 #1048)
-                    if supersession_tracker is not None:
-                        supersession_tracker.register(
-                            confirmed_pk,
-                            confirmed_depth,
-                            result.get("confidence", 0.7),
-                        )
-
-                    return IdentifiedFallacy(
-                        fallacy_type=result.get(
-                            "name", result.get("name_fr", result.get("pk", ""))
-                        ),
-                        taxonomy_pk=confirmed_pk,
-                        taxonomy_path=result.get("path", ""),
-                        explanation=full_explanation,
-                        confidence=result.get("confidence", 0.7),
-                        navigation_trace=navigation_trace,
-                        family=current_node.get("Famille", ""),
-                    )
-
+                    confirm_result = result
+                    break
                 elif func_name == "conclude_no_fallacy":
-                    reason = result.get("reason", "no reason")
-                    # Capture reasoning for memory
-                    reasoning_summary = f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
-                    reasoning_history.append(reasoning_summary)
-                    self.logger.info(f"  Branch abandoned: {reason}")
-                    return None
-
+                    conclude_result = result
+                    break
                 elif func_name == "explore_branch":
-                    # Navigate deeper
                     node_info = result.get("node", {})
                     next_pk = node_info.get("pk", "")
                     if next_pk and next_pk != current_pk:
-                        # Capture reasoning for memory - why this branch was chosen
-                        branch_name = node_info.get(
-                            "name", node_info.get("name_fr", next_pk)
-                        )
-                        reasoning_summary = f"Explored {branch_name} from {current_node.get(f'text_{self.language}', current_pk)}"
-                        reasoning_history.append(reasoning_summary)
+                        explore_targets.append((next_pk, node_info))
 
-                        current_pk = next_pk
-                        navigation_trace.append(current_pk)
-                        self.logger.info(
-                            f"  Exploring deeper: {branch_name} "
-                            f"(reasoning history: {len(reasoning_history)} steps)"
-                        )
-                    else:
-                        self.logger.info("  explore_branch returned same/empty node")
-                        break
+            # --- Decision, in priority order (preserves original semantics) ---
+            if confirm_result is not None:
+                confirmed_pk = confirm_result.get("pk", "")
+                confirmed_node = self.taxonomy_navigator.get_node(confirmed_pk)
+                confirmed_depth = (
+                    int(confirmed_node.get("depth", 0)) if confirmed_node else 0
+                )
+                justification = confirm_result.get("justification", "")
+
+                # Capture reasoning for memory
+                reasoning_summary = (
+                    f"Confirmed {current_node.get(f'text_{self.language}', current_pk)} "
+                    f"at depth {confirmed_depth}: {justification}"
+                )
+                reasoning_history.append(reasoning_summary)
+
+                # Reject too-shallow confirmations — force deeper exploration
+                if confirmed_depth < self.MIN_CONFIRM_DEPTH and children:
+                    self.logger.info(
+                        f"  Confirmation at depth {confirmed_depth} rejected "
+                        f"(min={self.MIN_CONFIRM_DEPTH}), forcing deeper exploration"
+                    )
+                    # Pick the first child as default deeper path
+                    first_child = children[0]
+                    current_pk = first_child.get("PK", "")
+                    navigation_trace.append(current_pk)
+                    continue  # re-iterate outer loop with new current_pk
+
+                # Build full explanation with reasoning history
+                full_explanation = justification
+                if reasoning_history:
+                    full_explanation += (
+                        f" | Reasoning path: {'; '.join(reasoning_history)}"
+                    )
+
+                # Register confirmation for branch supersession (RA-3 #1048)
+                if supersession_tracker is not None:
+                    supersession_tracker.register(
+                        confirmed_pk,
+                        confirmed_depth,
+                        confirm_result.get("confidence", 0.7),
+                    )
+
+                return IdentifiedFallacy(
+                    fallacy_type=confirm_result.get(
+                        "name",
+                        confirm_result.get("name_fr", confirm_result.get("pk", "")),
+                    ),
+                    taxonomy_pk=confirmed_pk,
+                    taxonomy_path=confirm_result.get("path", ""),
+                    explanation=full_explanation,
+                    confidence=confirm_result.get("confidence", 0.7),
+                    navigation_trace=navigation_trace,
+                    family=current_node.get("Famille", ""),
+                )
+
+            if conclude_result is not None:
+                reason = conclude_result.get("reason", "no reason")
+                # Capture reasoning for memory
+                reasoning_summary = f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
+                reasoning_history.append(reasoning_summary)
+                self.logger.info(f"  Branch abandoned: {reason}")
+                return None
+
+            if not explore_targets:
+                self.logger.info("  explore_branch returned same/empty node")
+                break
+
+            # RA-3 #1048 item 2: the top child stays the primary path; extra
+            # promising children are fanned out as bounded concurrent
+            # sub-branches (additive — the primary path is never regressed).
+            primary_pk, primary_info = explore_targets[0]
+            extras = explore_targets[1:]
+            if (
+                extras
+                and self.ENABLE_SUBBRANCH_FANOUT
+                and results_sink is not None
+                and supersession_tracker is not None
+            ):
+                await self._fanout_subbranches(
+                    extras,
+                    argument_text,
+                    slave_kernel,
+                    slave_settings,
+                    reasoning_history,
+                    supersession_tracker,
+                    results_sink,
+                )
+
+            # Capture reasoning for memory - why the primary branch was chosen
+            primary_name = primary_info.get(
+                "name", primary_info.get("name_fr", primary_pk)
+            )
+            reasoning_history.append(
+                f"Explored {primary_name} from "
+                f"{current_node.get(f'text_{self.language}', current_pk)}"
+            )
+            current_pk = primary_pk
+            navigation_trace.append(current_pk)
+            self.logger.info(
+                f"  Exploring deeper: {primary_name} "
+                f"(reasoning history: {len(reasoning_history)} steps)"
+            )
 
         return None
+
+    async def _fanout_subbranches(
+        self,
+        extras: List[Tuple[str, dict]],
+        argument_text: str,
+        slave_kernel: Kernel,
+        slave_settings: OpenAIPromptExecutionSettings,
+        reasoning_history: List[str],
+        supersession_tracker: "_BranchSupersessionTracker",
+        results_sink: List[IdentifiedFallacy],
+    ) -> None:
+        """Explore extra promising children as bounded concurrent sub-branches.
+
+        RA-3 #1048 item 2. When a fork yields more than one promising child the
+        primary path follows the top child (handled by the caller) and the next
+        few are explored concurrently here. Results are appended to
+        *results_sink* — additive, so the primary single-path descent is never
+        regressed. Bounded by:
+
+          - ``SUBBRANCH_FANOUT_WIDTH`` (extra children spawned per fork), and
+          - the tracker's shared global fan-out budget (per analysis),
+
+        and pruned by the supersession tracker (dead-end / superseded
+        sub-branches abandon early). Anti-pendule #1019: fan-out is capped, not
+        unbounded — it mirrors the beam's ``BEAM_MAX_LLM_CALLS`` discipline.
+        """
+        tasks = []
+        for sub_pk, sub_info in extras[: self.SUBBRANCH_FANOUT_WIDTH]:
+            if not supersession_tracker.try_consume_fanout():
+                self.logger.info("  Sub-branch fan-out budget exhausted")
+                break
+            sub_name = sub_info.get("name", sub_info.get("name_fr", sub_pk))
+            self.logger.info(f"  Fan-out sub-branch: {sub_name} (PK: {sub_pk})")
+            tasks.append(
+                self._explore_single_branch(
+                    argument_text,
+                    sub_pk,
+                    slave_kernel,
+                    slave_settings,
+                    reasoning_history=list(reasoning_history),
+                    supersession_tracker=supersession_tracker,
+                    results_sink=results_sink,
+                )
+            )
+        if not tasks:
+            return
+        sub_results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in sub_results:
+            if isinstance(r, IdentifiedFallacy):
+                results_sink.append(r)
+            elif isinstance(r, BaseException):
+                self.logger.warning(f"  Sub-branch fan-out error: {r}")
 
     @kernel_function(
         name="run_guided_analysis",
@@ -1166,8 +1293,19 @@ class FallacyWorkflowPlugin:
 
             # Phase 2: Parallel iterative deepening on ALL candidates
             slave_kernel, slave_settings = self._create_slave_kernel()
-            # Branch supersession tracker (RA-3 #1048) — shared across branches
-            tracker = self._BranchSupersessionTracker(self.taxonomy_navigator)
+            # Branch supersession tracker (RA-3 #1048) — shared across branches.
+            # The fan-out budget bounds recursive sub-branch exploration
+            # (item 2) across the whole analysis.
+            tracker = self._BranchSupersessionTracker(
+                self.taxonomy_navigator,
+                fanout_budget=(
+                    self.SUBBRANCH_FANOUT_BUDGET if self.ENABLE_SUBBRANCH_FANOUT else 0
+                ),
+            )
+            # Sink collecting fan-out sub-branch results (RA-3 #1048 item 2).
+            # Additive: top-level branch primaries return via the gather below;
+            # any extra promising children explored as sub-branches land here.
+            fanout_sink: List[IdentifiedFallacy] = []
             exploration_tasks = [
                 self._explore_single_branch(
                     argument_text,
@@ -1176,6 +1314,7 @@ class FallacyWorkflowPlugin:
                     slave_settings,
                     reasoning_history=None,
                     supersession_tracker=tracker,
+                    results_sink=fanout_sink,
                 )
                 for pk in candidate_pks
             ]
@@ -1207,6 +1346,25 @@ class FallacyWorkflowPlugin:
                     seen_pks[leaf_pk] = result
                     identified = [r for r in identified if r.fallacy_type != leaf_pk]
                     identified.append(result)
+
+            # Merge fan-out sub-branch results (RA-3 #1048 item 2) with the same
+            # dedup-by-leaf rule (keep highest confidence per leaf PK).
+            for result in fanout_sink:
+                total_iterations += len(result.navigation_trace)
+                leaf_pk = result.fallacy_type
+                if (
+                    leaf_pk in seen_pks
+                    and seen_pks[leaf_pk].confidence >= result.confidence
+                ):
+                    continue
+                seen_pks[leaf_pk] = result
+                identified = [r for r in identified if r.fallacy_type != leaf_pk]
+                identified.append(result)
+            if tracker.fanout_spawned:
+                self.logger.info(
+                    f"Sub-branch fan-out explored {tracker.fanout_spawned} "
+                    f"extra branch(es) (RA-3 #1048 item 2)"
+                )
 
             if identified:
                 identified.sort(key=lambda f: f.confidence, reverse=True)
