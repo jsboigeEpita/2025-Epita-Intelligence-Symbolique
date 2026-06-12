@@ -224,14 +224,39 @@ class HierarchicalOrchestrator:
 async def run_hierarchical_analysis(
     text: str,
     capability_registry: Optional[CapabilityRegistry] = None,
+    mode: str = "bridge",
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
     Convenience entry point for hierarchical analysis.
 
-    Creates a ``HierarchicalOrchestrator`` and runs the analysis.
-    Used by ``run_orchestration.py --mode hierarchical``.
+    Two selectable, comparable axes (anti-pendule #1019 / north-star R311 —
+    the DAG is NOT thrown away):
+
+    * ``mode="bridge"`` (default, M2) — short-circuits the 3-tier chain via
+      ``objectives_to_workflow`` → ``WorkflowExecutor`` (Lego/DAG).
+    * ``mode="delegation"`` (M3, RA-10 #1069) — true strategic→tactical→
+      operational delegation driven by explicit sequential calls. Fails loud
+      on a degraded chain instead of falling back to hardcoded objectives.
+
+    Used by ``run_orchestration.py --mode hierarchical --hierarchical-mode ...``.
     """
+    if mode == "delegation":
+        # Imported lazily to avoid a hard dependency cycle for the M2 path.
+        from argumentation_analysis.orchestration.hierarchical.delegation_orchestrator import (
+            run_delegation_analysis,
+        )
+
+        return await run_delegation_analysis(
+            text,
+            capability_registry=capability_registry,
+            **kwargs,
+        )
+    if mode != "bridge":
+        raise ValueError(
+            f"Unknown hierarchical mode {mode!r}; expected 'bridge' or 'delegation'."
+        )
+
     orchestrator = HierarchicalOrchestrator(
         capability_registry=capability_registry,
     )
