@@ -2551,36 +2551,15 @@ def _generate_attacks_from_args(
 def _python_ranking_fallback(
     arguments: List[str], attacks: List[List[str]], method: str
 ) -> Dict[str, Any]:
-    """Pure-Python ranking fallback when Tweety/JVM is unavailable.
+    """Fail-loud stub — ranking semantics requires JVM/Tweety (#1019, RA-8 #1053).
 
-    Uses a simplified categorizer algorithm: score = 1 / (1 + attackers).
+    Previous pure-Python fallback produced synthetic scores that entered state
+    as authentic formal results (anti-theater violation). Now raises instead.
     """
-    # Count incoming attacks per argument
-    in_attacks: Dict[str, int] = {a: 0 for a in arguments}
-    for src, tgt in attacks:
-        if tgt in in_attacks:
-            in_attacks[tgt] += 1
-
-    # Categorizer-style score
-    scores = {a: 1.0 / (1.0 + cnt) for a, cnt in in_attacks.items()}
-    sorted_args = sorted(scores.items(), key=lambda x: -x[1])
-    comparisons = []
-    for i in range(len(sorted_args) - 1):
-        comparisons.append(
-            {
-                "stronger": sorted_args[i][0],
-                "weaker": sorted_args[i + 1][0],
-                "score_diff": round(sorted_args[i][1] - sorted_args[i + 1][1], 4),
-            }
-        )
-    return {
-        "method": method,
-        "arguments": arguments,
-        "ranking": [a for a, _ in sorted_args],
-        "scores": {a: round(s, 4) for a, s in scores.items()},
-        "comparisons": comparisons,
-        "fallback": "python",
-    }
+    raise RuntimeError(
+        f"Ranking semantics ({method}) unavailable: JVM/Tweety required. "
+        "Install JVM and ensure Tweety JARs are on the classpath."
+    )
 
 
 def _enrich_ranking_with_justification(
@@ -2725,16 +2704,10 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             "Reporting unverified status. (%s)",
             e,
         )
-        return {
-            "framework_type": fw_type,
-            "arguments": args,
-            "attacks": attacks,
-            "supports": supports,
-            "extensions": None,
-            "solver": "unavailable",
-            "fallback": "python",
-            "message": "Bipolar analysis unavailable: no solver could be loaded.",
-        }
+        raise RuntimeError(
+            f"Bipolar analysis ({fw_type}) unavailable: JVM/Tweety required. "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -2753,14 +2726,10 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             handler.analyze_aba_framework, assumptions, rules, contraries, semantics
         )
     except Exception as e:
-        logger.info(f"ABA handler unavailable ({e}), using Python fallback")
-        return {
-            "assumptions": assumptions,
-            "rules": rules,
-            "semantics": semantics,
-            "extensions": [assumptions[:2]] if len(assumptions) >= 2 else [assumptions],
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"ABA reasoning unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -2780,16 +2749,10 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             handler.analyze_adf, statements, conditions, semantics
         )
     except Exception as e:
-        logger.info(f"ADF handler unavailable ({e}), using Python fallback")
-        return {
-            "statements": statements,
-            "acceptance_conditions": conditions,
-            "semantics": semantics,
-            "interpretations": [
-                {s: True for s in statements[:2]} if statements else {}
-            ],
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"ADF reasoning unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 def _python_aspic_fallback(
@@ -2799,99 +2762,15 @@ def _python_aspic_fallback(
     fallacies: List[Any],
     context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Pure-Python ASPIC+ fallback that interprets defensibility.
+    """Fail-loud stub — ASPIC+ analysis requires JVM/Tweety (#1019, RA-8 #1053).
 
-    Determines which arguments survive based on whether they are undermined
-    by detected fallacies or successfully rebutted by counter-arguments.
+    Previous pure-Python fallback produced synthetic defensibility scores that
+    entered state as authentic formal results (anti-theater violation).
     """
-    # Identify undermined arguments (targeted by fallacies)
-    undermined_indices = set()
-    for f in fallacies:
-        if isinstance(f, dict):
-            target = f.get("target_argument", "")
-            for i, arg in enumerate(args):
-                if target and target.lower()[:30] in arg.lower():
-                    undermined_indices.add(i)
-                    break
-            else:
-                # Fallacy without explicit target: assign to positional index
-                idx = min(len(undermined_indices), len(args) - 1)
-                if idx not in undermined_indices:
-                    undermined_indices.add(idx)
-
-    # Check counter-arguments for rebuttal
-    ca_output = context.get("phase_counter_output", {})
-    rebutted_indices = set()
-    if isinstance(ca_output, dict):
-        cas = ca_output.get("llm_counter_arguments", [])
-        if isinstance(cas, list):
-            for ca in cas:
-                if not isinstance(ca, dict):
-                    continue
-                target = ca.get("target_argument", "")
-                for i, arg in enumerate(args):
-                    if target and target.lower()[:30] in arg.lower():
-                        rebutted_indices.add(i)
-                        break
-
-    # Compute defensibility for each argument
-    defensibility = []
-    surviving = []
-    defeated = []
-    for i, arg in enumerate(args):
-        is_undermined = i in undermined_indices
-        is_rebutted = i in rebutted_indices
-        has_strict_support = any(
-            f"claim_{i+1}" in r or f"supported_{i+1}" in r for r in strict
-        )
-        status = "accepted"
-        reasons = []
-        if is_undermined:
-            status = "undermined"
-            matching_fallacies: list[str] = [
-                str(f.get("type", f.get("fallacy_type", "unknown")))
-                for f in fallacies
-                if isinstance(f, dict)
-            ]
-            reasons.append(
-                f"undermined by fallacy: {', '.join(matching_fallacies[:2])}"
-            )
-        if is_rebutted:
-            status = "defeated" if is_undermined else "challenged"
-            reasons.append("rebutted by counter-argument")
-        if has_strict_support and not is_undermined:
-            status = "strictly_supported"
-            reasons.append("backed by strict rule (factual claim)")
-
-        defensibility.append(
-            {
-                "argument": arg[:80],
-                "status": status,
-                "reasons": reasons or ["no attack detected"],
-            }
-        )
-        if status in ("accepted", "strictly_supported"):
-            surviving.append(arg[:80])
-        else:
-            defeated.append(arg[:80])
-
-    return {
-        "strict_rules": strict,
-        "defeasible_rules": defeasible,
-        "extensions": [surviving] if surviving else [args[:1]],
-        "defensibility_analysis": defensibility,
-        "surviving_arguments": surviving,
-        "defeated_arguments": defeated,
-        "statistics": {
-            "total_arguments": len(args),
-            "surviving": len(surviving),
-            "defeated": len(defeated),
-            "strict_rules": len(strict),
-            "defeasible_rules": len(defeasible),
-            "fallacies_applied": len(fallacies),
-        },
-        "fallback": "python",
-    }
+    raise RuntimeError(
+        "ASPIC+ analysis unavailable: JVM/Tweety required. "
+        "Install JVM and ensure Tweety JARs are on the classpath."
+    )
 
 
 async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -2997,32 +2876,10 @@ async def _invoke_belief_revision(
         handler = BeliefRevisionHandler()  # type: ignore[no-untyped-call]
         return await asyncio.to_thread(handler.revise, beliefs, new_belief, method)
     except Exception as e:
-        logger.info(f"Belief revision handler unavailable ({e}), using Python fallback")
-        # Real revision: add new belief, remove the belief it contradicts
-        revised = list(beliefs)
-        removed = []
-
-        # If new_belief negates an existing belief, remove the negated one
-        if new_belief.startswith("NOT("):
-            target = new_belief[4:].rstrip(")")
-            for b in beliefs:
-                if target.lower() in b.lower():
-                    revised.remove(b)
-                    removed.append(b)
-                    break
-
-        if new_belief not in revised:
-            revised.append(new_belief)
-
-        return {
-            "method": method,
-            "original": list(beliefs),
-            "new_belief": new_belief,
-            "revised": revised,
-            "removed": removed,
-            "revision_triggered": new_belief != beliefs[-1] if beliefs else True,
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"Belief revision ({method}) unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_probabilistic(
@@ -3045,23 +2902,10 @@ async def _invoke_probabilistic(
             handler.analyze_probabilistic_framework, args, attacks, probs
         )
     except Exception as e:
-        logger.info(f"Probabilistic handler unavailable ({e}), using Python fallback")
-        # Simple acceptance probability based on attack count
-        in_attacks: Dict[str, int] = {a: 0 for a in args}
-        for src, tgt in attacks:
-            if tgt in in_attacks:
-                in_attacks[tgt] += 1
-        acceptance = {
-            a: round(probs.get(a, 0.5) / (1.0 + cnt), 4)
-            for a, cnt in in_attacks.items()
-        }
-        return {
-            "arguments": args,
-            "attacks": attacks,
-            "initial_probabilities": probs,
-            "acceptance_probabilities": acceptance,
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"Probabilistic argumentation unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3115,72 +2959,10 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
             topic,
         )
     except Exception as e:
-        logger.info(f"Dialogue handler unavailable ({e}), using Python fallback")
-        # Build substantive dialogue using fallacies as attack moves
-        extract_output = context.get("phase_extract_output", {})
-        raw_fallacies = extract_output.get("fallacies", [])
-
-        # Enrich opponent moves with fallacy-based attacks
-        fallacy_attacks = []
-        for f in raw_fallacies[:5]:
-            if isinstance(f, dict):
-                ftype = f.get("type", f.get("fallacy_type", "unknown"))
-                justification = f.get("justification", "")
-                fallacy_attacks.append(f"[CHALLENGE: {ftype}] {justification[:120]}")
-
-        trace = []
-        turn = 1
-        for i, arg in enumerate(pro_args):
-            trace.append(
-                {
-                    "turn": turn,
-                    "speaker": "proponent",
-                    "move_type": "assert",
-                    "move": arg,
-                }
-            )
-            turn += 1
-            # Opponent responds with CA if available, fallacy attack, or counter-arg
-            if i < len(opp_args):
-                trace.append(
-                    {
-                        "turn": turn,
-                        "speaker": "opponent",
-                        "move_type": "counter",
-                        "move": opp_args[i],
-                    }
-                )
-                turn += 1
-            if i < len(fallacy_attacks):
-                trace.append(
-                    {
-                        "turn": turn,
-                        "speaker": "opponent",
-                        "move_type": "challenge",
-                        "move": fallacy_attacks[i],
-                    }
-                )
-                turn += 1
-
-        # Determine winner based on move balance
-        pro_moves = sum(1 for t in trace if t["speaker"] == "proponent")
-        opp_moves = sum(1 for t in trace if t["speaker"] == "opponent")
-        winner = (
-            "proponent"
-            if pro_moves > opp_moves
-            else ("opponent" if opp_moves > pro_moves else "draw")
+        raise RuntimeError(
+            f"Dialogue protocol unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
         )
-
-        return {
-            "topic": topic[:100],
-            "proponent_args": pro_args,
-            "opponent_args": opp_args,
-            "fallacy_attacks": fallacy_attacks,
-            "dialogue_trace": trace,
-            "outcome": winner,
-            "turns": len(trace),
-            "fallback": "python",
-        }
 
 
 async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3209,15 +2991,10 @@ async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
             "statistics": {"handler": "DLHandler", "reasoner": "NaiveDlReasoner"},
         }
     except Exception as e:
-        logger.info(f"DL handler unavailable ({e}), using Python fallback")
-        return {
-            "consistent": True,
-            "message": "Fallback: consistency assumed (JVM unavailable)",
-            "tbox_size": len(tbox),
-            "abox_size": len(abox_concepts) + len(abox_roles),
-            "statistics": {"handler": "fallback"},
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"Description Logic unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3248,14 +3025,10 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
             "statistics": {"handler": "CLHandler", "reasoner": "SimpleCReasoner"},
         }
     except Exception as e:
-        logger.info(f"CL handler unavailable ({e}), using Python fallback")
-        return {
-            "entailed": True,
-            "message": "Fallback: entailment assumed (JVM unavailable)",
-            "num_conditionals": len(conditionals),
-            "statistics": {"handler": "fallback"},
-            "fallback": "python",
-        }
+        raise RuntimeError(
+            f"Conditional Logic unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
+        )
 
 
 async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3302,20 +3075,10 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         handler = SetAFHandler(initializer)
         return await asyncio.to_thread(handler.analyze_setaf, args, attacks, semantics)
     except Exception as e:
-        logger.warning(
-            "SetAF analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)",
-            e,
+        raise RuntimeError(
+            f"SetAF analysis unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
         )
-        return {
-            "arguments": args,
-            "set_attacks": attacks,
-            "semantics": semantics,
-            "extensions": None,
-            "solver": "unavailable",
-            "fallback": "python",
-            "message": "SetAF analysis unavailable: no solver could be loaded.",
-        }
 
 
 async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3340,21 +3103,10 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             handler.analyze_weighted_framework, args, attacks, semantics
         )
     except Exception as e:
-        logger.warning(
-            "Weighted AF analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)",
-            e,
+        raise RuntimeError(
+            f"Weighted AF analysis unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
         )
-        return {
-            "arguments": args,
-            "weighted_attacks": attacks,
-            "semantics": semantics,
-            "scores": None,
-            "extensions": None,
-            "solver": "unavailable",
-            "fallback": "python",
-            "message": "Weighted AF analysis unavailable: no solver could be loaded.",
-        }
 
 
 async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -3391,75 +3143,15 @@ def _python_social_fallback(
     votes: Dict[str, Any],
     context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Pure-Python Social AF fallback using upstream data as social votes.
+    """Fail-loud stub — Social AF requires JVM/Tweety (#1019, RA-8 #1053).
 
-    Derives social acceptability from:
-    - Governance decisions (if available): voting results as social preference
-    - Quality scores: higher quality = more social support
-    - Counter-argument effectiveness: arguments that survive CAs are socially stronger
+    Previous pure-Python fallback produced synthetic social scores that entered
+    state as authentic formal results (anti-theater violation).
     """
-    # Derive votes from upstream governance if available
-    gov_output = context.get("phase_governance_output", {})
-    if isinstance(gov_output, dict) and not votes:
-        decisions = gov_output.get("governance_decisions", [])
-        if isinstance(decisions, list):
-            for d in decisions:
-                if isinstance(d, dict) and "scores" in d:
-                    for arg_id, score in d["scores"].items():
-                        if isinstance(score, (int, float)):
-                            votes[arg_id] = (score, 1.0 - score)
-
-    # Derive social scores from quality scores and attack resilience
-    quality_output = context.get("phase_quality_output", {})
-    quality_scores = {}
-    if isinstance(quality_output, dict):
-        qs = quality_output.get("quality_scores", quality_output.get("scores", {}))
-        if isinstance(qs, dict):
-            quality_scores = qs
-
-    # Compute social scores combining multiple signals
-    social_scores = {}
-    for i, arg in enumerate(args):
-        base_score = 0.5
-        # Signal 1: votes (if available)
-        if arg in votes:
-            v = votes[arg]
-            base_score = (
-                v[0] / (v[0] + v[1]) if isinstance(v, tuple) and sum(v) > 0 else 0.5
-            )
-        # Signal 2: quality score boost
-        # quality_scores keyed by canonical arg_id ("arg_N"), args are free text
-        canonical = f"arg_{i + 1}"
-        q = quality_scores.get(canonical, quality_scores.get(arg))
-        quality_boost = 0.0
-        if isinstance(q, (int, float)):
-            quality_boost = q * 0.3  # quality contributes 30%
-        elif isinstance(q, dict) and "overall" in q:
-            quality_boost = q["overall"] * 0.3
-        # Signal 3: attack resilience (fewer incoming attacks = stronger)
-        incoming = sum(1 for src, tgt in attacks if tgt == arg)
-        resilience = 1.0 / (1.0 + incoming) * 0.2  # resilience contributes 20%
-
-        social_scores[arg] = round(base_score + quality_boost + resilience, 4)
-
-    sorted_args = sorted(social_scores, key=lambda a: -social_scores[a])
-
-    return {
-        "arguments": args,
-        "attacks": attacks,
-        "votes": votes,
-        "social_ranking": sorted_args,
-        "social_scores": social_scores,
-        "social_analysis": [
-            {
-                "argument": arg[:80],
-                "social_score": social_scores.get(arg, 0),
-                "rank": rank + 1,
-            }
-            for rank, arg in enumerate(sorted_args)
-        ],
-        "fallback": "python",
-    }
+    raise RuntimeError(
+        "Social argumentation unavailable: JVM/Tweety required. "
+        "Install JVM and ensure Tweety JARs are on the classpath."
+    )
 
 
 def _python_eaf_fallback(
@@ -3468,111 +3160,15 @@ def _python_eaf_fallback(
     semantics: str,
     context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Pure-Python Epistemic AF fallback using upstream data for belief states.
+    """Fail-loud stub — EAF analysis requires JVM/Tweety (#1019, RA-8 #1053).
 
-    Computes epistemic confidence for each argument based on:
-    - Whether it was identified as fallacious (lower confidence)
-    - Quality scores (higher quality = higher confidence)
-    - Whether it survived counter-arguments (higher confidence)
-    - Whether it has strict support (ASPIC+)
+    Previous pure-Python fallback produced synthetic epistemic states that entered
+    state as authentic formal results (anti-theater violation).
     """
-    # Gather fallacy data
-    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-    fallacy_targets = {}
-    if isinstance(fallacy_output, dict):
-        for f in fallacy_output.get("fallacies", []):
-            if isinstance(f, dict):
-                target = f.get("target_argument", "")
-                ftype = f.get("type", f.get("fallacy_type", "unknown"))
-                if target:
-                    fallacy_targets[target.lower()[:30]] = ftype
-
-    # Gather quality scores
-    quality_output = context.get("phase_quality_output", {})
-    quality_scores = {}
-    if isinstance(quality_output, dict):
-        qs = quality_output.get("quality_scores", quality_output.get("scores", {}))
-        if isinstance(qs, dict):
-            quality_scores = qs
-
-    # Gather ASPIC defensibility
-    aspic_output = context.get("phase_aspic_output", {})
-    surviving = set()
-    if isinstance(aspic_output, dict):
-        for a in aspic_output.get("surviving_arguments", []):
-            surviving.add(str(a).lower()[:30])
-
-    # Compute epistemic states
-    epistemic: Dict[str, Dict[str, Any]] = {}
-    believed_args: list[str] = []
-    disbelieved_args: list[str] = []
-    for arg in args:
-        confidence = 0.6  # base confidence
-        believed = True
-        reasons = []
-
-        # Check fallacy targeting
-        is_fallacious = any(ft in arg.lower()[:30] for ft in fallacy_targets)
-        if is_fallacious:
-            confidence -= 0.3
-            reasons.append("targeted by fallacy")
-
-        # Check quality score
-        q = quality_scores.get(arg)
-        if isinstance(q, (int, float)):
-            confidence += (q - 0.5) * 0.4  # quality shifts confidence
-            reasons.append(f"quality={q:.2f}")
-        elif isinstance(q, dict) and "overall" in q:
-            confidence += (q["overall"] - 0.5) * 0.4
-            reasons.append(f"quality={q['overall']:.2f}")
-
-        # Check ASPIC survival
-        if arg.lower()[:30] in surviving:
-            confidence += 0.15
-            reasons.append("survives ASPIC+ analysis")
-
-        # Check attack count
-        incoming = sum(1 for src, tgt in attacks if tgt == arg)
-        if incoming >= 2:
-            confidence -= 0.15
-            reasons.append(f"heavily attacked ({incoming}x)")
-
-        confidence = max(0.0, min(1.0, confidence))
-        believed = confidence >= 0.4
-
-        epistemic[arg] = {
-            "believed": believed,
-            "confidence": round(confidence, 3),
-            "reasons": reasons or ["no specific evidence"],
-        }
-        if believed:
-            believed_args.append(arg)
-        else:
-            disbelieved_args.append(arg)
-
-    # Compute extensions based on epistemic states
-    extensions = [believed_args] if believed_args else [args[:1]]
-
-    return {
-        "arguments": args,
-        "attacks": attacks,
-        "semantics": semantics,
-        "epistemic_states": epistemic,
-        "extensions": extensions,
-        "believed_arguments": believed_args,
-        "disbelieved_arguments": disbelieved_args,
-        "epistemic_summary": {
-            "total": len(args),
-            "believed": len(believed_args),
-            "disbelieved": len(disbelieved_args),
-            "avg_confidence": round(
-                sum(e["confidence"] for e in epistemic.values())
-                / max(len(epistemic), 1),
-                3,
-            ),
-        },
-        "fallback": "python",
-    }
+    raise RuntimeError(
+        f"Epistemic AF analysis ({semantics}) unavailable: JVM/Tweety required. "
+        "Install JVM and ensure Tweety JARs are on the classpath."
+    )
 
 
 # --- EAF / DeLP / QBF invoke functions (#88, #89, #90) ---
@@ -3621,20 +3217,10 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             handler.analyze_delp, program_text, queries, criterion
         )
     except Exception as e:
-        logger.warning(
-            "DeLP analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)",
-            e,
+        raise RuntimeError(
+            f"DeLP analysis unavailable: JVM/Tweety required ({e}). "
+            "Install JVM and ensure Tweety JARs are on the classpath."
         )
-        return {
-            "program": program_text[:200],
-            "queries": queries,
-            "criterion": criterion,
-            "results": None,
-            "solver": "unavailable",
-            "fallback": "python",
-            "message": "DeLP analysis unavailable: no solver could be loaded.",
-        }
 
 
 async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -4972,24 +4558,12 @@ async def _invoke_propositional_logic(
                 "pl_metrics": pl_metrics,
             }
 
-        # All formulas failed — Python fallback
-        has_contradiction = any(f.startswith("!") for f in formulas) and any(
-            f == f2.lstrip("!")
-            for f in formulas
-            for f2 in formulas
-            if f2.startswith("!")
-        )
+        # All formulas failed — fail-loud (#1019, RA-8 #1053)
         pl_metrics["post_tweety"] = 0
-        return {
-            "formulas": formulas,
-            "satisfiable": not has_contradiction,
-            "model": {f"p{i+1}": True for i in range(len(args))},
-            "logic_type": "propositional",
-            "argument_mapping": argument_mapping
-            or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
-            "fallback": "python",
-            "pl_metrics": pl_metrics,
-        }
+        raise RuntimeError(
+            "Propositional logic analysis unavailable: all Tweety solvers failed "
+            f"for {len(formulas)} formulas. JVM/Tweety required."
+        )
 
 
 async def _invoke_fol_reasoning(
