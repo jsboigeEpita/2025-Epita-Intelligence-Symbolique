@@ -261,20 +261,20 @@ def _median(xs: List[float]) -> float:
 
 async def main_async(args: argparse.Namespace) -> int:
     if args.mode == "real":
-        if not os.environ.get("OPENAI_API_KEY") and not os.environ.get(
-            "OPENROUTER_API_KEY"
-        ):
-            print(
-                "[SKIP] --mode real requested but no OPENAI_API_KEY / "
-                "OPENROUTER_API_KEY in env. No numbers emitted (not faked).",
-                file=sys.stderr,
-            )
-            return 0
+        # Real-LLM wiring (a live llm_service + encrypted-corpus loading) is NOT
+        # implemented in this harness: build_plugin always injects the latency
+        # stub. Emitting the stub's timings under a "real" label would be
+        # fabricated numbers (anti-théâtre #1019), so real mode refuses outright
+        # rather than mislabel stub output — regardless of whether a key is set.
         print(
-            "[real] real-LLM mode is a thin confirmation path; sim mode is the "
-            "primary measurement. Real runs cost tokens.",
+            "[ABORT] --mode real is not wired: this harness only drives the "
+            "latency-stub engine, so it cannot produce live-LLM numbers. sim "
+            "mode is the accepted, primary measurement (see "
+            "RA3_1048_parallel_descent_findings.md). Refusing to emit stub "
+            "timings under a 'real' label. No numbers emitted (not faked).",
             file=sys.stderr,
         )
+        return 2
 
     text = SYNTHETIC_TEXT
     rows: List[Dict[str, Any]] = []
@@ -369,7 +369,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--mode",
         choices=["sim", "real"],
         default="sim",
-        help="sim=latency stub (default, $0); real=live LLM confirmation",
+        help="sim=latency stub (default, $0); real=NOT WIRED, aborts (no faked numbers)",
     )
     p.add_argument(
         "--corpus-idx",

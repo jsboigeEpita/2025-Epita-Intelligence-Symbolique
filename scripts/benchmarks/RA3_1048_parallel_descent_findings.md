@@ -12,8 +12,10 @@ NOT disabled, only forced serial — anti-pendule #1019). Default mode injects a
 fixed-latency LLM stub so each round-trip is a controlled `asyncio.sleep`; the
 stub drives the **real** descent structurally (content-independent), so the
 parallel/sequential ratio isolates the engine's concurrency structure at $0
-token cost and zero dataset-privacy surface. A `--mode real` confirmation path
-exists but skips visibly without a funded key (no fabricated numbers).
+token cost and zero dataset-privacy surface. `--mode real` is intentionally
+**not wired** — the harness only drives the latency stub, so real mode aborts
+loudly rather than emit stub timings under a "real" label (anti-théâtre #1019,
+no fabricated numbers). sim is the accepted, primary measurement.
 
 ## Results (sim, latency 0.3 s/call, 3 runs median)
 
