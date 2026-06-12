@@ -246,25 +246,37 @@ class StrategicManager:
 
     # ... Les méthodes privées restent inchangées comme détails d'implémentation ...
     def _define_initial_objectives(self) -> None:
-        """Define strategic objectives — LLM-driven if kernel available, else fallback."""
+        """Define strategic objectives — LLM-driven if kernel available, else fallback.
+
+        When fallback is used, objectives are tagged source="degraded" so downstream
+        consumers can detect non-LLM output (anti-théâtre R369).
+        """
         if self._kernel is not None:
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # Already in async context — schedule coroutine
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        objectives = loop.run_in_executor(
-                            pool, lambda: asyncio.run(self._generate_llm_objectives())
-                        )
-                        # For sync callers, we can't await. Use fallback.
-                        # Async callers should use initialize_analysis_async().
-                        objectives = self._fallback_objectives()
+                    # Already in async context — can't run_until_complete.
+                    # Sync callers in async context must use initialize_analysis_async().
+                    self.logger.warning(
+                        "Cannot run LLM objectives in sync path within async loop — "
+                        "use initialize_analysis_async(). Falling back to degraded."
+                    )
+                    objectives = self._fallback_objectives()
                 else:
                     objectives = loop.run_until_complete(self._generate_llm_objectives())
-            except Exception as e:
+            except (json.JSONDecodeError, ValueError, TypeError, RuntimeError) as e:
+                # Narrowed catch: only LLM/parse/async errors, not blanket Exception.
                 self.logger.warning(
-                    "LLM objective generation failed, using fallback: %s", e
+                    "LLM objective generation failed (%s: %s), using degraded fallback",
+                    type(e).__name__, e,
+                )
+                objectives = self._fallback_objectives()
+            except Exception as e:
+                # Unexpected errors: log at ERROR level for visibility (fail-loud).
+                self.logger.error(
+                    "UNEXPECTED error in LLM objective generation (%s: %s), "
+                    "using degraded fallback — investigate if persistent",
+                    type(e).__name__, e,
                 )
                 objectives = self._fallback_objectives()
         else:
@@ -274,27 +286,37 @@ class StrategicManager:
             self.state.add_global_objective(objective)
 
     def _fallback_objectives(self) -> List[Dict[str, Any]]:
-        """Return the original 4 hardcoded objectives (backward-compat fallback)."""
+        """Return the original 4 hardcoded objectives (backward-compat fallback).
+
+        Each objective is tagged with source="degraded" so downstream consumers
+        can distinguish LLM-generated objectives from degraded fallback ones.
+        This prevents the anti-théâtre violation R369 where deterministic output
+        masquerades as LLM-driven.
+        """
         return [
             {
                 "id": "obj-1",
                 "description": "Identifier les arguments principaux",
                 "priority": "high",
+                "source": "degraded",
             },
             {
                 "id": "obj-2",
                 "description": "Détecter les sophismes",
                 "priority": "high",
+                "source": "degraded",
             },
             {
                 "id": "obj-3",
                 "description": "Analyser la structure logique",
                 "priority": "medium",
+                "source": "degraded",
             },
             {
                 "id": "obj-4",
                 "description": "Évaluer la cohérence globale",
                 "priority": "medium",
+                "source": "degraded",
             },
         ]
 
@@ -359,11 +381,30 @@ class StrategicManager:
                     raise ValueError(f"Objective missing required keys: {obj}")
 
             self.logger.info("LLM generated %d strategic objectives", len(objectives))
+            # Tag LLM-generated objectives with source="llm"
+            for obj in objectives:
+                obj["source"] = "llm"
             return objectives
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            # Parse/validation errors — expected failure modes
             self.logger.warning(
-                "LLM objective generation failed (%s), using fallback", e
+                "LLM objective generation failed (%s: %s), using degraded fallback",
+                type(e).__name__, e,
+            )
+            return self._fallback_objectives()
+        except (ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+            # Network/timeout errors — expected failure modes
+            self.logger.warning(
+                "LLM objective generation network error (%s: %s), using degraded fallback",
+                type(e).__name__, e,
+            )
+            return self._fallback_objectives()
+        except Exception as e:
+            # Unexpected errors: fail-loud at ERROR level
+            self.logger.error(
+                "UNEXPECTED error in _generate_llm_objectives (%s: %s) — investigate",
+                type(e).__name__, e,
             )
             return self._fallback_objectives()
 
@@ -381,8 +422,19 @@ class StrategicManager:
                 objectives = await self._generate_llm_objectives()
                 for obj in objectives:
                     self.state.add_global_objective(obj)
+            except (json.JSONDecodeError, ValueError, TypeError,
+                    ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+                self.logger.warning(
+                    "LLM objectives failed in async path (%s: %s), using degraded fallback",
+                    type(e).__name__, e,
+                )
+                for obj in self._fallback_objectives():
+                    self.state.add_global_objective(obj)
             except Exception as e:
-                self.logger.warning("LLM objectives failed in async path: %s", e)
+                self.logger.error(
+                    "UNEXPECTED error in async LLM objectives (%s: %s) — investigate",
+                    type(e).__name__, e,
+                )
                 for obj in self._fallback_objectives():
                     self.state.add_global_objective(obj)
         else:
