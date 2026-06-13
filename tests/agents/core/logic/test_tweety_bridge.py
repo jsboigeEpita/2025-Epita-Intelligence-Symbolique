@@ -141,6 +141,32 @@ class TestTweetyBridge(unittest.TestCase):
             except Exception as e:
                 self.fail(f"fol_query a levé une exception inattendue: {e}")
 
+    def test_pl_check_consistency_delegation(self):
+        """PLHandler exposes the uniform check_consistency API (#1083).
+
+        Regression guard: TweetyBridge.check_consistency(belief, "propositional")
+        must dispatch to PLHandler.check_consistency. Before #1083, PLHandler only
+        exposed pl_check_consistency/pl_check_consistency_sat, so the dispatch raised
+        AttributeError on every formula -> the per-formula isolation loop in
+        _invoke_propositional_logic collapsed to 0 survivors (PL=0).
+        """
+        belief_set = "p => q"
+        if not self.use_real_jpype:
+            self.mock_pl_handler_instance.check_consistency.return_value = (
+                True,
+                "consistent",
+            )
+            ok, msg = self.bridge.check_consistency(belief_set, "propositional")
+            self.mock_pl_handler_instance.check_consistency.assert_called_once_with(
+                belief_set
+            )
+            self.assertTrue(ok)
+            self.assertEqual(msg, "consistent")
+        else:
+            # Real JVM: the textbook implication must parse and report consistent.
+            ok, _msg = self.bridge.check_consistency(belief_set, "propositional")
+            self.assertTrue(ok)
+
     def test_validate_pl_formula_delegation(self):
         """Vérifie que validate_pl_formula délègue correctement."""
         formula = "a => b"
