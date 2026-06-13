@@ -109,13 +109,15 @@ async def _invoke_collaborative_analysis(
     Returns a dict with per-role outputs and final synthesis.
     """
     from openai import AsyncOpenAI
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
-    api_key = os.environ.get("OPENAI_API_KEY", "")
+    # RA anti-théâtre #1079: route through the OpenRouter toggle (canonical
+    # resolver) so the collaborative debate hits the same provider as the rest
+    # of the pipeline instead of bypassing to official OpenAI → 429.
+    api_key, base_url, model_id = resolve_chat_endpoint()
     if not api_key:
         return _fallback_collaborative(input_text, context)
 
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     # Gather upstream context
