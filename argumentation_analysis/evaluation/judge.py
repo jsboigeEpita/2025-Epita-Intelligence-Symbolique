@@ -87,7 +87,6 @@ class LLMJudge:
             model_registry: Optional ModelRegistry for model switching.
         """
         from openai import AsyncOpenAI
-        import os
 
         # Prepare the prompt with smart summarization
         prepared = self._prepare_results_for_judge(analysis_results)
@@ -109,9 +108,17 @@ class LLMJudge:
             model_registry.activate(self.model_name)
 
         try:
-            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            api_key = os.environ.get("OPENAI_API_KEY", "")
+            # RA anti-théâtre #1079: honor the OpenRouter toggle so the LLM
+            # judge scores the same provider the pipeline used (no silent 429
+            # → zeroed-score fallback masking the real quality).
+            from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+            api_key, base_url, model_id = resolve_chat_endpoint()
+            if not api_key:
+                raise ValueError(
+                    "No LLM API key configured (set OPENAI_API_KEY, or "
+                    "OPENROUTER_API_KEY + OPENROUTER_BASE_URL)."
+                )
 
             client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 

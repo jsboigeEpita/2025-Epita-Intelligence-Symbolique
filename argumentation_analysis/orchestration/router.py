@@ -146,8 +146,11 @@ class TextAnalysisRouter:
                       are actually available (have registered providers).
         """
         self.registry = registry
-        self._api_key = os.environ.get("OPENAI_API_KEY")
-        self._model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        # RA anti-théâtre #1079: honor the OpenRouter toggle so routing uses the
+        # same provider as the rest of the pipeline (no silent 429 fallback).
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        self._api_key, self._base_url, self._model = resolve_chat_endpoint()
 
     # ----------------------------------------------------------
     # Public API
@@ -236,7 +239,9 @@ class TextAnalysisRouter:
         """Use LLM to determine which capabilities to activate."""
         from openai import AsyncOpenAI
 
-        client = AsyncOpenAI(api_key=self._api_key)
+        # Client built from the toggle-resolved endpoint (init); base_url ensures
+        # OpenRouter is targeted when the toggle is on (anti-théâtre #1079).
+        client = AsyncOpenAI(api_key=self._api_key, base_url=self._base_url)
 
         # Build capability list for the prompt
         cap_lines = []
