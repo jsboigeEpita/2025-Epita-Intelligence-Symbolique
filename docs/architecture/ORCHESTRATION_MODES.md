@@ -10,7 +10,7 @@ The system supports **5 orchestration modes**, each suited to different analysis
 |------|---------------|--------|-----------|----------|
 | **Sequential (Pipeline)** | ✅ `--mode pipeline` (default) | ACTIVE | `WorkflowExecutor` | Production analysis, benchmarks, API |
 | **Conversational** | ✅ `--mode conversational` | ACTIVE | `ConversationalOrchestrator` | Rich multi-agent dialogue with cross-KB synergies |
-| **Hierarchical** | ✅ `--mode hierarchical` | ACTIVE | `HierarchicalOrchestrator` | Strategic planning → Lego execution (bridge) |
+| **Hierarchical** | ✅ `--mode hierarchical [--hierarchical-mode {bridge,delegation}]` | ACTIVE | `HierarchicalOrchestrator` (M2) / `DelegationOrchestrator` (M3) | Strategic planning → Lego execution (M2, default) or true S→T→O delegation (M3, RA-10) |
 | **Sherlock Modern** | ✅ `--mode sherlock_modern` | ACTIVE | `SherlockModernOrchestrator` | Investigation multi-agent (#357) |
 | **Cluedo** | ❌ script-only | ACTIVE | `CluedoExtendedOrchestrator` | Sherlock-Watson investigation game |
 
@@ -122,8 +122,14 @@ TraceAnalyzer captures snapshots per round
 
 **Entry points:**
 
-- CLI: `python run_orchestration.py --text "..." --mode hierarchical`
+- CLI: `python run_orchestration.py --text "..." --mode hierarchical [--hierarchical-mode {bridge,delegation}]`
 - API: (planned — not yet wired)
+
+This mode now exposes **two comparable, selectable axes** (RA-10 #1069, anti-pendule #1019 /
+north-star R311 "stratégies comparables"). The DAG/bridge path (M2) is the default and is
+**not discarded** — the true 3-tier delegation chain (M3) is restored *beside* it.
+
+### M2 — bridge (default, `--hierarchical-mode bridge`)
 
 **How it works (bridge approach, R311-B4):**
 
@@ -131,7 +137,8 @@ TraceAnalyzer captures snapshots per round
 - Translates objectives into a `WorkflowDefinition` via `objectives_to_workflow()`
 - Executes via `WorkflowExecutor` (backed by `CapabilityRegistry`)
 - `StrategicManager.evaluate_final_results()` produces the final conclusion
-- This "bridge" approach reuses the Lego Architecture rather than the dormant 3-tier delegation chain
+- This "bridge" approach reuses the Lego Architecture; the 3-tier control structure is
+  short-circuited (tactical/operational tiers are not traversed)
 
 **Flow:**
 
@@ -147,12 +154,48 @@ WorkflowExecutor.execute(workflow, text) → phase results
 StrategicManager.evaluate_final_results(results) → conclusion
 ```
 
-**Use case:** Complex, goal-driven analyses where a strategic planner decomposes objectives into sub-tasks distributed across specialist agents.
+### M3 — delegation (`--hierarchical-mode delegation`, RA-10 #1069)
+
+**How it works (explicit sequential 3-tier calls):**
+
+- Drives the tiers by **explicit S→T→O sequential calls** (no pub/sub). The 3-tier
+  decomposition/translation logic is fully intact; the chain was dormant only because two
+  pub/sub auto-subscriptions are deliberately commented out
+  (`tactical/coordinator.py:257`, `operational/manager.py:310`).
+- **Strategic NL objective flows S→T→O**: decomposition carries only `objective_id`, so
+  `DelegationOrchestrator.analyze()` re-attaches the originating objective's NL description
+  onto each operational command (`strategic_objective_description`).
+- **Fail-loud (#1019)**: empty strategic objectives / zero tactical tasks / absent operational
+  tier → `DelegationError` (not a heuristic fallback). Missing capability provider → honest
+  per-task `status="failed"`, never a fabricated result. M3 reuses RA-4's existing
+  `_fallback_objectives()` (tagged `source="degraded"`); it introduces **zero** new hardcoded
+  objectives.
+
+**Flow:**
+
+```text
+DelegationOrchestrator.analyze(text)
+  S: StrategicManager.initialize_analysis(text) → objectives      (FAIL LOUD if empty)
+  T: TaskCoordinator.process_strategic_objectives(objectives)     → tasks  (FAIL LOUD if 0)
+  T→O: for task: interface.translate_task_to_command(task)
+       command["strategic_objective_description"] = objective.description   # NL thread S→T→O
+       operational_executor(command)        # CapabilityRegistry via RegistryBackedOperationalRegistry
+  O→T→S: aggregate per-objective success_rate → StrategicManager.evaluate_final_results()
+```
+
+A detailed M3-vs-M2 comparison on a reference corpus (opaque IDs, provenance header) lives in
+`docs/reports/RA10_M3_vs_M2_delegation_note.md`.
+
+**Use case:** Complex, goal-driven analyses where a strategic planner decomposes objectives
+into sub-tasks distributed across specialist agents. M2 when the DAG/Lego execution is wanted;
+M3 when the true S→T→O delegation chain (with strategic NL reaching the operational tier) is
+the comparable axis under study.
 
 **Key files:**
 
-- `argumentation_analysis/orchestration/hierarchical/orchestrator.py` — `HierarchicalOrchestrator` + `run_hierarchical_analysis()`
-- `argumentation_analysis/orchestration/hierarchical/hierarchy_bridge.py` — `objectives_to_workflow()`, `RegistryBackedOperationalRegistry`
+- `argumentation_analysis/orchestration/hierarchical/orchestrator.py` — `HierarchicalOrchestrator` (M2) + `run_hierarchical_analysis(mode=...)` selector
+- `argumentation_analysis/orchestration/hierarchical/delegation_orchestrator.py` — `DelegationOrchestrator` + `DelegationError` + `make_registry_operational_executor` (M3, RA-10)
+- `argumentation_analysis/orchestration/hierarchical/hierarchy_bridge.py` — `objectives_to_workflow()`, `RegistryBackedOperationalRegistry` (shared by both axes)
 - `argumentation_analysis/orchestration/hierarchical/strategic/manager.py` — `StrategicManager`
 - `docs/architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md` — 3-tier architecture reference
 
@@ -164,7 +207,12 @@ StrategicManager.evaluate_final_results(results) → conclusion
 - B4: `HierarchicalOrchestrator` bridge class + CLI `--mode hierarchical`
 - B5: Documentation updated
 
-Legacy 3-tier chain (Strategic→Tactical→Operational) remains dormant with 302 tests behind `pytestmark = pytest.mark.skip`. The bridge approach bypasses this chain entirely.
+**RA-10 #1069 (ORC-2):** M3 true 3-tier delegation restored as a selectable axis
+(`--hierarchical-mode delegation`). The dormant pub/sub-wired chain is *bypassed* (not
+re-enabled — its message-bus races motivated the deactivation); M3 drives the tiers by explicit
+sequential calls. The legacy skip-marked test suite (Strategic→Tactical→Operational pub/sub
+path) remains dormant; M3's behavior is covered by
+`tests/unit/orchestration/test_hierarchical_delegation.py` (9 zero-API tests).
 
 ---
 
@@ -212,7 +260,8 @@ python run_orchestration.py --file text.txt --workflow collaborative
 python run_orchestration.py --text "Your argument text" --mode conversational
 
 # Hierarchical mode (strategic planning → Lego execution)
-python run_orchestration.py --text "Your argument text" --mode hierarchical
+python run_orchestration.py --text "Your argument text" --mode hierarchical                         # M2 bridge (default)
+python run_orchestration.py --text "Your argument text" --mode hierarchical --hierarchical-mode delegation  # M3 true 3-tier (RA-10)
 
 # List available workflows
 python run_orchestration.py --list-workflows
@@ -243,13 +292,13 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 
 | Aspect | Sequential | Conversational | Hierarchical | Cluedo |
 |--------|-----------|---------------|-------------|--------|
-| Agent interaction | None (isolated phases) | Rich dialogue via GroupChat | Strategic → Lego bridge | Cyclic turns |
-| State model | UnifiedAnalysisState | Shared via StateManagerPlugin | StrategicState + WorkflowResults | EnqueteCluedoState |
-| Plugin routing | All-to-all | Per-agent specialty | Via CapabilityRegistry | Domain-specific |
-| LLM calls | 1 per phase | Multiple per round | 1 per phase (via WorkflowExecutor) | Per agent turn |
-| Cross-KB enrichment | Via context dict | Via state reads + prompts | Via objectives → capabilities map | N/A |
-| Convergence | Phase completion | PM designation + trace | Objective success rate | Oracle termination |
-| Best for | Batch analysis, API | Deep interactive analysis | Goal decomposition | Investigation game |
+| Agent interaction | None (isolated phases) | Rich dialogue via GroupChat | M2 bridge: Strategic → Lego DAG; M3 delegation: S→T→O sequential | Cyclic turns |
+| State model | UnifiedAnalysisState | Shared via StateManagerPlugin | StrategicState + (WorkflowResults \| operational_results) | EnqueteCluedoState |
+| Plugin routing | All-to-all | Per-agent specialty | Via CapabilityRegistry (both M2 & M3) | Domain-specific |
+| LLM calls | 1 per phase | Multiple per round | M2: 1 per phase (WorkflowExecutor); M3: per operational command | Per agent turn |
+| Cross-KB enrichment | Via context dict | Via state reads + prompts | M2: objectives → capabilities map; M3: strategic NL → operational command | N/A |
+| Convergence | Phase completion | PM designation + trace | Objective success rate (both axes) | Oracle termination |
+| Best for | Batch analysis, API | Deep interactive analysis | Goal decomposition (M2 DAG) / true S→T→O delegation study (M3) | Investigation game |
 
 ---
 
