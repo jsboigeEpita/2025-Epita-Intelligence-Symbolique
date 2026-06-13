@@ -767,7 +767,6 @@ class OrchestrationServiceManager:
 
         try:
             # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
-            import openai
             import time
 
             api_key = (
@@ -799,8 +798,6 @@ INSTRUCTIONS:
 
 Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetorique, coherence, recommandations."""
 
-            # Configuration OpenAI standard avec AsyncOpenAI
-            client = openai.AsyncOpenAI(api_key=api_key)
             model = "gpt-5-mini"
 
             # Mesurer le temps de début
@@ -858,7 +855,6 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
 
         try:
             # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
-            import openai
             import time
 
             api_key = (
@@ -892,8 +888,6 @@ INSTRUCTIONS OPÉRATIONNELLES:
 
 Réponds au format JSON avec les clés: entites, relations, patterns, persuasion, premisses, conclusions, biais, validite_logique."""
 
-            # Configuration OpenAI standard avec AsyncOpenAI
-            client = openai.AsyncOpenAI(api_key=api_key)
             model = "gpt-5-mini"
 
             # Mesurer le temps de début
