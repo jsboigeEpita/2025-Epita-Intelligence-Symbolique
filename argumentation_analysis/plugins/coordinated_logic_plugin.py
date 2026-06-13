@@ -38,14 +38,27 @@ def _parse_json_from_llm(raw: str) -> dict:
 
 
 def _get_openai_client():
-    """Create an AsyncOpenAI client from environment config."""
+    """Create an AsyncOpenAI client from environment config.
+
+    Honors the OpenRouter toggle (same logic as core.llm_service.create_llm_service)
+    so coordinated-logic phases route via OpenRouter when configured.
+    """
     from openai import AsyncOpenAI
 
-    api_key = os.environ.get("OPENAI_API_KEY", "")
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+    if use_openrouter:
+        api_key = openrouter_api_key
+        base_url = openrouter_base_url
+        model_id = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+
     if not api_key:
         return None, "", ""
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
     return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id, api_key
 
 

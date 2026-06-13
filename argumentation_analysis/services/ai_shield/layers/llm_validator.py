@@ -35,9 +35,20 @@ class LLMValidatorLayer(ShieldLayer):
         model: Optional[str] = None,
     ):
         super().__init__(name="llm_validator", threshold=threshold, enabled=enabled)
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-        self._model = model or os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-        self._base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        # Honor the OpenRouter toggle (same logic as core.llm_service.create_llm_service).
+        # Without this the shield's LLM validator hit the official OpenAI endpoint
+        # (429 quota) and silently failed-open instead of performing real analysis.
+        openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+        use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+        if use_openrouter and not api_key:
+            self._api_key = openrouter_api_key
+            self._model = model or os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+            self._base_url = openrouter_base_url
+        else:
+            self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+            self._model = model or os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            self._base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
     def validate(self, text: str, **kwargs) -> LayerResult:
         """Validate input using LLM analysis.
