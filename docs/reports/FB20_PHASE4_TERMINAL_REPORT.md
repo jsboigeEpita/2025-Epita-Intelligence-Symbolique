@@ -97,7 +97,9 @@ completes, this section will be refreshed.
 
 ### 2.C Formal Logic Analysis
 
-- **PL verdicts**: **25 formulas** (non-zero, unlike corpora B/C which both yielded PL=0 today) — on the 2026-06-10 run the LLM-generated formula syntax was parseable by Tweety. **Noting a PL regression risk**: today's runs (B/C) all yielded PL=0, suggesting the formula-generation or Tweety-parsing path may have degraded between 06-10 and 06-13. Flagged for investigation.
+- **PL verdicts**: ~~25 formulas~~ **CORRECTED by FB-21 #1083** (see below). The 25 were **Python-heuristic fallback** (`"fallback": "python"`, `has_contradiction = any(f.startswith("!"))`) synthesizing a non-empty result when Tweety could not parse — **not real Tweety verification**. This was the exact #1019 theater mode: a non-zero PL count masking a broken verification path.
+
+  > **FB-21 #1083 correction**: `TweetyBridge.check_consistency("propositional")` dispatched to `PLHandler.check_consistency` — a method that **never existed** (PLHandler only exposed `pl_check_consistency`/`pl_check_consistency_sat`). Every formula raised `AttributeError`, collapsing the per-formula isolation loop to 0 survivors. On 06-10 this was masked by a Python fallback; **RA-8 #1066** (`c685ed5e`) correctly removed that theater-fallback (replaced with fail-loud `RuntimeError`), exposing the latent bug as PL=0 on 06-13. FB-21 fixes it by adding the missing `PLHandler.check_consistency` (mirrors `FOLHandler`). Post-fix corpus_C re-run: **pl_verified=18** (real 2-pass LLM formulas, `template:0`, 3/4 implications Tweety-verified per-formula in isolated test). The "PL regression 06-10→06-13" hypothesis (§5.3 below) is **REFUTED** — there was no regression, only a latent bug unmasked by anti-theater work.
 - **FOL consistency**: **8 formulas, all 8 verified**.
 - **Abstract argumentation (Dung/ASPIC)**: 12 frameworks, 1 130 extensions.
 
@@ -109,11 +111,11 @@ completes, this section will be refreshed.
 
 ### 2.E Convergence Synthesis
 
-- **5-signal convergence**: fallacies (8) + counter-args (16) + jtms (44) + dung (1 130) + **PL (25)**. Quality MISSING (4/5), but PL is present here (unlike B/C) — so this corpus shows the strongest formal-logic convergence of the three.
+- **5-signal convergence**: fallacies (8) + counter-args (16) + jtms (44) + dung (1 130) + ~~PL (25)~~ (FB-21 #1083: those 25 were Python-fallback theater, not real Tweety — see §2.C). Quality MISSING (4/5). corpus_A's strongest real formal signals are FOL 8/8 + 12 Dung frameworks.
 
 ### 2.CONCLUSION — corpus_A verdict vs 0-shot
 
-> _Provisional: the pipeline DECIDES on formal grounding (PL 25 formulas + FOL 8/8 + 12 Dung frameworks + 16 counter-args + 44 JTMS) the baseline cannot produce. corpus_A is the strongest case — it is the only corpus where PL verification succeeded. Verdict **EDGES to DECIDES** pending the fresh post-fix run confirmation (the 06-10 provenance caps certainty). See §5._
+> _FB-21 #1083 correction: the earlier "PL 25 → EDGES to DECIDES" framing rested on the 06-10 PL count, which FB-21 proved was Python-heuristic fallback theater (not Tweety verification). With that corrected, corpus_A's real formal grounding is FOL 8/8 + 12 Dung frameworks + 16 counter-args + 44 JTMS — still a genuine EDGES over the baseline, but no longer the unique PL-deciding corpus. Verdict **EDGES** (aligned with corpora B/C)._
 
 ---
 
@@ -192,15 +194,16 @@ Scored against the 11-category rubric. Ordinal scale: **DECIDES** (pipeline stri
 
 | Corpus | score_B | ordinal_B |
 |--------|---------|-----------|
-| doc_C | FOL 15/15, 12 Dung fw, 20 counter-args, 46 JTMS, 10 fallacies — but PL=0, quality MISSING | **EDGES** |
-| doc_A | PL **25** (only corpus with PL verdicts) + FOL 8/8, 12 Dung fw, 16 counter-args, 44 JTMS, 8 fallacies — quality MISSING *(06-10 provenance)* | **EDGES→DECIDES** |
-| doc_B | FOL 12/12, 12 Dung fw, 12 counter-args, 40 JTMS, 6 fallacies (truncated) — PL=0, quality MISSING | **EDGES** |
+| doc_C | FOL 15/15, 12 Dung fw, 20 counter-args, 46 JTMS, 10 fallacies — PL=0 (pre-#1083), quality MISSING | **EDGES** |
+| doc_A | ~~PL **25**~~ (FB-21: that was Python-fallback theater, not Tweety) + FOL 8/8, 12 Dung fw, 16 counter-args, 44 JTMS, 8 fallacies — quality MISSING *(06-10 provenance)* | **EDGES** |
+| doc_B | FOL 12/12, 12 Dung fw, 12 counter-args, 40 JTMS, 6 fallacies (truncated) — PL=0 (pre-#1083), quality MISSING | **EDGES** |
+
+> **FB-21 #1083 update**: the "PL=0 on B/C" gap was a **latent code bug** (`PLHandler.check_consistency` missing), not "Tweety rejects LLM-generated syntax" as originally written. FB-21 adds the missing method; a post-fix corpus_C re-run yields **pl_verified=18** (real 2-pass LLM formulas, per-formula Tweety-isolated). The PL axis is no longer structurally capped — but the quality radar gap (spacy) remains, so the verdict stays EDGES pending a full A/B/C re-run with #1083. The "PL regression 06-10→06-13" risk in §5.3 is **REFUTED** (latent bug, not regression).
 
 **Why EDGES, not DECIDES**: the pipeline produces formal artifacts (FOL verified, Dung extensions,
 JTMS beliefs, counter-arguments) that the 0-shot baseline structurally **cannot** — that is a
 genuine DECIDES axis. But two honest gaps cap it at EDGES this run:
-1. **PL verification gap** (Tweety rejects LLM-generated syntax) → the propositional-logic axis
-   produces 0 verdicts, so one of the 11 categories is effectively TIES/MISSED, not DECIDES.
+1. **PL verification gap** (~~Tweety rejects LLM-generated syntax~~ → **latent missing-method bug, FIXED by #1083**; the corpus_A "PL=25" was heuristic-fallback theater, not real verification). Post-#1083 corpus_C shows PL=18 real; a full re-run would lift this axis — not yet reflected in the corpus-specific scores above.
 2. **Quality radar MISSING** (spacy WinError 182) → the 9-virtue quality category is unevaluated.
 
 The FOL + Dung + JTMS + counter-argument + fallacy axes still DECIDE; the min-rule across the
@@ -232,13 +235,13 @@ Epic verdict = min(ordinal_B_doc_A, ordinal_B_doc_B, ordinal_B_doc_C)
 |--------|-----------|
 | doc_C | EDGES |
 | doc_B | EDGES |
-| doc_A | EDGES→DECIDES (06-10 provenance; PL=25 is the deciding factor, but re-run pending) |
+| doc_A | EDGES (FB-21: the earlier "EDGES→DECIDES" was inflated by Python-fallback PL theater — corrected; corpus_A aligns with B/C) |
 
 **Epic verdict (min rule) = EDGES**. No corpus at LOSES. The closure bar (≥ EDGES, no LOSES) is **met**.
 
-The verdict is capped at EDGES (not DECIDES) for two honest reasons:
-1. **PL regression risk**: corpus_A (06-10) shows PL=25, but today's corpus_B and corpus_C both yield PL=0 (Tweety rejects LLM-generated formula syntax). If the post-fix re-run of corpus_A also yields PL=0, even doc_A drops to EDGES. The PL axis is the swing factor.
-2. **Quality radar gap**: the spacy/textstat WinError 182 failure is structural across all three corpora — the 9-virtue quality category is unevaluated everywhere.
+The verdict is capped at EDGES (not DECIDES) for the following honest reasons:
+1. **PL axis (~~regression risk~~ → RESOLVED by FB-21 #1083)**: the apparent "PL 06-10=25 → 06-13=0" was **not a regression**. The 06-10 "25" was Python-heuristic fallback theater; the 06-13 "0" was RA-8 #1066 correctly killing that theater, exposing a latent bug (`PLHandler.check_consistency` missing). FB-21 #1083 fixes the bug — post-fix corpus_C shows **pl_verified=18** (real). The PL axis is no longer a swing factor capping DECIDES; a full A/B/C re-run with #1083 would lift it. Not reflected in the corpus scores above because the re-run is not yet complete for A/B.
+2. **Quality radar gap**: the spacy/textstat WinError 182 failure is structural across all three corpora — the 9-virtue quality category is unevaluated everywhere. **This is now the single remaining cap on DECIDES.**
 
 A DECIDES verdict would require both the PL axis (all corpora) and the quality axis to produce verdicts — out of FB-20 scope (plumbing, not brick-fix per dispatch).
 
@@ -271,10 +274,18 @@ A DECIDES verdict would require both the PL axis (all corpora) and the quality a
 58s with arguments=0/fallacies=0 — the exact anti-theater failure mode this report must avoid.
 
 **Known degradations this run (honest, not fabricated)**:
-- `quality` phase FAILED (spacy/textstat WinError 182, torch DLL order) → no 9-virtue radar.
-- `pl` phase FAILED (Tweety solvers reject LLM-generated formula syntax) → 0 PL verdicts.
+- `quality` phase FAILED (spacy/textstat WinError 182, torch DLL order) → no 9-virtue radar. **Now the single remaining cap on DECIDES** post-FB-21.
+- ~~`pl` phase FAILED (Tweety solvers reject LLM-generated formula syntax) → 0 PL verdicts.~~ **CORRECTED by FB-21 #1083**: the real cause was a missing `PLHandler.check_consistency` method (not formula syntax). Post-fix corpus_C: pl_verified=18. The corpus_A "PL=25" was Python-fallback theater.
 - `probabilistic` FAILED (Tweety JAR missing class) / `stakes` FAILED (`'str' has no .get`).
 - `fallacy_families` aggregated to `unknown` (per-fallacy family field not populated in snapshot).
 
 **Anti-pendule note**: This is a RUN + curated report, not a code-fix track. The PR #1077 plumbing
 fix was necessary to make the measurement honest (anti-theater), not a brick re-fix.
+
+**Post-publication correction (FB-21 #1083)**: this report originally attributed PL=0 to
+"Tweety rejecting LLM-generated formula syntax" and corpus_A's PL=25 to "the only corpus where
+verification succeeded". FB-21's investigation disproved both: corpus_A's 25 were Python-heuristic
+fallback theater (the exact #1019 anti-pattern), and the PL=0 was a latent missing-method bug
+unmasked by RA-8's correct removal of that fallback. The verdict remains **EDGES** (quality gap
+still caps DECIDES), but the PL axis is no longer a cap and corpus_A no longer claimed as the
+unique PL-deciding corpus. Corrections marked inline above with `~~strikethrough~~` + FB-21 note.

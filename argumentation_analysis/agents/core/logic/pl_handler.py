@@ -1,7 +1,7 @@
 import jpype
 import re
 import logging
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
 # par exemple au point d'entrée de l'application ou dans conftest.py pour les tests.
@@ -170,6 +170,31 @@ class PLHandler:
                 exc_info=True,
             )
             raise
+
+    def check_consistency(self, belief_set: str) -> Tuple[bool, str]:
+        """Uniform handler API mirroring ``FOLHandler.check_consistency``.
+
+        ``TweetyBridge.check_consistency(belief_set, "propositional")`` dispatches
+        here. PLHandler previously exposed only ``pl_check_consistency`` /
+        ``pl_check_consistency_sat``, so the dispatch raised ``AttributeError`` on
+        *every* formula — collapsing the per-formula isolation loop in
+        ``_invoke_propositional_logic`` to 0 survivors (PL=0), which RA-8 #1066
+        unmasked once it removed the Python-heuristic fallback (#1083).
+
+        Delegates to ``pl_check_consistency`` (Tweety). Parse errors propagate
+        unchanged so the per-formula isolation keeps valid formulas and rejects
+        unparseable ones rather than swallowing the whole batch.
+
+        Returns:
+            Tuple[bool, str]: ``(is_consistent, message)``.
+        """
+        is_consistent = self.pl_check_consistency(belief_set)
+        msg = (
+            "PL knowledge base is consistent."
+            if is_consistent
+            else "PL knowledge base entails a contradiction."
+        )
+        return bool(is_consistent), msg
 
     def pl_check_consistency(
         self, knowledge_base_str: str, constants: Optional[List[str]] = None
