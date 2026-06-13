@@ -255,7 +255,6 @@ async def run_modern_analysis(
     return results
 
 
-
 async def main():
     """Fonction principale du script."""
     parser = argparse.ArgumentParser(
@@ -331,6 +330,16 @@ Exemples:
         "hierarchical (strategic planning → Lego execution), "
         "cluedo (investigation Sherlock-Watson-Oracle, #914), "
         "sherlock_modern (investigation multi-agent, #357)",
+    )
+    parser.add_argument(
+        "--hierarchical-mode",
+        type=str,
+        choices=["bridge", "delegation"],
+        default="bridge",
+        help="Sub-mode for --mode hierarchical (RA-10 #1069): "
+        "bridge (M2, default — strategic objectives → Lego/DAG execution), "
+        "delegation (M3 — true strategic→tactical→operational 3-tier delegation, "
+        "fails loud on a degraded chain instead of hardcoded fallback).",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
@@ -614,28 +623,50 @@ Exemples:
             run_hierarchical_analysis,
         )
 
-        logging.info("Mode HIÉRARCHIQUE : StrategicManager → Lego WorkflowExecutor")
-        results = await run_hierarchical_analysis(text=text_content)
+        hier_mode = getattr(args, "hierarchical_mode", "bridge")
+        if hier_mode == "delegation":
+            logging.info(
+                "Mode HIÉRARCHIQUE (M3 delegation) : "
+                "Strategic → Tactical → Operational (3-tier explicit chain)"
+            )
+        else:
+            logging.info(
+                "Mode HIÉRARCHIQUE (M2 bridge) : StrategicManager → Lego WorkflowExecutor"
+            )
+        results = await run_hierarchical_analysis(text=text_content, mode=hier_mode)
 
         # Afficher le résumé
-        summary = results.get("summary", {})
         conclusion = results.get("conclusion", "")
         objectives = results.get("objectives", [])
 
         print(f"\n{'='*60}")
-        print(f" Mode hiérarchique — {summary.get('total', 0)} phases")
-        print(f"{'='*60}")
-        print(f"  Objectifs stratégiques : {len(objectives)}")
-        for obj in objectives:
+        if results.get("mode") == "delegation":
+            op_results = results.get("operational_results", [])
+            completed = sum(1 for r in op_results if r.get("status") == "completed")
+            print(f" Mode hiérarchique (M3 delegation) — {len(op_results)} tâches")
+            print(f"{'='*60}")
+            print(f"  Objectifs stratégiques : {len(objectives)}")
+            for obj in objectives:
+                print(
+                    f"    - [{obj.get('priority', '?').upper()}] {obj.get('description', '?')}"
+                )
+            print(f"  Tâches créées      : {results.get('tasks_created', 0)}")
+            print(f"  Tâches complétées  : {completed}/{len(op_results)}")
+        else:
+            summary = results.get("summary", {})
+            print(f" Mode hiérarchique (M2 bridge) — {summary.get('total', 0)} phases")
+            print(f"{'='*60}")
+            print(f"  Objectifs stratégiques : {len(objectives)}")
+            for obj in objectives:
+                print(
+                    f"    - [{obj.get('priority', '?').upper()}] {obj.get('description', '?')}"
+                )
             print(
-                f"    - [{obj.get('priority', '?').upper()}] {obj.get('description', '?')}"
+                f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}"
             )
-        print(
-            f"  Phases complétées : {summary.get('completed', 0)}/{summary.get('total', 0)}"
-        )
-        print(f"  Phases échouées   : {summary.get('failed', 0)}")
-        print(f"  Phases sautées    : {summary.get('skipped', 0)}")
-        print(f"  Durée : {results.get('duration_seconds', 0):.1f}s")
+            print(f"  Phases échouées   : {summary.get('failed', 0)}")
+            print(f"  Phases sautées    : {summary.get('skipped', 0)}")
+            print(f"  Durée : {results.get('duration_seconds', 0):.1f}s")
         if conclusion:
             print(f"\n  Conclusion : {conclusion}")
         print(f"{'='*60}\n")
@@ -689,9 +720,13 @@ Exemples:
         print(f"{'='*60}")
         print(f"  Trace steps     : {len(trace) if isinstance(trace, list) else 'N/A'}")
         if investigation:
-            print(f"  Investigation   : {json.dumps(investigation, ensure_ascii=False, default=str)[:300]}")
+            print(
+                f"  Investigation   : {json.dumps(investigation, ensure_ascii=False, default=str)[:300]}"
+            )
         if solution:
-            print(f"  Solution        : {json.dumps(solution, ensure_ascii=False, default=str)[:300]}")
+            print(
+                f"  Solution        : {json.dumps(solution, ensure_ascii=False, default=str)[:300]}"
+            )
         print(f"{'='*60}\n")
 
         # Save if requested
