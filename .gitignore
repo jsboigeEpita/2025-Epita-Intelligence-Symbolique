@@ -154,6 +154,8 @@ examples/rapport_simple_*.json
 outputs/
 /reports/
 !docs/reports/
+# Hand-curated terminal deliverables (not generated outputs) — exempt from *_report*.md
+!docs/reports/FB20_PHASE4_TERMINAL_REPORT.md
 backend_info.json
 build_cache_logs*.txt
 tree.txt
