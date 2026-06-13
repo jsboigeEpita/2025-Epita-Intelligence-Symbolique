@@ -42,6 +42,49 @@ def _preflight_solver_check() -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# RA-4 #1049 item 3 — Strategic objective consumption by tactical callables
+# ---------------------------------------------------------------------------
+
+def _get_strategic_directives(context: Dict[str, Any]) -> Tuple[str, List[str]]:
+    """Extract active strategic objectives from state and format as NL directives.
+
+    Returns:
+        Tuple of (formatted_directives_text, list_of_objective_ids).
+        The text is empty string if no objectives are available.
+    """
+    state = context.get("_state_object")
+    if state is None:
+        return "", []
+
+    objectives = getattr(state, "strategic_objectives", [])
+    if not objectives:
+        return "", []
+
+    active = [
+        obj for obj in objectives
+        if isinstance(obj, dict) and obj.get("status", "active") in ("active", "in_progress")
+    ]
+    if not active:
+        return "", []
+
+    lines = []
+    obj_ids: List[str] = []
+    for obj in active[:5]:  # Cap at 5 to avoid prompt bloat
+        oid = obj.get("objective_id", obj.get("id", f"obj_{len(obj_ids)+1}"))
+        desc = obj.get("description", obj.get("text", ""))
+        priority = obj.get("priority", "normal")
+        if desc:
+            lines.append(f"[{oid}] (priority: {priority}) {desc}")
+            obj_ids.append(str(oid))
+
+    if not lines:
+        return "", []
+
+    header = "STRATEGIC DIRECTIVES — the PM has identified these long-term analysis goals. Prioritize detection and analysis aligned with these objectives:"
+    return f"{header}\n" + "\n".join(lines), obj_ids
+
+
 # Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
 try:
     from dotenv import load_dotenv
@@ -2265,7 +2308,11 @@ async def _invoke_camembert_fallacy(
             llm_service=llm_service,
         )
 
-        result_json = await plugin.run_guided_analysis(argument_text=input_text)
+        # RA-4 #1049 item 3: inject strategic directives into LLM prompt
+        _strat_text_cam, _strat_ids_cam = _get_strategic_directives(context)
+        _effective_text_cam = f"{_strat_text_cam}\n\n{input_text}" if _strat_text_cam else input_text
+
+        result_json = await plugin.run_guided_analysis(argument_text=_effective_text_cam)
         result = json.loads(result_json)
 
         # Map hierarchical result to adapter format
@@ -2281,7 +2328,7 @@ async def _invoke_camembert_fallacy(
                     "taxonomy_pk": f.get("taxonomy_pk", ""),
                 }
 
-        return {
+        _ret = {
             "detected_fallacies": detected,
             "arguments": {},
             "tiers_used": ["self_hosted_llm"],
@@ -2289,6 +2336,9 @@ async def _invoke_camembert_fallacy(
             "total_fallacies": len(detected),
             "extraction_method": result.get("exploration_method", "self_hosted"),
         }
+        if _strat_ids_cam:
+            _ret["strategic_objective_ids"] = _strat_ids_cam
+        return _ret
 
     except Exception as e:
         logger.warning("Self-hosted LLM fallacy detection failed: %s", e)
@@ -3453,9 +3503,15 @@ async def _invoke_hierarchical_fallacy(
             taxonomy_file_path=taxonomy_path,
         )
 
-        result_json = await plugin.run_guided_analysis(argument_text=input_text)
+        # RA-4 #1049 item 3: inject strategic directives into LLM prompt
+        _strat_text, _strat_ids = _get_strategic_directives(context)
+        _effective_text = f"{_strat_text}\n\n{input_text}" if _strat_text else input_text
+
+        result_json = await plugin.run_guided_analysis(argument_text=_effective_text)
         result = json.loads(result_json)
         result["extraction_method"] = result.get("exploration_method", "unknown")
+        if _strat_ids:
+            result["strategic_objective_ids"] = _strat_ids
 
         # Per-argument enrichment pass: run _invoke_hierarchical_fallacy_per_argument
         # and merge extras into the wide-net results to lift recall on dense text.
@@ -4575,6 +4631,11 @@ async def _invoke_fol_reasoning(
     those validated formulas. Otherwise falls back to template generation.
     (#208-H: wire NL-to-logic as pre-processing)
     """
+    # RA-4 #1049 item 3: inject strategic directives for LLM-guided FOL translation
+    _strat_text_fol, _strat_ids_fol = _get_strategic_directives(context)
+    if _strat_text_fol:
+        input_text = f"{_strat_text_fol}\n\n{input_text}"
+
     args = _extract_arguments_from_context(input_text, context)
     # #705 Track LL: capture upstream FOL formulas (DAG nl_to_logic /
     # context["formulas"]) separately and run the robust 2-pass generator
@@ -4911,6 +4972,7 @@ async def _invoke_fol_reasoning(
             "logic_type": "first_order",
             "argument_count": len(args),
             "fol_metrics": fol_metrics,
+            **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
     except Exception as tweety_err:
         logger.warning(
@@ -4954,6 +5016,7 @@ async def _invoke_fol_reasoning(
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
                 "fol_metrics": fol_metrics,
+                **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
             }
 
         # All formulas failed — no heuristic fallback (#1019)
@@ -4983,9 +5046,8 @@ async def _invoke_fol_reasoning(
             "solver": "none",
             "diagnostic": str(tweety_err),
             "fol_metrics": fol_metrics,
+            **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
-
-
 async def _invoke_nl_to_logic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
