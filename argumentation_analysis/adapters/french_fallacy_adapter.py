@@ -1090,24 +1090,36 @@ class LLMFallacyDetector:
         self._service_discovery = service_discovery
         self._available = None
         self._threshold = confidence_threshold
+        # RA anti-théâtre #1019: observable degradation state. Set True when an
+        # actual API call fails (a bare [] return would be indistinguishable
+        # from "no fallacies found"). Consumers check ``last_degraded``.
+        self._last_degraded: bool = False
+        self._last_error = None
+
+    @property
+    def last_degraded(self) -> bool:
+        """True if the most recent detect_async() failed (API error), else False.
+
+        #1019 signal: distinguishes "LLM tier failed" from "no fallacies found".
+        """
+        return self._last_degraded
 
     def _get_openai_client(self):
-        """Get OpenAI-compatible client and model, same as unified_pipeline."""
-        import os
+        """Get OpenAI-compatible client and model via the canonical toggle.
 
-        api_key = os.environ.get("OPENAI_API_KEY")
+        RA anti-théâtre #1079: routes through ``resolve_chat_endpoint`` (honors
+        the OpenRouter toggle) instead of reading OPENAI_* only, so this tier
+        hits the same provider as the rest of the pipeline (no silent 429).
+        """
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        api_key, base_url, model = resolve_chat_endpoint(default_model="gpt-4o-mini")
         if not api_key:
             return None, None
         try:
             from openai import AsyncOpenAI
 
-            base_url = os.environ.get("OPENAI_BASE_URL")
-            client = AsyncOpenAI(
-                api_key=api_key,
-                **({"base_url": base_url} if base_url else {}),
-            )
-            model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
-            return client, model
+            return AsyncOpenAI(api_key=api_key, base_url=base_url), model
         except ImportError:
             return None, None
 
@@ -1122,6 +1134,10 @@ class LLMFallacyDetector:
         client, model = self._get_openai_client()
         if client is None:
             return []
+
+        # Reset per-call degradation state (set on failure below).
+        self._last_degraded = False
+        self._last_error = None
 
         try:
             import json as _json
@@ -1178,7 +1194,17 @@ class LLMFallacyDetector:
             return detections
 
         except Exception as e:
-            logger.error(f"LLM detection failed: {e}")
+            # RA anti-théâtre #1019: a bare [] is indistinguishable from "no
+            # fallacies found". Emit an observable degraded signal a consumer
+            # can act on (detector.last_degraded / .last_error) instead of the
+            # silent [] that previously masked tier failures.
+            self._last_degraded = True
+            self._last_error = str(e)
+            logger.warning(
+                "[DEGRADED] LLMFallacyDetector.detect_async failed: %s "
+                "(returning [] — check detector.last_degraded)",
+                e,
+            )
             return []
 
     def detect(self, text: str) -> List[FallacyDetection]:

@@ -7,7 +7,7 @@ from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatCompletion,
     AzureChatCompletion,
 )
-from typing import Union, AsyncGenerator, List
+from typing import Union, AsyncGenerator, List, Tuple
 import httpx
 from openai import AsyncOpenAI
 import json
@@ -34,6 +34,43 @@ if not logger.handlers and not logger.propagate:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
+
+
+def resolve_chat_endpoint(default_model: str = "gpt-5-mini") -> Tuple[str, str, str]:
+    """Resolve the chat endpoint honoring the OpenRouter toggle.
+
+    Single canonical source of truth for routing raw-SDK (non-kernel) LLM
+    chat calls. Mirrors the toggle embedded in :func:`create_llm_service`
+    (this module) and ``orchestration.invoke_callables._get_openai_client``.
+    Anti-pendule (#1019 / anti-théâtre): consults ``OPENROUTER_BASE_URL`` +
+    ``OPENROUTER_API_KEY`` first and falls back to ``OPENAI_*``. Do NOT add a
+    new knob — every raw-SDK caller must go through this so they no longer hit
+    the official OpenAI quota (→ 429 → silent fallback) when OpenRouter is on.
+
+    Args:
+        default_model: model id used when neither ``OPENROUTER_CHAT_MODEL_ID``
+            nor ``OPENAI_CHAT_MODEL_ID`` is set.
+
+    Returns:
+        ``(api_key, base_url, model_id)``. ``api_key`` is ``""`` when no key
+        is configured (callers treat this as "no LLM available"). When the
+        OpenRouter toggle is on, ``base_url`` is the OpenRouter endpoint and
+        ``model_id`` is the provider-prefixed ``OPENROUTER_CHAT_MODEL_ID``.
+    """
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    if openrouter_base_url and openrouter_api_key:
+        api_key = openrouter_api_key
+        base_url = openrouter_base_url
+        model_id = os.environ.get(
+            "OPENROUTER_CHAT_MODEL_ID",
+            os.environ.get("OPENAI_CHAT_MODEL_ID", default_model),
+        )
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", default_model)
+    return api_key, base_url, model_id
 
 
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service

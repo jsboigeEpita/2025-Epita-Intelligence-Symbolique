@@ -295,7 +295,18 @@ class TestInvokeCollaborativeAnalysis:
         """Without API key, should use heuristic fallback."""
         context = {"phase_extract_output": {"arguments": [{"text": "Test argument"}]}}
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        # Blank BOTH providers so the toggle (now honored via resolve_chat_endpoint,
+        # #1079) resolves to no key → heuristic fallback. Robust to --allow-dotenv
+        # or OS env carrying OPENROUTER_*.
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "",
+                "OPENROUTER_API_KEY": "",
+                "OPENROUTER_BASE_URL": "",
+            },
+            clear=False,
+        ):
             result = await _invoke_collaborative_analysis("test text", context)
 
         assert result["interaction_type"] == "fallback_heuristic"
