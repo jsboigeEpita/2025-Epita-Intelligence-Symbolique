@@ -263,14 +263,29 @@ def _extract_phase_metrics(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 async def run_zeroshot_baseline(corpus_label: str, text: str) -> Dict[str, Any]:
-    """Run 0-shot LLM baseline (single prompt, no tools)."""
+    """Run 0-shot LLM baseline (single prompt, no tools).
+
+    Honors the OpenRouter toggle so the baseline uses the SAME provider as the
+    integral pipeline (create_llm_service). Without this, the baseline hit the
+    official OpenAI endpoint and 429'd on quota while the pipeline (via
+    OpenRouter) succeeded — making the integral-vs-baseline comparison compare
+    two different providers instead of two methods on the same model.
+    """
     print(f"[C1] Starting 0-shot baseline for corpus {corpus_label}...")
     t0 = time.time()
 
-    # Use OpenAI client directly (no SK needed for a single prompt)
     from openai import OpenAI
-    client = OpenAI()  # reads OPENAI_API_KEY from env
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+    if use_openrouter:
+        api_key = openrouter_api_key
+        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+        client = OpenAI(api_key=api_key, base_url=openrouter_base_url)
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        client = OpenAI(api_key=api_key)  # reads OPENAI_API_KEY from env
 
     prompt = ZEROSHOT_PROMPT.format(text=text[:8000])  # Limit text for baseline (token budget)
     response = client.chat.completions.create(
