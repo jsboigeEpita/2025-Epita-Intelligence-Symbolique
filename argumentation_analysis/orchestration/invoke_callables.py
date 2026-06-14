@@ -2312,8 +2312,26 @@ async def _invoke_camembert_fallacy(
         _strat_text_cam, _strat_ids_cam = _get_strategic_directives(context)
         _effective_text_cam = f"{_strat_text_cam}\n\n{input_text}" if _strat_text_cam else input_text
 
-        result_json = await plugin.run_guided_analysis(argument_text=_effective_text_cam)
-        result = json.loads(result_json)
+        # Bounded wide-net descent (#1087) — same backstop as the main path above:
+        # the camembert wide-net is unbounded and explodes on dense corpora. The
+        # per-arg enrichment below (already bounded) is a real fallback method.
+        try:
+            result_json = await asyncio.wait_for(
+                plugin.run_guided_analysis(argument_text=_effective_text_cam),
+                timeout=300.0,
+            )
+            result = json.loads(result_json)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Camembert wide-net fallacy descent timed out (>300s) on %d chars "
+                "— continuing with per-argument enrichment only (#1087)",
+                len(_effective_text_cam),
+            )
+            result = {
+                "fallacies": [],
+                "exploration_method": "widenet_timeout_camembert",
+                "wide_net_timed_out": True,
+            }
 
         # Map hierarchical result to adapter format
         fallacies = result.get("fallacies", [])
@@ -3507,8 +3525,33 @@ async def _invoke_hierarchical_fallacy(
         _strat_text, _strat_ids = _get_strategic_directives(context)
         _effective_text = f"{_strat_text}\n\n{input_text}" if _strat_text else input_text
 
-        result_json = await plugin.run_guided_analysis(argument_text=_effective_text)
-        result = json.loads(result_json)
+        # Bounded wide-net descent (#1087). The wide-net ``run_guided_analysis``
+        # on the FULL source text is unbounded here — on a dense corpus it explodes
+        # (iterative deepening over the taxonomy with no wall-clock cap) and the
+        # per-run LLM budget does not count SK-kernel calls made inside the plugin,
+        # so the only backstop is this timeout. 300s is generous: a healthy
+        # wide-net completes in ~250s on a 46K corpus; on timeout we fall back to
+        # the per-argument enrichment below (already bounded: 10 args x 165s) — a
+        # REAL alternate method, not a heuristic. ``wide_net_timed_out`` flags the
+        # partial so the report is honest (anti-theater #1019): the run completes,
+        # but wide-net coverage is absent for that corpus.
+        try:
+            result_json = await asyncio.wait_for(
+                plugin.run_guided_analysis(argument_text=_effective_text),
+                timeout=300.0,
+            )
+            result = json.loads(result_json)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Wide-net fallacy descent timed out (>300s) on input of %d chars "
+                "— falling back to per-argument enrichment only (#1087)",
+                len(_effective_text),
+            )
+            result = {
+                "fallacies": [],
+                "exploration_method": "widenet_timeout",
+                "wide_net_timed_out": True,
+            }
         result["extraction_method"] = result.get("exploration_method", "unknown")
         if _strat_ids:
             result["strategic_objective_ids"] = _strat_ids
