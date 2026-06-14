@@ -16,7 +16,10 @@ non-trivial values**. This document stands up the WSL env and documents the repr
 invocation so the A/B/C quality re-measurement (and #1088) can use it.
 
 **This is the answer to #1088's native-vs-WSL question**: WSL works; the DLL conflict is
-Windows-only.
+Windows-only. **Update (R399)**: a **native torch-free path** also works (see
+[Native alternative (R399)](#native-alternative-r399--verified) below) — WSL is no longer
+the *only* path, but remains the cleanest one when the broken `torch 2.2.2` must stay
+installed for other features.
 
 ---
 
@@ -137,6 +140,65 @@ password-gated, so the JVM is not yet available. Two options to complete DoD ite
 The formal phases are already proven working on Windows-native (FB-22 #1087, PR #1089), so
 the WSL JDK is only needed if the A/B/C quality re-measurement wants to run the **full**
 pipeline (not just the quality category) under WSL for environmental consistency.
+
+---
+
+## Native alternative (R399) — VERIFIED
+
+The WSL path above was framed as the answer to #1088 because the Windows-native quality
+radar crashed. **Independent native verification (R399)** refined the diagnosis and surfaced
+a native path that needs neither WSL nor a torch repair. Findings, verified in
+`projet-is-roo-new`:
+
+| Claim (tested native) | Verdict |
+|---|---|
+| `textstat` missing natively | ✅ **TRUE** — `ModuleNotFoundError` before install (#1091 correct to add it) |
+| `fr_core_news_sm` missing natively | ✅ **TRUE** — must be installed (via wheel, not `spacy download`, see below) |
+| "WinError 182 = false diagnostic" | ❌ **FALSE** — `import torch` **alone** raises WinError 182 (`torch 2.2.2` `fbgemm.dll`, issue #882) |
+| spaCy/thinc pull broken torch transitively | ✅ **TRUE** — `import spacy` triggers the torch load → same OSError |
+| **Block torch → spaCy + quality work natively** | ✅ **TRUE — VERIFIED** (see below) |
+
+### Decisive result
+
+`ArgumentQualityEvaluator.evaluate` on `corpus_C` (4000-char opaque excerpt), **native
+win32** with torch blocked via `sys.modules["torch"] = None` before any project import:
+
+```text
+note_finale: 2.0 | note_moyenne: 0.222
+  clarte                   0.500   Lisibilité (Flesch) : 46.34. Texte moyennement clair.
+  pertinence               0.500   Quelques connecteurs logiques (1). Structure partielle.
+  presence_sources         0.000
+  ...
+  exhaustivite             1.000   85 phrases. Couverture raisonnable.
+non-zero virtues: 3/9
+VERDICT: NATIVE quality WORKS (torch-free) ✅
+```
+
+Values are **identical to WSL** (`note_finale 2.0`, Flesch `46.34`) — the radar is
+deterministic and produces the same result on both paths. So the `fr_core_news_sm` model is
+rule-based (non-neural) and does not actually need torch; torch is only a *transitive
+optional dep* of `thinc` whose broken Windows build poisoned the import chain.
+
+### Implications
+
+- **#1091 (deps fix) is necessary but NOT sufficient** — installing `textstat` + the model
+  does not unblock native quality while `torch 2.2.2` (broken `fbgemm.dll`) stays importable.
+- **The clean native fix is torch-side**, not deps-side: either (a) block torch before the
+  spacy import (as the probe does), (b) upgrade `torch` to a Windows build without the
+  `fbgemm.dll` fault, or (c) uninstall torch if no feature on the run path needs it. This is
+  out of scope for this WSL-path PR — it belongs to po-2023's native lane (#1088/#1091).
+- **WSL (this PR) remains the cleanest path** when the broken torch must stay installed for
+  other features (CONV/camembert wide-net, PL/FOL do not need torch, but the wider harness
+  links it). Under WSL there is no DLL conflict regardless of import order (see §2 above).
+
+### Reconciliation with #1091 (po-2023)
+
+po-2023's #1091 correctly identifies that `textstat` was missing natively (a real gap), but
+its framing that "WinError 182 = false diagnostic" is **not supported** by direct probe:
+`import torch` alone reproduces WinError 182 in `projet-is-roo-new` (torch 2.2.2). The two
+PRs are complementary: #1091 fixes the deps gap; this PR (#1092) provides the WSL path that
+sidesteps the (real) torch DLL fault. Neither alone fully unblocks native quality — the
+torch-side repair is the remaining native follow-up, owned by po-2023's lane.
 
 ---
 
