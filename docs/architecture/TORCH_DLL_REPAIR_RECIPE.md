@@ -4,6 +4,24 @@
 **Scope**: Read-only investigation + recipe document. Zero code changes (lane po-2025).
 **Target**: po-2025 applies the fix described here when implementing #1019 subsystem 1.
 
+> **⚠️ UPDATE (FB-23 #1088, 2026-06-14)** — The recipe below assumes the
+> quality-radar failure is caused by the WinError 182 DLL conflict. On
+> `projet-is` (po-2023) this was **empirically refuted**: a fresh-process
+> repro with jpype loaded *before* spaCy loaded `fr_core_news_sm` cleanly
+> (no WinError 182). The **actual root cause was missing dependencies**:
+> `textstat` was not declared in any env spec, and the `fr_core_news_sm`
+> spaCy model was never downloaded by `setup_project_env.ps1`. The durable
+> fix for #1088 therefore (a) declares `textstat` in `environment.yml` +
+> `requirements.txt`, (b) adds a `python -m spacy download fr_core_news_sm`
+> step to `setup_project_env.ps1`, and (c) rewords the evaluator's error
+> message to point at the likely-actual cause (missing dep/model) first.
+> The WinError 182 DLL-ordering fix below remains valid as defense-in-depth
+> (and applies on environments where the conflict does manifest, e.g. some
+> torch/jpype version combos) — but it is **not** the quality-radar's
+> primary failure mode on this cluster. Verify the actual root cause with a
+> fresh-process repro before applying the DLL recipe.
+
+
 ---
 
 ## 1. Root Cause

@@ -16,10 +16,17 @@ import argumentation_analysis.agents.core.quality.quality_evaluator as qe
 @pytest.fixture(autouse=True)
 def mock_load_deps():
     with patch.object(qe, "_load_deps", return_value=False):
-        # Also ensure globals are set to fallback state
+        # Ensure globals reflect a consistent fallback state. Resetting
+        # _DEPS_ATTEMPTED=False matters: evaluate()'s fail-loud gate
+        # (quality_evaluator.py) raises when `_DEPS_ATTEMPTED and not
+        # _DEPS_AVAILABLE`. Without this reset, a prior test that triggered
+        # the real _load_deps leaves _DEPS_ATTEMPTED=True, and the gate
+        # fires here even though this fixture mocks _load_deps to never
+        # attempt. See FB-23 #1088.
         qe._nlp = None
         qe._flesch_reading_ease = None
         qe._DEPS_AVAILABLE = False
+        qe._DEPS_ATTEMPTED = False
         yield
 
 
