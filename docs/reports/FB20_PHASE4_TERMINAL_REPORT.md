@@ -36,8 +36,8 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 ### 1.A Rhetorical Architecture
 
 - **Arguments extracted**: **10** (vs 0 in degraded v1) — `fact_extraction_service` ran 60.5s.
-- **Quality profile (9 virtues)**: **UNAVAILABLE** — phase `quality` FAILED (`spacy/textstat not available`, DLL load-order on Windows). Degradation **honestly reported**, not silently omitted. Radar cannot be drawn this run.
-- **Structural assessment**: blocked on the same `quality` failure.
+- **Quality profile (9 virtues)**: **AVAILABLE** (FB-25 #1093, native-torch-free). **8 args scored** (of 10 extracted, the 8 with ≥10 chars) — overall mean **1.62/9** (min 1.4, max 1.9), clarté (Flesch-derived) **0.200** ("moyennement clair"), **27/72** non-zero virtue-cells + a per-argument LLM assessment. The radar now draws: low scores (1.4–1.9/9) honestly reflect rhetorically dense, source-light text rather than a fabricated number. _(Previously UNAVAILABLE — the `quality` phase failed on `spacy/textstat` + the Windows `torch` DLL fault; FB-25 #1095 `_neutralize_faulty_torch` blocks the faulty torch so the rule-based `fr_core_news_sm` model loads, unblocking the radar on `projet-is-roo-new`.)_
+- **Structural assessment**: the quality phase now runs; structural assessment is no longer blocked.
 
 ### 1.B Fallacy Detection
 
@@ -61,12 +61,12 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 
 ### 1.E Convergence Synthesis
 
-- **5-signal convergence**: fallacies (10) + counter-args (20) + jtms (46) + dung (4224 ext) converge on a rhetorically dense text. **Quality signal MISSING** (spacy failure) — convergence is 4/5 this run, not 5/5.
+- **5-signal convergence**: fallacies (10) + counter-args (20) + jtms (46) + dung (4224 ext) + **quality (8 args, mean 1.62/9)** converge on a rhetorically dense text. With the quality radar unblocked (FB-25 #1095), convergence is now **5/5** this run — the quality signal corroborates the density (low per-arg scores reflect source-light, rhetorically loaded text).
 - **Narrative synthesis**: phase completed (state field populated).
 
 ### 1.CONCLUSION — corpus_C verdict vs 0-shot
 
-> _FB-22 #1087 re-measurement: the integral pipeline now DECIDES on formal-logic grounding (**PL 10/10 + FOL 19/19 verified**, 12 Dung frameworks / 4 224 extensions, 20 counter-args, 45 JTMS) that the 0-shot baseline cannot produce. With FB-21 #1085 restoring real PL verification, the PL axis is no longer capped — only the **quality radar** gap (spacy WinError 182) remains. Verdict **EDGES→DECIDES** on the formal axes; capped at EDGES only by the unevaluated quality category. See §5._
+> _FB-22 #1087 re-measurement + FB-25 #1093 quality: the integral pipeline now DECIDES on formal-logic grounding (**PL 10/10 + FOL 19/19 verified**, 12 Dung frameworks / 4 224 extensions, 20 counter-args, 45 JTMS) that the 0-shot baseline cannot produce. With FB-21 #1085 restoring real PL verification and FB-25 #1095 unblocking the quality radar, the radar is no longer capped — it now scores 8 args (mean **1.62/9**, clarté 0.200). Verdict **EDGES→DECIDES** on the formal axes; the previously-unevaluated quality category is now measured (low scores, honest). See §5 for the terminal verdict._
 
 ---
 
@@ -79,8 +79,8 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 ### 2.A Rhetorical Architecture
 
 - **Arguments extracted**: **6** (corpus_A is rhetorically dense but compact in its argumentative structure — fewer discrete arguments than corpus_C's 10).
-- **Quality profile (9 virtues)**: **UNAVAILABLE** — same `spacy/textstat` failure (the single remaining cap on a clean DECIDES verdict, tracked as #1088).
-- **Structural assessment**: blocked on `quality` failure.
+- **Quality profile (9 virtues)**: **AVAILABLE** (FB-25 #1093, native-torch-free). **8 args scored** (of 10 extracted, the 8 with ≥10 chars) — overall mean **1.70/9** (min 1.4, max 2.7 — the highest ceiling of the three corpora), clarté (Flesch-derived) **0.438** (most readable of the three), **25/72** non-zero virtue-cells + 4 per-argument LLM assessments. The radar draws; the source-light, dense rhetorical style scores low as expected. _(Previously UNAVAILABLE — `spacy/textstat` + the Windows `torch` DLL fault; fixed by FB-25 #1095 `_neutralize_faulty_torch`.)_
+- **Structural assessment**: the quality phase now runs; no longer blocked.
 
 ### 2.B Fallacy Detection
 
@@ -102,11 +102,11 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 
 ### 2.E Convergence Synthesis
 
-- **5-signal convergence**: fallacies (6) + counter-args (12) + jtms (39) + dung (340) + **PL (8)**. Quality MISSING (4/5). With PL now real (post-#1085), corpus_A shows genuine formal-logic convergence aligned with B/C — no longer an outlier inflated by theater.
+- **5-signal convergence**: fallacies (6) + counter-args (12) + jtms (39) + dung (340) + **PL (8)** + **quality (8 args, mean 1.70/9)**. With PL now real (post-#1085) and quality measured (FB-25 #1095), corpus_A shows genuine **6-signal convergence** aligned with B/C — no longer an outlier inflated by theater.
 
 ### 2.CONCLUSION — corpus_A verdict vs 0-shot
 
-> _FB-22 #1087: the integral pipeline DECIDES on formal grounding (**PL 8/8 + FOL 6/6**, 12 Dung frameworks / 340 extensions, 12 counter-args, 39 JTMS) the baseline cannot produce. corpus_A completes non-degraded for the first time (348s, bounded timeout #1087). Verdict **EDGES→DECIDES** on formal axes; capped at EDGES only by the unevaluated quality category. See §5._
+> _FB-22 #1087 + FB-25 #1093: the integral pipeline DECIDES on formal grounding (**PL 8/8 + FOL 6/6**, 12 Dung frameworks / 340 extensions, 12 counter-args, 39 JTMS) the baseline cannot produce. corpus_A completes non-degraded for the first time (348s, bounded timeout #1087), and the quality radar now measures 8 args (mean **1.70/9**, clarté 0.438 — the most readable of the three). Verdict **EDGES→DECIDES** on formal axes; the quality category is now measured, not capped. See §5._
 
 ---
 
@@ -118,8 +118,8 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 ### 3.A Rhetorical Architecture
 
 - **Arguments extracted**: **7** (the truncated 60K window yields fewer discrete arguments than the pre-fix run's 120 — variance in extraction on the truncated window; not a degradation, the run is non-degraded per #1084/#1085).
-- **Quality profile (9 virtues)**: **UNAVAILABLE** — same `spacy/textstat` WinError 182 failure. Not fabricated.
-- **Structural assessment**: blocked on `quality` failure.
+- **Quality profile (9 virtues)**: **AVAILABLE** (FB-25 #1093, native-torch-free). **3 args scored** (the truncated 60K window yielded only 3 quality-eligible arguments this run — extraction variance on the truncated window, not a degradation) — overall mean **1.67/9** (min 1.4, max 2.2), clarté (Flesch-derived) **0.300**, **10/27** non-zero virtue-cells + 3 per-argument LLM assessments. The radar draws on the available arguments; the low count reflects truncation, not a radar failure. _(Previously UNAVAILABLE — `spacy/textstat` + the Windows `torch` DLL fault; fixed by FB-25 #1095.)_
+- **Structural assessment**: the quality phase now runs; no longer blocked.
 
 ### 3.B Fallacy Detection
 
@@ -143,12 +143,12 @@ This report is the **terminal deliverable** of Epic #947. It applies the narrati
 
 ### 3.E Convergence Synthesis
 
-- **5-signal convergence**: fallacies (5) + counter-args (12) + jtms (40) + dung (607) + **PL (4)**. Quality MISSING (4/5).
+- **5-signal convergence**: fallacies (5) + counter-args (12) + jtms (40) + dung (607) + **PL (4)** + **quality (3 args, mean 1.67/9)**. Quality now measured (FB-25 #1095); convergence is **5/5**, though the quality signal is thin (only 3 args scored on the truncated window).
 - The truncated window caps the structural advantage the pipeline has over 0-shot on this corpus.
 
 ### 3.CONCLUSION — corpus_B verdict vs 0-shot
 
-> _FB-22 #1087: the pipeline DECIDES on formal grounding (**PL 4/4 + FOL 15/15**, 12 Dung frameworks / 607 extensions, JTMS 40 beliefs) the baseline cannot produce, but the 60K truncation narrows the rhetorical-density gap. Verdict **EDGES→DECIDES** on formal axes; capped at EDGES only by the unevaluated quality category and the truncation-narrowed density. See §5._
+> _FB-22 #1087 + FB-25 #1093: the pipeline DECIDES on formal grounding (**PL 4/4 + FOL 15/15**, 12 Dung frameworks / 607 extensions, JTMS 40 beliefs) the baseline cannot produce, but the 60K truncation narrows the rhetorical-density gap. The quality radar now measures the 3 extracted args (mean **1.67/9**, clarté 0.300) — thin signal given truncation, but no longer unevaluated. Verdict **EDGES→DECIDES** on formal axes; the quality cap is lifted (signal is thin due to truncation, not missing). See §5._
 
 ---
 
