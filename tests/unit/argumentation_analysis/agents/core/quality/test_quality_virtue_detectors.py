@@ -5,6 +5,9 @@ Tests the individual detect_* functions and ArgumentQualityEvaluator.evaluate().
 Uses mocked _load_deps to avoid torch DLL crash and test fallback heuristics.
 """
 
+import builtins
+import sys
+
 import pytest
 from unittest.mock import patch
 
@@ -232,3 +235,65 @@ class TestVertuesAndDetectors:
 
     def test_detector_count(self):
         assert len(qe.DETECTORS) == 9
+
+
+class TestNeutralizeFaultyTorch:
+    """FB-25 #1093 — regression guard for the broken-torch → None-sentinel fix.
+
+    No prior test asserted that spaCy's transitive optional ``import torch``
+    (via thinc) is made skippable when torch's Windows DLL faults (issue #882).
+    That is why the fault blocked the whole quality path in envs with a broken
+    torch (e.g. torch 2.2.2 in ``projet-is-roo-new``). See FB-21 lesson:
+    "the bug shipped because nothing asserted the dispatch".
+    """
+
+    def teardown_method(self) -> None:
+        # Restore module-global state between tests.
+        qe._TORCH_NEUTRALIZED = False
+        sys.modules.pop("torch", None)
+
+    def _patched_import(self, behaviour):
+        """Return a fake ``__import__`` that applies ``behaviour`` for torch."""
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "torch":
+                return behaviour()
+            return real_import(name, *args, **kwargs)
+
+        return fake_import
+
+    def test_faulty_torch_is_blocked(self):
+        """A faulty torch (OSError) must be neutralised so thinc can skip it."""
+        with patch("builtins.__import__",
+                   side_effect=self._patched_import(
+                       lambda: (_ for _ in ()).throw(
+                           OSError("[WinError 182] simulated fbgemm.dll fault")))):
+            qe._neutralize_faulty_torch()
+
+        assert qe._TORCH_NEUTRALIZED is True
+        assert sys.modules.get("torch") is None  # sentinel planted
+
+    def test_absent_torch_is_not_blocked(self):
+        """Genuinely-absent torch (ImportError) is left to thinc's own handling."""
+        with patch("builtins.__import__",
+                   side_effect=self._patched_import(
+                       lambda: (_ for _ in ()).throw(ModuleNotFoundError(
+                           "No module named 'torch'")))):
+            qe._neutralize_faulty_torch()
+
+        assert qe._TORCH_NEUTRALIZED is False
+        assert "torch" not in sys.modules  # no sentinel planted
+
+    def test_healthy_torch_is_not_blocked(self):
+        """A cleanly-importing torch must stay available (neural path intact)."""
+
+        class _DummyTorch:
+            __version__ = "99.99.99"
+
+        sys.modules.pop("torch", None)
+        with patch("builtins.__import__",
+                   side_effect=self._patched_import(lambda: _DummyTorch())):
+            qe._neutralize_faulty_torch()
+
+        assert qe._TORCH_NEUTRALIZED is False

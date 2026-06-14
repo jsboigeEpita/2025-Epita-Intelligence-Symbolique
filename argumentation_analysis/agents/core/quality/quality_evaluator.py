@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -34,6 +35,49 @@ _nlp = None
 _flesch_reading_ease = None
 _DEPS_AVAILABLE = False
 _DEPS_ATTEMPTED = False
+_TORCH_NEUTRALIZED = False
+
+
+def _neutralize_faulty_torch() -> None:
+    """Make spaCy's transitive optional ``torch`` import skippable when torch's
+    Windows DLL faults (WinError 182 / fbgemm.dll, issue #882).
+
+    Background (FB-25 #1093): on Windows envs where ``torch`` is installed but
+    its native DLL faults (e.g. torch 2.2.2 in ``projet-is-roo-new``), spaCy's
+    ``import spacy`` pulls thinc, which does an *optional* ``import torch``.
+    thinc catches ``ImportError`` but NOT ``OSError`` — so the DLL fault
+    propagates and blocks spaCy entirely, even though the ``fr_core_news_sm``
+    model is rule-based (non-neural) and does not need torch at all.
+
+    Fix (anti-pendule: remove the poisoning, do not add a counterweight):
+    detect the faulty torch and plant a ``None`` sentinel in ``sys.modules``.
+    A subsequent ``import torch`` then raises ``ImportError`` ("import of name
+    halted; None in sys.modules"), which thinc catches gracefully and skips.
+
+    This is a no-op when torch is genuinely absent (thinc already handles that)
+    or when torch imports cleanly (neural path stays available — important so
+    the wide-net / camembert path is unaffected in healthy-torch envs). It only
+    fires when torch is installed-but-broken, in which case the neural path was
+    never usable in this process anyway.
+    """
+    global _TORCH_NEUTRALIZED
+    if _TORCH_NEUTRALIZED:
+        return
+    try:
+        import torch  # noqa: F401
+        return  # torch imports cleanly — nothing to do.
+    except ImportError:
+        return  # torch genuinely absent — thinc already handles this fine.
+    except OSError as exc:
+        # Broken torch (DLL fault). Block it so thinc skips its optional import.
+        sys.modules["torch"] = None  # type: ignore[assignment]
+        _TORCH_NEUTRALIZED = True
+        logger.warning(
+            "torch import faulted (%s); blocking it on the quality path so the "
+            "rule-based fr_core_news_sm model loads. Neural path unavailable in "
+            "this process. See issue #882, FB-25 #1093.",
+            exc,
+        )
 
 
 def _load_deps():
@@ -57,6 +101,9 @@ def _load_deps():
         return True
     _DEPS_ATTEMPTED = True
     try:
+        # FB-25 #1093: neutralise a faulty torch BEFORE importing spacy, so
+        # thinc's optional torch import is skipped instead of poisoning spaCy.
+        _neutralize_faulty_torch()
         import spacy
         from textstat import flesch_reading_ease
 
