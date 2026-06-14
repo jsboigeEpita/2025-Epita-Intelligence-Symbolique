@@ -65,6 +65,24 @@ catch {
     exit 1
 }
 
+# 2.1 Téléchargement du modèle spaCy français (FB-23 #1088 : quality-radar)
+#     spacy n'est qu'un runtime ; le modèle de langue `fr_core_news_sm` est un
+#     artefact séparé (non-Python-package dans requirements). Sans lui,
+#     ArgumentQualityEvaluator lève (détection qualité = FAILED sur Windows).
+Write-Host "[INFO] Téléchargement du modèle spaCy 'fr_core_news_sm' (quality-radar)..." -ForegroundColor Green
+try {
+    conda run -n $EnvName python -m spacy download fr_core_news_sm
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le téléchargement du modèle spaCy a échoué."
+    }
+    Write-Host "[SUCCÈS] Modèle spaCy 'fr_core_news_sm' installé." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Impossible de télécharger le modèle spaCy (nécessaire au quality-radar)." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
 # 3. Provisioning des outils portables (JDK, etc.) AVANT la configuration de l'environnement
 #    pour permettre au script Python de créer/modifier le fichier .env avec JAVA_HOME.
 Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green

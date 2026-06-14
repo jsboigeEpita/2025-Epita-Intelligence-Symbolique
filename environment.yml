@@ -72,6 +72,7 @@ dependencies:
 
   # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
+    - textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
     - semantic-kernel>=1.33.0
     - flask_socketio>=5.3.6
     - playwright

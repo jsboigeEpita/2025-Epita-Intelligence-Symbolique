@@ -9,10 +9,12 @@ Dependencies:
     - spacy (fr_core_news_sm model) — REQUIRED
     - textstat (Flesch readability) — REQUIRED
 
-If spacy/textstat cannot load (e.g. torch DLL conflict on Windows),
-the evaluator raises RuntimeError instead of silently producing
-heuristic scores.  Callers must handle the exception or ensure the
-environment is correctly configured (see dll_guard).
+If spacy/textstat/model cannot load, the evaluator raises RuntimeError
+instead of silently producing heuristic scores. The usual cause is a
+missing dependency (`textstat` package or the `fr_core_news_sm` spaCy
+model — see setup_project_env.ps1, FB-23 #1088); the torch DLL conflict
+(WinError 182, #882) is the rarer fallback covered by dll_guard. Callers
+must handle the exception or ensure the environment is correctly configured.
 """
 
 import argumentation_analysis.core.dll_guard  # noqa: F401 — defense in depth (#1019)
@@ -70,14 +72,18 @@ def _load_deps():
         _DEPS_AVAILABLE = True
         return True
     except (ImportError, OSError, RuntimeError) as exc:
-        # ImportError: spacy/textstat not installed
-        # OSError: WinError 182 — torch DLL load failure propagates through spacy (#993)
-        # RuntimeError: other DLL incompatibilities
+        # ImportError: spacy/textstat not installed (most common cause — ensure
+        #   `textstat` and `python -m spacy download fr_core_news_sm` are provisioned;
+        #   see setup_project_env.ps1 and environment.yml, FB-23 #1088).
+        # OSError [E050]: spaCy model `fr_core_news_sm` not downloaded.
+        # OSError [WinError 182]: torch DLL conflict (#882) — rare on recent envs;
+        #   dll_guard pre-loads torch before jpype as defense-in-depth.
         raise RuntimeError(
-            f"Quality evaluation requires spacy and textstat, but import failed: {exc}. "
-            "On Windows, this is typically the torch DLL conflict (WinError 182). "
-            "Fix: ensure dll_guard is imported at the entry point BEFORE jpype. "
-            "See docs/architecture/TORCH_DLL_REPAIR_RECIPE.md for the full recipe."
+            f"Quality evaluation requires spacy, textstat and the fr_core_news_sm "
+            f"model, but a dependency failed: {exc}. Most often this is a missing "
+            f"package (textstat) or model (run `python -m spacy download "
+            f"fr_core_news_sm`). See setup_project_env.ps1 and "
+            f"docs/architecture/TORCH_DLL_REPAIR_RECIPE.md (WinError 182 fallback)."
         ) from exc
 
 
@@ -348,10 +354,10 @@ class ArgumentQualityEvaluator:
         # is the exact "degraded theatre" the mandate forbids.
         if _DEPS_ATTEMPTED and not _DEPS_AVAILABLE:
             raise RuntimeError(
-                "Cannot evaluate quality: spacy/textstat are not available. "
-                "Ensure dll_guard is imported before jpype and the conda "
-                "environment is activated. "
-                "See docs/architecture/TORCH_DLL_REPAIR_RECIPE.md."
+                "Cannot evaluate quality: spacy/textstat/model are not available. "
+                "Ensure textstat is installed and the fr_core_news_sm model is "
+                "downloaded (`python -m spacy download fr_core_news_sm`), and the "
+                "conda environment is activated. See setup_project_env.ps1."
             )
 
         scores = {}
