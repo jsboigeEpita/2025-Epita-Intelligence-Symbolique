@@ -3566,7 +3566,27 @@ async def _invoke_hierarchical_fallacy(
             per_arg_fallacies = per_arg_result.get("fallacies", [])
             merged = _merge_fallacy_results(wide_fallacies, per_arg_fallacies)
             result["fallacies"] = merged
-            result["extraction_method"] = "widenet+perarg_union"
+            # FB-36 (#1123): label honestly. When the per-argument pass was
+            # skipped fail-loud (no extractable arguments — recursion fix), this
+            # is wide-net-only, NOT a union; surface the skip at the result
+            # level too so the report/state layer sees the per-arg lift was
+            # lost (fail-loud, anti-theater #1019).
+            if per_arg_result.get("per_argument_skipped"):
+                result["extraction_method"] = "widenet_only_no_perarg_args"
+                result["degraded"] = True
+                _existing_err = result.get("last_error")
+                result["last_error"] = (
+                    ("; " + _existing_err if _existing_err else "")
+                    + "per-argument fallacy lift skipped (no extractable arguments)"
+                ).lstrip("; ")
+                logger.warning(
+                    "Per-argument fallacy lift skipped (FB-36 #1123): no "
+                    "extractable arguments — wide-net result only, per-arg "
+                    "recall lift lost (widenet=%d fallacies retained)",
+                    len(wide_fallacies),
+                )
+            else:
+                result["extraction_method"] = "widenet+perarg_union"
             logger.info(
                 "Fallacy recall lift: widenet=%d, perarg=%d, merged=%d",
                 len(wide_fallacies),
@@ -3926,10 +3946,36 @@ async def _invoke_hierarchical_fallacy_per_argument(
         arguments = _extract_arguments_for_parallel(input_text, context)
 
         if not arguments:
-            logger.info(
-                "No individual arguments extracted — falling back to single-text analysis"
+            # FB-36 (#1123): do NOT recurse into _invoke_hierarchical_fallacy
+            # here. This per-argument pass is invoked AFTER the wide-net "llm"
+            # descent already ran (its results are merged by the caller at the
+            # ``_merge_fallacy_results`` site), so re-entering the wide-net path
+            # is redundant — and worse, that path calls THIS function again, so
+            # with no extractable arguments (no state args, no
+            # ``phase_extract_output``, no ``\n\n`` paragraph breaks — e.g. an
+            # encrypted corpus loaded as a single block) it recurses
+            # indefinitely. That infinite loop is the doc_A spectacular+full
+            # >2h hang (ruled out of the descent by FB-35, isolated here).
+            # Return fail-loud instead: the caller keeps the wide-net fallacies
+            # and the per-arg pass is marked degraded (anti-theater #1019).
+            logger.warning(
+                "Per-argument fallacy harness found no extractable arguments "
+                "(no state args / no phase_extract_output / no \\n\\n paragraph "
+                "breaks) — skipping per-argument pass fail-loud (FB-36 #1123, "
+                "no recursion). In a full pipeline this means the extract "
+                "phase produced no splittable arguments for this input; the "
+                "wide-net result is retained by the caller."
             )
-            return await _invoke_hierarchical_fallacy(input_text, context)
+            return {
+                "fallacies": [],
+                "exploration_method": "per_argument_skipped_no_args",
+                "per_argument_skipped": True,
+                "degraded": True,
+                "last_error": (
+                    "no arguments extracted for per-argument fallacy "
+                    "(wide-net result retained by caller)"
+                ),
+            }
 
         logger.info(
             "Parent harness: running parallel fallacy detection on %d arguments",
