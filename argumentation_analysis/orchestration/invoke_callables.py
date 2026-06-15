@@ -6287,8 +6287,9 @@ async def _invoke_deep_synthesis(
     """Invoke DeepSynthesisAgent on the current shared state (#532).
 
     Reads the full UnifiedAnalysisState from context, runs the 9-section
-    template-driven synthesis, and returns both the report object and the
-    rendered markdown.
+    synthesis (sections 1-8 grounded over state artifacts; Section 9
+    ``final_synthesis`` LLM-conducted and fail-loud per FB-31 #1108, NOT a
+    template), and returns both the report object and the rendered markdown.
 
     FB-18 Mode A (#1039): fails explicitly when fewer than 3 artifact fields
     are populated (VG-2 state guard), and attaches the grounded transversal
