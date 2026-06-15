@@ -63,15 +63,22 @@ class FallacyWorkflowPlugin:
     5. Fallback to one-shot if iterative approach fails
     """
 
-    MAX_DEPTH_PER_BRANCH = 8
     MAX_BRANCHES = 4
     MAX_CANDIDATES = 20  # Wide-net Phase 1 cap (#578)
     MIN_CONFIRM_DEPTH = 2  # Don't accept confirmations at depth < 2 (too generic)
 
-    # FB-19 beam descent parameters (#1040)
-    BEAM_WIDTH = 3  # Top-k branches kept per level during beam descent
-    BEAM_MAX_LLM_CALLS = 15  # Circuit breaker for beam descent
-    BEAM_MIN_DEPTH = 5  # Value-gate: beam must reach ≥1 node at this depth
+    # FB-30 (#1107): restored agentic taxonomy navigation by subtraction.
+    # There is NO depth cap — the taxonomy leaves are the only cap (real
+    # taxonomy depth ≤ 10). The previous MAX_DEPTH_PER_BRANCH=8 made the 12
+    # leaf nodes at depth 9-10 structurally unreachable. Runaway protection
+    # (#708) is preserved by a generous per-branch LLM-CALL budget (circuit
+    # breaker), NOT a depth cap. One navigation iteration == one LLM call, so
+    # this bounds total calls while letting the LLM descend freely to leaves.
+    MAX_NAVIGATION_LLM_CALLS = 18
+    # How many subtree levels the navigation prompt shows at each step (a
+    # multi-level cluster, not just immediate children) so the LLM can jump
+    # levels via explore_branch(any_pk) — the original summer-2025 design.
+    NAV_CLUSTER_DEPTH = 2
 
     # RA-3 #1048 item 2: bounded recursive sub-branch fan-out.
     # At a fork the LLM may flag several promising children; the engine used to
@@ -106,9 +113,10 @@ class FallacyWorkflowPlugin:
             self._confirmed: List[Tuple[str, str, int, float]] = []
             self.superseded_count = 0
             # RA-3 #1048 item 2: shared budget bounding recursive sub-branch
-            # fan-out across ALL branches of one analysis. Mirrors the beam's
-            # BEAM_MAX_LLM_CALLS guardrail — fan-out is capped, never unbounded
-            # (anti-pendule #1019). 0 ⇒ fan-out disabled.
+            # fan-out across ALL branches of one analysis. Mirrors the agentic
+            # navigation's MAX_NAVIGATION_LLM_CALLS guardrail — fan-out is
+            # capped, never unbounded (anti-pendule #1019). 0 ⇒ fan-out
+            # disabled.
             self._fanout_budget = fanout_budget
             self.fanout_spawned = 0
 
@@ -423,8 +431,8 @@ class FallacyWorkflowPlugin:
     ) -> Optional[str]:
         """Map a free-text fallacy name to the deepest matching PK.
 
-        FB-19 (#1040): tries the deep index (depth ≤ 3) first, giving the
-        beam descent a head start. Falls back to None if no match.
+        Tries the deep index (depth ≤ 3) first, giving the agentic navigation
+        a head start. Falls back to None if no match.
         """
         name_lower = fallacy_name.lower().strip()
 
@@ -439,185 +447,14 @@ class FallacyWorkflowPlugin:
 
         return None
 
-    async def _beam_descent(
-        self,
-        argument_text: str,
-        seed_pks: List[str],
-        beam_width: Optional[int] = None,
-        max_llm_calls: Optional[int] = None,
-    ) -> List[IdentifiedFallacy]:
-        """FB-19 beam descent: iterative top-k selection at each taxonomy level.
-
-        At each level, presents candidate children to the LLM, keeps the top
-        beam_width by confidence, and descends. Budget-capped to prevent runaway.
-
-        Args:
-            argument_text: The text to analyze.
-            seed_pks: Starting PKs (from wide-net, possibly at depth 2-3).
-            beam_width: Max branches kept per level (default BEAM_WIDTH).
-            max_llm_calls: Circuit breaker (default BEAM_MAX_LLM_CALLS).
-
-        Returns:
-            List of IdentifiedFallacy from confirmed nodes at deepest level.
-        """
-        beam_width = beam_width or self.BEAM_WIDTH
-        max_llm_calls = max_llm_calls or self.BEAM_MAX_LLM_CALLS
-
-        slave_kernel, slave_settings = self._create_slave_kernel()
-        llm_calls_used = 0
-
-        # Beam state: list of (pk, depth, confidence, navigation_trace)
-        beam: List[Tuple[str, int, float, List[str]]] = []
-        for pk in seed_pks:
-            node = self.taxonomy_navigator.get_node(pk)
-            if node:
-                try:
-                    depth = int(node.get("depth", 0))
-                except (ValueError, TypeError):
-                    depth = 0
-                beam.append((pk, depth, 1.0, [pk]))
-
-        confirmed_fallacies: List[IdentifiedFallacy] = []
-
-        while beam and llm_calls_used < max_llm_calls:
-            next_beam: List[Tuple[str, int, float, List[str]]] = []
-
-            for pk, depth, conf, trace in beam:
-                if llm_calls_used >= max_llm_calls:
-                    break
-
-                node = self.taxonomy_navigator.get_node(pk)
-                if not node:
-                    continue
-
-                children = self.taxonomy_navigator.get_children(pk)
-
-                # Leaf node or no children — auto-confirm if depth >= MIN_CONFIRM_DEPTH
-                if not children:
-                    node_name = node.get(
-                        f"text_{self.language}", node.get("nom_vulgarisé", pk)
-                    )
-                    if depth >= self.MIN_CONFIRM_DEPTH:
-                        confirmed_fallacies.append(
-                            IdentifiedFallacy(
-                                fallacy_type=node_name,
-                                taxonomy_pk=pk,
-                                taxonomy_path=node.get("path", ""),
-                                explanation=f"Beam descent confirmed at depth {depth} (leaf)",
-                                confidence=conf * 0.85,
-                                navigation_trace=trace,
-                                family=node.get("Famille", ""),
-                            )
-                        )
-                    continue
-
-                # Present children to LLM for beam selection
-                child_options = []
-                for child in children:
-                    cpk = child.get("PK", "")
-                    cname = child.get(
-                        f"text_{self.language}", child.get("nom_vulgarisé", cpk)
-                    )
-                    cdesc = child.get(f"desc_{self.language}", "")[:120]
-                    child_options.append({"pk": cpk, "name": cname, "desc": cdesc})
-
-                parent_name = node.get(
-                    f"text_{self.language}", node.get("nom_vulgarisé", pk)
-                )
-
-                prompt = (
-                    f'Text to analyze: "{argument_text[:500]}"\n\n'
-                    f"You are navigating the fallacy taxonomy at depth {depth}: "
-                    f"{parent_name}\n"
-                    f"Select the TOP {beam_width} most relevant children for this text.\n"
-                    f"Rate each selected child with a confidence score (0.0-1.0).\n\n"
-                    f"Children:\n"
-                )
-                for i, co in enumerate(child_options):
-                    prompt += f"  {i+1}. {co['name']} (PK: {co['pk']}): {co['desc']}\n"
-
-                prompt += (
-                    f"\nRespond with a JSON array of up to {beam_width} objects:\n"
-                    '[{"pk": "...", "confidence": 0.0-1.0, "reason": "..."}]\n'
-                    "Respond ONLY with the JSON array, no other text."
-                )
-
-                beam_history = ChatHistory(
-                    system_message=(
-                        "You are a fallacy taxonomy navigator. Select the most "
-                        "relevant branches for the given text. "
-                        "Watch for indirect forms: circular reasoning via paraphrase "
-                        "(not just literal repetition), and emotional appeals where "
-                        "emotion drives persuasion rather than merely illustrating. "
-                        "Respond ONLY with a JSON array."
-                    )
-                )
-                beam_history.add_user_message(prompt)
-
-                try:
-                    beam_response = await asyncio.wait_for(
-                        self.llm_service.get_chat_message_content(
-                            chat_history=beam_history,
-                            settings=slave_settings,
-                            kernel=slave_kernel,
-                        ),
-                        timeout=30.0,
-                    )
-                    llm_calls_used += 1
-                except asyncio.TimeoutError:
-                    self.logger.warning(f"  Beam descent LLM call timed out at {pk}")
-                    continue
-                except Exception as e:
-                    self.logger.warning(f"  Beam descent LLM call failed: {e}")
-                    llm_calls_used += 1
-                    continue
-
-                raw = str(beam_response).strip()
-                selections = []
-                try:
-                    if "```json" in raw:
-                        raw = raw.split("```json")[1].split("```")[0]
-                    elif "```" in raw:
-                        raw = raw.split("```")[1].split("```")[0]
-                    start = raw.find("[")
-                    end = raw.rfind("]") + 1
-                    if start >= 0 and end > start:
-                        selections = json.loads(raw[start:end])
-                except (json.JSONDecodeError, ValueError):
-                    self.logger.warning(f"  Beam descent parse failed: {raw[:100]}")
-
-                for sel in selections[:beam_width]:
-                    if not isinstance(sel, dict):
-                        continue
-                    sel_pk = str(sel.get("pk", ""))
-                    sel_conf = float(sel.get("confidence", 0.5))
-                    child_node = self.taxonomy_navigator.get_node(sel_pk)
-                    if child_node and sel_pk != pk:
-                        try:
-                            child_depth = int(child_node.get("depth", depth + 1))
-                        except (ValueError, TypeError):
-                            child_depth = depth + 1
-                        next_beam.append(
-                            (sel_pk, child_depth, conf * sel_conf, trace + [sel_pk])
-                        )
-
-            # Keep only top beam_width candidates by confidence for next level
-            next_beam.sort(key=lambda x: x[2], reverse=True)
-            beam = next_beam[: beam_width * 2]  # Allow some expansion
-
-        self.logger.info(
-            f"Beam descent complete: {llm_calls_used} LLM calls, "
-            f"{len(confirmed_fallacies)} confirmed fallacies"
-        )
-        return confirmed_fallacies
-
     async def _wide_net_candidates(self, argument_text: str) -> List[str]:
         """Phase 1 wide-net: LLM lists all candidate fallacies 0-shot-style.
 
         Returns list of PKs (depth 1-3 via deep index), up to MAX_CANDIDATES.
 
-        FB-19 (#1040): tries deep index first (depth 2-3), falls back to
-        root PKs. This gives the beam descent a 2-3 level head start.
+        Tries deep index first (depth 2-3), falls back to root PKs. This gives
+        the agentic navigation a 2-3 level head start; from there the LLM
+        descends freely (multi-level cluster, no depth cap — FB-30 #1107).
         """
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
@@ -759,6 +596,45 @@ class FallacyWorkflowPlugin:
 
         return results
 
+    def _render_subtree_cluster(self, root_pk: str, max_levels: int = 2) -> str:
+        """Render a truncated multi-level subtree under ``root_pk``.
+
+        FB-30 (#1107): the navigation prompt shows the LLM a cluster spanning
+        ``max_levels`` below the current node (not just immediate children),
+        so the LLM can jump levels by calling ``explore_branch`` on a deeper
+        PK directly. Each line carries name + PK + short description so the
+        LLM has enough signal to pick any node.
+
+        Args:
+            root_pk: the PK whose subtree to render (rendered as the root line).
+            max_levels: how many levels of descendants to include below the
+                root (1 = children only, 2 = children + grandchildren).
+
+        Returns:
+            A newline-separated, indented cluster string. Empty string if the
+            root has no descendants.
+        """
+        lines: List[str] = []
+
+        def walk(pk: str, level: int) -> None:
+            if level > max_levels:
+                return
+            node = self.taxonomy_navigator.get_node(pk)
+            if not node:
+                return
+            indent = "  " * level
+            name = node.get(f"text_{self.language}", node.get("nom_vulgarisé", pk))
+            desc = node.get(f"desc_{self.language}", "")
+            # Keep the description short so the whole cluster fits the prompt.
+            desc_short = desc[:120] + ("…" if len(desc) > 120 else "")
+            depth = node.get("depth", "?")
+            lines.append(f"{indent}- {name} (ID: {pk}, depth {depth}): {desc_short}")
+            for child in self.taxonomy_navigator.get_children(pk):
+                walk(child.get("PK", ""), level + 1)
+
+        walk(root_pk, 0)
+        return "\n".join(lines)
+
     async def _explore_single_branch(
         self,
         argument_text: str,
@@ -793,7 +669,14 @@ class FallacyWorkflowPlugin:
         navigation_trace = [start_pk]
         reasoning_history = reasoning_history or []
 
-        for iteration in range(self.MAX_DEPTH_PER_BRANCH):
+        # FB-30 (#1107): no depth cap — the LLM descends until it reaches a
+        # leaf (the only natural cap, depth ≤ 10). Bounded only by a generous
+        # per-branch LLM-call budget (circuit breaker, preserves #708). One
+        # iteration == one LLM call (either the leaf-confirmation call or the
+        # navigation call), so this counts calls, not depth.
+        llm_call_count = 0
+        while llm_call_count < self.MAX_NAVIGATION_LLM_CALLS:
+            llm_call_count += 1
             # --- Supersession check (RA-3 #1048) ---
             if supersession_tracker is not None:
                 current_node = self.taxonomy_navigator.get_node(current_pk)
@@ -962,18 +845,19 @@ class FallacyWorkflowPlugin:
                 "if this level matches and you want to STOP here.\n"
             )
 
-            options_text += "\n[EXPLORE DEEPER] Select one of these children:\n"
-            for child in children:
-                cpk = child.get("PK", "")
-                cname = child.get(
-                    f"text_{self.language}", child.get("nom_vulgarisé", cpk)
-                )
-                cdesc = child.get(f"desc_{self.language}", "")
-                cexample = child.get(f"example_{self.language}", "")[:150]
-                options_text += f"  - {cname} (ID: {cpk}): {cdesc}\n"
-                if cexample:
-                    options_text += f"    Example: {cexample}\n"
-                options_text += f"    → Call explore_branch(node_pk='{cpk}') to explore this branch.\n"
+            # FB-30 (#1107): multi-level cluster, not just immediate children.
+            # The LLM sees a truncated subtree NAV_CLUSTER_DEPTH levels deep,
+            # so it can jump levels by calling explore_branch on a grandchild
+            # PK directly (the original summer-2025 agentic design), rather
+            # than descending one level per iteration.
+            options_text += (
+                f"\n[EXPLORE DEEPER] — subtree under {parent_name} "
+                f"(showing {self.NAV_CLUSTER_DEPTH + 1} levels; "
+                "you may explore ANY listed node, not only the immediate children):\n"
+            )
+            options_text += self._render_subtree_cluster(
+                current_pk, max_levels=self.NAV_CLUSTER_DEPTH
+            )
 
             prompt = (
                 f'Text to analyze: "{argument_text[:500]}"\n\n'
@@ -981,7 +865,8 @@ class FallacyWorkflowPlugin:
                 f"{reasoning_context}"
                 f"{options_text}\n"
                 "Choose ONE action:\n"
-                "- Call explore_branch(node_pk='<child_pk>') to explore a child branch\n"
+                "- Call explore_branch(node_pk='<any_listed_pk>') to explore a node — "
+                "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
                 f"- Call confirm_fallacy(node_pk='{current_pk}', ...) to confirm THIS level and stop\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
                 "You MUST call exactly one function."
@@ -1215,7 +1100,8 @@ class FallacyWorkflowPlugin:
 
         and pruned by the supersession tracker (dead-end / superseded
         sub-branches abandon early). Anti-pendule #1019: fan-out is capped, not
-        unbounded — it mirrors the beam's ``BEAM_MAX_LLM_CALLS`` discipline.
+        unbounded — it mirrors the agentic navigation's
+        ``MAX_NAVIGATION_LLM_CALLS`` discipline.
         """
         tasks = []
         for sub_pk, sub_info in extras[: self.SUBBRANCH_FANOUT_WIDTH]:
@@ -1265,8 +1151,12 @@ class FallacyWorkflowPlugin:
         2. Slave selects candidate branches (via explore_branch calls)
         3. For each candidate, iterative deepening with double-selection
         4. Parallel exploration of up to MAX_BRANCHES branches
-        5. FB-19 beam descent for deep nodes (additive, no regression)
-        6. If no result, fall back to one-shot full-taxonomy approach
+        5. If no result, fall back to one-shot full-taxonomy approach
+
+        FB-30 (#1107): the mechanical per-level beam descent is removed.
+        Agentic navigation in step 3 now has no depth cap (taxonomy leaves are
+        the only cap) and shows the LLM a multi-level cluster so it can jump
+        levels — restoring the original summer-2025 design by subtraction.
         """
         file_handler = None
         if trace_log_path and str(trace_log_path).strip() not in ("", "None", "null"):
@@ -1375,29 +1265,12 @@ class FallacyWorkflowPlugin:
 
             if identified:
                 identified.sort(key=lambda f: f.confidence, reverse=True)
-
-            # Phase 3b: FB-19 beam descent for deep nodes (#1040)
-            # Additive: enriches identified list with deep findings, no regression
-            beam_fallacies = []
-            try:
-                beam_fallacies = await self._beam_descent(argument_text, candidate_pks)
-            except Exception as e:
-                self.logger.warning(f"Beam descent failed (non-fatal): {e}")
-
-            if beam_fallacies:
-                for bf in beam_fallacies:
-                    if bf.taxonomy_pk not in seen_pks:
-                        seen_pks[bf.taxonomy_pk] = bf
-                        identified.append(bf)
-                self.logger.info(
-                    f"FB-19 beam descent added {len(beam_fallacies)} deep fallacies"
-                )
-
-            if identified:
-                identified.sort(key=lambda f: f.confidence, reverse=True)
-                method = (
-                    "wide_net_parallel_beam" if beam_fallacies else "wide_net_parallel"
-                )
+                # FB-30 (#1107): the mechanical beam descent (_beam_descent,
+                # Phase 3b) is removed — restored agentic navigation in
+                # _explore_single_branch (no depth cap + multi-level cluster)
+                # now reaches deep/lateral nodes directly. Method label no
+                # longer carries the "_beam" suffix.
+                method = "wide_net_parallel"
                 analysis_result = FallacyAnalysisResult(
                     fallacies=identified,
                     exploration_method=method,
