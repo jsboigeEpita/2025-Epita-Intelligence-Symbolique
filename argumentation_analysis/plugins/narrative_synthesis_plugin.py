@@ -514,7 +514,11 @@ _PROSE_INSTRUCTIONS = (
     "not just list methods, but articulate the insight that emerges from their "
     "concordance (e.g. 'the argument combines X AND Y AND Z, making its weakness "
     "structural rather than circumstantial'). "
-    "(6) Maximum 400 words."
+    "(6) Maximum 400 words. "
+    "(7) OPAQUE-ID DISCIPLINE (FB-34 #1118): refer to the source/speaker/states "
+    "ONLY by opaque labels (Speaker_A, State_Q, arg_1, doc_A) — never emit a real "
+    "name, leader, country, party, or date. Characterize the argumentation "
+    "abstractly; if a real name is needed to make a point, drop the point."
 )
 
 
