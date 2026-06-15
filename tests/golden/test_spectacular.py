@@ -10,7 +10,12 @@ Definition of Done (#365):
   - state.dung_frameworks has non-trivial structure
   - state.fol_analysis_results has ≥5 formulas
   - state.jtms_retraction_chain has ≥1 cascade
-  - state.narrative_synthesis present and cites ≥5 fields
+
+Note (#1115): the spectacular workflow no longer produces `narrative_synthesis`
+(the template phase was removed — determinization residue per #1109 §5). The
+frozen fixture still carries a historical `narrative_synthesis` field, so the
+`TestNarrativeSynthesis` tests below validate that frozen artifact (a regression
+guard on the fixture), not on the live spectacular path.
 """
 
 import json

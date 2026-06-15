@@ -310,33 +310,55 @@ class TestSpectacularWorkflowGolden:
         "pl",
         "fol",
         "modal",
+        "fol_solver",
+        "modal_solver",
         "dung_extensions",
+        "ranking",
+        "bipolar",
+        "probabilistic",
         "aspic_analysis",
         "counter",
+        "stakes",
         "jtms",
         "debate",
         "atms",
         "governance",
         "formal_synthesis",
-        "narrative_synthesis",
+        "text_to_kb",
+        "kb_to_tweety",
+        "tweety_interpretation",
+        "belief_revision",
+        "synthesis",
+        "deep_synthesis",
     }
 
-    def test_phase_count_is_17(self):
+    def test_phase_count_is_28(self):
+        # #1115: narrative_synthesis template phase removed from spectacular
+        # (determinization residue #1109 §5); count reflects real phase set.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 17
+        assert len(wf.phases) == 28
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
         assert {p.name for p in wf.phases} == self.EXPECTED_PHASES
 
+    def test_narrative_template_not_in_spectacular(self):
+        """#1115: load-bearing — template narrative_synthesis phase removed from
+        spectacular; the LLM-conducted deep_synthesis is the sole narrative path."""
+        wf = build_spectacular_workflow()
+        assert "narrative_synthesis" not in {p.name for p in wf.phases}
+
     def test_dag_validates_clean(self):
         wf = build_spectacular_workflow()
         assert wf.validate() == []
 
-    def test_execution_order_has_6_levels(self):
+    def test_execution_order_has_8_levels(self):
+        # #1115: DAG grew via #504/#506/#507/#508/#534 (solvers, KB/tweety,
+        # belief_revision, synthesis, deep_synthesis) — execution order is now
+        # 8 levels. Folded DAG test debt per ai-01 R407.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 6
+        assert len(levels) == 8
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -346,11 +368,14 @@ class TestSpectacularWorkflowGolden:
     def test_l1_parallel_phases(self):
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
+        # L1 = the 4 fan-out phases after extract, PLUS text_to_kb (#506 KB
+        # extraction depends only on extract). #1115 folded DAG debt.
         assert set(levels[1]) == {
             "hierarchical_fallacy",
             "neural_detect",
             "nl_to_logic",
             "quality",
+            "text_to_kb",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -369,21 +394,38 @@ class TestSpectacularWorkflowGolden:
         atms = wf.get_phase("atms")
         assert "jtms" in atms.depends_on
 
-    def test_formal_synthesis_terminal(self):
+    def test_formal_synthesis_aggregates_three_logic_families(self):
+        # #1115: formal_synthesis is no longer terminal (deep_synthesis is the
+        # final spectacular deliverable). Assert its aggregation deps + that it
+        # runs in the late formal-aggregation level, not the terminal level.
         wf = build_spectacular_workflow()
         synth = wf.get_phase("formal_synthesis")
         assert "fol" in synth.depends_on
         assert "modal" in synth.depends_on
         assert "aspic_analysis" in synth.depends_on
         levels = wf.get_execution_order()
-        assert "formal_synthesis" in levels[-1]
+        # formal_synthesis runs in the formal-aggregation level (5 of 0..7); the
+        # terminal level is deep_synthesis (#534).
+        assert "formal_synthesis" in levels[5]
+        assert levels[-1] == ["deep_synthesis"]
 
     @pytest.mark.asyncio
-    async def test_all_16_phases_complete(self):
+    async def test_all_phases_complete_or_optional_skipped(self):
+        # #1115: the spectacular workflow has 28 phases (was 16/17); exact-count
+        # asserts went stale as the DAG grew. Assert the load-bearing invariant
+        # instead: no phase FAILED, and the non-optional phases all COMPLETED.
         wf = build_spectacular_workflow()
         results, state = await _execute_workflow(wf)
-        completed = [r for r in results.values() if r.status == PhaseStatus.COMPLETED]
-        assert len(completed) == 17
+        failed = [r for r in results.values() if r.status == PhaseStatus.FAILED]
+        assert failed == [], f"Phases failed: {[r for r in results if results[r].status == PhaseStatus.FAILED]}"
+        for name, phase in [(p.name, p) for p in wf.phases]:
+            result = results.get(name)
+            if result is None:
+                continue
+            if not getattr(phase, "optional", True):
+                assert result.status == PhaseStatus.COMPLETED, (
+                    f"Non-optional phase {name} did not complete: {result.status}"
+                )
 
     @pytest.mark.asyncio
     async def test_no_failed_phases(self):
@@ -511,8 +553,10 @@ class TestSpectacularWorkflowGolden:
         _, state = await _execute_workflow(wf)
         assert "spectacular_analysis" in state.workflow_results
         wf_data = state.workflow_results["spectacular_analysis"]
-        assert wf_data["completed"] == 17
+        # #1115: spectacular has 28 phases; assert none failed rather than a stale
+        # exact count (the DAG grew via #504/#506/#507/#508/#534).
         assert wf_data["failed"] == 0
+        assert wf_data["completed"] == len(wf.phases)
 
 
 # ── Sherlock Modern Workflow Golden Tests ────────────────────────────────────
@@ -613,7 +657,9 @@ class TestWorkflowCatalogGolden:
         catalog = get_workflow_catalog()
         assert "spectacular" in catalog
         assert catalog["spectacular"].name == "spectacular_analysis"
-        assert len(catalog["spectacular"].phases) == 17
+        # #1115: spectacular has 28 phases (narrative_synthesis template removed;
+        # DAG grew via #504/#506/#507/#508/#534).
+        assert len(catalog["spectacular"].phases) == 28
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
