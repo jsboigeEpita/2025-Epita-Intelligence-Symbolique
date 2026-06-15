@@ -1,25 +1,26 @@
-"""Unit tests for FB-19 taxonomy beam descent (#1040 / #1042).
+"""Unit tests for FB-19 deep-index + wide-net helpers (#1040 / #1042).
 
-Tests verify the FB-19 contract (VG-D1..VG-D4):
-- VG-D1: beam descent can reach nodes at depth ≥5 on synthetic data
-- VG-D2: existing depth 2-3 results are unchanged when beam is active
-- VG-D3: beam descent respects the max_llm_calls budget
-- VG-D4: additive merge — no new findings means identical output
-- Deep index: _build_deep_index returns depth 2-3 PKs
-- Wide-net: _wide_net_candidates uses deep mapping (FB-19 enhancement)
+FB-30 (#1107) note: the mechanical per-level `_beam_descent` method and its
+constants (BEAM_WIDTH / BEAM_MAX_LLM_CALLS / BEAM_MIN_DEPTH) have been
+REMOVED — restored agentic navigation in `_explore_single_branch` (no depth
+cap + multi-level cluster) now reaches deep/lateral nodes directly. The
+beam-specific test classes (TestBeamDescent / TestBeamIntegration /
+TestValueGates) were testing the removed method and have been deleted with
+it. See `test_fb30_agentic_navigation.py` for the restored-navigation tests.
+
+What remains load-bearing here:
+- `_build_deep_index` / `_map_fallacy_to_deep_pk` — the deep name→PK index
+  the wide-net uses to give the agentic navigation a 2-3 level head start.
+- `_wide_net_candidates` — Phase 1 candidate selection (deep-then-root).
 """
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
-from argumentation_analysis.plugins.identification_models import (
-    IdentifiedFallacy,
-    FallacyAnalysisResult,
-)
 
 # ---------------------------------------------------------------------------
 # Fixtures — synthetic taxonomy + plugin
@@ -27,7 +28,7 @@ from argumentation_analysis.plugins.identification_models import (
 
 
 def _make_taxonomy_data():
-    """Build a synthetic taxonomy with 7 levels for beam descent testing."""
+    """Build a synthetic taxonomy with several levels for deep-index testing."""
     data = []
     # Root families (depth 1)
     families = [
@@ -101,7 +102,7 @@ def _make_taxonomy_data():
                     }
                 )
 
-                # Depth 4-7: chain to test beam reaching depth 5+
+                # Depth 4-7: chain (kept so deep-index maps non-trivial names)
                 parent_path = gc_path
                 parent_pk = gc_path.replace(".", "")
                 for d in range(4, 8):
@@ -191,66 +192,6 @@ class TestDeepIndex:
 
 
 # ---------------------------------------------------------------------------
-# Test: Beam descent (FB-19 core)
-# ---------------------------------------------------------------------------
-
-
-class TestBeamDescent:
-
-    def test_beam_constants_set(self):
-        """FB-19 beam parameters should have sensible defaults."""
-        assert FallacyWorkflowPlugin.BEAM_WIDTH >= 2
-        assert FallacyWorkflowPlugin.BEAM_MAX_LLM_CALLS >= 5
-        assert FallacyWorkflowPlugin.BEAM_MIN_DEPTH >= 4
-
-    def test_beam_descent_returns_empty_without_children(self):
-        """If seed PKs are leaf nodes at depth < MIN_CONFIRM_DEPTH, returns empty."""
-        plugin = _make_plugin()
-        # Use a deep leaf node (depth 7) as seed — it's a leaf so auto-confirms
-        # But we need to find one that IS a leaf
-        for node in plugin.taxonomy_navigator.taxonomy_data:
-            if int(node["depth"]) == 7:
-                pk = node["PK"]
-                # Check if leaf (no children in our synthetic data at depth 7)
-                children = plugin.taxonomy_navigator.get_children(pk)
-                if not children:
-                    result = asyncio.get_event_loop().run_until_complete(
-                        plugin._beam_descent("test text", [pk])
-                    )
-                    # Depth 7 >= MIN_CONFIRM_DEPTH (5) → should auto-confirm
-                    assert len(result) == 1
-                    assert result[0].taxonomy_pk == pk
-                    break
-
-    def test_beam_descent_budget_guard(self):
-        """Beam descent should stop after max_llm_calls even if beam continues."""
-        plugin = _make_plugin()
-        # Mock LLM to return valid selections
-        mock_response = MagicMock()
-        mock_response.items = []
-        # Return JSON with child PKs
-        plugin.llm_service.get_chat_message_content = AsyncMock(
-            return_value='[{"pk": "11", "confidence": 0.8}]'
-        )
-        # With budget=1, should make exactly 1 LLM call
-        result = asyncio.get_event_loop().run_until_complete(
-            plugin._beam_descent("test text", ["1"], max_llm_calls=1)
-        )
-        assert plugin.llm_service.get_chat_message_content.call_count <= 1
-
-    def test_beam_descent_additive_no_new_findings(self):
-        """VG-D4: if beam finds nothing, it returns empty list (additive)."""
-        plugin = _make_plugin()
-        # Mock LLM to return empty/invalid JSON
-        plugin.llm_service.get_chat_message_content = AsyncMock(return_value="[]")
-        result = asyncio.get_event_loop().run_until_complete(
-            plugin._beam_descent("test text", ["1"])
-        )
-        # Beam couldn't parse any children → empty result (no regression)
-        assert result == []
-
-
-# ---------------------------------------------------------------------------
 # Test: Wide-net deep mapping (FB-19 enhanced Phase 1)
 # ---------------------------------------------------------------------------
 
@@ -261,7 +202,6 @@ class TestWideNetDeepMapping:
         """Wide-net should try deep index before root index."""
         plugin = _make_plugin()
         # Mock LLM to return a candidate that maps to depth-2
-        mock_response = MagicMock()
         mock_response_str = json.dumps(
             [
                 {
@@ -306,85 +246,4 @@ class TestWideNetDeepMapping:
                     depth = int(node["depth"])
                     # At least some should be depth 2+ if deep mapping worked
                     # (but root fallback is also acceptable)
-
-
-# ---------------------------------------------------------------------------
-# Test: Integration with run_guided_analysis
-# ---------------------------------------------------------------------------
-
-
-class TestBeamIntegration:
-
-    def test_beam_descent_method_exists(self):
-        """FB-19: _beam_descent method should exist on the plugin."""
-        plugin = _make_plugin()
-        assert hasattr(plugin, "_beam_descent")
-        assert hasattr(plugin, "_build_deep_index")
-        assert hasattr(plugin, "_map_fallacy_to_deep_pk")
-
-    def test_exploration_method_includes_beam(self):
-        """When beam descent adds findings, exploration_method should reflect it."""
-        # This is tested indirectly through the method field in results
-        # "wide_net_parallel_beam" when beam adds findings
-        # "wide_net_parallel" when beam adds nothing
-        assert True  # Structural check — the method name is set in code
-
-
-# ---------------------------------------------------------------------------
-# Test: Value-gates VG-D1..VG-D4 (structural)
-# ---------------------------------------------------------------------------
-
-
-class TestValueGates:
-
-    def test_vg_d1_beam_can_reach_depth_5(self):
-        """VG-D1: beam descent can confirm nodes at depth ≥5."""
-        plugin = _make_plugin()
-        # Find a node at depth 5 in synthetic taxonomy
-        deep_pk = None
-        for node in plugin.taxonomy_navigator.taxonomy_data:
-            if int(node["depth"]) == 5:
-                deep_pk = node["PK"]
-                break
-        assert deep_pk is not None, "Synthetic taxonomy should have depth-5 nodes"
-
-        # Direct beam from that PK — it's a leaf or has children
-        node = plugin.taxonomy_navigator.get_node(deep_pk)
-        children = plugin.taxonomy_navigator.get_children(deep_pk)
-
-        if not children:
-            # Leaf at depth 5 — auto-confirm
-            result = asyncio.get_event_loop().run_until_complete(
-                plugin._beam_descent("test text", [deep_pk])
-            )
-            assert len(result) >= 1
-            assert (
-                int(plugin.taxonomy_navigator.get_node(result[0].taxonomy_pk)["depth"])
-                >= 5
-            )
-
-    def test_vg_d3_budget_parameter_respected(self):
-        """VG-D3: beam respects max_llm_calls parameter."""
-        plugin = _make_plugin()
-        plugin.llm_service.get_chat_message_content = AsyncMock(
-            return_value='[{"pk": "11", "confidence": 0.5}]'
-        )
-        budget = 3
-        asyncio.get_event_loop().run_until_complete(
-            plugin._beam_descent("test text", ["1"], max_llm_calls=budget)
-        )
-        # LLM calls should not exceed budget + seed nodes
-        assert plugin.llm_service.get_chat_message_content.call_count <= budget + 1
-
-    def test_vg_d4_empty_beam_no_regression(self):
-        """VG-D4: when beam finds nothing, results are additive (empty list)."""
-        plugin = _make_plugin()
-        # Mock LLM to return unparseable output
-        plugin.llm_service.get_chat_message_content = AsyncMock(
-            return_value="I cannot determine"
-        )
-        result = asyncio.get_event_loop().run_until_complete(
-            plugin._beam_descent("test text", ["1"])
-        )
-        # No crash, returns empty — additive merge preserves existing results
-        assert isinstance(result, list)
+                    assert depth >= 1

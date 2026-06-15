@@ -37,7 +37,7 @@
 ### 1.3 Gaps
 
 1. No pipeline-level parameter to choose between lightweight vs deep detection
-2. `FallacyWorkflowPlugin` constants (`MAX_DEPTH_PER_BRANCH=8`, `MAX_BRANCHES=4`) are hardcoded
+2. `FallacyWorkflowPlugin` constants (`MAX_DEPTH_PER_BRANCH=8`, `MAX_BRANCHES=4`) are hardcoded. **Note (FB-30 #1107, 2026-06-15):** `MAX_DEPTH_PER_BRANCH` has since been **removed** — restored agentic taxonomy navigation has no depth cap (taxonomy leaves are the only cap); runaway protection is now a per-branch LLM-call budget (`MAX_NAVIGATION_LLM_CALLS`). See `docs/reports/FB19_TAXONOMY_DEEP_DESCENT.md` SUPERSEDED banner.
 3. `AnalysisDepth` enum not propagated to pipeline
 4. `FrenchFallacyAdapter` tier toggling is isolated — not wired into pipeline phases
 

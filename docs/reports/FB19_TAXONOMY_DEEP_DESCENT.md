@@ -1,9 +1,37 @@
 # FB-19 Design — Taxonomy Deep-Descent: Agent-Guided Exploration Beyond Depth 2-3
 
+> ## ⚠️ SUPERSEDED by FB-30 (#1107, 2026-06-15) — mechanical beam REMOVED
+>
+> The **agent-guided beam descent** described below (§2) was implemented as the
+> mechanical per-level `_beam_descent` (`fallacy_workflow_plugin.py`, #1044) —
+> a Python loop that showed the LLM only immediate children, kept top-k, and
+> descended one level per iteration under a hard `MAX_DEPTH_PER_BRANCH = 8` cap.
+> That made the 12 leaf nodes at taxonomy depth 9-10 **structurally
+> unreachable** and re-determinised a navigation that was originally (summer
+> 2025, commit `d2fdd930`) a free LLM-driven `explore_branch(any_pk)` walk with
+> **no cap**.
+>
+> **FB-30 restores the agentic design BY SUBTRACTION** (anti-pendule: one
+> scheme, not two):
+> - `MAX_DEPTH_PER_BRANCH` removed — taxonomy leaves are the only cap.
+> - `_beam_descent` + its Phase 3b call **deleted**.
+> - Runaway protection (#708) preserved by a generous per-branch LLM-**call**
+>   budget (`MAX_NAVIGATION_LLM_CALLS = 18`), NOT a depth cap.
+> - The navigation prompt shows a **multi-level cluster**
+>   (`_render_subtree_cluster`) so the LLM can jump levels via
+>   `explore_branch(any_pk)` — exactly the original design.
+> - FB-27 (#1101) case-(c) intermediate-confirm + D6/D7 directives preserved.
+>
+> The design rationale in §1 (why deep nodes were MISSED) and §5 (expected
+> impact) remain valid; only the **mechanism** (§2 beam) is superseded. Tests:
+> `tests/unit/argumentation_analysis/test_fb30_agentic_navigation.py`.
+
+---
+
 **Issue**: #1040 (Epic #947 follow-up — root cause of MISSED D3/D6/D7)
 **Author**: po-2023 worker (design)
 **Date**: 2026-06-11
-**Status**: DRAFT — awaiting review + implementation
+**Status**: SUPERSEDED (beam mechanism) — see banner above. Problem analysis (§1) and impact (§5) still valid.
 
 ---
 
