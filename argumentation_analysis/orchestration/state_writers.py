@@ -409,6 +409,23 @@ def _write_hierarchical_fallacy_to_state(
             taxonomy_path=taxonomy_path,
         )
 
+    # FB-35 (#1121): state-level fail-loud marker when the agentic descent was
+    # cost-capped (partial fallacy coverage). The phase output carries
+    # degraded/last_error from the invoke layer; surface it on the state trace
+    # so the spectacular report + convergence layer see the degradation
+    # (anti-theater #1019: never a silent partial/truncated outcome).
+    if output.get("degraded"):
+        state.add_trace_entry(
+            phase="hierarchical_fallacy",
+            agent="FallacyDetector",
+            reacts_to=["extract"],
+            summary=(
+                "DEGRADED: "
+                + str(output.get("last_error", "descent budget exceeded"))
+                + " — fallacy coverage is PARTIAL (descent cost-capped)."
+            ),
+        )
+
 
 def _write_semantic_index_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
