@@ -6358,9 +6358,12 @@ async def _invoke_deep_synthesis(
                     state
                 ),
             )
-            report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
-                state, report, []
-            )
+            # FB-31 #1108: no LLM in the static-builder path → Section 9 is
+            # fail-loud. final_synthesis stays empty and the status says
+            # "unavailable" explicitly — NOT a count-template masquerading as
+            # the synthesis (the determinization residue #1109/#1019 removes).
+            report.final_synthesis = ""
+            report.final_synthesis_status = "unavailable"
             report.total_state_fields = DeepSynthesisAgent._count_state_fields(state)
             report.sections_populated = DeepSynthesisAgent._count_populated_sections(
                 report

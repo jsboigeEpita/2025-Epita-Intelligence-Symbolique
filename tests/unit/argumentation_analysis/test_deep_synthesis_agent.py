@@ -130,9 +130,11 @@ def _build_report_from_state(state, meta=None):
         counter_arguments=Cls._build_counter_arguments(state),
         cross_text_parallels=Cls._build_cross_text_parallels(state),
     )
-    report.final_synthesis = asyncio.get_event_loop().run_until_complete(
-        Cls._build_final_synthesis(state, report, [])
-    )
+    # FB-31 #1108: Section 9 has no LLM in the static-builder path → fail-loud.
+    # The count-template fallback (_build_final_synthesis) was removed; the
+    # status says "unavailable" and final_synthesis stays empty.
+    report.final_synthesis = ""
+    report.final_synthesis_status = "unavailable"
     report.total_state_fields = Cls._count_state_fields(state)
     report.sections_populated = Cls._count_populated_sections(report)
     return report
@@ -293,13 +295,41 @@ class TestSectionBuilders:
         parallels = DeepSynthesisAgent._build_cross_text_parallels(state)
         assert parallels == []
 
-    def test_s9_final_synthesis(self, state):
+    def test_s9_final_synthesis_fail_loud_no_llm(self, state):
+        """FB-31 #1108: without an LLM, Section 9 is FAIL-LOUD — final_synthesis
+        is empty, status is "unavailable", and the rendered markdown contains
+        NO count-prose ("identified **N arguments**…"). The previous count-
+        template fallback was a determinization residue (#1109) emitting an
+        identical f-string regardless of model; it is deleted, not replaced."""
         report = _build_report_from_state(state)
-        assert len(report.final_synthesis) > 100
-        assert "argument" in report.final_synthesis.lower()
-        # WW #725: 6-section structure in template fallback
-        assert "## 1." in report.final_synthesis
-        assert "## 6." in report.final_synthesis
+        # Fail-loud contract: empty synthesis + explicit status
+        assert report.final_synthesis == ""
+        assert report.final_synthesis_status == "unavailable"
+        # Anti-theater: the markdown must NOT dress up counts as synthesis.
+        md = DeepSynthesisAgent.render_markdown(report)
+        count_marker = "identified **"  # the count-template's signature phrasing
+        assert count_marker not in md, (
+            "FB-31 NEGATIVE CONTROL FAILED: count-prose found in rendered "
+            "markdown despite the no-LLM path — template imposture not removed."
+        )
+        # Fail-loud surfaces the explicit status in the Section 9 block (mirrors
+        # the grounded-synthesis block). "## 1."/"## 6." are legitimate report
+        # sections (Source Overview, Belief Revision Trace) — NOT the deleted
+        # synthesis template — so they are not the distinguishing marker here.
+        assert "## 9. Final Synthesis" in md
+        assert "unavailable" in md, (
+            "FB-31: Section 9 must surface its fail-loud status explicitly, "
+            "not a generic 'not generated' fallback."
+        )
+
+    def test_s9_final_synthesis_status_field_serialized(self, state):
+        """FB-31 #1108: final_synthesis_status is part of the report's dict
+        serialization (mirrors grounded_synthesis_status) so downstream
+        consumers can branch on it rather than guessing from prose."""
+        report = _build_report_from_state(state)
+        d = report.to_dict()
+        assert "final_synthesis_status" in d
+        assert d["final_synthesis_status"] == "unavailable"
 
 
 # =========================================================================
@@ -459,22 +489,6 @@ class TestConvergenceWiring:
         md = DeepSynthesisAgent.render_markdown(report)
         assert "## Convergent Verdicts (cross-method agreement)" in md
         assert "resists cross-method scrutiny" in md
-
-    def test_final_synthesis_references_convergence(self):
-        state = _convergent_state()
-        report = DeepSynthesisReport(
-            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
-            argument_map=DeepSynthesisAgent._build_argument_map(state),
-            fallacy_diagnoses=DeepSynthesisAgent._build_fallacy_diagnoses(state),
-        )
-        report.convergent_verdicts, report.convergence_conclusion = (
-            DeepSynthesisAgent._build_convergent_verdicts(state)
-        )
-        thesis = asyncio.get_event_loop().run_until_complete(
-            DeepSynthesisAgent._build_final_synthesis(state, report, [])
-        )
-        assert "## 5." in thesis
-        assert "arg_2" in thesis
 
     def test_to_dict_includes_convergent_verdicts(self):
         state = _convergent_state()
@@ -687,125 +701,56 @@ def _ww_build_report(state=None, meta=None):
         report._raw_stakes = stakes_data
     else:
         report._raw_stakes = {}
-    # Rebuild final synthesis with stakes data attached
-    report.final_synthesis = asyncio.get_event_loop().run_until_complete(
-        DeepSynthesisAgent._build_final_synthesis(state, report, [])
-    )
+    # FB-31 #1108: the count-template (_build_final_synthesis) was removed;
+    # Section 9 is now LLM-conducted. In this no-LLM unit helper we leave the
+    # synthesis empty and mark the status explicitly (fail-loud — NOT a
+    # template masquerade). The stakes data attached above is still consumed
+    # by the LLM prompt tests (TestLLMSynthesisPromptSixSections).
+    report.final_synthesis = ""
+    report.final_synthesis_status = "unavailable"
     return report
 
 
-class TestSixSectionBriefing:
-    """WW #725: template fallback produces 6 numbered sections."""
+class TestSixSectionFailLoudNoLLM:
+    """FB-31 #1108: with no LLM, Section 9 is fail-loud.
 
-    def test_all_six_sections_present(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        assert "## 1." in thesis
-        assert "## 2." in thesis
-        assert "## 3." in thesis
-        assert "## 4." in thesis
-        assert "## 5." in thesis
-        assert "## 6." in thesis
+    Replaces the WW #725 template-fallback tests (``TestSixSectionBriefing`` /
+    ``TestSixSectionEmptyState``). The count-template that dressed up empty
+    state as six numbered ``## 1.``..``## 6.`` sections was the determinization
+    residue (#1109/#1019) and has been removed. A spectacular synthesis is now
+    LLM-conducted or absent — never a template masquerade.
 
-    def test_sections_in_order(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        pos = [thesis.index(f"## {i}.") for i in range(1, 7)]
-        assert pos == sorted(pos), "Sections must appear in order 1-6"
+    With no LLM available (the case for the static-builder path exercised here),
+    ``final_synthesis`` is empty, ``final_synthesis_status`` says so explicitly,
+    and the count-template block does not resurface.
+    """
 
-    def test_section_1_contains_context(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s1_start = thesis.index("## 1.")
-        s2_start = thesis.index("## 2.")
-        s1 = thesis[s1_start:s2_start]
-        assert "corpus_ww_A" in s1
-        assert "political" in s1.lower()
-
-    def test_section_2_mentions_stakes(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s2_start = thesis.index("## 2.")
-        s3_start = thesis.index("## 3.")
-        s2 = thesis[s2_start:s3_start]
-        assert "security" in s2.lower() or "stake" in s2.lower()
-
-    def test_section_3_mentions_stakeholders(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s3_start = thesis.index("## 3.")
-        s4_start = thesis.index("## 4.")
-        s3 = thesis[s3_start:s4_start]
-        assert "Speaker_A" in s3 or "stakeholder" in s3.lower()
-
-    def test_section_4_mentions_fallacies(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s4_start = thesis.index("## 4.")
-        s5_start = thesis.index("## 5.")
-        s4 = thesis[s4_start:s5_start]
-        assert "fallac" in s4.lower()
-
-    def test_section_5_specialist_graceful(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s5_start = thesis.index("## 5.")
-        s6_start = thesis.index("## 6.")
-        s5 = thesis[s5_start:s6_start]
-        # Without UU commentaries, should show graceful message
-        assert (
-            "No specialist commentaries" in s5
-            or "No cross-method" in s5
-            or "convergent" in s5.lower()
-        )
-
-    def test_section_6_political_reading(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        s6_start = thesis.index("## 6.")
-        s6 = thesis[s6_start:]
-        assert len(s6) > 100  # substantive content
-        assert "mobilization" in s6.lower() or "rhetorical" in s6.lower()
-
-    def test_no_real_names_privacy(self):
-        report = _ww_build_report()
-        thesis = report.final_synthesis
-        # Should NOT contain any raw names from the fixture text
-        assert "Speaker_A" in thesis  # opaque ID is fine
-        # Verify section 6 doesn't leak
-        s6_start = thesis.index("## 6.")
-        s6 = thesis[s6_start:]
-        assert "opaque" in DeepSynthesisAgent.SYSTEM_PROMPT.lower()
-
-
-class TestSixSectionEmptyState:
-    """WW #725: 6 sections produced even with minimal data."""
-
-    def test_minimal_state_produces_six_sections(self):
+    def test_minimal_state_empty_synthesis_unavailable(self):
+        """Minimal state + no LLM → empty synthesis, explicit 'unavailable'."""
         state = UnifiedAnalysisState("A short discourse about something.")
-        report = DeepSynthesisReport(
-            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
-        )
-        report._raw_stakes = {}
-        thesis = asyncio.get_event_loop().run_until_complete(
-            DeepSynthesisAgent._build_final_synthesis(state, report, [])
-        )
-        assert "## 1." in thesis
-        assert "## 6." in thesis
+        report = _build_report_from_state(state)
+        assert report.final_synthesis == ""
+        assert report.final_synthesis_status == "unavailable"
 
-    def test_no_stakes_graceful_message(self):
+    def test_no_count_template_residue(self):
+        """The deleted count-template block must not resurface as synthesis."""
         state = UnifiedAnalysisState("A short discourse.")
-        report = DeepSynthesisReport(
-            source_overview=DeepSynthesisAgent._build_source_overview(state, {}),
-        )
-        report._raw_stakes = {}
-        thesis = asyncio.get_event_loop().run_until_complete(
-            DeepSynthesisAgent._build_final_synthesis(state, report, [])
-        )
-        s2_start = thesis.index("## 2.")
-        s3_start = thesis.index("## 3.")
-        s2 = thesis[s2_start:s3_start]
-        assert "No typed stakes" in s2 or "no stakes" in s2.lower()
+        report = _build_report_from_state(state)
+        # The signature count-template markers ("## 1. Context", "## 6. Lecture")
+        # must not appear in the synthesis — that would mean the template was
+        # reinstated (the very determinization residue this change removes).
+        assert "## 1. Context" not in report.final_synthesis
+        assert "## 6. Lecture" not in report.final_synthesis
+        assert report.final_synthesis == ""
+
+    def test_status_field_serialized_to_dict(self):
+        """The fail-loud status is visible downstream via to_dict()."""
+        state = UnifiedAnalysisState("A short discourse.")
+        report = _build_report_from_state(state)
+        d = report.to_dict()
+        assert "final_synthesis_status" in d
+        assert d["final_synthesis_status"] == "unavailable"
+        assert d["final_synthesis"] == ""
 
 
 class TestLLMSynthesisPromptSixSections:

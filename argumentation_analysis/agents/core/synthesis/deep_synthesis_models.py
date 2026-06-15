@@ -135,6 +135,12 @@ class DeepSynthesisReport:
     counter_arguments: List[CounterArgumentEntry] = field(default_factory=list)
     cross_text_parallels: List[CrossTextParallel] = field(default_factory=list)
     final_synthesis: str = ""
+    # FB-31 #1108 — Section 9 status (fail-loud, mirrors grounded_synthesis_status):
+    # "llm" (LLM-conducted synthesis), "unavailable" (no LLM / empty result),
+    # "failed" (LLM raised). When the status is not "llm", final_synthesis is
+    # empty — there is NO count-template fallback dressed up as synthesis (the
+    # determinization residue #1019/#1109 says to remove, not institutionalize).
+    final_synthesis_status: str = ""
     convergent_verdicts: List[ConvergentVerdict] = field(default_factory=list)
     convergence_conclusion: str = ""
     # LLM-polished prose for the convergence section (Track GG #644).
@@ -170,6 +176,7 @@ class DeepSynthesisReport:
             "counter_arguments": [c.__dict__ for c in self.counter_arguments],
             "cross_text_parallels": [p.__dict__ for p in self.cross_text_parallels],
             "final_synthesis": self.final_synthesis,
+            "final_synthesis_status": self.final_synthesis_status,
             "convergent_verdicts": [v.__dict__ for v in self.convergent_verdicts],
             "convergence_conclusion": self.convergence_conclusion,
             "convergence_prose": self.convergence_prose,

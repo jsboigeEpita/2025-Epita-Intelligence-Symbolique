@@ -275,22 +275,24 @@ class DeepSynthesisAgent(BaseAgent):
         analysis_trace = getattr(state, "analysis_trace", [])
         report._raw_analysis_trace = analysis_trace if analysis_trace else []
 
-        # Section 9 — final synthesis (tries LLM, falls back to template)
+        # Section 9 — final synthesis (FB-31 #1108: fail-loud, NO template fallback).
+        # Mirrors the FB-18 grounded-transversal standard just below: when the
+        # LLM is unavailable the status says so explicitly instead of dressing
+        # up a count-template (f-string emitting "N arguments, M fallacies…")
+        # as the synthesis. That count-template was a determinization residue
+        # (#1109): an identical f-string emitted regardless of model, killing
+        # both richness AND variance. Fix = subtraction (remove the fallback),
+        # not a counterweight — per #1019 anti-theater.
         try:
             thesis = await self._llm_synthesis(report)
             if thesis:
                 report.final_synthesis = thesis
+                report.final_synthesis_status = "llm"
             else:
-                report.final_synthesis = (
-                    await DeepSynthesisAgent._build_final_synthesis(
-                        state, report, transcript
-                    )
-                )
+                report.final_synthesis_status = "unavailable"
         except Exception as e:
-            logger.warning(f"LLM synthesis failed, using template: {e}")
-            report.final_synthesis = await DeepSynthesisAgent._build_final_synthesis(
-                state, report, transcript
-            )
+            logger.warning(f"LLM synthesis failed (final_synthesis): {e}")
+            report.final_synthesis_status = "failed"
 
         # FB-18 Mode A (#1039) — grounded transversal synthesis + value-gates.
         # No template fallback here: when the LLM is unavailable the status
@@ -621,150 +623,6 @@ class DeepSynthesisAgent(BaseAgent):
             )
         return verdicts, synthesis.get("conclusion", "")
 
-    @staticmethod
-    async def _build_final_synthesis(
-        state: Any, report: DeepSynthesisReport, transcript: Optional[List[Dict]] = None
-    ) -> str:
-        """Section 9: 6-section political-rhetorical briefing (template fallback)."""
-        so = report.source_overview
-        stakes_data = getattr(report, "_raw_stakes", {}) or {}
-        stakes_list = stakes_data.get("stakes", [])
-        sh_list = stakes_data.get("stakeholders", [])
-        register = stakes_data.get("rhetorical_register", "")
-        arena = stakes_data.get("discursive_arena", "")
-
-        # Section 1 — Contexte & énonciation
-        s1 = (
-            f"## 1. Contexte & énonciation\n\n"
-            f"This {so.discourse_type or 'unknown'} discourse originates from source "
-            f"'{so.opaque_id}', delivered in {so.language or 'unknown'} during the "
-            f"{so.era or 'unknown'} era"
-        )
-        if so.speaker:
-            s1 += f" by {so.speaker}"
-        if so.venue:
-            s1 += f" at {so.venue}"
-        if so.topic:
-            s1 += f" on the topic of {so.topic}"
-        s1 += f". The text comprises {so.length_words:,} words.\n"
-        if register:
-            s1 += f"Rhetorical register: {register}. "
-        if arena:
-            s1 += f"Discursive arena: {arena}."
-        s1 += "\n"
-
-        # Section 2 — Enjeux soulevés
-        s2 = "## 2. Enjeux soulevés\n\n"
-        if stakes_list:
-            for s in stakes_list[:5]:
-                s2 += (
-                    f"- **{s.get('stake_type', 'unknown')}**: "
-                    f"{s.get('description', 'No description')}\n"
-                )
-        else:
-            s2 += "No typed stakes were extracted for this discourse.\n"
-
-        # Section 3 — Parties engagées & positionnement
-        s3 = "## 3. Parties engagées & positionnement\n\n"
-        if sh_list:
-            for sh in sh_list[:5]:
-                s3 += (
-                    f"- **{sh.get('name', '?')}** (role: {sh.get('role', '?')}, "
-                    f"stance: {sh.get('stance', '?')})\n"
-                )
-        else:
-            s3 += "No stakeholders were identified in this analysis.\n"
-
-        # Section 4 — Ressorts rhétoriques
-        n_args = len(report.argument_map)
-        n_fallacies = len(report.fallacy_diagnoses)
-        n_formal = len(report.formal_findings)
-        n_counters = len(report.counter_arguments)
-        families = sorted(set(f.family for f in report.fallacy_diagnoses))
-        dung_ext = ", ".join(report.dung_structure.grounded_extension) or "none"
-        s4 = (
-            f"## 4. Ressorts rhétoriques\n\n"
-            f"The analysis identified **{n_args} arguments**, "
-            f"**{n_fallacies} fallacies** across {len(families)} families "
-            f"({', '.join(families) or 'none'}), and **{n_formal} formal findings**. "
-            f"Dung grounded extension: [{dung_ext}].\n"
-        )
-        if report.fallacy_diagnoses:
-            top = sorted(
-                report.fallacy_diagnoses,
-                key=lambda f: len(f.commentary),
-                reverse=True,
-            )[:3]
-            s4 += "\nTop fallacies:\n"
-            for f in top:
-                s4 += f"- {f.family} ({f.taxonomy_path}): " f"{f.commentary[:120]}\n"
-        if report.counter_arguments:
-            best = max(report.counter_arguments, key=lambda c: c.score)
-            s4 += (
-                f"\nStrongest counter-argument (score {best.score:.2f}, "
-                f"strategy: {best.strategy}): {best.counter_content[:120]}...\n"
-            )
-
-        # Section 5 — Voix des spécialistes
-        specialist_commentary = getattr(report, "_specialist_commentary", "")
-        trace_data = getattr(report, "_raw_analysis_trace", [])
-        s5 = "## 5. Voix des spécialistes\n\n"
-        has_content = False
-        if specialist_commentary:
-            s5 += f"{specialist_commentary}\n"
-            has_content = True
-        if trace_data:
-            for entry in trace_data:
-                agent = entry.get("agent", "?")
-                reacts = ", ".join(entry.get("reacts_to", []))
-                summary = entry.get("summary", "")
-                s5 += f'- [{agent}] (réagit à: {reacts}) → "{summary}"\n'
-            has_content = True
-        if not has_content and report.convergent_verdicts:
-            s5 += (
-                "No specialist commentaries were deposited "
-                "during this analysis run.\n\n"
-            )
-            s5 += "Convergent verdicts (cross-method agreement):\n"
-            for v in report.convergent_verdicts:
-                s5 += f"- {v.arg_id}: {v.score} methods ({', '.join(v.methods)})\n"
-        elif not has_content:
-            s5 += (
-                "No specialist commentaries were deposited during this analysis run. "
-                "No cross-method convergence was detected.\n"
-            )
-
-        # Section 6 — Lecture politique
-        s6 = (
-            f"## 6. Lecture politique\n\n"
-            f"This {so.discourse_type or 'unknown'} discourse deploys "
-            f"{n_args} arguments across {len(families)} fallacy families, "
-            f"revealing a structured rhetorical strategy."
-        )
-        if register:
-            s6 += f" The dominant register is **{register}**"
-            if arena:
-                s6 += f", deployed in a **{arena}** arena"
-            s6 += "."
-        s6 += (
-            f"\n\nThe multi-agent orchestration identified {n_fallacies} fallacies "
-            f"and {n_counters} counter-arguments, with {n_formal} formal-method "
-            f"findings providing independent verification. "
-            f"The Dung grounded extension contains [{dung_ext}], "
-            f"indicating which arguments survive dialectical scrutiny."
-        )
-        if report.convergent_verdicts:
-            n_conv = len(report.convergent_verdicts)
-            s6 += (
-                f"\n\nCrucially, **{n_conv} argument(s) converge across independent "
-                f"methods**, signalling robustness in the diagnostic findings. "
-                f"This cross-method agreement is the signature insight unavailable "
-                f"to a single LLM pass."
-            )
-        s6 += "\n"
-
-        return "\n".join([s1, s2, s3, s4, s5, s6])
-
     # ------------------------------------------------------------------
     # Markdown rendering
     # ------------------------------------------------------------------
@@ -993,12 +851,20 @@ class DeepSynthesisAgent(BaseAgent):
                 sections.append(f"- {icon} `{gate}`")
             sections.append("")
 
-        # S9 — Final synthesis
-        sections.append(
-            report.final_synthesis
-            if report.final_synthesis
-            else "_Final synthesis not generated._\n"
-        )
+        # S9 — Final synthesis (FB-31 #1108: fail-loud). When the LLM did not
+        # produce a synthesis, surface the explicit status — mirroring the
+        # grounded-synthesis block above — instead of dressing up counts as a
+        # template synthesis (the determinization residue #1109 removed).
+        sections.append("## 9. Final Synthesis\n")
+        if report.final_synthesis:
+            sections.append(report.final_synthesis)
+            sections.append("")
+        else:
+            status = report.final_synthesis_status or "not generated"
+            sections.append(
+                f"_Final synthesis {status} — no LLM-conducted synthesis "
+                f"was produced for this run._\n"
+            )
 
         return "\n".join(sections)
 
