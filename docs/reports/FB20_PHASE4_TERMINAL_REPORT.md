@@ -185,17 +185,19 @@ Scored against the 11-category rubric. Ordinal scale: **DECIDES** (pipeline stri
 
 | Corpus | score_B | ordinal_B |
 |--------|---------|-----------|
-| doc_C | PL **10/10** + FOL 19/19, 12 Dung fw / 4 224 ext, 20 counter-args, 45 JTMS, 10 fallacies — quality MISSING | **EDGES→DECIDES** |
-| doc_A | PL **8/8** + FOL 6/6, 12 Dung fw / 340 ext, 12 counter-args, 39 JTMS, 6 fallacies — quality MISSING | **EDGES→DECIDES** |
-| doc_B | PL **4/4** + FOL 15/15, 12 Dung fw / 607 ext, 12 counter-args, 40 JTMS, 5 fallacies (truncated) — quality MISSING | **EDGES→DECIDES** |
+| doc_C | PL **10/10** + FOL 19/19, 12 Dung fw / 4 224 ext, 20 counter-args, 45 JTMS, 10 fallacies — quality **1.62/9** (Flesch 0.200, 8 args scored) | **EDGES** |
+| doc_A | PL **8/8** + FOL 6/6, 12 Dung fw / 340 ext, 12 counter-args, 39 JTMS, 6 fallacies — quality **1.70/9** (Flesch 0.438, 8 args scored) | **EDGES** |
+| doc_B | PL **4/4** + FOL 15/15, 12 Dung fw / 607 ext, 12 counter-args, 40 JTMS, 5 fallacies (truncated) — quality **1.67/9** (Flesch 0.300, 3 args scored — thin on truncated window) | **EDGES** |
 
-> **FB-22 #1087 re-measurement**: all three corpora now show **PL > 0 with real Tweety verification** (post-#1085 fix). The 11-category formal-logic axes (PL, FOL, Dung, JTMS, counter-args, fallacies) all DECIDE — the pipeline produces formal artifacts the 0-shot baseline structurally cannot. The min-rule now lands at DECIDES on the formal block. The **only remaining cap** is the unevaluated quality category.
+> **FB-22 #1087 re-measurement + FB-25 #1093 quality measurement**: all three corpora show **PL > 0 with real Tweety verification** (post-#1085 fix). The formal-logic axes (PL, FOL, Dung, JTMS, counter-args, fallacies) DECIDE — the pipeline produces formal artifacts the 0-shot baseline structurally cannot. The quality category is **no longer unevaluated**: FB-25 (#1091 deps + #1095 torch-fix) unblocked the native radar, which scored 8/8/3 args at mean **1.62 / 1.70 / 1.67** on the 9-virtue scale. The per-corpus verdict now **resolves to EDGES** (replacing the provisional "EDGES→DECIDES" that was hedged on the missing quality measurement).
 
-**Why EDGES→DECIDES (formal), capped at EDGES (overall)**: the pipeline produces formal artifacts
-(PL + FOL verified, Dung extensions, JTMS beliefs, counter-arguments) that the 0-shot baseline
-structurally **cannot** — that is a genuine DECIDES axis, now evidenced on all three corpora with
-real PL verification (not theater). The single remaining honest gap:
-- **Quality radar MISSING** (spacy/textstat WinError 182) → the 9-virtue quality category is unevaluated across all corpora. This is the **only** cap preventing a clean DECIDES. Tracked as #1088 (po-2023).
+**Quality axis — fork resolution (reasoned, not auto-promoted)**. The 0-shot baseline produces **no** 9-virtue radar, so two readings are defensible:
+- **(a) DECIDES by existence**: the pipeline emits a structured, deterministic (run-to-run spread **0.000000**) 9-virtue radar the baseline structurally cannot → existence-dominance.
+- **(b) EDGES by content**: the radar scores **low** (1.6–1.7/9; corpus_B thin at 3 args on the truncated 60K window). Low scores honestly reflect source-light, rhetorically dense text rather than a fabricated number — the pipeline does not demonstrate a *content* dominance, only a *systematic-evaluation* capability the baseline lacks.
+
+**We take (b) — quality = EDGES.** Rationale: DECIDES requires a clear dominance, and existence alone (pipeline emits a radar, baseline does not) is a weaker claim than the formal block's dominance (pipeline emits *Tweety-verified* artifacts with genuine analytic content). Promoting quality to DECIDES on existence-only grounds would be the auto-promotion the #1019 anti-theater mandate forbids. The radar is non-trivial and ≥ baseline (the baseline is zero on this axis), but its measured output does not *separate* from a competent human/baseline judgment the way formal verification does; corpus_B's thinness (3 args, truncation) further cautions against a DECIDES call.
+
+**Consequence for the overall verdict**: the formal block DECIDES; quality lands at EDGES. The min-rule (§5.3) therefore resolves the Epic verdict at **EDGES** — *reasoned across all axes, no longer capped by an unevaluated category*. This is a stronger, more defensible EDGES than the provisional one (which was hedged on a missing measurement), and it clears the closure bar (≥ EDGES, no LOSES). The quality measurement gap tracked as #1088 is **closed** (#1091 deps + #1095 torch-fix, both merged).
 
 ### 5.2 D3/D6/D7 status post-#1063 (honest yardstick)
 
@@ -220,20 +222,24 @@ Epic verdict = min(ordinal_B_doc_A, ordinal_B_doc_B, ordinal_B_doc_C)
 
 | Corpus | ordinal_B |
 |--------|-----------|
-| doc_C | EDGES→DECIDES (PL 10/10 real — quality only cap) |
-| doc_B | EDGES→DECIDES (PL 4/4 real — quality + truncation only cap) |
-| doc_A | EDGES→DECIDES (PL 8/8 real — quality only cap) |
+| doc_C | **EDGES** (formal block DECIDES — PL 10/10 real; quality measured **1.62/9**, content-dominance partial) |
+| doc_B | **EDGES** (formal block DECIDES — PL 4/4 real; quality measured **1.67/9** thin on truncated window) |
+| doc_A | **EDGES** (formal block DECIDES — PL 8/8 real; quality measured **1.70/9**, content-dominance partial) |
 
-**Epic verdict (min rule) = EDGES→DECIDES, capped at EDGES by the quality category.** No corpus at LOSES. The closure bar (≥ EDGES, no LOSES) is **met**.
+**Epic verdict (min rule) = EDGES.** No corpus at LOSES. The closure bar (≥ EDGES, no LOSES) is **met**.
 
-The formal-logic block now DECIDES on all three corpora (PL + FOL + Dung + JTMS + counter-args + fallacies — all real, all verified, all structurally impossible for the 0-shot baseline). The verdict is capped at EDGES (overall) by a **single** honest gap:
-1. **Quality radar MISSING** (spacy/textstat WinError 182) → the 9-virtue quality category is unevaluated across all three corpora. **This is now the sole remaining cap on DECIDES.** Tracked as #1088 (po-2023).
+This verdict is now **reasoned across all measured axes, not capped by an unevaluated category**. The formal-logic block DECIDES on all three corpora (PL + FOL + Dung + JTMS + counter-args + fallacies — all real, all Tweety-verified, all structurally impossible for the 0-shot baseline). The quality category is now **measured** (mean 1.62 / 1.70 / 1.67 on the 9-virtue scale, deterministic radar post-#1095) and resolves to **EDGES**: the radar is non-trivial and ≥ the baseline's zero on this axis, but its low scores honestly reflect source-light, rhetorically dense text rather than a content-dominance claim — and corpus_B is thin (3 args on the truncated window). The min of (formal DECIDES, quality EDGES) is EDGES.
+
+> **Quality axis — fully resolved by FB-23 + FB-25** (#1091 deps + #1095 torch-fix, both merged). The earlier "quality MISSING → #1088 → sole cap on DECIDES" framing is **retired**: the #1088 measurement gap is closed, and quality now produces an honest verdict (EDGES) rather than leaving a hole. DECIDES would require the radar to demonstrate content-dominance, not merely existence-dominance — and the measured scores do not support that stronger claim. This is the honest read, per the #1019 anti-theater mandate (no auto-promotion to a maximal verdict).
 
 > **PL axis — fully resolved by FB-21 #1085 + measured by FB-22 #1087**. The earlier "PL 06-10=25 → 06-13=0" was never a regression: the "25" was Python-heuristic fallback theater (FB-21 #1083 exposed it), the "0" was a latent missing-method bug (`PLHandler.check_consistency`) unmasked by RA-8's correct theater removal. FB-21 #1085 added the missing method; the FB-22 re-measurement confirms **PL > 0 with real Tweety verification on ALL THREE corpora** (C=10/10, A=8/8, B=4/4). The PL axis is no longer a swing factor and no longer caps DECIDES.
 
-A clean DECIDES verdict would require the quality axis to also produce a verdict — that fix (DLL load order for spacy/torch) is tracked as #1088 and is out of FB-20/FB-22 scope (plumbing, not brick-fix per dispatch).
+**Remaining traceable hedges (honest, not clean-story)**:
+- **D6 (Circularité) / D7 (Drive-Relief)** remain MISSED this run (§5.2) — the descent branches are reachable but the LLM did not classify at those leaves. A prompt-round-2 candidate, not inflated to PARTIAL.
+- **Per-brick latent bugs B-A…B-F** (FB-26 audit, #1096): **6/6 RESOLVED** on main, 0 still-real holes. Value-gate coverage is 30/31 load-bearing; the sole tautological gate (`TestModalLogicValueGate`) is a test-strength gap (real fallback is fixed via #961), tracked as **#1097**.
+- **Satellite formal bricks** (SAT/SetAF/DeLP/QBF/ABA/ADF/etc.) carry value-gates but their assertion strength was not spot-checked exhaustively in this audit — worthwhile Phase-1 hardening follow-up, recorded for traceability, not a verdict swing.
 
-**Closure bar**: Epic verdict ≥ EDGES, no corpus at LOSES. **Met.** (Per §5.2, the user retains the final call.)
+**Closure bar**: Epic verdict ≥ EDGES, no corpus at LOSES. **Met.** Per §5.2, the user retains the final call on Epic closure.
 
 ---
 
@@ -253,7 +259,7 @@ A clean DECIDES verdict would require the quality axis to also produce a verdict
 - [x] corpus_C integral — DONE **330.0s** (non-degraded, OpenRouter toggle active) / baseline **45.6s**
 - [x] corpus_A integral — DONE **348.2s** (non-degraded for the **first time** — bounded wide-net timeout #1087; descent completed naturally, no coverage lost) / baseline **78.5s**
 - [x] corpus_B integral — DONE **487.0s** (truncated 60K) / baseline **32.4s**
-- [x] Scoring + verdict population — DONE (formal block DECIDES on all corpora; Epic = EDGES→DECIDES capped at EDGES by quality)
+- [x] Scoring + verdict population — DONE (formal block DECIDES on all corpora; quality measured by FB-25 #1093 — Epic verdict = **EDGES**, reasoned across all axes per §5.3)
 
 > The original 06-10/06-13 runs (405.8s / 564.3s / corpus_A-timeout) are **superseded** by this FB-22 fresh measurement. The earlier corpus_A "validated 06-10 run" is retired — it carried the PL-fallback theater that FB-21 #1083/#1085 corrected.
 
@@ -263,7 +269,7 @@ A clean DECIDES verdict would require the quality axis to also produce a verdict
 58s with arguments=0/fallacies=0 — the exact anti-theater failure mode this report must avoid.
 
 **Known degradations this run (honest, not fabricated)**:
-- `quality` phase FAILED (spacy/textstat WinError 182, torch DLL order) → no 9-virtue radar. **The single remaining cap on DECIDES.** Tracked as #1088 (po-2023).
+- ~~`quality` phase FAILED (spacy/textstat WinError 182, torch DLL order) → no 9-virtue radar.~~ **RESOLVED end-to-end by FB-23 + FB-25** (#1091 deps `textstat`+`fr_core_news_sm` + #1095 `_neutralize_faulty_torch`). The radar now runs natively and **measured** all three corpora (mean 1.62 / 1.70 / 1.67 on the 9-virtue scale, §1–§3, §5.1) — no longer the cap on the verdict. The #1088 measurement gap is **closed**.
 - ~~`pl` phase FAILED → 0 PL verdicts.~~ **RESOLVED end-to-end by FB-21 #1085** (the missing `PLHandler.check_consistency` method). FB-22 measurement confirms **PL > 0 with real Tweety verification on all three corpora**: C=10/10, A=8/8, B=4/4 (`pl_metrics.template:0`, real implications, per-formula isolated). The corpus_A "PL=25" of the 06-10 run was Python-fallback theater — retired.
 - `probabilistic` FAILED (Tweety JAR missing class) / `stakes` FAILED (`'str' has no .get`).
 - `fallacy_families` aggregated to `unknown` (per-fallacy family field not populated in snapshot).
@@ -271,4 +277,4 @@ A clean DECIDES verdict would require the quality axis to also produce a verdict
 **Anti-pendule note**: This is a RUN + curated report, not a code-fix track. The PR #1077 plumbing
 fix was necessary to make the measurement honest (anti-theater), not a brick re-fix.
 
-**Post-publication correction (FB-21 #1083/#1085 → FB-22 #1087 measurement)**: this report originally attributed PL=0 to "Tweety rejecting LLM-generated formula syntax" and corpus_A's PL=25 to "the only corpus where verification succeeded". FB-21 disproved both: corpus_A's 25 were Python-heuristic fallback theater (the exact #1019 anti-pattern), and the PL=0 was a latent missing-method bug unmasked by RA-8's correct removal of that fallback. FB-22 confirms PL is verified on all corpora — the PL axis is no longer a cap and corpus_A no longer claimed as the unique PL-deciding corpus. The verdict is **EDGES→DECIDES on formal axes, capped at EDGES by the quality category only**.
+**Post-publication correction (FB-21 #1083/#1085 → FB-22 #1087 measurement → FB-25 #1093 quality)**: this report originally attributed PL=0 to "Tweety rejecting LLM-generated formula syntax" and corpus_A's PL=25 to "the only corpus where verification succeeded". FB-21 disproved both: corpus_A's 25 were Python-heuristic fallback theater (the exact #1019 anti-pattern), and the PL=0 was a latent missing-method bug unmasked by RA-8's correct removal of that fallback. FB-22 confirms PL is verified on all corpora — the PL axis is no longer a cap and corpus_A no longer claimed as the unique PL-deciding corpus. FB-25 then unblocked the quality radar (deps + torch-fix), so the previously-unevaluated quality category is now **measured** (§1–§3, §5.1). The terminal verdict is **EDGES** (§5.3): the formal block DECIDES, quality lands at EDGES (existence-dominance, not content-dominance — the honest read, no auto-promotion to DECIDES).
