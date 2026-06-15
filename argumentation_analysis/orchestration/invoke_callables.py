@@ -3579,6 +3579,32 @@ async def _invoke_hierarchical_fallacy(
                 enrich_err,
             )
 
+        # FB-35 (#1121): translate the descent budget-exceeded marker (from the
+        # wide-net run and/or the per-argument enrichment) into the canonical
+        # degraded/last_error signal so the report + state layer marks the phase
+        # degraded. Fail-loud (anti-theater #1019): the fallacy list may be
+        # PARTIAL — the agentic descent was cost-capped, never silently truncated.
+        _widenet_capped = bool(result.get("descent_budget_exceeded"))
+        _perarg_capped = bool(
+            "per_arg_result" in locals()
+            and isinstance(per_arg_result, dict)
+            and per_arg_result.get("descent_budget_exceeded")
+        )
+        if _widenet_capped or _perarg_capped:
+            result["degraded"] = True
+            _capped_sources = []
+            if _widenet_capped:
+                _capped_sources.append("wide-net")
+            if _perarg_capped:
+                _capped_sources.append("per-argument")
+            result["last_error"] = (
+                "descent budget exceeded (" + "+".join(_capped_sources) + " capped)"
+            )
+            logger.warning(
+                "Fallacy descent cost-capped (FB-35 #1121): %s — results are partial",
+                "+".join(_capped_sources),
+            )
+
         # Trace entry for hierarchical fallacy specialist
         _state = context.get("_state_object")
         if _state is not None and result.get("fallacies"):
@@ -3588,11 +3614,16 @@ async def _invoke_hierarchical_fallacy(
                 _top_family = str(
                     _fallacies[0].get("fallacy_type", _fallacies[0].get("type", ""))
                 )
+            _degraded_note = (
+                " [DEGRADED: descent budget exceeded — partial coverage]"
+                if result.get("degraded")
+                else ""
+            )
             _state.add_trace_entry(
                 phase="hierarchical_fallacy",
                 agent="FallacyDetector",
                 reacts_to=["extract"],
-                summary=f"{len(_fallacies)} sophismes détectés — famille dominante: {_top_family or 'mixte'}. Analyse taxonomique hiérarchique avec enrichissement per-argument.",
+                summary=f"{len(_fallacies)} sophismes détectés — famille dominante: {_top_family or 'mixte'}. Analyse taxonomique hiérarchique avec enrichissement per-argument.{_degraded_note}",
             )
         return result  # type: ignore[no-any-return]
 
@@ -3805,6 +3836,7 @@ async def _invoke_full_fallacy(
     """
     # Run LLM pass (default tier) — may raise RuntimeError if unavailable
     llm_context = {**context, "fallacy_tier": "llm"}
+    llm_result: Dict[str, Any] = {}
     try:
         llm_result = await _invoke_hierarchical_fallacy(input_text, llm_context)
         llm_fallacies = llm_result.get("fallacies", [])
@@ -3828,13 +3860,30 @@ async def _invoke_full_fallacy(
         len(merged),
     )
 
-    return {
+    # FB-35 (#1121): propagate the descent budget-exceeded / degraded signal
+    # from the LLM tier into the full-merged result so the report + state layer
+    # sees it (the hybrid pass is bounded and cannot trip the agentic descent
+    # breaker; only the LLM tier can).
+    full_result: Dict[str, Any] = {
         "fallacies": merged,
         "extraction_method": "full_merged",
         "tier": "full",
         "llm_count": len(llm_fallacies),
         "hybrid_count": len(hybrid_fallacies),
     }
+    if llm_result.get("descent_budget_exceeded") or llm_result.get("degraded"):
+        full_result["descent_budget_exceeded"] = bool(
+            llm_result.get("descent_budget_exceeded")
+        )
+        full_result["degraded"] = True
+        full_result["last_error"] = llm_result.get(
+            "last_error", "descent budget exceeded"
+        )
+    # FB-35 (#1121): propagate the descent-call diagnostic so verification can
+    # confirm the breaker's margin on normal corpora (calls made vs budget).
+    if "descent_calls_made" in llm_result:
+        full_result["descent_calls_made"] = llm_result["descent_calls_made"]
+    return full_result
 
 
 async def _invoke_hierarchical_fallacy_per_argument(
@@ -3964,11 +4013,16 @@ async def _invoke_hierarchical_fallacy_per_argument(
         all_fallacies = []
         total_iterations = 0
         methods_used = set()
+        # FB-35 (#1121): surface if ANY per-argument descent tripped the global
+        # call budget (each per-arg plugin instance has its own budget).
+        any_descent_budget_exceeded = False
         for result in per_arg_results:
             if isinstance(result, Exception):
                 logger.warning("Per-argument analysis error: %s", result)
                 continue
             if isinstance(result, dict):
+                if result.get("descent_budget_exceeded"):
+                    any_descent_budget_exceeded = True
                 fallacies = result.get("fallacies", [])
                 source_arg_id = result.get("source_arg_id", "unknown")
                 for f in fallacies:
@@ -4022,6 +4076,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
             "extraction_method": exploration_method,
             "per_argument_count": len(arguments),
             "parallel_executed": True,
+            "descent_budget_exceeded": any_descent_budget_exceeded,
         }
 
     except (ImportError, RuntimeError, ValueError) as e:

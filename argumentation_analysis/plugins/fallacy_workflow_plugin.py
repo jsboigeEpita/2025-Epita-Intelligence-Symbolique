@@ -14,6 +14,7 @@ import asyncio
 import csv
 import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Annotated, Dict, List, Optional, Set, Tuple
@@ -95,6 +96,18 @@ class FallacyWorkflowPlugin:
     SUBBRANCH_FANOUT_WIDTH = 2  # max extra children spawned per fork
     SUBBRANCH_FANOUT_BUDGET = 12  # max sub-branches spawned per analysis
 
+    # FB-35 (#1121): global cost-based circuit breaker on the agentic descent.
+    # MAX_NAVIGATION_LLM_CALLS bounds a SINGLE branch (≤18 calls) and the
+    # fan-out budget bounds sub-branch SPAWNING (≤12) — but their PRODUCT
+    # (~20 wide-net candidates × 18 calls × fan-out) is uncapped, which is
+    # what explodes on a large/entity-dense corpus (the doc_A runaway). This
+    # bounds the TOTAL descent LLM calls across ALL branches + sub-branches
+    # of one run_guided_analysis — a cost-based breaker, NOT a depth cap
+    # (anti-pendule: FB-30 subtracted the depth cap on purpose; this is
+    # additive only on the call-count dimension, never on depth). Tunable via
+    # env so a pathological corpus can be bounded without a code change.
+    DESCENT_TOTAL_CALL_BUDGET = int(os.getenv("FALLACY_DESCENT_CALL_BUDGET", "240"))
+
     class _BranchSupersessionTracker:
         """Track confirmed fallacies for branch supersession during parallel exploration.
 
@@ -107,7 +120,12 @@ class FallacyWorkflowPlugin:
         no explicit locking is needed (single-threaded concurrency model).
         """
 
-        def __init__(self, navigator: TaxonomyNavigator, fanout_budget: int = 0):
+        def __init__(
+            self,
+            navigator: TaxonomyNavigator,
+            fanout_budget: int = 0,
+            descent_call_budget: int = 0,
+        ):
             self._navigator = navigator
             # (pk, taxonomy_path, depth, confidence)
             self._confirmed: List[Tuple[str, str, int, float]] = []
@@ -119,6 +137,21 @@ class FallacyWorkflowPlugin:
             # disabled.
             self._fanout_budget = fanout_budget
             self.fanout_spawned = 0
+            # FB-35 (#1121): shared global budget bounding the TOTAL number of
+            # descent LLM calls across ALL branches + sub-branches of one
+            # analysis. The per-branch MAX_NAVIGATION_LLM_CALLS bounds one
+            # branch; the fan-out budget bounds spawning; THIS bounds their
+            # product (the dimension that explodes on large corpora). One
+            # descent iteration == one LLM call, so this counts cost, not
+            # depth. 0 ⇒ disabled (no global cap, legacy behavior). When
+            # exhausted the descent stops and run_guided_analysis surfaces a
+            # fail-loud flag (anti-theater #1019: partial results + honest
+            # marker, never a silent empty/truncated outcome).
+            self._descent_call_budget = descent_call_budget
+            self._descent_call_enabled = descent_call_budget > 0
+            self._descent_calls_remaining = descent_call_budget
+            self.descent_calls_made = 0
+            self.descent_budget_exceeded = False
 
         def register(self, pk: str, depth: int, confidence: float) -> None:
             """Register a confirmed fallacy."""
@@ -164,6 +197,32 @@ class FallacyWorkflowPlugin:
                 return False
             self._fanout_budget -= 1
             self.fanout_spawned += 1
+            return True
+
+        def try_consume_descent_call(self) -> bool:
+            """Consume one unit of the global descent LLM-call budget (FB-35 #1121).
+
+            Returns True while budget remains (the calling branch may make its
+            LLM call and continue descending), False once exhausted. Bounds the
+            TOTAL descent LLM calls across all branches + recursive sub-branches
+            of one analysis — the per-branch MAX_NAVIGATION_LLM_CALLS and the
+            fan-out spawn budget each bound a single dimension, but their
+            product (~candidates × calls × fan-out) is what explodes on a
+            large/entity-dense corpus. This is a COST-based breaker (one
+            iteration == one LLM call), never a depth cap. When it returns
+            False the caller stops descending and the run surfaces a fail-loud
+            flag. 0 ⇒ disabled (legacy unbounded-within-branch behavior).
+
+            Thread-safety: single-threaded asyncio event loop, no locking
+            needed (same model as try_consume_fanout above).
+            """
+            if not self._descent_call_enabled:
+                return True  # no global cap configured (legacy behavior)
+            if self._descent_calls_remaining <= 0:
+                self.descent_budget_exceeded = True
+                return False
+            self._descent_calls_remaining -= 1
+            self.descent_calls_made += 1
             return True
 
     def __init__(
@@ -676,6 +735,23 @@ class FallacyWorkflowPlugin:
         # navigation call), so this counts calls, not depth.
         llm_call_count = 0
         while llm_call_count < self.MAX_NAVIGATION_LLM_CALLS:
+            # FB-35 (#1121): global cost-based circuit breaker. Consume one
+            # unit of the shared descent-call budget BEFORE making this
+            # iteration's LLM call. When the global budget (across all
+            # concurrent branches + sub-branches) is exhausted, stop
+            # descending — run_guided_analysis surfaces a fail-loud flag. This
+            # is a COST cap (one iteration == one call), NOT a depth cap, so
+            # the LLM still descends freely to leaves within the budget.
+            if supersession_tracker is not None and not (
+                supersession_tracker.try_consume_descent_call()
+            ):
+                self.logger.warning(
+                    "  Global descent call budget exceeded at branch %s "
+                    "(call #%d) — stopping descent (fail-loud, FB-35 #1121)",
+                    start_pk,
+                    supersession_tracker.descent_calls_made,
+                )
+                break
             llm_call_count += 1
             # --- Supersession check (RA-3 #1048) ---
             if supersession_tracker is not None:
@@ -1198,6 +1274,7 @@ class FallacyWorkflowPlugin:
                 fanout_budget=(
                     self.SUBBRANCH_FANOUT_BUDGET if self.ENABLE_SUBBRANCH_FANOUT else 0
                 ),
+                descent_call_budget=self.DESCENT_TOTAL_CALL_BUDGET,
             )
             # Sink collecting fan-out sub-branch results (RA-3 #1048 item 2).
             # Additive: top-level branch primaries return via the gather below;
@@ -1282,6 +1359,24 @@ class FallacyWorkflowPlugin:
                     f"via {method} ({len(candidate_pks)} branches) ---"
                 )
                 result_json = analysis_result.model_dump_json(indent=2)
+                # FB-35 (#1121): surface the global descent-call diagnostic
+                # always (calls made across all branches + sub-branches) and a
+                # fail-loud marker when the budget was hit. When exceeded, the
+                # fallacies above are PARTIAL (the descent was cut short) —
+                # flagged honestly so the report/convergence layer marks the
+                # phase degraded (anti-theater #1019).
+                result_obj = json.loads(result_json)
+                result_obj["descent_calls_made"] = tracker.descent_calls_made
+                if tracker.descent_budget_exceeded:
+                    result_obj["descent_budget_exceeded"] = True
+                    result_obj["exploration_method"] = "wide_net_parallel_budget_capped"
+                    result_json = json.dumps(
+                        result_obj, indent=2, ensure_ascii=False
+                    )
+                else:
+                    result_json = json.dumps(
+                        result_obj, indent=2, ensure_ascii=False
+                    )
                 self._persist_trace(trace_log_path, analysis_result, argument_text)
                 return result_json
 
@@ -1290,6 +1385,23 @@ class FallacyWorkflowPlugin:
                 "No fallacies found via iterative deepening — falling back to one-shot"
             )
             one_shot_result = await self._run_one_shot(argument_text)
+            # FB-35 (#1121): surface the descent-call diagnostic on the one-shot
+            # fallback too. ``descent_calls_made`` is always injected (it records
+            # how many calls the iterative descent consumed before giving up),
+            # and ``descent_budget_exceeded`` marks the degradation when the
+            # descent was cost-capped (the one-shot itself is a single call —
+            # unbounded-by-design — so the marker reflects that the ITERATIVE
+            # descent was cut short).
+            try:
+                _os_obj = json.loads(one_shot_result)
+                _os_obj["descent_calls_made"] = tracker.descent_calls_made
+                if tracker.descent_budget_exceeded:
+                    _os_obj["descent_budget_exceeded"] = True
+                one_shot_result = json.dumps(
+                    _os_obj, indent=2, ensure_ascii=False
+                )
+            except (json.JSONDecodeError, TypeError):
+                pass
             if trace_log_path:
                 try:
                     parsed = json.loads(one_shot_result)
