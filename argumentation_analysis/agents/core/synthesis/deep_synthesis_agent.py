@@ -41,7 +41,31 @@ logger = logging.getLogger("DeepSynthesisAgent")
 class DeepSynthesisAgent(BaseAgent):
     """Aggregates spectacular-run state into a multi-page grounded markdown report."""
 
+    # FB-34 #1118 — opaque-ID discipline. Injected at the TOP of every LLM
+    # synthesis prompt so it dominates the model's attention (the prior
+    # directive was a single line buried at the end, and FB-32 showed a live
+    # run still named corpus entities). This is SHARPENING an existing
+    # instruction — not a post-hoc regex scrubber (that would be a template
+    # counterweight, anti-pendule). The LLM stays the only producer; we only
+    # constrain its vocabulary.
+    OPAQUE_ID_DIRECTIVE: ClassVar[str] = (
+        "OPAQUE-ID DISCIPLINE (HARD RULE — overrides any conflicting urge):\n"
+        "You analyze politically sensitive discourse. The speaker, author, "
+        "country, party, institution, leader, date, and any named entity "
+        "MUST NEVER appear in your output by their real name. Refer to every "
+        "entity ONLY by an opaque label: the speaker is `Speaker_A`, a state "
+        "is `State_Q`, an era is `era_A`, the document is `doc_A`, an argument "
+        "is `arg_1`. Characterize content ABSTRACTLY (\"the speaker frames X "
+        "as historically inevitable\") — never quote or paraphrase proper "
+        "nouns even if they appear in the data blocks below (those blocks may "
+        "carry named entities inherited from upstream extraction; treat them "
+        "as content only, never copy the names). If you cannot express an "
+        "insight without a real name, drop that detail. There is NO "
+        "legitimate reason to emit a real name here.\n\n"
+    )
+
     SYSTEM_PROMPT: ClassVar[str] = (
+        f"{OPAQUE_ID_DIRECTIVE}"
         "You are an intelligence analyst producing a political-rhetorical "
         "briefing on a discourse. Your output is structured into exactly 6 "
         "numbered sections (8-12 paragraphs total). Each section heading must "
@@ -100,6 +124,7 @@ class DeepSynthesisAgent(BaseAgent):
     # receives an intelligence briefing of verified artifacts (never raw
     # text) and must anchor every insight in [artifact:...] citations.
     GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
+        f"{OPAQUE_ID_DIRECTIVE}"
         "You are an intelligence analyst writing the grounded transversal "
         "synthesis of a rhetorical-analysis run. You receive an ARTIFACT "
         "BRIEFING: a list of verified analysis artifacts, each prefixed by a "
@@ -1501,10 +1526,12 @@ class DeepSynthesisAgent(BaseAgent):
                 convergence_section += "  No cross-method convergence.\n"
 
             prompt = (
+                f"{DeepSynthesisAgent.OPAQUE_ID_DIRECTIVE}"
                 "Produce the 6-section political-rhetorical briefing as specified "
                 "in your system prompt. Use the data blocks below. Each section "
                 "heading must be '## N. Title' on its own line. 8-12 paragraphs "
-                "total. Intelligence-briefing register. Opaque IDs only.\n"
+                "total. Intelligence-briefing register. Opaque IDs only — recall "
+                "the opaque-ID discipline above applies to every paragraph.\n"
                 f"\nSource: {so.contextual_frame}"
                 f"{context_block}"
                 f"{stakes_section}"
