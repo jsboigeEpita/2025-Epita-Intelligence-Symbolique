@@ -84,7 +84,13 @@ def _d6_d7_taxonomy():
             "A specific named variant: God's existence proven by our clear-and-"
             "distinct perception, which is guaranteed by God. Narrow sub-case.",
         ),
-        # D7 branch (Appel à l'émotion) — intermediate root with specialized leaves
+        # D7 branch (Appel à l'émotion / Connivence) — mirrors the real shape:
+        # Connivence (PK 300, depth 3) is an INTERMEDIATE node whose children
+        # are narrow emotional sub-cases (Appeal to desire, Appeal to
+        # confidence, wishful thinking, ...). A text that leans on emotion as
+        # the PRIMARY persuasive operator but instantiates NONE of those named
+        # sub-types matches Connivence, not a specialized child — exactly the
+        # D7 MISSED scenario.
         (1, "2", "2", "Influence", "Influence", "root"),
         (2, "2.2", "22", "Appel à l'émotion", "Appeal to emotion", "sub"),
         (
@@ -93,7 +99,18 @@ def _d6_d7_taxonomy():
             "221",
             "Connivence",
             "Complicity",
-            "Emotion as primary persuasive operator.",
+            "Establishing an emotional bond with the audience to bend their "
+            "judgement — emotion as the primary persuasive operator.",
+        ),
+        (
+            4,
+            "2.2.1.1",
+            "2211",
+            "Appel au désir",
+            "Appeal to desire",
+            "A narrow sub-case: argument rests specifically on tapping the "
+            "audience's wishes/desires. Only matches when desire is the named "
+            "lever, not any emotional appeal.",
         ),
     ]
     data = []
@@ -294,4 +311,89 @@ class TestIntermediateD6ConfirmAccepted:
         assert result is None, (
             "FB-27 negative control failed: a non-circular argument produced a "
             "D6 match — false positive (anti-#1019 violation)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# D7 behaviour test — the SAME case-(c) allowance must carry the D7
+# (Appel à l'émotion / Connivence) branch. Coordinator R404 kept #1101 OPEN
+# pending a D7 proof; this is that proof.
+# ---------------------------------------------------------------------------
+
+
+class TestIntermediateD7ConfirmAccepted:
+    """The case-(c) allowance is branch-agnostic: it must also accept a D7
+    intermediate confirm. 'Connivence' (PK 221, depth 3) is an intermediate
+    node whose only child 'Appel au désir' (PK 2211, depth 4) is a narrow
+    emotional sub-case. A text that leans on emotion as the primary persuasive
+    operator but instantiates NO named sub-type matches Connivence, not the
+    'appeal to desire' specialization — so the LLM must be allowed to confirm
+    the intermediate D7 node instead of being forced to descend."""
+
+    @pytest.mark.asyncio
+    async def test_intermediate_d7_confirm_is_accepted(self):
+        plugin = _make_plugin()
+        # Script the LLM to confirm at the intermediate D7 node (depth 3).
+        plugin.llm_service.get_chat_message_contents = AsyncMock(
+            return_value=_msg_with_items(_confirm_call("221"))
+        )
+        slave_kernel = _slave_kernel_stub()
+
+        result = await plugin._explore_single_branch(
+            argument_text=(
+                "As parents, we all feel the weight of protecting our children "
+                "— trust me, this policy is the right one."
+            ),
+            start_pk="2",  # start at the root of the Influence branch
+            slave_kernel=slave_kernel,
+            slave_settings=MagicMock(),
+        )
+
+        assert result is not None, (
+            "FB-27: intermediate D7 confirm produced no classification — the "
+            "decision gate rejected it or the LLM was forced to descend to the "
+            "over-specific 'Appel au désir' child."
+        )
+        assert result.taxonomy_pk == "221", (
+            f"FB-27: expected D7 intermediate node PK '221' (Connivence), "
+            f"got '{result.taxonomy_pk}'. The confirmation was not accepted at "
+            "the intermediate level — D7 still MISSED."
+        )
+
+    @pytest.mark.asyncio
+    async def test_d7_negative_control_no_emotion_not_confirmed(self):
+        """Anti-#1019: text where emotion is NOT the primary persuasive
+        operator must NOT produce a D7 match. The LLM is scripted to
+        conclude_no_fallacy — the result must be None, not a fabricated match.
+
+        This is the RA-9 #1063 negative boundary in behavioural form: an
+        argument that merely ILLUSTRATES with emotional language but provides
+        substantive reasoning is NOT an appeal to emotion."""
+        plugin = _make_plugin()
+        plugin.llm_service.get_chat_message_contents = AsyncMock(
+            return_value=_msg_with_items(
+                FunctionCallContent(
+                    name="conclude_no_fallacy",
+                    arguments=json.dumps(
+                        {"reason": "emotion illustrative, not primary operator"}
+                    ),
+                )
+            )
+        )
+        slave_kernel = _slave_kernel_stub()
+
+        result = await plugin._explore_single_branch(
+            argument_text=(
+                "Sadly, the data shows emissions rose — we must therefore act "
+                "on the three cited studies."
+            ),
+            start_pk="2",
+            slave_kernel=slave_kernel,
+            slave_settings=MagicMock(),
+        )
+
+        assert result is None, (
+            "FB-27 D7 negative control failed: an argument where emotion is "
+            "merely illustrative produced a D7 match — false positive "
+            "(anti-#1019 / RA-9 violation)."
         )
