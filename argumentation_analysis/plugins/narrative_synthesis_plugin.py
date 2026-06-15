@@ -1,5 +1,18 @@
 """Narrative Synthesis Plugin for Spectacular Analysis Pipeline (#351).
 
+.. warning::
+    **TEMPLATE-BASED (non-LLM) SUMMARY — NOT the analytical spectacular
+    synthesis.** FB-31 #1108: this plugin weaves f-strings over state
+    counts ("N arguments, M fallacies…") and so emits near-identical prose
+    regardless of the input model — it is a *determinization residue*
+    (#1109) that kills both richness and variance. It must NOT be mistaken
+    for the LLM-conducted analysis. The reference analytical synthesis is
+    ``DeepSynthesisAgent.grounded_transversal_synthesis`` (FB-18 #1039,
+    fail-loud, value-gated) and Section 9 ``final_synthesis`` (FB-31,
+    fail-loud ``final_synthesis_status``). This plugin stays for backward
+    compatibility as a *template summary* only; do not wire it as the
+    pipeline's "spectacular" deliverable.
+
 Produces 1-2 paragraphs of human-readable narrative weaving together
 results from all analysis KBs (fallacies, JTMS, ATMS, Dung, quality,
 counter-arguments). Reads from UnifiedAnalysisState and generates
@@ -531,6 +544,17 @@ def _build_prose_prompt(synthesis_result: Dict[str, Any]) -> str:
 
 class NarrativeSynthesisPlugin:
     """Semantic Kernel plugin for narrative synthesis (#351).
+
+    .. warning::
+        **Template summary (non-LLM) — not the analytical synthesis** (FB-31
+        #1108). The ``narrative_synthesis`` / ``convergent_synthesize``
+        kernel functions are f-string templates; ``narrate_convergence`` has
+        an LLM prose layer but SILENTLY falls back to template output when
+        no kernel is configured or the LLM call fails. That fallback is
+        indistinguishable from LLM output to a downstream reader — treat any
+        narrative from this plugin as a *count-summary*, not the grounded
+        analysis (see ``DeepSynthesisAgent.grounded_transversal_synthesis``
+        and Section 9 ``final_synthesis`` for the fail-loud analytical path).
 
     Produces human-readable analysis summaries by weaving together
     outputs from all pipeline phases. Pass an SK Kernel instance to
