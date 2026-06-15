@@ -118,33 +118,34 @@ class TestModalLogicValueGate:
         The heuristic fallback must NOT return valid=True for a formula
         it cannot actually verify. It must return valid=None with
         solver='unavailable' (#961).
+
+        #1097: this test is now LOAD-BEARING. We patch the SOLVER ROUTE
+        (``asyncio.to_thread`` — the SPASS L5180 and Tweety L5201 routes both
+        go through it), NOT ``_invoke_modal_logic`` itself. The real function
+        runs: both solver routes raise, fall through to the honest fallback
+        (L5218-5230), and we assert its ACTUAL output. A regression that
+        reintroduces ``valid=True`` in the real fallback is now caught.
+        Aligned with the 12 other satellite gates (SetAF/Weighted/DeLP/...).
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_modal_logic,
         )
 
-        # Force the heuristic fallback path by patching both solver routes
-        # to raise (simulating no JVM/no SPASS/no Tweety)
+        # Force BOTH solver routes (SPASS + Tweety) to raise by patching
+        # asyncio.to_thread — the real _invoke_modal_logic runs end-to-end,
+        # reaches its honest fallback, and we assert its ACTUAL output.
         with patch(
-            "argumentation_analysis.orchestration.invoke_callables._invoke_modal_logic",
-            side_effect=lambda text, ctx: {
-                "formulas": ctx.get("formulas", [text]),
-                "valid": None,
-                "modalities": ["necessity"],
-                "logic_type": "modal",
-                "solver": "unavailable",
-                "fallback": "python",
-                "message": "Modal analysis unavailable: no solver could be loaded.",
-            },
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No solver for test"),
         ):
             result = await _invoke_modal_logic("[](P)", {"formulas": ["[](P)"]})
 
         assert result.get("valid") is None, (
             f"Modal fallback returned valid={result.get('valid')} instead of None. "
-            "When no solver is available, must report unavailability, not valid=True (#961)."
+            "When no solver is available, must report unavailability, not valid=True (#961/#1097)."
         )
         assert result.get("solver") == "unavailable", (
-            f"Modal fallback solver={result.get('solver')}, expected 'unavailable' (#961)."
+            f"Modal fallback solver={result.get('solver')}, expected 'unavailable' (#961/#1097)."
         )
 
     async def test_heuristic_does_not_fabricate_valid_true(self):
@@ -152,34 +153,31 @@ class TestModalLogicValueGate:
 
         This is the anti-pendule guard: we test honest 'unavailable'
         (valid=None), NOT a fabricated valid:False.
+
+        #1097: LOAD-BEARING — patches ``asyncio.to_thread`` (the solver route)
+        so the real ``_invoke_modal_logic`` runs and reaches its honest
+        fallback. A regression reintroducing ``valid=True`` is caught here;
+        the old test (patching the function itself) would have passed through it.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_modal_logic,
         )
 
         with patch(
-            "argumentation_analysis.orchestration.invoke_callables._invoke_modal_logic",
-            side_effect=lambda text, ctx: {
-                "formulas": ctx.get("formulas", [text]),
-                "valid": None,
-                "modalities": [],
-                "logic_type": "modal",
-                "solver": "unavailable",
-                "fallback": "python",
-                "message": "Modal analysis unavailable.",
-            },
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No solver for test"),
         ):
             result = await _invoke_modal_logic("[](P)", {"formulas": ["[](P)"]})
 
         # Must NOT be True (vacuous) — must be None (honest unavailability)
         assert result.get("valid") is not True, (
             "Modal fallback still returns valid=True — the vacuous confirmation "
-            "bug from #941 is not fixed."
+            "bug from #941 is not fixed (#1097)."
         )
         # Must also NOT be False (fabricated rejection) — anti-pendule
         assert result.get("valid") is not False, (
             "Modal fallback returns valid=False — this is a fabricated rejection, "
-            "not honest unavailability. Anti-pendule: report None, not invented verdict."
+            "not honest unavailability. Anti-pendule: report None, not invented verdict (#1097)."
         )
 
 
