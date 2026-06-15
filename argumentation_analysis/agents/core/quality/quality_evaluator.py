@@ -386,7 +386,9 @@ class ArgumentQualityEvaluator:
     def __init__(self, detectors: Optional[Dict] = None):
         self.detectors = detectors or DETECTORS
 
-    def evaluate(self, text: str) -> Dict[str, Any]:
+    def evaluate(
+        self, text: str, agentic_llm: Optional[Any] = None
+    ) -> Dict[str, Any]:
         """Evaluate argument quality and return structured report.
 
         Raises RuntimeError if required dependencies (spacy/textstat) are
@@ -394,6 +396,14 @@ class ArgumentQualityEvaluator:
         a dict full of zeros is functionally identical to the old silent
         fallback.  Callers must handle the exception or ensure the
         environment is correctly configured.
+
+        FB-29 #1105: when ``agentic_llm`` is provided (an LLM callable wired by
+        the caller, e.g. production's OpenRouter-toggle-aware client), the two
+        joint-zero blindspot virtues (``refutation_constructive``,
+        ``analogie_pertinente``) are upgraded to their multi-step agentic
+        detectors (see ``agentic_virtue_detectors``). The other 7 virtues stay
+        deterministic. Without ``agentic_llm`` the legacy lexical detectors are
+        used for all 9 — backwards-compatible, no behavior change.
         """
         # Fail-loud gate (#1019 / NanoClaw review): if deps already failed,
         # raise immediately rather than looping through 9 detectors that
@@ -409,12 +419,48 @@ class ArgumentQualityEvaluator:
 
         scores = {}
         details = {}
+
+        # FB-29 #1105: upgrade the 2 joint-zero blindspot virtues to agentic
+        # multi-step detectors when an LLM is wired. Lazy import avoids a hard
+        # dependency on the agentic module for legacy callers.
+        agentic_detectors: Dict[str, Callable[..., Tuple[float, str]]] = {}
+        agentic_error_cls = None
+        if agentic_llm is not None:
+            try:
+                from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
+                    AGENTIC_DETECTORS,
+                    AgenticDetectorError,
+                )
+
+                agentic_detectors = AGENTIC_DETECTORS
+                agentic_error_cls = AgenticDetectorError
+            except ImportError as exc:
+                logger.warning(
+                    "agentic_virtue_detectors unavailable (%s); falling back to "
+                    "lexical detectors for all 9 virtues.", exc,
+                )
+
         for vertu, detector in self.detectors.items():
             try:
-                note, comment = detector(text)
+                # Use the agentic detector for the upgraded virtues when an LLM
+                # is available; keep the lexical detector otherwise.
+                if vertu in agentic_detectors and agentic_llm is not None:
+                    note, comment = agentic_detectors[vertu](text, llm=agentic_llm)
+                else:
+                    note, comment = detector(text)
                 scores[vertu] = note
                 details[vertu] = comment
             except Exception as e:
+                # FB-29 #1105: AgenticDetectorError is the agentic chain's
+                # fail-loud contract (no LLM / unparseable step). It MUST
+                # propagate — swallowing it would return a synthetic 0.0 "as if
+                # measured", the exact degraded theatre #1019 forbids. Other
+                # exceptions (detector-internal bugs) keep the legacy
+                # 0.0+"Erreur" robustness (anti-pendule: don't widen the change).
+                if agentic_error_cls is not None and isinstance(
+                    e, agentic_error_cls
+                ):
+                    raise
                 logger.warning("Detector '%s' failed: %s", vertu, e)
                 scores[vertu] = 0.0
                 details[vertu] = f"Erreur: {e}"
