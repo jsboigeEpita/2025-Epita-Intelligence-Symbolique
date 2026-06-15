@@ -6336,7 +6336,14 @@ async def _invoke_deep_synthesis(
             pass
 
         try:
-            agent = DeepSynthesisAgent(kernel=kernel)
+            # FB-32 #1112: pass service_id so the agent activates its 3 LLM paths
+            # (_llm_briefing, _llm_synthesis Section 9, FB-18 grounded). Without it,
+            # ``_llm_service_id`` stays None and all three early-return None, so
+            # Section 9 came back "unavailable" even with an LLM registered in the
+            # kernel (the de-castrated path was correct but never wired — last
+            # structural castration site, same class as FB-30/FB-31). Anti-pendule:
+            # activate the existing path, no counterweight.
+            agent = DeepSynthesisAgent(kernel=kernel, service_id="default")
             source_meta = context.get("source_metadata", {})
             report = await agent.synthesize(state, source_metadata=source_meta)
         except (ValueError, Exception) as agent_err:

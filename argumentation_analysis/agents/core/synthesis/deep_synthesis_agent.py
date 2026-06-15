@@ -1525,7 +1525,12 @@ class DeepSynthesisAgent(BaseAgent):
             )
             return str(result) if result else None
         except Exception as e:
-            logger.debug(f"LLM thesis generation skipped: {e}")
+            # FB-32 #1112: surface the real failure at WARNING (was
+            # ``logger.debug``, which hid why Section 9 came back "unavailable").
+            # Keep the ``return None`` contract so the caller records the
+            # explicit status — visibility without changing the return-type
+            # contract (None == "LLM did not produce a synthesis").
+            logger.warning(f"LLM thesis generation unavailable (Section 9): {e}")
             return None
 
 

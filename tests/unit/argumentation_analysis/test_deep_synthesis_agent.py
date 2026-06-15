@@ -510,10 +510,19 @@ class TestConvergenceWiring:
         result = asyncio.get_event_loop().run_until_complete(
             _invoke_deep_synthesis("", {"_state_object": state})
         )
-        assert "Convergent Verdicts" in result["markdown"]
-        # See test_render_markdown_includes_convergent_section: score == 3 in
-        # the fixture triggers the substantive insight variant.
-        assert "Insight convergent sur arg_2" in result["markdown"]
+        md = result["markdown"]
+        # Structural contract (FB-32 #1112): the convergence section is present
+        # and rendered — either via the LLM-conducted prose (now that
+        # ``_invoke_deep_synthesis`` wires ``service_id="default"``) or the
+        # template fallback. The exact prose string is LLM-dependent (variance
+        # is the feature) so we assert structure, not frozen content.
+        assert "Convergent Verdicts" in md
+        report = result["report"]
+        assert report["convergent_verdicts"], (
+            "convergent_verdicts must be populated for the cross-method fixture"
+        )
+        # Fail-loud Section 9 is always surfaced (FB-31).
+        assert "## 9. Final Synthesis" in md
 
 
 class TestConvergenceProse:
