@@ -28,8 +28,12 @@ class TestSpectacularWorkflowDAG:
         assert wf.name == "spectacular_analysis"
 
     def test_phase_count(self):
+        # #1115: the template `narrative_synthesis` phase was REMOVED from the
+        # spectacular workflow (determinization residue per #1109 §5). The count
+        # reflects the real phase set (#504 solvers, #506 KB/tweety, #507
+        # belief_revision, #508 synthesis, #534 deep_synthesis, ...).
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 17
+        assert len(wf.phases) == 28
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -43,17 +47,39 @@ class TestSpectacularWorkflowDAG:
             "pl",
             "fol",
             "modal",
+            "fol_solver",
+            "modal_solver",
             "dung_extensions",
+            "ranking",
+            "bipolar",
+            "probabilistic",
             "aspic_analysis",
             "counter",
+            "stakes",
             "jtms",
             "debate",
             "atms",
             "governance",
             "formal_synthesis",
-            "narrative_synthesis",
+            "text_to_kb",
+            "kb_to_tweety",
+            "tweety_interpretation",
+            "belief_revision",
+            "synthesis",
+            "deep_synthesis",
         }
         assert expected == phase_names
+
+    def test_narrative_template_removed_from_spectacular(self):
+        """#1115: load-bearing — the template narrative_synthesis phase must NOT
+        be in the spectacular workflow. Its f-string prose killed richness/variance
+        (#1109). Removal is by subtraction; the LLM-conducted deep_synthesis is
+        the sole narrative path on spectacular."""
+        wf = build_spectacular_workflow()
+        phase_names = {p.name for p in wf.phases}
+        assert "narrative_synthesis" not in phase_names
+        # deep_synthesis no longer depends on the removed template phase
+        assert "narrative_synthesis" not in wf.get_phase("deep_synthesis").depends_on
 
     def test_all_capabilities_unique(self):
         wf = build_spectacular_workflow()

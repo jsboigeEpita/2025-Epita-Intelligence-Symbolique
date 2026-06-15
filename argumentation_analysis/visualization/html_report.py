@@ -277,11 +277,15 @@ tr:hover { background: rgba(88,166,255,0.05); }
 </table>
 </div>
 
-{# ── Section 9: Narrative Synthesis ── #}
+{# ── Section 9: Narrative Synthesis (template prose — present only when the
+   workflow produced it; the spectacular workflow no longer does (#1115), so
+   this section stays empty there while standard/full/sherlock keep it). ── #}
+{% if narrative_synthesis %}
 <h2>9. Narrative Synthesis</h2>
 <div class="section">
   <div class="narrative">{{ narrative_synthesis }}</div>
 </div>
+{% endif %}
 
 {# ── Section 10: Discourse Pattern Mining (optional) ── #}
 {% if pattern_data %}

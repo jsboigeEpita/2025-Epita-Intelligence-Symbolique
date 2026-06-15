@@ -866,12 +866,15 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["fol", "modal", "aspic_analysis"],
             optional=True,
         )
-        .add_phase(
-            "narrative_synthesis",
-            capability="narrative_synthesis",
-            depends_on=["quality", "jtms", "atms", "dung_extensions"],
-            optional=True,
-        )
+        # NOTE (#1115): the template `narrative_synthesis` phase was REMOVED from
+        # the spectacular workflow. Its `build_narrative()` prose was an f-string
+        # over state counts (N arguments, M fallacies...) -> near-identical prose
+        # regardless of model -> a determinization residue (#1109) that killed
+        # richness AND variance. The canonical spectacular deliverable is the
+        # LLM-conducted `deep_synthesis` 9-section report (Section 9 fail-loud per
+        # FB-31 #1108). Removal is by subtraction (anti-pendule): the LLM path is
+        # now the only narrative path on spectacular. The capability stays wired in
+        # the standard (L243) and full (L358) workflows for non-spectacular runs.
         # L1b — KB extraction from extracted facts (#506)
         .add_phase(
             "text_to_kb",
@@ -921,7 +924,6 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="deep_synthesis",
             depends_on=[
                 "synthesis",
-                "narrative_synthesis",
                 "belief_revision",
                 "stakes",
             ],
