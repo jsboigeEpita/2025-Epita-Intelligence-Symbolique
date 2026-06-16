@@ -21,6 +21,13 @@ from .renderer import (
     render_restitution_report,
 )
 from .state_adapter import state_to_appendix_mapping
+from .virtuous_identification import (
+    ExtractProfile,
+    VirtuousCandidate,
+    VirtuousInventory,
+    identify,
+    render_inventory_report,
+)
 
 __all__ = [
     "ACT_TITLES",
@@ -33,4 +40,10 @@ __all__ = [
     "render_appendix",
     "render_restitution_report",
     "state_to_appendix_mapping",
+    # R5 volet-1 — virtuous-text candidate identification (spec §5.1)
+    "ExtractProfile",
+    "VirtuousCandidate",
+    "VirtuousInventory",
+    "identify",
+    "render_inventory_report",
 ]
