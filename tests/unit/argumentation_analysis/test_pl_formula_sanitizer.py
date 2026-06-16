@@ -21,14 +21,30 @@ class TestOperatorNormalization:
     """Test _normalize_operators and operator handling."""
 
     def test_double_ampersand(self):
+        # FB-39 (#1132): Tweety's PlParser requires the DOUBLE-form "&&"; the
+        # double-ampersand must be PRESERVED, not collapsed to a single "&".
         s = PLFormulaSanitizer()
         result = s.sanitize_formula("p && q")
-        assert result == "p & q"
+        assert result == "p && q"
 
     def test_double_pipe(self):
+        # FB-39 (#1132): "||" is preserved (Tweety rejects single "|").
         s = PLFormulaSanitizer()
         result = s.sanitize_formula("p || q")
-        assert result == "p | q"
+        assert result == "p || q"
+
+    def test_single_ampersand_canonicalized(self):
+        # FB-39 (#1132): a single "&" (which Tweety rejects) is canonicalised
+        # to the double-form "&&" so the formula reaches the solver.
+        s = PLFormulaSanitizer()
+        result = s.sanitize_formula("p & q")
+        assert result == "p && q"
+
+    def test_single_pipe_canonicalized(self):
+        # FB-39 (#1132): a single "|" is canonicalised to "||".
+        s = PLFormulaSanitizer()
+        result = s.sanitize_formula("p | q")
+        assert result == "p || q"
 
     def test_arrow_implication(self):
         s = PLFormulaSanitizer()
@@ -45,7 +61,7 @@ class TestOperatorNormalization:
         s = PLFormulaSanitizer()
         result = s.sanitize_formula("(p && q) -> r")
         assert result is not None
-        assert "&" in result
+        assert "&&" in result
         assert "=>" in result
 
     def test_no_operators(self):
@@ -126,8 +142,9 @@ class TestFormulaValidation:
     """Test formula validation rules."""
 
     def test_valid_simple(self):
+        # FB-39 (#1132): conjunction is the DOUBLE-form "&&" (validated directly).
         s = PLFormulaSanitizer()
-        ok, reason = s.validate_formula("p & q")
+        ok, reason = s.validate_formula("p && q")
         assert ok
         assert reason == "valid"
 
@@ -142,8 +159,9 @@ class TestFormulaValidation:
         assert ok
 
     def test_valid_nested(self):
+        # FB-39 (#1132): nested conjunction uses "&&".
         s = PLFormulaSanitizer()
-        ok, _ = s.validate_formula("( p & q ) => r")
+        ok, _ = s.validate_formula("( p && q ) => r")
         assert ok
 
     def test_empty_formula(self):
@@ -154,19 +172,28 @@ class TestFormulaValidation:
 
     def test_unbalanced_parens(self):
         s = PLFormulaSanitizer()
-        ok, reason = s.validate_formula("( p & q")
+        ok, reason = s.validate_formula("( p && q")
         assert not ok
         assert "unbalanced" in reason
 
+    def test_single_ampersand_rejected(self):
+        # FB-39 (#1132): a single "&" is NOT a valid Tweety token. validate_formula
+        # (which does NOT normalize) must reject it — callers must canonicalise to
+        # "&&" first (as _normalize_formula / sanitize_formula do).
+        s = PLFormulaSanitizer()
+        ok, reason = s.validate_formula("p & q")
+        assert not ok
+        assert "invalid tokens" in reason
+
     def test_no_propositions(self):
         s = PLFormulaSanitizer()
-        ok, reason = s.validate_formula("=> &")
+        ok, reason = s.validate_formula("=> &&")
         assert not ok
         assert "no propositions" in reason
 
     def test_invalid_token(self):
         s = PLFormulaSanitizer()
-        ok, reason = s.validate_formula("p & 123bad")
+        ok, reason = s.validate_formula("p && 123bad")
         assert not ok
         assert "invalid tokens" in reason
 
@@ -175,9 +202,10 @@ class TestSanitizeFormula:
     """Test end-to-end formula sanitization."""
 
     def test_already_valid(self):
+        # FB-39 (#1132): a "&&" formula is already valid and passes through.
         s = PLFormulaSanitizer()
-        result = s.sanitize_formula("p & q")
-        assert result == "p & q"
+        result = s.sanitize_formula("p && q")
+        assert result == "p && q"
 
     def test_nl_props_mapped(self):
         s = PLFormulaSanitizer()

@@ -50,21 +50,28 @@ class PLHandler:
 
         logger.debug(f"Original formula for normalization: '{formula_str}'")
 
-        # Replacements for common alternative operators. Ensure spacing for safety.
-        formula_str = formula_str.replace("&&", " & ").replace("||", " | ")
-        formula_str = formula_str.replace("->", " => ").replace("<->", " <=> ")
+        # Canonicalise operator variants to Tweety-compatible forms.
+        # NB (#1132): Tweety's PlParser accepts the DOUBLE-form conjunction/
+        # disjunction ("&&", "||") but REJECTS the single-form ("&", "|") with a
+        # "General parsing error". The previous code collapsed "&&"->"&" here,
+        # which mangled every LLM formula containing a conjunction/disjunction.
+        # Canonicalise any run of & or | (1+) to the double form instead.
+        formula_str = re.sub(r"\s*&+\s*", " && ", formula_str)
+        formula_str = re.sub(r"\s*\|+\s*", " || ", formula_str)
+        # Implication / equivalence variants (longest-first so "<->" wins "->").
+        formula_str = formula_str.replace("<->", " <=> ").replace("->", " => ")
         formula_str = formula_str.replace(" NOT ", " ! ").replace(" Not ", " ! ")
 
-        # Regex to add spaces around all operators and parentheses that might be stuck together (e.g. "A&B")
-        # This is a safety net for cases the replaces above miss.
-        # Note the correction of '<=>' from the previous '<=<' typo.
-        formula_str = re.sub(r"\s*(=>|<=>|&|\||!|\(|\))\s*", r" \1 ", formula_str)
+        # Space the remaining operators and parentheses that might be stuck
+        # together (e.g. "(p=>q)"). Conjunction/disjunction are already
+        # canonicalised above and are deliberately excluded here.
+        formula_str = re.sub(r"\s*(<=>|=>|!|\(|\))\s*", r" \1 ", formula_str)
 
         # Sanitize proposition names: replace invalid characters with underscore
         # This is done after operator spacing to avoid corrupting them.
         tokens = formula_str.split(" ")
         sanitized_tokens = []
-        operators_and_parentheses = {"=>", "<=>", "&", "|", "!", "(", ")"}
+        operators_and_parentheses = {"=>", "<=>", "&&", "||", "!", "(", ")"}
         for token in tokens:
             if token in operators_and_parentheses or token == "":
                 sanitized_tokens.append(token)
@@ -117,6 +124,7 @@ class PLHandler:
             from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
                 PLFormulaSanitizer,
             )
+
             sanitizer = PLFormulaSanitizer()
             is_valid, reason = sanitizer.validate_formula(normalized_formula)
             if not is_valid:

@@ -20,10 +20,11 @@ from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Tweety PL operators (after normalization)
-_TWEETY_OPERATORS = frozenset({"=>", "<=>", "&", "|", "!"})
+# Tweety PL operators (after normalization). NB (#1132): Tweety's PlParser
+# accepts the DOUBLE-form "&&"/"||" and rejects single-form "&"/"|".
+_TWEETY_OPERATORS = frozenset({"=>", "<=>", "&&", "||", "!"})
 _PARENS = frozenset({"(", ")"})
-_SPECIAL_TOKENS = frozenset({"=>", "<=>", "&", "|", "!", "(", ")", ""})
+_SPECIAL_TOKENS = frozenset({"=>", "<=>", "&&", "||", "!", "(", ")", ""})
 
 # Valid proposition name: starts with letter/underscore, followed by alphanumeric/underscore
 _PROP_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
@@ -34,12 +35,12 @@ _ATOMIC_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]+$")
 # Pattern to detect NL-like tokens (too long, spaces, special chars, mixed language)
 _NL_TOKEN_RE = re.compile(
     r"["
-    r"\s"          # whitespace
-    r"'\"`"        # quotes
-    r",;:!?"       # punctuation (inside tokens)
-    r"(){}[\]"     # brackets (inside tokens)
-    r"@#$%^*=+"    # math/special
-    r"<>/"         # angle brackets, slash
+    r"\s"  # whitespace
+    r"'\"`"  # quotes
+    r",;:!?"  # punctuation (inside tokens)
+    r"(){}[\]"  # brackets (inside tokens)
+    r"@#$%^*=+"  # math/special
+    r"<>/"  # angle brackets, slash
     r"\\"
     r"]"
 )
@@ -167,12 +168,13 @@ class PLFormulaSanitizer:
     def _normalize_operators(self, formula: str) -> str:
         """Normalize operator variants to Tweety-compatible forms."""
         f = formula
-        f = f.replace("&&", " & ")
-        f = f.replace("||", " | ")
-        f = f.replace("<->", " <=> ")
-        f = f.replace("->", " => ")
+        # Canonicalise conjunction/disjunction to the Tweety DOUBLE-form (&&, ||)
+        # — single-form &/| is rejected by Tweety (#1132).
+        f = re.sub(r"\s*&+\s*", " && ", f)
+        f = re.sub(r"\s*\|+\s*", " || ", f)
+        f = f.replace("<->", " <=> ").replace("->", " => ")
         f = f.replace(" NOT ", " ! ").replace(" Not ", " ! ")
-        f = re.sub(r"\s*(=>|<=>|&|\||!|\(|\))\s*", r" \1 ", f)
+        f = re.sub(r"\s*(<=>|=>|!|\(|\))\s*", r" \1 ", f)
         # Sanitize proposition names
         tokens = f.split(" ")
         sanitized = []
@@ -201,7 +203,11 @@ class PLFormulaSanitizer:
             return False, "no propositions"
 
         if not self._check_valid_tokens(f):
-            bad = [t for t in f.split() if t not in _SPECIAL_TOKENS and not _PROP_RE.match(t)]
+            bad = [
+                t
+                for t in f.split()
+                if t not in _SPECIAL_TOKENS and not _PROP_RE.match(t)
+            ]
             return False, f"invalid tokens: {bad}"
 
         return True, "valid"
@@ -237,7 +243,9 @@ class PLFormulaSanitizer:
         # Validate
         is_valid, reason = self.validate_formula(normalized)
         if not is_valid:
-            logger.debug(f"Formula failed validation after sanitization: '{formula}' → '{normalized}' ({reason})")
+            logger.debug(
+                f"Formula failed validation after sanitization: '{formula}' → '{normalized}' ({reason})"
+            )
             return None
 
         return normalized
