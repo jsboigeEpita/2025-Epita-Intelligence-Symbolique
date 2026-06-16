@@ -124,6 +124,7 @@ class PLHandler:
             from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
                 PLFormulaSanitizer,
             )
+
             sanitizer = PLFormulaSanitizer()
             is_valid, reason = sanitizer.validate_formula(normalized_formula)
             if not is_valid:

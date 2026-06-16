@@ -7,6 +7,7 @@ formulas/run of formal coverage. These tests guard the canonicalisation
 (no-JVM, runs in CI) and the negative controls (genuinely-illegal formulas stay
 rejected). End-to-end Tweety parsing is covered by the tweety-marked class.
 """
+
 import os
 
 import pytest
@@ -39,12 +40,12 @@ class TestNormalizeFormulaCanonicalisation:
     @pytest.mark.parametrize(
         "raw",
         [
-            "p && q",                 # already double — preserved
-            "p & q",                  # single-& — canonicalised UP to &&
-            "(p && q) => r",          # issue #1132 canonical example
-            "(p => q) & (q => r)",    # conjunction of implications
-            "!(p & q)",               # negation + grouping
-            "(a | b) => (c & d)",     # mixed or/and
+            "p && q",  # already double — preserved
+            "p & q",  # single-& — canonicalised UP to &&
+            "(p && q) => r",  # issue #1132 canonical example
+            "(p => q) & (q => r)",  # conjunction of implications
+            "!(p & q)",  # negation + grouping
+            "(a | b) => (c & d)",  # mixed or/and
         ],
     )
     def test_conjunction_canonicalised(self, raw):
@@ -89,7 +90,7 @@ class TestNormalizeFormulaCanonicalisation:
         h = _make_handler()
         out = h._normalize_formula("((p => q) => r) => s")
         assert out.count("=>") == 3  # all three implications survive
-        assert out.count("&") == 0   # no conjunction introduced
+        assert out.count("&") == 0  # no conjunction introduced
 
     def test_not_string_returns_empty(self):
         h = _make_handler()
@@ -135,13 +136,13 @@ class TestParsePlFormulaTweetyIntegration:
     ]
     # Sanitizer pre-validation rejects these -> parse_pl_formula returns None.
     _PATTERNS_SANITIZER_REJECTS = [
-        "(p && q",     # unbalanced parens
-        "p && q)",     # unbalanced parens
+        "(p && q",  # unbalanced parens
+        "p && q)",  # unbalanced parens
         "```p && q```",  # markdown fence
     ]
     # These pass the sanitizer but Tweety rejects them -> ValueError (fail-loud).
     _PATTERNS_TWEETY_REJECTS = [
-        "p =>",        # missing rhs
+        "p =>",  # missing rhs
     ]
 
     @pytest.fixture(autouse=True)
@@ -150,9 +151,11 @@ class TestParsePlFormulaTweetyIntegration:
             pytest.skip("set USE_REAL_JPYPE=true to exercise real Tweety parsing")
         from argumentation_analysis.core.jvm_setup import initialize_jvm
         import jpype  # noqa: F401
+
         initialize_jvm()
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
         from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
         bridge = TweetyBridge.get_instance()
         try:
             bridge.initialize_jvm()

@@ -35,12 +35,12 @@ _ATOMIC_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]+$")
 # Pattern to detect NL-like tokens (too long, spaces, special chars, mixed language)
 _NL_TOKEN_RE = re.compile(
     r"["
-    r"\s"          # whitespace
-    r"'\"`"        # quotes
-    r",;:!?"       # punctuation (inside tokens)
-    r"(){}[\]"     # brackets (inside tokens)
-    r"@#$%^*=+"    # math/special
-    r"<>/"         # angle brackets, slash
+    r"\s"  # whitespace
+    r"'\"`"  # quotes
+    r",;:!?"  # punctuation (inside tokens)
+    r"(){}[\]"  # brackets (inside tokens)
+    r"@#$%^*=+"  # math/special
+    r"<>/"  # angle brackets, slash
     r"\\"
     r"]"
 )
@@ -203,7 +203,11 @@ class PLFormulaSanitizer:
             return False, "no propositions"
 
         if not self._check_valid_tokens(f):
-            bad = [t for t in f.split() if t not in _SPECIAL_TOKENS and not _PROP_RE.match(t)]
+            bad = [
+                t
+                for t in f.split()
+                if t not in _SPECIAL_TOKENS and not _PROP_RE.match(t)
+            ]
             return False, f"invalid tokens: {bad}"
 
         return True, "valid"
@@ -239,7 +243,9 @@ class PLFormulaSanitizer:
         # Validate
         is_valid, reason = self.validate_formula(normalized)
         if not is_valid:
-            logger.debug(f"Formula failed validation after sanitization: '{formula}' → '{normalized}' ({reason})")
+            logger.debug(
+                f"Formula failed validation after sanitization: '{formula}' → '{normalized}' ({reason})"
+            )
             return None
 
         return normalized
