@@ -46,7 +46,6 @@ from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import 
     AgenticDetectorError,
 )
 
-
 # ── Call-order stub factory ──────────────────────────────────────────────────
 # Each detector calls the LLM exactly 3 times in sequence (step1, step2, step3).
 # We discriminate by invocation count, NOT prompt content — this is what lets us
@@ -133,9 +132,7 @@ class TestNoUpwardInflation:
     # --- pertinence (the reported +0.516 separator — highest priority) ---
 
     def test_pertinence_zero_propagates_when_steps_say_strong(self):
-        stub = _make_order_stub(
-            _PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.0)
-        )
+        stub = _make_order_stub(_PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.0))
         score, _ = detect_pertinence_agentic("text", llm=stub)
         assert score == 0.0, (
             "pertinence floored a 0.0 step3 score up — potential inflation "
@@ -143,80 +140,60 @@ class TestNoUpwardInflation:
         )
 
     def test_pertinence_low_score_no_floor_up(self):
-        stub = _make_order_stub(
-            _PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.2)
-        )
+        stub = _make_order_stub(_PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.2))
         score, _ = detect_pertinence_agentic("text", llm=stub)
         assert score == 0.2
 
     def test_pertinence_mid_score_propagates(self):
-        stub = _make_order_stub(
-            _PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.5)
-        )
+        stub = _make_order_stub(_PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.5))
         score, _ = detect_pertinence_agentic("text", llm=stub)
         assert score == 0.5
 
     # --- clarte ---
 
     def test_clarte_zero_propagates_when_obstacle_present(self):
-        stub = _make_order_stub(
-            _CLARTE_STEP1_OBSTACLE, _CLARTE_STEP2, _step3(0.0)
-        )
+        stub = _make_order_stub(_CLARTE_STEP1_OBSTACLE, _CLARTE_STEP2, _step3(0.0))
         score, _ = detect_clarte_agentic("text", llm=stub)
         assert score == 0.0
 
     def test_clarte_low_score_no_floor_up(self):
-        stub = _make_order_stub(
-            _CLARTE_STEP1_OBSTACLE, _CLARTE_STEP2, _step3(0.2)
-        )
+        stub = _make_order_stub(_CLARTE_STEP1_OBSTACLE, _CLARTE_STEP2, _step3(0.2))
         score, _ = detect_clarte_agentic("text", llm=stub)
         assert score == 0.2
 
     # --- structure_logique ---
 
     def test_structure_zero_propagates_when_chain_present(self):
-        stub = _make_order_stub(
-            _STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(0.0)
-        )
+        stub = _make_order_stub(_STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(0.0))
         score, _ = detect_structure_logique_agentic("text", llm=stub)
         assert score == 0.0
 
     def test_structure_low_score_no_floor_up(self):
-        stub = _make_order_stub(
-            _STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(0.2)
-        )
+        stub = _make_order_stub(_STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(0.2))
         score, _ = detect_structure_logique_agentic("text", llm=stub)
         assert score == 0.2
 
     # --- exhaustivite ---
 
     def test_exhaustivite_zero_propagates(self):
-        stub = _make_order_stub(
-            _EXHAUST_STEP1, _EXHAUST_STEP2, _step3(0.0)
-        )
+        stub = _make_order_stub(_EXHAUST_STEP1, _EXHAUST_STEP2, _step3(0.0))
         score, _ = detect_exhaustivite_agentic("text", llm=stub)
         assert score == 0.0
 
     def test_exhaustivite_low_score_no_floor_up(self):
-        stub = _make_order_stub(
-            _EXHAUST_STEP1, _EXHAUST_STEP2, _step3(0.2)
-        )
+        stub = _make_order_stub(_EXHAUST_STEP1, _EXHAUST_STEP2, _step3(0.2))
         score, _ = detect_exhaustivite_agentic("text", llm=stub)
         assert score == 0.2
 
     # --- redondance_faible ---
 
     def test_redondance_zero_propagates_when_points_distinct(self):
-        stub = _make_order_stub(
-            _REDOND_STEP1, _REDOND_STEP2, _step3(0.0)
-        )
+        stub = _make_order_stub(_REDOND_STEP1, _REDOND_STEP2, _step3(0.0))
         score, _ = detect_redondance_faible_agentic("text", llm=stub)
         assert score == 0.0
 
     def test_redondance_low_score_no_floor_up(self):
-        stub = _make_order_stub(
-            _REDOND_STEP1, _REDOND_STEP2, _step3(0.2)
-        )
+        stub = _make_order_stub(_REDOND_STEP1, _REDOND_STEP2, _step3(0.2))
         score, _ = detect_redondance_faible_agentic("text", llm=stub)
         assert score == 0.2
 
@@ -228,23 +205,17 @@ class TestBidirectionalFidelity:
     one-directional correction."""
 
     def test_pertinence_high_score_propagates(self):
-        stub = _make_order_stub(
-            _PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(1.0)
-        )
+        stub = _make_order_stub(_PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(1.0))
         score, _ = detect_pertinence_agentic("text", llm=stub)
         assert score == 1.0
 
     def test_structure_high_score_propagates(self):
-        stub = _make_order_stub(
-            _STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(1.0)
-        )
+        stub = _make_order_stub(_STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG, _step3(1.0))
         score, _ = detect_structure_logique_agentic("text", llm=stub)
         assert score == 1.0
 
     def test_redondance_high_score_propagates(self):
-        stub = _make_order_stub(
-            _REDOND_STEP1, _REDOND_STEP2, _step3(1.0)
-        )
+        stub = _make_order_stub(_REDOND_STEP1, _REDOND_STEP2, _step3(1.0))
         score, _ = detect_redondance_faible_agentic("text", llm=stub)
         assert score == 1.0
 
@@ -259,7 +230,11 @@ class TestExhibitNonVacant:
         [
             (detect_pertinence_agentic, _PERT_STEP1_STRONG, _PERT_STEP2_STRONG),
             (detect_clarte_agentic, _CLARTE_STEP1_OBSTACLE, _CLARTE_STEP2),
-            (detect_structure_logique_agentic, _STRUCT_STEP1_STRONG, _STRUCT_STEP2_STRONG),
+            (
+                detect_structure_logique_agentic,
+                _STRUCT_STEP1_STRONG,
+                _STRUCT_STEP2_STRONG,
+            ),
             (detect_exhaustivite_agentic, _EXHAUST_STEP1, _EXHAUST_STEP2),
             (detect_redondance_faible_agentic, _REDOND_STEP1, _REDOND_STEP2),
         ],
@@ -276,9 +251,7 @@ class TestExhibitNonVacant:
     def test_pertinence_comment_carries_verdict(self):
         """The step2 verdict token must surface in the comment — proves the
         chain's verify-step output is retained, not discarded."""
-        stub = _make_order_stub(
-            _PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.5)
-        )
+        stub = _make_order_stub(_PERT_STEP1_STRONG, _PERT_STEP2_STRONG, _step3(0.5))
         _, comment = detect_pertinence_agentic("text", llm=stub)
         assert "toutes_pertinentes" in comment
 
