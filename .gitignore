@@ -200,3 +200,17 @@ docs/reports/CORRECTIONS_PATCHES_*
 docs/reports/CORRECTION_ANALYSE_*
 docs/reports/ORGANISATION_WORKSPACE.md
 docs/reports/test-hierarchy-data/
+
+# Local scratch diagnostic/benchmark scripts + generated bench reports (one-shot, never commit).
+# These decrypt the corpus IN-MEMORY via load_extract_definitions (sanctioned), but
+# _peek_sources.py and _list_docs.py PRINT plaintext previews to stdout (text[:300],
+# text[:120]) — a leak vector if their output is captured/logged. Real outputs already
+# land in gitignored paths (analysis_kb/, evaluation/results/). Dead one-shot scratch
+# from the May/Jun benchmarking era; kept locally for reference. Use `git add -f` to commit.
+scripts/_peek_sources.py
+scripts/_list_docs.py
+scripts/_deep_analysis.py
+scripts/_write_c03_report.py
+scripts/run_baselines.py
+docs/reports/spectacular_perf_bench.md
+docs/reports/spectacular_vs_baseline.md
