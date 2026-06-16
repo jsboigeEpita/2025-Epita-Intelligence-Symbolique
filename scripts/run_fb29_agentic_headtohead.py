@@ -70,8 +70,18 @@ VIRTUES = [
     "redondance_faible",
 ]
 SCALE_VALUES = [0.0, 0.2, 0.5, 1.0]
-# The 2 virtues upgraded to agentic multi-step detection in FB-29.
-AGENTIC_UPGRADED_VIRTUES = ["refutation_constructive", "analogie_pertinente"]
+# The virtues upgraded to agentic multi-step detection. FB-29 #1105: the 2
+# joint-zero blindspot virtues. FB-38 #1127: +5 remaining tractable virtues
+# (clarte, pertinence, structure_logique, exhaustivite, redondance_faible).
+# Derived from the registry (source of truth) so this harness always runs every
+# agentic detector wired into the evaluator. Only presence_sources /
+# fiabilite_sources stay lexical (genuine absence of citations — #1127 forbids
+# fabricating them).
+from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
+    AGENTIC_DETECTORS,
+)
+
+AGENTIC_UPGRADED_VIRTUES = list(AGENTIC_DETECTORS.keys())
 
 # 0-shot baseline prompt — IDENTICAL to FB-28 (apples-to-apples: same rubric,
 # same scale). The baseline side must not change between FB-28 and FB-29 so the
@@ -124,29 +134,66 @@ def load_pipeline_args(corpus_label: str) -> Tuple[Dict[str, str], Dict[str, Dic
 
 
 def _get_llm_client():
-    """OpenRouter-toggle-aware client (FB-21 lesson, FB-28 reuse)."""
+    """OpenRouter-toggle-aware client (FB-21 lesson, FB-28 reuse).
+
+    FB-38: a per-call ``timeout`` + bounded ``max_retries`` is mandatory. The
+    default OpenAI client has an effectively-unbounded read timeout, so a single
+    hung upstream call blocks the whole run indefinitely (observed: 25 min
+    wall, 2% CPU, zero per-arg progress — indistinguishable from a hang). This
+    is a fail-loud bound on an unbounded operation, not a counterweight
+    (anti-pendule): the operation is unchanged when it succeeds, it just fails
+    loudly instead of hanging silently when the upstream stalls.
+    """
     from openai import OpenAI
 
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
     use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+    # Generous ceiling for reasoning-model calls on complex detector prompts.
+    call_timeout = float(os.environ.get("FB38_CALL_TIMEOUT", "120"))
     if use_openrouter:
         model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
-        client = OpenAI(api_key=openrouter_api_key, base_url=openrouter_base_url)
+        client = OpenAI(
+            api_key=openrouter_api_key,
+            base_url=openrouter_base_url,
+            timeout=call_timeout,
+            max_retries=1,
+        )
     else:
         model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = OpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY"),
+            timeout=call_timeout,
+            max_retries=1,
+        )
     return client, model
 
 
 def _make_llm_callable(client: Any, model: str) -> Callable[[str], str]:
     """Wrap the chat-completions client as a ``str -> str`` callable for the
-    agentic detectors (which expect that contract)."""
+    agentic detectors (which expect that contract).
+
+    FB-38: logs per-call elapsed + reasoning-token count to stderr, so a
+    slow-but-progressing run is visible and distinguishable from a hang.
+    """
 
     def call(prompt: str) -> str:
+        t0 = time.time()
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
+        )
+        dt = time.time() - t0
+        usage = getattr(response, "usage", None)
+        rtoks = (
+            getattr(usage.completion_tokens_details, "reasoning_tokens", None)
+            if usage and getattr(usage, "completion_tokens_details", None)
+            else None
+        )
+        print(
+            f"    [llm] {dt:.1f}s rtok={rtoks} prompt_len={len(prompt)}",
+            file=sys.stderr,
+            flush=True,
         )
         choice = response.choices[0]
         return (choice.message.content if choice.message and choice.message.content else "") or ""
@@ -302,17 +349,25 @@ def run_corpus(corpus_label: str, max_args: int = 8) -> Dict[str, Any]:
                 "overall": fb28.get("overall"),
             },
         }
-        # Console preview focused on the 2 upgraded virtues
+        # Console preview: how many upgraded virtues does the agentic pipeline
+        # separate ABOVE the 0-shot baseline on THIS arg (pipe>base). The
+        # content-separation claim lives in these per-arg separations + exhibits.
         ps = pipe["scores"]
         bs = base["scores"]
-        refut_p = ps.get("refutation_constructive")
-        refut_b = bs.get("refutation_constructive")
-        anal_p = ps.get("analogie_pertinente")
-        anal_b = bs.get("analogie_pertinente")
+        base_overall = round(
+            sum(s for s in bs.values() if isinstance(s, (int, float))), 2
+        )
+        up_separating = sum(
+            1
+            for v in AGENTIC_UPGRADED_VIRTUES
+            if isinstance(ps.get(v), (int, float))
+            and isinstance(bs.get(v), (int, float))
+            and float(ps[v]) > float(bs[v])
+        )
         print(
             f"  [{i}/{len(arg_ids)}] {arg_id}: "
-            f"refut pipe={refut_p}/base={refut_b} | "
-            f"analogy pipe={anal_p}/base={anal_b} "
+            f"pipe={pipe['overall']}/base={base_overall} | "
+            f"upgraded-separating={up_separating}/{len(AGENTIC_UPGRADED_VIRTUES)} "
             f"({elapsed:.1f}s)"
         )
 
@@ -390,45 +445,52 @@ def build_differential(results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="FB-29 agentic head-to-head")
+    parser = argparse.ArgumentParser(description="FB-29/FB-38 agentic head-to-head")
     parser.add_argument("--corpus", choices=["A", "B", "C"], default=None)
     parser.add_argument("--max-args", type=int, default=8)
+    parser.add_argument(
+        "--out-prefix",
+        default="fb38",
+        help="Output filename prefix (default fb38; FB-29 frozen results are fb29_*).",
+    )
     args_cli = parser.parse_args()
 
     corpus_list = [args_cli.corpus] if args_cli.corpus else ["A", "B", "C"]
+    out_prefix = args_cli.out_prefix
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     results: Dict[str, Any] = {}
     for label in corpus_list:
-        print(f"\n{'='*60}\n[FB29] corpus {label}\n{'='*60}")
+        print(f"\n{'='*60}\n[{out_prefix.upper()}] corpus {label}\n{'='*60}")
         try:
             res = run_corpus(label, max_args=args_cli.max_args)
             results[label] = res
-            out_path = RESULTS_DIR / f"fb29_agentic_{label}.json"
+            out_path = RESULTS_DIR / f"{out_prefix}_agentic_{label}.json"
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(res, f, indent=2, ensure_ascii=False, default=str)
-            print(f"[FB29] saved {out_path}")
+            print(f"[{out_prefix.upper()}] saved {out_path}")
         except Exception as exc:
-            print(f"[FB29] corpus {label} FAILED: {exc}")
+            print(f"[{out_prefix.upper()}] corpus {label} FAILED: {exc}")
             results[label] = {"corpus": CORPUS_LABELS[label], "error": str(exc)}
 
     diff = build_differential(results)
     summary = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "method": "fb29_agentic_headtohead",
+        "method": f"{out_prefix}_agentic_headtohead",
         "description": (
-            "Upgraded pipeline (agentic multi-step on refutation_constructive + "
-            "analogie_pertinente) vs 0-shot baseline, same rubric/scale as FB-28"
+            f"Upgraded pipeline (agentic multi-step on {len(AGENTIC_UPGRADED_VIRTUES)} "
+            f"virtues: {', '.join(AGENTIC_UPGRADED_VIRTUES)}) vs 0-shot baseline, "
+            "same rubric/scale as FB-28"
         ),
         "upgraded_virtues": AGENTIC_UPGRADED_VIRTUES,
         "differential": diff,
     }
-    summary_path = RESULTS_DIR / "fb29_summary.json"
+    summary_path = RESULTS_DIR / f"{out_prefix}_summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
-    print(f"\n[FB29] Summary + differential saved to {summary_path}")
+    print(f"\n[{out_prefix.upper()}] Summary + differential saved to {summary_path}")
 
-    print(f"\n{'='*60}\n[FB29] UPGRADED-VIRTUE DIFFERENTIAL (agentic pipe vs 0-shot base)\n{'='*60}")
+    print(f"\n{'='*60}\n[{out_prefix.upper()}] UPGRADED-VIRTUE DIFFERENTIAL (agentic pipe vs 0-shot base)\n{'='*60}")
     for label in corpus_list:
         d = diff.get(label, {})
         pv = d.get("per_virtue", {})
