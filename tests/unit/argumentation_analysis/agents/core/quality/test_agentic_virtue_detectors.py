@@ -26,6 +26,11 @@ from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import 
     detect_refutation_constructive_agentic,
     detect_refutation_constructive_agentic as detect_refut,
     detect_analogie_pertinente_agentic as detect_analogy,
+    detect_clarte_agentic as detect_clarte,
+    detect_pertinence_agentic as detect_pertinence,
+    detect_structure_logique_agentic as detect_structure,
+    detect_exhaustivite_agentic as detect_exhaust,
+    detect_redondance_faible_agentic as detect_redond,
 )
 from argumentation_analysis.agents.core.quality import agentic_virtue_detectors as avd
 
@@ -39,8 +44,20 @@ from argumentation_analysis.agents.core.quality import agentic_virtue_detectors 
 # ---------------------------------------------------------------------------
 
 def _which_step(prompt: str) -> str:
-    """Identify which chain step a prompt is asking (by its signature marker)."""
-    if "Étape 3" in prompt or "Score la qualité" in prompt or "Score la pertinence" in prompt:
+    """Identify which chain step a prompt is asking (by its signature marker).
+
+    FB-29 step3 prompts open with "Score la qualité/pertinence"; FB-38 step3
+    prompts open with "Score la clarté/...". The robust universal step3 signal:
+    every step3 prompt embeds the ``"exhibit":`` JSON key, which no step1/step2
+    does. (The step2 verdict tokens are underscore-form precisely so step3 can
+    discriminate them from the rubric prose — see the detectors' module docstring.)
+    """
+    if (
+        "Étape 3" in prompt
+        or '"exhibit"' in prompt
+        or "Score la qualité" in prompt
+        or "Score la pertinence" in prompt
+    ):
         return "step3"
     if "Étape 2" in prompt:
         return "step2"
@@ -296,6 +313,346 @@ class TestAnalogiePertinenteAgentic:
 
 
 # ---------------------------------------------------------------------------
+# FB-38 #1127 — the 5 remaining tractable virtues, agentic
+#
+# Same context-sensitive-stub pattern: step1/step2 classify the planted text;
+# step3 keys off the verdict token carried from step2 (underscore-form, NOT in
+# the rubric prose). Each negative control is a text where the LEXICAL detector
+# gives a FALSE-POSITIVE high score (the agentic chain must REJECT) — that
+# discrimination is the content-separation claim, not the score itself.
+# ---------------------------------------------------------------------------
+
+
+def _make_clarte_stub(jargon_keywords):
+    """clarté stub: jargon (short words, unresolvable) must REJECT; clear text
+    scores high. The lexical Flesch detector would score jargon HIGH on short
+    words — the negative control."""
+    def stub(prompt: str) -> str:
+        step = _which_step(prompt)
+        lower = prompt.lower()
+        is_jargon = any(k.lower() in lower for k in jargon_keywords)
+        if step == "step1":
+            if is_jargon:
+                return json.dumps({"has_clarity_obstacle": True, "obstacles": "jargon technique non défini (Q-GERT, TLN)"})
+            return json.dumps({"has_clarity_obstacle": False, "obstacles": ""})
+        if step == "step2":
+            if is_jargon:
+                return json.dumps({"obstacle_genuinely_opaque": True, "clarity_verdict": "opaque_réel", "reasoning": "jargon non résolvable"})
+            return json.dumps({"obstacle_genuinely_opaque": False, "clarity_verdict": "aucun_obstacle", "reasoning": ""})
+        if "opaque_réel" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "jargon opaque localisé"})
+        if "résolvable_contexte" in lower:
+            return json.dumps({"score": 0.5, "exhibit": "obstacle résolvable"})
+        return json.dumps({"score": 1.0, "exhibit": "aucun obstacle"})
+
+    return stub
+
+
+def _make_pertinence_stub(digression_keywords):
+    """pertinence stub: a digression (even with connectors) must REJECT; focused
+    text scores high. The lexical connector-count would score a digressive text
+    HIGH — the negative control."""
+    def stub(prompt: str) -> str:
+        step = _which_step(prompt)
+        lower = prompt.lower()
+        is_digression = any(k.lower() in lower for k in digression_keywords)
+        if step == "step1":
+            return json.dumps({
+                "has_thesis": True,
+                "thesis": "la thèse défendue",
+                "digressions": "aparté sur le chat" if is_digression else "",
+            })
+        if step == "step2":
+            if is_digression:
+                return json.dumps({"has_digression": True, "relevance_verdict": "digression_localisée", "located_digression": "aparté hors-sujet"})
+            return json.dumps({"has_digression": False, "relevance_verdict": "toutes_pertinentes", "located_digression": ""})
+        if "digression_localisée" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "digression localisée"})
+        if "toutes_pertinentes" in lower:
+            return json.dumps({"score": 1.0, "exhibit": "toutes pertinentes"})
+        return json.dumps({"score": 0.5, "exhibit": "pertinence partielle"})
+
+    return stub
+
+
+def _make_structure_stub(real_keywords, saut_keywords):
+    """structure_logique stub: an enumeration with rhetorical 'donc' but no
+    inference (saut logique) must REJECT; a real premise→conclusion scores high.
+    The lexical connector-count would score the saut HIGH — the negative control."""
+    def stub(prompt: str) -> str:
+        step = _which_step(prompt)
+        lower = prompt.lower()
+        is_real = any(k.lower() in lower for k in real_keywords)
+        is_saut = any(k.lower() in lower for k in saut_keywords)
+        if step == "step1":
+            return json.dumps({
+                "has_chain": True,
+                "premises": "prémisses identifiées",
+                "conclusion": "conclusion",
+            })
+        if step == "step2":
+            if is_real:
+                return json.dumps({"chain_holds": True, "structure_verdict": "progression_logique", "reasoning": "inférence réelle"})
+            if is_saut:
+                return json.dumps({"chain_holds": False, "structure_verdict": "saut_logique", "reasoning": "la conclusion ne découle pas des prémisses"})
+            return json.dumps({"chain_holds": False, "structure_verdict": "énumération_sans_lien", "reasoning": ""})
+        if "progression_logique" in lower:
+            return json.dumps({"score": 1.0, "exhibit": "chaîne prémisse→conclusion tenue"})
+        if "saut_logique" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "saut logique rejeté"})
+        if "énumération_sans_lien" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "énumération sans lien rejetée"})
+        return json.dumps({"score": 0.5, "exhibit": "structure partielle"})
+
+    return stub
+
+
+def _make_exhaust_stub(broad_keywords, mono_keywords):
+    """exhaustivité stub: a long but monodimensional text must REJECT; broad
+    coverage scores high. The lexical sentence-count would score a long
+    monodimensional text HIGH — the negative control."""
+    def stub(prompt: str) -> str:
+        step = _which_step(prompt)
+        lower = prompt.lower()
+        is_broad = any(k.lower() in lower for k in broad_keywords)
+        is_mono = any(k.lower() in lower for k in mono_keywords)
+        if step == "step1":
+            return json.dumps({"subject": "le sujet", "expected_dimensions": "efficacité, coût, équité, faisabilité"})
+        if step == "step2":
+            if is_broad:
+                return json.dumps({"covered_dimensions": "plusieurs dimensions", "missing_dimensions": "", "coverage_verdict": "couverture_large"})
+            if is_mono:
+                return json.dumps({"covered_dimensions": "efficacité seule", "missing_dimensions": "coût, équité, faisabilité absents", "coverage_verdict": "monodimensionnel_seul"})
+            return json.dumps({"covered_dimensions": "", "missing_dimensions": "", "coverage_verdict": "couverture_partielle"})
+        if "couverture_large" in lower:
+            return json.dumps({"score": 1.0, "exhibit": "couverture large des dimensions"})
+        if "monodimensionnel_seul" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "monodimensionnel rejeté"})
+        if "couverture_partielle" in lower:
+            return json.dumps({"score": 0.5, "exhibit": "couverture partielle"})
+        return json.dumps({"score": 0.2, "exhibit": "couverture faible"})
+
+    return stub
+
+
+def _make_redond_stub(distinct_keywords, redundant_keywords):
+    """redondance_faible stub: semantic restatement (same idea, varied words)
+    must REJECT; genuinely distinct points score high. The lexical unique-word
+    ratio would score a varied-word restatement HIGH (low redundancy) — the
+    negative control."""
+    def stub(prompt: str) -> str:
+        step = _which_step(prompt)
+        lower = prompt.lower()
+        is_distinct = any(k.lower() in lower for k in distinct_keywords)
+        is_redundant = any(k.lower() in lower for k in redundant_keywords)
+        if step == "step1":
+            return json.dumps({"distinct_points": "points identifiés"})
+        if step == "step2":
+            if is_distinct:
+                return json.dumps({"has_semantic_redundancy": False, "redundancy_verdict": "points_distincts", "located_redundancy": ""})
+            if is_redundant:
+                return json.dumps({"has_semantic_redundancy": True, "redundancy_verdict": "redondance_sémantique", "located_redundancy": "même idée reformulée"})
+            return json.dumps({"has_semantic_redundancy": False, "redundancy_verdict": "reformulation_utile", "located_redundancy": ""})
+        if "points_distincts" in lower:
+            return json.dumps({"score": 1.0, "exhibit": "points réellement distincts"})
+        if "redondance_sémantique" in lower:
+            return json.dumps({"score": 0.0, "exhibit": "redondance sémantique rejetée"})
+        if "reformulation_utile" in lower:
+            return json.dumps({"score": 0.5, "exhibit": "reformulation utile"})
+        return json.dumps({"score": 0.2, "exhibit": "redondance notable"})
+
+    return stub
+
+
+# --- Planted texts (FB-38) ---
+
+CLEAR_TEXT = (  # no clarity obstacle → measured 1.0
+    "La photosynthèse convertit l'énergie solaire en énergie chimique. "
+    "Les plantes utilisent ce processus pour produire leur propre nourriture."
+)
+JARGON_TEXT = (  # short words but unresolvable jargon → Flesch false-positive HIGH, agentic REJECT
+    "Le Q-GERT module le TLN via le protocole X-47. C'est crucial pour le résultat final obtenu."
+)
+RELEVANT_TEXT = (  # focused argument, all propositions serve the thesis
+    "La fiscalité écologique réduit les émissions carbone. En effet, taxer les "
+    "pollueurs modifie les comportements industriels vers des pratiques plus propres, "
+    "ce qui baisse durablement l'empreinte carbone du pays."
+)
+DIGRESSIVE_TEXT = (  # connectors + a clear digression → connector-count false-positive HIGH
+    "Nous devons réduire la dette publique. En effet, la dette étouffe l'économie. "
+    "Par ailleurs, mon chat est roux et dort beaucoup. Donc, la rigueur budgétaire s'impose."
+)
+CHAINED_TEXT = (  # real premise→conclusion inference
+    "Tous les mammifères possèdent un cœur. La baleine est un mammifère. "
+    "Donc, la baleine possède un cœur."
+)
+ENUMERATION_TEXT = (  # points + 'donc' but the conclusion doesn't follow → saut logique
+    "Il pleut. La route est mouillée. Donc, la politique monétaire doit changer radicalement."
+)
+BROAD_TEXT = (  # covers multiple dimensions of the subject
+    "Sur la réforme fiscale, il faut juger l'efficacité économique, le coût pour les "
+    "ménages, l'équité sociale et la faisabilité politique."
+)
+MONODIM_TEXT = (  # long, many sentences, but ONE dimension only → sentence-count false-positive HIGH
+    "Ce médicament est efficace. Son efficacité est prouvée par des essais cliniques. "
+    "Les patients guérissent vite grâce à lui. Le taux de guérison est élevé. "
+    "Son efficacité dépasse largement celle des alternatives disponibles."
+)
+DISTINCT_TEXT = (  # genuinely distinct points
+    "Premièrement, la mesure réduit les inégalités. Deuxièmement, elle encourage "
+    "l'innovation technique. Troisièmement, elle renforce la souveraineté du pays."
+)
+SEMANTIC_RESTATEMENT_TEXT = (  # same idea, varied words → unique-word-ratio false-positive HIGH
+    "Il faut investir dans l'éducation. Nos écoles méritent davantage de moyens. "
+    "L'enseignement doit rester une priorité budgétaire. Former notre jeunesse est un impératif national."
+)
+
+
+# --- FB-38 detector tests (positive + negative-control + fail-loud each) ---
+
+class TestClarteAgentic:
+    def test_clear_text_measured_high(self):
+        stub = _make_clarte_stub(jargon_keywords=["q-gert"])
+        score, comment = detect_clarte(CLEAR_TEXT, llm=stub)
+        assert score == 1.0, f"clear text should score high, got {score}"
+        assert "aucun obstacle" in comment.lower()
+
+    def test_jargon_rejected_negative_control(self):
+        """Negative control: unresolvable jargon (short words) must REJECT. A
+        lexical Flesch detector would score it HIGH — the agentic chain locates
+        the obstacle and rejects. Scoring it high = theatre (#1019)."""
+        stub = _make_clarte_stub(jargon_keywords=["q-gert", "tln", "x-47"])
+        score, comment = detect_clarte(JARGON_TEXT, llm=stub)
+        assert score == 0.0, (
+            f"NEGATIVE CONTROL FAILED: unresolvable jargon must REJECT (0.0), "
+            f"got {score}. Flesch scores short-word jargon high — theatre."
+        )
+        assert "opaque_réel" in comment
+
+    def test_no_llm_raises_fail_loud(self):
+        with pytest.raises(AgenticDetectorError, match="no LLM callable"):
+            detect_clarte(CLEAR_TEXT, llm=None)
+
+
+class TestPertinenceAgentic:
+    def test_relevant_text_matches_high(self):
+        stub = _make_pertinence_stub(digression_keywords=["chat", "dort"])
+        score, comment = detect_pertinence(RELEVANT_TEXT, llm=stub)
+        assert score == 1.0, f"focused text should score high, got {score}"
+        assert "toutes_pertinentes" in comment
+
+    def test_digression_rejected_negative_control(self):
+        """Negative control: connectors + a digression must REJECT. A lexical
+        connector-count would score it HIGH (many connectors) — the agentic
+        chain locates the digression."""
+        stub = _make_pertinence_stub(digression_keywords=["chat", "dort"])
+        score, comment = detect_pertinence(DIGRESSIVE_TEXT, llm=stub)
+        assert score == 0.0, (
+            f"NEGATIVE CONTROL FAILED: digression must REJECT (0.0), got {score}. "
+            "Connector-count would score a digressive text high — theatre."
+        )
+        assert "digression_localisée" in comment
+
+    def test_no_thesis_measured_zero(self):
+        """No thesis identified → measured 0.0 (the gate short-circuits)."""
+        def no_thesis_stub(prompt: str) -> str:
+            if _which_step(prompt) == "step1":
+                return json.dumps({"has_thesis": False, "thesis": "", "digressions": ""})
+            return json.dumps({})
+
+        score, comment = detect_pertinence(SOURCE_LIGHT_TEXT, llm=no_thesis_stub)
+        assert score == 0.0
+        assert "aucune thèse" in comment.lower()
+
+    def test_no_llm_raises_fail_loud(self):
+        with pytest.raises(AgenticDetectorError, match="no LLM callable"):
+            detect_pertinence(RELEVANT_TEXT, llm=None)
+
+
+class TestStructureLogiqueAgentic:
+    def test_real_chain_matches_high(self):
+        stub = _make_structure_stub(real_keywords=["mammifères", "baleine"], saut_keywords=["politique monétaire"])
+        score, comment = detect_structure(CHAINED_TEXT, llm=stub)
+        assert score == 1.0, f"real premise→conclusion should score high, got {score}"
+        assert "progression_logique" in comment
+
+    def test_enumeration_saut_rejected_negative_control(self):
+        """Negative control: points + rhetorical 'donc' but no inference (saut
+        logique) must REJECT. A lexical connector-count would score it HIGH —
+        the agentic chain verifies the inference and rejects the gap."""
+        stub = _make_structure_stub(real_keywords=["mammifères"], saut_keywords=["politique monétaire", "pleut"])
+        score, comment = detect_structure(ENUMERATION_TEXT, llm=stub)
+        assert score == 0.0, (
+            f"NEGATIVE CONTROL FAILED: saut logique must REJECT (0.0), got {score}. "
+            "Connector-count would score an enumeration with 'donc' high — theatre."
+        )
+        assert "saut_logique" in comment or "énumération_sans_lien" in comment
+
+    def test_no_chain_measured_zero(self):
+        def no_chain_stub(prompt: str) -> str:
+            if _which_step(prompt) == "step1":
+                return json.dumps({"has_chain": False, "premises": "", "conclusion": ""})
+            return json.dumps({})
+
+        score, comment = detect_structure(SOURCE_LIGHT_TEXT, llm=no_chain_stub)
+        assert score == 0.0
+        assert "aucune chaîne" in comment.lower()
+
+    def test_no_llm_raises_fail_loud(self):
+        with pytest.raises(AgenticDetectorError, match="no LLM callable"):
+            detect_structure(CHAINED_TEXT, llm=None)
+
+
+class TestExhaustiviteAgentic:
+    def test_broad_coverage_matches_high(self):
+        stub = _make_exhaust_stub(broad_keywords=["équité sociale", "faisabilité politique"], mono_keywords=["taux de guérison"])
+        score, comment = detect_exhaust(BROAD_TEXT, llm=stub)
+        assert score == 1.0, f"broad coverage should score high, got {score}"
+        assert "couverture_large" in comment
+
+    def test_monodimensional_rejected_negative_control(self):
+        """Negative control: long but monodimensional text must REJECT. A
+        lexical sentence-count would score it HIGH (many sentences) — the
+        agentic chain identifies the missing dimensions."""
+        stub = _make_exhaust_stub(broad_keywords=["équité sociale"], mono_keywords=["taux de guérison", "essais cliniques"])
+        score, comment = detect_exhaust(MONODIM_TEXT, llm=stub)
+        assert score == 0.0, (
+            f"NEGATIVE CONTROL FAILED: monodimensional text must REJECT (0.0), "
+            f"got {score}. Sentence-count rewards length, not coverage — theatre."
+        )
+        assert "monodimensionnel_seul" in comment
+
+    def test_no_llm_raises_fail_loud(self):
+        with pytest.raises(AgenticDetectorError, match="no LLM callable"):
+            detect_exhaust(BROAD_TEXT, llm=None)
+
+
+class TestRedondanceFaibleAgentic:
+    def test_distinct_points_matches_high(self):
+        stub = _make_redond_stub(distinct_keywords=["premièrement", "deuxièmement"], redundant_keywords=["écoles méritent"])
+        score, comment = detect_redond(DISTINCT_TEXT, llm=stub)
+        assert score == 1.0, f"distinct points should score high, got {score}"
+        assert "points_distincts" in comment
+
+    def test_semantic_restatement_rejected_negative_control(self):
+        """Negative control: same idea in varied words must REJECT. A lexical
+        unique-word ratio would score it HIGH (varied vocabulary = 'low
+        redundancy') — the agentic chain locates the semantic restatement."""
+        stub = _make_redond_stub(distinct_keywords=["premièrement"], redundant_keywords=["écoles méritent", "former notre jeunesse", "impératif national"])
+        score, comment = detect_redond(SEMANTIC_RESTATEMENT_TEXT, llm=stub)
+        assert score == 0.0, (
+            f"NEGATIVE CONTROL FAILED: semantic restatement must REJECT (0.0), "
+            f"got {score}. Unique-word-ratio rewards lexical variety, not "
+            "semantic distinctness — theatre."
+        )
+        assert "redondance_sémantique" in comment
+
+    def test_no_llm_raises_fail_loud(self):
+        with pytest.raises(AgenticDetectorError, match="no LLM callable"):
+            detect_redond(DISTINCT_TEXT, llm=None)
+
+
+# ---------------------------------------------------------------------------
 # Evaluator integration — agentic upgrade path + fail-loud propagation
 # ---------------------------------------------------------------------------
 
@@ -306,7 +663,11 @@ class TestEvaluatorAgenticUpgrade:
 
     def test_agentic_llm_uses_agentic_detector(self, monkeypatch):
         """With agentic_llm wired, refutation_constructive routes to the
-        agentic 3-step chain (not the lexical marker grep)."""
+        agentic 3-step chain (not the lexical marker grep).
+
+        FB-38 note: AGENTIC_DETECTORS now holds 7 virtues. The other 6 are
+        stubbed to benign no-ops so evaluate() completes — only the refutation
+        *routing* is under test here (not the other chains' behaviour)."""
         from argumentation_analysis.agents.core.quality.quality_evaluator import (
             ArgumentQualityEvaluator,
         )
@@ -317,9 +678,15 @@ class TestEvaluatorAgenticUpgrade:
             called["refut_chain"] = True
             return 0.5, "agentic chain ran"
 
+        def benign_stub(text, llm=None):
+            return 0.0, "stubbed (not under test)"
+
         monkeypatch.setitem(
             avd.AGENTIC_DETECTORS, "refutation_constructive", stub_chain
         )
+        for v in list(avd.AGENTIC_DETECTORS):
+            if v != "refutation_constructive":
+                monkeypatch.setitem(avd.AGENTIC_DETECTORS, v, benign_stub)
         # Avoid the spacy/textstat hard dependency for this unit test: bypass
         # the deps gate by marking them available. The 7 lexical detectors are
         # not under test here; only the routing is.
