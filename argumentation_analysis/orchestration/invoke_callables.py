@@ -5840,6 +5840,127 @@ async def _invoke_narrative_synthesis(
     }
 
 
+async def _invoke_act2_narrative(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Invoke the Acte II dialectical-narrative generator (Epic #1134 / R3 #1137).
+
+    Builds the deterministic movement evidence from the shared state, then
+    conducts the narrative via the LLM (fail-loud, no template — #1108/#405).
+    The result populates ``state.act2_narrative``, the key the R6 renderer
+    consumes for ``RestitutionActs.act2_narrative``.
+
+    The LLM is resolved into an async callable from a kernel + default service
+    (same idiom as ``_invoke_deep_synthesis``). If no service is available the
+    generator returns ``status="unavailable"`` fail-loud — the renderer reports
+    the gap honestly (anti-pendule #1019/#369).
+    """
+    from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+        Act2Result,
+        build_act2_narrative,
+    )
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+    from argumentation_analysis.orchestration.state_writers import (
+        CAPABILITY_STATE_WRITERS,
+    )
+
+    # Resolve state (same precedence as _invoke_narrative_synthesis).
+    state = context.get("_state_object") or context.get("unified_state")
+    if not isinstance(state, UnifiedAnalysisState):
+        state = UnifiedAnalysisState(input_text[:200])
+        populated = 0
+        for key, value in context.items():
+            if key.startswith("phase_") and key.endswith("_output"):
+                cap = key[len("phase_") : -len("_output")]
+                writer = CAPABILITY_STATE_WRITERS.get(cap)
+                if writer and isinstance(value, dict):
+                    try:
+                        writer(value, state, context)
+                        populated += 1
+                    except Exception:
+                        logger.warning(
+                            "State writer for '%s' failed during Acte II "
+                            "reconstruction",
+                            cap,
+                            exc_info=True,
+                        )
+        logger.info(
+            "Acte II: no UnifiedAnalysisState in context, reconstructed from "
+            "%d phase outputs",
+            populated,
+        )
+
+    # Resolve an async LLM callable from a kernel + default service (FB-32
+    # idiom: service_id="default" activates the LLM path). Absent service →
+    # fail-loud unavailable (passed as None → generator records the status).
+    llm_service_id: Optional[str] = None
+    kernel: Any = None
+    try:
+        from semantic_kernel import Kernel
+
+        kernel = Kernel()
+        try:
+            from argumentation_analysis.core.llm_service import create_llm_service
+
+            llm = create_llm_service(service_id="default")
+            if llm:
+                kernel.add_service(llm)
+                llm_service_id = "default"
+        except Exception:
+            llm_service_id = None
+    except Exception:
+        llm_service_id = None
+
+    async def _llm(prompt: str) -> str:
+        # Conducted LLM call bound to the resolved kernel/service.
+        if not llm_service_id or kernel is None:
+            return ""
+        settings = kernel.get_prompt_execution_settings_from_service_id(
+            llm_service_id
+        )
+        result = await kernel.invoke_prompt(
+            function_name="act2_narrative_conducted",
+            plugin_name="restitution",
+            prompt=prompt,
+            settings=settings,
+        )
+        return str(result) if result else ""
+
+    result: Act2Result = await build_act2_narrative(
+        state, llm_callable=_llm if llm_service_id else None
+    )
+
+    gate_band = result.gate_verdict.band if result.gate_verdict is not None else None
+    if result.status != "woven":
+        state_fields = [
+            attr
+            for attr in (
+                "identified_arguments",
+                "argument_quality_scores",
+                "identified_fallacies",
+                "counter_arguments",
+                "dung_frameworks",
+                "fol_analysis_results",
+                "propositional_analysis_results",
+            )
+            if getattr(state, attr, None)
+        ]
+        logger.warning(
+            "Acte II narrative status=%s (fail-loud). llm_service_id=%s. "
+            "Populated state fields: %s.",
+            result.status,
+            llm_service_id,
+            state_fields,
+        )
+
+    return {
+        "act2_narrative": result.narrative,
+        "status": result.status,
+        "gate_band": gate_band,
+        "degraded": result.degraded,
+    }
+
+
 def _count_referenced_fields(state: Any) -> int:
     """Count how many state fields have data (used as references in narrative)."""
     count = 0

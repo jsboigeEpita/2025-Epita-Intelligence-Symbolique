@@ -930,6 +930,19 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=False,
             timeout_seconds=180,
         )
+        # L11 — Acte II dialectical narrative (Epic #1134 / R3 #1137). Cut by
+        # argumentative movement, woven per spec §4, LLM-conducted + fail-loud
+        # (no template — #1108/#405). Depends on deep_synthesis so the full
+        # analysis state (args, fallacies, quality, counters, PL/FOL/Dung) is
+        # populated before weaving. Robust: returns empty + status when the LLM
+        # is unavailable (never raises) — the renderer reports the gap honestly.
+        .add_phase(
+            "act2_narrative",
+            capability="act2_narrative",
+            depends_on=["deep_synthesis"],
+            optional=False,
+            timeout_seconds=180,
+        )
         .build()
     )
 

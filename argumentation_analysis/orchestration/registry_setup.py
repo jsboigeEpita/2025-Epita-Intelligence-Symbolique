@@ -57,6 +57,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_tweety_interpretation,
     _invoke_analysis_synthesis,
     _invoke_narrative_synthesis,
+    _invoke_act2_narrative,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
     _invoke_deep_synthesis,
@@ -547,6 +548,25 @@ def setup_registry(
         registered.append("narrative_synthesis_service")
     except Exception as e:
         skipped.append(("narrative_synthesis_service", str(e)))
+
+    # --- Acte II dialectical narrative service (#1137, Epic #1134) ---
+    try:
+        registry.register_service(
+            name="act2_narrative_service",
+            service_class=type("act2_narrative_service", (), {}),
+            capabilities=["act2_narrative"],
+            metadata={
+                "description": (
+                    "Generate the Acte II dialectical narrative — cut by "
+                    "argumentative movement, woven per spec §4 (LLM-conducted, "
+                    "fail-loud). Consumed by the R6 renderer."
+                )
+            },
+            invoke=_invoke_act2_narrative,
+        )
+        registered.append("act2_narrative_service")
+    except Exception as e:
+        skipped.append(("act2_narrative_service", str(e)))
 
     # --- External solver routing services (#504) ---
     for name, caps, desc, invoke_fn in [
