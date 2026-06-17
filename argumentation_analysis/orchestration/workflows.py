@@ -956,6 +956,21 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=False,
             timeout_seconds=180,
         )
+        # L12 — Acte III actionable conclusion (Epic #1134 / R4 #1138). The
+        # reader's payoff: gated verdict (G1–G4, #1008 §3 + band adapted from
+        # #1008 §2), balanced appréciations, and que-faire (contrer / weak
+        # points / game-theoretic what-next). LLM-conducted + fail-loud (no
+        # template — #1108/#405). Depends on act2_narrative so the conclusion
+        # closes the narrative (framing → récit → conclusion), making it the
+        # spectacular terminal phase. Robust: returns empty + status when the LLM
+        # is unavailable (never raises) — the renderer reports the gap honestly.
+        .add_phase(
+            "act3_conclusion",
+            capability="act3_conclusion",
+            depends_on=["act2_narrative"],
+            optional=False,
+            timeout_seconds=180,
+        )
         .build()
     )
 

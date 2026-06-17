@@ -59,6 +59,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_narrative_synthesis,
     _invoke_act2_narrative,
     _invoke_act1_framing,
+    _invoke_act3_conclusion,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
     _invoke_deep_synthesis,
@@ -587,6 +588,26 @@ def setup_registry(
         registered.append("act1_framing_service")
     except Exception as e:
         skipped.append(("act1_framing_service", str(e)))
+
+    # --- Acte III actionable conclusion service (#1138, Epic #1134) ---
+    try:
+        registry.register_service(
+            name="act3_conclusion_service",
+            service_class=type("act3_conclusion_service", (), {}),
+            capabilities=["act3_conclusion"],
+            metadata={
+                "description": (
+                    "Generate the Acte III actionable conclusion — gated verdict "
+                    "(G1-G4, band-adapted from #1008 §2), balanced appréciations, "
+                    "and que-faire (contrer / weak points / game-theoretic "
+                    "what-next). LLM-conducted, fail-loud. Consumed by R6."
+                )
+            },
+            invoke=_invoke_act3_conclusion,
+        )
+        registered.append("act3_conclusion_service")
+    except Exception as e:
+        skipped.append(("act3_conclusion_service", str(e)))
 
     # --- External solver routing services (#504) ---
     for name, caps, desc, invoke_fn in [

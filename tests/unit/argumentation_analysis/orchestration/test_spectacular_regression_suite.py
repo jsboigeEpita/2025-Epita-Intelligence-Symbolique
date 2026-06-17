@@ -330,13 +330,19 @@ class TestSpectacularWorkflowGolden:
         "belief_revision",
         "synthesis",
         "deep_synthesis",
+        # Restitution acts (Epic #1134): R2 framing + R3 narrative + R4 conclusion.
+        "act1_framing",
+        "act2_narrative",
+        "act3_conclusion",
     }
 
-    def test_phase_count_is_28(self):
+    def test_phase_count_is_31(self):
         # #1115: narrative_synthesis template phase removed from spectacular
-        # (determinization residue #1109 §5); count reflects real phase set.
+        # (determinization residue #1109 §5); count reflects real phase set PLUS
+        # the three restitution acts (R2 act1_framing #1136, R3 act2_narrative
+        # #1137, R4 act3_conclusion #1138) wired onto the spectacular DAG.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 28
+        assert len(wf.phases) == 31
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -352,13 +358,15 @@ class TestSpectacularWorkflowGolden:
         wf = build_spectacular_workflow()
         assert wf.validate() == []
 
-    def test_execution_order_has_8_levels(self):
+    def test_execution_order_has_10_levels(self):
         # #1115: DAG grew via #504/#506/#507/#508/#534 (solvers, KB/tweety,
-        # belief_revision, synthesis, deep_synthesis) — execution order is now
-        # 8 levels. Folded DAG test debt per ai-01 R407.
+        # belief_revision, synthesis, deep_synthesis) PLUS the three restitution
+        # acts: act1_framing (R2, depends on extract+stakes), act2_narrative
+        # (R3, depends on deep_synthesis) and act3_conclusion (R4, depends on
+        # act2_narrative — the terminal level). Execution order is now 10 levels.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 8
+        assert len(levels) == 10
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -405,13 +413,14 @@ class TestSpectacularWorkflowGolden:
         assert "aspic_analysis" in synth.depends_on
         levels = wf.get_execution_order()
         # formal_synthesis runs in the formal-aggregation level (5 of 0..7); the
-        # terminal level is deep_synthesis (#534).
+        # terminal level is act3_conclusion (R4 #1138, depends on act2_narrative
+        # which depends on deep_synthesis #534).
         assert "formal_synthesis" in levels[5]
-        assert levels[-1] == ["deep_synthesis"]
+        assert levels[-1] == ["act3_conclusion"]
 
     @pytest.mark.asyncio
     async def test_all_phases_complete_or_optional_skipped(self):
-        # #1115: the spectacular workflow has 28 phases (was 16/17); exact-count
+        # #1115: the spectacular workflow has 31 phases (was 16/17); exact-count
         # asserts went stale as the DAG grew. Assert the load-bearing invariant
         # instead: no phase FAILED, and the non-optional phases all COMPLETED.
         wf = build_spectacular_workflow()
@@ -657,9 +666,9 @@ class TestWorkflowCatalogGolden:
         catalog = get_workflow_catalog()
         assert "spectacular" in catalog
         assert catalog["spectacular"].name == "spectacular_analysis"
-        # #1115: spectacular has 28 phases (narrative_synthesis template removed;
-        # DAG grew via #504/#506/#507/#508/#534).
-        assert len(catalog["spectacular"].phases) == 28
+        # #1115: spectacular has 31 phases (narrative_synthesis template removed;
+        # DAG grew via #504/#506/#507/#508/#534 + 3 restitution acts R2/R3/R4).
+        assert len(catalog["spectacular"].phases) == 31
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

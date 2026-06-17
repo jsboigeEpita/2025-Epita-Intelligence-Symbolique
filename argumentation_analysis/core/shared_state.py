@@ -445,6 +445,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # the R6 renderer to populate RestitutionActs.act1_framing. Empty until
         # the act1_framing phase runs; the renderer reports the gap honestly.
         self.act1_framing: str = ""
+        # Restitution Acte III — actionable conclusion: gated verdict + balanced
+        # appréciations + que-faire (contrer / points faibles à viser / what-next
+        # game-theoretic). Epic #1134 / R4 #1138. LLM-conducted, gated on G1–G4
+        # (#1008 §3) + the verdict band (coverage-adapted from #1008 §2).
+        # Consumed by the R6 renderer to populate RestitutionActs.act3_conclusion.
+        # Empty until the act3_conclusion phase runs; the renderer reports the gap
+        # honestly.
+        self.act3_conclusion: str = ""
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
         # PL 2-pass pipeline: shared atom inventory (#547)
