@@ -62,6 +62,7 @@ async def run_unified_analysis(
     create_state: bool = True,
     checkpoint_callback: Optional[Any] = None,
     resume_from: Optional[set] = None,
+    render_restitution: bool = False,
 ) -> Dict[str, Any]:
     """
     Run a unified analysis pipeline on input text.
@@ -79,6 +80,13 @@ async def run_unified_analysis(
         checkpoint_callback: Optional callable passed to WorkflowExecutor for
               per-level checkpointing.  Signature: ``(results, ctx) -> None``.
         resume_from: Optional set of phase names to skip on resume.
+        render_restitution: If True (and state tracking is enabled), assemble the
+              readable 3-act restitution report from the completed state and add it
+              to the result as ``restitution_report`` (a ``RenderedReport`` with
+              ``markdown`` + gate ``verdict``). This is the R6-final wiring (#1140):
+              it replaces the unreadable dimensional dump as the default report a
+              reader meets first. Honest on non-spectacular states (missing acts
+              are named, not fabricated — #1019/#369).
 
     Returns:
         Dict with keys:
@@ -89,6 +97,8 @@ async def run_unified_analysis(
             - capabilities_missing: List of capabilities with no provider
             - unified_state: UnifiedAnalysisState (if state tracking enabled)
             - state_snapshot: Dict snapshot of the state (if state tracking enabled)
+            - restitution_report: RenderedReport (if render_restitution=True) — the
+                  readable 3-act Markdown + gate-lisibilité verdict
     """
     if registry is None:
         registry = setup_registry()
@@ -261,5 +271,23 @@ async def run_unified_analysis(
             result["state_snapshot"] = state.get_state_snapshot(summarize=True)
         except Exception:
             result["state_snapshot"] = None
+
+    # R6-final wiring (#1140): assemble the readable 3-act restitution report
+    # from the completed state. Lazy import keeps the renderer decoupled from
+    # the pipeline (file-disjoint lane). Honest on any state — missing acts are
+    # named by the renderer, never fabricated (#1019/#369).
+    if render_restitution and state is not None:
+        try:
+            from argumentation_analysis.reporting.restitution.pipeline_adapter import (
+                render_spectacular_restitution,
+            )
+
+            result["restitution_report"] = render_spectacular_restitution(state)
+        except Exception as exc:  # noqa: BLE001 — reporting must never fail the run
+            logger.warning(
+                "Restitution report rendering failed (fail-loud, non-fatal): %s",
+                exc,
+            )
+            result["restitution_report"] = None
 
     return result
