@@ -32,10 +32,11 @@ class TestSpectacularWorkflowDAG:
         # spectacular workflow (determinization residue per #1109 §5). The count
         # reflects the real phase set (#504 solvers, #506 KB/tweety, #507
         # belief_revision, #508 synthesis, #534 deep_synthesis, ...) PLUS the
-        # two restitution acts wired onto the spectacular DAG: act1_framing
-        # (R2 #1136) and act2_narrative (R3 #1137) — the 3-act narrative.
+        # three restitution acts wired onto the spectacular DAG: act1_framing
+        # (R2 #1136), act2_narrative (R3 #1137) and act3_conclusion (R4 #1138)
+        # — the 3-act narrative.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 30
+        assert len(wf.phases) == 31
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -69,9 +70,10 @@ class TestSpectacularWorkflowDAG:
             "belief_revision",
             "synthesis",
             "deep_synthesis",
-            # Restitution acts (Epic #1134): R2 framing + R3 narrative.
+            # Restitution acts (Epic #1134): R2 framing + R3 narrative + R4 conclusion.
             "act1_framing",
             "act2_narrative",
+            "act3_conclusion",
         }
         assert expected == phase_names
 
