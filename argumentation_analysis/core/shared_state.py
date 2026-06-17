@@ -433,6 +433,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.workflow_results: Dict[str, Any] = {}
         # Narrative synthesis (#351)
         self.narrative_synthesis: str = ""
+        # Restitution Acte II — dialectical narrative by argumentative movement
+        # (Epic #1134 / R3 #1137). LLM-conducted, woven per spec §4. Consumed by
+        # the R6 renderer to populate RestitutionActs.act2_narrative. Empty until
+        # the act2_narrative phase runs; the renderer reports the gap honestly.
+        self.act2_narrative: str = ""
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
         # PL 2-pass pipeline: shared atom inventory (#547)

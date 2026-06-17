@@ -902,6 +902,23 @@ def _write_narrative_synthesis_to_state(
         state.narrative_synthesis = narrative
 
 
+def _write_act2_narrative_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write the Acte II dialectical narrative to UnifiedAnalysisState (#1137).
+
+    Populates ``state.act2_narrative`` — the key the R6 renderer consumes for
+    ``RestitutionActs.act2_narrative``. Empty/unavailable results are left as
+    the empty default so the renderer reports the gap honestly (fail-loud,
+    #1108/#1019 — never fabricate a narrative here).
+    """
+    if not output or not isinstance(output, dict):
+        return
+    narrative = output.get("act2_narrative", "")
+    if isinstance(narrative, str) and narrative:
+        state.act2_narrative = narrative
+
+
 def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write TextToKB extraction results to UnifiedAnalysisState (#506)."""
     if not output or not isinstance(output, dict):
@@ -1079,6 +1096,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "collaborative_analysis": _write_collaborative_analysis_to_state,
     "nl_to_logic_translation": _write_nl_to_logic_to_state,
     "narrative_synthesis": _write_narrative_synthesis_to_state,
+    "act2_narrative": _write_act2_narrative_to_state,
     "nl_extraction": _write_text_to_kb_to_state,
     "kb_to_tweety": _write_kb_to_tweety_to_state,
     "formal_result_interpretation": _write_tweety_interpretation_to_state,
