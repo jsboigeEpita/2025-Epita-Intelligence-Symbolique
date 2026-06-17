@@ -31,9 +31,11 @@ class TestSpectacularWorkflowDAG:
         # #1115: the template `narrative_synthesis` phase was REMOVED from the
         # spectacular workflow (determinization residue per #1109 §5). The count
         # reflects the real phase set (#504 solvers, #506 KB/tweety, #507
-        # belief_revision, #508 synthesis, #534 deep_synthesis, ...).
+        # belief_revision, #508 synthesis, #534 deep_synthesis, ...) PLUS the
+        # two restitution acts wired onto the spectacular DAG: act1_framing
+        # (R2 #1136) and act2_narrative (R3 #1137) — the 3-act narrative.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 28
+        assert len(wf.phases) == 30
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -67,6 +69,9 @@ class TestSpectacularWorkflowDAG:
             "belief_revision",
             "synthesis",
             "deep_synthesis",
+            # Restitution acts (Epic #1134): R2 framing + R3 narrative.
+            "act1_framing",
+            "act2_narrative",
         }
         assert expected == phase_names
 

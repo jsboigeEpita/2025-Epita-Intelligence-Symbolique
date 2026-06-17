@@ -930,6 +930,19 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=False,
             timeout_seconds=180,
         )
+        # L11a — Acte I framing (Epic #1134 / R2 #1136). Mise en situation:
+        # genre, enjeux, derived expected fallacy spectrum, game-theoretic read.
+        # LLM-conducted + fail-loud, produced BEFORE the microscope (the only
+        # act that may anticipate, spec §1.1). Depends on extract (metadata) +
+        # stakes (enjeux/game-theoretic) — NOT on the analysis phases, which are
+        # Acte II's domain. Robust: fail-loud when the LLM is unavailable.
+        .add_phase(
+            "act1_framing",
+            capability="act1_framing",
+            depends_on=["extract", "stakes"],
+            optional=False,
+            timeout_seconds=180,
+        )
         # L11 — Acte II dialectical narrative (Epic #1134 / R3 #1137). Cut by
         # argumentative movement, woven per spec §4, LLM-conducted + fail-loud
         # (no template — #1108/#405). Depends on deep_synthesis so the full
