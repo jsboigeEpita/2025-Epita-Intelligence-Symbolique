@@ -71,11 +71,11 @@ def _rich_state() -> SimpleNamespace:
         argument_quality_scores={
             "arg_1": {
                 "overall": 4.2,
-                "scores_par_vertu": {"pertinence": 3.0, "clarte": 5.0},
+                "scores": {"pertinence": 3.0, "clarte": 5.0},
             },
             "arg_2": {
                 "overall": 7.8,
-                "scores_par_vertu": {"pertinence": 8.0, "coherence": 7.5},
+                "scores": {"pertinence": 8.0, "coherence": 7.5},
             },
         },
         counter_arguments=[
@@ -88,16 +88,23 @@ def _rich_state() -> SimpleNamespace:
                 ),
             }
         ],
+        # Canonical Dung shape: the writer add_dung_framework stores NO
+        # ``semantics`` key (it folds it into ``name``, state_writers.py:717).
+        # Finding D (#1153): the reader must recover it from ``name``.
         dung_frameworks={
             "fw_1": {
+                "name": "verification_preferred",
                 "arguments": ["arg_1", "arg_2"],
+                "attacks": [["arg_2", "arg_1"]],
                 "extensions": {"all_members": ["arg_2"]},
-                "semantics": "grounded",
             }
         },
+        # Canonical PL shape: the writer stores ``satisfiable``, NOT
+        # ``consistent`` (shared_state.py:801). Finding C (#1153): the reader
+        # must read ``satisfiable`` to collect PL findings.
         propositional_analysis_results=[
-            {"consistent": True},
-            {"consistent": False},
+            {"satisfiable": True},
+            {"satisfiable": False},
         ],
     )
 
@@ -172,7 +179,7 @@ class TestBuildEvidence:
         assert arg1.fallacies[0].family == "ad hominem"
         assert len(arg1.counter_args) == 1
         assert arg1.counter_args[0].strategy == "contre-exemple"
-        assert arg1.dung_rejected == "grounded"
+        assert arg1.dung_rejected == "preferred"  # Finding D: parsed from name
 
     def test_quality_axis_available_flag(self):
         ev = build_act2_evidence(_rich_state())
@@ -202,6 +209,147 @@ class TestBuildEvidence:
         assert "dung" in kinds
         pl = next(f for f in ev.formal_findings if f.kind == "pl")
         assert "inconsistantes" in pl.verdict
+
+
+class TestReaderWriterContracts:
+    """#1153: prove each reader↔writer schema fix (Finding A/C/D + note(a) + §5).
+
+    These tests assert against the CANONICAL writer schema (the shape the
+    state-writers + shared_state.add_* actually produce), not the legacy shape
+    the old reader keys expected — the prior tests passed only because the
+    stubs mirrored the buggy reader.
+    """
+
+    def test_finding_a_quality_virtues_read_from_canonical_scores_key(self):
+        # Writer add_quality_score stores per-virtue scores under 'scores'.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            argument_quality_scores={
+                "arg_1": {"overall": 3.5, "scores": {"pertinence": 2.0,
+                                                      "clarte": 5.0}},
+            },
+        )
+        ev = build_act2_evidence(state)
+        arg1 = ev.movements[0].arguments[0]
+        assert arg1.virtues == {"pertinence": 2.0, "clarte": 5.0}  # NOT {}
+        assert arg1.quality_available is True
+        assert arg1.quality_overall == pytest.approx(3.5)
+
+    def test_finding_a_quality_virtues_legacy_scores_par_vertu_still_works(self):
+        # Legacy / external writers using 'scores_par_vertu' still surface.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            argument_quality_scores={
+                "arg_1": {"overall": 3.0,
+                          "scores_par_vertu": {"coherence": 4.0}},
+            },
+        )
+        ev = build_act2_evidence(state)
+        assert ev.movements[0].arguments[0].virtues == {"coherence": 4.0}
+
+    def test_finding_c_pl_verdict_collected_from_satisfiable_key(self):
+        # Writer stores 'satisfiable'; reader MUST collect PL findings.
+        state = _state(
+            propositional_analysis_results=[
+                {"satisfiable": True},
+                {"satisfiable": False},
+            ],
+        )
+        ev = build_act2_evidence(state)
+        pl = next((f for f in ev.formal_findings if f.kind == "pl"), None)
+        assert pl is not None
+        assert "inconsistantes" in pl.verdict  # the False entry surfaces
+
+    def test_finding_c_pl_none_verdict_not_treated_as_inconsistent(self):
+        # #1019: a None (unverified) verdict must NOT collapse to False.
+        state = _state(
+            propositional_analysis_results=[
+                {"satisfiable": None},  # unverified
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert not any(f.kind == "pl" for f in ev.formal_findings)
+
+    def test_finding_c_pl_legacy_consistent_key_still_collected(self):
+        # Backward-compat: a writer using the legacy 'consistent' key still works.
+        state = _state(
+            propositional_analysis_results=[{"consistent": True}],
+        )
+        ev = build_act2_evidence(state)
+        pl = next((f for f in ev.formal_findings if f.kind == "pl"), None)
+        assert pl is not None and "consistantes" in pl.verdict
+
+    def test_finding_d_dung_semantics_parsed_from_name(self):
+        # Writer folds semantics into name=verification_<sem>; no 'semantics' key.
+        state = _state(
+            identified_arguments={"arg_1": "Claim A.", "arg_2": "Claim B."},
+            dung_frameworks={
+                "fw_1": {
+                    "name": "verification_preferred",
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [["arg_2", "arg_1"]],
+                    "extensions": {"all_members": ["arg_2"]},
+                }
+            },
+        )
+        ev = build_act2_evidence(state)
+        # arg_1 rejected; label must be 'preferred', not the wrong 'grounded'.
+        arg1 = next(a for m in ev.movements for a in m.arguments if a.arg_id == "arg_1")
+        assert arg1.dung_rejected == "preferred"
+
+    def test_finding_d_dung_semantics_explicit_key_preferred(self):
+        # When an explicit 'semantics' key is present, it wins over the name.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            dung_frameworks={
+                "fw_1": {
+                    "name": "verification_grounded",
+                    "semantics": "stable",
+                    "arguments": ["arg_1"],
+                    "attacks": [],
+                    "extensions": {"all_members": []},
+                }
+            },
+        )
+        ev = build_act2_evidence(state)
+        arg1 = next(a for m in ev.movements for a in m.arguments if a.arg_id == "arg_1")
+        assert arg1.dung_rejected == "stable"
+
+    def test_note_a_unresolved_fallacy_traced_not_dropped(self):
+        # A fallacy with no target_argument_id must be counted apart, not lost.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            identified_fallacies={
+                "fl_1": {"target_argument_id": "arg_1", "family": "ad hominem",
+                         "type": "ad hominem", "justification": "x"},
+                "fl_2": {"target_argument_id": "", "family": "fuite",
+                         "type": "fuite en avant", "justification": "y"},
+            },
+        )
+        ev = build_act2_evidence(state)
+        assert ev.fallacies_total == 1  # only the attributed one
+        assert ev.unattributed_fallacies == 1  # traced, not dropped
+
+    def test_section5_gate_usable_content_not_bool_dict(self):
+        # A non-empty dict with NO usable entry → axis unavailable (Finding A
+        # hid here). Partial-but-empty must fail-loud, not pass as available.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            argument_quality_scores={"arg_1": {}},  # present but unusable
+        )
+        ev = build_act2_evidence(state)
+        assert ev.quality_axis_available is False
+
+    def test_section5_gate_legit_partial_state_still_available(self):
+        # Anti-pendule: a single usable entry (overall only, no virtues) is
+        # a legitimate partial state → axis stays available, no false fail-loud.
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            argument_quality_scores={"arg_1": {"overall": 2.5}},
+        )
+        ev = build_act2_evidence(state)
+        assert ev.quality_axis_available is True
+
 
 
 class TestPrivacy:
