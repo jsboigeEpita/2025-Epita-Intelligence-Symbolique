@@ -118,6 +118,12 @@ class Act2Evidence:
     quality_axis_available: bool = True
     args_total: int = 0
     fallacies_total: int = 0
+    # Note (a) (#1153): fallacies whose target_argument_id could not be
+    # resolved to an identified argument. These cannot join a movement beat,
+    # but they ARE counted (here) rather than silently dropped (#1019) — the
+    # LLM/rapport surfaces them honestly as "non rattaché(s) à un argument
+    # identifié". ``fallacies_total`` counts only the attributed ones.
+    unattributed_fallacies: int = 0
 
 
 @dataclass
@@ -164,7 +170,18 @@ def _dung_rejected_by_arg(state: Any) -> Dict[str, str]:
         fw_args = fw.get("arguments", []) or []
         if not isinstance(fw_args, list):
             continue
-        semantics = str(fw.get("semantics", "grounded"))
+        # Finding D (#1151/#1153): add_dung_framework stores no ``semantics``
+        # key — the writer folds it into ``name=f"verification_{semantics}"``
+        # (state_writers.py:717). Prefer an explicit key if present, else parse
+        # it back from ``name``; only default to ``grounded`` when neither
+        # carries a signal (honest: the label stays, but it is now correct when
+        # the name encodes the semantics).
+        semantics = fw.get("semantics")
+        if not semantics:
+            name = str(fw.get("name", "") or "")
+            if name.startswith("verification_"):
+                semantics = name[len("verification_") :]
+        semantics = str(semantics or "grounded")
         accepted: set[str] = set()
         ext = fw.get("extensions", [])
         if isinstance(ext, dict):
@@ -190,6 +207,37 @@ def _dung_rejected_by_arg(state: Any) -> Dict[str, str]:
     return rejected
 
 
+def _quality_axis_usable(quality: Any) -> bool:
+    """§5 gate (#1153): is the quality axis *usable*, not merely present?
+
+    The old gate ``bool(quality)`` stayed ``True`` for a non-empty dict whose
+    entries were unusable (no overall, no per-virtue scores) — a silent bug that
+    hid Finding A (#1151). This gate requires at least one scored entry to carry
+    a usable ``overall`` OR a usable per-virtue map (under the canonical
+    ``scores`` key or the legacy ``scores_par_vertu``).
+
+    Calibrated, NOT over-strict (anti-pendule): a single usable entry suffices
+    (we degrade the unusable ones per-entry, not the whole axis); we never
+    require ALL virtues populated (some args are short/degraded with overall
+    only). An empty/partial-but-empty axis returns ``False`` → the report
+    fail-louds « non concluable » honestly.
+    """
+    if not isinstance(quality, dict) or not quality:
+        return False
+    for entry in quality.values():
+        if not isinstance(entry, dict):
+            continue
+        ov = entry.get("overall")
+        if isinstance(ov, (int, float)):
+            return True
+        spv = entry.get("scores")
+        if not isinstance(spv, dict):
+            spv = entry.get("scores_par_vertu")
+        if isinstance(spv, dict) and spv:
+            return True
+    return False
+
+
 def build_act2_evidence(state: Any) -> Act2Evidence:
     """Build the deterministic Acte II evidence bundle from a shared state.
 
@@ -207,7 +255,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     quality = getattr(state, "argument_quality_scores", {}) or {}
     counters = getattr(state, "counter_arguments", []) or []
 
-    quality_axis_available = bool(quality) and isinstance(quality, dict)
+    quality_axis_available = _quality_axis_usable(quality)
     if not isinstance(args, dict):
         args = {}
     if not isinstance(fallacies, dict):
@@ -218,11 +266,15 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     # Index fallacies by target arg.
     fallacy_by_arg: Dict[str, List[FallacyEvidence]] = {}
     fallacies_total = 0
+    unattributed_fallacies = 0  # Note (a) (#1153): traced, not dropped (#1019)
     for _fid, fdata in fallacies.items():
         if not isinstance(fdata, dict):
             continue
         tid = fdata.get("target_argument_id") or ""
         if not tid:
+            # Note (a): no resolved target — count it apart so the report can
+            # surface it honestly instead of silently losing the detection.
+            unattributed_fallacies += 1
             continue
         fallacies_total += 1
         fallacy_by_arg.setdefault(tid, []).append(
@@ -292,7 +344,14 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         q_available = False
         if isinstance(qs, dict):
             q_available = True
-            spv = qs.get("scores_par_vertu")
+            # Finding A (#1151/#1153): the writer add_quality_score stores
+            # per-virtue scores under the canonical key ``scores``
+            # (shared_state.py:536); read that first, then the legacy
+            # ``scores_par_vertu`` key for any external source. Both shapes
+            # carry the same {virtue: float} mapping.
+            spv = qs.get("scores")
+            if not isinstance(spv, dict):
+                spv = qs.get("scores_par_vertu")
             if isinstance(spv, dict):
                 for vname, vval in spv.items():
                     if isinstance(vval, (int, float)):
@@ -326,7 +385,23 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         quality_axis_available=quality_axis_available,
         args_total=len(args),
         fallacies_total=fallacies_total,
+        unattributed_fallacies=unattributed_fallacies,
     )
+
+
+def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
+    """Resolve a PL analysis verdict from a stored result dict.
+
+    Finding C (#1151/#1153): the canonical writer key is ``satisfiable``
+    (shared_state.py:801); the legacy reader key is ``consistent``. Both map
+    to the same satisfiability semantics here. Returns ``True``/``False`` for a
+    settled verdict, or ``None`` when unverified (the entry carries neither key
+    or an explicit None) — never collapses None to False (#1019).
+    """
+    sat = result.get("satisfiable")
+    if sat is None:
+        sat = result.get("consistent")
+    return sat if isinstance(sat, bool) else None
 
 
 def _collect_formal_findings(state: Any) -> List[FormalFinding]:
@@ -340,15 +415,24 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
 
     pl = getattr(state, "propositional_analysis_results", None)
     if isinstance(pl, list):
+        # Finding C (#1151/#1153): the writer add_propositional_analysis_result
+        # stores the verdict under ``satisfiable`` (shared_state.py:801), NOT
+        # ``consistent``. Read the canonical PL key first, then the legacy
+        # ``consistent`` key (some external/older writers use it). Preserve the
+        # strict ``is True``/``is False`` check — NEVER ``bool(sat)``: that
+        # would conflate the unverified sentinel (None) with ``inconsistent``
+        # (False), an #1019 silent-degradation.
         consistent = sum(
             1
             for r in pl
-            if isinstance(r, dict) and r.get("consistent") is True
+            if isinstance(r, dict)
+            and _pl_verdict(r) is True
         )
         inconsistent = sum(
             1
             for r in pl
-            if isinstance(r, dict) and r.get("consistent") is False
+            if isinstance(r, dict)
+            and _pl_verdict(r) is False
         )
         if consistent or inconsistent:
             findings.append(
