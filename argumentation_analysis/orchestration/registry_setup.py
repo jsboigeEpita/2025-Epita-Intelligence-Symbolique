@@ -58,6 +58,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_analysis_synthesis,
     _invoke_narrative_synthesis,
     _invoke_act2_narrative,
+    _invoke_act1_framing,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
     _invoke_deep_synthesis,
@@ -567,6 +568,25 @@ def setup_registry(
         registered.append("act2_narrative_service")
     except Exception as e:
         skipped.append(("act2_narrative_service", str(e)))
+
+    # --- Acte I framing narrative service (#1136, Epic #1134) ---
+    try:
+        registry.register_service(
+            name="act1_framing_service",
+            service_class=type("act1_framing_service", (), {}),
+            capabilities=["act1_framing"],
+            metadata={
+                "description": (
+                    "Generate the Acte I framing — mise en situation: genre, "
+                    "enjeux, derived expected fallacy spectrum, game-theoretic "
+                    "read. LLM-conducted, fail-loud. Consumed by the R6 renderer."
+                )
+            },
+            invoke=_invoke_act1_framing,
+        )
+        registered.append("act1_framing_service")
+    except Exception as e:
+        skipped.append(("act1_framing_service", str(e)))
 
     # --- External solver routing services (#504) ---
     for name, caps, desc, invoke_fn in [

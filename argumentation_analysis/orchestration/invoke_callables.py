@@ -5961,6 +5961,107 @@ async def _invoke_act2_narrative(
     }
 
 
+async def _invoke_act1_framing(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Invoke the Acte I framing generator (Epic #1134 / R2 #1136).
+
+    Builds the deterministic framing evidence (metadata + enjeux + derived
+    spectrum + game-theoretic read), then conducts the narrative via the LLM
+    (fail-loud, no template — #1108/#405). The result populates
+    ``state.act1_framing``, the key the R6 renderer consumes for
+    ``RestitutionActs.act1_framing``.
+
+    Mirrors ``_invoke_act2_narrative``: the LLM is resolved into an async
+    callable from a kernel + default service. Absent service → fail-loud
+    unavailable (anti-pendule #1019/#369).
+    """
+    from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+        Act1Result,
+        build_act1_framing,
+    )
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+    from argumentation_analysis.orchestration.state_writers import (
+        CAPABILITY_STATE_WRITERS,
+    )
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if not isinstance(state, UnifiedAnalysisState):
+        state = UnifiedAnalysisState(input_text[:200])
+        populated = 0
+        for key, value in context.items():
+            if key.startswith("phase_") and key.endswith("_output"):
+                cap = key[len("phase_") : -len("_output")]
+                writer = CAPABILITY_STATE_WRITERS.get(cap)
+                if writer and isinstance(value, dict):
+                    try:
+                        writer(value, state, context)
+                        populated += 1
+                    except Exception:
+                        logger.warning(
+                            "State writer for '%s' failed during Acte I "
+                            "reconstruction",
+                            cap,
+                            exc_info=True,
+                        )
+        logger.info(
+            "Acte I: no UnifiedAnalysisState in context, reconstructed from "
+            "%d phase outputs",
+            populated,
+        )
+
+    llm_service_id: Optional[str] = None
+    kernel: Any = None
+    try:
+        from semantic_kernel import Kernel
+
+        kernel = Kernel()
+        try:
+            from argumentation_analysis.core.llm_service import create_llm_service
+
+            llm = create_llm_service(service_id="default")
+            if llm:
+                kernel.add_service(llm)
+                llm_service_id = "default"
+        except Exception:
+            llm_service_id = None
+    except Exception:
+        llm_service_id = None
+
+    async def _llm(prompt: str) -> str:
+        if not llm_service_id or kernel is None:
+            return ""
+        settings = kernel.get_prompt_execution_settings_from_service_id(
+            llm_service_id
+        )
+        result = await kernel.invoke_prompt(
+            function_name="act1_framing_conducted",
+            plugin_name="restitution",
+            prompt=prompt,
+            settings=settings,
+        )
+        return str(result) if result else ""
+
+    result: Act1Result = await build_act1_framing(
+        state, llm_callable=_llm if llm_service_id else None
+    )
+
+    gate_band = result.gate_verdict.band if result.gate_verdict is not None else None
+    if result.status != "woven":
+        logger.warning(
+            "Acte I framing status=%s (fail-loud). llm_service_id=%s.",
+            result.status,
+            llm_service_id,
+        )
+
+    return {
+        "act1_framing": result.narrative,
+        "status": result.status,
+        "gate_band": gate_band,
+        "degraded": result.degraded,
+    }
+
+
 def _count_referenced_fields(state: Any) -> int:
     """Count how many state fields have data (used as references in narrative)."""
     count = 0

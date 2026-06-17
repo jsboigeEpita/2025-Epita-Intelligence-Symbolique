@@ -438,6 +438,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # the R6 renderer to populate RestitutionActs.act2_narrative. Empty until
         # the act2_narrative phase runs; the renderer reports the gap honestly.
         self.act2_narrative: str = ""
+        # Restitution Acte I — mise en situation (framing): genre, enjeux,
+        # spectre attendu (derived from taxonomy common_contexts), game-theoretic
+        # read. Epic #1134 / R2 #1136. LLM-conducted, produced BEFORE the
+        # microscope (the only act that may anticipate, spec §1.1). Consumed by
+        # the R6 renderer to populate RestitutionActs.act1_framing. Empty until
+        # the act1_framing phase runs; the renderer reports the gap honestly.
+        self.act1_framing: str = ""
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
         # PL 2-pass pipeline: shared atom inventory (#547)
