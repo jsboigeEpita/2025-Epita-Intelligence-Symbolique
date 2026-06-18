@@ -6857,8 +6857,23 @@ async def _invoke_stakes_extractor(
 
     extractor = StakesExtractor()
 
-    # Gather arguments from state
-    arguments = list(getattr(state, "identified_arguments", []) or [])
+    # Gather arguments from state.
+    # Writer schema (shared_state.add_argument): identified_arguments is a
+    # dict {arg_id: description}. StakesExtractor.extract expects a list of
+    # argument dicts with a "text"/"description" key. The previous
+    # ``list(dict)`` passed bare arg_id keys (strings), which crashed
+    # ``arg.get("text", ...)`` inside extract on real (LLM-on) runs — masked
+    # by unit tests that mock LLM=None (extract short-circuits before the
+    # loop). Audit #1151 §3(b). Convert the dict-of-strings into the
+    # list-of-dicts the consumer's contract specifies (anti-pendule: feed the
+    # consumer what it asked for, no counterweight).
+    raw_args = getattr(state, "identified_arguments", {}) or {}
+    if isinstance(raw_args, dict):
+        arguments = [
+            {"text": desc} for desc in raw_args.values() if isinstance(desc, str)
+        ]
+    else:  # defensive: already a sequence of argument dicts (legacy/fixture)
+        arguments = list(raw_args)
 
     # Source metadata
     source_metadata = getattr(state, "source_metadata", {})

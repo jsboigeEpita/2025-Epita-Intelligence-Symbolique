@@ -129,9 +129,10 @@ class TestInvokeStakesExtractor:
         """Stakes extractor runs on a populated state (LLM=None, fallback path)."""
         invoke = self._get_invoke()
         state = UnifiedAnalysisState("Test speech about economic reform.")
-        state.identified_arguments = [
-            {"id": "arg_1", "text": "We must reform the tax system."},
-        ]
+        # Real writer schema (shared_state.add_argument): dict {arg_id: desc}.
+        state.identified_arguments = {
+            "arg_1": "We must reform the tax system.",
+        }
         result = asyncio.get_event_loop().run_until_complete(
             invoke("", {"_state_object": state, "source_metadata": {}})
         )
@@ -147,12 +148,60 @@ class TestInvokeStakesExtractor:
         """Results are written to state.stakes_and_stakeholders."""
         invoke = self._get_invoke()
         state = UnifiedAnalysisState("Test speech about policy.")
-        state.identified_arguments = [{"id": "a1", "text": "Policy argument"}]
+        # Real writer schema: dict {arg_id: description}.
+        state.identified_arguments = {"a1": "Policy argument"}
         asyncio.get_event_loop().run_until_complete(
             invoke("", {"_state_object": state, "source_metadata": {}})
         )
         # state.stakes_and_stakeholders should be populated (even if empty)
         assert hasattr(state, "stakes_and_stakeholders")
+
+    @patch(
+        "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+        return_value=None,
+    )
+    def test_dict_arguments_passed_as_list_of_dicts(self, mock_client):
+        """Audit #1151 §3(b): identified_arguments is {arg_id: description}
+        (writer schema). StakesExtractor.extract must receive a list of dicts
+        with a 'text' key — not bare arg_id keys (which crashed extract's
+        ``arg.get("text")`` on real LLM-on runs). This pins the contract by
+        capturing what extract receives, bypassing the LLM=None short-circuit
+        that previously masked the bug."""
+        invoke = self._get_invoke()
+        state = UnifiedAnalysisState("Test speech about reform.")
+        state.identified_arguments = {
+            "arg_1": "We must reform the tax system.",
+            "arg_2": "Reform will reduce inequality.",
+        }
+        captured = {}
+
+        class _StubExtractor:
+            def extract(self, **kwargs):
+                captured.update(kwargs)
+                return {
+                    "stakes": [],
+                    "stakeholders": [],
+                    "rhetorical_register": "",
+                    "discursive_arena": "",
+                }
+
+        with patch(
+            "argumentation_analysis.agents.core.political.stakes_extractor"
+            ".StakesExtractor",
+            return_value=_StubExtractor(),
+        ):
+            asyncio.get_event_loop().run_until_complete(
+                invoke("", {"_state_object": state, "source_metadata": {}})
+            )
+        args = captured.get("arguments", [])
+        # Contract: extract receives a list of dicts each with "text".
+        assert isinstance(args, list), args
+        assert all(isinstance(a, dict) and "text" in a for a in args), args
+        texts = [a["text"] for a in args]
+        assert "We must reform the tax system." in texts
+        assert "Reform will reduce inequality." in texts
+        # No bare arg_id keys leak through.
+        assert "arg_1" not in texts and "arg_2" not in texts
 
 
 # ---------------------------------------------------------------------------
