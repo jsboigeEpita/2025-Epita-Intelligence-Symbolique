@@ -4277,6 +4277,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
                     return
                 # Verbatim span: cap to keep the quote a tight anchor (privacy +
                 # match precision — the writer matches on desc[:60] prefixes).
+                # NB: the field name ``problematic_quote`` matches the
+                # IdentifiedFallacy schema, but here it is NOT the exact
+                # fallacious phrase — it is a match anchor (the argument's
+                # leading text) used by the writer for ID resolution only, and
+                # is never persisted into the narrated report.
                 quote_span = arg_text.strip()[:200]
                 for f in fallacies:
                     if not isinstance(f, dict):
