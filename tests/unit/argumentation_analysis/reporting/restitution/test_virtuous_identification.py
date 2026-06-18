@@ -12,13 +12,17 @@ pipeline run (spec §5.1). Tests assert that honest caveat is present.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from argumentation_analysis.reporting.restitution.virtuous_identification import (
     VirtuousCandidate,
     VirtuousInventory,
+    VirtuousModeAssessment,
     _extract_prose,
     _opaque_id,
+    detect_virtuous_mode,
     identify,
     render_inventory_report,
 )
@@ -210,3 +214,158 @@ class TestPrivacy:
         report = render_inventory_report(identify(defs))
         assert "pipeline" in report.lower()
         assert "unconfirmed" in report.lower() or "not assert" in report.lower()
+
+
+# ===========================================================================
+# volet-2 — DERIVED virtuous-mode flag from pipeline output (spec §5.1)
+# ===========================================================================
+#
+# ``detect_virtuous_mode`` reads a pipeline ``state`` (not the dataset). It is
+# the single source of truth the three act plugins consult to shift emphasis.
+# Deterministic: synthetic state stubs, no LLM/JVM/dataset.
+
+
+def _state(**fields: object) -> SimpleNamespace:
+    """A state stub with the virtuous-relevant fields defaulted empty."""
+    base = dict(
+        identified_arguments={},
+        identified_fallacies={},
+        argument_quality_scores={},
+        propositional_analysis_results=[],
+        fol_analysis_results=[],
+    )
+    base.update(fields)
+    return SimpleNamespace(**base)
+
+
+def _virtuous_state() -> SimpleNamespace:
+    """0 localized fallacies + measured quality virtues → virtuous (quality)."""
+    return _state(
+        identified_arguments={"arg_1": "Un raisonnement étayé et honnête."},
+        identified_fallacies={},  # zero localized fallacies
+        argument_quality_scores={
+            "arg_1": {
+                "overall": 7.5,
+                "scores": {"clarte": 8.0, "coherence": 7.0, "pertinence": 7.5},
+            }
+        },
+    )
+
+
+class TestDetectVirtuousMode:
+    def test_virtuous_zero_fallacies_plus_quality(self):
+        a = detect_virtuous_mode(_virtuous_state())
+        assert isinstance(a, VirtuousModeAssessment)
+        assert a.is_virtuous is True
+        assert a.fallacy_count == 0
+        assert a.quality_virtues_present is True
+
+    def test_virtuous_with_formal_bonus(self):
+        s = _virtuous_state()
+        s.propositional_analysis_results = [{"satisfiable": True}]  # PL holds
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is True
+        assert a.formal_holds is True  # strengthening signal surfaced
+
+    def test_one_fallacy_disqualifies_virtue_titling(self):
+        # a located fallacy hides behind no virtue title (anti-pendule: honest)
+        s = _virtuous_state()
+        s.identified_fallacies = {
+            "fl_1": {"target_argument_id": "arg_1", "family": "ad hominem"}
+        }
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is False
+        assert a.fallacy_count == 1
+        assert a.quality_virtues_present is True  # quality present, but overridden
+
+    def test_empty_run_not_misread_as_virtuous(self):
+        # 0 fallacies, 0 quality, 0 formal = empty run, NOT virtuous (spec §5.1)
+        a = detect_virtuous_mode(_state(identified_arguments={"arg_1": "x"}))
+        assert a.is_virtuous is False
+        assert a.quality_virtues_present is False
+
+    def test_formal_only_without_quality_not_virtue_titled(self):
+        # formally robust but no measured virtues → no virtue title material
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            propositional_analysis_results=[{"satisfiable": True}],
+        )
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is False
+        assert a.formal_holds is True
+        assert a.quality_virtues_present is False
+        # reasoning honestly notes the formal robustness without claiming virtue
+        assert "formelle" in a.reasoning
+
+    def test_quality_canonical_scores_key(self):
+        # writer stores virtues under canonical 'scores' (Finding A, #1150)
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            argument_quality_scores={
+                "arg_1": {"overall": 6.0, "scores": {"clarte": 5.0}}
+            },
+        )
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is True
+        assert a.quality_virtues_present is True
+
+    def test_quality_legacy_scores_par_vertu_fallback(self):
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            argument_quality_scores={
+                "arg_1": {"overall": 6.0, "scores_par_vertu": {"clarte": 5.0}}
+            },
+        )
+        assert detect_virtuous_mode(s).is_virtuous is True
+
+    def test_pl_canonical_satisfiable_key_for_formal_holds(self):
+        # writer stores PL verdict under canonical 'satisfiable' (Finding C)
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            propositional_analysis_results=[{"satisfiable": True}],
+            fol_analysis_results=[],
+        )
+        assert detect_virtuous_mode(s).formal_holds is True
+
+    def test_pl_legacy_consistent_fallback(self):
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            propositional_analysis_results=[{"consistent": True}],
+        )
+        assert detect_virtuous_mode(s).formal_holds is True
+
+    def test_fol_consistent_counts_as_formal_holds(self):
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            fol_analysis_results=[{"consistent": True}],
+        )
+        assert detect_virtuous_mode(s).formal_holds is True
+
+    def test_zero_virtue_score_not_counted(self):
+        # a virtue scored 0 is not "measured virtue" material
+        s = _state(
+            identified_arguments={"arg_1": "x"},
+            argument_quality_scores={"arg_1": {"overall": 0.0, "scores": {"clarte": 0.0}}},
+        )
+        assert detect_virtuous_mode(s).quality_virtues_present is False
+        assert detect_virtuous_mode(s).is_virtuous is False
+
+    def test_reasoning_carries_no_source_nor_prose(self):
+        # privacy HARD: reasoning is opaque counts + axis labels only
+        leak = "UNIQUE_LEAK_MARKER"
+        s = _state(
+            identified_arguments={"arg_1": leak},
+            identified_fallacies={},
+            argument_quality_scores={"arg_1": {"overall": 5.0, "scores": {"clarte": 5.0}}},
+        )
+        a = detect_virtuous_mode(s)
+        assert leak not in a.reasoning
+
+    def test_unresolved_fallacy_not_counted_as_localized(self):
+        # a fallacy with no target_argument_id is a resolution gap, not a
+        # characterization of the discourse as fallacy-laden
+        s = _virtuous_state()
+        s.identified_fallacies = {"fl_1": {"family": "ad hominem"}}  # no target
+        a = detect_virtuous_mode(s)
+        assert a.fallacy_count == 0
+        assert a.is_virtuous is True

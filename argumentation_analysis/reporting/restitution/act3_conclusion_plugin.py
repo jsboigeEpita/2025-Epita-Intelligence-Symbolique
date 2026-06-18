@@ -52,6 +52,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from .readability_gate import GateVerdict, ReadabilityGate
+from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,10 @@ class Act3Evidence:
     verdict: Optional[VerdictBand] = None
     narrative_synthesis_available: bool = False
     gates: Dict[str, bool] = field(default_factory=dict)
+    # DERIVED virtuous flag (spec §5.1) — drives virtue-first titling when the
+    # state characterises the text as virtuous (zero fallacies + non-trivial
+    # quality/formal axis). None until build_act3_evidence populates it.
+    virtuous_mode: Optional[VirtuousModeAssessment] = None
 
 
 @dataclass
@@ -170,6 +175,9 @@ class Act3Result:
     status: str
     gate_verdict: Optional[GateVerdict] = None
     degraded: Dict[str, str] = field(default_factory=dict)
+    # True when the conclusion was conducted in virtuous mode (spec §5) — the
+    # headline titles on the measured virtues, not on the absence of fallacies.
+    is_virtuous: bool = False
 
 
 # --- deterministic evidence builder (no LLM) ---------------------------------
@@ -183,16 +191,31 @@ def _truncate(text: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap].rstrip() + " […]"
 
 
+def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
+    """Read a PL analysis verdict as a strict bool, or None when unverified.
+
+    Canonical PL key is ``satisfiable`` (shared_state.add_propositional_analysis_result,
+    #1151 Finding C); ``consistent`` is the legacy/FOL-shared key kept as a
+    fallback. Preserves the strict ``True``/``False``/``None`` semantics so an
+    unverified theory is never conflated with an inconsistent one (#1019) — do
+    NOT collapse to ``bool()``.
+    """
+    sat = result.get("satisfiable")
+    if sat is None:
+        sat = result.get("consistent")
+    return sat if isinstance(sat, bool) else None
+
+
 def _pl_inconsistent(state: Any) -> int:
-    """Count PL inferences the Tweety solver found inconsistent (real-in-state)."""
+    """Count PL inferences the Tweety solver found inconsistent (real-in-state).
+
+    Uses ``_pl_verdict`` (canonical ``satisfiable`` key) so the PL axis is read
+    the same way as the FOL axis and the virtuous-mode detector — #1151 C.
+    """
     pl = getattr(state, "propositional_analysis_results", None)
     if not isinstance(pl, list):
         return 0
-    return sum(
-        1
-        for r in pl
-        if isinstance(r, dict) and r.get("consistent") is False
-    )
+    return sum(1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False)
 
 
 def _fol_inconsistent(state: Any) -> int:
@@ -320,7 +343,12 @@ def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]
     for _arg, qs in quality.items():
         if not isinstance(qs, dict):
             continue
-        spv = qs.get("scores_par_vertu")
+        # Canonical writer key is ``scores`` (shared_state.add_quality_score,
+        # #1150/#1151); ``scores_par_vertu`` is the legacy key kept as a
+        # fallback for any external source. Same {virtue: float} mapping.
+        spv = qs.get("scores")
+        if not isinstance(spv, dict):
+            spv = qs.get("scores_par_vertu")
         if not isinstance(spv, dict):
             continue
         for vname, vval in spv.items():
@@ -457,6 +485,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     }
 
     verdict = _compute_verdict_band(axes_nontrivial)
+    virtuous_mode = detect_virtuous_mode(state)
 
     return Act3Evidence(
         args_total=args_total,
@@ -469,6 +498,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         verdict=verdict,
         narrative_synthesis_available=narrative_synthesis_available,
         gates=gates,
+        virtuous_mode=virtuous_mode,
     )
 
 
@@ -572,6 +602,31 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     else:
         synthesis_block = "Bande de verdict : NON CALCULABLE (gates G1–G4 non passés)."
 
+    # --- Mode vertueux (spec §5) — titre sur les vertus quand l'état le dit ---
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if is_virtuous:
+        virtuous_section = (
+            "MODE VIRTUEUX (spec §5) — DÉCISION DE TITRE :\n"
+            "Le TITRE de l'Acte III porte sur ce qui TIENT : les vertus mesurées,\n"
+            "la robustesse formelle, la tenue des schemes. Le pipeline n'a localisé\n"
+            "AUCUN sophisme sur ce texte — ce n'est pas un manque à combler, c'est\n"
+            "le résultat honnête. Ne fabrique JAMAIS de sophisme ni de point faible\n"
+            "pour remplir un battement (anti-pendule #1019/#369). Si un battement\n"
+            "manque de matière faiblesse, titre sur la force qui le justifie.\n"
+            f"Dérivation du flag : {vm.reasoning if vm is not None else ''}\n\n"
+        )
+        consigne_virtue = (
+            "- MODE VIRTUEUX : ouvre la synthèse en caractérisant le discours par\n"
+            "  ses vertus (ce qui tient). L'appréciation mène avec les forces ; les\n"
+            "  faiblesses (si aucune localisée) s'effacent honnêtement. Le « que\n"
+            "  faire » devient « comment s'appuyer sur ce qui tient / le préserver »\n"
+            "  plutôt que « comment contrer ».\n"
+        )
+    else:
+        virtuous_section = ""
+        consigne_virtue = ""
+
     # --- Appréciations (forces + faiblesses) ---
     if evidence.quality_strengths:
         strengths_lines = "\n".join(
@@ -632,6 +687,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{_OPAQUE_ID_DIRECTIVE}\n\n"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
+        f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
         f"[SYNTHÈSE HONNÊTE — verdict gated]\n{synthesis_block}\n\n"
         f"[APPRÉCIATIONS — forces (qualité)]\n{strengths_lines}\n\n"
@@ -640,6 +696,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[QUE FAIRE — points faibles à viser]\n{target_lines}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
+        f"{consigne_virtue}"
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
         "- Le verdict formel (Tweety/Dung) appuie un battement : formule-le comme\n"
@@ -769,12 +826,26 @@ async def build_act3_conclusion(
             "Axe qualité non concluable ici (argument_quality_scores "
             "indisponible) — appréciations limitées aux faiblesses, fail-loud."
         )
-    if not evidence.weak_points:
-        degraded["act3_conclusion_virtuous"] = (
-            "Aucun point faible localisé — conclusion bascule en mode texte "
-            "vertueux (forces en titre)."
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if vm is not None and vm.is_virtuous:
+        degraded["act3_virtuous_mode"] = (
+            "Mode vertueux (spec §5) — titre sur les vertus. " + vm.reasoning
+        )
+    elif not evidence.weak_points:
+        # Defensive: no weak points AND not flagged virtuous (an empty-ish run
+        # that still passed G1). Honest note — not a positive virtuous claim,
+        # since no non-trivial axis qualified the text as virtuous.
+        degraded["act3_conclusion"] = (
+            "Aucun point faible localisé et aucun axe vertueux non-trivial — "
+            "la conclusion titre sur les forces disponibles sans claim vertueux "
+            "non dérivé (fail-loud)."
         )
 
     return Act3Result(
-        narrative=narrative, status="woven", gate_verdict=verdict, degraded=degraded
+        narrative=narrative,
+        status="woven",
+        gate_verdict=verdict,
+        degraded=degraded,
+        is_virtuous=is_virtuous,
     )

@@ -491,3 +491,64 @@ class TestConsumedByRenderer:
         assert _WOVEN_NARRATIVE.splitlines()[0] in report.markdown
         # act1/act3 are reported as missing (fail-loud), not silently dropped.
         assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+
+
+# ============================================================================
+# R5 volet-2 (#1139) — virtuous mode: Acte II narrates why the argumentation
+# holds (spec §5). The soutiens movement becomes the centrepiece.
+# ============================================================================
+
+
+def _virtuous_state() -> SimpleNamespace:
+    """A virtuous text: two clean arguments, no fallacies, measured virtues.
+
+    No attacks → both arguments form the 'soutiens' movement (what holds).
+    """
+    return _state(
+        identified_arguments={
+            "arg_1": "Un raisonnement causal étayé par des sources vérifiées.",
+            "arg_2": "Une conclusion qui suit logiquement ses prémisses.",
+        },
+        identified_fallacies={},  # zero localized fallacies
+        argument_quality_scores={
+            "arg_1": {"overall": 8.0, "scores": {"clarte": 8.0, "coherence": 8.5}},
+            "arg_2": {"overall": 7.5, "scores": {"coherence": 8.0, "pertinence": 7.0}},
+        },
+    )
+
+
+class TestVirtuousMode:
+    def test_virtuous_state_flagged(self):
+        ev = build_act2_evidence(_virtuous_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is True
+        # no dérapages on a virtuous text — the single mouvement is the soutiens
+        assert ev.fallacies_total == 0
+        assert all(m.theme == "soutiens" for m in ev.movements)
+
+    def test_non_virtuous_state_not_flagged(self):
+        # _rich_state has a localized fallacy → not virtuous
+        ev = build_act2_evidence(_rich_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is False
+
+    def test_prompt_leads_with_why_it_holds(self):
+        ev = build_act2_evidence(_virtuous_state())
+        prompt = build_act2_prompt(ev)
+        assert "MODE VIRTUEUX" in prompt
+        assert "tient" in prompt  # "pourquoi ça tient"
+        # non-virtuous: no virtuous lead
+        ev2 = build_act2_evidence(_rich_state())
+        assert "MODE VIRTUEUX" not in build_act2_prompt(ev2)
+
+    def test_virtuous_result_carries_positive_marker(self):
+        import asyncio
+
+        result = asyncio.get_event_loop().run_until_complete(
+            build_act2_narrative(
+                _virtuous_state(), llm_callable=_stub_llm(_WOVEN_NARRATIVE)  # type: ignore[arg-type]
+            )
+        )
+        assert result.is_virtuous is True
+        assert result.status == "woven"
+        assert "act2_virtuous_mode" in result.degraded

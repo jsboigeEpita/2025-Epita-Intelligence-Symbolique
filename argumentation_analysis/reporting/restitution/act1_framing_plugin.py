@@ -42,9 +42,10 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from .readability_gate import GateVerdict, ReadabilityGate
+from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,10 @@ class Act1Evidence:
     # Game-theoretic
     stakeholders: List[StakeholderInfo] = field(default_factory=list)
     arg_count: int = 0
+    # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
+    # as virtuous, the spectrum framing shifts from "what to watch for" to
+    # "what could derail but doesn't" (anticipation that did not materialise).
+    virtuous_mode: Optional[VirtuousModeAssessment] = None
 
 
 @dataclass
@@ -131,6 +136,9 @@ class Act1Result:
     status: str
     gate_verdict: Optional[GateVerdict] = None
     degraded: Dict[str, str] = field(default_factory=dict)
+    # True when the framing was conducted with the virtuous anticipation shift
+    # (spec §5): the spectrum is read as "what could derail but doesn't".
+    is_virtuous: bool = False
 
 
 # --- taxonomy loader (minimal, file-disjoint) --------------------------------
@@ -336,6 +344,8 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
     args = getattr(state, "identified_arguments", {}) or {}
     arg_count = len(args) if isinstance(args, dict) else 0
 
+    virtuous_mode = detect_virtuous_mode(state)
+
     return Act1Evidence(
         metadata=metadata_view,
         genre=genre,
@@ -349,6 +359,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         spectrum_available=spectrum_available,
         stakeholders=stakeholders,
         arg_count=arg_count,
+        virtuous_mode=virtuous_mode,
     )
 
 
@@ -392,6 +403,29 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
     The prompt varies with the evidence (hence with the corpus) — it is not a
     static template (#1108/#405).
     """
+    # --- Mode vertueux (spec §5) — anticipation qui ne se concrétise pas ---
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if is_virtuous:
+        virtuous_section = (
+            "MODE VIRTUEUX (spec §5) — ANTICIPATION QUI NE DÉRAPE PAS :\n"
+            "Ce texte est caractérisé comme vertueux par le pipeline (zéro\n"
+            "sophisme localisé + vertus mesurées). Le spectre ci-dessous reste ce\n"
+            "qu'un auditeur averti GUILLETAIT pour ce genre — mais le texte ne\n"
+            "dérape pas : l'anticipation ne s'est pas concrétisée. Cadre donc le\n"
+            "spectre comme « ce qui aurait pu déraper et ne dérape pas », en\n"
+            "honnêteté avec ce qui tient (vertus, robustesse formelle). Ne\n"
+            "fabrique JAMAIS de sophisme pour valider l'attente.\n"
+            f"Dérivation du flag : {vm.reasoning if vm is not None else ''}\n\n"
+        )
+        spectrum_coda = (
+            " Sur un texte vertueux, ces familles sont l'attente NON concrétisée "
+            "— dis ce qui aurait pu déraper et ne dérape pas."
+        )
+    else:
+        virtuous_section = ""
+        spectrum_coda = ""
+
     # --- Le texte (metadata) ---
     if evidence.metadata:
         meta_block = "\n".join(
@@ -465,10 +499,11 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"{_OPAQUE_ID_DIRECTIVE}\n\n"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
+        f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE :\n\n"
         f"[LE TEXTE — métadonnées]\n{meta_block}\n\n"
         f"[LES ENJEUX]\n{stakes_block}\n\n"
-        f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}\n"
+        f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"
         f"{spectrum_block}\n\n"
         f"[LECTURE GAME-THEORETIC]\n{gt_block}\n{gt_note}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
@@ -563,7 +598,18 @@ async def build_act1_framing(
             "Spectre attendu indisponible (taxonomie non chargée) — lire "
             "l'Acte II sans filet d'attente."
         )
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if vm is not None and vm.is_virtuous:
+        degraded["act1_virtuous_mode"] = (
+            "Mode vertueux (spec §5) — spectre lu comme anticipation qui ne "
+            "dérape pas. " + vm.reasoning
+        )
 
     return Act1Result(
-        narrative=narrative, status="woven", gate_verdict=verdict, degraded=degraded
+        narrative=narrative,
+        status="woven",
+        gate_verdict=verdict,
+        degraded=degraded,
+        is_virtuous=is_virtuous,
     )

@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from .readability_gate import GateVerdict, ReadabilityGate
+from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,10 @@ class Act2Evidence:
     # LLM/rapport surfaces them honestly as "non rattaché(s) à un argument
     # identifié". ``fallacies_total`` counts only the attributed ones.
     unattributed_fallacies: int = 0
+    # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
+    # as virtuous, the narrative leads with WHY THE ARGUMENTATION HOLDS (the
+    # soutiens movement becomes the centrepiece; formal tenue is the proof).
+    virtuous_mode: Optional[VirtuousModeAssessment] = None
 
 
 @dataclass
@@ -139,6 +144,9 @@ class Act2Result:
     status: str
     gate_verdict: Optional[GateVerdict] = None
     degraded: Dict[str, str] = field(default_factory=dict)
+    # True when the narrative was conducted leading with why the argumentation
+    # holds (spec §5) — the virtuous reading.
+    is_virtuous: bool = False
 
 
 # --- deterministic evidence builder (no LLM) ---------------------------------
@@ -378,6 +386,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         ordered.append(movements_by_key[_SOUTIENS_THEME])
 
     formal_findings = _collect_formal_findings(state)
+    virtuous_mode = detect_virtuous_mode(state)
 
     return Act2Evidence(
         movements=ordered,
@@ -386,6 +395,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         args_total=len(args),
         fallacies_total=fallacies_total,
         unattributed_fallacies=unattributed_fallacies,
+        virtuous_mode=virtuous_mode,
     )
 
 
@@ -527,6 +537,24 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     static template (#1108/#405). It instructs the LLM to weave each movement
     and to cite only the verified formal verdicts provided.
     """
+    # --- Mode vertueux (spec §5) — le récit mène avec pourquoi ça tient ---
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if is_virtuous:
+        virtuous_section = (
+            "MODE VIRTUEUX (spec §5) — LE RÉCIT MÈNE AVEC POURQUOI ÇA TIENT :\n"
+            "Ce texte est caractérisé comme vertueux (zéro sophisme localisé +\n"
+            "vertus mesurées). Le mouvement des soutiens est le CENTRE du récit,\n"
+            "pas un résidu. Tisse d'abord ce qui tient : le caractère (vertus),\n"
+            "la cohérence, et — si le solveur a validé des inférences — la tenue\n"
+            "formelle comme PREUVE que l'argumentation ne dérape pas. Peu (aucun)\n"
+            "contre-argument ne mord : c'est le résultat honnête, ne le présente\n"
+            "pas comme un manque. Ne fabrique JAMAIS de dérapage pour équilibrer.\n"
+            f"Dérivation du flag : {vm.reasoning if vm is not None else ''}\n\n"
+        )
+    else:
+        virtuous_section = ""
+
     # --- movement data blocks (truncated, opaque) ---
     blocks: List[str] = []
     for mvt in evidence.movements:
@@ -591,6 +619,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "par MOUVEMENT argumentatif, PAS par dimension analytique.\n\n"
         f"{_OPAQUE_ID_DIRECTIVE}\n\n"
         f"{_WEAVING_RULE}\n\n"
+        f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
         f"{chr(10).join(blocks)}\n\n"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
@@ -705,7 +734,18 @@ async def build_act2_narrative(
             "Axe qualité non concluable ici (argument_quality_scores "
             "indisponible) — vertus tues, fail-loud."
         )
+    vm = evidence.virtuous_mode
+    is_virtuous = vm is not None and vm.is_virtuous
+    if vm is not None and vm.is_virtuous:
+        degraded["act2_virtuous_mode"] = (
+            "Mode vertueux (spec §5) — récit mené par pourquoi ça tient. "
+            + vm.reasoning
+        )
 
     return Act2Result(
-        narrative=narrative, status="woven", gate_verdict=verdict, degraded=degraded
+        narrative=narrative,
+        status="woven",
+        gate_verdict=verdict,
+        degraded=degraded,
+        is_virtuous=is_virtuous,
     )
