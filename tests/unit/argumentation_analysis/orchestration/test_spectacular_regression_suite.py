@@ -317,6 +317,12 @@ class TestSpectacularWorkflowGolden:
         "bipolar",
         "probabilistic",
         "aspic_analysis",
+        # W1 #1169: dormant Dung-family / logic reasoners wired into spectacular.
+        "setaf_reasoning",
+        "aba_reasoning",
+        "delp_reasoning",
+        "dl_reasoning",
+        "dialogue_reasoning",
         "counter",
         "stakes",
         "jtms",
@@ -342,7 +348,7 @@ class TestSpectacularWorkflowGolden:
         # the three restitution acts (R2 act1_framing #1136, R3 act2_narrative
         # #1137, R4 act3_conclusion #1138) wired onto the spectacular DAG.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 31
+        assert len(wf.phases) == 36
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -377,13 +383,15 @@ class TestSpectacularWorkflowGolden:
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
         # L1 = the 4 fan-out phases after extract, PLUS text_to_kb (#506 KB
-        # extraction depends only on extract). #1115 folded DAG debt.
+        # extraction depends only on extract) PLUS dl_reasoning (W1 #1169
+        # description_logic depends only on extract). #1115 folded DAG debt.
         assert set(levels[1]) == {
             "hierarchical_fallacy",
             "neural_detect",
             "nl_to_logic",
             "quality",
             "text_to_kb",
+            "dl_reasoning",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -668,7 +676,7 @@ class TestWorkflowCatalogGolden:
         assert catalog["spectacular"].name == "spectacular_analysis"
         # #1115: spectacular has 31 phases (narrative_synthesis template removed;
         # DAG grew via #504/#506/#507/#508/#534 + 3 restitution acts R2/R3/R4).
-        assert len(catalog["spectacular"].phases) == 31
+        assert len(catalog["spectacular"].phases) == 36
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

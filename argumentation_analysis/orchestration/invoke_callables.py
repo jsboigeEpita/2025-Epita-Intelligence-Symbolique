@@ -2279,10 +2279,13 @@ async def _invoke_camembert_fallacy(
     model_id = os.environ.get("SELF_HOSTED_LLM_MODEL", "")
 
     if not endpoint or not model_id:
+        # Fail-loud (#1019): report unavailability explicitly so the empty
+        # result is NOT misread as "analysis ran and found 0 fallacies".
         return {
             "detected_fallacies": {},
             "arguments": {},
             "tiers_used": ["none"],
+            "status": "unavailable",
             "explanation": "Self-hosted LLM endpoint not configured",
             "total_fallacies": 0,
         }
@@ -2616,6 +2619,162 @@ def _generate_attacks_from_args(
     return attacks
 
 
+# --- Input-shaping helpers for dormant Dung-family reasoners (#1169 W1) ---
+#
+# These map spectacular's canonical context (arguments: List[str],
+# attacks: List[List[str]] pairs from _generate_attacks_from_args) into the
+# typed structures each Tweety handler expects. Without this shaping the
+# handlers raise on signature/type mismatch (same bug family as E1b #1168
+# layer-2: invokeables feeding the wrong input shape). The mapping is
+# deterministic and lossless for the attack graph; weights/beliefs default
+# to neutral values when upstream provides none (#1019: no fabricated signal).
+
+
+def _setaf_attacks_from_pairs(
+    attacks: List[List[str]],
+) -> List[Dict[str, Any]]:
+    """Convert ``[attacker, target]`` pairs into SetAF attack specs.
+
+    SetAF allows a *set* of attackers jointly attacking a target; for the
+    pairwise graph produced by ``_generate_attacks_from_args`` each pair
+    becomes a singleton-attacker set.
+    """
+    specs: List[Dict[str, Any]] = []
+    for pair in attacks:
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+            specs.append({"attackers": [str(pair[0])], "target": str(pair[1])})
+    return specs
+
+
+def _weighted_attacks_from_pairs(
+    attacks: List[List[str]],
+    weights: Optional[Dict[str, float]] = None,
+    default_weight: float = 0.5,
+) -> List[Tuple[str, str, float]]:
+    """Convert ``[source, target]`` pairs into weighted-attack triples.
+
+    Weights are looked up by ``"source->target"`` key when upstream provides
+    them (e.g. derived from fallacy confidence); otherwise the neutral
+    ``default_weight`` is used (no fabricated confidence signal, #1019).
+    """
+    triples: List[Tuple[str, str, float]] = []
+    for pair in attacks:
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+            src, tgt = str(pair[0]), str(pair[1])
+            w = default_weight
+            if weights and f"{src}->{tgt}" in weights:
+                w = float(weights[f"{src}->{tgt}"])
+            triples.append((src, tgt, w))
+    return triples
+
+
+def _aba_rules_from_context(
+    arguments: List[str],
+    context: Dict[str, Any],
+) -> Tuple[List[str], List[Dict[str, Any]]]:
+    """Derive ABA assumptions + rules from spectacular's argument graph.
+
+    Assumptions = the first few arguments (the open premises to defend).
+    Rules = each non-assumption argument is supported by the assumption(s)
+    preceding it (``head=arg, body=[assumption]``). When upstream provides
+    explicit ``assumptions``/``rules`` in context, those win.
+    """
+    assumptions = context.get("assumptions")
+    if not isinstance(assumptions, list) or not assumptions:
+        # Take up to 3 leading arguments as the assumptions to test.
+        assumptions = [str(a) for a in arguments[: min(3, len(arguments))]]
+    else:
+        assumptions = [str(a) for a in assumptions]
+
+    rules = context.get("rules")
+    if isinstance(rules, list) and rules:
+        shaped = [
+            {
+                "head": str(r.get("head", "")),
+                "body": [str(b) for b in r.get("body", [])],
+            }
+            for r in rules
+            if isinstance(r, dict)
+        ]
+        if shaped:
+            return assumptions, shaped
+
+    # Derive: each non-assumption argument is concluded from an assumption.
+    derived: List[Dict[str, Any]] = []
+    for arg in arguments:
+        arg_s = str(arg)
+        if arg_s in assumptions:
+            continue
+        # Support this argument from the first assumption (a real premise link).
+        derived.append({"head": arg_s, "body": [assumptions[0]]})
+    if not derived and assumptions:
+        # At least one rule so the theory is non-empty.
+        derived.append({"head": assumptions[0], "body": [assumptions[0]]})
+    return assumptions, derived
+
+
+def _adf_conditions_from_context(
+    arguments: List[str],
+    context: Dict[str, Any],
+) -> Tuple[List[str], Dict[str, str]]:
+    """Derive ADF statements + acceptance conditions from spectacular arguments.
+
+    Each statement gets a verum/falsum condition derived from whether the
+    argument appears as a supporter or attacker in the attack graph.
+    Upstream ``statements``/``acceptance_conditions`` in context override.
+    """
+    statements = context.get("statements")
+    if isinstance(statements, list) and statements:
+        statements = [str(s) for s in statements]
+    else:
+        statements = [str(a) for a in arguments]
+
+    conds_in = context.get("acceptance_conditions")
+    if isinstance(conds_in, dict) and conds_in:
+        return statements, {str(k): str(v) for k, v in conds_in.items()}
+
+    # Derive conditions from attack graph: attacked args → contradiction-ish.
+    attacks = context.get("attacks") or []
+    attacked = set()
+    for pair in attacks:
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+            attacked.add(str(pair[1]))
+    # Tweety ADF acceptance condition strings: "T" (tautology/accepted),
+    # "F" (contradiction), or a propositional formula over other statements.
+    conditions: Dict[str, str] = {}
+    for s in statements:
+        conditions[s] = "F" if s in attacked else "T"
+    if not conditions and statements:
+        conditions[statements[0]] = "T"
+    return statements, conditions
+
+
+def _eaf_beliefs_from_context(
+    arguments: List[str],
+    context: Dict[str, Any],
+) -> Optional[Dict[str, List[str]]]:
+    """Derive EAF epistemic beliefs (agent → believed args) from context.
+
+    EAF expects ``Dict[agent_name, List[arg_name]]`` — NOT floats. Returns
+    None when no agent structure is derivable (handler defaults to "all
+    arguments believed by all agents" — a valid non-fabricated baseline).
+    """
+    beliefs_in = context.get("epistemic_beliefs")
+    if isinstance(beliefs_in, dict) and beliefs_in:
+        # Already the right shape (agent → list of args)?
+        sample = next(iter(beliefs_in.values()))
+        if isinstance(sample, (list, tuple)):
+            return {str(k): [str(x) for x in v] for k, v in beliefs_in.items()}
+        # Float-valued (probability per arg): treat as a single agent's beliefs
+        # above a neutral 0.5 threshold — no fabricated multi-agent structure.
+        believed = [
+            str(k) for k, v in beliefs_in.items() if float(v) >= 0.5
+        ]
+        if believed:
+            return {"agent_0": believed}
+    return None
+
+
 def _python_ranking_fallback(
     arguments: List[str], attacks: List[List[str]], method: str
 ) -> Dict[str, Any]:
@@ -2781,8 +2940,10 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
 async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke ABA handler with JVM fallback."""
     args = _extract_arguments_from_context(input_text, context)
-    assumptions = context.get("assumptions") or args[:3]
-    rules = context.get("rules") or [f"{a} => valid" for a in args[:2]]
+    # ABA rules come as {head, body} dicts. Shape from the argument graph
+    # when upstream provides none (bug family E1b #1168: handler rejected the
+    # old string rules ``"a => valid"``).
+    assumptions, rules = _aba_rules_from_context(args, context)
     contraries = context.get("contraries")
     semantics = context.get("semantics", "preferred")
 
@@ -2803,10 +2964,9 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke ADF handler with JVM fallback."""
     args = _extract_arguments_from_context(input_text, context)
-    statements = context.get("statements") or args
-    conditions = context.get("acceptance_conditions") or {
-        a: "and(c(v))" for a in args[:3]
-    }
+    # ADF acceptance conditions map statement → propositional formula string.
+    # Shape from the attack graph when upstream provides none.
+    statements, conditions = _adf_conditions_from_context(args, context)
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -3194,7 +3354,16 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("set_attacks", [])
+    # SetAF attacks come as {attackers, target} dicts. Upstream may provide
+    # them directly, else shape from the canonical pairwise attack graph.
+    raw_attacks = context.get("set_attacks")
+    if isinstance(raw_attacks, list) and raw_attacks and isinstance(
+        raw_attacks[0], dict
+    ):
+        attacks = raw_attacks
+    else:
+        pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
+        attacks = _setaf_attacks_from_pairs(pairs)
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -3218,7 +3387,21 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("weighted_attacks", [])
+    # Weighted attacks come as (source, target, weight) triples. Upstream may
+    # provide them directly, else shape from the canonical pairwise graph with
+    # neutral weight 0.5 (#1019: no fabricated confidence).
+    raw_attacks = context.get("weighted_attacks")
+    if isinstance(raw_attacks, list) and raw_attacks and isinstance(
+        raw_attacks[0], (list, tuple)
+    ) and len(raw_attacks[0]) >= 3:
+        attacks = [
+            (str(t[0]), str(t[1]), float(t[2]))
+            for t in raw_attacks
+            if isinstance(t, (list, tuple)) and len(t) >= 3
+        ]
+    else:
+        pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
+        attacks = _weighted_attacks_from_pairs(pairs)
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -3312,7 +3495,10 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
         input_text, context
     )
     attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
-    beliefs = context.get("epistemic_beliefs")
+    # EAF expects Dict[agent, List[arg]] beliefs, NOT float probabilities.
+    # Shape/validate; None lets the handler default to "all believed" (valid
+    # non-fabricated baseline, #1019).
+    beliefs = _eaf_beliefs_from_context(args, context)
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -6562,11 +6748,15 @@ async def _invoke_tweety_interpretation(
 
         combined = " ".join(parts) if parts else ""
         if not combined:
-            combined = (
-                "Interpretation non disponible (donnees formelles insuffisantes)."
-            )
+            # Fail-loud (#1019): the placeholder is NOT a real interpretation.
+            # Mark status so consumers do not present it as an authentic result.
+            return {
+                "interpretation": "",
+                "status": "unavailable",
+                "reason": "insufficient_upstream_formal_data",
+            }
 
-        return {"interpretation": combined}
+        return {"interpretation": combined, "status": "ok"}
     except Exception as e:
         logger.warning(f"TweetyInterpretation failed: {e}")
         return {"error": str(e), "interpretation": ""}
