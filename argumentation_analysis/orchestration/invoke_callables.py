@@ -2823,6 +2823,33 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
         )
 
 
+def _pl_atom(text: str, prefix: str = "p") -> str:
+    """Sanitize free text into a valid propositional-logic atom.
+
+    Tweety's ``PlParser.parseFormula`` rejects atoms containing anything
+    outside ``[A-Za-z0-9_]`` (e.g. ``Unknown object teleprompteranecdote``
+    when raw corpus text leaked into a belief set / ASPIC rule). Upstream
+    pipeline data (extracted arguments, fallacy types) is free-form text —
+    it must be reduced to a stable alphanumeric atom before PL parsing.
+
+    The mapping is lossy by design (PL atoms are opaque labels, not
+    semantics): we keep up to 24 leading alnum chars of the text, lowercased,
+    non-alnum collapsed to ``_``. A short hash suffix disambiguates distinct
+    inputs that collapse to the same prefix (avoids false collisions that
+    would merge distinct beliefs). Deterministic (no Math.random).
+    """
+    import re as _re
+    import hashlib as _hashlib
+
+    if not text:
+        return f"{prefix}_0"
+    cleaned = _re.sub(r"[^A-Za-z0-9]+", "_", str(text)).strip("_").lower()[:24]
+    if not cleaned:
+        cleaned = "x"
+    digest = _hashlib.md5(str(text).encode("utf-8")).hexdigest()[:6]
+    return f"{prefix}_{cleaned}_{digest}"
+
+
 def _python_aspic_fallback(
     args: List[str],
     strict: List[str],
@@ -2859,7 +2886,11 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     strict = context.get("strict_rules")
     if not strict:
         strict = []
-        # Strict rules: factual claims that are uncontested
+        # Strict rules: factual claims support conclusions. The ASPIC handler
+        # expects dicts {head, body} with PL-atom heads/bodies (not raw rule
+        # strings — the handler builds StrictRule/DefeasibleRule itself).
+        # Atoms are sanitized via _pl_atom (Tweety's Proposition rejects
+        # non-alphanumeric names).
         extract_output = context.get("phase_extract_output", {})
         claims = (
             extract_output.get("claims", []) if isinstance(extract_output, dict) else []
@@ -2868,24 +2899,46 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             text = (
                 claim.get("text", str(claim)) if isinstance(claim, dict) else str(claim)
             )
-            strict.append(f"claim_{i+1}({text[:40]}) -> supported_{i+1}")
-        # If claims feed into arguments
+            strict.append(
+                {"head": f"supported_{i+1}", "body": [_pl_atom(text, prefix="claim")]}
+            )
+        # If claims feed into arguments, chain them.
         if len(args) >= 2:
-            strict.append(f"supported_1, supported_2 -> argument_chain")
+            strict.append(
+                {"head": "argument_chain", "body": ["supported_1", "supported_2"]}
+            )
 
     defeasible = context.get("defeasible_rules")
     if not defeasible:
         defeasible = []
-        # Defeasible rules: arguments that could be undermined
+        # Defeasible rules: arguments that could be undermined.
         for i, arg in enumerate(args[:4]):
-            defeasible.append(f"{arg[:40]} => plausible_conclusion_{i+1}")
-        # Fallacy-based defeat: if a fallacy targets an argument, it's defeasible
+            defeasible.append(
+                {
+                    "head": f"plausible_conclusion_{i+1}",
+                    "body": [_pl_atom(arg, prefix="arg")],
+                    "name": f"def_arg_{i+1}",
+                }
+            )
+        # Fallacy-based defeat: a detected fallacy undermines an argument.
         for j, f in enumerate(fallacies[:3]):
             if isinstance(f, dict):
                 ft = str(f.get("type", f.get("fallacy_type", "unknown")))
-                defeasible.append(f"detected({ft[:30]}) => undermined_{j+1}")
+                defeasible.append(
+                    {
+                        "head": f"undermined_{j+1}",
+                        "body": [_pl_atom(ft, prefix="fallacy")],
+                        "name": f"defeater_{j+1}",
+                    }
+                )
 
-    axioms = context.get("axioms")
+    axioms_raw = context.get("axioms")
+    # Sanitize axioms too (list of proposition names).
+    axioms = None
+    if axioms_raw:
+        axioms = [
+            _pl_atom(a, prefix="ax") for a in axioms_raw if isinstance(a, str)
+        ]
 
     try:
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
@@ -2941,8 +2994,19 @@ async def _invoke_belief_revision(
             BeliefRevisionHandler,
         )
 
+        # Sanitize free-form beliefs/new_belief into valid PL atoms.
+        # Upstream data (extracted args, fallacy types, LLM counter-arguments)
+        # is free text — Tweety's PlParser rejects non-alphanumeric atoms
+        # (ParserException: Unknown object ...). Reduce to stable atoms.
+        safe_beliefs = [_pl_atom(b) for b in beliefs if b and isinstance(b, str)]
+        safe_new_belief = _pl_atom(new_belief, prefix="n")
+        if not safe_beliefs:
+            safe_beliefs = [_pl_atom("initial_belief", prefix="b")]
+
         handler = BeliefRevisionHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(handler.revise, beliefs, new_belief, method)
+        return await asyncio.to_thread(
+            handler.revise, safe_beliefs, safe_new_belief, method
+        )
     except Exception as e:
         raise RuntimeError(
             f"Belief revision ({method}) unavailable: JVM/Tweety required ({e}). "

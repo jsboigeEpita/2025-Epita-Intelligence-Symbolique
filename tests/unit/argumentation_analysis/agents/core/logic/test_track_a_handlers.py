@@ -462,10 +462,22 @@ class TestBeliefRevisionHandler:
     def test_init_loads_revision_classes(self):
         handler, _, registry = self._make_handler()
         assert "org.tweetyproject.logics.pl.syntax.PlBeliefSet" in registry
-        assert "org.tweetyproject.beliefdynamics.revops.DalalRevision" in registry
+        # Contract (corrected #1168 E1b): the prior code referenced a fabricated
+        # ``org.tweetyproject.beliefdynamics.revops.DalalRevision`` (no such
+        # package/class in Tweety 1.28) and the 2-arg KernelContractionOperator
+        # ctor. The self-contained revision operator is
+        # RandomKernelContractionOperator (operators pkg, no-arg ctor).
         assert (
-            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator"
             in registry
+        )
+        assert (
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+            in registry
+        )
+        # The fabricated DalalRevision / revops package must NOT be loaded.
+        assert (
+            "org.tweetyproject.beliefdynamics.revops.DalalRevision" not in registry
         )
 
     def test_revise_dalal(self):
@@ -478,9 +490,15 @@ class TestBeliefRevisionHandler:
             )
         )
 
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised
 
         result = handler.revise(
             belief_set=["a", "b"],
@@ -506,8 +524,11 @@ class TestBeliefRevisionHandler:
         mock_contracted = MagicMock()
         mock_contracted.__iter__ = MagicMock(return_value=iter([]))
 
+        # Contract (corrected #1168 E1b): self.KernelContraction now holds
+        # RandomKernelContractionOperator (no-arg, self-contained) instead of
+        # the 2-arg kernels.KernelContractionOperator.
         kernel = registry.get(
-            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator"
         )
         if kernel:
             kernel.return_value.contract.return_value = mock_contracted
@@ -527,9 +548,15 @@ class TestBeliefRevisionHandler:
                 [MagicMock(__str__=lambda s: "a"), MagicMock(__str__=lambda s: "b")]
             )
         )
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised
 
         result = handler.revise(["a"], "b", method="dalal")
         assert "statistics" in result
@@ -540,8 +567,11 @@ class TestBeliefRevisionHandler:
         handler, _, registry = self._make_handler()
         mock_contracted = MagicMock()
         mock_contracted.__iter__ = MagicMock(return_value=iter([]))
+        # Contract (corrected #1168 E1b): self.KernelContraction now holds
+        # RandomKernelContractionOperator (no-arg, self-contained) instead of
+        # the 2-arg kernels.KernelContractionOperator.
         kernel = registry.get(
-            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator"
         )
         if kernel:
             kernel.return_value.contract.return_value = mock_contracted
@@ -556,9 +586,15 @@ class TestBeliefRevisionHandler:
         mock_revised.__iter__ = MagicMock(
             return_value=iter([MagicMock(__str__=lambda s: "!a")])
         )
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised
 
         result = handler.revise(["a"], "!a", method="dalal")
         assert result["new_belief"] == "!a"
@@ -569,9 +605,15 @@ class TestBeliefRevisionHandler:
         mock_revised.__iter__ = MagicMock(
             return_value=iter([MagicMock(__str__=lambda s: "p")])
         )
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised
 
         result = handler.revise([], "p", method="dalal")
         assert result["statistics"]["original_size"] == 0
@@ -581,8 +623,11 @@ class TestBeliefRevisionHandler:
         handler, _, registry = self._make_handler()
         mock_contracted = MagicMock()
         mock_contracted.__iter__ = MagicMock(return_value=iter([]))
+        # Contract (corrected #1168 E1b): self.KernelContraction now holds
+        # RandomKernelContractionOperator (no-arg, self-contained) instead of
+        # the 2-arg kernels.KernelContractionOperator.
         kernel = registry.get(
-            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator"
         )
         if kernel:
             kernel.return_value.contract.return_value = mock_contracted
@@ -598,9 +643,15 @@ class TestBeliefRevisionHandler:
         mock_revised_dalal.__iter__ = MagicMock(
             return_value=iter([MagicMock(__str__=lambda s: "a")])
         )
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised_dalal
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised_dalal
 
         result_d = handler.revise(["a", "b"], "c", method="dalal")
         result_l = handler.revise(["a", "b"], "c", method="levi")
@@ -620,9 +671,15 @@ class TestBeliefRevisionHandler:
                 ]
             )
         )
-        dalal = registry.get("org.tweetyproject.beliefdynamics.revops.DalalRevision")
-        if dalal:
-            dalal.return_value.revise.return_value = mock_revised
+        # Contract (corrected #1168 E1b): both ``dalal`` and ``levi`` methods
+        # now use the Levi pattern (RandomKernelContractionOperator +
+        # DefaultExpansion + LeviMultipleBaseRevisionOperator). The fabricated
+        # DalalRevision class is gone; we mock the Levi operator's revise().
+        levi = registry.get(
+            "org.tweetyproject.beliefdynamics.LeviMultipleBaseRevisionOperator"
+        )
+        if levi:
+            levi.return_value.revise.return_value = mock_revised
 
         result = handler.revise(["a"], "b", method="dalal")
         assert result["revised"] == sorted(result["revised"])
