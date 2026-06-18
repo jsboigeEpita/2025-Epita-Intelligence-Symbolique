@@ -390,11 +390,26 @@ def _write_hierarchical_fallacy_to_state(
             full_justification += f" [confidence:{confidence:.2f}]"
         if trace:
             full_justification += f" [trace:{'>'.join(trace)}]"
-        # Resolve target argument: try target_argument first (if present),
-        # then problematic_quote (exact text from the source), then explanation.
-        target_arg_id = f.get("target_argument_id") or _resolve_target_arg_id(
-            state, f.get("target_argument", "")
-        )
+        # Resolve target argument. Resolution order (D1a #1167 — surface what
+        # the per-argument descent already grounded, do NOT invent a link):
+        #   1. ``target_argument_id`` — an explicit arg_id carried by the plugin.
+        #   2. ``source_arg_id`` — set by the per-argument harness
+        #      (_invoke_hierarchical_fallacy_per_argument) to the arg_id the
+        #      descent analyzed this fallacy against. It IS a real arg_id from
+        #      state.identified_arguments (or "arg_N" from the extract phase),
+        #      so it is the most reliable grounded link — the wide-net fallacies
+        #      arrive with no quote/target and were orphaned without this.
+        #   3. text-match fallbacks (target_argument / problematic_quote /
+        #      explanation) for wide-net fallacies without a source_arg_id.
+        target_arg_id = f.get("target_argument_id")
+        if not target_arg_id:
+            _source_arg_id = str(f.get("source_arg_id") or "")
+            if _source_arg_id and _source_arg_id in state.identified_arguments:
+                target_arg_id = _source_arg_id
+        if not target_arg_id:
+            target_arg_id = _resolve_target_arg_id(
+                state, f.get("target_argument", "")
+            )
         if not target_arg_id:
             target_arg_id = _resolve_target_arg_id(
                 state, f.get("problematic_quote", "")
@@ -902,6 +917,45 @@ def _write_narrative_synthesis_to_state(
         state.narrative_synthesis = narrative
 
 
+def _write_deep_synthesis_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write the DeepSynthesisAgent grounded synthesis to UnifiedAnalysisState.
+
+    D1b (#1167 / Epic #1165): the spectacular workflow runs the
+    ``deep_synthesis`` phase (DeepSynthesisAgent, ~74s, LLM-conducted grounded
+    FB-18 synthesis with [artifact:] citations + value-gates) but no writer
+    existed in ``CAPABILITY_STATE_WRITERS`` — the output was dropped and
+    ``state.narrative_synthesis`` stayed empty, so Acte III (which reads it
+    via ``getattr(state, "narrative_synthesis", None)``) never saw the most
+    global component. This writer surfaces it.
+
+    The agent output (see ``_invoke_deep_synthesis``) carries:
+      - ``grounded_synthesis`` — the grounded FB-18 prose (the headline);
+      - ``value_gates`` — VG1-4 dict (persisted onto workflow_results when
+        present, the state has no dedicated attr);
+      - ``report`` — the full structured report (kept available on the state
+        trace for downstream consumers).
+    Empty/unavailable results are left as the empty default so the gap is
+    reported honestly (fail-loud, #1108/#1019 — never fabricate here).
+    """
+    if not output or not isinstance(output, dict):
+        return
+    grounded = output.get("grounded_synthesis", "")
+    if isinstance(grounded, str) and grounded.strip():
+        state.narrative_synthesis = grounded
+    # Persist the value-gates verdict where the state supports it. The state
+    # has no dedicated value_gates attr; workflow_results is the generic bag.
+    value_gates = output.get("value_gates")
+    if isinstance(value_gates, dict) and value_gates:
+        try:
+            existing = getattr(state, "workflow_results", None)
+            if isinstance(existing, dict):
+                existing["deep_synthesis_value_gates"] = value_gates
+        except Exception:  # noqa: BLE001 — non-fatal: state may lock the attr
+            pass
+
+
 def _write_act2_narrative_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -1130,6 +1184,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "collaborative_analysis": _write_collaborative_analysis_to_state,
     "nl_to_logic_translation": _write_nl_to_logic_to_state,
     "narrative_synthesis": _write_narrative_synthesis_to_state,
+    "deep_synthesis": _write_deep_synthesis_to_state,
     "act2_narrative": _write_act2_narrative_to_state,
     "act1_framing": _write_act1_framing_to_state,
     "act3_conclusion": _write_act3_conclusion_to_state,

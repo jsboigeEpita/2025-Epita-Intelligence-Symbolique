@@ -272,6 +272,45 @@ class TestBuildEvidence:
         assert ev.verdict is not None
         assert ev.verdict.band == "BELOW"
 
+    def test_consistent_pl_credits_formal_axis_d1c(self):
+        """D1c (#1167): a CONSISTENT PL theory (satisfiable True) is a real
+        formal result — the formal_pl axis must be credited so a coherent
+        text (no inconsistency) still surfaces a formal finding. satisfiable
+        IS a result."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _pl_verified,
+        )
+
+        state = _state(
+            propositional_analysis_results=[{"satisfiable": True}]
+        )
+        assert _pl_verified(state) == 1
+        ev = build_act3_evidence(state)
+        assert "formal_pl" in ev.verdict.nontrivial_axes
+
+    def test_consistent_fol_credits_formal_axis_d1c(self):
+        """D1c (#1167): a CONSISTENT FOL theory credits the formal_fol axis."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _fol_verified,
+        )
+
+        state = _state(fol_analysis_results=[{"consistent": True}])
+        assert _fol_verified(state) == 1
+        ev = build_act3_evidence(state)
+        assert "formal_fol" in ev.verdict.nontrivial_axes
+
+    def test_unverified_pl_does_not_credit_formal_axis_d1c(self):
+        """D1c (#1167): an unverified theory (None) is NOT a result — never
+        ``bool()`` a formal verdict (#1019: None ≠ False)."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _pl_verified,
+        )
+
+        state = _state(
+            propositional_analysis_results=[{"satisfiable": None}]
+        )
+        assert _pl_verified(state) == 0
+
 
 class TestPrivacy:
     def test_long_justification_truncated_in_prompt(self):

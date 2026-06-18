@@ -56,21 +56,24 @@ class TestNarrativeSynthesisRegistration:
         # MagicMock creates phantom attrs, so just verify no string was assigned
         assert not isinstance(getattr(state, "narrative_synthesis", ""), str)
 
-    def test_spectacular_has_narrative_synthesis_phase(self):
+    def test_spectacular_has_deep_synthesis_phase(self):
+        """Spectacular replaced ``narrative_synthesis`` with ``deep_synthesis``
+        (#1119 FB-33 — the template-prose narrative phase was removed; the
+        DeepSynthesisAgent grounded FB-18 synthesis is the spectacular
+        equivalent). D1b (#1167) wires its state writer. The spectacular
+        workflow must carry the deep_synthesis phase."""
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
         )
 
         wf = build_spectacular_workflow()
         phase = {p.name: p for p in wf.phases}
-        assert "narrative_synthesis" in phase
-        assert phase["narrative_synthesis"].capability == "narrative_synthesis"
-        deps = phase["narrative_synthesis"].depends_on
-        assert "quality" in deps
-        assert "jtms" in deps
-        assert "atms" in deps
-        assert "dung_extensions" in deps
-        assert phase["narrative_synthesis"].optional is True
+        # narrative_synthesis was removed from spectacular in #1119.
+        assert "narrative_synthesis" not in phase
+        # deep_synthesis is its grounded successor (mandatory, not optional).
+        assert "deep_synthesis" in phase
+        assert phase["deep_synthesis"].capability == "deep_synthesis"
+        assert phase["deep_synthesis"].optional is False
 
     def test_full_has_narrative_synthesis_phase(self):
         """II #698: the sequential `full` path computes convergence in-run too.
