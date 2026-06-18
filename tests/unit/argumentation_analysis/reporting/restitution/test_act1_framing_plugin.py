@@ -366,3 +366,52 @@ class TestConsumedByRenderer:
         assert _WOVEN_FRAMING.splitlines()[0] in report.markdown
         # act2/act3 are missing → reported honestly, not silently dropped.
         assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+
+
+# ============================================================================
+# R5 volet-2 (#1139) — virtuous mode: Acte I anticipates "what could derail
+# but doesn't" (spec §5).
+# ============================================================================
+
+
+def _virtuous_state() -> SimpleNamespace:
+    """A virtuous text with framing: political genre + measured virtues, no fallacies."""
+    s = _political_state()
+    s.identified_fallacies = {}  # zero localized fallacies
+    s.argument_quality_scores = {
+        "arg_1": {"overall": 8.0, "scores": {"clarte": 8.0, "coherence": 8.0}},
+        "arg_2": {"overall": 7.5, "scores": {"pertinence": 7.5}},
+    }
+    return s
+
+
+class TestVirtuousMode:
+    def test_virtuous_state_flagged(self):
+        ev = build_act1_evidence(_virtuous_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is True
+
+    def test_non_virtuous_state_not_flagged(self):
+        # _political_state has no quality scores → not virtuous (empty-run guard)
+        ev = build_act1_evidence(_political_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is False
+
+    def test_prompt_shifts_to_anticipated_but_no_derailment(self):
+        ev = build_act1_evidence(_virtuous_state())
+        prompt = build_act1_prompt(ev)
+        assert "MODE VIRTUEUX" in prompt
+        assert "dérape pas" in prompt  # "ce qui aurait pu déraper et ne dérape pas"
+        # non-virtuous: no virtuous shift
+        ev2 = build_act1_evidence(_political_state())
+        assert "MODE VIRTUEUX" not in build_act1_prompt(ev2)
+
+    def test_virtuous_result_carries_positive_marker(self):
+        result = asyncio.get_event_loop().run_until_complete(
+            build_act1_framing(
+                _virtuous_state(), llm_callable=_stub_llm(_WOVEN_FRAMING)  # type: ignore[arg-type]
+            )
+        )
+        assert result.is_virtuous is True
+        assert result.status == "woven"
+        assert "act1_virtuous_mode" in result.degraded

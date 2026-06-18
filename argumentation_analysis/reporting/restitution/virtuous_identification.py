@@ -365,3 +365,196 @@ def render_inventory_report(inv: VirtuousInventory) -> str:
     )
     lines.append("")
     return "\n".join(lines)
+
+
+# ===========================================================================
+# volet-2 — DERIVED virtuous flag from pipeline output (spec §5.1)
+# ===========================================================================
+#
+# Volet-1 (``identify``) is the cheap lexical CANDIDATE screen over the
+# *dataset* — it narrows which entries are worth a pipeline run. Volet-2 is the
+# *report mode*: once a pipeline has run, the DERIVED flag says whether the
+# output characterises the text as virtuous. The two answer the same question
+# ("is this virtuous?") at different stages, with different inputs (dataset
+# definitions vs a run ``state``) — hence they live together in this module.
+#
+# Spec §5.1 is unambiguous: a corpus input is virtuous iff its PIPELINE OUTPUT
+# shows (a) a low/zero localized-fallacy count AND (b) a non-trivial formal or
+# quality axis. The flag is **derived, never asserted**. Spec §5 adds: the
+# virtuous variant is NOT a separate skeleton — it is the same 3 acts with the
+# emphasis shifted by what the state actually contains. ``detect_virtuous_mode``
+# is the single source of truth that each act consults to shift its emphasis.
+
+# Transparent, fixed thresholds (anti-pendule: no curve, no tuning).
+# A text is virtuous-titled iff it has ZERO localized fallacies AND a
+# non-trivial quality/formal axis. We do NOT title on virtue when a fallacy is
+# located — that would hide a real weakness behind a virtue headline. The
+# non-trivial-axis guard prevents an empty run (0 fallacies, 0 quality, 0
+# formal) from being misread as virtuous (spec §5.1: "so an empty run is not
+# misread as virtuous").
+_VIRTUOUS_MAX_LOCALIZED_FALLACIES = 0
+
+
+@dataclass
+class VirtuousModeAssessment:
+    """DERIVED virtuous-mode flag (spec §5.1) — from pipeline output, never asserted.
+
+    A corpus input is virtuous iff its pipeline output shows (a) zero localized
+    fallacies AND (b) a non-trivial **quality** axis — measured virtues the
+    evaluator scored > 0. The quality axis is the *title material*: Acte III
+    titles on the virtues (spec §5 / DoD #1139), which requires measured virtues
+    to title on. ``formal_holds`` (a PL/FOL theory the solver validated) is a
+    strengthening signal surfaced for the "why it holds" narrative (Acte II),
+    NOT a standalone titling qualifier — a formally-robust text with no measured
+    virtues is told via its formal tenue, not via a virtue title. This keeps the
+    flag aligned with the G2 non-triviality gate (quality is a G2 axis) and with
+    the DoD ("les vertus sont en titre").
+
+    The flag is **derived from state**, never from lexical evidence alone, and
+    never fabricated. It governs *emphasis* in the report (the acts title on the
+    virtues instead of on the absence of fallacies), per spec §5: "the same 3
+    acts with the emphasis shifted by what the state actually contains". It
+    never authorises fabricating a fallacy to fill a beat (anti-pendule
+    #1019/#369).
+    """
+
+    is_virtuous: bool
+    fallacy_count: int
+    quality_virtues_present: bool
+    formal_holds: bool
+    reasoning: str
+
+
+def _quality_virtue_names(state: Any) -> List[str]:
+    """Return the measured virtue names across all scored arguments.
+
+    Reads the canonical writer key ``scores`` (shared_state.add_quality_score,
+    #1150/#1151) with a ``scores_par_vertu`` legacy fallback. A virtue counts
+    when at least one argument scored it > 0. De-duplicated, order-preserving.
+    Empty when no usable per-virtue map is present.
+    """
+    quality = getattr(state, "argument_quality_scores", {}) or {}
+    if not isinstance(quality, dict):
+        return []
+    names: List[str] = []
+    for _arg, qs in quality.items():
+        if not isinstance(qs, dict):
+            continue
+        spv = qs.get("scores")
+        if not isinstance(spv, dict):
+            spv = qs.get("scores_par_vertu")
+        if not isinstance(spv, dict):
+            continue
+        for vname, vval in spv.items():
+            if isinstance(vval, (int, float)) and float(vval) > 0:
+                names.append(str(vname))
+    seen: set[str] = set()
+    unique: List[str] = []
+    for n in names:
+        if n not in seen:
+            seen.add(n)
+            unique.append(n)
+    return unique
+
+
+def _localized_fallacy_count(state: Any) -> int:
+    """Count fallacies located on an identified argument (target_argument_id set).
+
+    Unresolved fallacies (no target) are NOT counted — they do not characterize
+    the discourse as fallacy-laden (they may be a resolution gap). Mirrors the
+    ``fallacies_total`` definition used by the act plugins.
+    """
+    fallacies = getattr(state, "identified_fallacies", {}) or {}
+    if not isinstance(fallacies, dict):
+        return 0
+    return sum(
+        1
+        for _f, d in fallacies.items()
+        if isinstance(d, dict) and (d.get("target_argument_id") or "")
+    )
+
+
+def _formal_holds(state: Any) -> bool:
+    """True iff at least one formal theory was checked AND found consistent.
+
+    The POSITIVE formal signal (an inference the solver validated), not the
+    absence of formal results. Reads the canonical PL key ``satisfiable``
+    (#1151 Finding C) with a ``consistent`` fallback, and the FOL ``consistent``
+    key. A verdict of ``True`` counts; an absent verdict never does
+    (anti-pendule: never read absence of a verdict as success, #1019).
+    """
+    pl = getattr(state, "propositional_analysis_results", None)
+    if isinstance(pl, list):
+        for r in pl:
+            if isinstance(r, dict):
+                sat = r.get("satisfiable")
+                if sat is None:
+                    sat = r.get("consistent")
+                if sat is True:
+                    return True
+    fol = getattr(state, "fol_analysis_results", None)
+    if isinstance(fol, list):
+        for r in fol:
+            if isinstance(r, dict) and r.get("consistent") is True:
+                return True
+    return False
+
+
+def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
+    """DERIVED virtuous-mode flag from pipeline output (spec §5.1).
+
+    The single source of truth for "is this text virtuous?" across the three
+    act plugins (Acte I anticipation, Acte II why-it-holds, Acte III virtue
+    titling). Operates on a shared ``state`` (pipeline output); never on lexical
+    evidence (that is volet-1's cheap screen, which only narrows candidates).
+
+    Returns a :class:`VirtuousModeAssessment`. ``reasoning`` is an opaque
+    one-line justification (counts + which axis qualifies) so each act can
+    surface it honestly — it carries no source name and no corpus text.
+
+    Anti-pendule: the flag is AND of two real signals (zero localized fallacies
+    AND a non-trivial axis). It never inflates: an empty run is explicitly
+    non-virtuous, and a single located fallacy disqualifies virtue-titling.
+    """
+    fallacy_count = _localized_fallacy_count(state)
+    virtues = _quality_virtue_names(state)
+    quality_present = bool(virtues)
+    formal_holds = _formal_holds(state)
+
+    low_fallacies = fallacy_count <= _VIRTUOUS_MAX_LOCALIZED_FALLACIES
+    # Quality drives the titling flag (the title material). formal_holds is a
+    # strengthening signal, not a standalone qualifier (see class docstring).
+    is_virtuous = low_fallacies and quality_present
+
+    if is_virtuous:
+        title_axes: List[str] = [f"vertus mesurées ({', '.join(sorted(virtues))})"]
+        if formal_holds:
+            title_axes.append("robustesse formelle (solveur valide les inférences)")
+        reasoning = (
+            "0 sophisme localisé + vertus mesurées ("
+            + "; ".join(title_axes)
+            + ") → mode vertueux (titre sur les vertus, spec §5)."
+        )
+    elif low_fallacies and formal_holds and not quality_present:
+        reasoning = (
+            "0 sophisme localisé + robustesse formelle validée, MAIS aucune "
+            "vertu mesurée (argument_quality_scores vide) → pas de titre vertueux "
+            "(pas de matière vertu) ; l'Acte II raconte la tenue formelle."
+        )
+    else:
+        reasons: List[str] = []
+        if not low_fallacies:
+            reasons.append(
+                f"{fallacy_count} sophisme(s) localisé(s) → ne titre pas sur les vertus"
+            )
+        if not quality_present:
+            reasons.append("aucune vertu mesurée (argument_quality_scores vide)")
+        reasoning = "Mode non-vertueux : " + " ; ".join(reasons) + "."
+
+    return VirtuousModeAssessment(
+        is_virtuous=is_virtuous,
+        fallacy_count=fallacy_count,
+        quality_virtues_present=quality_present,
+        formal_holds=formal_holds,
+        reasoning=reasoning,
+    )

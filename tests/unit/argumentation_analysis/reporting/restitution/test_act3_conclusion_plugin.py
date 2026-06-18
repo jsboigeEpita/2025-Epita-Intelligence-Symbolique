@@ -84,11 +84,11 @@ def _rich_state() -> SimpleNamespace:
         argument_quality_scores={
             "arg_1": {
                 "overall": 4.2,
-                "scores_par_vertu": {"pertinence": 3.0, "clarte": 5.0},
+                "scores": {"pertinence": 3.0, "clarte": 5.0},
             },
             "arg_2": {
                 "overall": 7.8,
-                "scores_par_vertu": {"pertinence": 8.0, "coherence": 7.5},
+                "scores": {"pertinence": 8.0, "coherence": 7.5},
             },
         },
         counter_arguments=[
@@ -109,8 +109,8 @@ def _rich_state() -> SimpleNamespace:
             }
         },
         propositional_analysis_results=[
-            {"consistent": True},
-            {"consistent": False},
+            {"satisfiable": True},
+            {"satisfiable": False},
         ],
     )
 
@@ -442,3 +442,85 @@ class TestConsumedByRenderer:
         assert _WOVEN_CONCLUSION.splitlines()[0] in report.markdown
         # act1/act2 are reported as missing (fail-loud), not silently dropped.
         assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+
+
+# ============================================================================
+# R5 volet-2 (#1139) — virtuous mode: Acte III titles the virtues (spec §5).
+# ============================================================================
+
+
+def _virtuous_state() -> SimpleNamespace:
+    """A virtuous text: zero localized fallacies + measured quality virtues.
+
+    No fallacies, real per-virtue scores under the canonical ``scores`` key, a
+    PL inference the solver validated (formal robustness). The conclusion must
+    title on the virtues, not on the absence of fallacies (spec §5 / DoD #1139).
+    """
+    return _state(
+        identified_arguments={
+            "arg_1": "Un raisonnement causal étayé par des sources vérifiées.",
+            "arg_2": "Une conclusion qui suit logiquement ses prémisses.",
+        },
+        identified_fallacies={},  # zero localized fallacies — the honest result
+        argument_quality_scores={
+            "arg_1": {
+                "overall": 8.0,
+                "scores": {"clarte": 8.0, "coherence": 8.5, "pertinence": 7.5},
+            },
+            "arg_2": {
+                "overall": 7.5,
+                "scores": {"coherence": 8.0, "pertinence": 7.0},
+            },
+        },
+        propositional_analysis_results=[{"satisfiable": True}],  # inferences hold
+    )
+
+
+class TestVirtuousMode:
+    def test_virtuous_state_flagged(self):
+        ev = build_act3_evidence(_virtuous_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is True
+        # no weak points on a virtuous text (nothing fabricated)
+        assert ev.weak_points == []
+
+    def test_non_virtuous_state_not_flagged(self):
+        # _rich_state has a localized fallacy → not virtuous (don't hide it)
+        ev = build_act3_evidence(_rich_state())
+        assert ev.virtuous_mode is not None
+        assert ev.virtuous_mode.is_virtuous is False
+
+    def test_prompt_titles_on_virtues_when_virtuous(self):
+        ev = build_act3_evidence(_virtuous_state())
+        prompt = build_act3_prompt(ev)
+        assert "MODE VIRTUEUX" in prompt
+        assert "TIENT" in prompt  # titles on what holds
+        # no fabrication instruction present when non-virtuous
+        ev2 = build_act3_evidence(_rich_state())
+        assert "MODE VIRTUEUX" not in build_act3_prompt(ev2)
+
+    def test_virtuous_result_carries_positive_marker(self):
+        result = asyncio.get_event_loop().run_until_complete(
+            build_act3_conclusion(
+                _virtuous_state(), llm_callable=_stub_llm(_WOVEN_CONCLUSION)  # type: ignore[arg-type]
+            )
+        )
+        assert result.is_virtuous is True
+        assert result.status == "woven"
+        assert "act3_virtuous_mode" in result.degraded
+
+    def test_non_virtuous_result_no_virtuous_marker(self):
+        result = asyncio.get_event_loop().run_until_complete(
+            build_act3_conclusion(
+                _rich_state(), llm_callable=_stub_llm(_WOVEN_CONCLUSION)  # type: ignore[arg-type]
+            )
+        )
+        assert result.is_virtuous is False
+        assert "act3_virtuous_mode" not in result.degraded
+
+    def test_no_fabricated_fallacy_in_virtuous_prompt(self):
+        # the virtuous prompt must NOT invent a weak point to fill a beat
+        ev = build_act3_evidence(_virtuous_state())
+        prompt = build_act3_prompt(ev)
+        assert "fabrique" in prompt.lower() or "ne fabrique" in prompt.lower()
+        assert ev.weak_points == []
