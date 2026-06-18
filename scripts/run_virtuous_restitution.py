@@ -29,11 +29,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-for line in open(ROOT / ".env", encoding="utf-8"):
-    line = line.strip()
-    if line and not line.startswith("#") and "=" in line:
-        k, _, v = line.partition("=")
-        os.environ.setdefault(k.strip(), v.strip())
+with open(ROOT / ".env", encoding="utf-8") as _envf:
+    for line in _envf:
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
 
 # Privacy HARD — redact any substring of any corpus.
 _REDACT_CHUNKS: "list[str]" = []
@@ -203,12 +204,16 @@ async def run_one(opaque_id: str, idx: int, timeout: int) -> dict:
             f.write(report_md)
         print(f"[CAPSTONE] {opaque_id} readable report -> {report_path.name} (gitignored, {len(report_md)} chars)")
 
-    # Does Acte III title on virtues? (opaque structural check — no names/leak)
+    # Does Acte III title on virtues? (opaque structural check — no names/leak).
+    # Real signal: in Acte III, the strengths header must PRECEDE the weaknesses
+    # header (virtues led, not fallacies) — verified by index order on the two
+    # headers the plugin actually emits, not on a bare literal that could match
+    # anywhere. NB: these headers come from the plugin (generated), not corpus.
     act3_titled_virtues = False
     if report_md:
-        act3_titled_virtues = bool(
-            _redact("vertu") in report_md and "### Synthèse" in report_md
-        )
+        strengths_idx = report_md.find("### Ce qui tient")
+        weaknesses_idx = report_md.find("### Ce qui dérape")
+        act3_titled_virtues = strengths_idx >= 0 and weaknesses_idx >= 0 and strengths_idx < weaknesses_idx
 
     metrics = {
         "opaque_id": opaque_id,
