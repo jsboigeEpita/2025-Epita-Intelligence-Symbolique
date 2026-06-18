@@ -157,6 +157,7 @@ outputs/
 # Hand-curated deliverables (architecture specs / terminal reports — not generated outputs) — exempt from *_report*.md
 !docs/reports/FB20_PHASE4_TERMINAL_REPORT.md
 !docs/architecture/RESTITUTION_REPORT_SPEC.md
+!docs/guides/RESTITUTION_REPORT.md
 backend_info.json
 build_cache_logs*.txt
 tree.txt
