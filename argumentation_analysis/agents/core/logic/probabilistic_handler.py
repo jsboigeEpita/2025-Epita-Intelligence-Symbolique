@@ -23,9 +23,16 @@ class ProbabilisticHandler:
         self.Probability = jpype.JClass(
             "org.tweetyproject.math.probability.Probability"
         )
-        self.SubgraphProbReasoner = jpype.JClass(
-            "org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner"
-        )
+        # NB: a prior revision referenced a fabricated
+        # ``org.tweetyproject.arg.prob.reasoner.ProbabilisticReasoner`` class
+        # here — that class does NOT exist in Tweety 1.28 (the real reasoners
+        # are SimplePafReasoner / MonteCarloPafReasoner). The attribute was
+        # dead code: never read by any method (the acceptance computation
+        # uses org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner at
+        # runtime, loaded lazily in _compute_acceptance_probabilities). The
+        # fabricated JClass lookup crashed __init__ on every real run → the
+        # ``probabilistic`` phase FAILED. Removed (anti-pendule: subtract the
+        # bug, do not replace it with another speculative class).
 
     def analyze_probabilistic_framework(
         self,

@@ -321,7 +321,12 @@ def tweety_logics_classes(tweety_classpath_initializer, jvm_session):
             "org.tweetyproject.beliefdynamics.RevisionOperator", loader=loader_to_use
         ),  # Interface
         "DalalRevision": JClass(
-            "org.tweetyproject.beliefdynamics.revops.DalalRevision",
+            # Corrected #1168 E1b: org.tweetyproject.beliefdynamics.revops
+            # does not exist in Tweety 1.28. Tweety exposes no distance-based
+            # DalalRevision operator; the self-contained contraction operator
+            # is RandomKernelContractionOperator. Kept under the ``DalalRevision``
+            # key for fixture-consumer backward-compat, but points to a real class.
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator",
             loader=loader_to_use,
         ),
         # Other useful classes
@@ -511,7 +516,10 @@ def belief_revision_classes(tweety_classpath_initializer, jvm_session):
         }
         revision_ops = {
             "KernelContractionOperator": jpype_instance.JClass(
-                "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator",
+                # Corrected #1168 E1b: the 2-arg kernels ctor needs
+                # (IncisionFunction, KernelProvider); the self-contained
+                # operator lives in the operators package (no-arg ctor).
+                "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator",
                 loader=loader_to_use,
             ),
             "RandomIncisionFunction": jpype_instance.JClass(
