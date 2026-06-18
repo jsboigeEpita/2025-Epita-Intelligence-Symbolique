@@ -814,17 +814,15 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
-        # L4b — Additional Dung-family / logic reasoners (#1169 W1).
+        # L4b — Additional Dung-family / logic reasoners (#1169 W1 + #1178 fixes).
         # These capabilities have state-writers but were only exercised by
         # ``formal_extended``; wiring them into spectacular closes the
         # workflow-completeness gap. Each is ``optional=True`` so a phase
         # failure (JVM/env) does not break the run; the invoke callables
         # fail-loud on genuine unavailability (#1019, no fabricated output).
-        # Verified runnable on corpus input (per W1 empirical probe): setaf,
-        # aba, delp, dialogue, dl. The remaining dormant reasoners
-        # (weighted/social/eaf/adf/qbf/cl) have handler-level Tweety API bugs
-        # (same family as E1b #1168 layer-1) documented out-of-scope in the
-        # W1 inventory report — a dedicated handler-fix track is the path.
+        # W1 (#1169) wired setaf/aba/delp/dialogue/dl after verifying their
+        # input contracts; #1178 fixed the 4 deeper handler-level Tweety API
+        # bugs (weighted/social/qbf/cl) that W1 had documented out-of-scope.
         .add_phase(
             "setaf_reasoning",
             capability="setaf_reasoning",
@@ -835,7 +833,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "aba_reasoning",
             capability="aba_reasoning",
-            depends_on=["pl"],
+            depends_on=["dung_extensions"],
             optional=True,
             timeout_seconds=180,
         )
@@ -857,6 +855,42 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             "dialogue_reasoning",
             capability="dialogue_protocols",
             depends_on=["aspic_analysis"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        # #1178 — Extended Tweety reasoners whose handler API bugs were fixed
+        # (file-disjoint from W1's setaf/aba/delp/dl/dialogue wiring).
+        # Each optional=True so a per-reasoner gap cannot break the run; the
+        # state-writers already exist for these capabilities.
+        # Weighted AF (FuzzySemiring-typed framework + grounded extensions).
+        .add_phase(
+            "weighted_reasoning",
+            capability="weighted_argumentation",
+            depends_on=["dung_extensions"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        # Social AF (ISS reasoner over (pos,neg) votes — social strength ranking).
+        .add_phase(
+            "social_reasoning",
+            capability="social_argumentation",
+            depends_on=["dung_extensions"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        # QBF (quantified boolean formulas — formal verification of properties).
+        .add_phase(
+            "qbf_reasoning",
+            capability="qbf_reasoning",
+            depends_on=["pl"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        # Conditional logic (System-Z / SimpleCReasoner default reasoning).
+        .add_phase(
+            "cl_reasoning",
+            capability="conditional_logic",
+            depends_on=["pl"],
             optional=True,
             timeout_seconds=180,
         )

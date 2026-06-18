@@ -340,6 +340,11 @@ class TestSpectacularWorkflowGolden:
         "act1_framing",
         "act2_narrative",
         "act3_conclusion",
+        # Extended reasoners (#1178): weighted/social/qbf/cl wired into spectacular.
+        "weighted_reasoning",
+        "social_reasoning",
+        "qbf_reasoning",
+        "cl_reasoning",
     }
 
     def test_phase_count_is_31(self):
@@ -348,7 +353,7 @@ class TestSpectacularWorkflowGolden:
         # the three restitution acts (R2 act1_framing #1136, R3 act2_narrative
         # #1137, R4 act3_conclusion #1138) wired onto the spectacular DAG.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 36
+        assert len(wf.phases) == 40
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -676,7 +681,7 @@ class TestWorkflowCatalogGolden:
         assert catalog["spectacular"].name == "spectacular_analysis"
         # #1115: spectacular has 31 phases (narrative_synthesis template removed;
         # DAG grew via #504/#506/#507/#508/#534 + 3 restitution acts R2/R3/R4).
-        assert len(catalog["spectacular"].phases) == 36
+        assert len(catalog["spectacular"].phases) == 40
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
