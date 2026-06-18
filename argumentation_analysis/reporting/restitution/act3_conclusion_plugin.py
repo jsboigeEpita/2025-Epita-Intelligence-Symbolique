@@ -218,6 +218,25 @@ def _pl_inconsistent(state: Any) -> int:
     return sum(1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False)
 
 
+def _pl_verified(state: Any) -> int:
+    """Count PL theories the Tweety solver verified (any verdict, real-in-state).
+
+    D1c (#1167): a CONSISTENT PL theory (``satisfiable is True``) is a real
+    formal result, not a non-event — the solver ran and confirmed the
+    discourse's propositional structure holds. The formal axis must credit it
+    as non-trivial so a coherent text (no inconsistency) still surfaces a
+    formal finding (satisfiable IS a result). Counts True AND False verdicts;
+    unverified (None) theories are excluded — #1019 (never ``bool()`` a formal
+    verdict: None ≠ False).
+    """
+    pl = getattr(state, "propositional_analysis_results", None)
+    if not isinstance(pl, list):
+        return 0
+    return sum(
+        1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is not None
+    )
+
+
 def _fol_inconsistent(state: Any) -> int:
     """Count FOL theories the Tweety solver found inconsistent (real-in-state)."""
     fol = getattr(state, "fol_analysis_results", None)
@@ -227,6 +246,24 @@ def _fol_inconsistent(state: Any) -> int:
         1
         for r in fol
         if isinstance(r, dict) and r.get("consistent") is False
+    )
+
+
+def _fol_verified(state: Any) -> int:
+    """Count FOL theories the Tweety solver verified (any verdict, real-in-state).
+
+    D1c (#1167): a CONSISTENT FOL theory (``consistent is True``) is a real
+    formal result — credit it so a coherent text surfaces a formal finding.
+    Counts True AND False verdicts; excludes unverified (None) — #1019.
+    """
+    fol = getattr(state, "fol_analysis_results", None)
+    if not isinstance(fol, list):
+        return 0
+    return sum(
+        1
+        for r in fol
+        if isinstance(r, dict)
+        and (r.get("consistent") is True or r.get("consistent") is False)
     )
 
 
@@ -433,6 +470,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     counters_total = sum(1 for c in counters if isinstance(c, dict) and (c.get("target_arg_id") or c.get("counter_content")))
     pl_inc = _pl_inconsistent(state)
     fol_inc = _fol_inconsistent(state)
+    # D1c (#1167): a verified-consistent theory is a real formal result too —
+    # the formal axis credits ANY verified verdict (satisfiable/consistent True
+    # OR False), so a coherent text surfaces a non-trivial formal finding.
+    pl_verified = _pl_verified(state)
+    fol_verified = _fol_verified(state)
     dung_rejected = _dung_rejected_by_arg(state)
 
     # Non-trivial axes (real-in-state content), in a stable display order.
@@ -443,9 +485,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         axes_nontrivial.append(_AXIS_QUALITY)
     if counters_total:
         axes_nontrivial.append(_AXIS_COUNTERS)
-    if pl_inc:
+    if pl_verified:
         axes_nontrivial.append(_AXIS_FORMAL_PL)
-    if fol_inc:
+    if fol_verified:
         axes_nontrivial.append(_AXIS_FORMAL_FOL)
     if dung_rejected:
         axes_nontrivial.append(_AXIS_DUNG)
@@ -700,9 +742,11 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
         "- Le verdict formel (Tweety/Dung) appuie un battement : formule-le comme\n"
-        "  « le solveur Tweety invalide cette inférence » ou « le cadre de Dung\n"
-        "  isole cette attaque comme défaillante » — jamais une sous-section\n"
-        "  isolée.\n"
+        "  « le solveur Tweety invalide cette inférence » (théorie inconsistante),\n"
+        "  « le solveur Tweety confirme la cohérence de cette inférence »\n"
+        "  (théorie consistante — un résultat formel aussi) ou « le cadre de Dung\n"
+        "  isole cet argument comme rejeté/défaillant » (argument absent de\n"
+        "  l'extension acceptée) — jamais une sous-section isolée.\n"
         "- Respecte STRICTEMENT le plafond de claim de la bande : ne formule rien\n"
         "  au-delà de ce qu'elle autorise.\n"
         "- La conclusion doit VARIER selon le contenu réel ci-dessus : pas de\n"

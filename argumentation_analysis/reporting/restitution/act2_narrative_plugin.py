@@ -494,7 +494,7 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     f"{len(dung_rejected)} argument(s) rejeté(s) par le cadre "
                     f"abstrait de Dung (sémantique: {', '.join(sems)})"
                 ),
-                detail="cadre de Dung — attaque défaillante isolée",
+                detail="cadre de Dung — argument rejeté (absent de l'extension acceptée)",
             )
         )
 
@@ -631,8 +631,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "(sophisme localisé + descente + contre-argument), et sa tenue formelle "
         "citée comme preuve.\n"
         "- Le verdict formel (Tweety/Dung) appuie le battement ; formule-le comme "
-        "« le solveur Tweety confirme l'inconsistance de cette inférence » ou "
-        "« le cadre de Dung isole cette attaque comme défaillante ».\n"
+        "« le solveur Tweety confirme l'inconsistance de cette inférence » "
+        "(théorie inconsistante), « le solveur Tweety confirme la cohérence de "
+        "cette inférence » (théorie consistante — un résultat formel aussi) ou "
+        "« le cadre de Dung isole cet argument comme rejeté/défaillant » "
+        "(argument absent de l'extension acceptée).\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"

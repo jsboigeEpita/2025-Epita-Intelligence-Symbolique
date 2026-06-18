@@ -4002,7 +4002,40 @@ async def _invoke_hierarchical_fallacy_per_argument(
             section AND the convergence layer (fallacy is one of its inputs).
             The one-shot is a single taxonomy-mapped call, so it recovers
             recall cheaply when the API is slow.
+
+            D1a (#1167): enrich every emitted fallacy with the grounded arg
+            link so the state writer (_write_hierarchical_fallacy_to_state)
+            can attach it to arg_1..N. The plugin's IdentifiedFallacy model
+            has ``problematic_quote`` but the descent never populates it and
+            the confirm_fallacy tool emits no quote; without this enrichment
+            the fallacies arrive orphaned ({type, justification} only) and
+            the writer's text-match fallbacks cannot link them. We attach:
+              - ``target_argument`` = arg_id (a real id from state.identified_
+                arguments, or "arg_N" from the extract phase) — the writer
+                resolves it by direct ID match;
+              - ``problematic_quote`` = a verbatim span capped from the
+                argument text (privacy: stays in-memory in the state, results
+                are gitignored) — the writer's text-match fallback anchor.
+            This surfaces what the descent already grounded (which argument
+            it analyzed) — it does NOT fabricate family/target (anti-pendule).
             """
+
+            def _enrich_fallacies(res: Dict[str, Any]) -> None:
+                """Attach grounded arg link to each fallacy dict in-place."""
+                fallacies = res.get("fallacies")
+                if not isinstance(fallacies, list):
+                    return
+                # Verbatim span: cap to keep the quote a tight anchor (privacy +
+                # match precision — the writer matches on desc[:60] prefixes).
+                quote_span = arg_text.strip()[:200]
+                for f in fallacies:
+                    if not isinstance(f, dict):
+                        continue
+                    # Do not overwrite an explicit plugin-provided target.
+                    if not f.get("target_argument"):
+                        f["target_argument"] = arg_id
+                    if not f.get("problematic_quote") and quote_span:
+                        f["problematic_quote"] = quote_span
             plugin = None
             try:
                 master_kernel = Kernel()
@@ -4020,6 +4053,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 )
                 result: Dict[str, Any] = json.loads(result_json)
                 result["source_arg_id"] = arg_id
+                _enrich_fallacies(result)
                 return result
             except asyncio.TimeoutError:
                 logger.warning(
@@ -4037,6 +4071,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
                         oneshot: Dict[str, Any] = json.loads(oneshot_json)
                         oneshot["source_arg_id"] = arg_id
                         oneshot["timed_out_fallback"] = True
+                        _enrich_fallacies(oneshot)
                         return oneshot
                     except Exception as e:
                         logger.warning(
