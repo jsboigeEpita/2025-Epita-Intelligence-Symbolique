@@ -814,6 +814,52 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
+        # L4b — Additional Dung-family / logic reasoners (#1169 W1).
+        # These capabilities have state-writers but were only exercised by
+        # ``formal_extended``; wiring them into spectacular closes the
+        # workflow-completeness gap. Each is ``optional=True`` so a phase
+        # failure (JVM/env) does not break the run; the invoke callables
+        # fail-loud on genuine unavailability (#1019, no fabricated output).
+        # Verified runnable on corpus input (per W1 empirical probe): setaf,
+        # aba, delp, dialogue, dl. The remaining dormant reasoners
+        # (weighted/social/eaf/adf/qbf/cl) have handler-level Tweety API bugs
+        # (same family as E1b #1168 layer-1) documented out-of-scope in the
+        # W1 inventory report — a dedicated handler-fix track is the path.
+        .add_phase(
+            "setaf_reasoning",
+            capability="setaf_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        .add_phase(
+            "aba_reasoning",
+            capability="aba_reasoning",
+            depends_on=["pl"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        .add_phase(
+            "delp_reasoning",
+            capability="defeasible_logic",
+            depends_on=["pl"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        .add_phase(
+            "dl_reasoning",
+            capability="description_logic",
+            depends_on=["extract"],
+            optional=True,
+            timeout_seconds=180,
+        )
+        .add_phase(
+            "dialogue_reasoning",
+            capability="dialogue_protocols",
+            depends_on=["aspic_analysis"],
+            optional=True,
+            timeout_seconds=180,
+        )
         # L5 — counter-argument generation.
         # timeout_seconds=420 (#708, anti-pendulum): the counter sweep is the
         # only LLM-heavy phase that scales with the upstream argument count;

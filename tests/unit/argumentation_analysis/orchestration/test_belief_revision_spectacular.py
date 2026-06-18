@@ -24,9 +24,10 @@ class TestBeliefRevisionSpectacularPhase:
 
         wf = build_spectacular_workflow()
         # Canary: bump this when build_spectacular_workflow gains/loses a phase
-        # (catches an accidental dropped/duplicated phase). 28 incl. the
+        # (catches an accidental dropped/duplicated phase). 36 = 31 (E1b base)
+        # + 5 W1 reasoners (setaf/aba/delp/dl/dialogue, #1169) incl. the
         # belief_revision phase wired here.
-        assert len(wf.phases) == 28
+        assert len(wf.phases) == 36
 
     def test_belief_revision_state_writer_exists(self):
         from argumentation_analysis.orchestration.state_writers import (

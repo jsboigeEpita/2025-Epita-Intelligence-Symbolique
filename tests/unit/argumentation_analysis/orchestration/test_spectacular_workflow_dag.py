@@ -36,7 +36,8 @@ class TestSpectacularWorkflowDAG:
         # (R2 #1136), act2_narrative (R3 #1137) and act3_conclusion (R4 #1138)
         # — the 3-act narrative.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 31
+        # 36 = 31 (E1b base) + 5 W1 reasoners (#1169: setaf/aba/delp/dl/dialogue).
+        assert len(wf.phases) == 36
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -57,6 +58,11 @@ class TestSpectacularWorkflowDAG:
             "bipolar",
             "probabilistic",
             "aspic_analysis",
+            "setaf_reasoning",
+            "aba_reasoning",
+            "delp_reasoning",
+            "dl_reasoning",
+            "dialogue_reasoning",
             "counter",
             "stakes",
             "jtms",
