@@ -938,6 +938,16 @@ def _write_deep_synthesis_to_state(
         trace for downstream consumers).
     Empty/unavailable results are left as the empty default so the gap is
     reported honestly (fail-loud, #1108/#1019 — never fabricate here).
+
+    Workflow disjointness (double-writer note): both this writer and
+    ``_write_narrative_synthesis_to_state`` (the ``full`` path) set
+    ``state.narrative_synthesis``. They are never active in the same run —
+    ``narrative_synthesis`` was removed from the ``spectacular`` workflow
+    (#1119, replaced by this ``deep_synthesis`` successor), while ``full``
+    keeps the sequential ``narrative_synthesis`` phase. So at most one writer
+    fires per workflow. No execution guard is added: the disjointness lives
+    in the workflow phase sets, and a guard here would duplicate that
+    contract (anti-pendule).
     """
     if not output or not isinstance(output, dict):
         return
@@ -953,7 +963,12 @@ def _write_deep_synthesis_to_state(
             if isinstance(existing, dict):
                 existing["deep_synthesis_value_gates"] = value_gates
         except Exception:  # noqa: BLE001 — non-fatal: state may lock the attr
-            pass
+            # Side-channel only (narrative_synthesis is the headline and is
+            # already set above); trace at debug so a state-lock regression
+            # stays diagnosable rather than silently swallowed.
+            logger.debug(
+                "deep_synthesis value_gates persistence skipped", exc_info=True
+            )
 
 
 def _write_act2_narrative_to_state(
