@@ -104,8 +104,18 @@ class ASPICHandler:
             else:
                 reasoner = self.SimpleAspicReasoner(self.SimplePreferredReasoner())
 
-            # Get extensions
-            extensions = reasoner.getModels(theory)
+            # Get extensions. SimpleAspicReasoner does NOT expose getModels
+            # directly; it translates the ASPIC+ theory into a Dung framework
+            # via getDungTheory(theory, invertable), and the underlying Dung
+            # reasoner (SimplePreferredReasoner, passed to the ctor above)
+            # computes the extensions on that DungTheory. The 2nd arg is an
+            # Invertable — a PL formula-type signature; a Proposition instance
+            # is the PL Invertable (verified empirically). (Prior code called
+            # reasoner.getModels(theory) → AttributeError on every real run.)
+            inv = self.Proposition("aspic_pl_formula")
+            dung_theory = reasoner.getDungTheory(theory, inv)
+            dung_reasoner = self.SimplePreferredReasoner()
+            extensions = dung_reasoner.getModels(dung_theory)
 
             ext_list = []
             for ext in extensions:

@@ -36,15 +36,23 @@ class BeliefRevisionHandler:
             "org.tweetyproject.logics.pl.syntax.Proposition"
         )
         self.PlNegation = jpype.JClass("org.tweetyproject.logics.pl.syntax.Negation")
-        # Revision operators
-        self.DalalRevision = jpype.JClass(
-            "org.tweetyproject.beliefdynamics.revops.DalalRevision"
-        )
+        # Revision operators. NB: a prior revision referenced a fabricated
+        # ``org.tweetyproject.beliefdynamics.revops.DalalRevision`` class here
+        # — that class does NOT exist in Tweety 1.28 (there is no ``revops``
+        # package at all). The lookup crashed __init__ on every real run → the
+        # ``belief_revision`` phase FAILED, and because it is the FIRST
+        # revision operator loaded, the 4 valid operators below were never
+        # reached. A second, deeper bug was hidden behind it: the prior code
+        # constructed ``KernelContractionOperator(RandomIncision())`` but that
+        # ctor requires (IncisionFunction, KernelProvider) — 2 args, not 1.
+        # The self-contained ctor is
+        # ``org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator``
+        # (no-arg: wires its own incision + kernel provider), so we use that.
+        # Tweety exposes no distance-based ``DalalRevision`` operator class;
+        # the ``dalal`` method maps to the same Levi pattern as ``levi``. See
+        # ``revise()`` below.
         self.KernelContraction = jpype.JClass(
-            "org.tweetyproject.beliefdynamics.kernels.KernelContractionOperator"
-        )
-        self.RandomIncision = jpype.JClass(
-            "org.tweetyproject.beliefdynamics.kernels.RandomIncisionFunction"
+            "org.tweetyproject.beliefdynamics.operators.RandomKernelContractionOperator"
         )
         self.DefaultExpansion = jpype.JClass(
             "org.tweetyproject.beliefdynamics.DefaultMultipleBaseExpansionOperator"
@@ -83,12 +91,15 @@ class BeliefRevisionHandler:
             parser = self.PlParser()
             new_formula = parser.parseFormula(new_belief)
 
-            if method == "levi":
-                contraction = self.KernelContraction(self.RandomIncision())
-                expansion = self.DefaultExpansion()
-                operator = self.LeviRevision(contraction, expansion)
-            else:
-                operator = self.DalalRevision()
+            # Both ``dalal`` and ``levi`` methods use the Levi pattern
+            # (contraction + expansion) — the only AGM revision operator
+            # family Tweety 1.28 exposes. ``dalal`` has no dedicated Tweety
+            # class (see __init__ note), so it maps to the same path. We do
+            # NOT fabricate a DalalRevision class. RandomKernelContractionOperator
+            # is no-arg (self-contained incision + kernel provider).
+            contraction = self.KernelContraction()
+            expansion = self.DefaultExpansion()
+            operator = self.LeviRevision(contraction, expansion)
 
             revised = operator.revise(bs, new_formula)
 
@@ -127,7 +138,7 @@ class BeliefRevisionHandler:
             parser = self.PlParser()
             formula = parser.parseFormula(formula_to_remove)
 
-            contraction = self.KernelContraction(self.RandomIncision())
+            contraction = self.KernelContraction()
             contracted = contraction.contract(bs, formula)
 
             contracted_formulas = [str(f) for f in contracted]
