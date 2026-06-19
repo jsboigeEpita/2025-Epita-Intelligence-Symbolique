@@ -415,7 +415,22 @@ def _write_hierarchical_fallacy_to_state(
         if not isinstance(f, dict):
             continue
         fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))
+        # G5 (#1186): per-family FR explanation. The LLM descent often returns
+        # an empty explanation; resolve the family template here rather than
+        # leaving a bare/generic line. Fail-loud (#1019): unknown families keep
+        # whatever the LLM produced (possibly "") — never a fabricated template.
         justification = f.get("explanation", "")
+        if not justification:
+            try:
+                from argumentation_analysis.adapters.french_fallacy_adapter import (
+                    justify_fallacy,
+                )
+
+                template = justify_fallacy(str(fallacy_type))
+                if template:
+                    justification = template
+            except ImportError:
+                pass  # adapter unavailable — keep LLM explanation as-is
         taxonomy_pk = f.get("taxonomy_pk", "")
         confidence = f.get("confidence", 0.0)
         trace = f.get("navigation_trace", [])

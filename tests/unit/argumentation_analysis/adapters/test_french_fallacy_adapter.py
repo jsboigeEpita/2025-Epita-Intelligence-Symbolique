@@ -437,3 +437,268 @@ class TestCapabilityRegistration:
         services = registry.find_services_for_capability("fallacy_detection")
         assert len(services) == 1
         assert services[0].name == "french_fallacy_detector"
+
+
+class TestG4RestoredSubRules:
+    """G4 (#1186): the 3 symbolic sub-rules dropped at #35 are restored AND fire.
+
+    Faithful to student 2.3.2-detection-sophismes/symbolic_rules.py:40-52 /
+    104-115 / 132-140, with minimal punctuation/POS fixes so the spaCy Matcher
+    actually matches real French (the student originals never fired — verified).
+    """
+
+    def test_three_families_have_restored_subrule(self):
+        """AD_HOMINEM char-attack + GENERALISATION base-de + APPEL_TRADITION c'est-la."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            _SYMBOLIC_FALLACY_RULES,
+        )
+
+        # Character/motive attack restored under AD_HOMINEM_DIRECT.
+        adhominem_patterns = _SYMBOLIC_FALLACY_RULES["AD_HOMINEM_DIRECT"]
+        assert any(
+            any(tok.get("POS") == "PROPN" for tok in r["PATTERN"])
+            and any(tok.get("LOWER") == "faux" for tok in r["PATTERN"])
+            for r in adhominem_patterns
+        ), "character-attack sub-rule (PROPN ... faux) not restored"
+
+        # "Sur la base de N exemples" restored under GENERALISATION_HATIVE.
+        gen_patterns = _SYMBOLIC_FALLACY_RULES["GENERALISATION_HATIVE"]
+        assert any(
+            any(tok.get("LOWER") == "sur" for tok in r["PATTERN"])
+            and any(tok.get("LOWER") == "base" for tok in r["PATTERN"])
+            for r in gen_patterns
+        ), "sur-la-base-de sub-rule not restored"
+
+        # "C'est la tradition" restored under APPEL_A_LA_TRADITION.
+        tradition_patterns = _SYMBOLIC_FALLACY_RULES["APPEL_A_LA_TRADITION"]
+        assert any(
+            any(tok.get("LOWER") == "tradition" for tok in r["PATTERN"])
+            and any(tok.get("LEMMA") == "être" for tok in r["PATTERN"])
+            for r in tradition_patterns
+        ), "c'est-la-tradition sub-rule not restored"
+
+    def test_all_symbolic_subrules_wired_to_fire(self):
+        """Every sub-rule dict carries a FALLACY_TYPE (detector iterates them all)."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            _SYMBOLIC_FALLACY_RULES,
+        )
+
+        for fam, rules in _SYMBOLIC_FALLACY_RULES.items():
+            for i, rule in enumerate(rules):
+                assert "PATTERN" in rule, f"{fam}[{i}] has no PATTERN"
+                assert isinstance(rule["PATTERN"], list) and rule["PATTERN"]
+                assert "FALLACY_TYPE" in rule, f"{fam}[{i}] has no FALLACY_TYPE"
+                assert rule["FALLACY_TYPE"], f"{fam}[{i}] FALLACY_TYPE empty"
+
+    def test_restored_subrules_fire_with_spacy(self):
+        """When spaCy FR is available, the 3 restored sub-rules actually fire."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            SymbolicFallacyDetector,
+        )
+
+        det = SymbolicFallacyDetector()
+        if not det.is_available():
+            pytest.skip("spaCy French model unavailable — firing verified elsewhere")
+
+        cases = {
+            "Attaque personnelle (Ad Hominem)": (
+                "Pierre est malhonnête, donc son argument est faux."
+            ),
+            "Généralisation hâtive (Hasty Generalization)": (
+                "Sur la base de 3 exemples, tous les touristes sont désagréables."
+            ),
+            "Appel à la tradition (Appeal to Tradition)": (
+                "C'est la tradition, il ne faut rien changer."
+            ),
+        }
+        for expected, text in cases.items():
+            hits = det.detect(text)
+            types = [h.fallacy_type for h in hits]
+            assert expected in types, (
+                f"restored sub-rule did not fire: expected {expected!r}, got {types}"
+            )
+
+
+class TestG5FrenchExplanationTemplates:
+    """G5 (#1186): 4 per-family FR explanation templates restored from student
+    2.3.2-detection-sophismes/fallacy_pipeline.py:279-288, collapsed to generic
+    at #35. ``justify_fallacy`` is fail-loud (#1019): unknown → None."""
+
+    def test_four_templates_present(self):
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            _FALLACY_JUSTIFICATIONS_FR,
+        )
+
+        assert len(_FALLACY_JUSTIFICATIONS_FR) == 4
+        for entry in _FALLACY_JUSTIFICATIONS_FR:
+            assert "template" in entry and entry["template"]
+            assert "matches" in entry and isinstance(entry["matches"], list)
+
+    def test_student_symbolic_labels_resolve(self):
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            justify_fallacy,
+        )
+
+        # The student's own symbolic FALLACY_TYPE labels must resolve.
+        assert justify_fallacy("Attaque personnelle (Ad Hominem)") is not None
+        assert justify_fallacy("Généralisation hâtive (Hasty Generalization)") is not None
+        assert justify_fallacy("Argument d'autorité (Appeal to Authority)") is not None
+
+    def test_trunk_taxonomy_leaf_labels_resolve(self):
+        """The trunk LLM descent emits taxonomy leaf labels — they must match too."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            justify_fallacy,
+        )
+
+        assert justify_fallacy("Ad hominem (Obstruction)") is not None
+        assert (
+            justify_fallacy("Généralisation abusive (Erreur mathématique)") is not None
+        )
+        assert justify_fallacy("Appel à l'émotion (Influence)") is not None
+
+    def test_fail_loud_on_unknown_family(self):
+        """#1019: unknown family → None, never a fabricated/generic line."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            justify_fallacy,
+        )
+
+        assert justify_fallacy("Mauvaise déduction (Erreur de raisonnement)") is None
+        assert justify_fallacy("Comparaison fallacieuse (Abus de langage)") is None
+        assert justify_fallacy("Unknown fallacy") is None
+        assert justify_fallacy("") is None
+
+    def test_description_populated_in_to_dict(self):
+        """The single output boundary populates description via the template."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            FallacyAnalysisResult,
+            FallacyDetection,
+        )
+
+        # A symbolic-tier detection (description=None) resolves the template.
+        result = FallacyAnalysisResult(
+            text="Pierre est malhonnête, donc son argument est faux.",
+            fallacies=[
+                FallacyDetection(
+                    fallacy_type="Attaque personnelle (Ad Hominem)",
+                    confidence=1.0,
+                    source="symbolic",
+                    matched_rule="Pierre est malhonnête",
+                    description=None,  # symbolic path leaves it unset
+                )
+            ],
+        )
+        d = result.to_dict()
+        desc = d["detected_fallacies"]["Attaque personnelle (Ad Hominem)"]["description"]
+        assert desc is not None
+        assert "personne" in desc.lower() or "caractère" in desc.lower()
+
+    def test_description_fails_loud_when_no_template(self):
+        """A fallacy with no family template keeps description=None (no fabrication)."""
+        from argumentation_analysis.adapters.french_fallacy_adapter import (
+            FallacyAnalysisResult,
+            FallacyDetection,
+        )
+
+        result = FallacyAnalysisResult(
+            text="...",
+            fallacies=[
+                FallacyDetection(
+                    fallacy_type="Pente glissante (Slippery Slope)",
+                    confidence=1.0,
+                    source="symbolic",
+                    description=None,
+                )
+            ],
+        )
+        d = result.to_dict()
+        assert (
+            d["detected_fallacies"]["Pente glissante (Slippery Slope)"]["description"]
+            is None
+        )
+
+
+class TestG5StateWriterFallback:
+    """G5 (#1186): state-writer fills per-family FR template when LLM explanation
+    is empty, surfacing per-family explanations in the restitution report."""
+
+    def test_empty_explanation_filled_by_family_template(self):
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = MagicMock()
+        state.identified_arguments = {}
+        state.identified_fallacies = {}
+        state.add_fallacy = MagicMock(return_value="fallacy_1")
+
+        output = {
+            "fallacies": [
+                {
+                    "type": "Ad hominem (Obstruction)",
+                    "explanation": "",  # LLM gave nothing
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        _write_hierarchical_fallacy_to_state(output, state, {})
+
+        state.add_fallacy.assert_called_once()
+        kwargs = state.add_fallacy.call_args.kwargs
+        # The per-family FR template was injected (not empty/generic).
+        assert "caractère" in kwargs["justification"] or "personne" in kwargs[
+            "justification"
+        ].lower()
+
+    def test_llm_explanation_preserved_when_present(self):
+        """When the LLM already produced an explanation, it is NOT overwritten."""
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = MagicMock()
+        state.identified_arguments = {}
+        state.identified_fallacies = {}
+        state.add_fallacy = MagicMock(return_value="fallacy_1")
+
+        output = {
+            "fallacies": [
+                {
+                    "type": "Ad hominem (Obstruction)",
+                    "explanation": "Analyse LLM détaillée du sophisme.",
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        _write_hierarchical_fallacy_to_state(output, state, {})
+
+        kwargs = state.add_fallacy.call_args.kwargs
+        assert "Analyse LLM détaillée" in kwargs["justification"]
+
+    def test_no_template_no_fabrication(self):
+        """Unknown family + empty LLM explanation → justification stays sparse,
+        no fabricated template injected (#1019)."""
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = MagicMock()
+        state.identified_arguments = {}
+        state.identified_fallacies = {}
+        state.add_fallacy = MagicMock(return_value="fallacy_1")
+
+        output = {
+            "fallacies": [
+                {
+                    "type": "Mauvaise déduction (Erreur de raisonnement)",
+                    "explanation": "",
+                    "confidence": 0.9,
+                }
+            ]
+        }
+        _write_hierarchical_fallacy_to_state(output, state, {})
+
+        kwargs = state.add_fallacy.call_args.kwargs
+        # No family template for Erreur de raisonnement → justification holds
+        # only the metadata decorations, no per-family prose.
+        assert "caractère" not in kwargs["justification"]
+        assert "échantillon" not in kwargs["justification"]
