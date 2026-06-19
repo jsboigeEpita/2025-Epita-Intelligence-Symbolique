@@ -282,6 +282,33 @@ class TestBuildEvidence:
         assert "DÉLIBÉRATION COLLECTIVE" in prompt
         assert "opt_X" in prompt
 
+    def test_debate_scheme_grounding_g8(self):
+        """G8 (#1184): a scheme-grounded exchange surfaces scheme + CQ.
+
+        SV reader contract (point/rebuttal) intact; scheme/critical_question
+        extend it optionally. None when no scheme matched (fail-loud, #1019).
+        """
+        state = _state(
+            debate_transcripts=[
+                {
+                    "topic": "t",
+                    "exchanges": [
+                        {
+                            "point": "Selon un expert du domaine, P tient.",
+                            "rebuttal": "mais hors domaine",
+                            "scheme": "Argument d'autorité (advice of an expert)",
+                            "critical_question": "E est-elle experte ?",
+                        }
+                    ],
+                }
+            ]
+        )
+        ev = build_act3_evidence(state)
+        ex = ev.debate_exchanges[0]
+        assert ex.point == "Selon un expert du domaine, P tient."
+        assert ex.scheme == "Argument d'autorité (advice of an expert)"
+        assert ex.critical_question == "E est-elle experte ?"
+
     def test_quality_strengths_collected(self):
         ev = build_act3_evidence(_rich_state())
         virtues = {s.virtue for s in ev.quality_strengths}
