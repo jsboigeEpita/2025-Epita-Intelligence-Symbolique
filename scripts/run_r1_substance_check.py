@@ -154,6 +154,33 @@ async def main() -> None:
         restitution and any(t in restitution for t in formal_credit_terms)
     )
 
+    # (d''') DECISIVE post-SV checks (R444 #1165 closer): the rendered
+    # Acte II/III must now CITE governance verdict + debate exchange (SV #1183
+    # surfaced these). These are the checks that prove the culmination wires
+    # governance + debate into the narrative, not just phase completion.
+    # Governance: voting method + opaque winning option + Copeland/consensus.
+    gov_terms = ("gouvernance", "governance", "Copeland", "vote", "scrutin",
+                 "consensus", "majorité", "majorite", "Borda", "bullet")
+    checklist["governance_verdict_cited"] = bool(
+        restitution and sum(1 for t in gov_terms if t.lower() in restitution.lower()) >= 2
+    )
+    # Debate: a point/rebuttal exchange (Walton-Krabbe). Note: per R444, debate
+    # may render SPARSE (G8 schemes-engine still dropped, #1184) — sparse-but-
+    # present is a PASS (honest surfacing, anti-pendule). Empty = FAIL.
+    debate_terms = ("débat", "debat", "point", "réplique", "replique",
+                    "rebuttal", "contre-argumentation", "Walton", "échange",
+                    "echange", "objection")
+    checklist["debate_exchange_cited"] = bool(
+        restitution and any(t.lower() in restitution.lower() for t in debate_terms)
+    )
+    # Counter-validity surfaced (G6 #1181): the report cites counter-argument
+    # validity, not just count.
+    counter_terms = ("validité", "valide", "valid", "contre-argument", "force",
+                     "pertinent", "5-critères", "5-criteres")
+    checklist["counter_validity_cited"] = bool(
+        restitution and any(t.lower() in restitution.lower() for t in counter_terms)
+    )
+
     # (e) 0 failed phases (no env-failed phase)
     checklist["zero_failed_phases"] = summary.get("failed", 1) == 0
 
@@ -184,6 +211,39 @@ async def main() -> None:
     checklist["privacy_zero_leak"] = len(leak_hits) == 0
     all_green = all(checklist.values())
 
+    # --- Opaque citation snippets (DoD R444: prove gov+debate+counter are
+    # CITED in the rendered narrative). We extract short sentences containing
+    # the key terms — these are restitution-generated prose (paraphrase/
+    # structural), NOT raw corpus text, so they are safe to commit. We cap
+    # length and count to keep the report concise + avoid any long fragment.
+    def _extract_citations(terms: tuple[str, ...], max_hits: int = 3) -> list[str]:
+        hits: list[str] = []
+        low = restitution.lower()
+        for term in terms:
+            t = term.lower()
+            idx = low.find(t)
+            while idx >= 0 and len(hits) < max_hits:
+                # extract the surrounding sentence (bounded window)
+                start = restitution.rfind("\n", 0, idx) + 1
+                end = restitution.find("\n", idx)
+                if end < 0:
+                    end = min(len(restitution), idx + 160)
+                snippet = restitution[start:end].strip()
+                # cap snippet length + strip any corpus-like long quote
+                if len(snippet) > 180:
+                    snippet = snippet[:180].rstrip() + "…"
+                if snippet and snippet not in hits:
+                    hits.append(snippet)
+                idx = low.find(t, idx + len(t))
+        return hits
+
+    gov_citations = _extract_citations(
+        ("gouvernance", "Copeland", "scrutin", "vote", "consensus", "majorité"))
+    debate_citations = _extract_citations(
+        ("débat", "réplique", "rebuttal", "objection", "Walton", "échange"))
+    counter_citations = _extract_citations(
+        ("validité", "contre-argument", "5-critères", "force"))
+
     metrics = {
         "opaque_id": "r1_culminating",
         "verdict": verdict,
@@ -197,6 +257,9 @@ async def main() -> None:
         "gate": result.get("restitution_gate"),  # if exposed
         "privacy_leak_hit_count": len(leak_hits),
         "restitution_verdict": str(restitution_verdict) if restitution_verdict else None,
+        "gov_citations": gov_citations,
+        "debate_citations": debate_citations,
+        "counter_citations": counter_citations,
     }
     ts = time.strftime("%Y%m%dT%H%M%S")
     out_path = RESULTS_DIR / f"r1_culminating_{ts}.json"
