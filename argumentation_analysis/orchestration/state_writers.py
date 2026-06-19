@@ -158,9 +158,20 @@ def _write_counter_argument_to_state(
                 score = float(evaluation["overall_score"])
             else:
                 score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
+            # G6 (#1180): persist the validation verdict (ValidationResult shape)
+            # when the evaluator populated it. Surface-only — absent if the
+            # evaluator did not run (no fabrication).
+            validation = llm_ca.get("validation")
+            if not isinstance(validation, dict):
+                validation = None
             arg_id = _resolve_target_arg_id(state, target)
             state.add_counter_argument(
-                target, counter_text, strategy_name, score, target_arg_id=arg_id
+                target,
+                counter_text,
+                strategy_name,
+                score,
+                target_arg_id=arg_id,
+                validation=validation,
             )
         return
 
@@ -171,9 +182,17 @@ def _write_counter_argument_to_state(
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
+        validation = llm_ca.get("validation")
+        if not isinstance(validation, dict):
+            validation = None
         arg_id = _resolve_target_arg_id(state, target)
         state.add_counter_argument(
-            target, counter_text, strategy_name, score, target_arg_id=arg_id
+            target,
+            counter_text,
+            strategy_name,
+            score,
+            target_arg_id=arg_id,
+            validation=validation,
         )
         return
 

@@ -1201,6 +1201,60 @@ async def _invoke_counter_argument(
     return result
 
 
+def _build_counter_argument_validation(
+    overall_score: float,
+    logical_strength: float,
+) -> Dict[str, Any]:
+    """Populate a counter-argument ``validation`` dict (G6 #1180, Epic #1165).
+
+    The unified ``ValidationResult`` (``counter_argument/definitions.py:94``)
+    was defined + exported but never populated in the pipeline — the 4 boolean
+    fields (``is_valid_attack``/``original_survives``/``counter_succeeds``/
+    ``logical_consistency``) came, in the original student deliverable
+    (``counter_agent/logic/tweety_bridge.py``), from a Dung-theory attack
+    graph built per counter-argument. That formal bridge was dropped during
+    the #35 unification (β audit gap G6).
+
+    Anti-pendule / fail-loud (#1019): we do NOT fabricate a formal Dung
+    verdict here. We surface the *already-computed* 5-criteria evaluation
+    (the evaluator's real output) into the validation shape, with thresholds
+    derived from the original student fallback
+    (``tweety_bridge._fallback_validation``), which itself mapped strength
+    labels → booleans. The unified evaluator produces a continuous
+    ``overall_score`` ∈ [0,1] (weighted sum of 5 criteria, each ∈ [0,1]),
+    a richer signal than the student's categorical strength — so we map the
+    score onto the boolean fields with documented thresholds, and we label
+    ``formal_representation`` honestly as a heuristic (NOT a Tweety check):
+
+      - ``counter_succeeds``: overall_score ≥ 0.5 (the counter lands).
+      - ``original_survives``: overall_score < 0.6 (the original still holds
+        below a strong counter). Asymmetric vs ``counter_succeeds`` by design:
+        a mid-range counter both lands and leaves the original partially
+        standing (a real dynamic in argumentation).
+      - ``is_valid_attack``: counter_succeeds AND logical_strength ≥ 0.4
+        (a landing counter that is also internally coherent).
+      - ``logical_consistency``: logical_strength ≥ 0.4 (the counter's own
+        internal logic is coherent — not a cross-argument Dung check).
+
+    Returns a plain dict (not the dataclass) so it serializes into the state
+    entry without an import dependency at write time.
+    """
+    counter_succeeds = overall_score >= 0.5
+    original_survives = overall_score < 0.6
+    is_valid_attack = counter_succeeds and logical_strength >= 0.4
+    logical_consistency = logical_strength >= 0.4
+    return {
+        "is_valid_attack": is_valid_attack,
+        "original_survives": original_survives,
+        "counter_succeeds": counter_succeeds,
+        "logical_consistency": logical_consistency,
+        "formal_representation": (
+            "heuristic (5-criteria weighted score; not a Tweety/Dung "
+            "formal verification)"
+        ),
+    }
+
+
 def _evaluate_counter_arguments(
     llm_counters: List[Dict[str, Any]], input_text: str
 ) -> List[Dict[str, Any]]:
@@ -1208,6 +1262,12 @@ def _evaluate_counter_arguments(
 
     Wraps each LLM-generated dict into proper Argument/CounterArgument dataclass
     objects, runs the 5-criteria evaluator, and attaches the evaluation_score.
+
+    G6 (#1180): also populates a ``validation`` dict (``ValidationResult`` shape)
+    from the already-computed evaluation, so the counter-argument *validity*
+    verdict reaches the state and the restitution report can cite it — not
+    just that counter-arguments exist. Surface-only (no fabricated formal
+    signal); see ``_build_counter_argument_validation``.
     """
     try:
         from argumentation_analysis.agents.core.counter_argument.evaluator import (
@@ -1277,6 +1337,14 @@ def _evaluate_counter_arguments(
                 "clarity": round(evaluation.clarity, 3),
                 "recommendations": evaluation.recommendations,
             }
+            # G6 (#1180): surface the validation verdict from the computed
+            # evaluation. Anti-pendule: built from the real overall_score +
+            # logical_strength, never fabricated. Fail-loud: if this branch
+            # runs, evaluation succeeded; the validation dict is always set.
+            ca_dict["validation"] = _build_counter_argument_validation(
+                float(evaluation.overall_score),
+                float(evaluation.logical_strength),
+            )
         except Exception as e:
             logger.debug(f"Counter-argument evaluation skipped: {e}")
     return llm_counters

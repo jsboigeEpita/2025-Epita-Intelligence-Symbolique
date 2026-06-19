@@ -506,8 +506,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         strategy: str,
         score: float,
         target_arg_id: Optional[str] = None,
+        validation: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """Add a counter-argument result."""
+        """Add a counter-argument result.
+
+        G6 (#1180): ``validation`` carries the populated ``ValidationResult``
+        verdict (is_valid_attack / original_survives / counter_succeeds /
+        logical_consistency / formal_representation) so the restitution report
+        (Acte II/III) can cite counter-argument *validity*, not just existence.
+        Stored only when non-empty (honest — never fabricated).
+        """
         ca_id = self._generate_id("ca", self.counter_arguments)
         entry = {
             "id": ca_id,
@@ -518,6 +526,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if target_arg_id:
             entry["target_arg_id"] = target_arg_id
+        if validation:
+            entry["validation"] = validation
         self.counter_arguments.append(entry)
         state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
         return ca_id

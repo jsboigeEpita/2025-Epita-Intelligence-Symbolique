@@ -198,6 +198,45 @@ class TestBuildEvidence:
         assert len(ev.counter_strategies) == 1
         assert ev.counter_strategies[0].strategy == "contre-exemple"
 
+    def test_counter_validation_surfaced_g6(self):
+        """G6 (#1180): validation verdict (from 5-criteria eval) reaches Acte III."""
+        state = _state(
+            counter_arguments=[
+                {
+                    "target_arg_id": "arg_1",
+                    "strategy": "contre-exemple",
+                    "counter_content": "Attaque la thèse, pas la personne.",
+                    "validation": {
+                        "is_valid_attack": True,
+                        "counter_succeeds": True,
+                        "original_survives": False,
+                        "logical_consistency": True,
+                    },
+                }
+            ]
+        )
+        ev = build_act3_evidence(state)
+        assert len(ev.counter_strategies) == 1
+        cs = ev.counter_strategies[0]
+        assert cs.is_valid_attack is True
+        assert cs.counter_succeeds is True
+
+    def test_counter_validation_absent_is_none_g6(self):
+        """When the evaluator did not run, validation stays None (no #1019 fabrication)."""
+        state = _state(
+            counter_arguments=[
+                {
+                    "target_arg_id": "arg_1",
+                    "strategy": "contre-exemple",
+                    "counter_content": "Attaque la thèse.",
+                }
+            ]
+        )
+        ev = build_act3_evidence(state)
+        cs = ev.counter_strategies[0]
+        assert cs.is_valid_attack is None
+        assert cs.counter_succeeds is None
+
     def test_quality_strengths_collected(self):
         ev = build_act3_evidence(_rich_state())
         virtues = {s.virtue for s in ev.quality_strengths}

@@ -112,6 +112,11 @@ class CounterStrategy:
     strategy: str
     target_arg_id: str
     snippet: str
+    # G6 (#1180): the validation verdict (ValidationResult shape) so the
+    # narrative can cite counter-argument *validity*, not just existence.
+    # None when the evaluator did not run (honest absence, not fabricated).
+    is_valid_attack: Optional[bool] = None
+    counter_succeeds: Optional[bool] = None
 
 
 @dataclass
@@ -501,11 +506,24 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         content = ca.get("counter_content") or ""
         if not (tid or content):
             continue
+        # G6 (#1180): surface the validation verdict (absent → None, honest).
+        validation = ca.get("validation")
+        is_valid = None
+        succeeds = None
+        if isinstance(validation, dict):
+            _iv = validation.get("is_valid_attack")
+            _cs = validation.get("counter_succeeds")
+            if isinstance(_iv, bool):
+                is_valid = _iv
+            if isinstance(_cs, bool):
+                succeeds = _cs
         counter_strategies.append(
             CounterStrategy(
                 strategy=str(ca.get("strategy", "")),
                 target_arg_id=str(tid),
                 snippet=_truncate(content, _COUNTER_CAP),
+                is_valid_attack=is_valid,
+                counter_succeeds=succeeds,
             )
         )
 
