@@ -106,7 +106,10 @@ class TestFormulaBuilders:
         handler = CLHandler(mock_initializer)
         f1, f2 = MagicMock(), MagicMock()
         result = handler.conjunction(f1, f2)
-        handler._Conjunction.assert_called_once_with(f1, f2)
+        # #1178: args are cast to PlFormula to disambiguate the binary ctor.
+        assert handler._Conjunction.call_count == 1
+        called_args = handler._Conjunction.call_args.args
+        assert len(called_args) == 2
 
     def test_conjunction_three(self, mock_initializer, mock_jpype):
         handler = CLHandler(mock_initializer)
@@ -118,7 +121,10 @@ class TestFormulaBuilders:
         handler = CLHandler(mock_initializer)
         f1, f2 = MagicMock(), MagicMock()
         result = handler.disjunction(f1, f2)
-        handler._Disjunction.assert_called_once_with(f1, f2)
+        # #1178: args are cast to PlFormula to disambiguate the binary ctor.
+        assert handler._Disjunction.call_count == 1
+        called_args = handler._Disjunction.call_args.args
+        assert len(called_args) == 2
 
     def test_disjunction_three(self, mock_initializer, mock_jpype):
         handler = CLHandler(mock_initializer)

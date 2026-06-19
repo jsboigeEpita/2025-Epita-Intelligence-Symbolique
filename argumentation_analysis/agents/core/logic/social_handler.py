@@ -44,6 +44,12 @@ class SocialHandler:
         # Dung classes
         self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+        # #1178: SocialAF inherits DungTheory.add, whose add(Attack) overload is
+        # ambiguous against add(Formula)/add(Object) on the social subclass.
+        # Resolving via the explicit DungTheory.add(Attack) static dispatch.
+        self._DungTheory = jpype.JClass(
+            "org.tweetyproject.arg.dung.syntax.DungTheory"
+        )
 
         logger.info("Social AF classes loaded successfully.")
 
@@ -78,17 +84,20 @@ class SocialHandler:
                 arg_map[name] = arg
                 framework.add(arg)
 
-            # Set votes
+            # Set votes (#1178: SocialAF API is voteUp/voteDown, not vpiPlus).
             if votes:
                 for name, (pos, neg) in votes.items():
                     if name in arg_map:
-                        framework.vpiPlus(arg_map[name], pos)
-                        framework.vpiMinus(arg_map[name], neg)
+                        framework.voteUp(arg_map[name], jpype.JInt(pos))
+                        framework.voteDown(arg_map[name], jpype.JInt(neg))
 
-            # Create attacks
+            # Create attacks — explicit DungTheory.add(Attack) to avoid the
+            # add(Formula)/add(Object) ambiguity on SocialAbstractAF (#1178).
             for src, tgt in attacks:
                 if src in arg_map and tgt in arg_map:
-                    framework.add(self._Attack(arg_map[src], arg_map[tgt]))
+                    self._DungTheory.add(
+                        framework, self._Attack(arg_map[src], arg_map[tgt])
+                    )
 
             # Compute social strength via ISS reasoner
             semantics = self._SimpleProductSemantics(precision)

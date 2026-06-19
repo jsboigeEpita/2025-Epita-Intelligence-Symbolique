@@ -51,6 +51,11 @@ class QBFHandler:
         self._Disjunction = jpype.JClass(f"{pl_pkg}.Disjunction")
         self._Implication = jpype.JClass(f"{pl_pkg}.Implication")
         self._PlBeliefSet = jpype.JClass(f"{pl_pkg}.PlBeliefSet")
+        # #1178: Disjunction/Conjunction have both (PlFormula, PlFormula) and
+        # (PlFormula...) varargs ctors — JPype cannot resolve the overload when
+        # passed two concrete formulas. Casting the args to the declared
+        # PlFormula supertype disambiguates to the binary ctor.
+        self._PlFormula = jpype.JClass(f"{pl_pkg}.PlFormula")
 
         # QBF parser
         try:
@@ -60,6 +65,14 @@ class QBFHandler:
             logger.debug("QbfParser not available.")
 
         logger.info("QBF classes loaded successfully.")
+
+    def _cast_formula(self, formula):
+        """Cast a built PL formula to the PlFormula supertype.
+
+        #1178: disambiguates the binary (PlFormula, PlFormula) ctor of
+        Disjunction/Conjunction from their (PlFormula...) varargs overload.
+        """
+        return jpype.JObject(formula, self._PlFormula)
 
     def _parse_simple_formula(self, formula_str: str):
         """Parse a simple PL formula string (supports !, &, |, =>)."""
@@ -77,14 +90,14 @@ class QBFHandler:
             formulas = [self._parse_simple_formula(p) for p in parts]
             result = formulas[0]
             for f in formulas[1:]:
-                result = self._Conjunction(result, f)
+                result = self._Conjunction(self._cast_formula(result), self._cast_formula(f))
             return result
         if "|" in formula_str:
             parts = formula_str.split("|")
             formulas = [self._parse_simple_formula(p) for p in parts]
             result = formulas[0]
             for f in formulas[1:]:
-                result = self._Disjunction(result, f)
+                result = self._Disjunction(self._cast_formula(result), self._cast_formula(f))
             return result
         return self._Proposition(formula_str.strip())
 

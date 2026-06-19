@@ -41,10 +41,11 @@ class TestExternalSolverSpectacular:
 
         wf = build_spectacular_workflow()
         # Canary: bump this when build_spectacular_workflow gains/loses a phase
-        # (catches an accidental dropped/duplicated phase). 36 = 31 (E1b base)
+        # (catches an accidental dropped/duplicated phase). 40 = 31 (E1b base)
         # + 5 W1 reasoners (setaf/aba/delp/dl/dialogue, #1169) incl. the L5
-        # external fol_solver + modal_solver phases + narrative_synthesis.
-        assert len(wf.phases) == 36
+        # external fol_solver + modal_solver phases + narrative_synthesis,
+        # + 4 #1178 reasoners (weighted/social/qbf/cl).
+        assert len(wf.phases) == 40
 
     def test_external_fol_solver_service_registered(self):
         from argumentation_analysis.orchestration.registry_setup import setup_registry

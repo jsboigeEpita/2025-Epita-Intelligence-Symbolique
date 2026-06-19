@@ -53,6 +53,12 @@ class CLHandler:
             self._Negation = jpype.JClass(f"{pl_pkg}.Negation")
             self._Conjunction = jpype.JClass(f"{pl_pkg}.Conjunction")
             self._Disjunction = jpype.JClass(f"{pl_pkg}.Disjunction")
+            # #1178: PlFormula supertype — casting to it disambiguates the
+            # (PlFormula, PlFormula) ctor from the (PlFormula...) varargs
+            # overload of Conjunction/Disjunction. Also used to cast the
+            # conclusion passed to SimpleCReasoner.query (which expects a
+            # PlFormula, NOT a Conditional).
+            self._PlFormula = jpype.JClass(f"{pl_pkg}.PlFormula")
 
             logger.info("CL classes loaded successfully.")
         except Exception as e:
@@ -94,14 +100,22 @@ class CLHandler:
         """Conjunction of formulas."""
         result = formulas[0]
         for f in formulas[1:]:
-            result = self._Conjunction(result, f)
+            # #1178: cast to PlFormula to disambiguate the binary ctor.
+            result = self._Conjunction(
+                jpype.JObject(result, self._PlFormula),
+                jpype.JObject(f, self._PlFormula),
+            )
         return result
 
     def disjunction(self, *formulas):
         """Disjunction of formulas."""
         result = formulas[0]
         for f in formulas[1:]:
-            result = self._Disjunction(result, f)
+            # #1178: cast to PlFormula to disambiguate the binary ctor.
+            result = self._Disjunction(
+                jpype.JObject(result, self._PlFormula),
+                jpype.JObject(f, self._PlFormula),
+            )
         return result
 
     def conditional(self, conclusion, premise=None):
@@ -177,13 +191,12 @@ class CLHandler:
         reasoner = self._get_reasoner()
         try:
             conclusion = self._parse_simple_formula(conclusion_str)
-            if premise_str:
-                premise = self._parse_simple_formula(premise_str)
-                cond = self._Conditional(conclusion, premise)
-            else:
-                cond = self._Conditional(conclusion)
-
-            result = reasoner.query(kb, cond)
+            # #1178: SimpleCReasoner.query(ClBeliefSet, PlFormula) answers
+            # whether the CONCLUSION is accepted given the KB. It takes the
+            # conclusion as a plain PlFormula — passing a Conditional raised a
+            # ClassCastException (Conditional is not a PlFormula). The premise
+            # is part of the KB's conditionals, not of the query.
+            result = reasoner.query(kb, jpype.JObject(conclusion, self._PlFormula))
             entailed = bool(result)
             query_repr = (
                 f"({conclusion_str} | {premise_str})" if premise_str else conclusion_str
@@ -199,16 +212,30 @@ class CLHandler:
             return False, f"FUNC_ERROR: {e}"
 
     def parse_and_query(self, kb_string: str, query_string: str) -> Tuple[bool, str]:
-        """Parse a CL knowledge base and query from strings."""
+        """Parse a CL knowledge base and query from strings.
+
+        The Tweety ClParser requires every formula to be a conditional
+        ``(conclusion | premise)``. A bare fact like ``flies`` is wrapped as
+        ``(flies | TRUE)``. SimpleCReasoner.query answers on the conclusion
+        (a PlFormula), so the conditional's conclusion is extracted before
+        querying (#1178).
+        """
         try:
             parser = self._ClParser()
             StringReader = jpype.JClass("java.io.StringReader")
 
             kb = parser.parseBeliefBase(StringReader(kb_string))
-            query = parser.parseFormula(jpype.JString(query_string))
-
+            # #1178: wrap bare facts as unconditional conditionals.
+            normalized_query = (
+                query_string
+                if query_string.strip().startswith("(")
+                else f"({query_string.strip()} | TRUE)"
+            )
+            parsed = parser.parseFormula(jpype.JString(normalized_query))
+            # query() answers on the conclusion (PlFormula), not the Conditional.
+            conclusion = parsed.getConclusion() if hasattr(parsed, "getConclusion") else parsed
             reasoner = self._get_reasoner()
-            result = reasoner.query(kb, query)
+            result = reasoner.query(kb, jpype.JObject(conclusion, self._PlFormula))
 
             if bool(result):
                 return True, f"CL query '{query_string}' is ACCEPTED."

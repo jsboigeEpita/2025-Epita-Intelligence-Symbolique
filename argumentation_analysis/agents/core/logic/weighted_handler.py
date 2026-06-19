@@ -43,6 +43,16 @@ class WeightedHandler:
         pkg = "org.tweetyproject.arg.weighted"
         self._WeightedAF = jpype.JClass(f"{pkg}.syntax.WeightedArgumentationFramework")
 
+        # #1178: WeightedArgumentationFramework is generic over the weight type T.
+        # The no-arg ctor instantiates <Boolean> (trivial order), but the
+        # reasoners' getModels(WAF, T, T) requires the bounds to match T. Since
+        # we model numeric attack weights in [0.0, 1.0], the correct algebra is
+        # the FuzzySemiring (Double-typed, standard order). This makes
+        # setWeight(JDouble) and getModels(min, max) type-consistent.
+        self._FuzzySemiring = jpype.JClass(
+            "org.tweetyproject.math.algebra.FuzzySemiring"
+        )
+
         # Dung classes shared across AF variants
         self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
@@ -80,7 +90,9 @@ class WeightedHandler:
             Dict with extensions and weight statistics.
         """
         try:
-            framework = self._WeightedAF()
+            # #1178: build a Fuzzy (Double-typed) framework so numeric weights
+            # and the (min, max) bounds passed to getModels are type-consistent.
+            framework = self._WeightedAF(self._FuzzySemiring())
 
             # Create arguments
             arg_map = {}
@@ -97,11 +109,17 @@ class WeightedHandler:
                     framework.setWeight(attack, jpype.JDouble(weight))
                     weights.append(weight)
 
-            # Compute extensions
+            # Compute extensions. getModels(WAF, T min, T max) requires the
+            # weight bounds; with FuzzySemiring these are Doubles in [0,1].
+            # A non-None weight_threshold raises the lower bound (weak attacks
+            # below it are discounted).
             extensions = []
             if semantics in self._reasoners:
                 reasoner = self._reasoners[semantics]()
-                models = reasoner.getModels(framework)
+                lower = weight_threshold if weight_threshold is not None else 0.0
+                models = reasoner.getModels(
+                    framework, jpype.JDouble(lower), jpype.JDouble(1.0)
+                )
                 for ext in models:
                     ext_args = sorted([str(a) for a in ext])
                     extensions.append(ext_args)
