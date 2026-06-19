@@ -137,3 +137,41 @@ no fabricated output, each affected phase still emits real state.
 balance checked before spend ($149.84 remaining). Two additional runs during this
 session hit a transient `APIConnectionError` (infra, non-code) and were discarded;
 the terminal run `20260619T191539` is the valid PASS artifact.
+
+## R445 follow-up — post-G8 run attempted, blocked by OpenRouter key quota
+
+Coordinator R445 (after G8 #1185 merged → main `6d8e19a6`, scheme-grounded debate)
+requested **one more run on post-G8 main** as the definitive culmination artifact:
+debate exchanges now name a Walton scheme + critical question (rich vs sparse). This
+would supersede the pre-G8 terminal run as the closer.
+
+**Attempted, blocked — NOT a code regression.** Two runs on detached `origin/main`
+`6d8e19a6` (the extended harness restored onto post-G8 code; G8 `argumentation_schemes.py`
+confirmed present) both returned `PARTIAL` at 116.3s / 92.5s (short = LLMs under-used)
+with `APIConnectionError` on the LLM-conducted act generators (`act1_framing`,
+`deep_synthesis`) → governance/debate/counter decisive checks ✗ (no rendered prose).
+Signature identical to the transient infra failures documented above.
+
+**Root cause (verified, not assumed — FB-39 lesson)**: the pipeline routes LLM calls
+through **OpenRouter** (`OPENROUTER_BASE_URL` + `OPENROUTER_API_KEY` toggle active in
+`llm_service.py`), not OpenAI direct. Probing the OpenRouter key endpoint:
+
+```
+usage=$46.03 / limit=$120  →  limit_remaining=0  (is_free_tier=False, disabled=None)
+```
+
+The key has a **hard $120 key-level cap** (distinct from the $149.84 account balance
+returned by `/credits`) and is **exhausted**. Every chat-completion returns
+`HTTP 403 "Key limit exceeded (total limit)"`. This is a budget/account decision
+(coordinator/user scope), not a pipeline defect — the code is correct, the key is dry.
+Raw OpenAI-direct connectivity is healthy (`/models` HTTP 200, 3/3 chat completions
+HTTP 200 ~4–7s), confirming the network and the OpenAI fallback path both work; only
+the OpenRouter key is blocked.
+
+**DoD status — unchanged, SATISFIED on pre-G8.** The R444 dispatch's decisive check
+(governance + debate + counter cited in the rendered Acte II/III) is proven by the
+terminal run `20260619T191539` above (23/23, 0 failed). R445's post-G8 run is an
+**enrichment** (richer debate prose via scheme-grounding), not a new gate — the pre-G8
+artefact already closes #1165 once the coordinator visually verifies it. The post-G8
+run is re-runnable as soon as the OpenRouter key quota is raised; no code change is
+pending. Escalated to the coordinator (budget decision).
