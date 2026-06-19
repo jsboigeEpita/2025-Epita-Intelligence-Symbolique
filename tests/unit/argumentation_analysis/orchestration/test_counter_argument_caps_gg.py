@@ -465,3 +465,73 @@ class TestYYCounterArgumentFloor:
             f"YY #730 floor: 24 expected, got {result['added']} (must be ≥19 to "
             "beat 0-shot=18 on corpus_C)"
         )
+
+
+class TestG6CounterArgumentValidation:
+    """G6 (#1180): surface counter-argument validity from the 5-criteria eval.
+
+    ``_build_counter_argument_validation`` maps the evaluator's already-computed
+    overall_score + logical_strength onto the ``ValidationResult`` shape with
+    documented thresholds (no fabricated formal/Dung signal — anti-pendule #1019).
+    """
+
+    def test_high_score_lands_and_is_valid(self):
+        v = mod._build_counter_argument_validation(0.8, 0.7)
+        assert v["counter_succeeds"] is True
+        assert v["is_valid_attack"] is True
+        assert v["logical_consistency"] is True
+        # original_survives is the asymmetric partner (a strong counter lowers it)
+        assert v["original_survives"] is False
+        assert "heuristic" in v["formal_representation"]
+
+    def test_low_score_fails_and_original_survives(self):
+        v = mod._build_counter_argument_validation(0.2, 0.1)
+        assert v["counter_succeeds"] is False
+        assert v["is_valid_attack"] is False
+        assert v["logical_consistency"] is False
+        assert v["original_survives"] is True
+
+    def test_mid_score_asymmetry(self):
+        """A mid-range counter (0.55) both lands AND leaves the original standing."""
+        v = mod._build_counter_argument_validation(0.55, 0.3)
+        assert v["counter_succeeds"] is True
+        assert v["original_survives"] is True
+        # logical_strength below 0.4 ⇒ not a coherent/valid attack
+        assert v["is_valid_attack"] is False
+
+    def test_validation_populated_in_evaluate_loop(self):
+        """``_evaluate_counter_arguments`` attaches validation when eval succeeds.
+
+        We mock the evaluator so the 5-criteria math runs through the real
+        population path (not a fabricated signal). Fail-loud: if the evaluator
+        returns an object, validation is ALWAYS set.
+        """
+        fake_eval = MagicMock()
+        fake_eval.overall_score = 0.75
+        fake_eval.logical_strength = 0.6
+        fake_eval.relevance = 0.5
+        fake_eval.persuasiveness = 0.5
+        fake_eval.originality = 0.5
+        fake_eval.clarity = 0.5
+        fake_eval.recommendations = []
+        fake_evaluator = MagicMock()
+        fake_evaluator.evaluate.return_value = fake_eval
+        with patch(
+            "argumentation_analysis.agents.core.counter_argument.evaluator.CounterArgumentEvaluator",
+            return_value=fake_evaluator,
+        ):
+            out = mod._evaluate_counter_arguments(
+                [
+                    {
+                        "counter_argument": "contredit la thèse par un exemple.",
+                        "strategy_used": "counter-example",
+                        "target_argument": "la thèse X",
+                        "strength": "strong",
+                    }
+                ],
+                "la thèse X",
+            )
+        assert out and out[0].get("validation") is not None
+        assert out[0]["validation"]["counter_succeeds"] is True
+        assert out[0]["validation"]["is_valid_attack"] is True
+
