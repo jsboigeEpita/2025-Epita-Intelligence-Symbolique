@@ -137,10 +137,17 @@ class GovernanceVerdict:
 
 @dataclass
 class DebateExchange:
-    """One adversarial-debate exchange (SV #1182). Gap β G8: can be sparse."""
+    """One adversarial-debate exchange (SV #1182). G8 (#1184): scheme-grounded.
+
+    ``scheme``/``critical_question`` carried when the deterministic classifier
+    matched (None otherwise — honest, not fabricated). SV reader contract
+    (point/rebuttal) preserved.
+    """
 
     point: str
     rebuttal: str
+    scheme: Optional[str] = None
+    critical_question: Optional[str] = None
 
 
 @dataclass
@@ -484,7 +491,23 @@ def _collect_debate(state: Any) -> List[DebateExchange]:
             rebuttal = _truncate(ex.get("rebuttal", ""), _DEBATE_CAP)
             if not point and not rebuttal:
                 continue
-            out.append(DebateExchange(point=point, rebuttal=rebuttal))
+            # G8 (#1184): carry scheme grounding (None when no match — honest).
+            scheme_raw = ex.get("scheme")
+            scheme = str(scheme_raw).strip() if isinstance(scheme_raw, str) and scheme_raw.strip() else None
+            cq_raw = ex.get("critical_question")
+            critical_question = (
+                str(cq_raw).strip()
+                if isinstance(cq_raw, str) and cq_raw.strip()
+                else None
+            )
+            out.append(
+                DebateExchange(
+                    point=point,
+                    rebuttal=rebuttal,
+                    scheme=scheme,
+                    critical_question=critical_question,
+                )
+            )
             if len(out) >= _DEBATE_MAX_EXCHANGES:
                 return out
     return out
@@ -841,9 +864,15 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
+            scheme_anchor = ""
+            if ex.scheme:
+                scheme_anchor = f" [scheme : {ex.scheme}"
+                if ex.critical_question:
+                    scheme_anchor += f" — question critique : {ex.critical_question}"
+                scheme_anchor += "]"
             deliberation_lines.append(
                 f"  - DÉBAT (échange {i}) : position « {ex.point} » / "
-                f"réplique « {ex.rebuttal} »."
+                f"réplique « {ex.rebuttal} »{scheme_anchor}."
             )
     deliberation_block = (
         "\n".join(deliberation_lines)

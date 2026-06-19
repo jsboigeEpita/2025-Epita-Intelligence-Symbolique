@@ -1454,6 +1454,27 @@ async def _invoke_debate_analysis(
             )
 
             det_params = _get_determinism_params()
+            # G8 (#1184): hand the LLM the restored Walton scheme table so
+            # exchanges can be scheme-grounded. The scheme classification is
+            # re-checked deterministically at write-time (classify_scheme) — this
+            # prompt block nudges the LLM toward scheme-shaped exchanges but the
+            # authoritative scheme label comes from the deterministic matcher
+            # (anti-pendule: no fabricated scheme if the LLM hallucinates one).
+            try:
+                from argumentation_analysis.agents.core.debate.argumentation_schemes import (
+                    schemes_as_prompt_context,
+                )
+                scheme_kb = schemes_as_prompt_context()
+            except ImportError:
+                scheme_kb = ""
+            scheme_directive = (
+                "\n\nGROUNDED SCHEMES (Walton-Krabbe, restored engine G8):\n"
+                f"{scheme_kb}\n"
+                "Each Agent A point should resemble one of these schemes; Agent B's "
+                "rebuttal should stress its critical question. Name the scheme the "
+                "point relies on inside agent_a_point when clearly applicable — do "
+                "NOT force a scheme label where none fits (honest absence > fake label).\n"
+            ) if scheme_kb else ""
             response = await _guarded_chat_completion(
                 client,
                 model=model_id,
@@ -1474,6 +1495,7 @@ async def _invoke_debate_analysis(
                             '"key_exchanges": [{"agent_a_point": "text", "agent_b_rebuttal": "text", "judge_note": "text"}], '
                             '"new_insights": ["insight 1 not obvious from extraction alone", ...], '
                             '"reasoning": "assessment of argumentative quality"}'
+                            + scheme_directive
                         ),
                     },
                     {"role": "user", "content": debate_material},

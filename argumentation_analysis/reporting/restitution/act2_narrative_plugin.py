@@ -141,10 +141,17 @@ class DebateExchange:
     schemes-engine (student ``ArgumentationEngine`` 10 schemes) was dropped in the
     #35 unification → exchanges can be sparse. We surface what exists honestly
     and never fabricate a rich debate (#1019). G8 is a separate follow-up.
+
+    G8 (#1184) CLOSED: the 10-scheme engine is restored; each exchange now
+    carries the Walton ``scheme`` it relies on + its ``critical_question`` when
+    the deterministic classifier matched (None when no scheme fit — honest, not
+    fabricated). The SV reader contract (point/rebuttal) is preserved.
     """
 
     point: str
     rebuttal: str
+    scheme: Optional[str] = None
+    critical_question: Optional[str] = None
 
 
 @dataclass
@@ -524,7 +531,24 @@ def _collect_debate(state: Any) -> List[DebateExchange]:
             # would read as fabricated debate matter (#1019).
             if not point and not rebuttal:
                 continue
-            out.append(DebateExchange(point=point, rebuttal=rebuttal))
+            # G8 (#1184): carry the scheme grounding (None when no scheme matched
+            # — honest absence, not fabricated).
+            scheme_raw = ex.get("scheme")
+            scheme = str(scheme_raw).strip() if isinstance(scheme_raw, str) and scheme_raw.strip() else None
+            cq_raw = ex.get("critical_question")
+            critical_question = (
+                str(cq_raw).strip()
+                if isinstance(cq_raw, str) and cq_raw.strip()
+                else None
+            )
+            out.append(
+                DebateExchange(
+                    point=point,
+                    rebuttal=rebuttal,
+                    scheme=scheme,
+                    critical_question=critical_question,
+                )
+            )
             if len(out) >= _DEBATE_MAX_EXCHANGES:
                 return out
     return out
@@ -752,9 +776,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
+            scheme_anchor = ""
+            if ex.scheme:
+                scheme_anchor = f" [scheme : {ex.scheme}"
+                if ex.critical_question:
+                    scheme_anchor += f" — question critique : {ex.critical_question}"
+                scheme_anchor += "]"
             deliberation_lines.append(
                 f"  - DÉBAT (échange {i}) : position « {ex.point} » / "
-                f"réplique « {ex.rebuttal} »."
+                f"réplique « {ex.rebuttal} »{scheme_anchor}."
             )
     deliberation_block = (
         "\n".join(deliberation_lines)

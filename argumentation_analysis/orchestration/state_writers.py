@@ -292,14 +292,33 @@ def _write_debate_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
     if isinstance(llm_debate, dict):
         key_exchanges = llm_debate.get("key_exchanges", [])
         if isinstance(key_exchanges, list):
+            # G8 (#1184): scheme-ground each exchange. The LLM produces point/
+            # rebuttal; we attach a deterministic Walton-scheme classification
+            # (fail-loud: no match → scheme stays None, never fabricated #1019).
+            # The debatable claim is the POINT (what Agent A defends) — that is
+            # what the scheme classifies.
+            try:
+                from argumentation_analysis.agents.core.debate.argumentation_schemes import (
+                    classify_scheme,
+                )
+            except ImportError:
+                classify_scheme = None  # type: ignore[assignment]
             for ex in key_exchanges:
                 if isinstance(ex, dict):
-                    exchanges.append(
-                        {
-                            "point": str(ex.get("point", "")),
-                            "rebuttal": str(ex.get("rebuttal", "")),
-                        }
-                    )
+                    point = str(ex.get("point", ""))
+                    rebuttal = str(ex.get("rebuttal", ""))
+                    entry: dict[str, Any] = {"point": point, "rebuttal": rebuttal}
+                    if classify_scheme is not None:
+                        scheme = classify_scheme(point or rebuttal)
+                        if scheme is not None:
+                            entry["scheme"] = scheme.label
+                            entry["scheme_key"] = scheme.key
+                            entry["critical_question"] = (
+                                scheme.critical_questions[0]
+                                if scheme.critical_questions
+                                else ""
+                            )
+                    exchanges.append(entry)
     state.add_debate_transcript(
         topic=topic,
         exchanges=exchanges,
