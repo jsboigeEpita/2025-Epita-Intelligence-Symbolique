@@ -204,6 +204,25 @@ _SYMBOLIC_FALLACY_RULES = {
             ],
             "FALLACY_TYPE": "Attaque personnelle (Ad Hominem)",
         },
+        # G4 (#1186, restored from student 2.3.2 symbolic_rules.py:40-52):
+        # Character/motive attack — "[Nom] est [adjectif], donc son argument est faux."
+        # Faithful to student intent; OP "?" on the comma so the rule actually
+        # fires on real text ("Pierre est malhonnête, donc son argument est faux.")
+        # — the student pattern had no punctuation slot and never matched.
+        {
+            "PATTERN": [
+                {"POS": "PROPN"},
+                {"LEMMA": "être"},
+                {"POS": "ADJ"},
+                {"IS_PUNCT": True, "OP": "?"},
+                {"LOWER": {"IN": ["donc", "alors"]}},
+                {"POS": "DET"},
+                {"POS": "NOUN"},
+                {"LEMMA": "être"},
+                {"LOWER": "faux"},
+            ],
+            "FALLACY_TYPE": "Attaque personnelle (Ad Hominem)",
+        },
     ],
     "PENTE_GLISSANTE": [
         {
@@ -248,6 +267,22 @@ _SYMBOLIC_FALLACY_RULES = {
             ],
             "FALLACY_TYPE": "Généralisation hâtive (Hasty Generalization)",
         },
+        # G4 (#1186, restored from student 2.3.2 symbolic_rules.py:104-115):
+        # "Sur la base de [petit nombre] exemples..."
+        # Faithful to student intent; "exemples" is itself the NOUN, so the
+        # student's extra standalone POS:NOUN slot made the rule never match —
+        # dropped here so the rule actually fires on real text.
+        {
+            "PATTERN": [
+                {"LOWER": "sur"},
+                {"LOWER": "la"},
+                {"LOWER": "base"},
+                {"LOWER": "de"},
+                {"POS": "NUM"},
+                {"LOWER": "exemples"},
+            ],
+            "FALLACY_TYPE": "Généralisation hâtive (Hasty Generalization)",
+        },
     ],
     "APPEL_A_LA_TRADITION": [
         {
@@ -263,6 +298,17 @@ _SYMBOLIC_FALLACY_RULES = {
         },
         {
             "PATTERN": [{"LOWER": "depuis"}, {"LOWER": "toujours"}],
+            "FALLACY_TYPE": "Appel à la tradition (Appeal to Tradition)",
+        },
+        # G4 (#1186, restored from student 2.3.2 symbolic_rules.py:132-140):
+        # "C'est la tradition." — bare appeal to tradition.
+        {
+            "PATTERN": [
+                {"LOWER": "c'"},
+                {"LEMMA": "être"},
+                {"LOWER": "la"},
+                {"LOWER": "tradition"},
+            ],
             "FALLACY_TYPE": "Appel à la tradition (Appeal to Tradition)",
         },
     ],
@@ -289,6 +335,74 @@ _SYMBOLIC_FALLACY_RULES = {
         },
     ],
 }
+
+# G5 (#1186, restored from student 2.3.2 fallacy_pipeline.py:279-288):
+# Per-family French explanation templates — one specific justification per
+# fallacy family, instead of a single generic line. The student pipeline
+# emitted these verbatim per detected fallacy; the trunk had collapsed them
+# away.
+#
+# The student used its own bilingual fallacy names as keys. The trunk's
+# taxonomy uses different labels (top-level families: Insuffisance, Influence,
+# Erreur mathématique, Erreur de raisonnement, Abus de langage, Tricherie,
+# Obstruction). To stay faithful AND actually fire on trunk output, each
+# template carries the set of trunk family/leaf substrings it covers; the
+# resolver matches by direct key OR by family-substring.
+_FALLACY_JUSTIFICATIONS_FR: List[Dict[str, Any]] = [
+    {
+        "template": (
+            "L'argument attaque la personne ou le caractère de l'adversaire "
+            "plutôt que de réfuter son argument."
+        ),
+        # Student: "Attaque personnelle (Ad Hominem)".
+        "matches": ["Attaque personnelle", "Ad hominem", "Obstruction"],
+    },
+    {
+        "template": (
+            "Une conclusion générale est tirée à partir d'un échantillon trop "
+            "limité ou non représentatif."
+        ),
+        # Student: "Généralisation hâtive (Hasty Generalization)".
+        "matches": ["Généralisation", "Erreur mathématique"],
+    },
+    {
+        "template": (
+            "L'argument s'appuie sur l'opinion d'une figure d'autorité ou sur "
+            "l'émotion sans fournir de preuves suffisantes pour étayer "
+            "l'affirmation."
+        ),
+        # Student: "Argument d'autorité (Appeal to Authority)".
+        "matches": ["autorité", "Influence", "Appel à l'émotion"],
+    },
+    {
+        "template": (
+            "L'argument tente de discréditer une source ou une affirmation sans "
+            "aborder le fond de la question, ou s'appuie sur des idées reçues "
+            "sans les remettre en question."
+        ),
+        # Student: "fallacy of credibility".
+        "matches": ["crédibilité", "Préjugé", "Insuffisance"],
+    },
+]
+
+
+def justify_fallacy(fallacy_type: str) -> Optional[str]:
+    """Return the per-family French justification for a fallacy type.
+
+    Resolution order: (1) direct match against any ``matches`` substring
+    (case-insensitive), (2) no match → ``None``. Fail-loud (#1019): an unknown
+    family returns ``None`` (the caller leaves ``description`` unset / surfaces
+    the LLM explanation honestly), never a fabricated/generic justification.
+    """
+    if not fallacy_type:
+        return None
+    needle = fallacy_type.lower()
+    for entry in _FALLACY_JUSTIFICATIONS_FR:
+        for token in entry["matches"]:
+            if token.lower() in needle:
+                return entry["template"]  # type: ignore[no-any-return]
+    return None
+
 
 # Claim/premise mining patterns (from student project)
 _CLAIM_PATTERNS = [
@@ -354,7 +468,14 @@ class FallacyAnalysisResult:
     explanation: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dict matching AbstractFallacyDetector.detect() output."""
+        """Convert to dict matching AbstractFallacyDetector.detect() output.
+
+        G5 (#1186): every detected fallacy carries its per-family FR
+        explanation in ``description``. When the producing tier left it empty
+        (e.g. NLI/LLM tiers that return only a label), we resolve the template
+        here at the single output boundary — fail-loud (None) when the family
+        has no template, never a fabricated justification (#1019).
+        """
         return {
             "text": self.text,
             "detected_fallacies": {
@@ -362,7 +483,7 @@ class FallacyAnalysisResult:
                     "source": f.source,
                     "confidence": f.confidence,
                     "matched_rule": f.matched_rule,
-                    "description": f.description,
+                    "description": f.description or justify_fallacy(f.fallacy_type),
                     "taxonomy_pk": f.taxonomy_pk,
                 }
                 for f in self.fallacies
@@ -470,6 +591,9 @@ class SymbolicFallacyDetector:
                         confidence=1.0,
                         source="symbolic",
                         matched_rule=span.text,
+                        # G5 (#1186): per-family FR explanation. None when the
+                        # family has no template (fail-loud, not fabricated).
+                        description=justify_fallacy(fallacy_type),
                     )
                 )
 
