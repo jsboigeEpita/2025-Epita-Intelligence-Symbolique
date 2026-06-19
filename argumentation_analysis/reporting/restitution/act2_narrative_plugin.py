@@ -47,6 +47,10 @@ LlmCallable = Callable[[str], Awaitable[str]]
 _DESC_CAP = 220
 _JUSTIFICATION_CAP = 200
 _COUNTER_CAP = 200
+# SV (#1182): truncation + count caps for governance/debate evidence (privacy
+# + prompt-budget discipline; the LLM paraphrases, never echoes).
+_DEBATE_CAP = 220
+_DEBATE_MAX_EXCHANGES = 6
 
 # Fallacy families form the mouvement theme (taxonomy constants, not source
 # content — safe to surface). The reserved theme for arguments no fallacy
@@ -115,12 +119,46 @@ class FormalFinding:
 
 
 @dataclass
+class GovernanceVerdict:
+    """A governance voting decision (7-method social-choice layer), verified-in-state.
+
+    SV (#1182): the spectacular pipeline runs a governance phase (7 voting methods,
+    Copeland winner, consensus) but it was invisible in the report — the same
+    debranching G6 fixed for counter-argument validity. ``scores`` maps opaque
+    option IDs → Copeland/influence score (privacy: opaque keys, never party names).
+    """
+
+    method: str
+    winner: str
+    scores: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class DebateExchange:
+    """One Walton-Krabbe adversarial-debate exchange (point vs rebuttal).
+
+    SV (#1182): the debate phase produces key exchanges. NB (gap β G8): the
+    schemes-engine (student ``ArgumentationEngine`` 10 schemes) was dropped in the
+    #35 unification → exchanges can be sparse. We surface what exists honestly
+    and never fabricate a rich debate (#1019). G8 is a separate follow-up.
+    """
+
+    point: str
+    rebuttal: str
+
+
+@dataclass
 class Act2Evidence:
     """Deterministic evidence bundle for the Acte II narrative."""
 
     movements: List[MovementEvidence] = field(default_factory=list)
     formal_findings: List[FormalFinding] = field(default_factory=list)
     quality_axis_available: bool = True
+    # SV (#1182): governance voting verdict + adversarial-debate exchanges,
+    # surfaced so the narrative can cite them. Empty/None when the phases did
+    # not produce non-trivial output (honest absence, not fabricated).
+    governance_verdict: Optional[GovernanceVerdict] = None
+    debate_exchanges: List[DebateExchange] = field(default_factory=list)
     args_total: int = 0
     fallacies_total: int = 0
     # Note (a) (#1153): fallacies whose target_argument_id could not be
@@ -403,6 +441,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
 
     formal_findings = _collect_formal_findings(state)
     virtuous_mode = detect_virtuous_mode(state)
+    # SV (#1182): surface governance verdict + debate exchanges (debranched
+    # capabilities — same fix shape as G6 for counter-arg validity).
+    governance_verdict = _collect_governance(state)
+    debate_exchanges = _collect_debate(state)
 
     return Act2Evidence(
         movements=ordered,
@@ -412,7 +454,80 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         fallacies_total=fallacies_total,
         unattributed_fallacies=unattributed_fallacies,
         virtuous_mode=virtuous_mode,
+        governance_verdict=governance_verdict,
+        debate_exchanges=debate_exchanges,
     )
+
+
+def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
+    """Collect the governance voting verdict (SV #1182, spec §1.2.4 social-choice).
+
+    Reads ``state.governance_decisions`` (written by
+    ``state_writers._write_governance_to_state``). Each entry carries the
+    recommended voting ``method``, the ``winner`` (Copeland / recommended
+    resolution), and per-option ``scores``. We surface the LAST decision (the
+    terminal aggregation) — fail-loud: return ``None`` when the list is empty
+    or carries no non-trivial winner/scores (no fabricated verdict, #1019).
+
+    Privacy: option keys are kept as-is (opaque IDs from the pipeline). The
+    writer already scrubs source names; we never echo raw option labels.
+    """
+    decisions = getattr(state, "governance_decisions", []) or []
+    if not isinstance(decisions, list):
+        return None
+    chosen: Optional[GovernanceVerdict] = None
+    for d in decisions:
+        if not isinstance(d, dict):
+            continue
+        method = str(d.get("method", "")).strip()
+        winner = str(d.get("winner", "")).strip()
+        raw_scores = d.get("scores", {}) or {}
+        scores: Dict[str, float] = {}
+        if isinstance(raw_scores, dict):
+            for k, v in raw_scores.items():
+                try:
+                    scores[str(k)] = float(v)
+                except (TypeError, ValueError):
+                    continue
+        # Trivial / placeholder winners ("N/A", empty) carry no verdict.
+        if not method or not winner or winner == "N/A":
+            continue
+        chosen = GovernanceVerdict(method=method, winner=winner, scores=scores)
+    return chosen
+
+
+def _collect_debate(state: Any) -> List[DebateExchange]:
+    """Collect adversarial-debate key exchanges (SV #1182, spec §1.2.4).
+
+    Reads ``state.debate_transcripts`` (written by
+    ``state_writers._write_debate_to_state``). Each transcript carries a list of
+    ``exchanges`` (point + rebuttal). Gap β G8: the schemes-engine was dropped in
+    #35 unification → exchanges can be sparse; we surface ONLY the real, non-empty
+    ones and never invent exchanges (#1019). Capped to keep the prompt budget sane.
+    """
+    transcripts = getattr(state, "debate_transcripts", []) or []
+    if not isinstance(transcripts, list):
+        return []
+    out: List[DebateExchange] = []
+    for t in transcripts:
+        if not isinstance(t, dict):
+            continue
+        exchanges = t.get("exchanges", []) or []
+        if not isinstance(exchanges, list):
+            continue
+        for ex in exchanges:
+            if not isinstance(ex, dict):
+                continue
+            point = _truncate(ex.get("point", ""), _DEBATE_CAP)
+            rebuttal = _truncate(ex.get("rebuttal", ""), _DEBATE_CAP)
+            # Fail-loud: skip empty exchanges (no point AND no rebuttal) — they
+            # would read as fabricated debate matter (#1019).
+            if not point and not rebuttal:
+                continue
+            out.append(DebateExchange(point=point, rebuttal=rebuttal))
+            if len(out) >= _DEBATE_MAX_EXCHANGES:
+                return out
+    return out
 
 
 def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
@@ -622,6 +737,32 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             for f in evidence.formal_findings
         )
 
+    # --- SV (#1182): délibération collective (governance + debate) ---
+    # Both capabilities were completing in the 40 phases but invisible in the
+    # report. We surface what exists — honestly sparse when the schemes-engine
+    # gap (β G8) left debate thin. Each citation must bind to a narrative beat
+    # (spec §4 anti-énumération); never a bare score/label line.
+    deliberation_lines: List[str] = []
+    gv = evidence.governance_verdict
+    if gv is not None:
+        deliberation_lines.append(
+            f"  - GOUVERNANCE : sous la méthode « {gv.method} », l'option "
+            f"{gv.winner} sort gagnante du vote social-choice. "
+            "(noms d'options maintenus opaques — discipline FB-34.)"
+        )
+    if evidence.debate_exchanges:
+        for i, ex in enumerate(evidence.debate_exchanges, start=1):
+            deliberation_lines.append(
+                f"  - DÉBAT (échange {i}) : position « {ex.point} » / "
+                f"réplique « {ex.rebuttal} »."
+            )
+    deliberation_block = (
+        "\n".join(deliberation_lines)
+        if deliberation_lines
+        else "  (aucune délibération governance/débat non-triviale dans le state — "
+        "ne la fabrique pas, note l'absence honnêtement si tu l'évoques)"
+    )
+
     quality_note = (
         "L'axe qualité est disponible : tisse les vertus comme CARACTÈRE."
         if evidence.quality_axis_available
@@ -640,6 +781,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{chr(10).join(blocks)}\n\n"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"
+        f"DÉLIBÉRATION COLLECTIVE (governance + débat, à tisser dans le récit — "
+        f"le verdict de gouvernance ou un échange de débat peut appuyer un "
+        f"battement, jamais une sous-section isolée) :\n"
+        f"{deliberation_block}\n\n"
         f"{quality_note}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Pour chaque mouvement, écris un paragraphe qui tisse en UN battement : "

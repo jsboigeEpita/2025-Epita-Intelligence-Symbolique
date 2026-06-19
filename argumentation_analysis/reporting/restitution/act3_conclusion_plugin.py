@@ -64,6 +64,9 @@ LlmCallable = Callable[[str], Awaitable[str]]
 _JUSTIFICATION_CAP = 200
 _COUNTER_CAP = 200
 _SYNTHESIS_CAP = 400
+# SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
+_DEBATE_CAP = 200
+_DEBATE_MAX_EXCHANGES = 4
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
 _BAND_EXCEEDED = "EXCEEDED"
@@ -120,6 +123,27 @@ class CounterStrategy:
 
 
 @dataclass
+class GovernanceVerdict:
+    """A governance voting decision (SV #1182), verified-in-state.
+
+    ``scores`` maps opaque option IDs → Copeland/influence score. Privacy: the
+    keys are opaque (no party/option names).
+    """
+
+    method: str
+    winner: str
+    scores: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class DebateExchange:
+    """One adversarial-debate exchange (SV #1182). Gap β G8: can be sparse."""
+
+    point: str
+    rebuttal: str
+
+
+@dataclass
 class QualityStrength:
     """A virtue where the discourse scores well (a strength to acknowledge)."""
 
@@ -159,6 +183,11 @@ class Act3Evidence:
     verdict: Optional[VerdictBand] = None
     narrative_synthesis_available: bool = False
     gates: Dict[str, bool] = field(default_factory=dict)
+    # SV (#1182): governance verdict + debate exchanges, surfaced so the
+    # conclusion can cite collective deliberation. None/empty when the phases
+    # produced no non-trivial output (honest absence, not fabricated).
+    governance_verdict: Optional[GovernanceVerdict] = None
+    debate_exchanges: List[DebateExchange] = field(default_factory=list)
     # DERIVED virtuous flag (spec §5.1) — drives virtue-first titling when the
     # state characterises the text as virtuous (zero fallacies + non-trivial
     # quality/formal axis). None until build_act3_evidence populates it.
@@ -402,6 +431,65 @@ def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]
     ]
 
 
+def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
+    """Collect the governance voting verdict (SV #1182).
+
+    Reads ``state.governance_decisions``; surfaces the LAST non-trivial decision.
+    Fail-loud: ``None`` when empty or winner is a placeholder ("N/A"/empty) —
+    no fabricated verdict (#1019). Privacy: option keys stay opaque.
+    """
+    decisions = getattr(state, "governance_decisions", []) or []
+    if not isinstance(decisions, list):
+        return None
+    chosen: Optional[GovernanceVerdict] = None
+    for d in decisions:
+        if not isinstance(d, dict):
+            continue
+        method = str(d.get("method", "")).strip()
+        winner = str(d.get("winner", "")).strip()
+        if not method or not winner or winner == "N/A":
+            continue
+        raw_scores = d.get("scores", {}) or {}
+        scores: Dict[str, float] = {}
+        if isinstance(raw_scores, dict):
+            for k, v in raw_scores.items():
+                try:
+                    scores[str(k)] = float(v)
+                except (TypeError, ValueError):
+                    continue
+        chosen = GovernanceVerdict(method=method, winner=winner, scores=scores)
+    return chosen
+
+
+def _collect_debate(state: Any) -> List[DebateExchange]:
+    """Collect adversarial-debate exchanges (SV #1182). Gap β G8: can be sparse.
+
+    Reads ``state.debate_transcripts``; surfaces ONLY non-empty exchanges
+    (fail-loud: empty point+rebuttal would read as fabricated matter, #1019).
+    """
+    transcripts = getattr(state, "debate_transcripts", []) or []
+    if not isinstance(transcripts, list):
+        return []
+    out: List[DebateExchange] = []
+    for t in transcripts:
+        if not isinstance(t, dict):
+            continue
+        exchanges = t.get("exchanges", []) or []
+        if not isinstance(exchanges, list):
+            continue
+        for ex in exchanges:
+            if not isinstance(ex, dict):
+                continue
+            point = _truncate(ex.get("point", ""), _DEBATE_CAP)
+            rebuttal = _truncate(ex.get("rebuttal", ""), _DEBATE_CAP)
+            if not point and not rebuttal:
+                continue
+            out.append(DebateExchange(point=point, rebuttal=rebuttal))
+            if len(out) >= _DEBATE_MAX_EXCHANGES:
+                return out
+    return out
+
+
 def _compute_verdict_band(
     axes_nontrivial: List[str],
 ) -> VerdictBand:
@@ -534,6 +622,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         narrative_synthesis and isinstance(narrative_synthesis, str) and narrative_synthesis.strip()
     )
 
+    # SV (#1182): surface governance verdict + debate exchanges (debranched
+    # capabilities — same fix shape as G6 for counter-arg validity).
+    governance_verdict = _collect_governance(state)
+    debate_exchanges = _collect_debate(state)
+
     # G1–G4 (#1008 §3.2). G3 passes once a band is computable (always, given the
     # deterministic scorer); G4 is structural (we only surface real-in-state
     # fields). The orchestrator emits the honest fallback when any gate fails.
@@ -559,6 +652,8 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         narrative_synthesis_available=narrative_synthesis_available,
         gates=gates,
         virtuous_mode=virtuous_mode,
+        governance_verdict=governance_verdict,
+        debate_exchanges=debate_exchanges,
     )
 
 
@@ -736,6 +831,26 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "localisées."
     )
 
+    # --- SV (#1182): délibération collective (governance + debate) ---
+    deliberation_lines: List[str] = []
+    gv = evidence.governance_verdict
+    if gv is not None:
+        deliberation_lines.append(
+            f"  - GOUVERNANCE : méthode « {gv.method} » — l'option {gv.winner} "
+            "sort gagnante du vote social-choice. (options opaques, FB-34.)"
+        )
+    if evidence.debate_exchanges:
+        for i, ex in enumerate(evidence.debate_exchanges, start=1):
+            deliberation_lines.append(
+                f"  - DÉBAT (échange {i}) : position « {ex.point} » / "
+                f"réplique « {ex.rebuttal} »."
+            )
+    deliberation_block = (
+        "\n".join(deliberation_lines)
+        if deliberation_lines
+        else "  (aucune délibération governance/débat non-triviale — ne la fabrique pas)"
+    )
+
     return (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
         "— la CONCLUSION ACTIONNABLE : ce que le lecteur FAIT de l'analyse.\n"
@@ -754,6 +869,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[APPRÉCIATIONS — faiblesses localisées]\n{weaknesses_lines}\n\n"
         f"[QUE FAIRE — comment contrer]\n{counters_lines}\n\n"
         f"[QUE FAIRE — points faibles à viser]\n{target_lines}\n\n"
+        f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         f"{consigne_virtue}"

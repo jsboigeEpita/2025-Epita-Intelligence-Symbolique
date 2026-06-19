@@ -52,6 +52,8 @@ def _state(**fields: object) -> SimpleNamespace:
         propositional_analysis_results=[],
         modal_analysis_results=[],
         narrative_synthesis="",
+        governance_decisions=[],
+        debate_transcripts=[],
     )
     base.update(fields)
     return SimpleNamespace(**base)
@@ -236,6 +238,49 @@ class TestBuildEvidence:
         cs = ev.counter_strategies[0]
         assert cs.is_valid_attack is None
         assert cs.counter_succeeds is None
+
+    def test_governance_and_debate_surfaced_sv(self):
+        """SV (#1182): governance verdict + debate exchange reach Acte III."""
+        state = _state(
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+            debate_transcripts=[
+                {
+                    "topic": "t",
+                    "exchanges": [{"point": "la thèse P", "rebuttal": "or Q"}],
+                    "winner": "pro",
+                }
+            ],
+        )
+        ev = build_act3_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.winner == "opt_X"
+        assert ev.governance_verdict.method == "copeland"
+        assert len(ev.debate_exchanges) == 1
+        assert ev.debate_exchanges[0].point == "la thèse P"
+
+    def test_governance_trivial_winner_is_none_sv(self):
+        """SV fail-loud: a placeholder 'N/A' winner carries no verdict (#1019)."""
+        state = _state(
+            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
+        )
+        ev = build_act3_evidence(state)
+        assert ev.governance_verdict is None
+        assert ev.debate_exchanges == []
+
+    def test_deliberation_block_in_prompt_sv(self):
+        """SV: the deliberation block reaches the conducted prompt."""
+        state = _state(
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+        )
+        ev = build_act3_evidence(state)
+        prompt = build_act3_prompt(ev)
+        assert "DÉLIBÉRATION COLLECTIVE" in prompt
+        assert "opt_X" in prompt
 
     def test_quality_strengths_collected(self):
         ev = build_act3_evidence(_rich_state())
