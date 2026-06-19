@@ -44,6 +44,8 @@ def _state(**fields: object) -> SimpleNamespace:
         fol_analysis_results=[],
         propositional_analysis_results=[],
         modal_analysis_results=[],
+        governance_decisions=[],
+        debate_transcripts=[],
     )
     base.update(fields)
     return SimpleNamespace(**base)
@@ -314,6 +316,54 @@ class TestReaderWriterContracts:
         ev = build_act2_evidence(state)
         arg1 = next(a for m in ev.movements for a in m.arguments if a.arg_id == "arg_1")
         assert arg1.dung_rejected == "stable"
+
+    def test_governance_and_debate_surfaced_sv(self):
+        """SV (#1182): governance verdict + debate exchange reach Acte II."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+            debate_transcripts=[
+                {
+                    "topic": "t",
+                    "exchanges": [{"point": "position A", "rebuttal": "réplique B"}],
+                    "winner": "pro",
+                }
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.winner == "opt_X"
+        assert len(ev.debate_exchanges) == 1
+        assert ev.debate_exchanges[0].rebuttal == "réplique B"
+
+    def test_governance_trivial_and_empty_debate_fail_loud_sv(self):
+        """SV fail-loud: N/A winner → None; empty exchange → [] (#1019)."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is None
+        assert ev.debate_exchanges == []
+
+    def test_deliberation_block_in_prompt_sv(self):
+        """SV: the deliberation block reaches the Acte II conducted prompt."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+            debate_transcripts=[
+                {"topic": "t", "exchanges": [{"point": "p", "rebuttal": "r"}]}
+            ],
+        )
+        ev = build_act2_evidence(state)
+        prompt = build_act2_prompt(ev)
+        assert "DÉLIBÉRATION COLLECTIVE" in prompt
+        assert "opt_X" in prompt
 
     def test_note_a_unresolved_fallacy_traced_not_dropped(self):
         # A fallacy with no target_argument_id must be counted apart, not lost.
