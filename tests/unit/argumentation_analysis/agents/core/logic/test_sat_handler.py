@@ -511,3 +511,85 @@ class TestPLHandlerSATDispatch:
     def test_pl_query_sat_not_entails(self, mock_pl_handler):
         result = mock_pl_handler.pl_query_sat("A | B", "A")
         assert result is False
+
+
+# ──── FP-3 #1192 DoD tests ────
+
+
+@pytest.mark.skipif(not PYSAT_AVAILABLE, reason="PySAT not installed")
+class TestTokenizerDoubleOp:
+    """#1192: SATHandler must accept BOTH single-form (``&``) and double-form
+    (``&&``, Tweety-normalized) operators. Previously ``_tokenize`` only matched
+    single-form, so ``&&`` became ``['&','&']`` and ``a && !a`` was wrongly
+    reported consistent (the original PL-SAT bug)."""
+
+    def test_tokenize_collapses_double_and(self):
+        handler = SATHandler()
+        tokens = handler._tokenize("A && B")
+        assert tokens == ["A", "&", "B"]
+
+    def test_tokenize_collapses_double_or(self):
+        handler = SATHandler()
+        tokens = handler._tokenize("A || B")
+        assert tokens == ["A", "|", "B"]
+
+    def test_tokenize_mixed_run(self):
+        # runs of 1+ operators all collapse to single-form
+        handler = SATHandler()
+        assert handler._tokenize("A &&& B") == ["A", "&", "B"]
+
+    def test_double_op_contradiction_detected(self):
+        # the bug case: 'a && !a' must be UNSAT, not SAT
+        handler = SATHandler()
+        is_consistent, _ = handler.check_consistency(["a && !a"])
+        assert is_consistent is False
+
+    def test_double_op_consistent(self):
+        handler = SATHandler()
+        is_consistent, _ = handler.check_consistency(["a && b"])
+        assert is_consistent is True
+
+    def test_double_op_distinct_cnfs(self):
+        # 'a && b' and 'a && !a' must NOT produce identical CNF (the bug
+        # signature: both collapsed to the same clause set).
+        handler = SATHandler()
+        cnf_a = handler.formulas_to_cnf(["a && b"])
+        handler.reset_variables()
+        cnf_b = handler.formulas_to_cnf(["a && !a"])
+        assert cnf_a != cnf_b
+
+
+@pytest.mark.skipif(not PYSAT_AVAILABLE, reason="PySAT not installed")
+class TestLargeKBPerformance:
+    """#1192 DoD: PL consistency on a 60+-atom KB completes in <2s (no OOM)
+    via SAT. The Tweety reasoner's model enumeration (2^n) OOMs on such KBs;
+    Tseitin→CNF is linear."""
+
+    def test_60_atom_kb_completes_under_2s(self):
+        import time
+
+        handler = SATHandler()
+        # 80 atoms: 40 facts + 40 implications (a_i => b_i)
+        formulas = [f"a{i}" for i in range(1, 41)] + [
+            f"a{i} => b{i}" for i in range(1, 41)
+        ]
+        assert len(formulas) == 80
+        t0 = time.time()
+        is_consistent, _ = handler.check_consistency(formulas)
+        elapsed = time.time() - t0
+        assert elapsed < 2.0, f"60+-atom KB took {elapsed:.3f}s (>2s budget)"
+        assert is_consistent is True
+
+    def test_60_atom_contradiction_completes_under_2s(self):
+        import time
+
+        handler = SATHandler()
+        # 80 atoms: a_i and !a_i — inconsistent
+        formulas = [f"a{i}" for i in range(1, 41)] + [
+            f"!a{i}" for i in range(1, 41)
+        ]
+        t0 = time.time()
+        is_consistent, _ = handler.check_consistency(formulas)
+        elapsed = time.time() - t0
+        assert elapsed < 2.0
+        assert is_consistent is False

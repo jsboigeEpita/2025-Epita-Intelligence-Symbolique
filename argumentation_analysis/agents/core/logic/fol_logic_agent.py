@@ -1039,8 +1039,13 @@ RÉPONDS EN FORMAT JSON :
         """Valide syntaxe formule FOL."""
         return self._validate_fol_formula(formula)
 
-    async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
-        """Vérifie cohérence ensemble de croyances."""
+    async def is_consistent(self, belief_set: BeliefSet) -> Tuple[Optional[bool], str]:
+        """Vérifie cohérence ensemble de croyances.
+
+        #1192: propagate degraded (``None``) verdicts from the FOL handler
+        instead of masking them as ``True``. A missing reasoner is not a
+        consistency claim (anti-theater #1019).
+        """
         try:
             bridge = getattr(self, "_tweety_bridge", None)
             if bridge:
@@ -1058,8 +1063,9 @@ RÉPONDS EN FORMAT JSON :
                     return raw[0], f"Tweety consistency check: {raw[1]}"
                 return raw, f"Tweety consistency check: {raw}"
             else:
-                # Vérification heuristique basique
-                return True, "Basic consistency assumed"
+                # No bridge → cannot reason about consistency. Degraded, not
+                # "assumed consistent" (anti-theater #1019, #1192).
+                return None, "Degraded: no Tweety bridge; no consistency verdict."
 
         except Exception as e:
             return False, f"Consistency check error: {str(e)}"

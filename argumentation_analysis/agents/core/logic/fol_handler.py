@@ -505,8 +505,19 @@ class FOLHandler:
         Accepts either a Tweety-syntax string (parsed via local FolParser)
         or a pre-built Java FolBeliefSet object.
 
+        #1192 (anti-theater #1019): a parse-only or reasoner-less outcome is
+        NOT a consistency verdict. Previously, on a reasoner exception or a
+        missing initializer, this method returned ``(True, "Parsed
+        successfully...")`` — a fabricated consistent verdict with no
+        reasoning behind it. It now returns ``None`` (unknown/degraded) so
+        downstream consumers cannot mistake "could not check" for "is
+        consistent". Only a Tweety reasoner query determines consistency.
+
         Returns:
-            Tuple[bool, str]: (is_consistent, message)
+            Tuple[Optional[bool], str]: ``(is_consistent, message)`` where
+            ``is_consistent`` is ``True``/``False`` when the reasoner decided,
+            or ``None`` when the check is degraded (reasoner unavailable or
+            raised). An empty belief set is trivially consistent (``True``).
         """
         try:
             # If it's a string, parse it into a Java belief set first
@@ -540,18 +551,22 @@ class FOLHandler:
                     msg = f"FOL consistency check: {'consistent' if is_consistent else 'inconsistent'}"
                     return is_consistent, msg
                 except Exception as e:
+                    # Fail-loud (anti-theater): parsing succeeded but the
+                    # reasoner could not decide. Do NOT fabricate a consistent
+                    # verdict — return degraded (None) so callers know the
+                    # check did not run.
                     self.logger.warning(
                         f"Reasoner-based consistency check failed: {e}. "
-                        "Falling back to parsing-only check."
+                        "Returning degraded (None) — no consistency verdict."
                     )
-                    # If we got here, at least the parsing succeeded
                     return (
-                        True,
-                        "Parsed successfully (no reasoner available for deep check).",
+                        None,
+                        "Degraded: reasoner unavailable; no consistency verdict (parse-only).",
                     )
             else:
-                # No initializer — parsing success is the best we can do
-                return True, "Parsed successfully (no Tweety initializer)."
+                # No initializer — cannot reason about consistency.
+                # Fail-loud: degraded, not "consistent".
+                return None, "Degraded: no Tweety initializer; no consistency verdict."
 
         except (ValueError, Exception) as e:
             error_msg = str(e)

@@ -264,19 +264,42 @@ class TweetyBridge:
     def execute_modal_query(
         self, belief_set: str, query: str, logic_type: str = "K"
     ) -> Tuple[bool, str]:
-        """Backward compatibility wrapper for execute_modal_query."""
-        return self.modal_handler.execute_modal_query(belief_set, query, logic_type)
+        """Backward compatibility wrapper for execute_modal_query.
+
+        #1192: the underlying ``ModalHandler.execute_modal_query`` takes only
+        ``(belief_set, query)`` (the reasoner is selected globally via
+        ``settings.modal_solver``, not per-call). The previous call passed
+        ``logic_type`` as a third positional arg → ``TypeError`` on every
+        modal query. Drop it here rather than adding an unused parameter to
+        the handler (anti-pendule: subtract the mismatch).
+        """
+        _ = logic_type  # accepted for API compatibility; handler is reasoner-global
+        result_str = self.modal_handler.execute_modal_query(belief_set, query)
+        # Handler returns a descriptive string; parse ACCEPTED/REJECTED/FUNC_ERROR.
+        if isinstance(result_str, str):
+            if "ACCEPTED" in result_str:
+                return True, result_str
+            if "REJECTED" in result_str:
+                return False, result_str
+            return False, result_str  # FUNC_ERROR or unexpected
+        return bool(result_str), str(result_str)
 
     def check_consistency(
         self, belief_set: str, logic_type: str = "propositional"
     ) -> Tuple[bool, str]:
-        """Backward compatibility wrapper for check_consistency."""
+        """Backward compatibility wrapper for check_consistency.
+
+        #1192: ``ModalHandler`` exposes ``is_modal_kb_consistent`` (not
+        ``check_consistency``); the previous dispatch raised
+        ``AttributeError`` for K/T/S4/S5. Route modal consistency to the
+        existing method.
+        """
         if logic_type == "propositional":
             return self.pl_handler.check_consistency(belief_set)
         elif logic_type == "first_order":
             return self.fol_handler.check_consistency(belief_set)
         elif logic_type in ["K", "T", "S4", "S5"]:
-            return self.modal_handler.check_consistency(belief_set, logic_type)
+            return self.modal_handler.is_modal_kb_consistent(belief_set)
         else:
             return False, f"Unknown logic type: {logic_type}"
 
