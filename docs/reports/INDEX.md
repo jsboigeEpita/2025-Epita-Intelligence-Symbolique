@@ -47,6 +47,66 @@ The SCDA (Spectacular Conversational Discourse Analysis) reports document the de
 | [spectacular_perf_bench.md](spectacular_perf_bench.md) | Standard vs spectacular comparison |
 | [spectacular_vs_baseline.md](spectacular_vs_baseline.md) | Spectacular delta: +3 fields, +9.4% coverage |
 
+## Post-SCDA Culmination & Fidelity (Epics #947, #1045, #1134, #1165)
+
+Reports produced after the SCDA/Epic #530 wave — the "Final Boss" hardening (#947),
+the Agentic Redressement (#1045), the readable 3-act restitution (#1134), and the
+culmination "every capability digested & integrated" relaunch (#1165). The `FB-*`
+series is the de-castration / fidelity hardening inside #947.
+
+### Final Boss / de-castration (#947, FB-18 → FB-39)
+
+| Report | Description |
+|--------|-------------|
+| [FB20_PHASE4_TERMINAL_REPORT.md](FB20_PHASE4_TERMINAL_REPORT.md) | Phase-4 terminal synthesis (later reconciled by FB-26/FB-37) |
+| [FB26_PER_BRICK_AUDIT.md](FB26_PER_BRICK_AUDIT.md) | Per-brick audit B-A..B-F of the de-castrated pipeline |
+| [FB29_QUALITY_BLINDSPOT_REPORT.md](FB29_QUALITY_BLINDSPOT_REPORT.md) | Quality-axis "blind virtues" fix |
+| [FB29_ADVERSARIAL_VERIFY.md](FB29_ADVERSARIAL_VERIFY.md) | Adversarial cross-verify of the FB-29 fix |
+| [FB28_QUALITY_HEADTOHEAD_REPORT.md](FB28_QUALITY_HEADTOHEAD_REPORT.md) | Pipeline vs baseline quality head-to-head (EDGES verdict) |
+| [FB32_DECAST_VARIANCE_REPORT.md](FB32_DECAST_VARIANCE_REPORT.md) | De-castration variance measure + wiring fix |
+| [FB33_DECASTRATION_RESIDUAL_AUDIT.md](FB33_DECASTRATION_RESIDUAL_AUDIT.md) | Residual de-castration audit (#1109 §4) |
+| [FB34_OPAQUENESS_HARDENING_REPORT.md](FB34_OPAQUENESS_HARDENING_REPORT.md) | Opaque-ID discipline in prompts (0-leak) |
+| [FB37_CAPSTONE_SPECTACULAR_REPORT.md](FB37_CAPSTONE_SPECTACULAR_REPORT.md) | Capstone terminal deliverable — formal DECIDES, opaque 0-leak |
+| [FB38_QUALITY_AGENTIC_REPORT.md](FB38_QUALITY_AGENTIC_REPORT.md) | 7/9 agentic virtues + EDGES re-measure |
+| [FB38_ADVERSARIAL_CROSSVERIFY.md](FB38_ADVERSARIAL_CROSSVERIFY.md) | Adversarial cross-verify of FB-38 (no inflation, EDGES holds) |
+| [FB39_PL_PARSING_REPORT.md](FB39_PL_PARSING_REPORT.md) | PL double-ampersand canonicalisation (21/81 → 81/81) |
+| [FB39_ADVERSARIAL_CROSSVERIFY.md](FB39_ADVERSARIAL_CROSSVERIFY.md) | Real-Tweety cross-verify of FB-39 (root-cause confirmed) |
+| [FB21_PL_VERIFICATION_ROOT_CAUSE.md](FB21_PL_VERIFICATION_ROOT_CAUSE.md) | PL coverage root cause (`PLHandler.check_consistency` missing) |
+
+### Restitution — readable 3-act narrative (#1134 / #1165)
+
+| Report | Description |
+|--------|-------------|
+| [R1_CULMINATING_REPORT.md](R1_CULMINATING_REPORT.md) | Culminating run + 23/23 substance checklist (the #1165 closer) |
+| [R5_VIRTUOUS_SCAN_AGGREGATE.md](R5_VIRTUOUS_SCAN_AGGREGATE.md) | Virtuous-corpus lexical scan — 11 candidates identified |
+| [R5_DERIVED_VIRTUOUS_REPORT.md](R5_DERIVED_VIRTUOUS_REPORT.md) | DERIVED virtuous confirmation — 0/4 (corpus-gap, not engine-gap) |
+
+### Fidelity & reader↔writer contracts (#1166, #1151)
+
+| Report | Description |
+|--------|-------------|
+| [FIDELITY_AUDIT_2026_06_18.md](FIDELITY_AUDIT_2026_06_18.md) | β audit: unified plugins vs student deliverables (71 integrated / 14 partial / 19 missing) |
+| [AUDIT_1151_READER_WRITER_CONTRACTS.md](AUDIT_1151_READER_WRITER_CONTRACTS.md) | 3 reader↔writer schema mismatches proved (quality, PL, Dung-semantics) |
+| [DIAG_1149_QUALITY_EMPTY_SPECTACULAR.md](DIAG_1149_QUALITY_EMPTY_SPECTACULAR.md) | Quality-empty spectacular diagnostic (schema bug proved) |
+
+### Culmination foundations (D1/E1/W1/T1, Epic #1165)
+
+| Report | Description |
+|--------|-------------|
+| [W1_REASONER_INVENTORY_REPORT.md](W1_REASONER_INVENTORY_REPORT.md) | Dormant-Tweety reasoner inventory (5 W1 reasoners wired) |
+| [W1_REASONER_INVENTORY_REPORT_1178.md](W1_REASONER_INVENTORY_REPORT_1178.md) | 4 more reasoners (#1178: weighted/social/qbf/cl) wired into spectacular |
+
+### Cross-cutting / reference
+
+| Report | Description |
+|--------|-------------|
+| [CAPSTONE_INTEGRAL_VS_ZEROSHOT.md](CAPSTONE_INTEGRAL_VS_ZEROSHOT.md) | Pipeline vs zero-shot capstone comparison |
+| [CAPSTONE_QUALITATIVE_RUBRIC.md](CAPSTONE_QUALITATIVE_RUBRIC.md) | Qualitative scoring rubric for the capstone |
+| [PHASE4_VERDICT_RUBRIC.md](PHASE4_VERDICT_RUBRIC.md) | Verdict-band rubric (EXCEEDED/MATCH/PARTIAL/BELOW) |
+| [FB18_DEEP_SYNTHESIS_SPEC.md](FB18_DEEP_SYNTHESIS_SPEC.md) | Deep-synthesis fail-loud spec (Section 9) |
+| [DRIFT_REGISTER.md](DRIFT_REGISTER.md) | Memory/register of stale-vs-correct facts (FB-39 verify>memo) |
+| [subsystem_verdict.md](subsystem_verdict.md) | Per-subsystem verdict map |
+
 ## Pre-SCDA Reports (Legacy)
 
 | Report | Description |
