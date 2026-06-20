@@ -6,7 +6,65 @@
 > Aggregate-only / diagnostic. No corpus content. All findings empirically
 > reproduced this session (0 LLM cost, pure solver plumbing).
 
-## TL;DR
+## UPDATE 2026-06-20 (post-investigation correction) — EProver WAS available; the bug was silent API-drift, NOT a missing binary
+
+The original finding below (TL;DR + table) concluded **EProver was absent**.
+That conclusion was **wrong** and has been corrected by deeper investigation
+(user challenge: *"eprover est régulièrement utilisé sur le dépôt CoursIA… tu
+n'as pas bien investigué"*). The verified reality:
+
+- **The EProver binary exists and works.** It is present in this repo's git
+  history (`_archives/Argument_Analysis/ext_tools/EProver/eprover.exe`,
+  commit `93bf136e`) and in the CoursIA reference repo (`E 2.0 Turzum`,
+  4366144 bytes — identical). With its `cygwin1.dll` dependency, it runs and
+  decides (`# Proof found!` on an inconsistent TPTP input).
+- **The real bug was a silent Tweety API-drift**, in two places:
+  1. `jvm_setup._configure_external_tools` called the **legacy static** API
+     `EFOLReasoner.setPathToEProver(path)` — but in Tweety 1.28+ this method
+     **does not exist** (replaced by instance method `setBinaryLocation`). The
+     call raised `AttributeError`, swallowed by the surrounding
+     `except Exception: logger.debug(...)`. EProver was therefore **never
+     wired at startup**, yet the pipeline reported the configured solver name
+     as if it were active.
+  2. `fol_handler._fol_check_consistency_with_eprover` / `_fol_query_with_eprover`
+     instantiated `EFOLReasoner()` **with no argument** — but the constructor
+     requires the binary path (`EFOLReasoner(String)`). And the sync path
+     `check_consistency` (the one spectacular actually uses) **hardcoded
+     `SimpleFolReasoner` regardless of `settings.solver`** — so even a correctly
+     installed EProver was never invoked for FOL consistency.
+
+**The fix (committed this update)** is anti-pendule (remove the bug, not add a
+counterweight): a module-level `EXTERNAL_TOOL_PATHS` registry populated by
+`_configure_external_tools` replaces the dead static calls; the FOL handler
+reads `EXTERNAL_TOOL_PATHS["eprover"]`, builds `EFOLReasoner(path)`, and
+`check_consistency` now dispatches to EProver when `settings.solver == EPROVER`
+and the path is registered (falling back to `SimpleFolReasoner` only when the
+binary is genuinely absent — fail-loud, not fabricated).
+
+**End-to-end proof on a real JVM with the real binary:**
+
+| KB | `fol_handler.check_consistency` verdict | solver |
+| --- | --- | --- |
+| `p(a), !p(a)` | `(False, "FOL consistency check (EProver): inconsistent")` | EProver ✓ |
+| `p(a), ∀x:p(x)⇒q(x)` | `(True, "FOL consistency check (EProver): consistent")` | EProver ✓ |
+
+**What remains a genuine infrastructure gap (still open, cluster-wide):**
+
+- **EProver binary is `ext_tools/`-gitignored** → must be installed on each
+  machine (manual, like Clingo before `download_clingo` existed). There is no
+  `download_eprover`. Coordinator cluster-wide audit still required.
+- **SPASS (modal) still absent** — unchanged.
+- **Prover9 runner still broken (3 format bugs)** — unchanged.
+- The original `SimpleFolReasoner` path still OOMs on large KBs, so without
+  the EProver binary deployed, FOL still degrades on real corpora.
+
+The table/sections below are the **original (pre-correction) findings** kept
+for traceability — read them as the diagnostic path that *led* to the fix, not
+as the current state.
+
+---
+
+## TL;DR (original, pre-correction)
 
 While running the FP-5 formal-richness matrix, the FOL axis returned
 `degraded (None)` (the honest FP-3 outcome). Investigating *why* revealed that

@@ -47,6 +47,12 @@ except ImportError as e:
 # Verrou global pour rendre l'initialisation de la JVM thread-safe
 _jvm_lock = threading.Lock()
 
+# Registry of detected external solver paths, populated by
+# ``_configure_external_tools``. Keys: "clingo" (binary dir), "eprover" (binary
+# path), "spass" (binary path). Logic handlers read this to instantiate the
+# corresponding Tweety reasoner with the correct constructor argument (#1196).
+EXTERNAL_TOOL_PATHS: dict[str, str] = {}
+
 # --- Gestion d'état de la JVM ---
 _JVM_INITIALIZED_THIS_SESSION = False
 _JVM_WAS_SHUTDOWN = False
@@ -662,13 +668,28 @@ def _configure_external_tools():
     """
     Auto-detect and configure external reasoning tools for Tweety.
 
-    Detects and wires:
-    - Clingo (ASP solver) → ClingoSolver.setPathToClingo()
-    - SPASS (Modal logic prover) → SPASSMlReasoner.setPathToSpass()
-    - EProver (FOL prover) → EFOLReasoner.setPathToEProver()
+    Detects and records the path of each external solver into the module-level
+    ``EXTERNAL_TOOL_PATHS`` registry, which the logic handlers read at
+    instantiation time to build the corresponding Tweety reasoner.
+
+    Detected tools:
+    - Clingo (ASP solver) → directory of the binary, for ClingoSolver
+    - SPASS (Modal logic prover) → binary path, for SPASSMlReasoner
+    - EProver (FOL prover) → binary path, for EFOLReasoner
     - Python SAT tools (sat_solver.py, marco.py, maxsat_solver.py) — detection only
 
     Pattern from CoursIA tweety_init.py (issue #27).
+
+    #1196 (verify-the-verification, FB-39): the previous version called the
+    legacy *static* API ``EFOLReasoner.setPathToEProver`` /
+    ``ClingoSolver.setPathToClingo`` / ``SPASSMlReasoner.setPathToSpass`` —
+    but in the current Tweety build (1.28+) these are **instance** methods,
+    so every call raised ``AttributeError`` and was silently swallowed by
+    the surrounding ``except Exception: logger.debug(...)``. Result: no
+    external solver was ever wired, yet the pipeline reported the configured
+    solver name as if it were active (formal theater). The registry pattern
+    below removes the dead call and exposes the detected path so handlers
+    instantiate the reasoner with the correct constructor argument.
     """
     if not jpype.isJVMStarted():
         return
@@ -729,42 +750,13 @@ def _configure_external_tools():
     if python_tools:
         logger.info(f"External Python tools detected: {list(python_tools.keys())}")
 
-    # Configure Tweety Java classes with detected tool paths
-    try:
-        JString = jpype.JClass("java.lang.String")
-
-        if "clingo" in tools_found:
-            try:
-                ClingoSolver = jpype.JClass(
-                    "org.tweetyproject.lp.asp.reasoner.ClingoSolver"
-                )
-                ClingoSolver.setPathToClingo(JString(tools_found["clingo"]))
-                logger.info(f"  Clingo configured: {tools_found['clingo']}")
-            except Exception as e:
-                logger.debug(f"  Clingo configuration skipped: {e}")
-
-        if "eprover" in tools_found:
-            try:
-                EFOLReasoner = jpype.JClass(
-                    "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
-                )
-                EFOLReasoner.setPathToEProver(JString(tools_found["eprover"]))
-                logger.info(f"  EProver configured: {tools_found['eprover']}")
-            except Exception as e:
-                logger.debug(f"  EProver configuration skipped: {e}")
-
-        if "spass" in tools_found:
-            try:
-                SPASSMlReasoner = jpype.JClass(
-                    "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
-                )
-                SPASSMlReasoner.setPathToSpass(JString(tools_found["spass"]))
-                logger.info(f"  SPASS configured: {tools_found['spass']}")
-            except Exception as e:
-                logger.debug(f"  SPASS configuration skipped: {e}")
-
-    except Exception as e:
-        logger.warning(f"External tools configuration failed (non-fatal): {e}")
+    # Record detected tool paths in the module-level registry. Logic handlers
+    # (FOLHandler, ModalHandler, ASP) read these paths when they instantiate
+    # the corresponding Tweety reasoner — passing the path as the constructor
+    # argument, which is the only supported wiring in Tweety 1.28+.
+    for tool_name, path in tools_found.items():
+        EXTERNAL_TOOL_PATHS[tool_name] = path
+        logger.info(f"  {tool_name} path registered: {path}")
 
 
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
