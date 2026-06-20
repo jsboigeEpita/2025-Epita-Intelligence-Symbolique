@@ -5560,20 +5560,24 @@ async def _invoke_fol_reasoning(
             # `None` (unverified), never a fabricated True.
             iso_consistent: Optional[bool] = None
             iso_msg = "combined consistency unverified"
-            try:
-                combined_bs = "\n".join(
-                    str(f) for f in fol_signature + [""] + valid_formulas
-                )
-                iso_consistent, iso_msg = await asyncio.to_thread(
-                    bridge.check_consistency, combined_bs, "first_order"
-                )
-            except Exception as iso_err:  # combined check failed → honest unverified
-                logger.warning(
-                    "FOL isolation: combined consistency check failed (%s) — "
-                    "reporting unverified (None), not fabricated True.",
-                    iso_err,
-                )
-                iso_consistent = None
+            # bridge is non-None whenever valid_formulas is non-empty (the loop
+            # above is guarded by `if bridge is not None`), but narrow explicitly
+            # for the type checker; None ⇒ stay unverified (never fabricate True).
+            if bridge is not None:
+                try:
+                    combined_bs = "\n".join(
+                        str(f) for f in fol_signature + [""] + valid_formulas
+                    )
+                    iso_consistent, iso_msg = await asyncio.to_thread(
+                        bridge.check_consistency, combined_bs, "first_order"
+                    )
+                except Exception as iso_err:  # combined check failed → unverified
+                    logger.warning(
+                        "FOL isolation: combined consistency check failed (%s) — "
+                        "reporting unverified (None), not fabricated True.",
+                        iso_err,
+                    )
+                    iso_consistent = None
             return {
                 "formulas": valid_formulas,
                 "fol_signature": fol_signature,
