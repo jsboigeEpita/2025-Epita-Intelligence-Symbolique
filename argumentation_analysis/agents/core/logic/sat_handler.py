@@ -117,9 +117,21 @@ class SATHandler:
         return all_clauses
 
     def _tokenize(self, formula: str) -> List[str]:
-        """Tokenize a PL formula string."""
-        # Add spaces around operators and parens
-        formula = re.sub(r"(=>|<=>|[&|!()])", r" \1 ", formula)
+        """Tokenize a PL formula string.
+
+        SAT-native grammar uses the SINGLE-form operators ``&``, ``|``, ``!``,
+        ``=>``, ``<=>``. Tweety's PlParser instead requires the DOUBLE-form
+        ``&&``/``||`` (#1132), so formulas normalized for Tweety would silently
+        corrupt SAT tokenization (``&&`` → ``['&','&']`` → ``a && !a`` parsed
+        as the atom ``&`` and wrongly reported consistent). Accept both forms
+        here and canonicalise to single-form so the SAT path is robust
+        regardless of upstream normalization.
+        """
+        # Collapse any run of & or | to the single-form operator first, then
+        # space operators/parens. Longest-first so <=> wins =>.
+        formula = re.sub(r"&+", "&", formula)
+        formula = re.sub(r"\|+", "|", formula)
+        formula = re.sub(r"(<=>|=>|&|\||!|\(|\))", r" \1 ", formula)
         return [t for t in formula.split() if t]
 
     def _tseitin(self, formula: str) -> Tuple[int, List[List[int]]]:

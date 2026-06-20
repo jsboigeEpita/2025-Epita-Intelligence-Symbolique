@@ -189,14 +189,18 @@ class PLHandler:
         ``_invoke_propositional_logic`` to 0 survivors (PL=0), which RA-8 #1066
         unmasked once it removed the Python-heuristic fallback (#1083).
 
-        Delegates to ``pl_check_consistency`` (Tweety). Parse errors propagate
-        unchanged so the per-formula isolation keeps valid formulas and rejects
-        unparseable ones rather than swallowing the whole batch.
+        Delegates to ``pl_check_consistency_sat`` (PySAT). Consistency of a PL
+        knowledge base is a SAT problem; the correct algorithm is Tseitin→CNF
+        (linear), never the Tweety reasoner's model enumeration
+        (``query(kb, Contradiction())`` walks 2^n models → OOM on 50-100+ atom
+        KBs, see #1192). Parse errors propagate unchanged so the per-formula
+        isolation keeps valid formulas and rejects unparseable ones rather than
+        swallowing the whole batch.
 
         Returns:
             Tuple[bool, str]: ``(is_consistent, message)``.
         """
-        is_consistent = self.pl_check_consistency(belief_set)
+        is_consistent = self.pl_check_consistency_sat(belief_set)
         msg = (
             "PL knowledge base is consistent."
             if is_consistent
@@ -207,8 +211,43 @@ class PLHandler:
     def pl_check_consistency(
         self, knowledge_base_str: str, constants: Optional[List[str]] = None
     ) -> bool:
+        """Check PL KB consistency via PySAT (Tseitin→CNF, linear).
+
+        #1192: consistency is a SAT problem. The Tweety reasoner's approach
+        (``query(kb, Contradiction())``) enumerates models (2^n) and OOMs on
+        50-100+ atom KBs. PySAT is the correct, scalable algorithm and is the
+        wired path. ``constants`` are accepted for API compatibility but are
+        ignored by the SAT path (atoms are discovered from the formulas).
+
+        Falls back to ``pl_check_consistency_tweety`` only if PySAT is not
+        importable (fail-loud via the SATHandler constructor otherwise).
+        """
+        if not self._sat_available():
+            logger.warning(
+                "PySAT unavailable; falling back to Tweety consistency "
+                "(model enumeration — may OOM on large KBs)."
+            )
+            return self.pl_check_consistency_tweety(knowledge_base_str, constants)
+        return self.pl_check_consistency_sat(knowledge_base_str)
+
+    def _sat_available(self) -> bool:
+        """True if the SAT handler (PySAT) can be constructed."""
+        try:
+            from . import sat_handler as _sh  # local import to avoid hard dep at import time
+
+            return bool(_sh.PYSAT_AVAILABLE)
+        except Exception:
+            return False
+
+    def pl_check_consistency_tweety(
+        self, knowledge_base_str: str, constants: Optional[List[str]] = None
+    ) -> bool:
         """
         Checks if a PL knowledge base (string of formulas, semicolon-separated) is consistent.
+
+        #1192: NOT the wired path — kept as a fallback when PySAT is absent.
+        Uses Tweety's ``SimplePlReasoner.query(kb, Contradiction())`` which
+        enumerates models (2^n); do not use on large KBs.
         """
         logger.debug(f"Checking PL consistency for: {knowledge_base_str}")
         try:
@@ -300,10 +339,36 @@ class PLHandler:
         query_formula_str: str,
         constants: Optional[List[str]] = None,
     ) -> bool:
+        """Check PL entailment via PySAT (KB ∧ ¬query is UNSAT).
+
+        #1192: entailment is a SAT problem (negate the query, check
+        unsatisfiability). The Tweety reasoner's ``query(kb, formula)``
+        enumerates models; PySAT via Tseitin→CNF is the scalable wired path.
+        ``constants`` accepted for API compatibility, ignored by the SAT path.
+        """
+        if not self._sat_available():
+            logger.warning(
+                "PySAT unavailable; falling back to Tweety query "
+                "(model enumeration — may OOM on large KBs)."
+            )
+            return self.pl_query_tweety(
+                knowledge_base_str, query_formula_str, constants
+            )
+        return self.pl_query_sat(knowledge_base_str, query_formula_str)
+
+    def pl_query_tweety(
+        self,
+        knowledge_base_str: str,
+        query_formula_str: str,
+        constants: Optional[List[str]] = None,
+    ) -> bool:
         """
         Checks if a query formula is entailed by a PL knowledge base.
         Knowledge base: string of formulas, semicolon-separated.
         Query: single formula string.
+
+        #1192: NOT the wired path — kept as a fallback when PySAT is absent.
+        Uses Tweety's ``SimplePlReasoner.query`` (model enumeration).
         """
         logger.debug(
             f"Performing PL query. KB: '{knowledge_base_str}', Query: '{query_formula_str}'"

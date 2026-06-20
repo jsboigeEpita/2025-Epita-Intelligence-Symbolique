@@ -199,3 +199,149 @@ class TestFOLSolverFallback:
                     belief_set.size.return_value = 2
                     with pytest.raises(RuntimeError, match="FOL consistency check failed"):
                         await handler.fol_check_consistency(belief_set)
+
+
+# ──── FP-3 #1192 DoD: fail-loud sync consistency ────
+
+
+class TestFOLCheckConsistencyFailLoud:
+    """#1192: ``FOLHandler.check_consistency`` (sync path) must NEVER fabricate
+    a ``consistent=True`` verdict when no reasoning happened (anti-theater
+    #1019). Previously it returned ``(True, "Parsed successfully...")`` on a
+    reasoner exception or a missing initializer — a false-positive consistency
+    claim. It now returns ``(None, ...)`` (degraded/unknown)."""
+
+    @pytest.fixture
+    def handler(self):
+        from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        mock_initializer = MagicMock(spec=TweetyInitializer)
+        mock_initializer.get_fol_parser.return_value = MagicMock()
+        with patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.settings"
+        ) as mock_settings:
+            from argumentation_analysis.core.config import SolverChoice
+
+            mock_settings.solver = SolverChoice.TWEETY
+            h = FOLHandler(initializer_instance=mock_initializer)
+        return h
+
+    def test_reasoner_exception_returns_degraded_not_true(self, handler):
+        """When the reasoner raises, consistency is unknown (None), not True."""
+        java_bs = MagicMock()
+        java_bs.size.return_value = 2
+
+        # initializer present but get_reasoner raises (simulates a Tweety
+        # internal failure on the contradiction query).
+        handler._initializer_instance = MagicMock()
+        handler._initializer_instance.get_reasoner.side_effect = RuntimeError(
+            "boom"
+        )
+
+        with patch.object(handler, "create_belief_set_from_string", return_value=java_bs):
+            result = handler.check_consistency(java_bs)
+
+        is_consistent, msg = result
+        assert is_consistent is None, (
+            "Degraded check must return None, not fabricate a True verdict"
+        )
+        assert "degraded" in msg.lower() or "no consistency verdict" in msg.lower()
+
+    def test_no_initializer_returns_degraded_not_true(self, handler):
+        """Without a Tweety initializer, consistency is unknown (None), not True."""
+        handler._initializer_instance = None
+        java_bs = MagicMock()
+        java_bs.size.return_value = 3
+
+        with patch.object(handler, "create_belief_set_from_string", return_value=java_bs):
+            result = handler.check_consistency(java_bs)
+
+        is_consistent, msg = result
+        assert is_consistent is None
+        assert "degraded" in msg.lower() or "no consistency verdict" in msg.lower()
+
+    def test_empty_belief_set_still_consistent(self, handler):
+        """An empty belief set remains trivially consistent (degraded only
+        applies to non-empty KBs that cannot be reasoned about)."""
+        java_bs = MagicMock()
+        java_bs.size.return_value = 0
+        result = handler.check_consistency(java_bs)
+        is_consistent, _ = result
+        assert is_consistent is True
+
+
+# ──── FP-3 #1192 DoD: modal signature fix ────
+
+
+class TestTweetyBridgeModalDispatch:
+    """#1192: ``TweetyBridge.execute_modal_query`` previously passed 3 args to
+    ``ModalHandler.execute_modal_query`` (2-arg) → TypeError on every modal
+    query; and ``check_consistency`` called a non-existent
+    ``modal_handler.check_consistency`` → AttributeError for K/T/S4/S5. Both
+    now route to the correct handler methods."""
+
+    def test_execute_modal_query_2arg_handler(self):
+        """ModalHandler.execute_modal_query accepts exactly (self, belief_set, query)
+        — no logic_type (reasoner is global). The bridge must NOT pass a 3rd arg."""
+        import inspect
+
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+
+        sig = inspect.signature(ModalHandler.execute_modal_query)
+        # self + belief_set_content + query_string = 3 params
+        assert len(sig.parameters) == 3, (
+            "execute_modal_query must take 3 params incl. self (belief_set, query), "
+            "not logic_type (reasoner is global)"
+        )
+
+    def test_modal_handler_has_no_check_consistency(self):
+        """ModalHandler exposes is_modal_kb_consistent, not check_consistency."""
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+
+        assert not hasattr(ModalHandler, "check_consistency"), (
+            "ModalHandler must NOT expose check_consistency; "
+            "TweetyBridge routes to is_modal_kb_consistent"
+        )
+        assert hasattr(ModalHandler, "is_modal_kb_consistent")
+
+    def test_bridge_execute_modal_query_returns_tuple(self):
+        """Bridge wrapper returns (bool, str), calling the 2-arg handler."""
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        mock_modal = MagicMock()
+        mock_modal.execute_modal_query.return_value = (
+            "Tweety Result (SimpleMlReasoner): Modal Query 'p' is ACCEPTED (True)."
+        )
+        with patch.object(
+            TweetyBridge, "modal_handler", new_callable=lambda: property(lambda self: mock_modal)
+        ):
+            bridge = TweetyBridge.__new__(TweetyBridge)  # bypass JVM __init__
+            accepted, msg = bridge.execute_modal_query("kb", "p", logic_type="K")
+        mock_modal.execute_modal_query.assert_called_once_with("kb", "p")
+        assert accepted is True
+        assert "ACCEPTED" in msg
+
+    def test_bridge_check_consistency_routes_modal_to_is_consistent(self):
+        """Bridge check_consistency('K') calls is_modal_kb_consistent."""
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        mock_modal = MagicMock()
+        mock_modal.is_modal_kb_consistent.return_value = (True, "ok")
+        with patch.object(
+            TweetyBridge, "modal_handler", new_callable=lambda: property(lambda self: mock_modal)
+        ):
+            bridge = TweetyBridge.__new__(TweetyBridge)
+            result = bridge.check_consistency("kb", "S5")
+        mock_modal.is_modal_kb_consistent.assert_called_once_with("kb")
+        assert result == (True, "ok")
