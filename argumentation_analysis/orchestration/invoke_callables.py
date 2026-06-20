@@ -46,6 +46,7 @@ def _preflight_solver_check() -> None:
 # RA-4 #1049 item 3 — Strategic objective consumption by tactical callables
 # ---------------------------------------------------------------------------
 
+
 def _get_strategic_directives(context: Dict[str, Any]) -> Tuple[str, List[str]]:
     """Extract active strategic objectives from state and format as NL directives.
 
@@ -62,8 +63,10 @@ def _get_strategic_directives(context: Dict[str, Any]) -> Tuple[str, List[str]]:
         return "", []
 
     active = [
-        obj for obj in objectives
-        if isinstance(obj, dict) and obj.get("status", "active") in ("active", "in_progress")
+        obj
+        for obj in objectives
+        if isinstance(obj, dict)
+        and obj.get("status", "active") in ("active", "in_progress")
     ]
     if not active:
         return "", []
@@ -1464,17 +1467,22 @@ async def _invoke_debate_analysis(
                 from argumentation_analysis.agents.core.debate.argumentation_schemes import (
                     schemes_as_prompt_context,
                 )
+
                 scheme_kb = schemes_as_prompt_context()
             except ImportError:
                 scheme_kb = ""
             scheme_directive = (
-                "\n\nGROUNDED SCHEMES (Walton-Krabbe, restored engine G8):\n"
-                f"{scheme_kb}\n"
-                "Each Agent A point should resemble one of these schemes; Agent B's "
-                "rebuttal should stress its critical question. Name the scheme the "
-                "point relies on inside agent_a_point when clearly applicable — do "
-                "NOT force a scheme label where none fits (honest absence > fake label).\n"
-            ) if scheme_kb else ""
+                (
+                    "\n\nGROUNDED SCHEMES (Walton-Krabbe, restored engine G8):\n"
+                    f"{scheme_kb}\n"
+                    "Each Agent A point should resemble one of these schemes; Agent B's "
+                    "rebuttal should stress its critical question. Name the scheme the "
+                    "point relies on inside agent_a_point when clearly applicable — do "
+                    "NOT force a scheme label where none fits (honest absence > fake label).\n"
+                )
+                if scheme_kb
+                else ""
+            )
             response = await _guarded_chat_completion(
                 client,
                 model=model_id,
@@ -2403,7 +2411,9 @@ async def _invoke_camembert_fallacy(
 
         # RA-4 #1049 item 3: inject strategic directives into LLM prompt
         _strat_text_cam, _strat_ids_cam = _get_strategic_directives(context)
-        _effective_text_cam = f"{_strat_text_cam}\n\n{input_text}" if _strat_text_cam else input_text
+        _effective_text_cam = (
+            f"{_strat_text_cam}\n\n{input_text}" if _strat_text_cam else input_text
+        )
 
         # Bounded wide-net descent (#1087) — same backstop as the main path above:
         # the camembert wide-net is unbounded and explodes on dense corpora. The
@@ -2857,9 +2867,7 @@ def _eaf_beliefs_from_context(
             return {str(k): [str(x) for x in v] for k, v in beliefs_in.items()}
         # Float-valued (probability per arg): treat as a single agent's beliefs
         # above a neutral 0.5 threshold — no fabricated multi-agent structure.
-        believed = [
-            str(k) for k, v in beliefs_in.items() if float(v) >= 0.5
-        ]
+        believed = [str(k) for k, v in beliefs_in.items() if float(v) >= 0.5]
         if believed:
             return {"agent_0": believed}
     return None
@@ -3186,9 +3194,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # Sanitize axioms too (list of proposition names).
     axioms = None
     if axioms_raw:
-        axioms = [
-            _pl_atom(a, prefix="ax") for a in axioms_raw if isinstance(a, str)
-        ]
+        axioms = [_pl_atom(a, prefix="ax") for a in axioms_raw if isinstance(a, str)]
 
     try:
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
@@ -3447,8 +3453,10 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # SetAF attacks come as {attackers, target} dicts. Upstream may provide
     # them directly, else shape from the canonical pairwise attack graph.
     raw_attacks = context.get("set_attacks")
-    if isinstance(raw_attacks, list) and raw_attacks and isinstance(
-        raw_attacks[0], dict
+    if (
+        isinstance(raw_attacks, list)
+        and raw_attacks
+        and isinstance(raw_attacks[0], dict)
     ):
         attacks = raw_attacks
     else:
@@ -3481,9 +3489,12 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     # provide them directly, else shape from the canonical pairwise graph with
     # neutral weight 0.5 (#1019: no fabricated confidence).
     raw_attacks = context.get("weighted_attacks")
-    if isinstance(raw_attacks, list) and raw_attacks and isinstance(
-        raw_attacks[0], (list, tuple)
-    ) and len(raw_attacks[0]) >= 3:
+    if (
+        isinstance(raw_attacks, list)
+        and raw_attacks
+        and isinstance(raw_attacks[0], (list, tuple))
+        and len(raw_attacks[0]) >= 3
+    ):
         attacks = [
             (str(t[0]), str(t[1]), float(t[2]))
             for t in raw_attacks
@@ -3863,7 +3874,9 @@ async def _invoke_hierarchical_fallacy(
 
         # RA-4 #1049 item 3: inject strategic directives into LLM prompt
         _strat_text, _strat_ids = _get_strategic_directives(context)
-        _effective_text = f"{_strat_text}\n\n{input_text}" if _strat_text else input_text
+        _effective_text = (
+            f"{_strat_text}\n\n{input_text}" if _strat_text else input_text
+        )
 
         # Bounded wide-net descent (#1087). The wide-net ``run_guided_analysis``
         # on the FULL source text is unbounded here — on a dense corpus it explodes
@@ -4381,6 +4394,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
                         f["target_argument"] = arg_id
                     if not f.get("problematic_quote") and quote_span:
                         f["problematic_quote"] = quote_span
+
             plugin = None
             try:
                 master_kernel = Kernel()
@@ -5485,13 +5499,23 @@ async def _invoke_fol_reasoning(
             bridge.check_consistency, belief_set_str, "first_order"
         )
         fol_metrics["post_tweety"] = len(formulas)
+        # FP-6 #1197: pass the handler's tri-state through unchanged. The handler
+        # (fol_handler.check_consistency, FP-3 #1192) returns None on reasoner OOM /
+        # failure = "could not compute". `bool(None)` would fabricate that into a
+        # definite `consistent: False` ("KB is inconsistent") — théâtre regrowing one
+        # layer above the handler (R405). None ⇒ unverified (confidence 0.0), True ⇒
+        # consistent (0.8), False ⇒ a real inconsistency verdict (0.4). (#1019 fail-loud)
         return {
             "formulas": formulas,
             "fol_signature": fol_signature,
             "fol_metadata": meta,
-            "consistent": bool(is_consistent),
+            "consistent": is_consistent,
             "inferences": inferences,
-            "confidence": 0.8 if is_consistent else 0.4,
+            "confidence": (
+                0.8
+                if is_consistent is True
+                else (0.0 if is_consistent is None else 0.4)
+            ),
             "message": msg,
             "logic_type": "first_order",
             "argument_count": len(args),
@@ -5528,19 +5552,50 @@ async def _invoke_fol_reasoning(
                 f"FOL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
                 f"formulas accepted by Tweety"
             )
+            # FP-6 #1197: the per-formula loop only proved each formula PARSES — it
+            # discarded the consistency verdicts. Hardcoding `consistent: True` here
+            # fabricated a consistency verdict out of parse-success (théâtre, R405 /
+            # #1019). Run a real combined consistency check on the survivors and pass
+            # the tri-state through; if the combined check itself fails/OOMs, that is
+            # `None` (unverified), never a fabricated True.
+            iso_consistent: Optional[bool] = None
+            iso_msg = "combined consistency unverified"
+            try:
+                combined_bs = "\n".join(
+                    str(f) for f in fol_signature + [""] + valid_formulas
+                )
+                iso_consistent, iso_msg = await asyncio.to_thread(
+                    bridge.check_consistency, combined_bs, "first_order"
+                )
+            except Exception as iso_err:  # combined check failed → honest unverified
+                logger.warning(
+                    "FOL isolation: combined consistency check failed (%s) — "
+                    "reporting unverified (None), not fabricated True.",
+                    iso_err,
+                )
+                iso_consistent = None
             return {
                 "formulas": valid_formulas,
                 "fol_signature": fol_signature,
                 "fol_metadata": meta,
-                "consistent": True,
+                "consistent": iso_consistent,
                 "inferences": inferences,
-                "confidence": 0.6,
+                "confidence": (
+                    0.6
+                    if iso_consistent is True
+                    else (0.0 if iso_consistent is None else 0.4)
+                ),
+                "message": iso_msg,
                 "logic_type": "first_order",
                 "argument_count": len(args),
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
                 "fol_metrics": fol_metrics,
-                **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
+                **(
+                    {"strategic_objective_ids": _strat_ids_fol}
+                    if _strat_ids_fol
+                    else {}
+                ),
             }
 
         # All formulas failed — no heuristic fallback (#1019)
@@ -5572,6 +5627,8 @@ async def _invoke_fol_reasoning(
             "fol_metrics": fol_metrics,
             **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
+
+
 async def _invoke_nl_to_logic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -6295,9 +6352,7 @@ async def _invoke_act2_narrative(
         # Conducted LLM call bound to the resolved kernel/service.
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(
-            llm_service_id
-        )
+        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         result = await kernel.invoke_prompt(
             function_name="act2_narrative_conducted",
             plugin_name="restitution",
@@ -6411,9 +6466,7 @@ async def _invoke_act1_framing(
     async def _llm(prompt: str) -> str:
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(
-            llm_service_id
-        )
+        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         result = await kernel.invoke_prompt(
             function_name="act1_framing_conducted",
             plugin_name="restitution",
@@ -6513,9 +6566,7 @@ async def _invoke_act3_conclusion(
     async def _llm(prompt: str) -> str:
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(
-            llm_service_id
-        )
+        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         result = await kernel.invoke_prompt(
             function_name="act3_conclusion_conducted",
             plugin_name="restitution",
