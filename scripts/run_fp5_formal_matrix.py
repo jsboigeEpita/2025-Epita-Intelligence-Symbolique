@@ -1,0 +1,388 @@
+"""FP-5 #1196 — multi-corpus formal-richness matrix on FIXED main (UNTRACKED).
+
+Epic #1191 depth-parity DoD, un-frozen now that FP-3 #1192 (PL→SAT, FOL
+fail-loud, Modal sig) landed on main `72586016`. Measuring before FP-3 would
+have measured théâtre (FOL fabricated `consistent=True`, PL OOM). Now verdicts
+are real.
+
+Per formal capability × corpus, class the measured outcome:
+  real-verdict — genuine solver output (PL SAT sat/unsat, Dung extensions, FOL
+                 real consistency if it ran, nonzero *_count with non-trivial output).
+  degraded     — fail-loud (FOL reasoner couldn't decide → None; honest, not théâtre).
+  empty        — solver ran, no structure in corpus (honest-absent, count==0).
+  error        — handler bug (should be ~0 after FP-3; flag any remaining).
+
+Privacy HARD: corpus loaded in-memory (encrypted dataset), redact-filter over
+chunks, results gitignored under evaluation/results/fp5/. Only opaque counts/
+classes leave the machine. No raw_text. No verbatim.
+
+Anti-pendule (#1196): do NOT pad empty/degraded cells to claim parity; do NOT
+re-raise heap as a fix (PL is SAT now — if something still OOMs it's a NEW
+finding to report). Synthesis-first: no bare count table.
+"""
+import os
+import sys
+import json
+import asyncio
+import time
+import logging
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+for line in open(ROOT / ".env", encoding="utf-8"):
+    line = line.strip()
+    if line and not line.startswith("#") and "=" in line:
+        k, _, v = line.partition("=")
+        os.environ.setdefault(k.strip(), v.strip())
+
+# Privacy HARD — redact any substring of any corpus.
+_REDACT_CHUNKS: "list[str]" = []
+
+
+def _populate_redact(text: str) -> None:
+    if not text:
+        return
+    step, size = 20, 40
+    for i in range(0, max(1, len(text) - size + 1), step):
+        chunk = text[i:i + size].strip()
+        if len(chunk) >= 20:
+            _REDACT_CHUNKS.append(chunk)
+
+
+def _redact(msg: object) -> str:
+    s = str(msg)
+    for chunk in _REDACT_CHUNKS:
+        if chunk and chunk in s:
+            s = s.replace(chunk, "[REDACTED]")
+    return s
+
+
+class _RedactFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            record.msg = _redact(record.getMessage())
+            record.args = ()
+        except Exception:
+            pass
+        return True
+
+
+class _RedactStream:
+    def __init__(self, stream: object) -> None:
+        self._stream = stream  # type: ignore[assignment]
+
+    def write(self, s: str) -> int:
+        return self._stream.write(_redact(s))  # type: ignore[attr-defined]
+
+    def flush(self) -> None:
+        self._stream.flush()  # type: ignore[attr-defined]
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._stream, name)
+
+
+sys.stdout = _RedactStream(sys.stdout)  # type: ignore[assignment]
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    stream=sys.stdout,
+)
+logging.getLogger().addFilter(_RedactFilter())
+
+RESULTS_DIR = ROOT / "argumentation_analysis" / "evaluation" / "results" / "fp5"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+DATASET_PATH = ROOT / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
+
+# corpus (opaque id, dataset idx, ceiling s). A hard / C standard / B large.
+CORPORA = [("A", 11, 900), ("C", 2, 900), ("B", 3, 1800)]
+
+# The ~24 formal/richness capabilities. Each maps to (phase_name, state_count_key).
+# state_count_key is the UnifiedAnalysisState snapshot counter for that capability.
+CAPABILITIES = [
+    # ── Formal logic layer (the FP-3 focus) ──
+    ("pl", "propositional_analysis", "propositional_analysis_count"),
+    ("fol", "fol", "fol_analysis_count"),
+    ("modal", "modal", "modal_analysis_count"),
+    ("kb_to_tweety", "kb_to_tweety", "atomic_propositions_count"),
+    # ── Dung family ──
+    ("dung_extensions", "dung_extensions", "dung_framework_count"),
+    ("aspic_analysis", "aspic_analysis", "aspic_result_count"),
+    ("setaf_reasoning", "setaf_reasoning", None),  # W1 — count may be absent
+    ("aba_reasoning", "aba_reasoning", None),
+    ("weighted_reasoning", "weighted_reasoning", None),
+    ("social_reasoning", "social_reasoning", None),
+    # ── Extended reasoners (#1178) ──
+    ("delp_reasoning", "delp_reasoning", None),
+    ("dl_reasoning", "dl_reasoning", None),
+    ("qbf_reasoning", "qbf_reasoning", None),
+    ("cl_reasoning", "cl_reasoning", None),
+    ("dialogue_reasoning", "dialogue_reasoning", "dialogue_result_count"),
+    # ── Other formal/structured axes ──
+    ("quality", "quality", "quality_scores_count"),
+    ("probabilistic", "probabilistic", "probabilistic_result_count"),
+    ("belief_revision", "belief_revision", "belief_revision_result_count"),
+    ("counter_argument", "counter_argument", "counter_argument_count"),
+    ("governance", "governance", "governance_decision_count"),
+    ("debate", "debate", "debate_transcript_count"),
+    ("jtms", "jtms", "jtms_belief_count"),
+    ("deep_synthesis", "deep_synthesis", "formal_synthesis_count"),
+]
+
+
+def load_corpus_text(label: str, idx: int) -> str:
+    from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+    from argumentation_analysis.core.io_manager import load_extract_definitions
+
+    key = derive_encryption_key(os.environ["TEXT_CONFIG_PASSPHRASE"])
+    defs = load_extract_definitions(DATASET_PATH, key)
+    text = defs[idx].get("full_text", "")
+    _populate_redact(text)
+    return text
+
+
+def _phase(result: dict, name: str):
+    return result.get("phases", {}).get(name)
+
+
+def _phase_status(result: dict, name: str) -> str:
+    pr = _phase(result, name)
+    if pr is None:
+        return "absent"
+    try:
+        return str(pr.status).split(".")[-1].lower()
+    except Exception:
+        return "unknown"
+
+
+def _output_repr(pr) -> object:
+    """Best-effort non-triviality probe of a phase output."""
+    if pr is None:
+        return None
+    out = getattr(pr, "output", None)
+    if out is None:
+        return None
+    if isinstance(out, str):
+        return out.strip() if out.strip() else None
+    if isinstance(out, dict):
+        # non-trivial if any truthy value
+        return {k: v for k, v in out.items() if v} or None
+    if isinstance(out, list):
+        return out if out else None
+    return out
+
+
+def _classify_capability(
+    result: dict, phase_name: str, count_key
+) -> tuple[str, dict]:
+    """Return (class, evidence) for one capability.
+
+    class ∈ {real-verdict, degraded, empty, error, absent}.
+    evidence = short opaque dict (status, count, has_output) for the matrix cell.
+    """
+    status = _phase_status(result, phase_name)
+    pr = _phase(result, phase_name)
+    out = _output_repr(pr)
+    snapshot = result.get("state_snapshot", {}) or {}
+    if isinstance(snapshot, dict):
+        count = snapshot.get(count_key) if count_key else None
+    else:
+        count = None
+    has_output = out is not None
+
+    evidence = {
+        "status": status,
+        "count": count,
+        "has_nontrivial_output": has_output,
+    }
+
+    if status == "failed":
+        return "error", evidence
+    if status == "absent":
+        return "absent", evidence
+    # degraded: fail-loud tri-state (FOL after FP-3 returns None/degraded)
+    if isinstance(out, dict):
+        degraded_markers = (
+            out.get("is_consistent") is None,
+            out.get("consistent") is None,
+            "degraded" in str(out.get("message", "")).lower(),
+            out.get("valid") is None and phase_name in ("modal", "modal_solver"),
+        )
+        # Only mark degraded if the phase explicitly signals it (None verdict)
+        # AND there is no other real structure.
+        explicitly_degraded = any(degraded_markers) and not any(
+            v for k, v in out.items()
+            if k not in ("is_consistent", "consistent", "valid", "message", "status")
+        )
+        if explicitly_degraded:
+            return "degraded", evidence
+    if has_output:
+        return "real-verdict", evidence
+    # no output: fall back to count
+    if count is not None:
+        if count > 0:
+            return "real-verdict", evidence
+        return "empty", evidence
+    # phase ran (completed) but no output and no count → empty honest-absent
+    if status == "completed":
+        return "empty", evidence
+    return "degraded", evidence
+
+
+def _leak_audit(artifact_text: str, corpus_text: str) -> int:
+    chunks = []
+    step, size = 20, 40
+    for i in range(0, max(1, len(corpus_text) - size + 1), step):
+        c = corpus_text[i:i + size].strip()
+        if len(c) >= 20:
+            chunks.append(c)
+    return sum(1 for c in chunks if c in artifact_text)
+
+
+async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dict:
+    from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
+
+    text = load_corpus_text(label, idx)
+    corpus_texts[label] = text
+    print(f"[FP-5] doc_{label}: {len(text)} chars | spectacular+full | ceiling {timeout}s")
+
+    t0 = time.time()
+    verdict = "UNKNOWN"
+    result: dict = {}
+    try:
+        result = await asyncio.wait_for(
+            run_unified_analysis(
+                text,
+                workflow_name="spectacular",
+                context={"fallacy_tier": "full"},
+            ),
+            timeout=float(timeout),
+        )
+        verdict = "COMPLETED"
+    except asyncio.TimeoutError:
+        verdict = f"TIMED_OUT_{timeout}s"
+        print(f"[FP-5] doc_{label} TIMED OUT after {timeout}s — documented fail-loud.")
+    except Exception as exc:
+        verdict = f"ERROR:{type(exc).__name__}"
+        print(f"[FP-5] doc_{label} {verdict}: {_redact(str(exc))[:160]}")
+
+    elapsed = time.time() - t0
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+
+    # Per-capability matrix row.
+    matrix = {}
+    pl_evidence: dict = {}
+    fol_evidence: dict = {}
+    for cap, phase, count_key in CAPABILITIES:
+        cls, ev = _classify_capability(result, phase, count_key)
+        matrix[cap] = {"class": cls, "evidence": ev}
+        if cap == "pl":
+            pl_evidence = ev
+        if cap == "fol":
+            fol_evidence = ev
+
+    metrics = {
+        "corpus": f"doc_{label}",
+        "verdict": verdict,
+        "elapsed_s": round(elapsed, 1),
+        "phases_completed": summary.get("completed"),
+        "phases_failed": summary.get("failed"),
+        "phases_total": summary.get("total"),
+        "failed_phases": summary.get("failed_phases", []),
+        "matrix": matrix,
+    }
+
+    # DoD-specific confirmations.
+    metrics["dod"] = {
+        "pl_no_oom": verdict == "COMPLETED" and _phase_status(result, "pl") == "completed",
+        "pl_wallclock_s": round(elapsed, 1) if label == "A" else None,
+        "fol_fail_loud": fol_evidence.get("count") in (None, 0)
+        or fol_evidence.get("has_nontrivial_output") is False
+        or matrix["fol"]["class"] in ("degraded", "empty"),
+        "fol_fabricated_true": False,  # set True only if we detect a real consistent=True
+    }
+    # Detect fabricated FOL consistent=True (anti-theater check): scan fol output
+    fol_pr = _phase(result, "fol")
+    fol_out = getattr(fol_pr, "output", None) if fol_pr else None
+    if isinstance(fol_out, dict) and fol_out.get("is_consistent") is True:
+        # Only suspicious if reasoner was supposed to fail; for now flag presence
+        metrics["dod"]["fol_fabricated_true"] = True
+        metrics["dod"]["fol_fail_loud"] = False
+
+    # Raw provenance (gitignored).
+    ts = time.strftime("%Y%m%dT%H%M%S")
+    raw_out = RESULTS_DIR / f"fp5_doc{label}_{ts}.json"
+    try:
+        serializable = {
+            "corpus": f"doc_{label}",
+            "metrics": metrics,
+            "state_snapshot": result.get("state_snapshot"),
+            "capabilities_used": result.get("capabilities_used", []),
+        }
+        with open(raw_out, "w", encoding="utf-8") as f:
+            json.dump(serializable, f, indent=2, ensure_ascii=False, default=str)
+        print(f"[FP-5] doc_{label} raw metrics saved -> {raw_out.name} (gitignored)")
+    except Exception as exc:
+        print(f"[FP-5] doc_{label} raw save failed: {type(exc).__name__}")
+
+    # Class tally for the console summary (opaque counts only).
+    tally = {}
+    for cap, row in matrix.items():
+        tally[row["class"]] = tally.get(row["class"], 0) + 1
+    print(
+        f"[FP-5] doc_{label} DONE: {verdict} ({metrics['elapsed_s']}s) | "
+        f"phases {metrics['phases_completed']}/{metrics['phases_total']} | "
+        f"classes={tally}"
+    )
+    return metrics
+
+
+async def amain() -> None:
+    print("=" * 72)
+    print("[FP-5] #1196 formal-richness matrix — spectacular+full on FIXED main")
+    print("=" * 72)
+    corpus_texts: dict = {}
+    all_metrics = []
+    for label, idx, timeout in CORPORA:
+        try:
+            m = await run_one(label, idx, timeout, corpus_texts)
+        except Exception as exc:
+            m = {
+                "corpus": f"doc_{label}",
+                "verdict": f"FATAL:{type(exc).__name__}",
+                "elapsed_s": -1,
+                "error": _redact(str(exc))[:200],
+            }
+            print(f"[FP-5] doc_{label} FATAL: {_redact(str(exc))[:160]}")
+        all_metrics.append(m)
+
+    agg = RESULTS_DIR / f"fp5_matrix_{time.strftime('%Y%m%dT%H%M%S')}.json"
+    with open(agg, "w", encoding="utf-8") as f:
+        json.dump(all_metrics, f, indent=2, ensure_ascii=False, default=str)
+    print(f"\n[FP-5] matrix aggregate saved -> {agg.name} (gitignored)")
+
+    # Console matrix (opaque classes only).
+    print("\n" + "=" * 72)
+    print("[FP-5] MATRIX (capability × corpus → class)")
+    print("=" * 72)
+    caps = [c for c, _, _ in CAPABILITIES]
+    header = f"{'capability':<22}" + "".join(f"{f'doc_{l}':>12}" for l, _, _ in CORPORA)
+    print(header)
+    for cap in caps:
+        row = f"{cap:<22}"
+        for m in all_metrics:
+            mx = m.get("matrix", {}).get(cap, {})
+            cls = mx.get("class", "?") if isinstance(mx, dict) else "?"
+            row += f"{cls:>12}"
+        print(row)
+
+    print("\n[FP-5] DoD confirmations:")
+    for m in all_metrics:
+        d = m.get("dod", {})
+        print(f"  {m.get('corpus')}: pl_no_oom={d.get('pl_no_oom')} | "
+              f"fol_fail_loud={d.get('fol_fail_loud')} | "
+              f"fol_fabricated_true={d.get('fol_fabricated_true')}")
+
+
+if __name__ == "__main__":
+    asyncio.run(amain())
