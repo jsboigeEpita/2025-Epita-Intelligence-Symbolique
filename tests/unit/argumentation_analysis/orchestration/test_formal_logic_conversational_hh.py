@@ -20,6 +20,8 @@ baseline on the formal axis. These tests verify, with mocked invoke callables
 
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 import argumentation_analysis.orchestration.invoke_callables as mod
 
 
@@ -163,17 +165,23 @@ class TestRunFormalLogicFromState:
 class TestExceptBlockHardening:
     """A TweetyBridge construction failure must degrade, not raise (#697 HH)."""
 
-    async def test_pl_bridge_failure_degrades_to_python_fallback(self):
+    async def test_pl_bridge_failure_raises_fail_loud(self):
+        """FP-7 #1199 / #1019: a TweetyBridge failure must FAIL LOUD.
+
+        Previously (pre-FP-3) this asserted ``out["fallback"] == "python"`` — a
+        graceful Python fallback that fabricated a result on Tweety failure.
+        FP-3 (#1192/#1019) removed that theater: when all Tweety solvers fail
+        (here the bridge cannot even be constructed), ``_invoke_propositional_logic``
+        now raises ``RuntimeError`` rather than degrading silently. This test
+        asserts that fail-loud behaviour (R369 / anti-théâtre).
+        """
         context = {"formulas": ["p1", "p2"]}
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("no JVM"),
         ):
-            out = await mod._invoke_propositional_logic("text", context)
-        # No exception bubbled; we still get a usable result dict.
-        assert isinstance(out, dict)
-        assert "formulas" in out
-        assert out.get("fallback") == "python"
+            with pytest.raises(RuntimeError, match="Tweety solvers failed"):
+                await mod._invoke_propositional_logic("text", context)
 
     async def test_fol_bridge_failure_degrades_to_python_fallback(self):
         context = {"formulas": ["P(a)", "Q(b)"]}
