@@ -47,13 +47,19 @@ class TestRunProver9:
 
     @patch("argumentation_analysis.core.prover9_runner.subprocess.run")
     @patch("argumentation_analysis.core.prover9_runner.PROVER9_EXECUTABLE")
-    def test_called_with_check_true(self, mock_executable, mock_run):
+    def test_called_without_check_true(self, mock_executable, mock_run):
+        """FP-8: ``check`` must NOT be True. Prover9's exit code is semantic —
+        exit 2 with "SEARCH FAILED" is the NORMAL outcome for a consistency
+        check on a CONSISTENT KB. ``check=True`` raised on exactly that case,
+        so a consistent KB could never be reported (théâtre). The runner now
+        inspects the "Fatal error" marker in stdout instead.
+        """
         mock_executable.is_file.return_value = True
         mock_run.return_value = MagicMock(stdout="ok", returncode=0)
 
         run_prover9("test input")
         call_kwargs = mock_run.call_args
-        assert call_kwargs.kwargs.get("check") is True
+        assert call_kwargs.kwargs.get("check") is not True
 
     @patch("argumentation_analysis.core.prover9_runner.subprocess.run")
     @patch("argumentation_analysis.core.prover9_runner.PROVER9_EXECUTABLE")
@@ -112,3 +118,54 @@ class TestRunProver9:
         run_prover9("test")
         call_kwargs = mock_run.call_args
         assert call_kwargs.kwargs.get("encoding") == "cp1252"
+
+    @patch("argumentation_analysis.core.prover9_runner.subprocess.run")
+    @patch("argumentation_analysis.core.prover9_runner.PROVER9_EXECUTABLE")
+    def test_fatal_error_in_stdout_raises_not_silent_verdict(
+        self, mock_executable, mock_run
+    ):
+        """FP-8 #1019: Prover9's .bat wrapper returns exit code 0 even on a
+        fatal parse/syntax error. The runner must detect the "Fatal error"
+        marker in stdout and raise — otherwise the malformed-input error string
+        is returned as if it were a real consistency verdict (théâtre).
+        """
+        mock_executable.is_file.return_value = True
+        # exit 0 (unreliable) but a fatal-error marker in stdout
+        mock_run.return_value = MagicMock(
+            stdout="Fatal error: Unrecognized command or list\n\n goals.\n",
+            returncode=0,
+        )
+        with pytest.raises(RuntimeError, match="Prover9 reported a fatal error"):
+            run_prover9("goals.\n$F.\nend_of_list.")
+
+    def test_real_binary_inconsistent_kb_emits_theorem_proved(self):
+        """FP-8 verify-the-verification: the REAL bundled Prover9 binary
+        (2009-11A) emits "THEOREM PROVED" when it finds a proof (KB entails
+        $F = inconsistent), and emits "SEARCH FAILED" (NOT an exception) when
+        consistent. This empirically pins TWO contracts:
+          (1) the proof-found marker the fol_handler must match (previous code
+              looked for "END OF PROOF" in the wrong case — never matched), and
+          (2) a non-zero exit code is SEMANTIC here: exit 2 = "SEARCH FAILED" on
+              a consistent KB is the normal outcome the caller needs, so the
+              runner must NOT raise on it (the previous ``check=True`` raised on
+              exactly the consistent case → a consistent KB could never be
+              reported = théâtre).
+        Skipped if the binary is absent (CI without libs/).
+        """
+        if not PROVER9_EXECUTABLE.is_file():
+            pytest.skip("Prover9 binary not bundled on this machine")
+        inconsistent_input = (
+            "formulas(assumptions).\np.\n-p.\nend_of_list.\n\n"
+            "formulas(goals).\n$F.\nend_of_list.\n"
+        )
+        inconsistent_out = run_prover9(inconsistent_input)
+        assert "THEOREM PROVED" in inconsistent_out  # proof of $F found
+        consistent_input = (
+            "formulas(assumptions).\np.\nend_of_list.\n\n"
+            "formulas(goals).\nq.\nend_of_list.\n"
+        )
+        # Consistent KB: runner must RETURN (not raise) stdout with "SEARCH
+        # FAILED" — the handler then reads "THEOREM PROVED not in out" = True.
+        consistent_out = run_prover9(consistent_input)
+        assert "THEOREM PROVED" not in consistent_out  # no proof = consistent
+        assert "SEARCH FAILED" in consistent_out  # the normal no-proof marker

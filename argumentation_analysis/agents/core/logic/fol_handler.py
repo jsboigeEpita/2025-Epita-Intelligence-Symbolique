@@ -326,10 +326,20 @@ class FOLHandler:
         )
         try:
             formulas_str = belief_set.toString().replace(";", ".\n")
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n$F.\nend_of_list."
+            # FP-8: correct Prover9 syntax — goals must be wrapped in
+            # ``formulas(goals).`` (the bare ``goals.`` list header is rejected
+            # by Prover9 2009-11A with "Fatal error: Unrecognized command"). A
+            # consistency check asks whether the KB entails falsehood ($F): a
+            # proof of $F = inconsistent.
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n$F.\nend_of_list."
             logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
             prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
-            is_consistent = "END OF PROOF" not in prover9_output
+            # FP-8: the real proof-found marker emitted by Prover9 2009-11A is
+            # "THEOREM PROVED" (the previous code looked for "END OF PROOF" in
+            # the wrong case — it never matched, so an inconsistent KB was
+            # reported as consistent = théâtre). Proof found (KB entails $F) ⇒
+            # inconsistent.
+            is_consistent = "THEOREM PROVED" not in prover9_output
             msg = f"Consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
@@ -463,15 +473,20 @@ class FOLHandler:
             # Convert belief set and query to Prover9 input format
             formulas_str = belief_set.toString().replace(";", ".\n")
             prover9_goal = query_formula_str.rstrip(".")
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n{prover9_goal}.\nend_of_list."
+            # FP-8: correct Prover9 syntax — ``formulas(goals).`` not bare
+            # ``goals.`` (see consistency check above). Validated empirically
+            # against Prover9 2009-11A.
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n{prover9_goal}.\nend_of_list."
 
             logger.debug(f"Prover9 input for query:\n{prover9_input}")
 
             # Run Prover9 externally
             prover9_output = run_prover9(prover9_input)
 
-            # Check for "END OF PROOF" which means the goal was proven
-            entails = "END OF PROOF" in prover9_output
+            # FP-8: the real proof-found marker is "THEOREM PROVED" (Prover9
+            # 2009-11A). "END OF PROOF" never matched (wrong case) so every
+            # entailment query returned False even when the goal was proven.
+            entails = "THEOREM PROVED" in prover9_output
 
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails
