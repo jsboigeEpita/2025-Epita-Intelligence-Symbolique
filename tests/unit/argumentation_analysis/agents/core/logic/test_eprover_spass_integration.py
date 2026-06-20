@@ -204,24 +204,43 @@ class TestFOLHandlerEProverImplementation:
             with pytest.raises(ValueError, match="TweetyInitializer"):
                 handler._fol_query_with_eprover(mock_belief_set, "query(a)")
 
-    async def test_eprover_consistency_requires_initializer(self, mock_belief_set):
+    async def test_eprover_consistency_requires_path(self, mock_belief_set):
+        """#1196: EProver consistency requires the binary path (from the
+        EXTERNAL_TOOL_PATHS registry), not the TweetyInitializer. With no path
+        registered, the method must raise RuntimeError (fail-loud) rather than
+        silently fall back to a no-op reasoner."""
         handler = FOLHandler()
-        with pytest.raises(ValueError, match="TweetyInitializer"):
-            await handler._fol_check_consistency_with_eprover(mock_belief_set)
+        with patch(
+            "argumentation_analysis.agents.core.logic.fol_handler._get_eprover_path",
+            return_value=None,
+        ):
+            with pytest.raises(RuntimeError, match="EProver binary not detected"):
+                await handler._fol_check_consistency_with_eprover(mock_belief_set)
 
     def test_eprover_query_uses_efol_reasoner(self, mock_belief_set):
-        """Verify that _fol_query_with_eprover loads EFOLReasoner from JPype."""
+        """Verify that _fol_query_with_eprover builds EFOLReasoner from the
+        registered binary path and delegates the query to it (#1196).
+
+        The EFOLReasoner constructor takes the path string as its single
+        argument (Tweety 1.28+ API); previously this called EFOLReasoner() with
+        no argument and relied on a global static path that was never set.
+        """
         mock_initializer = MagicMock(spec=TweetyInitializer)
         mock_reasoner = MagicMock()
         mock_reasoner.query.return_value = True
+        fake_path = "/fake/eprover.exe"
 
         with patch(
             "argumentation_analysis.agents.core.logic.fol_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.fol_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.fol_handler._get_eprover_path",
+            return_value=fake_path,
+        ):
             mock_settings.solver = SolverChoice.EPROVER
-            mock_jpype.JClass.return_value = lambda: mock_reasoner
+            # EFOLReasoner(path) returns the mock reasoner.
+            mock_jpype.JClass.return_value = lambda _path: mock_reasoner
 
             handler = FOLHandler(initializer_instance=mock_initializer)
             handler._fol_parser = MagicMock()
@@ -233,6 +252,122 @@ class TestFOLHandlerEProverImplementation:
 
             handler.parse_fol_formula.assert_called_once_with("query(a)")
             mock_reasoner.query.assert_called_once()
+            assert result is True
+
+
+# ──── EProver Wiring Contract (#1196) ────
+
+
+class TestEProverWiringContract:
+    """Regression guard for the #1196 external-solver wiring fix.
+
+    The previous code called ``EFOLReasoner.setPathToEProver(path)`` as if it
+    were a static method — but in Tweety 1.28+ this method does not exist
+    (it was replaced by the instance method ``setBinaryLocation``). The
+    ``AttributeError`` was silently swallowed, so EProver was never wired and
+    the FOL axis degraded. The fix records the path in a registry and the
+    handler instantiates ``EFOLReasoner(path)`` directly.
+
+    These tests pin the contract: the path is read from the registry, the
+    constructor receives it, and a missing path fails loud (no fabricated
+    verdict).
+    """
+
+    def test_eprover_path_read_from_registry_on_query(self, mock_belief_set):
+        """_fol_query_with_eprover must pass the registered path to EFOLReasoner."""
+        mock_reasoner = MagicMock()
+        mock_reasoner.query.return_value = True
+        fake_path = "/registered/eprover.exe"
+        captured_path = {}
+
+        def fake_jclass(name):
+            if name.endswith("EFOLReasoner"):
+                return lambda path: mock_reasoner.__setattr__("_path", path) or mock_reasoner
+            if name == "java.lang.String":
+                return lambda s: s
+            return MagicMock()
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.fol_handler._get_eprover_path",
+            return_value=fake_path,
+        ), patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.jpype"
+        ) as mock_jpype:
+            mock_jpype.JClass.side_effect = fake_jclass
+
+            handler = FOLHandler(initializer_instance=MagicMock(spec=TweetyInitializer))
+            handler.parse_fol_formula = MagicMock(return_value="mock_formula")
+            handler._fol_query_with_eprover(mock_belief_set, "query(a)")
+
+            # The constructor must have been invoked with the registered path.
+            assert mock_reasoner.query.called
+
+    def test_check_consistency_uses_eprover_when_wired(self, mock_belief_set):
+        """check_consistency must dispatch to EFOLReasoner when settings.solver
+        is EPROVER and the binary path is registered (#1196: previously it
+        hardcoded SimpleFolReasoner regardless of settings)."""
+        mock_reasoner = MagicMock()
+        mock_reasoner.query.return_value = False  # bottom not entailed => consistent
+        mock_parser_instance = MagicMock()
+        mock_parser_instance.parseFormula.return_value = "bottom_formula"
+        mock_parser_factory = MagicMock(return_value=mock_parser_instance)
+
+        def fake_jclass(name):
+            if name.endswith("EFOLReasoner"):
+                return lambda _path: mock_reasoner
+            if name == "java.lang.String":
+                return lambda s: s
+            # FolParser and anything else: a factory returning an instance
+            return mock_parser_factory
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.settings"
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.fol_handler._get_eprover_path",
+            return_value="/registered/eprover.exe",
+        ), patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.jpype"
+        ) as mock_jpype:
+            mock_settings.solver = SolverChoice.EPROVER
+            mock_jpype.JClass.side_effect = fake_jclass
+
+            handler = FOLHandler()  # no initializer — EProver path is self-sufficient
+            is_consistent, msg = handler.check_consistency(mock_belief_set)
+
+            # EFOLReasoner was used (query called), verdict reflects its answer.
+            assert mock_reasoner.query.called
+            assert is_consistent is True
+            assert "EProver" in msg
+
+    def test_check_consistency_falls_back_to_tweety_when_eprover_absent(
+        self, mock_belief_set
+    ):
+        """When settings.solver is EPROVER but no binary is registered, the
+        handler must fall back to SimpleFolReasoner (not fabricate a verdict)."""
+        mock_initializer = MagicMock(spec=TweetyInitializer)
+        mock_tweety_reasoner = MagicMock()
+        mock_tweety_reasoner.query.return_value = False
+        mock_initializer.get_reasoner.return_value = mock_tweety_reasoner
+        mock_parser = MagicMock()
+        mock_parser.parseFormula.return_value = "bottom_formula"
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.settings"
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.fol_handler._get_eprover_path",
+            return_value=None,
+        ), patch(
+            "argumentation_analysis.agents.core.logic.fol_handler.jpype"
+        ) as mock_jpype:
+            mock_settings.solver = SolverChoice.EPROVER
+            mock_jpype.JClass.side_effect = lambda name: mock_parser
+
+            handler = FOLHandler(initializer_instance=mock_initializer)
+            is_consistent, msg = handler.check_consistency(mock_belief_set)
+
+            # EFOLReasoner not built; SimpleFolReasoner used instead.
+            mock_initializer.get_reasoner.assert_called_once_with("SimpleFolReasoner")
+            assert "SimpleFolReasoner" in msg
 
 
 # ──── ModalHandler SPASS Tests ────

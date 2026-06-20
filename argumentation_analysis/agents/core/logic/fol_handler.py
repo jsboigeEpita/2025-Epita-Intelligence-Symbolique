@@ -12,6 +12,22 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+def _get_eprover_path() -> "str | None":
+    """Return the detected EProver binary path, or None if not wired.
+
+    Reads the module-level registry populated by
+    ``jvm_setup._configure_external_tools``. Centralised here so the FOL handler
+    does not duplicate the detection logic and the wiring is testable in
+    isolation (#1196).
+    """
+    try:
+        from argumentation_analysis.core.jvm_setup import EXTERNAL_TOOL_PATHS
+
+        return EXTERNAL_TOOL_PATHS.get("eprover")
+    except Exception:  # pragma: no cover - import guard
+        return None
+
+
 class FOLHandler:
     """
     Handles First-Order Logic (FOL) operations using either TweetyProject or Prover9,
@@ -362,21 +378,32 @@ class FOLHandler:
             ) from e
 
     async def _fol_check_consistency_with_eprover(self, belief_set):
-        """Checks FOL consistency using Tweety's EFOLReasoner (backed by EProver binary)."""
+        """Checks FOL consistency using Tweety's EFOLReasoner (backed by EProver binary).
+
+        #1196: the EProver binary path is read from the module-level
+        ``EXTERNAL_TOOL_PATHS`` registry populated by ``jvm_setup._configure_external_tools``.
+        The ``EFOLReasoner`` constructor takes that path as its single argument
+        (Tweety 1.28+ API). Previously this method called ``EFOLReasoner()`` with
+        no argument and relied on a global static path that was never set — so
+        the EProver path always raised and fell back silently.
+        """
         logger.debug(
             f"Performing FOL consistency check via EProver for belief set of size {belief_set.size()}."
         )
-        if not self._initializer_instance:
-            raise ValueError(
-                "TweetyInitializer instance is required for the 'eprover' solver path."
+        eprover_path = _get_eprover_path()
+        if eprover_path is None:
+            raise RuntimeError(
+                "EProver binary not detected (EXTERNAL_TOOL_PATHS['eprover'] unset); "
+                "cannot run the 'eprover' solver path."
             )
         try:
+            JString = jpype.JClass("java.lang.String")
             EFOLReasoner = jpype.JClass(
                 "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
             )
-            reasoner = EFOLReasoner()
+            reasoner = EFOLReasoner(JString(eprover_path))
 
-            # Check consistency by querying contradiction
+            # Check consistency by querying the bottom/contradiction symbol "-"
             local_parser = jpype.JClass(
                 "org.tweetyproject.logics.fol.parser.FolParser"
             )()
@@ -485,10 +512,16 @@ class FOLHandler:
             )
         try:
             query_formula = self.parse_fol_formula(query_formula_str)
+            eprover_path = _get_eprover_path()
+            if eprover_path is None:
+                raise RuntimeError(
+                    "EProver binary not detected (EXTERNAL_TOOL_PATHS['eprover'] unset)."
+                )
+            JString = jpype.JClass("java.lang.String")
             EFOLReasoner = jpype.JClass(
                 "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
             )
-            reasoner = EFOLReasoner()
+            reasoner = EFOLReasoner(JString(eprover_path))
             entails = reasoner.query(belief_set, query_formula)
             logger.info(
                 f"EProver query: KB entails '{query_formula_str}'? {bool(entails)}"
@@ -532,12 +565,32 @@ class FOLHandler:
             if java_belief_set is None or java_belief_set.size() == 0:
                 return True, "Empty belief set is trivially consistent."
 
-            # Use SimpleFolReasoner if available via initializer
-            if self._initializer_instance:
+            # Select the reasoner: the configured external solver (EProver) when
+            # its binary is wired, otherwise Tweety's SimpleFolReasoner (#1196).
+            # Previously this hardcoded SimpleFolReasoner regardless of
+            # ``settings.solver`` — so a run configured for EProver silently
+            # used the in-JVM reasoner (and OOM'd on large KBs), masking the
+            # EProver integration as "active" when it never ran.
+            eprover_path = _get_eprover_path()
+            use_eprover = (
+                settings.solver == SolverChoice.EPROVER and eprover_path is not None
+            )
+
+            # Use the configured reasoner if available via initializer / registry
+            if use_eprover or self._initializer_instance:
                 try:
-                    reasoner = self._initializer_instance.get_reasoner(
-                        "SimpleFolReasoner"
-                    )
+                    if use_eprover:
+                        JString = jpype.JClass("java.lang.String")
+                        EFOLReasoner = jpype.JClass(
+                            "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
+                        )
+                        reasoner = EFOLReasoner(JString(eprover_path))
+                        solver_name = "EProver"
+                    else:
+                        reasoner = self._initializer_instance.get_reasoner(
+                            "SimpleFolReasoner"
+                        )
+                        solver_name = "SimpleFolReasoner"
                     # Check if KB entails a contradiction
                     # Use "-" (Tweety's built-in contradiction/bottom symbol)
                     # which doesn't require any predicates in the signature
@@ -548,7 +601,7 @@ class FOLHandler:
                     contradiction = local_parser.parseFormula("-")
                     inconsistent = reasoner.query(java_belief_set, contradiction)
                     is_consistent = not bool(inconsistent)
-                    msg = f"FOL consistency check: {'consistent' if is_consistent else 'inconsistent'}"
+                    msg = f"FOL consistency check ({solver_name}): {'consistent' if is_consistent else 'inconsistent'}"
                     return is_consistent, msg
                 except Exception as e:
                     # Fail-loud (anti-theater): parsing succeeded but the
