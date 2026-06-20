@@ -87,23 +87,27 @@ class TestRealEProverConsistency:
         must identify the EProver solver (so the verdict is traceable to a real
         decision, not a degraded fallback).
 
-        KB (Tweety FOL syntax): ``Mortal(socrate)`` together with its negation
-        ``!Mortal(socrate)`` — a direct contradiction.
+        KB (Tweety native FOL syntax — sort + predicate declarations are
+        mandatory): a one-element sort ``human = {socrate}``, the predicate type
+        ``type(Mortal(human))``, then ``Mortal(socrate)`` together with its
+        negation ``!Mortal(socrate)`` — a direct contradiction.
         """
         inconsistent_kb = (
-            "type Human\n"
+            "human = {socrate}\n"
+            "type(Mortal(human))\n"
+            "\n"
             "Mortal(socrate)\n"
             "!Mortal(socrate)\n"
         )
         is_consistent, msg = fol_bridge.check_consistency(
             inconsistent_kb, "first_order"
         )
-        assert is_consistent is False, (
-            f"Inconsistent KB must report inconsistent; got ({is_consistent!r}, {msg!r})."
-        )
-        assert "EProver" in msg, (
-            f"Verdict must be traceable to the EProver solver; got msg={msg!r}."
-        )
+        assert (
+            is_consistent is False
+        ), f"Inconsistent KB must report inconsistent; got ({is_consistent!r}, {msg!r})."
+        assert (
+            "EProver" in msg
+        ), f"Verdict must be traceable to the EProver solver; got msg={msg!r}."
 
     def test_consistent_kb_reports_consistent_via_eprover(
         self, fol_bridge, eprover_solver
@@ -111,19 +115,23 @@ class TestRealEProverConsistency:
         """A consistent FOL KB must yield ``is_consistent = True`` via the REAL
         EProver binary.
 
-        KB (Tweety FOL syntax): ``∀x(Human(x) → Mortal(x))`` +
-        ``Human(socrate)`` + ``Mortal(socrate)`` — the classic syllogism, no
-        contradiction.
+        KB (Tweety native FOL syntax — sort + predicate declarations are
+        mandatory): ``∀x(Human(x) → Mortal(x))`` + ``Human(socrate)`` +
+        ``Mortal(socrate)`` — the classic syllogism, no contradiction.
         """
         consistent_kb = (
-            "type Human\n"
-            "forall x: (Human(x) => Mortal(x)).\n"
-            "Human(socrate).\n"
-            "Mortal(socrate).\n"
+            "human = {socrate}\n"
+            "type(Human(human))\n"
+            "type(Mortal(human))\n"
+            "\n"
+            "forall X: (Human(X) => Mortal(X))\n"
+            "Human(socrate)\n"
+            "Mortal(socrate)\n"
         )
-        is_consistent, msg = fol_bridge.check_consistency(
-            consistent_kb, "first_order"
-        )
-        assert is_consistent is True, (
-            f"Consistent KB must report consistent; got ({is_consistent!r}, {msg!r})."
-        )
+        is_consistent, msg = fol_bridge.check_consistency(consistent_kb, "first_order")
+        assert (
+            is_consistent is True
+        ), f"Consistent KB must report consistent; got ({is_consistent!r}, {msg!r})."
+        assert (
+            "EProver" in msg
+        ), f"Verdict must be traceable to the EProver solver; got msg={msg!r}."
