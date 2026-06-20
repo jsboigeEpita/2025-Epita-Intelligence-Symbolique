@@ -122,7 +122,15 @@ data/
 !argumentation_analysis/agents/data/
 
 # External tools & downloads
-ext_tools/
+# ext_tools/ is ignored EXCEPT the vendored EProver FOL solver runtime.
+# The binary was tracked, then wrongly de-indexed by 95d4f3fd ("Nettoyer l'index Git",
+# 2025-06-12), which left FOL silently degraded on every fresh clone (see #1204/#1208).
+# eprover.exe + its co-located cygwin1.dll are the firsthand-verified pair that DECIDES.
+ext_tools/*
+!ext_tools/EProver/
+ext_tools/EProver/*
+!ext_tools/EProver/eprover.exe
+!ext_tools/EProver/cygwin1.dll
 resources/tweety/
 _temp_downloads/
 portable_jdk/
