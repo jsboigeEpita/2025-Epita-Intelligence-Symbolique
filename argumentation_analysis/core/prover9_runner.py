@@ -17,11 +17,14 @@ def run_prover9(input_content: str) -> str:
         input_content: Une chaîne de caractères contenant la logique à envoyer à Prover9.
 
     Returns:
-        La sortie de Prover9.
+        La sortie de Prover9 (stdout), whether or not a proof was found. A
+        non-zero exit code is SEMANTIC (exit 2 = "SEARCH FAILED" on a consistent
+        KB) and is NOT treated as an error — the caller inspects the stdout
+        markers ("THEOREM PROVED" vs "SEARCH FAILED") to decide.
 
     Raises:
         FileNotFoundError: Si l'exécutable de Prover9 n'est pas trouvé.
-        subprocess.CalledProcessError: Si Prover9 retourne un code d'erreur.
+        RuntimeError: Si Prover9 signale une erreur fatale (input mal formé).
     """
     if not PROVER9_EXECUTABLE.is_file():
         raise FileNotFoundError(f"Prover9 executable not found at {PROVER9_EXECUTABLE}")
@@ -47,19 +50,27 @@ def run_prover9(input_content: str) -> str:
             command_str,
             capture_output=True,
             text=True,
-            check=True,
             cwd=str(PROVER9_BIN_DIR),
             encoding="cp1252",
             shell=True,
         )
-        return process.stdout
-    except subprocess.CalledProcessError as e:
-        error_message = f"Prover9 failed with exit code {e.returncode}.\n"
-        error_message += f"Input was:\n{input_content}\n"
-        error_message += f"Stderr:\n{e.stderr}"
-        raise subprocess.CalledProcessError(
-            e.returncode, e.cmd, output=e.stdout, stderr=error_message
-        )
+        # FP-8 verify-the-verification: Prover9's exit code is SEMANTIC, not a
+        # success/failure signal. Exit 2 with "SEARCH FAILED" is the NORMAL
+        # outcome for a consistency check on a CONSISTENT KB (no proof of $F
+        # found) — using ``check=True`` made the runner raise on exactly the
+        # case the caller wants, so a consistent KB could never be reported.
+        # Only a *parser* failure is a real error: it carries the "Fatal error"
+        # marker in stdout and must be surfaced (anti-théâtre #1019: a malformed
+        # input must not masquerade as a consistency verdict). Everything else
+        # (proof found / search failed) is returned to the caller, which
+        # interprets the proof markers.
+        stdout = process.stdout
+        if "Fatal error" in stdout:
+            raise RuntimeError(
+                "Prover9 reported a fatal error (likely malformed input):\n"
+                f"{stdout}"
+            )
+        return stdout
     finally:
         # S'assurer que le fichier temporaire est supprimé
         if "temp_input_path" in locals() and os.path.exists(temp_input_path):
