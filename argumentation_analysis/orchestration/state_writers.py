@@ -693,7 +693,12 @@ def _write_fact_extraction_to_state(
 
 
 def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write propositional logic analysis results to UnifiedAnalysisState."""
+    """Write propositional logic analysis results to UnifiedAnalysisState.
+
+    #1208 (FP-10): forward the real PySAT model + axiom/query counts so the
+    persisted entry carries a genuine solver witness (not a fabricated
+    ``{p1: True}`` placeholder).
+    """
     if not output or not isinstance(output, dict):
         return
     formulas = output.get("formulas", [])
@@ -703,7 +708,16 @@ def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         formulas = []
     if not isinstance(model, dict):
         model = {}
-    state.add_propositional_analysis_result(formulas, bool(satisfiable), model)
+    kwargs: dict[str, Any] = {}
+    if "axiom_count" in output:
+        kwargs["axiom_count"] = output["axiom_count"]
+    if "query_count" in output:
+        kwargs["query_count"] = output["query_count"]
+    if output.get("message"):
+        kwargs["message"] = output["message"]
+    state.add_propositional_analysis_result(
+        formulas, bool(satisfiable), model, **kwargs
+    )
 
 
 def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

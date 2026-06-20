@@ -208,6 +208,27 @@ class PLHandler:
         )
         return bool(is_consistent), msg
 
+    def check_consistency_detailed(
+        self, belief_set: str
+    ) -> Tuple[bool, Optional[dict], str]:
+        """Return the PL consistency verdict WITH the real PySAT model.
+
+        #1208 (FP-10): mirrors ``check_consistency`` but does not drop the
+        solver witness. ``TweetyBridge.check_consistency_detailed`` dispatches
+        here so the invoke-callable can persist the genuine SAT model instead
+        of fabricating one. Returns ``(is_consistent, named_model, message)``.
+        """
+        if self._sat_available():
+            return self.pl_check_consistency_detailed(belief_set)
+        # Tweety fallback (no PySAT): no structured model to return.
+        is_consistent = self.pl_check_consistency_tweety(belief_set)
+        msg = (
+            "PL knowledge base is consistent."
+            if is_consistent
+            else "PL knowledge base entails a contradiction."
+        )
+        return bool(is_consistent), None, msg
+
     def pl_check_consistency(
         self, knowledge_base_str: str, constants: Optional[List[str]] = None
     ) -> bool:
@@ -432,21 +453,48 @@ class PLHandler:
 
     def pl_check_consistency_sat(self, knowledge_base_str: str) -> bool:
         """Check PL consistency using PySAT instead of Tweety."""
+        is_consistent, _model, _msg = self.pl_check_consistency_detailed(
+            knowledge_base_str
+        )
+        return is_consistent
+
+    def pl_check_consistency_detailed(
+        self, knowledge_base_str: str
+    ) -> Tuple[bool, Optional[dict], str]:
+        """Check PL consistency via PySAT and return the real SAT model.
+
+        #1208 (FP-10): ``pl_check_consistency_sat`` returned only the boolean
+        verdict, dropping the model that ``SATHandler.solve_formulas`` had
+        already computed. The invoke-callable then fabricated a placeholder
+        ``{p1: True, p2: True}`` model, so the persisted state carried a real
+        decision (sat/unsat) with a fake witness — a silent loss of the real
+        solver output (same failure class as a buried solver, #1019).
+
+        This exposes the already-computed named model so callers persist the
+        genuine PySAT witness. Returns ``(is_consistent, named_model_or_None,
+        message)``. ``named_model`` maps proposition-name -> bool (True/False
+        assignment); None when UNSAT.
+        """
         formula_strings = [
             f.strip().rstrip("%")
             for f in knowledge_base_str.split("\n")
             if f.strip() and f.strip() != "```"
         ]
         if not formula_strings:
-            return True
-        # Normalize formulas for SAT handler
+            return True, {}, "Empty knowledge base is consistent."
         normalized = [self._normalize_formula(f) for f in formula_strings]
         handler = self._get_sat_handler()
-        is_consistent, msg = handler.check_consistency(
+        is_sat, named_model, stats = handler.solve_formulas(
             normalized, settings.pysat_solver
         )
+        is_consistent = bool(is_sat)
+        msg = (
+            f"Consistent (SAT). Model: {named_model}"
+            if is_consistent
+            else f"Inconsistent (UNSAT). Solver: {stats.get('solver')}"
+        )
         logger.info(f"PySAT consistency check: {msg}")
-        return is_consistent
+        return is_consistent, named_model, msg
 
     def pl_query_sat(self, knowledge_base_str: str, query_formula_str: str) -> bool:
         """Check PL entailment using PySAT instead of Tweety."""

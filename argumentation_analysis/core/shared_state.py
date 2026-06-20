@@ -810,10 +810,20 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         satisfiable: bool,
         model: Optional[Dict[str, bool]] = None,
         arg_id: Optional[str] = None,
+        axiom_count: Optional[int] = None,
+        query_count: Optional[int] = None,
+        message: Optional[str] = None,
     ) -> str:
-        """Add a propositional logic analysis result."""
+        """Add a propositional logic analysis result.
+
+        #1208 (FP-10): the real PySAT verdict (satisfiable + genuine model)
+        is persisted here. ``axiom_count``/``query_count``/``message`` are
+        optional provenance fields so downstream consumers (restitution, the
+        measurement matrix) can confirm the entry carries a real solver
+        decision, not a hollow counter.
+        """
         pl_id = self._generate_id("pl", self.propositional_analysis_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": pl_id,
             "formulas": formulas,
             "satisfiable": satisfiable,
@@ -821,6 +831,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if arg_id:
             entry["arg_id"] = arg_id
+        if axiom_count is not None:
+            entry["axiom_count"] = axiom_count
+        if query_count is not None:
+            entry["query_count"] = query_count
+        if message:
+            entry["message"] = message
         self.propositional_analysis_results.append(entry)
         state_logger.info(f"PL analysis added: {pl_id} (satisfiable={satisfiable})")
         return pl_id
@@ -1096,6 +1112,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "bipolar_result_count": len(self.bipolar_results),
                     "fol_analysis_count": len(self.fol_analysis_results),
                     "propositional_analysis_count": len(
+                        self.propositional_analysis_results
+                    ),
+                    # #1208 (FP-10): expose the real PL entries (verdict +
+                    # genuine PySAT model + counts) in the summarized snapshot
+                    # too, not just the counter. The state IS the contract;
+                    # a count alone hides whether the verdict is real or a
+                    # fabricated placeholder. This list is already in the
+                    # state object — surfacing it subtracts the masking, it
+                    # does not add a counterweight.
+                    "propositional_analysis_results": list(
                         self.propositional_analysis_results
                     ),
                     "modal_analysis_count": len(self.modal_analysis_results),
