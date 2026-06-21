@@ -101,7 +101,7 @@ CORPORA = [("A", 11, 900), ("C", 2, 900), ("B", 3, 1800)]
 # state_count_key is the UnifiedAnalysisState snapshot counter for that capability.
 CAPABILITIES = [
     # ── Formal logic layer (the FP-3 focus) ──
-    ("pl", "propositional_analysis", "propositional_analysis_count"),
+    ("pl", "propositional_logic", "propositional_analysis_count"),
     ("fol", "fol", "fol_analysis_count"),
     ("modal", "modal", "modal_analysis_count"),
     ("kb_to_tweety", "kb_to_tweety", "atomic_propositions_count"),

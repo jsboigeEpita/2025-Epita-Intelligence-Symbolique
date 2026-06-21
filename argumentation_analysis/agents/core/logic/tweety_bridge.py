@@ -303,6 +303,24 @@ class TweetyBridge:
         else:
             return False, f"Unknown logic type: {logic_type}"
 
+    def check_consistency_detailed(
+        self, belief_set: str, logic_type: str = "propositional"
+    ) -> Tuple[bool, Optional[dict], str]:
+        """Consistency verdict that also returns the real solver witness.
+
+        #1208 (FP-10): the plain ``check_consistency`` returns only ``(bool,
+        str)`` and the message string is where the SAT model was buried (and
+        then dropped by the caller). This returns the structured named model
+        so the PL invoke-callable persists the genuine PySAT assignment
+        instead of fabricating ``{p1: True, p2: True}`` (silent loss of a
+        real decision, #1019). Currently supported for propositional logic;
+        other logic types fall back to ``(bool, None, msg)``.
+        """
+        if logic_type == "propositional":
+            return self.pl_handler.check_consistency_detailed(belief_set)
+        is_consistent, msg = self.check_consistency(belief_set, logic_type)
+        return is_consistent, None, msg
+
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
         if TweetyInitializer.is_jvm_ready():

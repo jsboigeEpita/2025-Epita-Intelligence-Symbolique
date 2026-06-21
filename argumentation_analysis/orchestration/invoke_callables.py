@@ -5100,14 +5100,26 @@ async def _invoke_propositional_logic(
 
         bridge = TweetyBridge()
         belief_set_str = "\n".join(str(f) for f in formulas)
-        is_consistent, msg = await asyncio.to_thread(
-            bridge.check_consistency, belief_set_str, "propositional"
+        # #1208 (FP-10): use the detailed consistency API so the REAL PySAT
+        # model (named proposition -> bool assignment) is persisted, not the
+        # fabricated ``{p1: True, ...}`` placeholder that silently dropped the
+        # solver witness. Also exposes the axiom/query counts the state
+        # contract expects.
+        is_consistent, sat_model, msg = await asyncio.to_thread(
+            bridge.check_consistency_detailed, belief_set_str, "propositional"
         )
         pl_metrics["post_tweety"] = len(formulas)
+        # Fallback model only when PySAT returned no structured witness (e.g.
+        # Tweety-fallback path or UNSAT). Empty dict is honest for UNSAT.
+        persisted_model = (
+            sat_model if isinstance(sat_model, dict) else {}
+        )
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
-            "model": {f"p{i+1}": True for i in range(len(args))},
+            "model": persisted_model,
+            "axiom_count": len(formulas),
+            "query_count": 0,  # PL consistency is a satisfiability check (no entailment query)
             "message": msg,
             "logic_type": "propositional",
             "argument_mapping": argument_mapping
