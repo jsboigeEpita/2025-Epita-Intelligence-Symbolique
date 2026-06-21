@@ -43,8 +43,8 @@ Vous utilisez la syntaxe de TweetyProject pour représenter les formules modales
 IMPORTANT - Gestion des erreurs de syntaxe :
 Si vous recevez une erreur de syntaxe TweetyProject, utilisez la BNF fournie pour corriger automatiquement la syntaxe.
 La BNF de TweetyProject pour la logique modale est :
-- Propositions : identifiants en minuscules (ex: p, q, proposition_name)
-- Constantes doivent être déclarées explicitement avec "constant nom_constante"
+- Propositions : prédicats 0-aires déclarés avec "type(prop)" (ex: type(rain), type(is_wet))
+- Une proposition est UTILISABLE comme atome uniquement après sa déclaration "type(prop)"
 - Opérateurs modaux : [] (nécessité), <> (possibilité)
 - Connecteurs logiques : !, &&, ||, =>, <=>
 
@@ -62,7 +62,9 @@ Les opérateurs modaux que vous utilisez sont :
 PROMPT_TEXT_TO_MODAL_BELIEF_SET = """Expert Modal : Convertissez le texte en ensemble de croyances modales JSON.
 
 ATTENTION - Syntaxe TweetyProject stricte requise :
-- Toutes les constantes/propositions DOIVENT être déclarées avec "constant nom"
+- Listez TOUTES les propositions utilisées dans le tableau "propositions" ; elles seront déclarées
+  automatiquement par le moteur comme "type(prop)" (prédicat 0-aire). Ne générez PAS de "type(...)"
+  vous-même dans "modal_formulas" — uniquement des formules.
 - Utilisez UNIQUEMENT des identifiants en minuscules avec underscores
 - Format JSON : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[](prop1)", "<>(prop2)"]}
 - TOUJOURS entourer la proposition avec des parenthèses après un opérateur modal: [](prop), <>(prop)
@@ -71,7 +73,7 @@ Si vous avez reçu une erreur de syntaxe précédemment, corrigez-la en utilisan
 - Opérateurs : [] (nécessité), <> (possibilité)
 - Connecteurs : !, &&, ||, =>, <=>
 - Propositions en snake_case uniquement
-- Déclarez toutes les constantes utilisées
+- Chaque proposition référencée dans une formule doit figurer dans le tableau "propositions"
 
 Texte : {{$input}}
 """
@@ -104,15 +106,19 @@ Pour chaque requête : objectif modal ([] nécessité, <> possibilité), statut 
 Conclusion générale concise.
 """
 
-# BNF TweetyProject pour la logique modale
+# BNF TweetyProject pour la logique modale (FOL-modal, MlParser)
+# #1213 (FP-11): la grammaire "constant X" (propositionnel-modal) n'est PAS
+# implémentée par ce build de MlParser ("Missing '=' in sort declaration").
+# MlParser est FOL-modal : les propositions sont des prédicats 0-aires déclarés
+# via "type(prop)". Firsthand-verified (po-2025, SimpleMlReasoner pure-Java).
 TWEETY_MODAL_BNF = """
-BNF Syntaxe TweetyProject Logique Modale :
+BNF Syntaxe TweetyProject Logique Modale (FOL-modal, MlParser) :
 
-formula ::= constant_declaration | modal_formula
-constant_declaration ::= "constant" IDENTIFIER
+declaration   ::= "type(" IDENTIFIER ")"
+formula       ::= declaration | modal_formula
 modal_formula ::= atomic_formula | composite_formula
 atomic_formula ::= IDENTIFIER
-composite_formula ::= "!" formula | 
+composite_formula ::= "!" formula |
                      "[](" formula ")" |
                      "<>(" formula ")" |
                      "(" formula ")" |
@@ -123,7 +129,9 @@ composite_formula ::= "!" formula |
 IDENTIFIER ::= [a-z][a-z0-9_]*
 
 RÈGLES IMPORTANTES :
-1. Toutes les constantes/propositions doivent être déclarées avec "constant nom"
+1. Chaque proposition doit être déclarée une fois avec "type(prop)" avant usage
+   (le moteur génère ces déclarations à partir du tableau "propositions" du JSON ;
+   ne pas les réécrire dans "modal_formulas")
 2. Les noms doivent être en minuscules avec underscores uniquement
 3. Les opérateurs modaux sont [] (nécessité) et <> (possibilité)
 4. Pas d'espaces dans les identifiants
@@ -328,40 +336,46 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         return enriched_error
 
     def _construct_modal_kb_from_json(self, kb_json: Dict[str, Any]) -> str:
-        """
-        Version améliorée de la construction de KB avec gestion d'erreur enrichie.
+        """Build a modal belief-set string that Tweety's MlParser accepts.
+
+        #1213 (FP-11): the previous implementation emitted ``constant <name>``
+        declarations — a propositional-modal grammar this MlParser build does
+        NOT implement. Every modal KB failed to parse
+        (``Missing '=' in sort declaration 'constant X'``), so consistency was
+        never actually decided (the failure was silently swallowed as
+        "inconsistent" = théâtre #1019, later surfaced as honest ``None`` by
+        #1212 but still never decided).
+
+        MlParser is FOL-modal: propositions are 0-ary predicates declared with
+        ``type(prop)``; modal operators are ``[]``/``<>``. Firsthand-verified
+        (po-2025, SimpleMlReasoner pure-Java): ``type(rain)`` + ``[](rain =>
+        wet)`` + ``rain`` parses and DECIDES consistently.
+
+        Anti-pendule: the wrong ``constant X`` grammar is REPLACED by
+        ``type(prop)`` — not kept alongside a parallel path.
         """
         kb_parts = []
 
-        # 1. Extraction de toutes les constantes utilisées dans les formules
+        # 1. Collect every proposition referenced (declared + used in formulas).
         propositions = kb_json.get("propositions", [])
         modal_formulas = kb_json.get("modal_formulas", [])
-
-        # Collecter toutes les constantes uniques utilisées
-        all_constants = set(propositions)
-
-        # Extraire les constantes supplémentaires des formules modales
+        all_props = set(propositions)
         for formula in modal_formulas:
-            # Extraire les identifiants en minuscules (constantes)
-            constants_in_formula = re.findall(r"\b[a-z_][a-z0-9_]*\b", formula)
-            all_constants.update(constants_in_formula)
+            all_props.update(re.findall(r"\b[a-z_][a-z0-9_]*\b", formula))
 
-        # 2. Déclaration explicite des constantes pour TweetyProject
-        if all_constants:
+        # 2. Declare each proposition as a 0-ary predicate: ``type(prop)``.
+        #    This is the FOL-modal declaration MlParser parses (replaces the
+        #    invalid ``constant prop`` form).
+        if all_props:
             self.logger.debug(
-                f"Déclaration des constantes modales: {sorted(all_constants)}"
+                f"Déclaration des propositions modales (type/0): {sorted(all_props)}"
             )
-            # Déclarer chaque constante comme une constante modale
-            for const in sorted(all_constants):
-                kb_parts.append(f"constant {const}")
+            for prop in sorted(all_props):
+                kb_parts.append(f"type({prop})")
+            kb_parts.append("")  # blank line separates declarations from formulas
 
-            # Ajouter une ligne vide pour séparer les déclarations des propositions
-            if kb_parts:
-                kb_parts.append("")
-
-        # 3. Formules modales
+        # 3. Modal formulas.
         if modal_formulas:
-            # Assurer que les formules sont bien séparées des déclarations
             if kb_parts:
                 kb_parts.append("")
             kb_parts.extend(modal_formulas)
@@ -575,13 +589,15 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             if not line:
                 continue
 
-            # Extraire les déclarations de propositions (format: constant nom)
-            const_match = re.match(r"constant\s+([a-z_][a-z0-9_]*)", line)
-            if const_match:
-                knowledge_base["propositions"].add(const_match.group(1))
+            # Extraire les déclarations de propositions (format FOL-modal: type(prop)).
+            # #1213 (FP-11): the constructor now emits ``type(prop)`` declarations
+            # (the legacy ``constant nom`` form was unparseable by MlParser).
+            type_match = re.match(r"type\s*\(\s*([a-z_][a-z0-9_]*)\s*\)", line)
+            if type_match:
+                knowledge_base["propositions"].add(type_match.group(1))
             else:
                 # Traiter comme une formule modale
-                if line and not line.startswith("constant"):
+                if line and not line.startswith("type("):
                     knowledge_base["modal_formulas"].append(line)
                     # Extraire les propositions utilisées dans la formule
                     used_props = re.findall(r"\b[a-z_][a-z0-9_]*\b", line)
@@ -881,17 +897,17 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         # L'argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
         negated_conclusion = f"!({conclusion})"  # Négation en logique modale Tweety
 
-        # Le belief set doit contenir les déclarations de constantes/propositions
-        # et les formules. On va construire un belief set temporaire.
+        # Le belief set doit contenir les déclarations de propositions (type(prop),
+        # #1213 FP-11) et les formules. On construit un belief set temporaire.
         all_formulas = premises + [negated_conclusion]
 
-        # Extraction des constantes pour les déclarer
-        all_constants = set()
+        # Extraction des propositions pour les déclarer comme prédicats 0-aires.
+        all_props = set()
         for formula in all_formulas:
-            constants_in_formula = re.findall(r"\b[a-z_][a-z0-9_]*\b", formula)
-            all_constants.update(constants_in_formula)
+            props_in_formula = re.findall(r"\b[a-z_][a-z0-9_]*\b", formula)
+            all_props.update(props_in_formula)
 
-        kb_parts = [f"constant {c}" for c in sorted(all_constants)]
+        kb_parts = [f"type({p})" for p in sorted(all_props)]
         kb_parts.append("")
         kb_parts.extend(all_formulas)
         belief_set_content = "\n".join(kb_parts)
