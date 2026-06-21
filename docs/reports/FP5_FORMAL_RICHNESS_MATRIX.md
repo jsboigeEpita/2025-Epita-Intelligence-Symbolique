@@ -105,7 +105,7 @@ the parallel FOL fail-loud over-label (`is_consistent=None` + echoed `axioms`).
 | `modal` class (post-fix) | **degraded** | **degraded** | **degraded** (parse error: sort decl `'Adolf Hitler'`) |
 | `modal_fabricated_true` | False | False | False |
 | `dl_fabricated_true` | True (pre-existing, genuine) | True | True |
-| phases completed | 40/40 | 40/40 | *run completing — modal verdict already confirmed* |
+| phases completed | 40/40 | 40/40 | 39/40 (`act2_narrative` — non-formal, same transient LLM failure as FP-13) |
 
 `dl_fabricated_true: True` is **pre-existing and genuine** — DL bottom-entailment
 returns `consistent=True` per FP-12 #1216; #1221 touched modal only (not DL), so
