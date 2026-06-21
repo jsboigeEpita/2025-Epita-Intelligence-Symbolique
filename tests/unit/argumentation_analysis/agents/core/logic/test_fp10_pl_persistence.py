@@ -30,11 +30,16 @@ def test_state_writer_persists_real_model_not_placeholder():
     )
 
     state = UnifiedAnalysisState("test")
+    # Two formulas → axiom_count == len(formulas) (the invoke-callable contract).
+    # #1208 review feedback (Hermes po-2026): keep the test's axiom_count
+    # consistent with the number of formulas so it reflects the real emitted
+    # value, not an arbitrary hardcoded integer that masks the semantics.
+    formulas = ["is_mortal && foreign_threat", "is_mortal => danger"]
     output = {
-        "formulas": ["is_mortal && foreign_threat"],
+        "formulas": formulas,
         "satisfiable": True,
-        "model": {"is_mortal": True, "foreign_threat": True},
-        "axiom_count": 2,
+        "model": {"is_mortal": True, "foreign_threat": True, "danger": True},
+        "axiom_count": len(formulas),
         "query_count": 0,
         "message": "Consistent (SAT). Model: {...}",
         "logic_type": "propositional",
@@ -44,9 +49,13 @@ def test_state_writer_persists_real_model_not_placeholder():
     assert len(state.propositional_analysis_results) == 1
     entry = state.propositional_analysis_results[0]
     # The real named model must be preserved — NOT a {p1: True} placeholder.
-    assert entry["model"] == {"is_mortal": True, "foreign_threat": True}
+    assert entry["model"] == {
+        "is_mortal": True,
+        "foreign_threat": True,
+        "danger": True,
+    }
     assert entry["satisfiable"] is True
-    assert entry["axiom_count"] == 2
+    assert entry["axiom_count"] == len(formulas)
     assert entry["query_count"] == 0
     assert entry["message"].startswith("Consistent (SAT)")
 
@@ -64,11 +73,12 @@ def test_state_writer_persists_unsat_with_empty_model():
     )
 
     state = UnifiedAnalysisState("test")
+    formulas = ["claim", "!claim"]
     output = {
-        "formulas": ["claim", "!claim"],
+        "formulas": formulas,
         "satisfiable": False,
         "model": {},  # UNSAT — no model
-        "axiom_count": 2,
+        "axiom_count": len(formulas),
         "query_count": 0,
         "message": "Inconsistent (UNSAT).",
     }
