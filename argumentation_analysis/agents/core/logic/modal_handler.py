@@ -167,41 +167,112 @@ class ModalHandler:
             logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
 
-    def is_modal_kb_consistent(self, belief_set_content: str) -> Tuple[bool, str]:
+    def _build_contradiction_probe(self, belief_set):
+        """Build a ground contradiction ``atom && !atom`` over the KB signature.
+
+        Tweety modal reasoners (``SimpleMlReasoner`` / ``SPASSMlReasoner``)
+        expose ``query(beliefSet, formula)`` but **NOT** ``isConsistent`` (#1205,
+        verified firsthand via ``javap`` and ``getMethods()`` introspection — the
+        only methods are ``query``/``queryProof``). A modal KB is inconsistent
+        iff it entails a contradiction (an inconsistent KB has no models, so it
+        entails every formula over its signature, including ``atom && !atom``;
+        a consistent KB has a model that satisfies the atom one way, so it does
+        NOT entail the contradiction).
+
+        Returns the parsed contradiction formula, or ``None`` when the signature
+        has no predicates (an empty / modal-constant-only KB is trivially
+        consistent). Raises ``RuntimeError`` when a ground atom cannot be built
+        (n-ary predicate with no declared constants) — surfaced as honest
+        "undecidable" rather than a fabricated verdict (#1019).
+        """
+        signature = belief_set.getSignature()
+        predicates = list(signature.getPredicates())
+        if not predicates:
+            return None
+        predicate = predicates[0]
+        name = str(predicate.getName())
+        arity = int(predicate.getArity())
+        if arity == 0:
+            atom = name
+        else:
+            constants = list(signature.getConstants())
+            if not constants:
+                raise RuntimeError(
+                    f"Cannot build a ground contradiction probe: predicate "
+                    f"'{name}' has arity {arity} but the signature declares no "
+                    f"constants — modal consistency is undecidable via query here."
+                )
+            constant = str(constants[0].get())
+            atom = f"{name}(" + ",".join([constant] * arity) + ")"
+        return self._modal_parser.parseFormula(f"{atom} && !{atom}")
+
+    def is_modal_kb_consistent(
+        self, belief_set_content: str
+    ) -> Tuple[Optional[bool], str]:
         """
         Checks if a modal logic knowledge base is consistent.
-        Uses the configured reasoner (SimpleMlReasoner or SPASSMlReasoner).
+
+        Uses the configured reasoner (``SimpleMlReasoner`` or
+        ``SPASSMlReasoner``) via **query-based consistency** (#1205): the KB is
+        inconsistent iff it entails a contradiction (see
+        ``_build_contradiction_probe``). The previous implementation called
+        ``reasoner.isConsistent(belief_set)`` — a method that exists on NO
+        Tweety modal reasoner — so it never decided; the failure was masked by
+        fully-mocked unit tests (formal theater, modal side of #1196/#1202).
+
+        Returns ``(True/False, msg)`` on a real decision and ``(None, msg)``
+        when consistency cannot be determined — a malformed KB, or a reasoner
+        that cannot run (e.g. the SPASS binary is absent or not a runnable CLI
+        build). Honest ``None`` (no silent fallback to another reasoner, no
+        fabricated verdict) per the anti-theater contract (#1019/#961).
         """
+        solver_name = settings.modal_solver.value
         reasoner = self._get_active_reasoner()
-        logger.debug(
-            f"Checking modal KB consistency with {settings.modal_solver.value}."
-        )
+        logger.debug(f"Checking modal KB consistency with {solver_name}.")
+
         try:
             StringReader = jpype.JClass("java.io.StringReader")
-            belief_set_reader = StringReader(belief_set_content)
-            belief_set = self._modal_parser.parseBeliefBase(belief_set_reader)
-
-            is_consistent = reasoner.isConsistent(belief_set)
-
-            message = (
-                "Knowledge base is consistent."
-                if is_consistent
-                else "Knowledge base is inconsistent."
+            belief_set = self._modal_parser.parseBeliefBase(
+                StringReader(belief_set_content)
             )
-            return bool(is_consistent), message
+        except Exception as e:  # parse failure → undetermined, not "inconsistent"
+            error_msg = (
+                f"Modal KB parse error (consistency undetermined, {solver_name}): {e}"
+            )
+            logger.error(error_msg)
+            return None, error_msg
+
+        try:
+            contradiction = self._build_contradiction_probe(belief_set)
+            if contradiction is None:
+                return True, (
+                    f"Knowledge base is consistent (no predicates, {solver_name})."
+                )
+            entails_contradiction = reasoner.query(belief_set, contradiction)
+            is_consistent = not bool(entails_contradiction)
+            message = (
+                f"Knowledge base is consistent ({solver_name})."
+                if is_consistent
+                else f"Knowledge base is inconsistent ({solver_name})."
+            )
+            return is_consistent, message
 
         except jpype.JException as e:
-            if "no method found" in str(e).lower():
-                logger.warning(
-                    "The 'isConsistent' method is not available on the ModalReasoner. "
-                    "Reporting unverified status instead of assuming consistent (#961)."
-                )
-                return None, "Consistency check unavailable: method not found on reasoner."
-
-            error_msg = f"Error checking modal KB consistency: {e.getMessage()}"
-            logger.error(error_msg, exc_info=True)
-            return False, error_msg
+            # e.g. the SPASS binary cannot launch (wrong build / elevation) →
+            # honest "could not decide" (None), NOT False and NOT a fallback.
+            error_msg = (
+                f"Modal consistency could not be decided via {solver_name} "
+                f"(reasoner unavailable): {e.getMessage()}"
+            )
+            logger.warning(error_msg)
+            return None, error_msg
+        except RuntimeError as e:
+            error_msg = f"Modal consistency undecidable ({solver_name}): {e}"
+            logger.warning(error_msg)
+            return None, error_msg
         except Exception as e:
-            error_msg = f"An unexpected error occurred during consistency check: {e}"
+            error_msg = (
+                f"Unexpected error during modal consistency check ({solver_name}): {e}"
+            )
             logger.error(error_msg, exc_info=True)
-            return False, error_msg
+            return None, error_msg
