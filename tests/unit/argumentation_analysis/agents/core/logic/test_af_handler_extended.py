@@ -1,8 +1,9 @@
 """Tests for extended Dung semantics in AFHandler.
 
 Validates:
-- All 11 supported semantics (preferred, grounded, stable, complete, admissible,
-  conflict_free, semi_stable, stage, cf2, ideal, naive)
+- All 10 supported semantics (preferred, grounded, stable, complete, admissible,
+  conflict_free, semi_stable, stage, ideal, naive). cf2 is NOT shipped in the
+  vendored Tweety build (#1215).
 - Multi-semantics analysis
 - Convenience methods (get_grounded_extension)
 - Error handling (invalid semantics, unavailable reasoner)
@@ -79,6 +80,8 @@ class TestSupportedSemantics:
     """Tests for semantics enumeration."""
 
     def test_supported_semantics_list(self):
+        # #1215 (FP-12): cf2 is NOT shipped in the vendored Tweety build —
+        # honest gate-out (was advertised but the class is absent).
         expected = [
             "preferred",
             "grounded",
@@ -88,14 +91,14 @@ class TestSupportedSemantics:
             "conflict_free",
             "semi_stable",
             "stage",
-            "cf2",
             "ideal",
             "naive",
         ]
         assert AFHandler.supported_semantics() == expected
+        assert "cf2" not in AFHandler.supported_semantics()
 
     def test_semantics_reasoners_mapping(self):
-        assert len(SEMANTICS_REASONERS) == 11
+        assert len(SEMANTICS_REASONERS) == 10
         for sem, cls_path in SEMANTICS_REASONERS.items():
             assert "org.tweetyproject.arg.dung.reasoner" in cls_path
 
@@ -242,10 +245,10 @@ class TestMultiSemantics:
         result = handler.analyze_multi_semantics(
             arguments=["a"],
             attacks=[],
-            semantics_list=["grounded", "naive", "cf2"],
+            semantics_list=["grounded", "naive", "ideal"],
         )
 
-        assert set(result["extensions"].keys()) == {"grounded", "naive", "cf2"}
+        assert set(result["extensions"].keys()) == {"grounded", "naive", "ideal"}
 
     def test_partial_failure_continues(self, mock_initializer, mock_jpype):
         _, mock_reasoner_cls = mock_jpype

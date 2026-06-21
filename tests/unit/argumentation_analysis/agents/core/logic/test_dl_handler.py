@@ -223,7 +223,8 @@ class TestConsistencyCheck:
     def test_consistent_kb(self, mock_initializer, mock_jpype):
         handler = DLHandler(mock_initializer)
         mock_reasoner = MagicMock()
-        mock_reasoner.query.return_value = True
+        # #1215: bottom-entailment — a consistent KB does NOT entail ⊥.
+        mock_reasoner.query.return_value = False
         handler._NaiveDlReasoner.return_value = mock_reasoner
 
         kb = MagicMock()
@@ -231,7 +232,19 @@ class TestConsistencyCheck:
         assert result is True
         assert "consistent" in msg.lower()
 
-    def test_jexception_returns_false(self, mock_initializer, mock_jpype):
+    def test_inconsistent_kb(self, mock_initializer, mock_jpype):
+        handler = DLHandler(mock_initializer)
+        mock_reasoner = MagicMock()
+        # #1215: an inconsistent KB entails ⊥ (it entails everything).
+        mock_reasoner.query.return_value = True
+        handler._NaiveDlReasoner.return_value = mock_reasoner
+
+        kb = MagicMock()
+        result, msg = handler.is_consistent(kb)
+        assert result is False
+        assert "inconsistent" in msg.lower()
+
+    def test_jexception_returns_none_degraded(self, mock_initializer, mock_jpype):
         jpype_mock, _ = mock_jpype
         handler = DLHandler(mock_initializer)
         mock_reasoner = MagicMock()
@@ -240,9 +253,10 @@ class TestConsistencyCheck:
 
         kb = MagicMock()
         result, msg = handler.is_consistent(kb)
-        assert result is False
+        # #1215: fail-loud None (degraded), not a fabricated False (anti-theater #1019).
+        assert result is None
 
-    def test_unexpected_error(self, mock_initializer, mock_jpype):
+    def test_unexpected_error_returns_none_degraded(self, mock_initializer, mock_jpype):
         handler = DLHandler(mock_initializer)
         mock_reasoner = MagicMock()
         mock_reasoner.query.side_effect = ValueError("unexpected")
@@ -250,7 +264,8 @@ class TestConsistencyCheck:
 
         kb = MagicMock()
         result, msg = handler.is_consistent(kb)
-        assert result is False
+        # #1215: fail-loud None, never a fabricated verdict.
+        assert result is None
 
 
 class TestConceptQuery:

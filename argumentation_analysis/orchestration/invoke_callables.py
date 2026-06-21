@@ -3619,10 +3619,28 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 
 
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke DeLP handler (#89) with JVM fallback."""
-    program_text = context.get("program", input_text[:500])
+    """Invoke DeLP handler (#89) with JVM fallback.
+
+    #1215 (FP-12): requires an explicit ``program`` in context. Never feeds raw
+    text to ``DelpParser`` — DeLP syntax (facts / strict rules / defeasible
+    rules) is not prose; the old ``input_text[:500]`` default guaranteed a parse
+    failure AND leaked corpus text into the parser (correctness + privacy).
+    Honest-absent when no program is supplied, not a fake parse.
+    """
+    program_text = context.get("program")
     queries = context.get("queries", [])
     criterion = context.get("criterion", "generalized_specificity")
+
+    if not program_text:
+        return {
+            "status": "unavailable",
+            "message": (
+                "DeLP analysis requires an explicit 'program' in context "
+                "(DeLP syntax: 'fact.', 'head <- body.' strict, "
+                "'head -< body.' defeasible). Raw text is not a valid program."
+            ),
+            "queries": queries,
+        }
 
     try:
         from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
@@ -5111,9 +5129,7 @@ async def _invoke_propositional_logic(
         pl_metrics["post_tweety"] = len(formulas)
         # Fallback model only when PySAT returned no structured witness (e.g.
         # Tweety-fallback path or UNSAT). Empty dict is honest for UNSAT.
-        persisted_model = (
-            sat_model if isinstance(sat_model, dict) else {}
-        )
+        persisted_model = sat_model if isinstance(sat_model, dict) else {}
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
@@ -5790,9 +5806,9 @@ async def _invoke_dung_extensions(
     """Invoke Dung framework extension computation via AFHandler (JVM required).
 
     Builds attack graph from extracted arguments and detected fallacies,
-    then computes all 11 Dung semantics via Tweety: grounded, preferred,
-    stable, complete, admissible, conflict_free, semi_stable, stage, cf2,
-    ideal, naive.
+    then computes all available Dung semantics via Tweety: grounded, preferred,
+    stable, complete, admissible, conflict_free, semi_stable, stage, ideal,
+    naive. (cf2 is NOT shipped in the vendored Tweety build — #1215.)
     Falls back to pure-Python computation when JVM is unavailable.
 
     #908: If ``context["dung_provider_hint"]`` is set to

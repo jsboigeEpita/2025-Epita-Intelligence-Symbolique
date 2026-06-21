@@ -53,6 +53,8 @@ class DLHandler:
             self._RoleAssertion = jpype.JClass(f"{dl_pkg}.RoleAssertion")
             self._DlBeliefSet = jpype.JClass(f"{dl_pkg}.DlBeliefSet")
             self._DlSignature = jpype.JClass(f"{dl_pkg}.DlSignature")
+            # Bottom concept for consistency checking (bottom-entailment, #1215).
+            self._BottomConcept = jpype.JClass(f"{dl_pkg}.BottomConcept")
 
             self._DlParser = jpype.JClass("org.tweetyproject.logics.dl.parser.DlParser")
             self._NaiveDlReasoner = jpype.JClass(
@@ -156,21 +158,44 @@ class DLHandler:
 
     # ── Reasoning ────────────────────────────────────────────────────
 
-    def is_consistent(self, kb) -> Tuple[bool, str]:
-        """Check if a DL knowledge base is consistent."""
+    def is_consistent(self, kb) -> Tuple[Optional[bool], str]:
+        """Check if a DL knowledge base is consistent via bottom-entailment.
+
+        #1215 (FP-12): the previous implementation computed
+        ``reasoner.query(kb, AtomicConcept("⊤"))`` and then **ignored the
+        result**, unconditionally returning ``(True, "consistent")`` — DL
+        consistency was never actually decided (hardcoded-True theater, the same
+        #1019 regression class as the modal/DL/DeLP family). Querying ``⊤``
+        cannot distinguish consistent from inconsistent anyway (a consistent KB
+        entails ⊤ trivially, but so does an inconsistent one which entails
+        everything).
+
+        ``NaiveDlReasoner`` exposes only ``query`` (no ``isConsistent`` — same gap
+        as the modal reasoners, #1212). The deciding procedure is
+        **bottom-entailment**: a KB is consistent iff it does NOT entail ⊥. We
+        assert ``(witness: ⊥)`` and ask whether the KB entails it — an
+        inconsistent KB entails everything (incl. ⊥), a consistent one does not.
+        Firsthand-verified (po-2025): consistent KB → ``query(witness:⊥)=False``
+        → ``True``; KB with ``john:human`` ∧ ``john:¬human`` → ``True`` → ``False``.
+
+        Returns ``(None, msg)`` on a reasoner exception — fail-loud degraded
+        (#1019), never a fabricated ``False`` disguised as "inconsistent".
+        """
         reasoner = self._get_reasoner()
         try:
-            result = reasoner.query(kb, self._AtomicConcept("⊤"))
-            # NaiveDlReasoner.query returns true if kb entails the query
-            # An inconsistent KB entails everything
+            witness = self._Individual("_consistency_witness")
+            bottom_assertion = self._ConceptAssertion(witness, self._BottomConcept())
+            entails_bottom = bool(reasoner.query(kb, bottom_assertion))
+            if entails_bottom:
+                return False, "Knowledge base is inconsistent (entails ⊥)."
             return True, "Knowledge base is consistent."
         except jpype.JException as e:
             error_msg = f"DL consistency check error: {e.getMessage()}"
             logger.error(error_msg)
-            return False, error_msg
+            return None, error_msg
         except Exception as e:
             logger.error(f"Unexpected DL error: {e}")
-            return False, str(e)
+            return None, str(e)
 
     def query_concept(self, kb, individual_name: str, concept_name: str) -> bool:
         """Check if an individual is an instance of a concept."""
