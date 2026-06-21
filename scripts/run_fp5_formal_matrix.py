@@ -20,6 +20,7 @@ Anti-pendule (#1196): do NOT pad empty/degraded cells to claim parity; do NOT
 re-raise heap as a fix (PL is SAT now — if something still OOMs it's a NEW
 finding to report). Synthesis-first: no bare count table.
 """
+
 import os
 import sys
 import json
@@ -45,7 +46,7 @@ def _populate_redact(text: str) -> None:
         return
     step, size = 20, 40
     for i in range(0, max(1, len(text) - size + 1), step):
-        chunk = text[i:i + size].strip()
+        chunk = text[i : i + size].strip()
         if len(chunk) >= 20:
             _REDACT_CHUNKS.append(chunk)
 
@@ -101,7 +102,12 @@ CORPORA = [("A", 11, 900), ("C", 2, 900), ("B", 3, 1800)]
 # state_count_key is the UnifiedAnalysisState snapshot counter for that capability.
 CAPABILITIES = [
     # ── Formal logic layer (the FP-3 focus) ──
-    ("pl", "propositional_logic", "propositional_analysis_count"),
+    # #1218 (FP-13): phase_name is the WORKFLOW phase id (workflows.py
+    # ``add_phase("<id>", capability=...)``), NOT the capability name. PL and
+    # counter-argument were mis-keyed (capability name vs phase id) → the phase
+    # looked absent even though the snapshot carried the count (PL=3,
+    # counter=28). Fixed to the real phase ids.
+    ("pl", "pl", "propositional_analysis_count"),
     ("fol", "fol", "fol_analysis_count"),
     ("modal", "modal", "modal_analysis_count"),
     ("kb_to_tweety", "kb_to_tweety", "atomic_propositions_count"),
@@ -122,7 +128,11 @@ CAPABILITIES = [
     ("quality", "quality", "quality_scores_count"),
     ("probabilistic", "probabilistic", "probabilistic_result_count"),
     ("belief_revision", "belief_revision", "belief_revision_result_count"),
-    ("counter_argument", "counter_argument", "counter_argument_count"),
+    (
+        "counter_argument",
+        "counter",
+        "counter_argument_count",
+    ),  # #1218: phase id "counter"
     ("governance", "governance", "governance_decision_count"),
     ("debate", "debate", "debate_transcript_count"),
     ("jtms", "jtms", "jtms_belief_count"),
@@ -172,9 +182,7 @@ def _output_repr(pr) -> object:
     return out
 
 
-def _classify_capability(
-    result: dict, phase_name: str, count_key
-) -> tuple[str, dict]:
+def _classify_capability(result: dict, phase_name: str, count_key) -> tuple[str, dict]:
     """Return (class, evidence) for one capability.
 
     class ∈ {real-verdict, degraded, empty, error, absent}.
@@ -183,6 +191,10 @@ def _classify_capability(
     status = _phase_status(result, phase_name)
     pr = _phase(result, phase_name)
     out = _output_repr(pr)
+    # #1218 (FP-13): raw_out is the ORIGINAL phase output. ``_output_repr`` strips
+    # falsy values (e.g. ``valid=False``), which would hide a real verdict and the
+    # ``solver`` unavailability marker. Verdict + honest-absent checks read raw_out.
+    raw_out = getattr(pr, "output", None) if pr else None
     snapshot = result.get("state_snapshot", {}) or {}
     if isinstance(snapshot, dict):
         count = snapshot.get(count_key) if count_key else None
@@ -190,31 +202,70 @@ def _classify_capability(
         count = None
     has_output = out is not None
 
+    # #1218 (FP-13): capture the verdict VALUE so each matrix cell is self-proving
+    # (PL SAT/UNSAT model, FOL/DL consistency, modal validity, DeLP status, modal
+    # solver). Read from raw_out (``_output_repr`` strips ``valid=False``).
+    verdict_val: object = None
+    if isinstance(raw_out, dict):
+        for _k in ("is_consistent", "consistent", "valid"):
+            if _k in raw_out:
+                verdict_val = raw_out[_k]
+                break
+        if verdict_val is None:
+            verdict_val = raw_out.get("status") or raw_out.get("solver")
+
     evidence = {
         "status": status,
         "count": count,
         "has_nontrivial_output": has_output,
+        "verdict": verdict_val,
     }
 
     if status == "failed":
         return "error", evidence
+    # #1218 (FP-13): a snapshot count key that is explicitly 0 means the
+    # state-writer ran and found nothing → honest-absent (empty), not a wiring
+    # gap (absent). Precedes the status=="absent" early-return so an optional
+    # phase that produced 0 isn't mis-read as unwired. (count is None only when
+    # the key is absent → fall through to the status check below.)
+    if count == 0:
+        return "empty", evidence
     if status == "absent":
         return "absent", evidence
-    # degraded: fail-loud tri-state (FOL after FP-3 returns None/degraded)
+    # #1218 (FP-13): honest-absent signal takes PRIORITY over the degraded
+    # heuristic below. An explicit DECLINE marker means the capability could not
+    # decide — DeLP ``status:"unavailable"`` (no program, FP-12), modal
+    # ``solver:"unavailable"`` (no SPASS/Tweety solver loaded in the pipeline),
+    # a reasoner gate-out. The output dict is non-empty (message + queries +
+    # echoed formulas) but carries no decision → class as empty (honest-absent),
+    # NOT real-verdict and NOT degraded. Anti-théâtre #1019: a filled-but-
+    # declined dict must not count as decided. Read from raw_out (solver is
+    # truthy so survives _output_repr, but be uniform with the verdict capture).
+    # Must precede the degraded heuristic, which otherwise mis-fires on a
+    # status/solver+message-only dict.
+    if isinstance(raw_out, dict):
+        _decl = ("unavailable", "unsupported", "skipped", "not_applicable")
+        if (
+            str(raw_out.get("status", "")).lower() in _decl
+            or str(raw_out.get("solver", "")).lower() in _decl
+        ):
+            return "empty", evidence
+    # degraded: fail-loud tri-state — NO decisive verdict (every verdict key is
+    # None) AND no other real structure. #1218 (FP-13): verdict-aware — the old
+    # ``any()`` over is_consistent/consistent/valid mis-fired when FOL returned
+    # ``is_consistent=True`` but had no ``consistent`` key (None → false marker).
+    # A real verdict (True OR False, e.g. modal valid=False) now correctly
+    # short-circuits to non-degraded; only an all-None verdict + bare message
+    # (the FP-3 fail-loud shape) is degraded.
     if isinstance(out, dict):
-        degraded_markers = (
-            out.get("is_consistent") is None,
-            out.get("consistent") is None,
-            "degraded" in str(out.get("message", "")).lower(),
-            out.get("valid") is None and phase_name in ("modal", "modal_solver"),
-        )
-        # Only mark degraded if the phase explicitly signals it (None verdict)
-        # AND there is no other real structure.
-        explicitly_degraded = any(degraded_markers) and not any(
-            v for k, v in out.items()
+        verdict_keys = [k for k in ("is_consistent", "consistent", "valid") if k in out]
+        has_real_verdict = any(out.get(k) is not None for k in verdict_keys)
+        no_other_structure = not any(
+            v
+            for k, v in out.items()
             if k not in ("is_consistent", "consistent", "valid", "message", "status")
         )
-        if explicitly_degraded:
+        if not has_real_verdict and no_other_structure:
             return "degraded", evidence
     if has_output:
         return "real-verdict", evidence
@@ -233,18 +284,22 @@ def _leak_audit(artifact_text: str, corpus_text: str) -> int:
     chunks = []
     step, size = 20, 40
     for i in range(0, max(1, len(corpus_text) - size + 1), step):
-        c = corpus_text[i:i + size].strip()
+        c = corpus_text[i : i + size].strip()
         if len(c) >= 20:
             chunks.append(c)
     return sum(1 for c in chunks if c in artifact_text)
 
 
 async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dict:
-    from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
+    )
 
     text = load_corpus_text(label, idx)
     corpus_texts[label] = text
-    print(f"[FP-5] doc_{label}: {len(text)} chars | spectacular+full | ceiling {timeout}s")
+    print(
+        f"[FP-5] doc_{label}: {len(text)} chars | spectacular+full | ceiling {timeout}s"
+    )
 
     t0 = time.time()
     verdict = "UNKNOWN"
@@ -294,7 +349,8 @@ async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dic
 
     # DoD-specific confirmations.
     metrics["dod"] = {
-        "pl_no_oom": verdict == "COMPLETED" and _phase_status(result, "pl") == "completed",
+        "pl_no_oom": verdict == "COMPLETED"
+        and _phase_status(result, "pl") == "completed",
         "pl_wallclock_s": round(elapsed, 1) if label == "A" else None,
         "fol_fail_loud": fol_evidence.get("count") in (None, 0)
         or fol_evidence.get("has_nontrivial_output") is False
@@ -308,6 +364,20 @@ async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dic
         # Only suspicious if reasoner was supposed to fail; for now flag presence
         metrics["dod"]["fol_fabricated_true"] = True
         metrics["dod"]["fol_fail_loud"] = False
+
+    # #1218 (FP-13): extend the fabricated-True anti-théâtre probe to modal +
+    # DL. Like ``fol``, this flags the PRESENCE of a positive verdict
+    # (consistent/valid == True); interpretation (real vs fabricated) happens in
+    # the report — a true verdict on a real KB is genuine, not theater.
+    for _cap, _phase_n, _key in (
+        ("modal", "modal", "valid"),
+        ("dl", "dl_reasoning", "consistent"),
+    ):
+        _pr = _phase(result, _phase_n)
+        _out = getattr(_pr, "output", None) if _pr else None
+        metrics["dod"][f"{_cap}_fabricated_true"] = bool(
+            isinstance(_out, dict) and _out.get(_key) is True
+        )
 
     # Raw provenance (gitignored).
     ts = time.strftime("%Y%m%dT%H%M%S")
@@ -379,9 +449,11 @@ async def amain() -> None:
     print("\n[FP-5] DoD confirmations:")
     for m in all_metrics:
         d = m.get("dod", {})
-        print(f"  {m.get('corpus')}: pl_no_oom={d.get('pl_no_oom')} | "
-              f"fol_fail_loud={d.get('fol_fail_loud')} | "
-              f"fol_fabricated_true={d.get('fol_fabricated_true')}")
+        print(
+            f"  {m.get('corpus')}: pl_no_oom={d.get('pl_no_oom')} | "
+            f"fol_fail_loud={d.get('fol_fail_loud')} | "
+            f"fol_fabricated_true={d.get('fol_fabricated_true')}"
+        )
 
 
 if __name__ == "__main__":
