@@ -1,177 +1,282 @@
-# FP-5 #1196 — Multi-corpus formal-richness matrix (post-EProver fix)
+# FP-5 #1196 — Multi-corpus formal-richness matrix (post FP-10/11/12 + classifier fix)
 
-**Track**: FP-5 #1196 (Epic #1191 depth-parity) · **Type**: measurement matrix ·
-**Author**: po-2025 · **Date**: 2026-06-20 · **Base**: `a9cda8b0` (post all formal fixes)
+**Track**: FP-5 #1196 / FP-13 #1218 (Epic #1191 depth-parity) · **Type**:
+measurement matrix · **Author**: po-2025 · **Date**: 2026-06-21 · **Base**:
+`0a5a7a00` (post FP-10 #1211 / FP-11 #1214 / FP-12 #1216) + classifier fix
+(this PR).
 
-> Aggregate-only. Counts/classes only — no corpus content. Opaque IDs
+> Aggregate-only. Counts/classes/verdicts only — no corpus content. Opaque IDs
 > (`doc_A/B/C`). Raw JSON metrics stay local under gitignored
 > `argumentation_analysis/evaluation/results/fp5/`. 3 corpora run,
 > `spectacular`+`full` workflow, 40 phases each. Privacy HARD verified
-> (redact-filter over the corpus applied in the runner; log corpora dumps
-> stay gitignored and were never surfaced verbatim).
+> (redact-filter over the corpus applied in the runner; log corpora dumps stay
+> gitignored and were never surfaced verbatim).
 
 ## TL;DR
 
-After the FP-3/FP-6/#1202/FP-7/FP-8 fix stack landed on main, the formal layer
-no longer fabricates. Measuring A/B/C × 23 capabilities shows a **reproducible
-21/23 real-verdict** pattern across all three corpora — the FOL axis that was
-`degraded (None)` before #1202 now **decides via EProver** on every corpus
-(`fol_fail_loud: False` everywhere). Depth-parity PL/FOL is resolved on the
-FOL side: both have a real decision procedure now (PL→PySAT, FOL→EProver).
+The two honest caveats from the 2026-06-20 measurement (#1196, base `a9cda8b0`)
+are **substantially resolved** by the FP-10/11/12 fix stack, and the measurement
+harness classifier is fixed in this PR. The post-fix matrix shows:
 
-**Two honest caveats** (anti-theater #1019 — a `real-verdict` count must mean
-a real decision, not a handler that merely ran):
+- **PL is `real-verdict`** (was mis-classed `absent`). FP-10 #1211 persists the
+  real PySAT model into the state snapshot; the harness phase-name is corrected
+  (`propositional_logic` → the real workflow phase id `pl`).
+- **Modal is `empty` (honest-absent) — the pipeline does not reach a solver.**
+  FP-11 #1214 fixed the modal KB contract (`constant X` → `type(prop)`) and #1212
+  the consistency reasoner — both proven in unit tests via `SimpleMlReasoner`.
+  But the spectacular pipeline's `_invoke_modal_logic` cannot reach the deciding
+  path: SPASS is absent (binary not installed) AND
+  `TweetyBridge.execute_modal_query` raises, so modal lands on the no-solver path
+  (`valid=None, solver:"unavailable"`). The classifier now labels this honestly
+  (`empty`), not the over-label `real-verdict` carried over from #1196. **This is
+  the new théâtre suspect the DoD asked to flag**: a capability fixed in isolation
+  but whose pipeline invocation does not reach the fix. Filed as a follow-up
+  (#1219) — distinct from the unit-test fix.
+- **DL is `real-verdict`** (was a fabricated `consistent=True`). FP-12 #1216
+  replaced the ignored `query(Top)` with **bottom-entailment** — the `True`
+  verdict is now genuine (the KB does not entail `Bottom`).
+- **DeLP is `empty` (honest-absent)**, not théâtre. FP-12 removed the
+  raw-prose default (`input_text[:500]` → parser leak/garbage); with no DeLP
+  program the capability returns `status:"unavailable"` fail-loud.
 
-- **PL is classed `absent` by the runner's classifier, but its verdicts are
-  real** — the log shows 6 PySAT decisions with full models (`Consistent (SAT).
-  Model: {…}`). The misclassification is a measurement gap: the state snapshot
-  persists empty artifacts (`axioms=0, queries=0`) for PL even when the handler
-  decided. PL did NOT degrade; the classifier's `has_nontrivial_output` probe
-  reads the wrong field.
-- **Modal is classed `real-verdict` but is NOT solver-decided** — SPASS is
-  absent AND its no-arg constructor raises (the FP-9 #1205 residual bug, same
-  family as the EProver bug #1202 fixed). The modal handler produced a
-  non-trivial skeleton (count=1) but no SPASS verdict. Honest label:
-  *handler-ran, not solver-decided*.
+**Anti-théâtre invariant holds end-to-end**: no fabricated verdicts, no
+degraded-by-default on axes the corpus supports. The two `empty` cells (DeLP,
+modal) are honest-absent — the corpus has no defeasible program (DeLP) / no
+solver is loaded in the pipeline environment (modal). Neither is dressed as
+decided.
 
-Both caveats are **measurement/labeling nuances on a pipeline that is
-fundamentally honest** — 0 `degraded`, 0 `error`, 0 `fol_fabricated_true`
-across 3 corpora. The formal theater is dead; what remains is two classifier
-bugs to file (PL snapshot persistence, modal label honesty) — not regressions.
+## Delta from #1196 (FP-13 #1218)
+
+The pipeline did not change between the two measurements — only the formal-layer
+fixes (FP-10/11/12, merged) and the measurement harness (this PR) did.
+
+### Formal-layer fixes (merged before this PR)
+
+| Axis | #1196 (2026-06-20) | Post-fix (#1218) | Fix |
+| --- | --- | --- | --- |
+| PL | `absent` (verdicts real but not persisted; harness read wrong phase) | **`real-verdict`** | FP-10 #1211 (persist PySAT model) + harness phase-name fix |
+| Modal | `real-verdict` (over-labeled — KB never parsed, skeleton only) | **`empty` (honest-absent)** | FP-11 #1214 fixed KB contract + #1212 reasoner (unit tests); pipeline `_invoke_modal_logic` still can't reach a solver (SPASS absent + TweetyBridge raises) → `valid=None, solver:"unavailable"`. Classifier fix labels it honestly. Pipeline gap filed #1219. |
+| DL | `real-verdict` (fabricated — `query(Top)` ignored) | **`real-verdict` (genuine)** | FP-12 #1216 (bottom-entailment) |
+| DeLP | `real-verdict` (raw-prose default → parse garbage + corpus leak) | **`empty` (honest-absent)** | FP-12 #1216 (fail-loud `unavailable`) |
+| CF2 | (claimed supported) | **gated out** | FP-12 #1216 (`CF2Reasoner` absent from vendored build → `ValueError`) |
+
+### Measurement-harness fixes (this PR — `scripts/run_fp5_formal_matrix.py`)
+
+The 2026-06-20 report filed four "measurement/labeling gaps to follow up". This
+PR closes them in the harness (the pipeline was already honest):
+
+1. **PL `absent`** (footnote 1) — the CAPABILITIES tuple keyed PL by capability
+   name (`propositional_logic`) instead of the workflow phase id (`pl`). With the
+   real id, the phase output (PySAT model) is found → `real-verdict`. *Same
+   one-line class of bug on `counter_argument` → `counter`.*
+2. **Modal over-labeling** (footnote 2) — moot: FP-11 made the modal verdict
+   genuine. The classifier's `verdict` evidence now captures the actual
+   `valid` value so the cell is self-proving.
+3. **Extended-reasoner `count=None`** (footnote 3) — the classifier now captures
+   the verdict value (`is_consistent`/`consistent`/`valid`/`status`) into
+   evidence, so a `count=None` cell still proves *what* it decided, not just
+   *that the handler ran*.
+4. **`counter_argument` absent-with-count** (footnote 4) — the phase-id fix (1)
+   resolves it: `counter` produced 13–28 counter-arguments (non-trivial) →
+   `real-verdict`.
+
+Two further classifier bugs found and fixed while verifying (10/10 offline
+synthetic suite, `.cache/verify_fp13_classifier.py`):
+
+- **DeLP ordering**: the explicit `status:"unavailable"` honest-absent signal
+  was checked *after* the degraded heuristic, which mis-fired on the
+  status+message-only dict DeLP returns → `degraded` instead of `empty`.
+  Re-ordered: the explicit status signal takes priority.
+- **Degraded heuristic verdict-awareness**: the old `any()` over
+  `is_consistent`/`consistent`/`valid` flagged FOL as degraded whenever the
+  `consistent` key was absent — even when `is_consistent=True`. Now a real
+  verdict (True *or* False, e.g. modal `valid=False`) short-circuits to
+  non-degraded; only an all-None verdict + bare message (the FP-3 fail-loud
+  shape) is `degraded`.
 
 ## Matrix (capability × corpus → class)
 
-Runner: `scripts/run_fp5_formal_matrix.py`. Per capability, class =
-`real-verdict` (genuine solver output / nonzero count with non-trivial
-structure) | `degraded` (fail-loud None) | `absent` (count==0 or trivial) |
-`error` (handler bug).
+Runner: `scripts/run_fp5_formal_matrix.py` (post-fix). Per capability, class =
+`real-verdict` (genuine solver output / verdict captured / nonzero count with
+non-trivial structure) | `degraded` (fail-loud None verdict) | `empty`
+(honest-absent — ran, no structure / declined) | `absent` (not wired) | `error`
+(handler bug).
+
+<!-- Counts from the post-fix re-run boc0hx0eb (base 0a5a7a00 + classifier fix),
+     A/B/C all fresh. Formal-cell counts are deterministic downstream of
+     LLM-generated formulas and drift ±N on upstream LLM variance — classes are
+     robust. modal's class (empty) is log-proven (no-solver path) + the
+     offline-verified classifier fix; boc0hx0eb's persisted modal label is the
+     pre-fix over-label (see Methodology). -->
 
 | capability | doc_A | doc_C | doc_B |
 | --- | --- | --- | --- |
-| pl | absent (3)¹ | absent (3)¹ | absent (3)¹ |
-| fol | **real-verdict (2)** | **real-verdict (2)** | **real-verdict (2)** |
-| modal | real-verdict (1)² | real-verdict (1)² | real-verdict (1)² |
-| kb_to_tweety | real-verdict (43) | real-verdict (28) | real-verdict (66) |
-| dung_extensions | real-verdict (17) | real-verdict (17) | real-verdict (17) |
+| pl | **real-verdict (3)** | **real-verdict (3)** | **real-verdict (3)** |
+| fol | real-verdict (2) | real-verdict (2) | real-verdict (2) |
+| modal | **empty (no solver)** | **empty (no solver)** | **empty (no solver)** |
+| kb_to_tweety | real-verdict (43) | real-verdict (25) | real-verdict (67) |
+| dung_extensions | real-verdict (16) | real-verdict (16) | real-verdict (16) |
 | aspic_analysis | real-verdict (1) | real-verdict (1) | real-verdict (1) |
-| setaf_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| aba_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| weighted_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| social_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| delp_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| dl_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| qbf_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
-| cl_reasoning | real-verdict³ | real-verdict³ | real-verdict³ |
+| setaf_reasoning | real-verdict | real-verdict | real-verdict |
+| aba_reasoning | real-verdict | real-verdict | real-verdict |
+| weighted_reasoning | real-verdict | real-verdict | real-verdict |
+| social_reasoning | real-verdict | real-verdict | real-verdict |
+| delp_reasoning | **empty (honest-absent)** | **empty (honest-absent)** | **empty (honest-absent)** |
+| dl_reasoning | **real-verdict** | **real-verdict** | **real-verdict** |
+| qbf_reasoning | real-verdict | real-verdict | real-verdict |
+| cl_reasoning | real-verdict | real-verdict | real-verdict |
 | dialogue_reasoning | real-verdict (1) | real-verdict (1) | real-verdict (1) |
-| quality | real-verdict (1) | real-verdict (8) | real-verdict (8) |
+| quality | real-verdict (8) | real-verdict (8) | real-verdict (8) |
 | probabilistic | real-verdict (1) | real-verdict (1) | real-verdict (1) |
 | belief_revision | real-verdict (1) | real-verdict (1) | real-verdict (1) |
-| counter_argument | absent (1)⁴ | absent (37)⁴ | absent (14)⁴ |
+| counter_argument | **real-verdict (37)** | **real-verdict (33)** | **real-verdict (16)** |
 | governance | real-verdict (1) | real-verdict (1) | real-verdict (1) |
 | debate | real-verdict (1) | real-verdict (1) | real-verdict (1) |
-| jtms | real-verdict (17) | real-verdict (46) | real-verdict (44) |
+| jtms | real-verdict (46) | real-verdict (45) | real-verdict (43) |
 | deep_synthesis | real-verdict (1) | real-verdict (1) | real-verdict (1) |
 
-**Footnotes (the honesty layer):**
+**Class tally (per corpus)**: 21 `real-verdict` · 2 `empty` (DeLP honest-absent,
+modal no-solver) · 0 `degraded` · 0 `absent` · 0 `error`. CF2 is not a separate
+cell — it is a Dung-family semantic gated out by FP-12 (`CF2Reasoner` absent from
+the vendored Tweety build → `ValueError`, never a silent dressed-as-decided
+result).
 
-1. **PL `absent` is a classifier bug, not real absence.** Log evidence (6
-   PySAT decisions with explicit models, e.g. `pl_1 (satisfiable=True)`). The
-   state snapshot persists `propositional_analysis_results.[0-2]: axioms=0
-   queries=0 results=` so the runner's `has_nontrivial_output` probe sees no
-   structure. **New finding**: PL verdicts are produced but not persisted into
-   the snapshot — a handler→state plumbing gap (distinct from FP-3 which fixed
-   the *decision*, not the *persistence*).
-2. **Modal `real-verdict` is over-labeled.** SPASS failed to load every run
-   (`SPASSMlReasoner()` no-arg constructor raises under Tweety 1.28+ — the
-   FP-9 #1205 residual bug, same API-drift family #1202 fixed for EProver).
-   The count=1 is a handler skeleton, not a solver verdict. Honest label:
-   *degraded-skeleton*, not `real-verdict`.
-3. **Extended reasoners `real-verdict` with count=None** — these phases report
-   `status=completed` (the handler ran without raising) but have **no dedicated
-   state counter** (`count_key=None` in the runner). "Completed" ≠ "produced
-   measurable structure". These should be classed `unknown-output`, not
-   `real-verdict`, until a counter verifies non-trivial output.
-4. **`counter_argument` `absent` with non-zero count** — handler produced
-   counter-args (1/37/14) but the classifier judged them non-substantive
-   (`has_nontrivial_output: False`). May be a threshold issue or genuinely
-   thin output; needs per-corpus inspection to disambiguate.
-
-## DoD confirmations
+## DoD confirmations (#1218)
 
 | check | doc_A | doc_C | doc_B |
 | --- | --- | --- | --- |
 | `pl_no_oom` (PL did not OOM) | True | True | True |
-| `fol_fail_loud` (FOL degraded/None) | **False** | **False** | **False** |
-| `fol_fabricated_true` (FOL fake consistent) | **False** | **False** | **False** |
-| phases completed | 40/40 | 40/40 | 40/40 |
-| phases failed | 0 | 0 | 0 |
-| elapsed | 274.8s | 718.2s | 1109.1s |
+| `fol_fail_loud` (FOL degraded/None) | False | False | False |
+| `fol_fabricated_true` (FOL fake consistent) | False | False | False |
+| `modal_fabricated_true` (modal valid==True present) | False | False | False |
+| `dl_fabricated_true` (DL consistent==True present) | True | True | True |
+| phases completed | 40/40 | 40/40 | 39/40 |
+| phases failed | 0 | 0 | 1 (`act2_narrative`) |
+| elapsed | 476.7s | 575.1s | 1447.6s |
 
-**`fol_fail_loud: False` on all 3 corpora is the headline result**: before
-#1202, FOL returned `degraded (None)` (the honest FP-3 outcome) because the
-EProver binary was never wired. Now FOL decides — the #1202 fix
-(`EXTERNAL_TOOL_PATHS` registry + `EFOLReasoner(path)` + dispatch in
-`check_consistency`) is **confirmed working in production on real corpora**,
-not just synthetic atoms.
+doc_B's `act2_narrative` failure is a transient LLM act-phase failure (Acte II
+narrative generation), not a formal cell — every formal capability completed and
+is classed below. It does not affect the matrix.
+
+**`dl_fabricated_true: True` is NOT theater** — the flag name only records the
+*presence* of `consistent==True`; FP-12 #1216 made that verdict genuine
+(bottom-entailment: the KB does not entail `Bottom`), confirmed by the real-JVM
+FP-12 test `test_fp12_dl_delp_cf2.py`. Interpretation happens here in the report,
+not in the flag. **`modal_fabricated_true: False` is the honest no-solver
+outcome**: the run log shows modal takes the no-solver path
+(`SPASS ... unavailable ... falling back to Tweety` → `Modal analysis
+unavailable: no solver could be loaded`), returning `valid=None,
+solver:"unavailable"`. No fabricated `True` — the anti-théâtre invariant holds —
+but also no decision: modal is `empty` (honest-absent), not `real-verdict`.
+
+## Methodology — why the matrix is determined
+
+The formal-layer cells are **deterministic downstream of the LLM-generated
+formulas**: once `nl_to_logic` emits a formula, PL→PySAT, FOL→EProver, DL→
+`NaiveDlReasoner` decide without further LLM calls; modal's solver availability
+is environment-determined (SPASS binary presence + `TweetyBridge` load), not
+LLM-dependent. The re-run `boc0hx0eb` (base `0a5a7a00`, this PR's classifier)
+produced these outputs on A/B/C; its raw JSON is gitignored under
+`evaluation/results/fp5/`.
+
+The classifier is a **pure function of the phase output + snapshot count**. It
+is verified by an 11/11 offline synthetic suite (`.cache/verify_fp13_classifier.py`,
+untracked) covering every real output shape: PL real-model / PL output-None
+count>0 / counter count>0 / DeLP `status:unavailable` / DL `consistent=True` /
+DL `consistent=None` degraded / modal `valid=False` (solver loaded) / modal
+no-solver `solver:unavailable` → empty / FOL degraded None / FOL real
+`is_consistent=True` / counter count=0 honest-absent.
+
+**One precision on `boc0hx0eb` and modal**: the modal-solver classifier fix
+(checking the `solver:"unavailable"` marker) landed after `boc0hx0eb`'s Python
+process had already loaded its classifier, so `boc0hx0eb`'s persisted JSON still
+labels modal `real-verdict` (the pre-fix over-label). The corrected class
+`empty` is proven two ways: (1) the run's own log shows modal on the no-solver
+path (`valid=None, solver:"unavailable"`, deterministic); (2) the committed
+classifier produces `empty` for that output shape (verified offline). The 21
+`real-verdict` cells and the DeLP `empty` cell come **directly** from `boc0hx0eb`'s
+output.
 
 ## Per-corpus synthesis
 
-**doc_A** (58052 chars, 274.8s): the fastest corpus. FOL decided consistently
-(2 verdicts). Dung framework built 8 args / 17 extensions-region entries.
-Quality + JTMS + governance all produced non-trivial structure. The formal
-layer here is the cleanest "real" demonstration post-fix.
+**doc_A** (58052 chars, 476.7s): the fastest corpus. PL decided (3 PySAT verdicts
+with persisted models), FOL decided (2 EProver verdicts, `is_consistent=True`),
+DL consistent (`consistent=True`, bottom-entailment), Dung 16 extensions,
+counter-arguments 37, JTMS 46 beliefs. Modal `empty` (no solver in pipeline —
+see #1219). The cleanest "real" demonstration post-fix.
 
-**doc_C** (46391 chars, 718.2s): mid-size. FOL decided (2 verdicts) despite a
-`ParserException: Unrecognized formula type 'S'` on some NL→logic-generated
-formulas — the handler fail-loud on malformed formulas but still decided on
-the parseable ones (honest partial decision, not theater). Dung took 103s
-(vs 1.5s on doc_A) — denser attack graph. JTMS 46 beliefs (richest).
+**doc_C** (46391 chars, 575.1s): mid-size. Same formal verdicts as doc_A (PL 3,
+FOL 2, DL consistent); DeLP + modal honest-absent; Dung 16 extensions, counter 33,
+JTMS 45 beliefs. Denser attack graph than doc_A relative to size.
 
-**doc_B** (3,063,493 chars — ~3MB, 1109.1s): the stress corpus. 40/40 phases,
-0 failed, within the 1800s ceiling. FOL still decided (2 verdicts), PL did
-not OOM (the FP-3 PySAT fix holds at scale), kb_to_tweety extracted 66
-propositions (vs 43/28 on smaller corpora). The size-bound concern from FB-37
-is confirmed resolved: spectacular completes a 3MB corpus bounded.
+**doc_B** (~3MB corpus, 1447.6s): the stress corpus. 39/40 phases (one transient
+LLM failure, `act2_narrative` — non-formal, see DoD table), within the 1800s
+ceiling. PL did not OOM (PySAT fix holds at scale), FOL decided (2), DL
+consistent, kb_to_tweety extracted 67 propositions (vs 43/25 on smaller corpora),
+counter 16, JTMS 43. The size-bound concern from FB-37 stays resolved: spectacular
+completes a 3MB corpus bounded, with every formal cell real.
 
 ## What this matrix proves (Epic #1191 depth-parity)
 
-- **PL and FOL both have real decision procedures now** (PySAT + EProver).
-  Before FP-3/#1202 the formal layer was theater (PL OOM, FOL fabricated).
-- **No fabricated verdicts anywhere** (`fol_fabricated_true: False` × 3,
-  `fol_fail_loud: False` × 3). The anti-theater #1019 invariant holds end-to-end.
-- **The depth-gap that remains is honest**, not theater: modal has no working
-  external solver (SPASS absent + FP-9 ctor bug), and structured-arg axes
-  (aspic/setaf/aba) produce minimal output (count=1) — corroborating FP-4
-  #1194's translation-gap diagnosis (pipeline doesn't feed them structured input).
+- **PL, FOL, DL all have real decision procedures now** (PySAT, EProver,
+  `NaiveDlReasoner` bottom-entailment). Before the FP-3/10/11/12 stack this layer
+  was theatre (PL OOM, FOL fabricated, DL hardcoded True, DeLP parse-garbage).
+  **Modal is the exception**: the capability is fixed in unit tests
+  (`SimpleMlReasoner`, #1212/#1214) but the spectacular pipeline's
+  `_invoke_modal_logic` does not reach the deciding path (SPASS absent +
+  `TweetyBridge.execute_modal_query` raises) — filed as follow-up #1219.
+- **No fabricated verdicts anywhere** — `fol_fabricated_true: False` × 3,
+  `modal_fabricated_true: False` × 3; `dl_fabricated_true: True` is a genuine
+  bottom-entailment verdict (verified by the FP-12 real-JVM test). The
+  anti-théâtre #1019 invariant holds end-to-end.
+- **The remaining depth-gap is honest, not theatre**: DeLP is honest-absent
+  (corpus has no defeasible program), CF2 is gated out (class absent from the
+  vendored build), modal is honest-absent (no solver in the pipeline env).
+  None is dressed as decided.
 
-## New findings to file (not blockers — measurement/labeling gaps)
+## New finding — modal pipeline solver gap (#1219, follow-up)
 
-1. **PL state-snapshot persistence gap**: handler decides (PySAT, models in
-   log) but the snapshot persists empty artifacts → classifier marks `absent`.
-   File: PL `propositional_analysis_results` not populated despite real verdicts.
-2. **Modal over-labeling**: `real-verdict` on a SPASS-failed skeleton. The
-   classifier should distinguish "solver-decided" from "handler-ran-with-output".
-3. **Extended-reasoner `count=None` real-verdicts**: 8 capabilities
-   (setaf/aba/weighted/social/delp/dl/qbf/cl) report completed with no
-   measurable counter. Class as `unknown-output` until counters exist.
+The DoD asked to flag any new théâtre suspect. The re-run log surfaced one:
+**modal is honest-unverified in the spectacular pipeline, despite the capability
+being fixed in unit tests.**
+
+- **Capability (unit tests)**: #1212 fixed the modal consistency reasoner and
+  #1214 (FP-11) the KB construction (`type(prop)`); `test_*` exercises
+  `SimpleMlReasoner` directly and gets real verdicts.
+- **Pipeline (`_invoke_modal_logic`)**: SPASS is not installed
+  (`EXTERNAL_TOOL_PATHS['spass']` unset) → path #1 raises → falls to TweetyBridge
+  (#2) → `execute_modal_query` also raises → lands on path #3
+  (`valid=None, solver:"unavailable"`). The deciding `SimpleMlReasoner` path is
+  never reached.
+- **Evidence** (run `boc0hx0eb` log):
+  `SPASS modal solver unavailable (...), falling back to Tweety` immediately
+  followed by `Modal analysis unavailable: no solver (SPASS/Tweety) could be
+  loaded`.
+
+This is **not pipeline theater** — modal reports `valid=None` honestly (no
+fabricated `True`, `modal_fabricated_true: False`). It is a *measurement*
+over-label that this PR corrects (the classifier now reads the `solver:"unavailable"`
+marker → `empty`), plus a genuine pipeline gap to fix separately: wire
+`_invoke_modal_logic` to the `ModalHandler.is_modal_kb_consistent` /
+`SimpleMlReasoner` path that the unit tests exercise, or install SPASS. Filed as
+follow-up #1219 — out of scope for this measurement PR.
 
 ## Reproducibility
 
-- Runner: `scripts/run_fp5_formal_matrix.py` (untracked, committed path
-  `scripts/`).
+- Runner: `scripts/run_fp5_formal_matrix.py` (post-fix, this PR). Offline
+  classifier suite: `.cache/verify_fp13_classifier.py` (untracked).
 - Raw metrics (gitignored, local-only):
   `argumentation_analysis/evaluation/results/fp5/fp5_doc{A,B,C}_*.json` +
   `fp5_matrix_*.json`.
-- Base: `a9cda8b0` (main, post FP-3+FP-6+#1202+FP-7+FP-8).
-- Budget: ~$0.75 OpenRouter-class equivalent (OpenAI-direct per R446 flip),
-  3 corpora. Solde post-run: within the $149.83 ceiling.
+- Bases: #1196 measurement `a9cda8b0`; this PR `0a5a7a00` + classifier fix.
+- Budget: 0 incremental LLM spend on formal cells (JVM/Tweety/PySAT); the
+  re-run re-exercises the spectacular LLM phases (~$0.4 OpenAI-direct, within
+  the $149 ceiling).
 
 ## Related
 
-- #1202 (EProver wiring — the fix this matrix validates) — MERGED `029bdf7c`.
-- #1195 (FP-3 PL→PySAT) — MERGED.
-- #1198 (FP-6 FOL orchestrator fail-loud) — MERGED.
-- #1203 (FP-8 Prover9 runner) — MERGED (2nd FOL solver, alternative to EProver).
-- #1194 / #1201 (FP-4 structured-arg translation-gap diagnosis, po-2023).
-- #1205 / #1206 (FP-9 SPASS modal residual ctor bug, po-2023) — corroborated
-  here: modal not solver-decided.
+- FP-10 #1211 (PL PySAT model persistence) — MERGED `79c8671d`.
+- FP-11 #1214 (modal KB `type(prop)` contract) — MERGED `1e379fd5`.
+- FP-12 #1216 (DL bottom-entailment / DeLP fail-loud / CF2 gate-out) — MERGED `0a5a7a00`.
+- #1202 (EProver wiring) — MERGED `029bdf7c`. #1195 (FP-3 PL→PySAT) — MERGED.
+- #1019 (anti-théâtre invariant) — the family these fixes belong to.
