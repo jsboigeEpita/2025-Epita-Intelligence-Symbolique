@@ -7,7 +7,12 @@ from .tweety_initializer import TweetyInitializer
 logger = logging.getLogger(__name__)
 
 
-# Mapping from semantics name to Tweety reasoner class path
+# Mapping from semantics name to Tweety reasoner class path.
+# #1215 (FP-12): ``cf2`` removed — ``CF2Reasoner`` is NOT shipped in the vendored
+# Tweety build (introspected firsthand: the FQN raises ClassNotFoundException in
+# both 1.28 and 1.29; no SimpleCF2Reasoner / prover.* variant exists either).
+# Advertising it as supported while the class is absent was a false promise;
+# honest gate-out instead of a silent {"error": ...} dressed as a result.
 SEMANTICS_REASONERS = {
     "preferred": "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner",
     "grounded": "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner",
@@ -17,7 +22,6 @@ SEMANTICS_REASONERS = {
     "conflict_free": "org.tweetyproject.arg.dung.reasoner.SimpleConflictFreeReasoner",
     "semi_stable": "org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner",
     "stage": "org.tweetyproject.arg.dung.reasoner.SimpleStageReasoner",
-    "cf2": "org.tweetyproject.arg.dung.reasoner.CF2Reasoner",
     "ideal": "org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner",
     "naive": "org.tweetyproject.arg.dung.reasoner.SimpleNaiveReasoner",
 }
@@ -27,7 +31,8 @@ class AFHandler:
     """
     Handles Abstract Argumentation Framework (AF) operations using TweetyProject.
     Supports multiple Dung semantics: preferred, grounded, stable, complete,
-    admissible, conflict-free, semi-stable, stage, CF2, ideal, naive.
+    admissible, conflict-free, semi-stable, stage, ideal, naive.
+    (CF2 is NOT shipped in the vendored Tweety build — see SEMANTICS_REASONERS.)
     """
 
     def __init__(self, initializer_instance: TweetyInitializer):
@@ -124,8 +129,8 @@ class AFHandler:
             arguments: A list of argument names.
             attacks: A list of attacks [source, target].
             semantics: The semantics to use. Supported: preferred, grounded, stable,
-                      complete, admissible, conflict_free, semi_stable, stage, cf2,
-                      ideal, naive.
+                      complete, admissible, conflict_free, semi_stable, stage,
+                      ideal, naive. (cf2 is NOT available in the vendored build.)
 
         Returns:
             Dict with keys: semantics, extensions, statistics.
