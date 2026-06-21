@@ -959,7 +959,16 @@ class TestInvokeCallables:
         assert result["modalities"] == ["none_detected"]
 
     async def test_invoke_modal_logic_error(self):
-        """_invoke_modal_logic returns error dict on exception."""
+        """_invoke_modal_logic handles undecidable input honestly (valid=None).
+
+        #1219 + #961/#1019: when the solver cannot decide (here: an unparseable
+        modal belief set, or a solver that cannot load), the result reports
+        ``valid=None`` — NEVER a fabricated ``valid=False`` nor an ``error`` dict.
+        This is the anti-théâtre invariant; the load-bearing unavailable-fallback
+        assertion lives in ``test_value_gates`` (patches ``asyncio.to_thread``).
+        Previously this test asserted the theater shape ``valid is False`` +
+        ``"error"``, which the #1097 hardening removed — aligned here.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_modal_logic,
         )
@@ -969,8 +978,11 @@ class TestInvokeCallables:
             side_effect=Exception("fail"),
         ):
             result = await _invoke_modal_logic("text", {})
-        assert "error" in result
-        assert result["valid"] is False
+        assert result.get("valid") is None, (
+            f"Undecidable modal input must yield valid=None (honest, not "
+            f"fabricated), got {result.get('valid')!r}."
+        )
+        assert "modalities" in result
 
     async def test_invoke_dung_extensions_error(self):
         """_invoke_dung_extensions falls back to Python when handler unavailable."""
