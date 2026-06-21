@@ -138,9 +138,12 @@ class TestModalLogicAgent:
 
         kb_content = modal_agent._construct_modal_kb_from_json(kb_json)
 
-        # Vérifier que les constantes sont déclarées
-        assert "constant action_necessaire" in kb_content
-        assert "constant climat_urgent" in kb_content
+        # #1213 (FP-11): les propositions sont déclarées comme prédicats 0-aires
+        # type(prop) (grammaire FOL-modal que MlParser parse). L'ancienne forme
+        # ``constant prop`` était rejetée par MlParser → KB jamais décidée.
+        assert "type(action_necessaire)" in kb_content
+        assert "type(climat_urgent)" in kb_content
+        assert "constant" not in kb_content
 
         # Vérifier que les propositions ne sont plus déclarées avec prop()
         assert "prop(climat_urgent)" not in kb_content
@@ -252,7 +255,7 @@ class TestModalLogicAgent:
         assert belief_set is not None
         assert isinstance(belief_set, ModalBeliefSet)
         assert "réussie" in message
-        assert "constant urgent" in belief_set.content
+        assert "type(urgent)" in belief_set.content
         assert "[](urgent)" in belief_set.content
 
     # @pytest.mark.real_jpype
@@ -289,9 +292,9 @@ class TestModalLogicAgent:
     def test_parse_modal_belief_set_content(self, modal_agent):
         """Test l'analyse du contenu d'un belief set modal."""
         belief_content = """
-        constant urgent
-        constant action
-        
+        type(urgent)
+        type(action)
+
         [](urgent)
         <>(urgent => action)
         """
@@ -310,7 +313,7 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
 
         # Mock du belief set
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
 
         # Mock de la réponse LLM
         mock_json_response = (
@@ -343,7 +346,7 @@ class TestModalLogicAgent:
         """Test la génération de requêtes avec réponse vide."""
         modal_agent._tweety_bridge = mock_tweety_bridge
 
-        belief_set = ModalBeliefSet("constant test\n\n[](test)")
+        belief_set = ModalBeliefSet("type(test)\n\n[](test)")
 
         # Mock retournant une réponse vide
         mock_json_response = '{"query_ideas": []}'
@@ -366,7 +369,7 @@ class TestModalLogicAgent:
             "ACCEPTED: Query validated"
         )
 
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "[](urgent)"
 
         result, message = modal_agent.execute_query(belief_set, query)
@@ -381,7 +384,7 @@ class TestModalLogicAgent:
             "REJECTED: Query not valid"
         )
 
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "invalid_query"
 
         result, message = modal_agent.execute_query(belief_set, query)
@@ -396,7 +399,7 @@ class TestModalLogicAgent:
             "Test error"
         )
 
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "[](urgent)"
 
         result, message = modal_agent.execute_query(belief_set, query)
@@ -418,7 +421,7 @@ class TestModalLogicAgent:
         ].invoke.return_value = mock_response_object
 
         text = "Texte original"
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         queries = ["[](urgent)"]
         results = [(True, "ACCEPTED: Query valid")]
 
@@ -439,7 +442,7 @@ class TestModalLogicAgent:
         ].invoke.side_effect = Exception("Interpret error")
 
         text = "Texte"
-        belief_set = ModalBeliefSet("constant test\n\n[](test)")
+        belief_set = ModalBeliefSet("type(test)\n\n[](test)")
         queries = ["[](test)"]
         results = [(True, "ACCEPTED")]
 
@@ -499,7 +502,7 @@ class TestModalLogicAgent:
             "Consistent KB",
         )
 
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         is_consistent, message = modal_agent.is_consistent(belief_set)
 
         assert is_consistent == True
@@ -514,7 +517,7 @@ class TestModalLogicAgent:
             "Inconsistent KB",
         )
 
-        belief_set = ModalBeliefSet("constant p\n\n[](p)\n!<>(p)")  # Contradictoire
+        belief_set = ModalBeliefSet("type(p)\n\n[](p)\n!<>(p)")  # Contradictoire
         is_consistent, message = modal_agent.is_consistent(belief_set)
 
         assert is_consistent == False
@@ -530,7 +533,7 @@ class TestModalLogicAgent:
         # Simuler l'absence de la méthode sur le handler de manière robuste
         delattr(mock_tweety_bridge.modal_handler, "is_modal_kb_consistent")
 
-        belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
+        belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         is_consistent, message = modal_agent.is_consistent(belief_set)
 
         # Devrait retourner True par défaut avec un message explicatif
@@ -539,11 +542,11 @@ class TestModalLogicAgent:
 
     def test_create_belief_set_from_data(self, modal_agent):
         """Test la création d'un belief set depuis des données."""
-        data = {"content": "constant test\n\n[](test)"}
+        data = {"content": "type(test)\n\n[](test)"}
         belief_set = modal_agent._create_belief_set_from_data(data)
 
         assert isinstance(belief_set, ModalBeliefSet)
-        assert belief_set.content == "constant test\n\n[](test)"
+        assert belief_set.content == "type(test)\n\n[](test)"
 
     def test_create_belief_set_from_empty_data(self, modal_agent):
         """Test la création d'un belief set depuis des données vides."""
@@ -762,9 +765,9 @@ class TestModalLogicAgentIntegration:
 def create_test_modal_belief_set() -> ModalBeliefSet:
     """Crée un belief set modal pour les tests."""
     content = """
-    constant urgent
-    constant action
-    
+    type(urgent)
+    type(action)
+
     [](urgent)
     <>(urgent => action)
     """
