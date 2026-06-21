@@ -99,7 +99,9 @@ class TestFOLHandlerEProverDispatch:
             mock_eprover.assert_called_once_with(mock_belief_set, "query(a)")
             mock_tweety.assert_not_called()
             mock_prover9.assert_not_called()
-            assert result is True
+            # fol_query returns (result, used_tweety_fallback); the eprover path
+            # returns the prover verdict + False (no Tweety fallback was used).
+            assert result == (True, False)
 
     @pytest.mark.parametrize(
         "solver,expected_method",
