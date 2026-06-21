@@ -8,6 +8,30 @@ from argumentation_analysis.core.config import settings, ModalSolverChoice
 logger = logging.getLogger(__name__)
 
 
+def _get_spass_path() -> "str | None":
+    """Return the detected SPASS binary path, or None if not wired.
+
+    Reads the module-level registry populated by
+    ``jvm_setup._configure_external_tools``. Centralised here (mirroring
+    ``fol_handler._get_eprover_path``) so the Modal handler does not duplicate
+    the detection logic and the wiring is testable in isolation (#1205).
+
+    #1205: the previous ``_get_spass_reasoner`` called ``SPASSMlReasoner()`` with
+    no argument — but in Tweety 1.28+/1.29 the only constructors are
+    ``SPASSMlReasoner(String)`` and ``SPASSMlReasoner(String, Shell)`` (verified
+    via ``javap`` on the bundled jar). The no-arg call raised a Java
+    construction error, swallowed by the surrounding ``except`` → SPASS was
+    never wired, yet the pipeline reported it as the configured modal solver
+    (formal theater, same class as the EProver regression #1196/#1202).
+    """
+    try:
+        from argumentation_analysis.core.jvm_setup import EXTERNAL_TOOL_PATHS
+
+        return EXTERNAL_TOOL_PATHS.get("spass")
+    except Exception:  # pragma: no cover - import guard
+        return None
+
+
 class ModalHandler:
     """
     Handles Modal Logic operations using TweetyProject.
@@ -34,14 +58,41 @@ class ModalHandler:
             )
 
     def _get_spass_reasoner(self):
-        """Lazy-load SPASSMlReasoner if available."""
+        """Lazy-load SPASSMlReasoner, wired with the detected binary path.
+
+        #1205 (anti-theater #1019): the previous implementation called
+        ``SPASSMlReasoner()`` with no argument — but Tweety 1.28+/1.29 only
+        exposes ``SPASSMlReasoner(String)`` / ``SPASSMlReasoner(String, Shell)``
+        (verified via ``javap``), so the construction raised and the bare
+        ``except`` swallowed it into a generic ``RuntimeError``. The detected
+        SPASS path (``EXTERNAL_TOOL_PATHS['spass']``) was never passed to the
+        constructor — mirroring the EProver regression #1196/#1202.
+
+        Now reads the registered path and instantiates
+        ``SPASSMlReasoner(JString(path))`` (1-arg ctor). If the path is unset
+        (binary absent), this raises ``RuntimeError`` **fail-loud** — it does
+        NOT silently fall back to ``SimpleMlReasoner``: a missing SPASS binary
+        must surface as an honest "could not decide" (``None``/degraded), never
+        as a fabricated verdict.
+        """
         if self._spass_reasoner is None:
+            spass_path = _get_spass_path()
+            if spass_path is None:
+                raise RuntimeError(
+                    "SPASS binary not detected (EXTERNAL_TOOL_PATHS['spass'] "
+                    "unset) — modal axis cannot decide via SPASS. Install "
+                    "SPASS under ext_tools/spass/ or use a non-SPASS modal "
+                    "solver (anti-theater #1019: no silent fallback)."
+                )
             try:
                 SPASSMlReasoner = jpype.JClass(
                     "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
                 )
-                self._spass_reasoner = SPASSMlReasoner()
-                logger.info("SPASSMlReasoner loaded successfully.")
+                JString = jpype.JClass("java.lang.String")
+                self._spass_reasoner = SPASSMlReasoner(JString(spass_path))
+                logger.info(
+                    f"SPASSMlReasoner loaded successfully (binary: {spass_path})."
+                )
             except Exception as e:
                 logger.warning(f"Failed to load SPASSMlReasoner: {e}")
                 raise RuntimeError(f"SPASS reasoner not available: {e}") from e

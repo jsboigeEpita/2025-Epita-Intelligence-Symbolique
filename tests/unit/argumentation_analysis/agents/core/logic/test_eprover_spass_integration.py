@@ -397,15 +397,21 @@ class TestModalHandlerSPASS:
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.modal_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
             mock_settings.modal_solver = ModalSolverChoice.SPASS
             mock_spass = MagicMock()
-            mock_jpype.JClass.return_value = lambda: mock_spass
+            # #1205: SPASSMlReasoner is built as SPASSMlReasoner(JString(path))
+            # (1-arg ctor). JClass is called twice: for JString and for the
+            # reasoner class. Both return a factory accepting the path arg.
+            mock_jpype.JClass.return_value = lambda *args, **kwargs: mock_spass
 
             handler = ModalHandler(mock_initializer)
             reasoner = handler._get_active_reasoner()
 
-            mock_jpype.JClass.assert_called_with(
+            mock_jpype.JClass.assert_any_call(
                 "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
             )
 
@@ -414,22 +420,49 @@ class TestModalHandlerSPASS:
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.modal_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
             mock_settings.modal_solver = ModalSolverChoice.SPASS
             mock_spass = MagicMock()
-            mock_jpype.JClass.return_value = lambda: mock_spass
+            mock_jpype.JClass.return_value = lambda *args, **kwargs: mock_spass
 
             handler = ModalHandler(mock_initializer)
             r1 = handler._get_spass_reasoner()
             r2 = handler._get_spass_reasoner()
             assert r1 is r2  # Same instance
 
-    def test_spass_unavailable_raises(self, mock_initializer):
+    def test_spass_unavailable_raises_when_binary_absent(self, mock_initializer):
+        """#1205: when no SPASS binary is registered, _get_spass_reasoner must
+        raise RuntimeError fail-loud (anti-theater #1019) — NOT silently fall
+        back to SimpleMlReasoner. The previous code swallowed the no-arg ctor
+        error into a generic RuntimeError; now the fail-loud path is explicit
+        on the missing binary path."""
+        with patch(
+            "argumentation_analysis.agents.core.logic.modal_handler.settings"
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value=None,
+        ):
+            mock_settings.modal_solver = ModalSolverChoice.SPASS
+
+            handler = ModalHandler(mock_initializer)
+            with pytest.raises(RuntimeError, match="SPASS binary not detected"):
+                handler._get_active_reasoner()
+
+    def test_spass_construction_error_raises(self, mock_initializer):
+        """#1205: if the binary is registered but SPASSMlReasoner construction
+        fails (e.g. the binary is present but broken), the error must still
+        surface as RuntimeError — never a silent fallback."""
         with patch(
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.modal_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
             mock_settings.modal_solver = ModalSolverChoice.SPASS
             mock_jpype.JClass.side_effect = Exception("Class not found")
 
@@ -442,7 +475,10 @@ class TestModalHandlerSPASS:
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.modal_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
             mock_settings.modal_solver = ModalSolverChoice.SPASS
 
             # Setup SPASS reasoner mock
@@ -477,7 +513,10 @@ class TestModalHandlerSPASS:
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
         ) as mock_settings, patch(
             "argumentation_analysis.agents.core.logic.modal_handler.jpype"
-        ) as mock_jpype:
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
             mock_settings.modal_solver = ModalSolverChoice.SPASS
 
             mock_spass_instance = MagicMock()
