@@ -5710,10 +5710,34 @@ async def _invoke_nl_to_logic(
 async def _invoke_modal_logic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Invoke modal logic analysis via TweetyBridge or external SPASS solver.
+    """Invoke modal logic consistency via the configured Tweety reasoner.
 
-    Routes to SPASS when context["modal_solver"] == "spass" (#479).
-    Falls back to TweetyBridge or pure-Python heuristic.
+    Primary path: ``ModalHandler.is_modal_kb_consistent`` — the #1212
+    query-based consistency probe (the KB is inconsistent iff it entails a
+    ground contradiction), run with the **configured** modal solver. The
+    default ``settings.modal_solver`` is ``TWEETY`` → ``SimpleMlReasoner``
+    (pure Java, decides without any external binary — #1205, firsthand-
+    verified). SPASS remains opt-in via ``settings.modal_solver = SPASS``
+    (honored by ``ModalHandler._get_active_reasoner``), useful once a real
+    SPASS CLI build is vendored.
+
+    #1219 (anti-pendule): the previous implementation force-set
+    ``settings.modal_solver = SPASS`` *unconditionally* on every call. With
+    the SPASS binary absent (the current state), ``_get_active_reasoner``
+    raised ``RuntimeError`` *before* ``is_modal_kb_consistent`` could run,
+    so the #1212 ``SimpleMlReasoner`` fix — proven in unit tests
+    (``test_fp11_modal_kb_roundtrip``) — was **never reached in the
+    pipeline**: every spectacular ``modal`` phase fell through to the
+    no-solver path (``valid=None``). The force-set was the bug; subtracting
+    it lets the configured ``TWEETY`` default decide. ``ModalSolverChoice``
+    is no longer imported here (no per-call override → config is the single
+    source of truth, mirroring ``ModalHandler``'s own design).
+
+    ``valid`` is ``Optional[bool]``: a real ``True``/``False`` when the
+    solver decided, ``None`` when it could not (parse error, undecidable
+    signature) — honest, never fabricated (#1019). Falls back to
+    ``TweetyBridge.execute_modal_query`` then to an honest ``unavailable``
+    report (#961) — no heuristic that fabricates a verdict.
     """
     formulas = context.get("formulas", [input_text])
     if not isinstance(formulas, list):
@@ -5726,47 +5750,50 @@ async def _invoke_modal_logic(
         if "<>" in f_str or "possibly" in f_str.lower():
             modalities.append("possibility")
     modalities = list(set(modalities)) or ["none_detected"]
+    belief_set_str = "\n".join(str(f) for f in formulas)
 
-    modal_solver = context.get(
-        "modal_solver", "spass"
-    )  # #939: spass default, tweety is last resort
+    # Primary: ModalHandler.is_modal_kb_consistent (#1212 query-based
+    # consistency) via the CONFIGURED solver (default TWEETY = SimpleMlReasoner).
+    # #1219: do NOT force SPASS — forcing it bypassed the fix when the binary
+    # was absent. valid is Optional[bool] (None = undecidable, honest).
+    try:
+        from argumentation_analysis.core.config import settings
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
 
-    # SPASS routing (#479): set settings.modal_solver for this request
-    if modal_solver == "spass":
-        try:
-            from argumentation_analysis.core.config import settings, ModalSolverChoice
-            from argumentation_analysis.agents.core.logic.modal_handler import (
-                ModalHandler,
-            )
-            from argumentation_analysis.agents.core.logic.tweety_initializer import (
-                TweetyInitializer,
-            )
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        # #1219: bare TweetyInitializer() does NOT initialize the modal parser/
+        # reasoner — those are class attrs that start None and are set only by
+        # ``initialize_modal_components`` (which ``TweetyBridge.__init__`` calls
+        # via ``ensure_jvm_and_components_are_ready``). Without this call,
+        # ``ModalHandler.__init__`` raises "Modal Parser not initialized" and the
+        # #1212 ``SimpleMlReasoner`` fix is never reached. The original code
+        # masked this construction bug behind the SPASS force-set cascade.
+        initializer.initialize_modal_components()  # type: ignore[no-untyped-call]
+        handler = ModalHandler(initializer_instance=initializer)
+        is_consistent, msg = await asyncio.to_thread(
+            handler.is_modal_kb_consistent, belief_set_str
+        )
+        return {
+            "formulas": formulas,
+            "valid": is_consistent,
+            "modalities": modalities,
+            "logic_type": "modal",
+            "solver": settings.modal_solver.value,
+            "message": msg,
+        }
+    except Exception as e:
+        logger.info(f"ModalHandler unavailable ({e}), falling back to TweetyBridge")
 
-            if not settings.modal_solver == ModalSolverChoice.SPASS:
-                object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
-            initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
-            handler = ModalHandler(initializer_instance=initializer)
-            belief_set_str = "\n".join(str(f) for f in formulas)
-            is_consistent, msg = await asyncio.to_thread(
-                handler.is_modal_kb_consistent, belief_set_str
-            )
-            return {
-                "formulas": formulas,
-                "valid": bool(is_consistent),
-                "modalities": modalities,
-                "logic_type": "modal",
-                "solver": "spass",
-                "message": msg,
-            }
-        except Exception as e:
-            logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
-
-    # TweetyBridge routing
+    # Fallback: TweetyBridge.execute_modal_query (genuine modal query via JVM)
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
-        belief_set_str = "\n".join(str(f) for f in formulas)
         logic_type = context.get("modal_logic_type", "K")
         accepted, msg = await asyncio.to_thread(
             bridge.execute_modal_query,
@@ -5783,11 +5810,12 @@ async def _invoke_modal_logic(
             "message": msg,
         }
     except Exception as e:
-        logger.debug(f"Modal TweetyBridge unavailable ({e}), using heuristic")
+        logger.debug(f"Modal TweetyBridge unavailable ({e})")
 
-    # No solver available — report honest failure (#1019)
+    # No solver available — report honest failure (#1019, #961).
+    # No heuristic fallback that could fabricate a verdict.
     logger.warning(
-        "Modal analysis unavailable: no solver (SPASS/Tweety) could be loaded. "
+        "Modal analysis unavailable: no solver (Tweety/SPASS) could be loaded. "
         "Reporting unverified status (no heuristic fallback)."
     )
     return {
