@@ -41,10 +41,17 @@ class ArgAnalysisSettings(BaseSettings):
 
     #
     # Le choix du solveur pour la logique modale.
-    # 'spass' (défaut) utilise SPASSMlReasoner — robust (#939).
-    # 'tweety' fallback — SimpleMlReasoner, last resort only.
+    # 'tweety' (défaut) utilise SimpleMlReasoner (pure-Java) — query-based
+    #   consistency DÉCIDE réellement, aucun binaire externe requis (#1205,
+    #   firsthand-vérifié). C'est le défaut honnête.
+    # 'spass' utilise SPASSMlReasoner (binaire externe) — disponible mais exige
+    #   un build CLI exécutable de SPASS ; le binaire vendoré actuel est un build
+    #   GUI/élévation (CreateProcess err740), donc SPASS reste fail-loud None
+    #   tant qu'un vrai CLI n'est pas fourni (anti-théâtre #1019, pas de fallback
+    #   silencieux). L'ancien défaut 'spass' (#939) n'a jamais décidé :
+    #   SPASSMlReasoner n'expose pas isConsistent + binaire non exécutable.
     #
-    modal_solver: ModalSolverChoice = ModalSolverChoice.SPASS
+    modal_solver: ModalSolverChoice = ModalSolverChoice.TWEETY
 
     #
     # Le choix du solveur pour la logique propositionnelle.
