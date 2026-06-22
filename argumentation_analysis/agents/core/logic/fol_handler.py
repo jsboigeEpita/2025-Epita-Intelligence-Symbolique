@@ -675,8 +675,39 @@ class FOLHandler:
                         EFOLReasoner = jpype.JClass(
                             "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
                         )
+                        # use_eprover already implies eprover_path is not None
+                        # (set above); narrow for the typed sentinel call below.
+                        assert eprover_path is not None
                         reasoner = EFOLReasoner(JString(eprover_path))
                         solver_name = "EProver"
+                        # #1204/#1232: this SYNC path is what
+                        # ``TweetyBridge.check_consistency`` and the #1210 real-
+                        # eprover test actually call. The #1232 sentinel guard
+                        # was wired only into the ASYNC
+                        # ``_fol_check_consistency_with_eprover`` — so on a
+                        # platform with a broken Tweety->E delivery contract
+                        # (Linux argc=0, firsthand #1204) this path STILL
+                        # fabricated "consistent" on an inconsistent KB (#1019).
+                        # Apply the SAME sentinel here: if the known-inconsistent
+                        # {P(a),!P(a)} is not detected, eprover cannot be trusted
+                        # on this platform — fall back to the in-JVM
+                        # SimpleFolReasoner, which decides correctly, instead of
+                        # serving a fabricated verdict.
+                        if not _eprover_delivery_is_reliable(
+                            reasoner, eprover_path
+                        ):
+                            if self._initializer_instance is not None:
+                                reasoner = self._initializer_instance.get_reasoner(
+                                    "SimpleFolReasoner"
+                                )
+                                solver_name = "SimpleFolReasoner"
+                            else:
+                                return (
+                                    None,
+                                    "Degraded: EProver delivery contract broken "
+                                    "(#1204) and no in-JVM reasoner available; "
+                                    "no consistency verdict.",
+                                )
                     else:
                         reasoner = self._initializer_instance.get_reasoner(
                             "SimpleFolReasoner"
