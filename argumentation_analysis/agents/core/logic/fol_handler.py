@@ -28,6 +28,61 @@ def _get_eprover_path() -> "str | None":
         return None
 
 
+# Cache: eprover binary path -> bool (delivery contract verified on this platform).
+# The sentinel is a one-off subprocess per binary, not per-query overhead.
+_EPROVER_DELIVERY_RELIABLE: "dict[str, bool]" = {}
+
+
+def _eprover_delivery_is_reliable(reasoner, eprover_path: str) -> bool:
+    """Anti-théâtre sentinel guard for the Tweety->EProver delivery contract (#1019, #1204).
+
+    Tweety's ``EFOLReasoner`` builds the command ``<eprover> --auto-schedule
+    --tptp3-format <file>`` and runs it through ``NativeShell`` via
+    ``Runtime.exec(String)`` (the fragile, non-portable single-String overload
+    that re-tokenises on whitespace). On some platform/E-version combinations
+    (firsthand-observed on Linux with E 3.x, #1204) the problem file never
+    reaches the binary — E reads empty input, proves the *empty* theory
+    ``Satisfiable`` and a genuinely **inconsistent** KB is reported *consistent*.
+    That is a fabricated verdict, exactly the failure #1019 forbids.
+
+    Before trusting any eprover verdict, run a known-inconsistent sentinel
+    ``{P(a), !P(a)}`` through the SAME reasoner. If the contradiction is not
+    detected, the delivery is broken here and eprover must not be trusted — the
+    caller raises so ``fol_check_consistency`` falls back to the in-JVM Tweety
+    reasoner instead of serving a fabricated answer. Result cached per path.
+
+    Returns True iff the sentinel is correctly reported inconsistent.
+    """
+    cached = _EPROVER_DELIVERY_RELIABLE.get(eprover_path)
+    if cached is not None:
+        return cached
+    reliable = False
+    try:
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        sentinel = FolParser().parseBeliefBase(
+            "human = {a}\ntype(P(human))\n\nP(a)\n!P(a)\n"
+        )
+        probe_parser = FolParser()
+        probe_parser.setSignature(sentinel.getMinimalSignature())
+        contradiction = probe_parser.parseFormula("-")
+        # query returns True iff the KB entails the contradiction (= inconsistent).
+        reliable = bool(reasoner.query(sentinel, contradiction))
+    except Exception as e:  # parser/JVM hiccup -> unreliable, fail loud
+        logger.error(
+            f"EProver sentinel self-check raised ({e}); treating eprover as unreliable."
+        )
+        reliable = False
+    _EPROVER_DELIVERY_RELIABLE[eprover_path] = reliable
+    if not reliable:
+        logger.error(
+            "EProver sentinel self-check FAILED: known-inconsistent {P(a),!P(a)} "
+            "was not reported inconsistent — the problem is not reaching the solver "
+            "on this platform (Tweety<->E delivery contract broken, #1204). EProver "
+            "verdicts cannot be trusted here; falling back to the in-JVM reasoner."
+        )
+    return reliable
+
+
 class FOLHandler:
     """
     Handles First-Order Logic (FOL) operations using either TweetyProject or Prover9,
@@ -290,7 +345,9 @@ class FOLHandler:
                 self.logger.warning(
                     f"Prover9 unavailable ({e}), falling back to Tweety FOL reasoner"
                 )
-                return await self._fol_check_consistency_with_tweety_fallback(belief_set)
+                return await self._fol_check_consistency_with_tweety_fallback(
+                    belief_set
+                )
         elif settings.solver == SolverChoice.EPROVER:
             try:
                 return await self._fol_check_consistency_with_eprover(belief_set)
@@ -298,7 +355,9 @@ class FOLHandler:
                 self.logger.warning(
                     f"EProver unavailable ({e}), falling back to Tweety FOL reasoner"
                 )
-                return await self._fol_check_consistency_with_tweety_fallback(belief_set)
+                return await self._fol_check_consistency_with_tweety_fallback(
+                    belief_set
+                )
         else:
             return await self._fol_check_consistency_with_tweety(belief_set)
 
@@ -413,6 +472,17 @@ class FOLHandler:
             )
             reasoner = EFOLReasoner(JString(eprover_path))
 
+            # #1204 anti-théâtre guard: verify the Tweety->E delivery contract
+            # actually carries the problem to the binary on this platform before
+            # trusting any verdict. A broken contract silently returns
+            # "consistent" on an inconsistent KB (fabrication, #1019).
+            if not _eprover_delivery_is_reliable(reasoner, eprover_path):
+                raise RuntimeError(
+                    "EProver delivery contract broken on this platform "
+                    "(sentinel {P(a),!P(a)} not reported inconsistent, #1204) — "
+                    "refusing to serve a possibly-fabricated FOL verdict."
+                )
+
             # Check consistency by querying the bottom/contradiction symbol "-"
             local_parser = jpype.JClass(
                 "org.tweetyproject.logics.fol.parser.FolParser"
@@ -444,7 +514,10 @@ class FOLHandler:
 
         if settings.solver == SolverChoice.PROVER9:
             try:
-                return self._fol_query_with_prover9(belief_set, query_formula_str), False
+                return (
+                    self._fol_query_with_prover9(belief_set, query_formula_str),
+                    False,
+                )
             except RuntimeError as e:
                 logger.warning(
                     f"Prover9 unavailable ({e}), falling back to Tweety FOL query"
@@ -452,7 +525,10 @@ class FOLHandler:
                 return self._fol_query_with_tweety(belief_set, query_formula_str), True
         elif settings.solver == SolverChoice.EPROVER:
             try:
-                return self._fol_query_with_eprover(belief_set, query_formula_str), False
+                return (
+                    self._fol_query_with_eprover(belief_set, query_formula_str),
+                    False,
+                )
             except RuntimeError as e:
                 logger.warning(
                     f"EProver unavailable ({e}), falling back to Tweety FOL query"
