@@ -93,3 +93,54 @@ class TestInvokeModalLogicReachesSolver:
         assert (
             result.get("solver") == "tweety"
         ), f"solver must be 'tweety', got {result.get('solver')!r}."
+
+    async def test_nl_translations_consistent_decides_true(self, jvm, tweety_solver):
+        """#1224: a modal KB built from nl_to_logic translations (sanitized to
+        propositional atoms + type(prop) declarations) reaches SimpleMlReasoner
+        and decides True — NOT the raw-corpus ``valid=None`` of the pre-#1224
+        pipeline. ``input_text`` is ignored when translations are present."""
+        result = await _invoke_modal_logic(
+            "ignored raw corpus", {"phase_nl_to_logic_output": NL_CONSISTENT_OUT}
+        )
+        assert result.get("valid") is True, (
+            f"#1224 REGRESSION: a consistent nl_to_logic-derived KB must decide "
+            f"True via SimpleMlReasoner; got valid={result.get('valid')!r}, "
+            f"solver={result.get('solver')!r}, message={result.get('message')!r}. "
+            f"A None means the nl→modal-KB translation is still malformed."
+        )
+        assert result.get("solver") == "tweety"
+
+    async def test_nl_translations_inconsistent_decides_false(self, jvm, tweety_solver):
+        """#1224: an inconsistent nl_to_logic-derived KB decides False — a real
+        rejection on sanitized translations, not a fabricated one."""
+        result = await _invoke_modal_logic(
+            "ignored raw corpus", {"phase_nl_to_logic_output": NL_INCONSISTENT_OUT}
+        )
+        assert result.get("valid") is False, (
+            f"#1224 REGRESSION: an inconsistent nl_to_logic-derived KB must "
+            f"decide False via SimpleMlReasoner; got valid={result.get('valid')!r}, "
+            f"message={result.get('message')!r}."
+        )
+        assert result.get("solver") == "tweety"
+
+
+# #1224 — nl_to_logic translation output (the shape _invoke_nl_to_logic returns).
+# The spectacular pipeline builds the modal KB from these translations (mirroring
+# PL/FOL), NOT from the raw corpus. These prove the fix end-to-end: a KB derived
+# from nl_to_logic formulas (sanitized to propositional atoms + type(prop)
+# declarations) reaches SimpleMlReasoner and DECIDES — the pre-#1224 pipeline
+# fed MlParser the raw corpus and got valid=None (degraded) on every corpus.
+NL_CONSISTENT_OUT = {
+    "translations": [
+        {"formula": "rain => wet", "is_valid": True, "logic_type": "propositional"},
+        {"formula": "rain", "is_valid": True, "logic_type": "propositional"},
+    ],
+    "valid_count": 2,
+}
+NL_INCONSISTENT_OUT = {
+    "translations": [
+        {"formula": "rain", "is_valid": True, "logic_type": "propositional"},
+        {"formula": "!rain", "is_valid": True, "logic_type": "propositional"},
+    ],
+    "valid_count": 2,
+}

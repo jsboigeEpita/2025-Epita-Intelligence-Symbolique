@@ -5739,9 +5739,78 @@ async def _invoke_modal_logic(
     ``TweetyBridge.execute_modal_query`` then to an honest ``unavailable``
     report (#961) — no heuristic that fabricates a verdict.
     """
-    formulas = context.get("formulas", [input_text])
-    if not isinstance(formulas, list):
-        formulas = [str(formulas)]
+    # #1224: build the modal KB from the nl_to_logic translations (as PL/FOL
+    # do), NOT from the raw corpus. The spectacular DAG executor never populates
+    # ``context["formulas"]`` (``_store_phase_result`` sets only
+    # ``phase_*_output``/``_result`` and does not merge output keys), so the
+    # prior ``context.get("formulas", [input_text])`` fallback fed ``MlParser``
+    # the raw corpus paragraph → ``ParserException`` on URL fragments /
+    # prose-as-sort-declarations → ``valid=None`` (degraded) on every corpus.
+    # When nl_to_logic produced formulas, mirror PL: keep the valid ones,
+    # sanitize them to clean propositional atoms (``PLFormulaSanitizer``,
+    # #537), and declare ``type(<atom>)`` per FP-11 #1214 so the modal parser
+    # (an extension of FOL) accepts the KB. The hand-written-KB / direct
+    # ``formulas`` path (tests, pre-typed KBs) stays as-is — never re-declare
+    # atoms an existing KB already declared (MlParser rejects duplicates).
+    nl_out = context.get("phase_nl_to_logic_output") or {}
+    nl_translations = (
+        nl_out.get("translations", []) if isinstance(nl_out, dict) else []
+    )
+    nl_formulas = [
+        str(t["formula"])
+        for t in nl_translations
+        if isinstance(t, dict) and t.get("is_valid") and t.get("formula")
+    ]
+
+    if nl_formulas:
+        # Real-pipeline path (#1224): the modal KB comes from nl_to_logic.
+        # Sanitize to clean propositional atoms, then declare type(prop) per
+        # atom so MlParser accepts the KB. Fail-loud: if the sanitized KB still
+        # does not parse, ``is_modal_kb_consistent`` honestly returns
+        # ``(None, "parse error")`` → degraded, never a fabricated verdict
+        # (#1019). nl_to_logic formulas never carry ``type(...)`` so there is
+        # no duplicate-declaration risk here.
+        formulas = nl_formulas
+        kb_formulas: List[str] = list(nl_formulas)
+        try:
+            from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
+                PLFormulaSanitizer,
+            )
+
+            sanitizer = PLFormulaSanitizer()
+            san_result = sanitizer.sanitize_batch(nl_formulas)
+            if san_result.sanitized_formulas:
+                kb_formulas = san_result.sanitized_formulas
+        except Exception as san_err:
+            logger.debug(
+                f"Modal sanitizer unavailable ({san_err}), using raw nl formulas"
+            )
+        # FP-11 #1214: declare type(prop) for each atomic predicate the modal
+        # parser will reference (connectives/keywords are not atoms).
+        _keyword_atoms = {
+            "forall", "exists", "true", "false", "type", "prop",
+            "and", "or", "not", "implies",
+        }
+        _seen_atoms: Dict[str, None] = {}
+        for f in kb_formulas:
+            for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", str(f)):
+                if tok not in _keyword_atoms and tok not in _seen_atoms:
+                    _seen_atoms[tok] = None
+        _declarations = [f"type({atom})" for atom in _seen_atoms]
+        belief_set_str = "\n".join(_declarations + [str(f) for f in kb_formulas])
+    else:
+        # Direct-formulas / hand-written-KB path (tests, pre-typed KBs like
+        # ``type(rain), [](rain => wet), rain``): use the formulas verbatim so
+        # existing declarations/modal operators are not duplicated. Falls back
+        # to ``[input_text]`` only when neither path yields formulas — the parse
+        # below then fail-louds to ``degraded`` if that content is raw corpus.
+        formulas = context.get("formulas", [input_text])
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        belief_set_str = "\n".join(str(f) for f in formulas)
+
+    # Modality detection runs on the source formulas: modal operators ([]/<>)
+    # live in the untranslated input, not in sanitized propositional atoms.
     modalities = []
     for f in formulas:
         f_str = str(f)
@@ -5750,7 +5819,6 @@ async def _invoke_modal_logic(
         if "<>" in f_str or "possibly" in f_str.lower():
             modalities.append("possibility")
     modalities = list(set(modalities)) or ["none_detected"]
-    belief_set_str = "\n".join(str(f) for f in formulas)
 
     # Primary: ModalHandler.is_modal_kb_consistent (#1212 query-based
     # consistency) via the CONFIGURED solver (default TWEETY = SimpleMlReasoner).
