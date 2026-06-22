@@ -116,6 +116,8 @@ playwright-timeout-screenshot-*.png
 results/
 traces/
 text_cache/
+# Scratch run logs (may contain corpus-derived plaintext — never track). #1231
+.cache/
 data/
 !data/.gitkeep
 !data/extract_sources.json.gz.enc

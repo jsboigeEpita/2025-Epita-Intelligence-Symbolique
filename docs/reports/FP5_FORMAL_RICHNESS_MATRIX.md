@@ -1,11 +1,12 @@
 # FP-5 #1196 — Multi-corpus formal-richness matrix (post FP-10/11/12 + classifier fix)
 
-**Track**: FP-5 #1196 / FP-13 #1218 / FP-14 #1222 / FP-15 #1226 (Epic #1191 depth-parity) ·
+**Track**: FP-5 #1196 / FP-13 #1218 / FP-14 #1222 / FP-15 #1226 / FP-16 #1231 (Epic #1191 depth-parity) ·
 **Type**: measurement matrix · **Author**: po-2025 · **Date**: 2026-06-22 ·
-**Base**: `b118f2da` (post FP-10/11/12 + #1219 modal-pipeline-solver fix +
-#1224/#1225 NL→modal-KB-source fix) + FP-14 modal-cell classifier correction.
-The FP-13/FP-14 bodies are preserved as provenance; the **FP-15 Update** section
-supersedes the modal findings.
+**Base**: `8c6714f2` (post FP-10/11/12 + #1219 modal-pipeline-solver fix +
+#1224/#1225 NL→modal-KB-source fix + **#1227/#1230 modal predicate-name
+normalization**) + FP-14 modal-cell classifier correction.
+The FP-13/FP-14/FP-15 bodies are preserved as provenance; the **FP-16 Update**
+section supersedes the modal findings.
 
 > Aggregate-only. Counts/classes/verdicts only — no corpus content. Opaque IDs
 > (`doc_A/B/C`). Raw JSON metrics stay local under gitignored
@@ -46,6 +47,118 @@ degraded-by-default on axes the corpus supports. The two `empty` cells (DeLP,
 modal) are honest-absent — the corpus has no defeasible program (DeLP) / no
 solver is loaded in the pipeline environment (modal). Neither is dressed as
 decided.
+
+## FP-16 Update (2026-06-22, base `8c6714f2` post-#1227/#1230 predicate-name normalization)
+
+**Status: #1230 (predicate-name normalization, the FP-15 residual) is MERGED, and
+the re-run confirms it is upstream-correct — the modal KB now PARSES cleanly. Modal
+still does NOT reach a real verdict, but the residual has moved OFF the parser
+entirely onto the *reasoner* layer: `SimpleMlReasoner.query` raises
+`java.lang.OutOfMemoryError` on the real KB.** `modal_fabricated_true: False` × 3
+(DoD met — no verdict dressed as decided). **This finding supersedes the
+earlier-drafted "MlParser tokenizer mismatch" hypothesis, which the firsthand
+verification REFUTED** (see "Verify-the-verification" below): the constructed KB
+parses with **zero** MlParser-illegal constructs.
+
+### Matrix re-run (3 corpora, base `8c6714f2`)
+
+| corpus | pipeline verdict | modal class | `modal_valid` | `modal_solver` | `modal_fabricated_true` |
+| --- | --- | --- | --- | --- | --- |
+| doc_A (hard) | COMPLETED (563.6s) | **error** (modal phase FAILED — phase timeout) | None | None | **False** |
+| doc_C (standard) | TIMED_OUT_900s | **absent** (pipeline never reached modal) | None | None | **False** |
+| doc_B (large/stress) | hung past 1800s ceiling → killed | n/a (never reached modal) | None | None | **False** |
+
+Only **doc_A reaches the modal phase**; doc_C/doc_B time out *upstream* of modal
+(a pipeline-throughput blocker, orthogonal to the modal layer — see note). So the
+modal residual is characterized on **doc_A**, the corpus that exercises the modal KB.
+
+> **doc_B hang (process-hygiene finding).** `asyncio.wait_for(timeout=1800)` cancels
+> the *await* but cannot interrupt an in-flight blocking JPype/JVM call, so doc_B ran
+> ~63 min past its ceiling without producing output and had to be killed. The harness
+> now supports `FP16_CORPORA=A` to re-run a single corpus without re-triggering this
+> hang; a hard per-corpus subprocess kill is the proper fix (follow-up). The same
+> mechanism explains doc_A's `status=failed` (below): an in-thread JVM call that
+> over-runs the phase ceiling cannot be cancelled, so the phase is marked FAILED.
+
+### Verify-the-verification — the residual is the REASONER, not the parser
+
+The first draft of this section blamed an "MlParser *tokenizer* mismatch" (URL /
+multi-word atoms reaching the parser). **Firsthand replay refuted it.** Replaying
+the real `nl_to_logic` translations through a verbatim copy of #1230's KB
+construction and the **live `MlParser`** shows the KB **parses** —
+`parseBeliefBase` → `org.tweetyproject.logics.ml.syntax.MlBeliefSet`, with
+**`distinct_illegal_constructs = 0`**. The URL/prose ParserExceptions in the draft
+were stale observations from a *pre-#1230 / raw-corpus* path, not this run. #1230
+genuinely closed the grammar layer.
+
+Driving the next step manually pins the real cause (privacy: classes/counts only,
+never corpus tokens):
+
+| step | observed |
+| --- | --- |
+| `parseBeliefBase(belief_set)` | OK → `MlBeliefSet` (KB is well-formed) |
+| `_build_contradiction_probe` | OK → `org.tweetyproject.logics.fol.syntax.Conjunction` |
+| `reasoner.query(belief_set, contradiction)` | **raises `java.lang.OutOfMemoryError`** |
+| `is_modal_kb_consistent` (full) | returns honest `(None, "could not be decided … reasoner unavailable")` — the OOM is caught, never fabricated |
+
+`SimpleMlReasoner` decides consistency by **naive Kripke-model enumeration**. Its
+memory scales (hyper-)exponentially in the number of atomic propositions. Synthetic
+control KBs confirm the threshold: a 2-atom propositional KB and a small genuinely
+modal KB (`[](rain => wet)`) both **decide** in <1s (`valid=True/False`); the real
+doc_A KB (12 atom declarations) **OOMs**. The #1225/#1230 integration tests passed
+precisely because they used tiny KBs (`rain`, `wet`) below this threshold.
+
+### Modal cell — full residual characterization by TYPE (anti-loop deliverable)
+
+The DoD asks, if modal still cannot decide, for the FULL remaining MlParser-illegal
+set enumerated by TYPE. **That set is empty** — the residual is no longer at the
+parser. Reported instead is the construct profile of the KB the reasoner OOMs on,
+classified by logical-construct TYPE (privacy: presence-counts only, no tokens):
+
+- **MlParser-illegal constructs:** `0` (grammar layer closed by #1227/#1230).
+- **Modal operators (`[]` / `<>`):** `0` — the `nl_to_logic` translations are all
+  `logic_type=propositional`. The modal phase is asked to decide a purely
+  propositional KB via the modal reasoner.
+- **Boolean-connective profile (per-formula presence):** implication ×1,
+  equivalence ×1, negation ×1, conjunction ×3, disjunction ×1, atom-only ×2
+  (6 formulas, 12 atoms). No quantifiers.
+- **Reasoner outcome:** `java.lang.OutOfMemoryError` from `SimpleMlReasoner.query`
+  → honest `valid=None`. In-pipeline the OOM-thrash over-runs the **180s** modal
+  phase ceiling → `status=failed` (the `error` cell).
+
+### Two distinct, both-honest residuals — neither is grammar
+
+1. **Reasoner blow-up (primary).** `SimpleMlReasoner` cannot decide a ~12-atom KB
+   without exhausting memory. Raising the timeout would not help (it OOMs, it does
+   not merely run long). Two viable fixes, neither applied here (out of scope for a
+   measurement PR): route 0-modal-operator (purely propositional) translations to
+   the PL/PySAT path that already DECIDES (`real-verdict`) instead of the modal
+   reasoner; and/or use a real modal prover (SPASS CLI) in place of the naive
+   enumerator.
+2. **Phase-timeout asymmetry (secondary).** The spectacular `modal` phase keeps
+   `timeout_seconds=180`, while the #705 fix that raised `pl`→420s and `fol`→600s
+   ("180s ceiling timed the phase out → failed_phases") was **never applied to
+   modal**. So even a deciding modal reasoner has a third the budget of `pl`/`fol`.
+   This converts the reasoner's honest `None` (degraded) into a `status=failed`
+   (`error`) cell under load.
+
+**Filed follow-up (#1234):** route non-modal translations away from
+`SimpleMlReasoner`, and align the modal phase ceiling with `pl`/`fol`. Distinct from
+#1219 (solver reached), #1224/#1225 (KB source) and #1227/#1230 (predicate-name
+grammar) — this is the reasoner-scalability layer.
+
+### Modal track progression
+
+`#1219` solver gap (closed, FP-14) → `#1224/#1225` KB source (closed) → `#1227/#1230`
+predicate-name grammar (closed, FP-15) → **FP-16 measurement**: KB now parses
+cleanly; non-verdict for a *new, deeper* cause = `SimpleMlReasoner` OOM on real
+(propositional, multi-atom) KBs, plus a `180s` modal-phase ceiling never aligned
+with `pl`/`fol`. Each notch is independently verifiable in the run log; none is
+dressed as decided (`modal_fabricated_true: False` × 3). The convergent pattern
+holds — and this round it also corrected a drafted hypothesis the firsthand replay
+refuted (parser → reasoner), rather than shipping the plausible-but-wrong cause.
+
+---
 
 ## FP-15 Update (2026-06-22, base `b118f2da` post-#1225 NL→modal-KB-source fix)
 
