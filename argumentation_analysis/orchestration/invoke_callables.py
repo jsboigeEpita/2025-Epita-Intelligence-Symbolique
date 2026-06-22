@@ -5753,9 +5753,7 @@ async def _invoke_modal_logic(
     # ``formulas`` path (tests, pre-typed KBs) stays as-is — never re-declare
     # atoms an existing KB already declared (MlParser rejects duplicates).
     nl_out = context.get("phase_nl_to_logic_output") or {}
-    nl_translations = (
-        nl_out.get("translations", []) if isinstance(nl_out, dict) else []
-    )
+    nl_translations = nl_out.get("translations", []) if isinstance(nl_out, dict) else []
     nl_formulas = [
         str(t["formula"])
         for t in nl_translations
@@ -5787,13 +5785,65 @@ async def _invoke_modal_logic(
             )
         # FP-11 #1214: declare type(prop) for each atomic predicate the modal
         # parser will reference (connectives/keywords are not atoms).
+        # #1227: MlParser predicate identifiers must match ``[a-zA-Z][a-zA-Z0-9]*``
+        # — NO underscores (stricter than Tweety PL, whose grammar is
+        # ``[a-zA-Z_][a-zA-Z0-9_]*`` and which ``PLFormulaSanitizer`` targets).
+        # Real ``nl_to_logic`` extraction emits COMPOUND atoms with underscores
+        # (e.g. ``heavy_rain``); the sanitizer only symbolizes atoms it deems
+        # NL-like (>30 chars / punctuation / accents), so a short compound atom
+        # passes through underscored and ``type(heavy_rain)`` raises
+        # ``ParserException: Illegal characters in predicate definition``. Subtract
+        # the illegal chars: map every MlParser-illegal atom to a fresh legal
+        # symbol (``mp1, mp2, ...``), applied CONSISTENTLY to both the
+        # declarations and the formula bodies so the KB stays sound (no two
+        # distinct atoms collapse to one symbol). Already-legal atoms are kept
+        # verbatim — minimal change, anti-pendule.
         _keyword_atoms = {
-            "forall", "exists", "true", "false", "type", "prop",
-            "and", "or", "not", "implies",
+            "forall",
+            "exists",
+            "true",
+            "false",
+            "type",
+            "prop",
+            "and",
+            "or",
+            "not",
+            "implies",
         }
+        _atom_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+        _mlparser_legal_re = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
+        # Reserve the already-legal atom names so generated ``mpN`` symbols never
+        # collide with a real atom that is already MlParser-legal.
+        _legal_atoms = {
+            tok
+            for f in kb_formulas
+            for tok in _atom_re.findall(str(f))
+            if tok not in _keyword_atoms and _mlparser_legal_re.match(tok)
+        }
+        _atom_symbol: Dict[str, str] = {}
+        _symbol_counter = 0
+
+        def _legal_symbol(atom: str) -> str:
+            """Map a modal atom to an MlParser-legal identifier (memoized)."""
+            nonlocal _symbol_counter
+            if atom in _keyword_atoms or _mlparser_legal_re.match(atom):
+                return atom
+            if atom not in _atom_symbol:
+                _symbol_counter += 1
+                candidate = f"mp{_symbol_counter}"
+                while candidate in _legal_atoms:
+                    _symbol_counter += 1
+                    candidate = f"mp{_symbol_counter}"
+                _atom_symbol[atom] = candidate
+            return _atom_symbol[atom]
+
+        kb_formulas = [
+            _atom_re.sub(lambda m: _legal_symbol(m.group(0)), str(f))
+            for f in kb_formulas
+        ]
         _seen_atoms: Dict[str, None] = {}
         for f in kb_formulas:
-            for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", str(f)):
+            for tok in _atom_re.findall(str(f)):
                 if tok not in _keyword_atoms and tok not in _seen_atoms:
                     _seen_atoms[tok] = None
         _declarations = [f"type({atom})" for atom in _seen_atoms]
