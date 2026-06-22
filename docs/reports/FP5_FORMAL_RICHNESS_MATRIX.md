@@ -73,9 +73,9 @@ pre-#1221 that parser was never invoked). The remaining `valid=None` is a
 **different** problem: the corpus→modal-KB translation produces malformed
 grammar, so the parser rejects it:
 
-- doc_A: `Predicate 'http[…]s=2.25' has not been declared` (a URL fragment
+- doc_A: `Predicate '<url-fragment>' has not been declared` (a URL fragment
   leaked from upstream extraction as a predicate name).
-- doc_C: `Missing '=' in sort declaration '[…] Citizens of Russia, friends,'`
+- doc_C: `Missing '=' in sort declaration '<prose-greeting-fragment>'`
   (prose leaked as a sort declaration).
 
 `is_modal_kb_consistent` catches the parse failure and honestly returns
@@ -102,7 +102,7 @@ the parallel FOL fail-loud over-label (`is_consistent=None` + echoed `axioms`).
 
 | check | doc_A | doc_C | doc_B |
 | --- | --- | --- | --- |
-| `modal` class (post-fix) | **degraded** | **degraded** | **degraded** (parse error: sort decl `'Adolf Hitler'`) |
+| `modal` class (post-fix) | **degraded** | **degraded** | **degraded** (parse error: sort decl `'<proper-noun-fragment>'`) |
 | `modal_fabricated_true` | False | False | False |
 | `dl_fabricated_true` | True (pre-existing, genuine) | True | True |
 | phases completed | 40/40 | 40/40 | 39/40 (`act2_narrative` — non-formal, same transient LLM failure as FP-13) |
