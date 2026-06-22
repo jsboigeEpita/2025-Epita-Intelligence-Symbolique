@@ -142,7 +142,7 @@ classified by logical-construct TYPE (privacy: presence-counts only, no tokens):
    This converts the reasoner's honest `None` (degraded) into a `status=failed`
    (`error`) cell under load.
 
-**Filed follow-up (#1231 → new issue):** route non-modal translations away from
+**Filed follow-up (#1234):** route non-modal translations away from
 `SimpleMlReasoner`, and align the modal phase ceiling with `pl`/`fol`. Distinct from
 #1219 (solver reached), #1224/#1225 (KB source) and #1227/#1230 (predicate-name
 grammar) — this is the reasoner-scalability layer.
