@@ -31,6 +31,7 @@ class TestFOLSolverFallback:
             mock_settings.solver.value = "eprover"
             # Force tweety path for constructor
             from argumentation_analysis.core.config import SolverChoice
+
             mock_settings.solver = SolverChoice.TWEETY
             handler = FOLHandler(initializer_instance=mock_initializer)
             # Now override to eprover for test
@@ -71,7 +72,9 @@ class TestFOLSolverFallback:
         assert len(result) == 3
         is_consistent, msg, solver_fallback = result
         assert is_consistent is True
-        assert solver_fallback is True, "solver_fallback flag must be True when degraded"
+        assert (
+            solver_fallback is True
+        ), "solver_fallback flag must be True when degraded"
         assert "Tweety" in msg
 
     @pytest.mark.asyncio
@@ -150,7 +153,9 @@ class TestFOLSolverFallback:
         # Result is (entailed, solver_fallback)
         entailed, solver_fallback = result
         assert entailed is True
-        assert solver_fallback is True, "solver_fallback must be True on query degradation"
+        assert (
+            solver_fallback is True
+        ), "solver_fallback must be True on query degradation"
 
     def test_eprover_present_no_query_fallback(self, handler):
         """When eprover is available, query returns (entailed, False)."""
@@ -171,7 +176,9 @@ class TestFOLSolverFallback:
 
         entailed, solver_fallback = result
         assert entailed is True
-        assert solver_fallback is False, "solver_fallback must be False when eprover works"
+        assert (
+            solver_fallback is False
+        ), "solver_fallback must be False when eprover works"
 
     @pytest.mark.asyncio
     async def test_both_solvers_absent_raises(self, handler):
@@ -197,7 +204,9 @@ class TestFOLSolverFallback:
                 ):
                     belief_set = MagicMock()
                     belief_set.size.return_value = 2
-                    with pytest.raises(RuntimeError, match="FOL consistency check failed"):
+                    with pytest.raises(
+                        RuntimeError, match="FOL consistency check failed"
+                    ):
                         await handler.fol_check_consistency(belief_set)
 
 
@@ -237,17 +246,17 @@ class TestFOLCheckConsistencyFailLoud:
         # initializer present but get_reasoner raises (simulates a Tweety
         # internal failure on the contradiction query).
         handler._initializer_instance = MagicMock()
-        handler._initializer_instance.get_reasoner.side_effect = RuntimeError(
-            "boom"
-        )
+        handler._initializer_instance.get_reasoner.side_effect = RuntimeError("boom")
 
-        with patch.object(handler, "create_belief_set_from_string", return_value=java_bs):
+        with patch.object(
+            handler, "create_belief_set_from_string", return_value=java_bs
+        ):
             result = handler.check_consistency(java_bs)
 
         is_consistent, msg = result
-        assert is_consistent is None, (
-            "Degraded check must return None, not fabricate a True verdict"
-        )
+        assert (
+            is_consistent is None
+        ), "Degraded check must return None, not fabricate a True verdict"
         assert "degraded" in msg.lower() or "no consistency verdict" in msg.lower()
 
     def test_no_initializer_returns_degraded_not_true(self, handler):
@@ -256,7 +265,9 @@ class TestFOLCheckConsistencyFailLoud:
         java_bs = MagicMock()
         java_bs.size.return_value = 3
 
-        with patch.object(handler, "create_belief_set_from_string", return_value=java_bs):
+        with patch.object(
+            handler, "create_belief_set_from_string", return_value=java_bs
+        ):
             result = handler.check_consistency(java_bs)
 
         is_consistent, msg = result
@@ -322,7 +333,9 @@ class TestTweetyBridgeModalDispatch:
             "Tweety Result (SimpleMlReasoner): Modal Query 'p' is ACCEPTED (True)."
         )
         with patch.object(
-            TweetyBridge, "modal_handler", new_callable=lambda: property(lambda self: mock_modal)
+            TweetyBridge,
+            "modal_handler",
+            new_callable=lambda: property(lambda self: mock_modal),
         ):
             bridge = TweetyBridge.__new__(TweetyBridge)  # bypass JVM __init__
             accepted, msg = bridge.execute_modal_query("kb", "p", logic_type="K")
@@ -339,9 +352,87 @@ class TestTweetyBridgeModalDispatch:
         mock_modal = MagicMock()
         mock_modal.is_modal_kb_consistent.return_value = (True, "ok")
         with patch.object(
-            TweetyBridge, "modal_handler", new_callable=lambda: property(lambda self: mock_modal)
+            TweetyBridge,
+            "modal_handler",
+            new_callable=lambda: property(lambda self: mock_modal),
         ):
             bridge = TweetyBridge.__new__(TweetyBridge)
             result = bridge.check_consistency("kb", "S5")
         mock_modal.is_modal_kb_consistent.assert_called_once_with("kb")
         assert result == (True, "ok")
+
+
+# ──── #1204 anti-théâtre: EProver delivery-contract sentinel guard ────
+
+
+class TestEProverDeliverySentinelGuard:
+    """#1204 / #1019: Tweety's ``EFOLReasoner`` ships the problem to the binary
+    via ``Runtime.exec(String)`` — on some platform/E-version combos (Linux,
+    E 3.x) the file never reaches the solver, E proves the *empty* theory
+    ``Satisfiable`` and a genuinely **inconsistent** KB is reported *consistent*
+    (a fabricated verdict, #1019). ``_eprover_delivery_is_reliable`` runs a
+    known-inconsistent sentinel ``{P(a),!P(a)}`` through the SAME reasoner and
+    refuses to trust eprover when the contradiction is not detected, so the
+    caller falls back to the in-JVM reasoner instead of fabricating."""
+
+    def _clear_cache(self):
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        fol_handler._EPROVER_DELIVERY_RELIABLE.clear()
+
+    def test_reliable_when_sentinel_reported_inconsistent(self):
+        """Sentinel correctly detected inconsistent (query truthy) → reliable."""
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        self._clear_cache()
+        reasoner = MagicMock()
+        reasoner.query.return_value = True  # contradiction entailed = inconsistent
+        with patch.object(fol_handler.jpype, "JClass", return_value=MagicMock()):
+            assert (
+                fol_handler._eprover_delivery_is_reliable(reasoner, "/path/eprover")
+                is True
+            )
+
+    def test_unreliable_when_sentinel_not_inconsistent(self):
+        """Broken delivery: sentinel reported consistent (query falsy) → unreliable.
+        This is the exact Linux/E-3.x fabrication the guard must catch."""
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        self._clear_cache()
+        reasoner = MagicMock()
+        reasoner.query.return_value = (
+            False  # contradiction NOT entailed = fabricated "consistent"
+        )
+        with patch.object(fol_handler.jpype, "JClass", return_value=MagicMock()):
+            assert (
+                fol_handler._eprover_delivery_is_reliable(reasoner, "/path/eprover")
+                is False
+            )
+
+    def test_unreliable_when_sentinel_raises(self):
+        """A parser/JVM hiccup during the self-check → fail-loud unreliable, never trust."""
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        self._clear_cache()
+        reasoner = MagicMock()
+        reasoner.query.side_effect = RuntimeError("JVM boom")
+        with patch.object(fol_handler.jpype, "JClass", return_value=MagicMock()):
+            assert (
+                fol_handler._eprover_delivery_is_reliable(reasoner, "/path/eprover")
+                is False
+            )
+
+    def test_result_is_cached_per_path(self):
+        """The sentinel is a one-off per binary path; the verdict is cached so the
+        reasoner is probed only once (not per query)."""
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        self._clear_cache()
+        reasoner = MagicMock()
+        reasoner.query.return_value = True
+        with patch.object(fol_handler.jpype, "JClass", return_value=MagicMock()):
+            fol_handler._eprover_delivery_is_reliable(reasoner, "/path/eprover")
+            # second call must NOT re-probe (cache hit)
+            fol_handler._eprover_delivery_is_reliable(reasoner, "/path/eprover")
+        assert reasoner.query.call_count == 1
+        assert fol_handler._EPROVER_DELIVERY_RELIABLE["/path/eprover"] is True
