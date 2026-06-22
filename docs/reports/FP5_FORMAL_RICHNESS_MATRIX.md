@@ -1,9 +1,10 @@
 # FP-5 #1196 — Multi-corpus formal-richness matrix (post FP-10/11/12 + classifier fix)
 
-**Track**: FP-5 #1196 / FP-13 #1218 (Epic #1191 depth-parity) · **Type**:
-measurement matrix · **Author**: po-2025 · **Date**: 2026-06-21 · **Base**:
-`0a5a7a00` (post FP-10 #1211 / FP-11 #1214 / FP-12 #1216) + classifier fix
-(this PR).
+**Track**: FP-5 #1196 / FP-13 #1218 / FP-14 #1222 (Epic #1191 depth-parity) ·
+**Type**: measurement matrix · **Author**: po-2025 · **Date**: 2026-06-22 ·
+**Base**: `883fd770` (post FP-10/11/12 + #1219 modal-pipeline-solver fix) +
+modal-cell classifier correction (this PR). The FP-13 body below is preserved
+as provenance; the **FP-14 Update** section supersedes the modal findings.
 
 > Aggregate-only. Counts/classes/verdicts only — no corpus content. Opaque IDs
 > (`doc_A/B/C`). Raw JSON metrics stay local under gitignored
@@ -44,6 +45,81 @@ degraded-by-default on axes the corpus supports. The two `empty` cells (DeLP,
 modal) are honest-absent — the corpus has no defeasible program (DeLP) / no
 solver is loaded in the pipeline environment (modal). Neither is dressed as
 decided.
+
+## FP-14 Update (2026-06-22, base `883fd770` post-#1221 #1219-fix)
+
+**Status: #1219 RESOLVED at the pipeline level.** The modal follow-up flagged in
+the FP-13 body below ("modal `empty`, pipeline can't reach a solver") is fixed
+by #1219 (PR #1221, merged `883fd770`): `_invoke_modal_logic` no longer
+force-sets `SPASS` and now calls `initialize_modal_components()`, so the
+spectacular `modal` phase reaches `SimpleMlReasoner` (the configured `TWEETY`
+default). A fresh A/B/C re-run at `883fd770` confirms the solver is now reached —
+but surfaced a **new, distinct gap** (NL→modal-KB translation) and a **classifier
+over-label**, both addressed in this PR.
+
+### Modal cell — no longer `empty (no solver)`; now `degraded`
+
+| metric | pre-#1221 (FP-13) | post-#1221 (FP-14) |
+| --- | --- | --- |
+| `solver` evidence | `null` (`"unavailable"`) | **`"tweety"`** (SimpleMlReasoner reached) |
+| run log | no modal parser invocation | `MlParser.parseBeliefBase` runs, raises `ParserException` |
+| `valid` | `None` (solver never ran) | **`None`** (solver ran, **KB malformed**) |
+| honest class | `empty` (no solver) | **`degraded`** (solver ran, could not decide) |
+
+The #1219 pipeline gap is closed: the modal phase now exercises the real
+`MlParser`/`SimpleMlReasoner` (verified two ways: the matrix cell evidence
+`verdict:"tweety"`, and the run log where `MlParser.parseBeliefBase` raises —
+pre-#1221 that parser was never invoked). The remaining `valid=None` is a
+**different** problem: the corpus→modal-KB translation produces malformed
+grammar, so the parser rejects it:
+
+- doc_A: `Predicate '<url-fragment>' has not been declared` (a URL fragment
+  leaked from upstream extraction as a predicate name).
+- doc_C: `Missing '=' in sort declaration '<prose-greeting-fragment>'`
+  (prose leaked as a sort declaration).
+
+`is_modal_kb_consistent` catches the parse failure and honestly returns
+`(None, "Modal KB parse error (consistency undetermined, tweety)")` — no
+fabricated verdict (`modal_fabricated_true: False` × 3). **This is neither a
+clean `real-verdict` nor `honest-absent`** (the DoD's binary): the corpus *has*
+modal-ish content, but the NL→modal-KB translation cannot render it as valid
+`MlParser` grammar. The unit-test KBs (`type(rain)`, `[](rain => wet)`) parse
+and decide cleanly; real political-corpus extraction does not. Filed as a new
+follow-up (NL→modal-logic translation quality) — out of scope for this PR.
+
+### Classifier over-label corrected (this PR)
+
+The FP-13 classifier labeled this modal output `real-verdict`: `_output_repr`
+strips `valid=None` (falsy), and the remaining echoed keys (`formulas`,
+`modalities`, `solver`) satisfied the `has_output` gate — an undecidable modal
+disguised as decided (anti-théâtre #1019). **Fixed**: a verdict key
+(`is_consistent`/`consistent`/`valid`) present-but-`None` in the unstripped
+output → `degraded`. Pinned by 5 unit tests
+(`tests/unit/scripts/test_run_fp5_formal_matrix.py`). The same correction closes
+the parallel FOL fail-loud over-label (`is_consistent=None` + echoed `axioms`).
+
+### DoD re-check (post-#1221 re-run `b7osu9551`)
+
+| check | doc_A | doc_C | doc_B |
+| --- | --- | --- | --- |
+| `modal` class (post-fix) | **degraded** | **degraded** | **degraded** (parse error: sort decl `'<proper-noun-fragment>'`) |
+| `modal_fabricated_true` | False | False | False |
+| `dl_fabricated_true` | True (pre-existing, genuine) | True | True |
+| phases completed | 40/40 | 40/40 | 39/40 (`act2_narrative` — non-formal, same transient LLM failure as FP-13) |
+
+`dl_fabricated_true: True` is **pre-existing and genuine** — DL bottom-entailment
+returns `consistent=True` per FP-12 #1216; #1221 touched modal only (not DL), so
+no fabrication was **introduced** by FP-14. Verified pre-existing across the two
+prior runs (`fp5_docA_20260621T231303.json`, `…T221436.json` both `true`). The
+flag records the *presence* of a True verdict, not fabrication.
+
+### Class tally (post-fix classifier, per corpus)
+
+21 `real-verdict` · 1 `degraded` (modal — solver reached, KB malformed) · 1
+`empty` (DeLP honest-absent). (Pre-fix the modal cell was mis-counted among the
+22 `real-verdict`; the DeLP `empty` is unchanged.)
+
+---
 
 ## Delta from #1196 (FP-13 #1218)
 
@@ -113,7 +189,7 @@ non-trivial structure) | `degraded` (fail-loud None verdict) | `empty`
 | --- | --- | --- | --- |
 | pl | **real-verdict (3)** | **real-verdict (3)** | **real-verdict (3)** |
 | fol | real-verdict (2) | real-verdict (2) | real-verdict (2) |
-| modal | **empty (no solver)** | **empty (no solver)** | **empty (no solver)** |
+| modal | **degraded** † | **degraded** † | **degraded** † |
 | kb_to_tweety | real-verdict (43) | real-verdict (25) | real-verdict (67) |
 | dung_extensions | real-verdict (16) | real-verdict (16) | real-verdict (16) |
 | aspic_analysis | real-verdict (1) | real-verdict (1) | real-verdict (1) |
@@ -135,8 +211,11 @@ non-trivial structure) | `degraded` (fail-loud None verdict) | `empty`
 | jtms | real-verdict (46) | real-verdict (45) | real-verdict (43) |
 | deep_synthesis | real-verdict (1) | real-verdict (1) | real-verdict (1) |
 
-**Class tally (per corpus)**: 21 `real-verdict` · 2 `empty` (DeLP honest-absent,
-modal no-solver) · 0 `degraded` · 0 `absent` · 0 `error`. CF2 is not a separate
+**Class tally (per corpus, post-FP-14 classifier)**: 21 `real-verdict` · 1
+`degraded` (modal †) · 1 `empty` (DeLP honest-absent) · 0 `absent` · 0 `error`.
+† modal = `degraded` post-#1221: the solver is now reached (`verdict:"tweety"`)
+but the corpus KB is malformed → `valid=None` (see **FP-14 Update** above). CF2
+is not a separate
 cell — it is a Dung-family semantic gated out by FP-12 (`CF2Reasoner` absent from
 the vendored Tweety build → `ValueError`, never a silent dressed-as-decided
 result).
@@ -221,10 +300,11 @@ completes a 3MB corpus bounded, with every formal cell real.
 - **PL, FOL, DL all have real decision procedures now** (PySAT, EProver,
   `NaiveDlReasoner` bottom-entailment). Before the FP-3/10/11/12 stack this layer
   was theatre (PL OOM, FOL fabricated, DL hardcoded True, DeLP parse-garbage).
-  **Modal is the exception**: the capability is fixed in unit tests
-  (`SimpleMlReasoner`, #1212/#1214) but the spectacular pipeline's
-  `_invoke_modal_logic` does not reach the deciding path (SPASS absent +
-  `TweetyBridge.execute_modal_query` raises) — filed as follow-up #1219.
+  **Modal now reaches its solver too** (FP-14/#1221): the pipeline gap (#1219)
+  is closed — `_invoke_modal_logic` exercises `SimpleMlReasoner`
+  (`verdict:"tweety"`). The remaining modal depth-gap is the NL→modal-KB
+  translation (corpus grammar malformed → `valid=None`), a *different* problem
+  from the solved solver gap — see **FP-14 Update** above.
 - **No fabricated verdicts anywhere** — `fol_fabricated_true: False` × 3,
   `modal_fabricated_true: False` × 3; `dl_fabricated_true: True` is a genuine
   bottom-entailment verdict (verified by the FP-12 real-JVM test). The
@@ -234,7 +314,15 @@ completes a 3MB corpus bounded, with every formal cell real.
   vendored build), modal is honest-absent (no solver in the pipeline env).
   None is dressed as decided.
 
-## New finding — modal pipeline solver gap (#1219, follow-up)
+## New finding — modal pipeline solver gap (#1219) — ✅ RESOLVED by #1221
+
+> **FP-14 (2026-06-22): RESOLVED.** #1219 was fixed by PR #1221 (merged
+> `883fd770`): `_invoke_modal_logic` no longer force-sets `SPASS` and now calls
+> `initialize_modal_components()`, so the spectacular `modal` phase reaches
+> `SimpleMlReasoner`. The post-#1221 re-run confirms it (`verdict:"tweety"`,
+> `MlParser.parseBeliefBase` runs). The remaining depth-gap is now a *different*
+> one — NL→modal-KB translation quality (corpus produces malformed grammar) —
+> see **FP-14 Update** above. The historical FP-13 finding is preserved below.
 
 The DoD asked to flag any new théâtre suspect. The re-run log surfaced one:
 **modal is honest-unverified in the spectacular pipeline, despite the capability

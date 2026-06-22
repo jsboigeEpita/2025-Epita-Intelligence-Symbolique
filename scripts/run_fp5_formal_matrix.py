@@ -250,6 +250,25 @@ def _classify_capability(result: dict, phase_name: str, count_key) -> tuple[str,
             or str(raw_out.get("solver", "")).lower() in _decl
         ):
             return "empty", evidence
+    # #1222 (FP-14): a verdict key that EXISTS in raw_out with value None means
+    # the solver RAN but could not decide (parse error, undecidable signature)
+    # — degraded, NOT real-verdict. ``_output_repr`` strips ``valid=None``
+    # (falsy), so the degraded branch below misses it when the dict also carries
+    # echoed input (formulas/modalities/solver) and mis-labels via ``has_output``.
+    # Surfaced by the post-#1219 matrix: modal now reaches SimpleMlReasoner
+    # (solver="tweety", not "unavailable") but the real-corpus KB is malformed
+    # → valid=None → over-labeled real-verdict. Read raw_out (unstripped). Must
+    # follow the honest-absent check above: solver="unavailable" + valid=None
+    # stays empty (solver never ran), while solver="tweety" + valid=None is
+    # degraded (solver ran, could not decide). A real verdict (True OR False) is
+    # untouched (``is None`` is False).
+    if isinstance(raw_out, dict) and isinstance(out, dict):
+        if any(
+            raw_out.get(_k) is None
+            for _k in ("is_consistent", "consistent", "valid")
+            if _k in raw_out
+        ):
+            return "degraded", evidence
     # degraded: fail-loud tri-state — NO decisive verdict (every verdict key is
     # None) AND no other real structure. #1218 (FP-13): verdict-aware — the old
     # ``any()`` over is_consistent/consistent/valid mis-fired when FOL returned
