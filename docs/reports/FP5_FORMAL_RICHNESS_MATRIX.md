@@ -1,10 +1,11 @@
 # FP-5 #1196 — Multi-corpus formal-richness matrix (post FP-10/11/12 + classifier fix)
 
-**Track**: FP-5 #1196 / FP-13 #1218 / FP-14 #1222 (Epic #1191 depth-parity) ·
+**Track**: FP-5 #1196 / FP-13 #1218 / FP-14 #1222 / FP-15 #1226 (Epic #1191 depth-parity) ·
 **Type**: measurement matrix · **Author**: po-2025 · **Date**: 2026-06-22 ·
-**Base**: `883fd770` (post FP-10/11/12 + #1219 modal-pipeline-solver fix) +
-modal-cell classifier correction (this PR). The FP-13 body below is preserved
-as provenance; the **FP-14 Update** section supersedes the modal findings.
+**Base**: `b118f2da` (post FP-10/11/12 + #1219 modal-pipeline-solver fix +
+#1224/#1225 NL→modal-KB-source fix) + FP-14 modal-cell classifier correction.
+The FP-13/FP-14 bodies are preserved as provenance; the **FP-15 Update** section
+supersedes the modal findings.
 
 > Aggregate-only. Counts/classes/verdicts only — no corpus content. Opaque IDs
 > (`doc_A/B/C`). Raw JSON metrics stay local under gitignored
@@ -45,6 +46,107 @@ degraded-by-default on axes the corpus supports. The two `empty` cells (DeLP,
 modal) are honest-absent — the corpus has no defeasible program (DeLP) / no
 solver is loaded in the pipeline environment (modal). Neither is dressed as
 decided.
+
+## FP-15 Update (2026-06-22, base `b118f2da` post-#1225 NL→modal-KB-source fix)
+
+**Status: the modal KB is now built from real `nl_to_logic` translations, not
+the raw corpus (#1224/#1225). A fresh A/B/C re-run confirms this — and surfaces
+the next, distinct residual cause.** The modal cell is still a non-verdict
+(`degraded` on doc_A/doc_C, `error` on doc_B — solver reached, could not decide),
+but for a *new* reason: `MlParser` rejects the **compound predicate names** that
+real extraction emits. This is honest progress, not regression:
+`modal_fabricated_true: False` × 3 (DoD met — no verdict dressed as decided).
+
+### Modal cell — KB source fixed; new residual cause = predicate-name grammar
+
+| metric | FP-14 (base `883fd770`) | FP-15 (base `b118f2da`) |
+| --- | --- | --- |
+| KB source | raw corpus paragraph (`[input_text]` fallback) | **`nl_to_logic` translations** (sanitized, `type(prop)` declared) |
+| run-log parse failure | `ParserException` on URL fragments / prose-as-sort-decl | `ParserException` on **compound predicate names** |
+| `valid` | `None` (solver ran, KB malformed) | **`None`** (solver ran, KB malformed — new cause) |
+| `solver` evidence | `"tweety"` | **`"tweety"`** (SimpleMlReasoner still reached) |
+| honest class | `degraded` | **non-verdict** (`degraded` A/C, `error` B) |
+
+The #1224/#1225 fix removed the raw-corpus fallback that fed `MlParser` URL
+fragments and prose. The modal KB is now assembled from the `nl_to_logic`
+translations (the same source PL/FOL consume), with a `type(prop)` declaration
+per atom — mirroring PL/FOL exactly (anti-pendule: no new infra). This is
+**verifiable progress** (raw-corpus garbage → real extracted formulas), proven
+two ways: the matrix cell evidence still reads `verdict:"tweety"` (solver
+reached, #1219 holds), and the run log shows `MlParser.parseBeliefBase` running
+and raising on a *different* token class than FP-14.
+
+But real extraction produces **compound predicate names** (e.g. `<compound-predicate>`,
+opaque) that violate the MlParser grammar `[a-zA-Z][a-zA-Z0-9]*` (underscores
+and other punctuation are illegal in predicate identifiers). The parser rejects
+them:
+
+- doc_A: `Illegal characters in predicate definition '<compound-predicate>';
+  declaration must conform to [a-z,A-Z]([a-z,A-Z,0-9])*`.
+- doc_C: same family — `Illegal characters in (predicate|sort) definition
+  '<compound-predicate>'` (plus a `Missing '=' in sort declaration` variant
+  where a fallacy-structure fragment leaks as a sort decl).
+- doc_B: same compound-predicate parse cause; on the 3MB stress corpus it
+  crashes the modal phase outright (`error`, status=failed) rather than degrading
+  gracefully (see DoD table below).
+
+`is_modal_kb_consistent` catches the parse failure and honestly returns
+`(None, "Modal KB parse error (consistency undetermined, tweety)")` — no
+fabricated verdict (`modal_fabricated_true: False` × 3).
+`PLFormulaSanitizer` validates formula *structure* but does not symbolize
+compound atom *names* (confirmed: `<compound-predicate>` passes through
+unchanged, `symbol_mapping: {}`). The #1225 integration tests
+(`test_nl_translations_*`) pass because they use simple atoms (`rain`, `wet`);
+they did not exercise the compound-name case. This is the gap the next follow-up
+closes.
+
+**Filed follow-up** (#1227, this round): normalize modal predicate names to
+`[a-zA-Z][a-zA-Z0-9]*` (symbolize compound atoms to `p1, p2, …` with a
+name→symbol map, applied consistently in both `type(...)` declarations and
+formula bodies — mirroring PL/FOL) so `MlParser` accepts real extracted
+predicates. Distinct from #1219 (solver) and #1224/#1225 (KB source) — this is
+the identifier-grammar layer. Implementing it is out of scope for this
+measurement PR (FP-15 measures; the fix is a code change to #1225's logic
+deserving its own issue/PR, per task discipline).
+
+### DoD re-check (post-#1225 re-run, base `b118f2da`)
+
+| check | doc_A | doc_C | doc_B |
+| --- | --- | --- | --- |
+| `modal` class | **degraded** | **degraded** | **error** (modal phase FAILED on the compound-predicate parse) |
+| `modal_fabricated_true` | False | False | False |
+| phases completed | 40/40 | 40/40 | 39/40 (the modal phase failed) |
+| elapsed | 293.1s | 559.9s | 1164.2s |
+
+On doc_B (3MB stress corpus) the same `ParserException` (compound predicate
+names) crashed the modal phase outright (`Phase FAILED — Agent: modal`) rather
+than being caught as a graceful `valid=None`/`degraded` as on doc_A/doc_C. This
+is a *harder* honest non-verdict, not a different root cause: the run log shows
+`Error executing modal query: ParserException` on the same compound-predicate
+shape. Either way no verdict is dressed as decided (`modal_fabricated_true:
+False` × 3). The predicate-name follow-up (#1227) would resolve all three.
+
+### Modal track progression
+
+`#1219` solver gap (closed, FP-14) → `#1224/#1225` KB source (closed, this base)
+→ **FP-15 measurement** (non-verdict, *new* cause = predicate grammar) →
+predicate-name normalization (#1227, this round). Each notch is independently
+verifiable in the run log; none is dressed as decided
+(`modal_fabricated_true: False` × 3).
+
+### Class tally (per corpus)
+
+- doc_A / doc_C: 21 `real-verdict` · 1 `degraded` (modal — solver reached, KB
+  grammar-rejected) · 1 `empty` (DeLP honest-absent).
+- doc_B: 21 `real-verdict` · 1 `error` (modal phase failed on the compound-
+  predicate parse — a harder non-verdict on the stress corpus) · 1 `empty` (DeLP).
+
+Same shape as FP-14 for non-modal cells: the #1225 KB-source advance moved the
+modal failure *cause* (raw corpus → compound predicates) but did not reach a
+real verdict, because the new KB still does not parse. No non-modal capability
+changed class.
+
+---
 
 ## FP-14 Update (2026-06-22, base `883fd770` post-#1221 #1219-fix)
 
@@ -189,7 +291,7 @@ non-trivial structure) | `degraded` (fail-loud None verdict) | `empty`
 | --- | --- | --- | --- |
 | pl | **real-verdict (3)** | **real-verdict (3)** | **real-verdict (3)** |
 | fol | real-verdict (2) | real-verdict (2) | real-verdict (2) |
-| modal | **degraded** † | **degraded** † | **degraded** † |
+| modal | **degraded** † | **degraded** † | **error** † |
 | kb_to_tweety | real-verdict (43) | real-verdict (25) | real-verdict (67) |
 | dung_extensions | real-verdict (16) | real-verdict (16) | real-verdict (16) |
 | aspic_analysis | real-verdict (1) | real-verdict (1) | real-verdict (1) |
@@ -213,8 +315,10 @@ non-trivial structure) | `degraded` (fail-loud None verdict) | `empty`
 
 **Class tally (per corpus, post-FP-14 classifier)**: 21 `real-verdict` · 1
 `degraded` (modal †) · 1 `empty` (DeLP honest-absent) · 0 `absent` · 0 `error`.
-† modal = `degraded` post-#1221: the solver is now reached (`verdict:"tweety"`)
-but the corpus KB is malformed → `valid=None` (see **FP-14 Update** above). CF2
+† modal = non-verdict: the solver is reached (`verdict:"tweety"`) but the KB is
+malformed → `valid=None` (`degraded` on doc_A/C, `error` on doc_B). Post-#1225
+(FP-15) the cause is **compound predicate names** that violate the MlParser
+grammar, distinct from FP-14's raw-corpus cause (see **FP-15 Update** above). CF2
 is not a separate
 cell — it is a Dung-family semantic gated out by FP-12 (`CF2Reasoner` absent from
 the vendored Tweety build → `ValueError`, never a silent dressed-as-decided
