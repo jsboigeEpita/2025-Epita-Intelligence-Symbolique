@@ -133,6 +133,15 @@ ext_tools/*
 ext_tools/EProver/*
 !ext_tools/EProver/eprover.exe
 !ext_tools/EProver/cygwin1.dll
+# SPASS modal theorem prover (FP-18 #1241), vendored the same eprover way: the
+# native Windows CLI build (V 3.9, decides firsthand) + the EML->eml DFG
+# delivery-contract adapter. Tracked so CI-Windows exercises the modal guard
+# live (test_spass_real.py / test_external_provers_wired.py) rather than
+# green-by-skipping. Provenance/rebuild: scripts/setup/build_spass_windows.ps1.
+!ext_tools/spass/
+ext_tools/spass/*
+!ext_tools/spass/SPASS.exe
+!ext_tools/spass/spass_eml_adapter.bat
 resources/tweety/
 _temp_downloads/
 portable_jdk/

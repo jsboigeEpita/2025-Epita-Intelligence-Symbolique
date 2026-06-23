@@ -1,0 +1,9 @@
+# Protect vendored solver binaries from line-ending conversion: autocrlf must
+# NEVER touch these, or a fresh Windows clone gets a corrupted binary that can't
+# decide (the silent-break class behind the #1204/#1241 solver regressions).
+*.exe binary
+*.dll binary
+
+# Windows batch adapters need CRLF when checked out (e.g. the SPASS EML->eml
+# delivery-contract adapter invoked by Tweety on Windows).
+*.bat text eol=crlf
