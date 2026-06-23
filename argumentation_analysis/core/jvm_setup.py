@@ -712,8 +712,25 @@ def _configure_external_tools():
             if clingo_path.exists():
                 tools_found["clingo"] = str(clingo_path.parent.resolve())
 
-    # SPASS — Modal logic theorem prover
+    # SPASS — Modal logic theorem prover.
+    # #1234: Tweety 1.29's SPASSMlReasoner emits the DFG special-formulae logic
+    # token as ``EML`` (uppercase); SPASS 3.9's parser requires ``eml``
+    # (lowercase) → "got 'EML', expected special type (eml)", SPASS aborts and
+    # the modal axis cannot decide. This is a Tweety↔SPASS delivery-contract
+    # version mismatch — the modal analogue of the eprover #1204 regression.
+    # The EML→eml adapter (scripts/solvers/spass_eml_adapter.sh) rewrites only
+    # that keyword case in the DFG temp file and forwards to the real SPASS,
+    # which performs ALL modal reasoning (EML→FOL translation + saturation).
+    # Prefer the adapter when present so Tweety's DFG is accepted; otherwise
+    # register the raw binary (modal SPASS then fails honestly on the EML
+    # mismatch — #1019, no fabrication).
+    adapter_name = (
+        "spass_eml_adapter.bat"
+        if platform.system() == "Windows"
+        else "spass_eml_adapter.sh"
+    )
     for candidate in [
+        str(EXT_TOOLS_DIR / f"spass/{adapter_name}"),
         shutil.which("SPASS"),
         str(EXT_TOOLS_DIR / f"spass/SPASS{exe_suffix}"),
     ]:

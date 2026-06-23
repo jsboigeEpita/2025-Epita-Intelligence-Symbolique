@@ -137,11 +137,11 @@ def filter_formal_extensions(
     workflow.phases = [
         p
         for p in workflow.phases
-        if p.capability not in _ALL_EXTENSION_CAPS
-        or p.capability in allowed_caps
+        if p.capability not in _ALL_EXTENSION_CAPS or p.capability in allowed_caps
     ]
     logger.info(f"formal_extension={filter_spec}: keeping {sorted(requested)}")
     return workflow
+
 
 # --- Pre-built workflow definitions ---
 
@@ -756,7 +756,18 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             capability="modal_logic",
             depends_on=["nl_to_logic"],
             optional=True,
-            timeout_seconds=180,
+            # #1234: align the modal ceiling with pl(420)/fol(600). #705 raised
+            # those two but left modal at 180, so a decidable modal KB (or the
+            # 2-pass nl_to_logic generator feeding it) could be timed out → the
+            # phase failed (the "error" matrix cell) instead of deciding. The
+            # OOM itself is fixed by ACTIVATING SPASS (the SOTA modal prover):
+            # SimpleMlReasoner enumerates Kripke models and OOMs at ~12 atoms
+            # (FP-16 #1231), whereas SPASS decides by saturation without that
+            # explosion (see scripts/solvers/spass_eml_adapter.sh). This ceiling
+            # bump is the secondary alignment (anti-pendule: it does NOT exist to
+            # "let an OOM finish" — an OOM is exponential and never finishes — only
+            # to give a genuinely-decidable phase the same room pl/fol already got).
+            timeout_seconds=420,
         )
         # L2c — external solver routing: FOL→EProver/Prover9 (#504)
         .add_phase(
